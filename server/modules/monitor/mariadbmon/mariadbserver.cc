@@ -18,68 +18,6 @@
 #include <maxscale/mysql_utils.h>
 #include "utilities.hh"
 
-Gtid::Gtid()
-    : domain(0)
-    , server_id(SERVER_ID_UNKNOWN)
-    , sequence(0)
-{}
-
-Gtid::Gtid(const char* str, int64_t search_domain)
-    : domain(0)
-    , server_id(SERVER_ID_UNKNOWN)
-    , sequence(0)
-{
-    // Autoselect only allowed with one triplet
-    ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
-    parse_triplet(str);
-    if (search_domain >= 0 && domain != search_domain)
-    {
-        // Search for the correct triplet.
-        bool found = false;
-        for (const char* next_triplet = strchr(str, ',');
-             next_triplet != NULL && !found;
-             next_triplet = strchr(next_triplet, ','))
-        {
-            parse_triplet(++next_triplet);
-            if (domain == search_domain)
-            {
-                found = true;
-            }
-        }
-        ss_dassert(found);
-    }
-}
-
-bool Gtid::operator == (const Gtid& rhs) const
-{
-    return domain == rhs.domain &&
-        server_id != SERVER_ID_UNKNOWN && server_id == rhs.server_id &&
-        sequence == rhs.sequence;
-}
-
-string Gtid::to_string() const
-{
-    std::stringstream ss;
-    if (server_id != SERVER_ID_UNKNOWN)
-    {
-        ss << domain << "-" << server_id << "-" << sequence;
-    }
-    return ss.str();
-}
-
-void Gtid::parse_triplet(const char* str)
-{
-    ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRId64 "-%" PRIu64, &domain, &server_id, &sequence);
-    ss_dassert(rv == 3);
-}
-
-string Gtid::generate_master_gtid_wait_cmd(double timeout) const
-{
-    std::stringstream query_ss;
-    query_ss << "SELECT MASTER_GTID_WAIT(\"" << to_string() << "\", " << timeout << ");";
-    return query_ss.str();
-}
-
 SlaveStatusInfo::SlaveStatusInfo()
     : master_server_id(SERVER_ID_UNKNOWN)
     , master_port(0)
@@ -214,7 +152,7 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
             {
                 /** Only check binlog name for the first running slave */
                 string master_log_file = result->get_string(i_master_log_file);
-                uint64_t read_master_log_pos = result->get_int(i_read_master_log_pos);
+                uint64_t read_master_log_pos = result->get_uint(i_read_master_log_pos);
                 if (slave_status.master_log_file != master_log_file ||
                     slave_status.read_master_log_pos != read_master_log_pos)
                 {
@@ -233,7 +171,7 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
          * root master server.
          * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
          */
-        int64_t last_io_errno = result->get_int(i_last_io_errno);
+        int64_t last_io_errno = result->get_uint(i_last_io_errno);
         int io_errno = last_io_errno;
         const int connection_errno = 2003;
 
@@ -247,18 +185,18 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
         if (server_version == MYSQL_SERVER_VERSION_100)
         {
             slave_status.master_host = result->get_string(i_master_host);
-            slave_status.master_port = result->get_int(i_master_port);
+            slave_status.master_port = result->get_uint(i_master_port);
 
             string last_io_error = result->get_string(i_last_io_error);
             string last_sql_error = result->get_string(i_last_sql_error);
             slave_status.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-            int heartbeats = result->get_int(i_slave_rec_hbs);
+            int heartbeats = result->get_uint(i_slave_rec_hbs);
             if (slave_heartbeats < heartbeats)
             {
                 latest_event = time(NULL);
                 slave_heartbeats = heartbeats;
-                heartbeat_period = result->get_int(i_slave_hb_period);
+                heartbeat_period = result->get_uint(i_slave_hb_period);
             }
             string using_gtid = result->get_string(i_using_gtid);
             if (gtid_domain >= 0 && (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
@@ -289,5 +227,105 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
     slave_status.master_server_id = master_server_id;
     n_slaves_configured = nconfigured;
     n_slaves_running = nrunning;
+    return rval;
+}
+
+bool MariaDBServer::update_gtids(int64_t gtid_domain)
+{
+    ss_dassert(gtid_domain >= 0);
+    static const string query = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
+    const int ind_current_pos = 0;
+    const int ind_binlog_pos = 1;
+
+    bool rval = false;
+    auto result = execute_query(query);
+    if (result.get() != NULL && result->next_row())
+    {
+        gtid_current_pos = result->get_gtid(ind_current_pos, gtid_domain);
+        gtid_binlog_pos = result->get_gtid(ind_binlog_pos, gtid_domain);
+        rval = true;
+    }
+    return rval;
+}
+
+bool MariaDBServer::update_replication_settings()
+{
+    static const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
+    bool rval = false;
+    auto result = execute_query(query);
+    if (result.get() != NULL && result->next_row())
+    {
+        rpl_settings.gtid_strict_mode = result->get_bool(0);
+        rpl_settings.log_bin = result->get_bool(1);
+        rpl_settings.log_slave_updates = result->get_bool(2);
+        rval = true;
+    }
+    return rval;
+}
+
+void MariaDBServer::read_server_variables()
+{
+    MXS_MONITORED_SERVER* database = server_base;
+    string query = "SELECT @@global.server_id, @@read_only;";
+    int columns = 2;
+    if (version ==  MYSQL_SERVER_VERSION_100)
+    {
+        query.erase(query.end() - 1);
+        query += ", @@global.gtid_domain_id;";
+        columns = 3;
+    }
+
+    int ind_id = 0;
+    int ind_ro = 1;
+    int ind_domain = 2;
+    auto result = execute_query(query);
+    if (result.get() != NULL && result->next_row())
+    {
+        int64_t server_id_parsed = result->get_uint(ind_id);
+        if (server_id_parsed < 0)
+        {
+            server_id_parsed = SERVER_ID_UNKNOWN;
+        }
+        database->server->node_id = server_id_parsed;
+        server_id = server_id_parsed;
+        read_only = result->get_bool(ind_ro);
+        if (columns == 3)
+        {
+            gtid_domain_id = result->get_uint(ind_domain);
+        }
+    }
+}
+
+bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings)
+{
+    bool rval = true;
+    const char* servername = server_base->server->unique_name;
+    if (rpl_settings.log_bin == false)
+    {
+        if (print_warnings == WARNINGS_ON)
+        {
+            const char NO_BINLOG[] =
+                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
+            MXS_WARNING(NO_BINLOG, servername);
+        }
+        rval = false;
+    }
+    else if (print_warnings == WARNINGS_ON)
+    {
+        if (rpl_settings.gtid_strict_mode == false)
+        {
+            const char NO_STRICT[] =
+                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+            MXS_WARNING(NO_STRICT, servername);
+        }
+        if (rpl_settings.log_slave_updates == false)
+        {
+            const char NO_SLAVE_UPDATES[] =
+                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+                "will break for lagging slaves if '%s' is promoted.";
+            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
+        }
+    }
     return rval;
 }

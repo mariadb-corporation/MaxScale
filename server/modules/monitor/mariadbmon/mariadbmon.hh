@@ -37,12 +37,6 @@ typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInf
 // Server container, owns the server objects.
 typedef std::vector<MariaDBServer> ServerContainer; // TODO: Rename/get rid of ServerVector typedef!
 
-enum print_repl_warnings_t
-{
-    WARNINGS_ON,
-    WARNINGS_OFF
-};
-
 enum slave_down_setting_t
 {
     ACCEPT_DOWN,
@@ -51,8 +45,6 @@ enum slave_down_setting_t
 
 // TODO: Most of following should be class methods
 void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
-bool check_replication_settings(const MXS_MONITORED_SERVER* server, MariaDBServer* server_info,
-                                print_repl_warnings_t print_warnings = WARNINGS_ON);
 MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *, long);
 MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
 
@@ -217,7 +209,6 @@ private:
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info);
     MariaDBServer* update_slave_info(MXS_MONITORED_SERVER* server);
-    bool update_replication_settings(MXS_MONITORED_SERVER *database, MariaDBServer* info);
     void init_server_info();
     bool slave_receiving_events();
     void monitor_database(MariaDBServer* param_db);
@@ -247,7 +238,6 @@ private:
                                   json_t** output);
     bool cluster_can_be_joined();
     bool failover_check(json_t** error_out);
-    bool update_gtids(MariaDBServer* info);
     void disable_setting(const char* setting);
     bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
     bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,

@@ -17,7 +17,6 @@
 #include "utilities.hh"
 
 static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
-static void read_server_variables(MariaDBServer* serv_info);
 
 static bool report_version_err = true;
 
@@ -655,11 +654,11 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
         serv_info->version = MYSQL_SERVER_VERSION_51;
     }
     /* Query a few settings. */
-    read_server_variables(serv_info);
+    serv_info->read_server_variables();
     /* If gtid domain exists and server is 10.0, update gtid:s */
     if (m_master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
     {
-        update_gtids(serv_info);
+        serv_info->update_gtids(m_master_gtid_domain);
     }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
@@ -678,45 +677,6 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
             MXS_ERROR("MySQL version is lower than 5.5 and 'mysql51_replication' option is "
                       "not enabled, replication tree cannot be resolved. To enable MySQL 5.1 replication "
                       "detection, add 'mysql51_replication=true' to the monitor section.");
-        }
-    }
-}
-
-/**
- * Read server_id, read_only and (if 10.X) gtid_domain_id. TODO: Move to MariaDBServer
- *
- * @param serv_info Where to save results
- */
-static void read_server_variables(MariaDBServer* serv_info)
-{
-    MXS_MONITORED_SERVER* database = serv_info->server_base;
-    string query = "SELECT @@global.server_id, @@read_only;";
-    int columns = 2;
-    if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
-    {
-        query.erase(query.end() - 1);
-        query += ", @@global.gtid_domain_id;";
-        columns = 3;
-    }
-
-    int ind_id = 0;
-    int ind_ro = 1;
-    int ind_domain = 2;
-    StringVector row;
-    if (query_one_row(database, query.c_str(), columns, &row))
-    {
-        int64_t server_id = scan_server_id(row[ind_id].c_str());
-        database->server->node_id = server_id;
-        serv_info->server_id = server_id;
-
-        ss_dassert(row[ind_ro] == "0" || row[ind_ro] == "1");
-        serv_info->read_only = (row[ind_ro] == "1");
-        if (columns == 3)
-        {
-            uint32_t domain = 0;
-            ss_debug(int rv = ) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
-            ss_dassert(rv == 1);
-            serv_info->gtid_domain_id = domain;
         }
     }
 }
@@ -748,34 +708,6 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
 }
 
 /**
- * Query gtid_current_pos and gtid_binlog_pos and save the values to the server info object.
- * Only the cluster master domain is parsed.
- *
- * @param info Server info structure for saving result TODO: move to MariaDBServer
- * @return True if successful
- */
-bool MariaDBMonitor::update_gtids(MariaDBServer* info)
-{
-    MXS_MONITORED_SERVER* database = info->server_base;
-    StringVector row;
-    const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
-    const int ind_current_pos = 0;
-    const int ind_binlog_pos = 1;
-    int64_t domain = m_master_gtid_domain;
-    ss_dassert(domain >= 0);
-    bool rval = false;
-    if (query_one_row(database, query, 2, &row))
-    {
-        info->gtid_current_pos = (row[ind_current_pos] != "") ?
-                                 Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
-        info->gtid_binlog_pos = (row[ind_binlog_pos] != "") ?
-                                Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
-        rval = true;
-    }
-    return rval;
-}
-
-/**
  * Update replication settings and gtid:s of the slave server.
  *
  * @param server Slave to update
@@ -785,31 +717,11 @@ MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
 {
     MariaDBServer* info = get_server_info(server);
     if (info->slave_status.slave_sql_running &&
-        update_replication_settings(server, info) &&
-        update_gtids(info) &&
+        info->update_replication_settings() &&
+        info->update_gtids(m_master_gtid_domain) &&
         info->do_show_slave_status(m_master_gtid_domain))
     {
         return info;
     }
     return NULL;
-}
-
-/**
- * Query a few miscellaneous replication settings.
- *
- * @param database The slave server to query
- * @param info Where to save results
- * @return True on success
- */
-bool MariaDBMonitor::update_replication_settings(MXS_MONITORED_SERVER *database, MariaDBServer* info)
-{
-    StringVector row;
-    bool ok = query_one_row(database, "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;", 3, &row);
-    if (ok)
-    {
-        info->rpl_settings.gtid_strict_mode = (row[0] == "1");
-        info->rpl_settings.log_bin = (row[1] == "1");
-        info->rpl_settings.log_slave_updates = (row[2] == "1");
-    }
-    return ok;
 }

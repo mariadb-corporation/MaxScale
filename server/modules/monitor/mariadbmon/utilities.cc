@@ -177,12 +177,21 @@ string QueryResult::get_string(int64_t column_ind) const
     return data ? data : "";
 }
 
-int64_t QueryResult::get_int(int64_t column_ind) const
+int64_t QueryResult::get_uint(int64_t column_ind) const
 {
     ss_dassert(column_ind < m_columns);
     char* data = m_rowdata[column_ind];
-    errno = 0; // strtoll sets this
-    return data ? strtoll(data, NULL, 10) : 0;
+    int64_t rval = -1;
+    if (data)
+    {
+        errno = 0; // strtoll sets this
+        auto parsed = strtoll(data, NULL, 10);
+        if (parsed >= 0 && errno == 0)
+        {
+            rval = parsed;
+        }
+    }
+    return rval;
 }
 
 bool QueryResult::get_bool(int64_t column_ind) const
@@ -190,4 +199,78 @@ bool QueryResult::get_bool(int64_t column_ind) const
     ss_dassert(column_ind < m_columns);
     char* data = m_rowdata[column_ind];
     return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
+}
+
+Gtid QueryResult::get_gtid(int64_t column_ind, int64_t gtid_domain) const
+{
+    ss_dassert(column_ind < m_columns);
+    char* data = m_rowdata[column_ind];
+    Gtid rval;
+    if (data && *data)
+    {
+        rval = Gtid(data, gtid_domain);
+    }
+    return rval;
+}
+
+Gtid::Gtid()
+    : domain(0)
+    , server_id(SERVER_ID_UNKNOWN)
+    , sequence(0)
+{}
+
+Gtid::Gtid(const char* str, int64_t search_domain)
+    : domain(0)
+    , server_id(SERVER_ID_UNKNOWN)
+    , sequence(0)
+{
+    // Autoselect only allowed with one triplet
+    ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
+    parse_triplet(str);
+    if (search_domain >= 0 && domain != search_domain)
+    {
+        // Search for the correct triplet.
+        bool found = false;
+        for (const char* next_triplet = strchr(str, ',');
+             next_triplet != NULL && !found;
+             next_triplet = strchr(next_triplet, ','))
+        {
+            parse_triplet(++next_triplet);
+            if (domain == search_domain)
+            {
+                found = true;
+            }
+        }
+        ss_dassert(found);
+    }
+}
+
+bool Gtid::operator == (const Gtid& rhs) const
+{
+    return domain == rhs.domain &&
+        server_id != SERVER_ID_UNKNOWN && server_id == rhs.server_id &&
+        sequence == rhs.sequence;
+}
+
+string Gtid::to_string() const
+{
+    std::stringstream ss;
+    if (server_id != SERVER_ID_UNKNOWN)
+    {
+        ss << domain << "-" << server_id << "-" << sequence;
+    }
+    return ss.str();
+}
+
+void Gtid::parse_triplet(const char* str)
+{
+    ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRId64 "-%" PRIu64, &domain, &server_id, &sequence);
+    ss_dassert(rv == 3);
+}
+
+string Gtid::generate_master_gtid_wait_cmd(double timeout) const
+{
+    std::stringstream query_ss;
+    query_ss << "SELECT MASTER_GTID_WAIT(\"" << to_string() << "\", " << timeout << ");";
+    return query_ss.str();
 }

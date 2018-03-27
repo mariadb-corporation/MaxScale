@@ -72,6 +72,40 @@ string get_connection_errors(const ServerVector& servers);
  */
 string monitored_servers_to_string(const ServerVector& array);
 
+class Gtid
+{
+public:
+    uint32_t domain;
+    int64_t server_id; // Is actually 32bit unsigned. 0 is only used by server versions  <= 10.1
+    uint64_t sequence;
+    Gtid();
+
+    /**
+     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
+     * the given domain is returned.
+     *
+     * @param str Gtid string
+     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
+     * autoselect, which is only allowed when the string contains one triplet.
+     */
+    Gtid(const char* str, int64_t search_domain = -1);
+
+    bool operator == (const Gtid& rhs) const;
+
+    std::string to_string() const;
+
+    /**
+     * Generate a MASTER_GTID_WAIT()-query to this gtid.
+     *
+     * @param timeout Maximum wait time in seconds
+     * @return The query
+     */
+    std::string generate_master_gtid_wait_cmd(double timeout) const;
+
+private:
+    void parse_triplet(const char* str);
+};
+
 /**
  * Helper class for simplifying working with resultsets. Used in MariaDBServer.
  */
@@ -124,13 +158,12 @@ public:
     string get_string(int64_t column_ind) const;
 
     /**
-     * Read an integer value from the current row and given column. No error checking is done on the parsing.
-     * The parsing is performed by @c strtoll(), so the caller may check errno for errors.
+     * Read a non-negative integer value from the current row and given column.
      *
      * @param column_ind Column index
-     * @return Value as integer
+     * @return Value as integer. 0 or greater indicates success, -1 is returned on error.
      */
-    int64_t get_int(int64_t column_ind) const;
+    int64_t get_uint(int64_t column_ind) const;
 
     /**
      * Read a boolean value from the current row and given column.
@@ -139,6 +172,16 @@ public:
      * @return Value as boolean. Returns true if the text is either 'Y' or '1'.
      */
     bool get_bool(int64_t column_ind) const;
+
+    /**
+     * Read a gtid values from the current row and given column. If the field is empty, will return an invalid
+     * gtid.
+     *
+     * @param column_ind Column index
+     * @param gtid_domain Which gtid domain to parse
+     * @return Value as a gtid.
+     */
+    Gtid get_gtid(int64_t column_ind, int64_t gtid_domain) const;
 
 private:
     MYSQL_RES* m_resultset; // Underlying result set, freed at dtor.

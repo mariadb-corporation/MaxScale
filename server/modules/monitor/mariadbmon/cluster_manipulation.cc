@@ -156,7 +156,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
 
             if (server_is_rejoin_suspect(mon_server, master_info, output))
             {
-                if (update_gtids(master_info))
+                if (master_info->update_gtids(m_master_gtid_domain))
                 {
                     if (can_replicate_from(mon_server, server_info, master_info))
                     {
@@ -433,7 +433,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
     bool comm_ok = true;
     if (!suspects.empty())
     {
-        if (update_gtids(master_info))
+        if (master_info->update_gtids(m_master_gtid_domain))
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
@@ -814,7 +814,7 @@ bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, i
         Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
-        query_ok = update_gtids(master_info) &&
+        query_ok = master_info->update_gtids(m_master_gtid_domain) &&
                    master_info->do_show_slave_status(m_master_gtid_domain);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
@@ -903,7 +903,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
                 if (!query_error)
                 {
                     query = "";
-                    if (update_gtids(info))
+                    if (info->update_gtids(m_master_gtid_domain))
                     {
                         success = true;
                     }
@@ -1071,7 +1071,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
     MariaDBServer* new_master_info = get_server_info(new_master);
 
     if (mxs_mysql_query(new_master->con, "FLUSH TABLES;") == 0 &&
-        update_gtids(new_master_info))
+        new_master_info->update_gtids(m_master_gtid_domain))
     {
         int query_fails = 0;
         int repl_fails = 0;
@@ -1094,7 +1094,8 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             {
                 MXS_MONITORED_SERVER* slave = wait_list[i];
                 MariaDBServer* slave_info = get_server_info(slave);
-                if (update_gtids(slave_info) && slave_info->do_show_slave_status(m_master_gtid_domain))
+                if (slave_info->update_gtids(m_master_gtid_domain) &&
+                    slave_info->do_show_slave_status(m_master_gtid_domain))
                 {
                     if (!slave_info->slave_status.last_error.empty())
                     {
@@ -1157,7 +1158,7 @@ bool MariaDBMonitor::switchover_check_preferred_master(MXS_MONITORED_SERVER* pre
     ss_dassert(preferred);
     bool rval = true;
     MariaDBServer* preferred_info = update_slave_info(preferred);
-    if (preferred_info == NULL || !check_replication_settings(preferred, preferred_info))
+    if (preferred_info == NULL || !preferred_info->check_replication_settings())
     {
         PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
                              preferred->server->unique_name);
@@ -1234,14 +1235,14 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
         {
             slaves_out->push_back(cand);
             // Check that server is not in the exclusion list while still being a valid choice.
-            if (server_is_excluded(cand) && check_replication_settings(cand, cand_info, WARNINGS_OFF))
+            if (server_is_excluded(cand) && cand_info->check_replication_settings(WARNINGS_OFF))
             {
                 valid_but_excluded.push_back(cand);
                 const char CANNOT_SELECT[] = "Promotion candidate '%s' is excluded from new "
                 "master selection.";
                 MXS_INFO(CANNOT_SELECT, cand->server->unique_name);
             }
-            else if (check_replication_settings(cand, cand_info))
+            else if (cand_info->check_replication_settings())
             {
                 // If no new master yet, accept any valid candidate. Otherwise check.
                 if (current_best == NULL || is_candidate_better(current_best_info, cand_info))
@@ -1483,49 +1484,6 @@ bool MariaDBMonitor::failover_check(json_t** error_out)
 }
 
 /**
- * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
- *
- * @param server Server to check
- * @param server_info Server info
- * @param print_on Print warnings or not
- * @return True if log_bin is on
- */
-bool check_replication_settings(const MXS_MONITORED_SERVER* server, MariaDBServer* server_info,
-                                print_repl_warnings_t print_warnings)
-{
-    bool rval = true;
-    const char* servername = server->server->unique_name;
-    if (server_info->rpl_settings.log_bin == false)
-    {
-        if (print_warnings == WARNINGS_ON)
-        {
-            const char NO_BINLOG[] =
-                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
-            MXS_WARNING(NO_BINLOG, servername);
-        }
-        rval = false;
-    }
-    else if (print_warnings == WARNINGS_ON)
-    {
-        if (server_info->rpl_settings.gtid_strict_mode == false)
-        {
-            const char NO_STRICT[] =
-                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-            MXS_WARNING(NO_STRICT, servername);
-        }
-        if (server_info->rpl_settings.log_slave_updates == false)
-        {
-            const char NO_SLAVE_UPDATES[] =
-                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-                "will break for lagging slaves if '%s' is promoted.";
-            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
-        }
-    }
-    return rval;
-}
-
-/**
  * Checks if slave can replicate from master. Only considers gtid:s and only detects obvious errors. The
  * non-detected errors will mostly be detected once the slave tries to start replicating.
  *
@@ -1538,7 +1496,7 @@ bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
                                         MariaDBServer* slave_info, MariaDBServer* master_info)
 {
     bool rval = false;
-    if (update_gtids(slave_info))
+    if (slave_info->update_gtids(m_master_gtid_domain))
     {
         Gtid slave_gtid = slave_info->gtid_current_pos;
         Gtid master_gtid = master_info->gtid_binlog_pos;

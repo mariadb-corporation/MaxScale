@@ -27,38 +27,10 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-class Gtid
+enum print_repl_warnings_t
 {
-public:
-    uint32_t domain;
-    int64_t server_id; // Is actually 32bit unsigned. 0 is only used by server versions  <= 10.1
-    uint64_t sequence;
-    Gtid();
-
-    /**
-     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
-     * the given domain is returned.
-     *
-     * @param str Gtid string
-     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
-     * autoselect, which is only allowed when the string contains one triplet.
-     */
-    Gtid(const char* str, int64_t search_domain = -1);
-
-    bool operator == (const Gtid& rhs) const;
-
-    std::string to_string() const;
-
-    /**
-     * Generate a MASTER_GTID_WAIT()-query to this gtid.
-     *
-     * @param timeout Maximum wait time in seconds
-     * @return The query
-     */
-    std::string generate_master_gtid_wait_cmd(double timeout) const;
-
-private:
-    void parse_triplet(const char* str);
+    WARNINGS_ON,
+    WARNINGS_OFF
 };
 
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
@@ -155,4 +127,33 @@ public:
      * @return True on success
      */
     bool do_show_slave_status(int64_t gtid_domain);
+
+    /**
+     * Query gtid_current_pos and gtid_binlog_pos and save the values to the server.
+     * Only the given domain is parsed.
+     *
+     * @param gtid_domain Which gtid domain should be parsed
+     * @return True if successful
+     */
+    bool update_gtids(int64_t gtid_domain);
+
+    /**
+     * Query a few miscellaneous replication settings.
+     *
+     * @return True on success
+     */
+    bool update_replication_settings();
+
+    /**
+     * Query and save server_id, read_only and (if 10.X) gtid_domain_id.
+     */
+    void read_server_variables();
+
+    /**
+     * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
+     *
+     * @param print_on Print warnings or not
+     * @return True if log_bin is on
+     */
+    bool check_replication_settings(print_repl_warnings_t print_warnings = WARNINGS_ON);
 };
