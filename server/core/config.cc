@@ -80,6 +80,7 @@ const char CN_CONNECTION_TIMEOUT[]            = "connection_timeout";
 const char CN_DATA[]                          = "data";
 const char CN_DEFAULT[]                       = "default";
 const char CN_DESCRIPTION[]                   = "description";
+const char CN_DUMP_LAST_STATEMENTS[]          = "dump_last_statements";
 const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
 const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
@@ -121,6 +122,7 @@ const char CN_RELATIONSHIPS[]                 = "relationships";
 const char CN_LINKS[]                         = "links";
 const char CN_LOCAL_ADDRESS[]                 = "local_address";
 const char CN_REQUIRED[]                      = "required";
+const char CN_RETAIN_LAST_STATEMENTS[]        = "retain_last_statements";
 const char CN_RETRY_ON_FAILURE[]              = "retry_on_failure";
 const char CN_ROUTER[]                        = "router";
 const char CN_ROUTER_DIAGNOSTICS[]            = "router_diagnostics";
@@ -1780,6 +1782,39 @@ handle_global_item(const char *name, const char *value)
             MXS_ERROR("%s is an invalid value for '%s', using default %d instead.",
                       value, CN_USERS_REFRESH_TIME, USERS_REFRESH_TIME_DEFAULT);
             gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+        }
+    }
+    else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            session_set_retain_last_statements(intval);
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for '%s': %s", CN_RETAIN_LAST_STATEMENTS, value);
+        }
+    }
+    else if (strcmp(name, CN_DUMP_LAST_STATEMENTS) == 0)
+    {
+        if (strcmp(value, "on_close") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_CLOSE);
+        }
+        else if (strcmp(value, "on_error") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_ERROR);
+        }
+        else if (strcmp(value, "never") == 0)
+        {
+            session_set_dump_statements(SESSION_DUMP_STATEMENTS_NEVER);
+        }
+        else
+        {
+            MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
+                      CN_DUMP_LAST_STATEMENTS);
         }
     }
     else

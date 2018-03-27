@@ -30,6 +30,11 @@
 #ifdef __cplusplus
 #include <tr1/unordered_map>
 #include <string>
+#include <deque>
+#include <vector>
+typedef std::deque<std::vector<uint8_t> > SessionStmtQueue;
+#else
+typedef void SessionStmtQueue;
 #endif
 
 MXS_BEGIN_DECLS
@@ -79,6 +84,13 @@ typedef enum
     /*< An explicit READ WRITE transaction is ending. */
     SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE),
 } mxs_session_trx_state_t;
+
+typedef enum
+{
+    SESSION_DUMP_STATEMENTS_NEVER,
+    SESSION_DUMP_STATEMENTS_ON_CLOSE,
+    SESSION_DUMP_STATEMENTS_ON_ERROR,
+} session_dump_statements_t;
 
 /**
  * The session statistics structure
@@ -200,7 +212,8 @@ typedef struct session
         MXS_UPSTREAM up; /*< Upward component to receive buffer. */
         GWBUF* buffer;   /*< Buffer to deliver to up. */
     } response;                               /*< Shortcircuited response */
-    skygw_chk_t             ses_chk_tail;
+    SessionStmtQueue*      last_statements;   /*< The N last statements by the client */
+    skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
 /**
@@ -622,5 +635,42 @@ char* session_set_variable_value(MXS_SESSION* session,
                                  const char* name_end,
                                  const char* value_begin,
                                  const char* value_end);
+
+/**
+ * @brief Specify how many statements each session should retain for
+ *        debugging purposes.
+ *
+ * @param n  The number of statements.
+ */
+void session_set_retain_last_statements(uint32_t n);
+
+/**
+ * @brief Retain provided statement, if configured to do so.
+ *
+ * @param session  The session.
+ * @param buffer   Buffer assumed to contain a full statement.
+ */
+void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
+
+/**
+ * @brief Dump the last statements, if statements have been retained.
+ *
+ * @param session  The session.
+ */
+void session_dump_statements(MXS_SESSION* pSession);
+
+/**
+ * @brief Specify whether statements should be dumped or not.
+ *
+ * @param value    Whether and when to dump statements.
+ */
+void session_set_dump_statements(session_dump_statements_t value);
+
+/**
+ * @brief Returns in what contexts statements should be dumped.
+ *
+ * @return Whether and when to dump statements.
+ */
+session_dump_statements_t session_get_dump_statements();
 
 MXS_END_DECLS

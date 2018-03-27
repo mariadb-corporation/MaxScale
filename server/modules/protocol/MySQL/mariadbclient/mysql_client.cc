@@ -1030,6 +1030,8 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             // is thread and not session specific.
             qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
         }
+
+        session_retain_statement(session, read_buffer);
     }
     /** Update the current protocol command being executed */
     else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
@@ -1464,6 +1466,11 @@ static int gw_client_hangup_event(DCB *dcb)
         CHK_SESSION(session);
         if (session->state != SESSION_STATE_DUMMY && !session_valid_for_pool(session))
         {
+            if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
+            {
+                session_dump_statements(session);
+            }
+
             // The client did not send a COM_QUIT packet
             modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
         }

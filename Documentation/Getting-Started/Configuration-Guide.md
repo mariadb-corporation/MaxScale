@@ -726,6 +726,35 @@ possible to explicitly cause the users of a service to be reloaded.
 users_refresh_time=120
 ```
 
+#### `retain_last_statements`
+
+How many statements MaxScale should store for each session. This is for
+debugging purposes, as in case of problems it is often of value to be able
+to find out exactly what statements were sent before a particular
+problem turned up. See also `dump_last_statements` using which the actual
+dumping of the statements is enabled.
+```
+retain_last_statements=20
+```
+Default is `0`.
+
+#### `dump_last_statements`
+
+With this configuration item it is specified in what circumstances MaxScale
+should dump the last statements that a client sent. The allowed values are
+`never, `on_error` and `on_close`. With `never` the statements are never
+logged, with `on_error` they are logged if the client closes the connection
+improperly, and with `on_close` they are always logged when a client session
+is closed.
+```
+dump_last_statements=on_error
+```
+Default is `never`.
+
+Note that you need to specify with `retain_last_statements` how many statements
+MaxScale should retain for each session. Unless it has been set to another value
+than `0`, this configuration setting will not have an effect.
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the
