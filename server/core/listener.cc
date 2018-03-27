@@ -319,6 +319,9 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         /** Disable SSLv3 */
         SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_NO_SSLv3);
 
+        // Disable session cache
+        SSL_CTX_set_session_cache_mode(ssl_listener->ctx, SSL_SESS_CACHE_OFF);
+
         /** Generate the 512-bit and 1024-bit RSA keys */
         if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
         {
