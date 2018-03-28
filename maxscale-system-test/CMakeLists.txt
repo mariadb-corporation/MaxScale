@@ -596,6 +596,9 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1503
 add_test_executable(mxs1503_master_reconnection.cpp mxs1503_master_reconnection mxs1503_master_reconnection LABELS REPL_BACKEND)
 
+# Master reconnection with session commands
+add_test_executable(mxs1503_queued_sescmd.cpp mxs1503_queued_sescmd mxs1503_master_reconnection LABELS REPL_BACKEND)
+
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS REPL_BACKEND)
