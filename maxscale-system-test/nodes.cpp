@@ -166,8 +166,6 @@ int Nodes::ssh_node(int node, const char *ssh, bool sudo)
 
 
     free(cmd);
-    return rc;
-
 
     if (WIFEXITED(rc))
     {
