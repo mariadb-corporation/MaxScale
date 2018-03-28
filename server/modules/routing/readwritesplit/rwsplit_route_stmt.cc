@@ -690,7 +690,7 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
 
 bool should_replace_master(RWSplitSession *rses, SRWBackend& target)
 {
-    return rses->rses_config.allow_master_change &&
+    return rses->rses_config.master_reconnection &&
         // We have a target server and it's not the current master
         target && target != rses->current_master &&
         // We are not inside a transaction (also checks for autocommit=1)

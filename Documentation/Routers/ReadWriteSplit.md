@@ -105,7 +105,7 @@ connections alive even if they are not used. This is a common problem if the
 backend servers have a low _wait_timeout_ value and the client connections live
 for a long time.
 
-### `allow_master_change`
+### `master_reconnection`
 
 Allow the master server to change mid-session. This feature was introduced in
 MaxScale 2.3.0 and is disabled by default.
@@ -114,7 +114,7 @@ When a readwritesplit session starts, it will pick a master server as the
 current master server of that session. By default, when this master server
 changes mid-session, the connection will be closed.
 
-If the `allow_master_change` parameter is enabled, the master server is allowed
+If the `master_reconnection` parameter is enabled, the master server is allowed
 to change as long as the session meets the following criteria:
 
 * The session is already connected to the slave that was chosen to be the new master
@@ -123,7 +123,7 @@ to change as long as the session meets the following criteria:
 * No `LOAD DATA LOCAL INFILE` is in progress
 * There are no queries being actively routed to the old master
 
-When `allow_master_change` is enabled in conjunction with either
+When `master_reconnection` is enabled in conjunction with either
 `master_failure_mode=fail_on_write` or `master_failure_mode=error_on_write`, the
 session can recover from the loss of a master server. This means that when a
 session starts without a master server and later a slave server that it is
@@ -295,7 +295,7 @@ long as slave servers are available.
 **Note:** If _master_failure_mode_ is set to _error_on_write_ and the connection
 to the master is lost, by default, clients will not be able to execute write
 queries without reconnecting to MariaDB MaxScale once a new master is
-available. If [`allow_master_change`](#allow_master_change) is enabled, the
+available. If [`master_reconnection`](#master_reconnection) is enabled, the
 session can recover if one of the slaves is promoted as the master.
 
 ### `retry_failed_reads`
