@@ -1376,17 +1376,32 @@ static void handleError(MXS_ROUTER *instance,
                         can_continue = true;
                     }
                 }
-                else if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
+                else
                 {
-                    ss_dassert(backend);
-                    MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                              " for a result. Client sessions will be closed.",
-                              backend->name(), backend->uri());
-                    backend->server()->master_err_is_logged = true;
+                    // We were expecting a response but we aren't going to get one
+                    rses->expected_responses--;
+
+                    if (rses->rses_config.master_failure_mode == RW_ERROR_ON_WRITE)
+                    {
+                        /** In error_on_write mode, the session can continue even
+                         * if the master is lost. Send a read-only error to
+                         * the client to let it know that the query failed. */
+                        can_continue = true;
+                        send_readonly_error(rses->client_dcb);
+                    }
+
+                    if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
+                    {
+                        ss_dassert(backend);
+                        MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                            " for a result. Client sessions will be closed.",
+                                  backend->name(), backend->uri());
+                        backend->server()->master_err_is_logged = true;
+                    }
                 }
 
                 *succp = can_continue;
-                backend->close(mxs::Backend::CLOSE_FATAL);
+                backend->close();
             }
             else
             {

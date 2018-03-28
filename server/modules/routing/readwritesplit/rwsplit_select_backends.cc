@@ -351,12 +351,9 @@ bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
     {
         if (backend->can_connect() && backend->connect(session, sescmd_list))
         {
-            if (sescmd_list && sescmd_list->size())
+            if (sescmd_list && sescmd_list->size() && expected_responses)
             {
-                if (expected_responses)
-                {
-                    (*expected_responses)++;
-                }
+                (*expected_responses)++;
             }
 
             slaves_connected++;

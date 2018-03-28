@@ -167,6 +167,30 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
         {
             succp = handle_master_is_target(inst, rses, &target);
 
+            // Check if we need to connect to the master server in order to use it
+            if (succp && target && !target->in_use() && target->can_connect())
+            {
+                if (rses->rses_config.master_reconnection)
+                {
+                    if ((!rses->rses_config.disable_sescmd_history || rses->recv_sescmd == 0))
+                    {
+                        target->connect(rses->client_dcb->session, &rses->sescmd_list);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Cannot reconnect to master, session command"
+                                  " history is disabled (session has executed"
+                                  " %lu session commands).", rses->recv_sescmd);
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("The connection to the master was lost but "
+                              "'master_reconnection' is not enabled.");
+                    succp = false;
+                }
+            }
+
             if (!rses->rses_config.strict_multi_stmt &&
                 !rses->rses_config.strict_sp_calls &&
                 rses->target_node == rses->current_master)
@@ -462,7 +486,7 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
 
         if (master)
         {
-            if (master->in_use())
+            if (master->in_use() || master->can_connect())
             {
                 if (master->is_master())
                 {
@@ -479,10 +503,6 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                 MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
                           master->name());
             }
-        }
-        else
-        {
-            MXS_ERROR("No master server available at this time.");
         }
     }
 

@@ -154,7 +154,7 @@ public:
      *
      * This will close all active connections created by the backend.
      */
-    void close(close_type type = CLOSE_NORMAL);
+    virtual void close(close_type type = CLOSE_NORMAL);
 
     /**
      * @brief Get a pointer to the internal DCB

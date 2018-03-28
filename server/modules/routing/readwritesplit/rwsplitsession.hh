@@ -66,6 +66,7 @@ public:
 
     bool execute_session_command();
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
+    void close(close_type type = CLOSE_NORMAL);
 
     inline void set_large_packet(bool value)
     {

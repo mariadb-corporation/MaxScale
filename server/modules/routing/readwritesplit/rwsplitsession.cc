@@ -79,6 +79,12 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
     return mxs::Backend::write(buffer);
 }
 
+void RWBackend::close(close_type type)
+{
+    m_reply_state = REPLY_STATE_DONE;
+    mxs::Backend::close(type);
+}
+
 uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
 {
     uint32_t rval = 0;
