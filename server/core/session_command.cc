@@ -16,7 +16,8 @@
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
 
-using namespace maxscale;
+namespace maxscale
+{
 
 void SessionCommand::mark_reply_received()
 {
@@ -62,6 +63,11 @@ SessionCommand::~SessionCommand()
 {
 }
 
+bool SessionCommand::eq(const SessionCommand& rhs) const
+{
+    return rhs.m_buffer.compare(m_buffer) == 0;
+}
+
 std::string SessionCommand::to_string()
 {
     std::string str;
@@ -79,4 +85,6 @@ std::string SessionCommand::to_string()
     m_buffer.reset(buf);
 
     return str;
+}
+
 }

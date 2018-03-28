@@ -23,6 +23,10 @@
 namespace maxscale
 {
 
+class SessionCommand;
+typedef std::tr1::shared_ptr<SessionCommand> SSessionCommand;
+typedef std::list<SSessionCommand> SessionCommandList;
+
 class SessionCommand
 {
     SessionCommand(const SessionCommand&);
@@ -78,6 +82,29 @@ public:
      */
     std::string to_string();
 
+    /**
+     * @brief Equality comparison
+     *
+     * @return True if @c rhs is equal
+     */
+    bool eq(const SessionCommand& rhs) const;
+
+    class Equals: public std::unary_function<const SSessionCommand&, bool>
+    {
+    public:
+        Equals(const SSessionCommand& base):
+        m_base(base)
+        {}
+
+        bool operator ()(const SSessionCommand& rhs)
+        {
+            return m_base->eq(*rhs);
+        }
+
+    private:
+        const SSessionCommand& m_base;
+    };
+
 private:
     mxs::Buffer m_buffer;    /**< The buffer containing the command */
     uint8_t     m_command;   /**< The command being executed */
@@ -85,7 +112,14 @@ private:
     bool        m_reply_sent; /**< Whether the session command reply has been sent */
 };
 
-typedef std::tr1::shared_ptr<SessionCommand> SSessionCommand;
-typedef std::list<SSessionCommand> SessionCommandList;
+inline bool operator ==(const SessionCommand& lhs, const SessionCommand& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+inline bool operator !=(const SessionCommand& lhs, const SessionCommand& rhs)
+{
+    return !lhs.eq(rhs);
+}
 
 }

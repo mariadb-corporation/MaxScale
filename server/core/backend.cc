@@ -123,7 +123,7 @@ bool Backend::execute_session_command()
 
 void Backend::append_session_command(GWBUF* buffer, uint64_t sequence)
 {
-    m_session_commands.push_back(SSessionCommand(new SessionCommand(buffer, sequence)));
+    append_session_command(SSessionCommand(new SessionCommand(buffer, sequence)));
 }
 
 void Backend::append_session_command(const SSessionCommand& sescmd)

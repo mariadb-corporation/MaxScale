@@ -23,6 +23,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
+#include <maxscale/session_command.hh>
 
 #include "routeinfo.hh"
 #include "rwsplit_internal.hh"
@@ -240,6 +241,54 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
 }
 
 /**
+ * Purge session command history
+ *
+ * @param rses   Router session
+ * @param sescmd Executed session command
+ */
+static void purge_history(RWSplitSession* rses, mxs::SSessionCommand& sescmd)
+{
+    /**
+     * We can try to purge duplicate text protocol session commands. This
+     * makes the history size smaller but at the cost of being able to handle
+     * the more complex user variable modifications. To keep the best of both
+     * worlds, keeping the first and last copy of each command should be
+     * an adequate compromise. This way executing the following SQL will still
+     * produce the correct result.
+     *
+     * USE test;
+     * SET @myvar = (SELECT COUNT(*) FROM t1);
+     * USE test;
+     *
+     * Another option would be to keep the first session command but that would
+     * require more work to be done in the session command response processing.
+     * This would be a better alternative but the gain might not be optimal.
+     */
+
+    // As the PS handles map to explicit IDs, we must retain all COM_STMT_PREPARE commands
+    if (sescmd->get_command() != MXS_COM_STMT_PREPARE)
+    {
+        auto first = std::find_if(rses->sescmd_list.begin(), rses->sescmd_list.end(),
+                                  mxs::SessionCommand::Equals(sescmd));
+
+        if (first != rses->sescmd_list.end())
+        {
+            // We have at least one of these commands. See if we have a second one
+            auto second = std::find_if(std::next(first), rses->sescmd_list.end(),
+                                       mxs::SessionCommand::Equals(sescmd));
+
+            if (second != rses->sescmd_list.end())
+            {
+                // We have a total of three commands, remove the middle one
+                auto old_cmd = *second;
+                rses->sescmd_responses.erase(old_cmd->get_position());
+                rses->sescmd_list.erase(second);
+            }
+        }
+    }
+}
+
+/**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
  * struct. Thus, they can be replayed in backends which are
@@ -315,7 +364,7 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     }
 
     if (rses->rses_config.max_sescmd_history > 0 &&
-        rses->sescmd_count >= rses->rses_config.max_sescmd_history)
+        rses->sescmd_list.size() >= rses->rses_config.max_sescmd_history)
     {
         MXS_WARNING("Router session exceeded session command history limit. "
                     "Slave recovery is disabled and only slave servers with "
@@ -338,6 +387,7 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     }
     else
     {
+        purge_history(rses, sescmd);
         rses->sescmd_list.push_back(sescmd);
     }
 
