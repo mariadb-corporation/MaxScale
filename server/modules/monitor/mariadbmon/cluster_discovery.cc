@@ -695,7 +695,7 @@ static void read_server_variables(MariaDBServer* serv_info)
     if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
     {
         query.erase(query.end() - 1);
-        query += ", @@gtid_domain_id;";
+        query += ", @@global.gtid_domain_id;";
         columns = 3;
     }
 
