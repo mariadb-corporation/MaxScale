@@ -26,19 +26,24 @@ namespace
  * Examine the query type, transaction state and routing hints. Find out the
  * target for query routing.
  *
- *  @param qtype      Type of query
- *  @param trx_active Is transacation active or not
- *  @param hint       Pointer to list of hints attached to the query buffer
+ *  @param session               The MaxScale session.
+ *  @param use_sql_variables_in  Where statements using SQL variables should be sent.
+ *  @param load_active           Whether LOAD DATA is on going.
+ *  @param command               The current command.
+ *  @param qtype                 Type of query
+ *  @param query_hints           Pointer to list of hints attached to the query buffer
  *
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
-                                uint32_t qtype, HINT *query_hints)
+route_target_t get_route_target(MXS_SESSION* session,
+                                mxs_target_t use_sql_variables_in,
+                                bool load_active,
+                                uint8_t command,
+                                uint32_t qtype,
+                                HINT *query_hints)
 {
-    bool trx_active = session_trx_is_active(rses->client_dcb->session);
-    bool load_active = rses->load_data_state != LOAD_DATA_INACTIVE;
-    mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
+    bool trx_active = session_trx_is_active(session);
     int target = TARGET_UNDEFINED;
 
     /**
@@ -126,7 +131,7 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
             target = TARGET_MASTER;
         }
     }
-    else if (session_trx_is_read_only(rses->client_dcb->session))
+    else if (session_trx_is_read_only(session))
     {
         /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
         target = TARGET_SLAVE;
@@ -738,7 +743,14 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 *type = rses->ps_manager.get_type(*stmt_id);
             }
 
-            route_target = get_route_target(rses, *command, *type, buffer->hint);
+            MXS_SESSION* session = rses->client_dcb->session;
+            mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
+            bool load_active = (rses->load_data_state != LOAD_DATA_INACTIVE);
+
+            route_target = get_route_target(session,
+                                            use_sql_variables_in,
+                                            load_active,
+                                            *command, *type, buffer->hint);
         }
     }
     else
