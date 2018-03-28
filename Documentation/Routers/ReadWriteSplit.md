@@ -175,14 +175,23 @@ the slave with the least amount of connections
 
 ### `max_sescmd_history`
 
-**`max_sescmd_history`** sets a limit on how many session commands each session
-can execute before the session command history is disabled. The default is an
-unlimited number of session commands.
+**`max_sescmd_history`** sets a limit on how many distinct session commands each
+session can execute before the session command history is disabled. The default
+is 50 session commands.
 
 ```
 # Set a limit on the session command history
 max_sescmd_history=1500
 ```
+
+The first and last execution of each session command is stored. This means that
+with `N` distinct session commands, the minimum value of `max_sescmd_history` to
+guarantee that all of them are kept in the history is `N * 2`. In practice, the
+real history size required to store the commands is closer to `N`.
+
+If you have long-running sessions which change the session state often, increase
+the value of this parameter if server reconnections fail due to disabled session
+command history.
 
 When a limitation is set, it effectively creates a cap on the session's memory
 consumption. This might be useful if connection pooling is used and the sessions
@@ -200,7 +209,9 @@ This option is only intended to be enabled if the value of
 failed slave to be replaced with a standby slave server.
 
 In versions 2.0 and older, the session command history is enabled by default.
-Starting with version 2.1, the session command history is disabled by default.
+In version 2.1 and 2.2, the session command history is disabled by default.  In
+2.3 and newer versions, the session command is enabled but it is limited to a
+default of 50 session commands after which the history is disabled.
 
 ```
 # Disable the session command history

@@ -10,6 +10,24 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Session Command History
+
+The _readwritesplit_ session command history is now enabled mby default but it
+is limited to a total of 50 distict session commands. This default allows most
+sessions to leverage the newly improved reconnection mechanism without having to
+explicitly enable the history. When the limit of 50 commands is exceeded, the
+session command history is disabled. This makes it possible to use pooled
+connections by default without having to explicitly disable the history (this
+was the case with pre-2.1 versions of MaxScale).
+
+The way that the history is stored has also changed. Instead of storing all
+session commands, each session only stores the first and last execution of each
+command. This way the history is compressed into a compact representation while
+still retaining the relative order of each command.
+
+To keep the old functionality, add `disable_sescmd_history=true` to the service
+definition.
+
 ## Dropped Features
 
 ## New Features
