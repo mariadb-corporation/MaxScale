@@ -98,6 +98,38 @@ static inline bool locked_to_master(RWSplitSession *rses)
     return rses->large_query || (rses->current_master && rses->target_node == rses->current_master);
 }
 
+static bool prepare_target(RWSplitSession* rses, SRWBackend& target, route_target_t route_target)
+{
+    bool rval = true;
+
+    // Check if we need to connect to the server in order to use it
+    if (!target->in_use() && target->can_connect())
+    {
+        if (TARGET_IS_SLAVE(route_target) ||
+            (rses->rses_config.master_reconnection && TARGET_IS_MASTER(route_target)))
+        {
+            if ((!rses->rses_config.disable_sescmd_history || rses->recv_sescmd == 0))
+            {
+                rval = target->connect(rses->client_dcb->session, &rses->sescmd_list);
+            }
+            else
+            {
+                MXS_ERROR("Cannot reconnect to server '%s', session command"
+                          " history is disabled (session has executed"
+                          " %lu session commands).", target->name(), rses->recv_sescmd);
+            }
+        }
+        else if (TARGET_IS_MASTER(route_target))
+        {
+            MXS_ERROR("The connection to the master was lost and the connection "
+                      "could be recreated but 'master_reconnection' is not enabled.");
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -167,30 +199,6 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
         {
             succp = handle_master_is_target(inst, rses, &target);
 
-            // Check if we need to connect to the master server in order to use it
-            if (succp && target && !target->in_use() && target->can_connect())
-            {
-                if (rses->rses_config.master_reconnection)
-                {
-                    if ((!rses->rses_config.disable_sescmd_history || rses->recv_sescmd == 0))
-                    {
-                        target->connect(rses->client_dcb->session, &rses->sescmd_list);
-                    }
-                    else
-                    {
-                        MXS_ERROR("Cannot reconnect to master, session command"
-                                  " history is disabled (session has executed"
-                                  " %lu session commands).", rses->recv_sescmd);
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("The connection to the master was lost but "
-                              "'master_reconnection' is not enabled.");
-                    succp = false;
-                }
-            }
-
             if (!rses->rses_config.strict_multi_stmt &&
                 !rses->rses_config.strict_sp_calls &&
                 rses->target_node == rses->current_master)
@@ -200,8 +208,9 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             }
         }
 
-        if (target && succp) /*< Have DCB of the target backend */
+        if (succp && target && prepare_target(rses, target, route_target))
         {
+            // Target server was found and is in the correct state
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
             succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
 
@@ -214,6 +223,10 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
                 rses->exec_map[stmt_id] = target;
                 MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
             }
+        }
+        else
+        {
+            succp = false;
         }
     }
 
@@ -381,8 +394,7 @@ SRWBackend get_slave_backend(RWSplitSession *rses, int max_rlag)
     {
         auto& backend = *it;
 
-        if (backend->in_use() && // Backend is in use
-            (backend->is_master() || backend->is_slave()) && // Either a master or a slave
+        if ((backend->is_master() || backend->is_slave()) && // Either a master or a slave
             rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
         {
             if (!rval)
@@ -858,7 +870,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     rses->wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
-    GWBUF *send_buf = gwbuf_clone(querybuf); ;
+    GWBUF *send_buf = gwbuf_clone(querybuf);
     if (cmd == COM_QUERY && inst->config().enable_causal_read && rses->gtid_pos != "")
     {
         send_buf = add_prefix_wait_gtid(inst, rses, target->server(), send_buf);
