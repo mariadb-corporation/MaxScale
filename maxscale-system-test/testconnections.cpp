@@ -769,9 +769,9 @@ int TestConnections::copy_maxscale_logs(double timestamp)
             maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
         }
 
-        const char* command = "for i in `find /tmp/ -name 'core*'`; do test -e $i && exit 1; done";
+        const char* command = "for i in `find /tmp/ -name 'core*'`; do test -e $i && exit 42; done";
         int rc = maxscales->ssh_node_f(i, true, command);
-        assert(rc == 0, "Test should not generate core files");
+        assert(rc != 42, "Test should not generate core files");
     }
     return 0;
 }
