@@ -29,7 +29,7 @@ the name is used later as a reference in a listener section.
 For more details about the standard service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
-## Optional parameters
+## Parameters
 
 ### `max_slave_connections`
 
@@ -73,10 +73,6 @@ with embedded session variable modifications, such as:
 
 In above-mentioned case the user-defined variable would only be updated in the
 master where the query would be routed to due to the `INSERT` statement.
-
-**Note:** As of version 2.1 of MaxScale, all of the router options can also be
-defined as parameters. The values defined in _router_options_ will have priority
-over the parameters.
 
 ```
 [Splitter Service]
@@ -131,26 +127,6 @@ connected to is promoted as the master, the session will come out of the
 read-only mode (described in detail in the
 [`master_failure_mode`](#master_failure_mode) documentation).
 
-## Router options
-
-**`router_options`** may include multiple **readwritesplit**-specific options.
-All the options are parameter-value pairs. All parameters listed in this section
-must be configured as a value in `router_options`.
-
-Multiple options can be defined as a comma-separated list of parameter-value
-pairs.
-
-```
-router_options=<option>,<option>
-```
-
-For example, to set **`slave_selection_criteria`** and
-**`disable_sescmd_history`**, write
-
-```
-router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS,disable_sescmd_history=true
-```
-
 ### `slave_selection_criteria`
 
 This option controls how the readwritesplit router chooses the slaves it
@@ -161,7 +137,7 @@ read queries to the slave server with the lowest amount of ongoing queries i.e.
 The option syntax:
 
 ```
-router_options=slave_selection_criteria=<criteria>
+slave_selection_criteria=<criteria>
 ```
 
 Where `<criteria>` is one of the following values.
@@ -205,7 +181,7 @@ unlimited number of session commands.
 
 ```
 # Set a limit on the session command history
-router_options=max_sescmd_history=1500
+max_sescmd_history=1500
 ```
 
 When a limitation is set, it effectively creates a cap on the session's memory
@@ -228,7 +204,7 @@ Starting with version 2.1, the session command history is disabled by default.
 
 ```
 # Disable the session command history
-router_options=disable_sescmd_history=true
+disable_sescmd_history=true
 ```
 
 ### `master_accept_reads`
@@ -241,7 +217,7 @@ By default, no reads are sent to the master.
 
 ```
 # Use the master for reads
-router_options=master_accept_reads=true
+master_accept_reads=true
 ```
 
 ### `strict_multi_stmt`
@@ -262,7 +238,7 @@ query.
 
 ```
 # Enable strict multi-statement mode
-router_options=strict_multi_stmt=true
+strict_multi_stmt=true
 ```
 
 ### `strict_sp_calls`
@@ -324,6 +300,30 @@ hints when you are sure that they can cause no harm.
 
 For a list of readwritesplit limitations, please read the
 [Limitations](../About/Limitations.md) document.
+
+## Legacy Configuration
+
+In older versions of MaxScale, routers were configured via the _router_options_
+parameter. This functionality is deprecated and should not be used.
+
+**`router_options`** may include multiple **readwritesplit**-specific options.
+All the options are parameter-value pairs. All parameters listed in this section
+must be configured as a value in `router_options`.
+
+Multiple options can be defined as a comma-separated list of parameter-value
+pairs.
+
+```
+router_options=<option>,<option>
+```
+
+For example, to set **`slave_selection_criteria`** and
+**`disable_sescmd_history`**, write
+
+```
+router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS,disable_sescmd_history=true
+```
+
 
 ## Examples
 
