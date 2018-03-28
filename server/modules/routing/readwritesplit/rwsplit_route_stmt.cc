@@ -344,6 +344,16 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
 }
 
 /**
+ * Check if replication lag is below acceptable levels
+ */
+static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
+{
+    return max_rlag == MAX_RLAG_UNDEFINED ||
+        (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
+        backend->server()->rlag <= max_rlag);
+}
+
+/**
  * Provide the router with a reference to a suitable backend
  *
  * @param rses     Pointer to router client session
@@ -396,84 +406,38 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
 
     if (btype == BE_SLAVE)
     {
-        for (SRWBackendList::iterator it = rses->backends.begin();
-             it != rses->backends.end(); it++)
+        for (auto it = rses->backends.begin(); it != rses->backends.end(); it++)
         {
-            SRWBackend& backend = *it;
+            auto& backend = *it;
 
-            /**
-             * Unused backend or backend which is not master nor
-             * slave can't be used
-             */
-            if (!backend->in_use() ||
-                (!backend->is_master() && !backend->is_slave()))
+            if (backend->in_use() && // Backend is in use
+                (backend->is_master() || backend->is_slave()) && // Either a master or a slave
+                rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
             {
-                continue;
-            }
-            /**
-             * If there are no candidates yet accept both master or
-             * slave.
-             */
-            else if (!rval)
-            {
-                /**
-                 * Ensure that master has not changed during
-                 * session and abort if it has.
-                 */
-                if (backend->is_master() && backend == rses->current_master)
+                if (!rval)
                 {
-                    /** found master */
-                    rval = backend;
-                }
-                /**
-                 * Ensure that max replication lag is not set
-                 * or that candidate's lag doesn't exceed the
-                 * maximum allowed replication lag.
-                 */
-                else if (max_rlag == MAX_RLAG_UNDEFINED ||
-                         (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                          backend->server()->rlag <= max_rlag))
-                {
-                    /** found slave */
-                    rval = backend;
-                }
-            }
-            /**
-             * If candidate is master, any slave which doesn't break
-             * replication lag limits replaces it.
-             */
-            else if (rval->is_master() && backend->is_slave() &&
-                     (max_rlag == MAX_RLAG_UNDEFINED ||
-                      (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                       backend->server()->rlag <= max_rlag)) &&
-                     !rses->rses_config.master_accept_reads)
-            {
-                /** found slave */
-                rval = backend;
-            }
-            /**
-             * When candidate exists, compare it against the current
-             * backend and update assign it to new candidate if
-             * necessary.
-             */
-            else if (backend->is_slave() ||
-                     (rses->rses_config.master_accept_reads &&
-                      backend->is_master()))
-            {
-                if (max_rlag == MAX_RLAG_UNDEFINED ||
-                    (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                     backend->server()->rlag <= max_rlag))
-                {
-                    rval = compare_backends(rval, backend, rses->rses_config.slave_selection_criteria);
+                    // No previous candidate, accept any valid server (includes master)
+                    if ((backend->is_master() && backend == rses->current_master) ||
+                        backend->is_slave())
+                    {
+                        rval = backend;
+                    }
                 }
                 else
                 {
-                    MXS_INFO("Server %s is too much behind the master "
-                             "(%d seconds) and can't be chosen",
-                             backend->uri(), backend->server()->rlag);
+                    if (!rses->rses_config.master_accept_reads && rval->is_master())
+                    {
+                        // Pick slaves over masters with master_accept_reads=false
+                        rval = backend;
+                    }
+                    else
+                    {
+                        // Compare the two servers and pick the best one
+                        rval = compare_backends(rval, backend, rses->rses_config.slave_selection_criteria);
+                    }
                 }
             }
-        } /*<  for */
+        }
     }
     /**
      * If target was originally master only then the execution jumps
