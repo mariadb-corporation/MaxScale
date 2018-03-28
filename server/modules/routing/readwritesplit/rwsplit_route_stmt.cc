@@ -389,6 +389,7 @@ SRWBackend get_hinted_backend(RWSplitSession *rses, char *name)
 SRWBackend get_slave_backend(RWSplitSession *rses, int max_rlag)
 {
     SRWBackend rval;
+    auto counts = get_slave_counts(rses->backends, rses->current_master);
 
     for (auto it = rses->backends.begin(); it != rses->backends.end(); it++)
     {
@@ -406,7 +407,7 @@ SRWBackend get_slave_backend(RWSplitSession *rses, int max_rlag)
                     rval = backend;
                 }
             }
-            else
+            else if (backend->in_use() || counts.second < rses->router->max_slave_count())
             {
                 if (!rses->rses_config.master_accept_reads && rval->is_master())
                 {

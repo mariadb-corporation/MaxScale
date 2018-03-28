@@ -15,6 +15,7 @@
 #include "readwritesplit.hh"
 
 #include <string>
+#include <utility>
 
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
@@ -100,6 +101,17 @@ bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
                                     int* expected_responses,
                                     connection_type type);
 SRWBackend get_root_master(const SRWBackendList& backends);
+
+/**
+ * Get total slave count and connected slave count
+ *
+ * @param backends List of backend servers
+ * @param master   Current master
+ *
+ * @return Total number of slaves and number of slaves we are connected to
+ */
+std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& master);
+
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
