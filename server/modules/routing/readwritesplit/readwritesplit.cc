@@ -1272,11 +1272,15 @@ static void clientReply(MXS_ROUTER *instance,
         process_sescmd_response(rses, backend, &writebuf);
     }
 
-    bool queue_routed = false;
-
-    if (rses->expected_responses == 0 && rses->query_queue)
+    if (backend->session_command_count())
     {
-        queue_routed = true;
+        if (backend->execute_session_command())
+        {
+            rses->expected_responses++;
+        }
+    }
+    else if (rses->expected_responses == 0 && rses->query_queue)
+    {
         route_stored_query(rses);
     }
 
@@ -1285,17 +1289,6 @@ static void clientReply(MXS_ROUTER *instance,
         ss_dassert(client_dcb);
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
-    }
-    /** Check pending session commands */
-    else if (!queue_routed && backend->session_command_count())
-    {
-        MXS_DEBUG("Backend %s processed reply and starts to execute active cursor.",
-                  backend->uri());
-
-        if (backend->execute_session_command())
-        {
-            rses->expected_responses++;
-        }
     }
 }
 

@@ -211,18 +211,27 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
 
         if (succp && target && prepare_target(rses, target, route_target))
         {
-            // Target server was found and is in the correct state
-            ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
-            succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
-
-            if (succp && command == MXS_COM_STMT_EXECUTE && not_locked_to_master)
+            if (target->session_command_count())
             {
-                /** Track the targets of the COM_STMT_EXECUTE statements. This
-                 * information is used to route all COM_STMT_FETCH commands
-                 * to the same server where the COM_STMT_EXECUTE was done. */
-                ss_dassert(stmt_id > 0);
-                rses->exec_map[stmt_id] = target;
-                MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
+                // We need to wait until the session commands are executed
+                rses->expected_responses++;
+                rses->query_queue = gwbuf_append(rses->query_queue, gwbuf_clone(querybuf));
+            }
+            else
+            {
+                // Target server was found and is in the correct state
+                ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
+                succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
+
+                if (succp && command == MXS_COM_STMT_EXECUTE && not_locked_to_master)
+                {
+                    /** Track the targets of the COM_STMT_EXECUTE statements. This
+                     * information is used to route all COM_STMT_FETCH commands
+                     * to the same server where the COM_STMT_EXECUTE was done. */
+                    ss_dassert(stmt_id > 0);
+                    rses->exec_map[stmt_id] = target;
+                    MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
+                }
             }
         }
         else
