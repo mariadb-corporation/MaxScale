@@ -460,22 +460,29 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
         /** get root master from available servers */
         SRWBackend master = get_root_master(rses->backends);
 
-        if (master && master->in_use())
+        if (master)
         {
-            if (master->is_master())
+            if (master->in_use())
             {
-                rval = master;
+                if (master->is_master())
+                {
+                    rval = master;
+                }
+                else
+                {
+                    MXS_ERROR("Server '%s' does not have the master state and "
+                              "can't be chosen as the master.", master->name());
+                }
             }
             else
             {
-                MXS_ERROR("Server '%s' does not have the master state and "
-                          "can't be chosen as the master.", master->name());
+                MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
+                          master->name());
             }
         }
         else
         {
-            MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
-                      master->name());
+            MXS_ERROR("No master server available at this time.");
         }
     }
 
