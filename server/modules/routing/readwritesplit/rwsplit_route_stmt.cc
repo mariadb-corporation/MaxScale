@@ -353,6 +353,96 @@ static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
         backend->server()->rlag <= max_rlag);
 }
 
+SRWBackend get_hinted_backend(RWSplitSession *rses, char *name)
+{
+    SRWBackend rval;
+
+    for (auto it = rses->backends.begin(); it != rses->backends.end(); it++)
+    {
+        auto& backend = *it;
+
+        /** The server must be a valid slave, relay server, or master */
+        if (backend->in_use() && strcasecmp(name, backend->name()) == 0 &&
+            (backend->is_slave() || backend->is_relay() || backend->is_master()))
+        {
+            rval = backend;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+SRWBackend get_slave_backend(RWSplitSession *rses, int max_rlag)
+{
+    SRWBackend rval;
+
+    for (auto it = rses->backends.begin(); it != rses->backends.end(); it++)
+    {
+        auto& backend = *it;
+
+        if (backend->in_use() && // Backend is in use
+            (backend->is_master() || backend->is_slave()) && // Either a master or a slave
+            rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
+        {
+            if (!rval)
+            {
+                // No previous candidate, accept any valid server (includes master)
+                if ((backend->is_master() && backend == rses->current_master) ||
+                    backend->is_slave())
+                {
+                    rval = backend;
+                }
+            }
+            else
+            {
+                if (!rses->rses_config.master_accept_reads && rval->is_master())
+                {
+                    // Pick slaves over masters with master_accept_reads=false
+                    rval = backend;
+                }
+                else
+                {
+                    // Compare the two servers and pick the best one
+                    rval = compare_backends(rval, backend, rses->rses_config.slave_selection_criteria);
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+SRWBackend get_master_backend(RWSplitSession *rses)
+{
+    SRWBackend rval;
+    /** get root master from available servers */
+    SRWBackend master = get_root_master(rses->backends);
+
+    if (master)
+    {
+        if (master->in_use() || master->can_connect())
+        {
+            if (master->is_master())
+            {
+                rval = master;
+            }
+            else
+            {
+                MXS_ERROR("Server '%s' does not have the master state and "
+                          "can't be chosen as the master.", master->name());
+            }
+        }
+        else
+        {
+            MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
+                      master->name());
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Provide the router with a reference to a suitable backend
  *
@@ -372,102 +462,26 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
     /** Check whether using rses->target_node as target SLAVE */
     if (rses->target_node && session_trx_is_read_only(rses->client_dcb->session))
     {
-        MXS_DEBUG("In READ ONLY transaction, using server '%s'",
-                  rses->target_node->name());
+        MXS_DEBUG("In READ ONLY transaction, using server '%s'", rses->target_node->name());
         return rses->target_node;
-    }
-
-    if (name) /*< Choose backend by name from a hint */
-    {
-        ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
-
-        for (SRWBackendList::iterator it = rses->backends.begin();
-             it != rses->backends.end(); it++)
-        {
-            SRWBackend& backend = *it;
-
-            /** The server must be a valid slave, relay server, or master */
-
-            if (backend->in_use() &&
-                (strcasecmp(name, backend->name()) == 0) &&
-                (backend->is_slave() ||
-                 backend->is_relay() ||
-                 backend->is_master()))
-            {
-                return backend;
-            }
-        }
-
-        /** No server found, use a normal slave for it */
-        btype = BE_SLAVE;
     }
 
     SRWBackend rval;
 
-    if (btype == BE_SLAVE)
+    if (name) /*< Choose backend by name from a hint */
     {
-        for (auto it = rses->backends.begin(); it != rses->backends.end(); it++)
-        {
-            auto& backend = *it;
-
-            if (backend->in_use() && // Backend is in use
-                (backend->is_master() || backend->is_slave()) && // Either a master or a slave
-                rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
-            {
-                if (!rval)
-                {
-                    // No previous candidate, accept any valid server (includes master)
-                    if ((backend->is_master() && backend == rses->current_master) ||
-                        backend->is_slave())
-                    {
-                        rval = backend;
-                    }
-                }
-                else
-                {
-                    if (!rses->rses_config.master_accept_reads && rval->is_master())
-                    {
-                        // Pick slaves over masters with master_accept_reads=false
-                        rval = backend;
-                    }
-                    else
-                    {
-                        // Compare the two servers and pick the best one
-                        rval = compare_backends(rval, backend, rses->rses_config.slave_selection_criteria);
-                    }
-                }
-            }
-        }
+        ss_dassert(btype != BE_MASTER);
+        btype = BE_SLAVE;
+        rval = get_hinted_backend(rses, name);
     }
-    /**
-     * If target was originally master only then the execution jumps
-     * directly here.
-     */
+
+    else if (btype == BE_SLAVE)
+    {
+        rval = get_slave_backend(rses, max_rlag);
+    }
     else if (btype == BE_MASTER)
     {
-        /** get root master from available servers */
-        SRWBackend master = get_root_master(rses->backends);
-
-        if (master)
-        {
-            if (master->in_use() || master->can_connect())
-            {
-                if (master->is_master())
-                {
-                    rval = master;
-                }
-                else
-                {
-                    MXS_ERROR("Server '%s' does not have the master state and "
-                              "can't be chosen as the master.", master->name());
-                }
-            }
-            else
-            {
-                MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
-                          master->name());
-            }
-        }
+        rval = get_master_backend(rses);
     }
 
     return rval;
