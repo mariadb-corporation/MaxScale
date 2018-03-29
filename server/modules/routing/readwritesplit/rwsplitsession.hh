@@ -43,8 +43,8 @@ typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
  */
 class RWSplitSession
 {
-    RWSplitSession(const RWSplitSession&);
-    RWSplitSession& operator=(const RWSplitSession&);
+    RWSplitSession(const RWSplitSession&) = delete;
+    RWSplitSession& operator=(const RWSplitSession&) = delete;
 
 public:
 
