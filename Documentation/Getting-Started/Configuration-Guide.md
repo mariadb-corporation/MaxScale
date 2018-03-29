@@ -731,11 +731,16 @@ users_refresh_time=120
 How many statements MaxScale should store for each session. This is for
 debugging purposes, as in case of problems it is often of value to be able
 to find out exactly what statements were sent before a particular
-problem turned up. See also `dump_last_statements` using which the actual
-dumping of the statements is enabled.
+problem turned up.
+
+**Note:** See also `dump_last_statements` using which the actual dumping
+  of the statements is enabled. Unless both of the parameters are defined,
+  the statement dumping mechanism doesn't work.
+
 ```
 retain_last_statements=20
 ```
+
 Default is `0`.
 
 #### `dump_last_statements`
