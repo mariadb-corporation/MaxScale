@@ -269,17 +269,17 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
             dcb_printf(dcb, "Master binlog position: %lu\n",
                        serv_info->slave_status.read_master_log_pos);
         }
-        if (serv_info->gtid_current_pos.server_id != SERVER_ID_UNKNOWN)
+        if (!serv_info->gtid_current_pos.empty())
         {
             dcb_printf(dcb, "Gtid current position:  %s\n",
                        serv_info->gtid_current_pos.to_string().c_str());
         }
-        if (serv_info->gtid_binlog_pos.server_id != SERVER_ID_UNKNOWN)
+        if (!serv_info->gtid_binlog_pos.empty())
         {
             dcb_printf(dcb, "Gtid binlog position:   %s\n",
                        serv_info->gtid_current_pos.to_string().c_str());
         }
-        if (serv_info->slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN)
+        if (!serv_info->slave_status.gtid_io_pos.empty())
         {
             dcb_printf(dcb, "Gtid slave IO position: %s\n",
                        serv_info->slave_status.gtid_io_pos.to_string().c_str());

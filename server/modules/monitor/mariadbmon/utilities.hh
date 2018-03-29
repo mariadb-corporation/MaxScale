@@ -110,14 +110,6 @@ public:
     std::string to_string() const;
 
     /**
-     * Generate a MASTER_GTID_WAIT()-query to this gtid.
-     *
-     * @param timeout Maximum wait time in seconds
-     * @return The query
-     */
-    std::string generate_master_gtid_wait_cmd(double timeout) const;
-
-    /**
      * Comparator, used when sorting by domain id.
      *
      * @param triplet1 Left side
@@ -205,10 +197,19 @@ public:
     static uint64_t events_ahead(const Gtid& lhs, const Gtid& rhs,
                                  substraction_mode_t domain_substraction_mode);
 
+    /**
+     * Generate a MASTER_GTID_WAIT()-query to this gtid.
+     *
+     * @param timeout Maximum wait time in seconds
+     * @return The query
+     */
+    std::string generate_master_gtid_wait_cmd(double timeout) const;
+
+    GtidTriplet get_triplet(uint32_t domain) const;
+
 private:
     std::vector<GtidTriplet> m_triplets;
 };
-
 
 /**
  * Helper class for simplifying working with resultsets. Used in MariaDBServer.

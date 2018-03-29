@@ -44,14 +44,11 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
 
 int64_t MariaDBServer::relay_log_events()
 {
-    if (slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN &&
-        gtid_current_pos.server_id != SERVER_ID_UNKNOWN &&
-        slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
-        slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
-    {
-        return slave_status.gtid_io_pos.sequence - gtid_current_pos.sequence;
-    }
-    return -1;
+    /* The events_ahead-call below ignores domains where current_pos is ahead of io_pos. This situation is
+     * rare but is possible (I guess?) if the server is replicating a domain from multiple masters
+     * and decides to process events from one relay log before getting new events to the other. In
+     * any case, such events are obsolete and the server can be considered to have processed such logs. */
+    return Gtid::events_ahead(slave_status.gtid_io_pos, gtid_current_pos, Gtid::MISSING_DOMAIN_LHS_ADD);
 }
 
 std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
@@ -70,7 +67,7 @@ std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
     return rval;
 }
 
-bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
+bool MariaDBServer::do_show_slave_status()
 {
     /** Column positions for SHOW SLAVE STATUS */
     const size_t MYSQL55_STATUS_MASTER_LOG_POS = 5;
@@ -79,7 +76,6 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
     const size_t MYSQL55_STATUS_SQL_RUNNING = 11;
     const size_t MYSQL55_STATUS_MASTER_ID = 39;
 
-    bool rval = true;
     unsigned int columns;
     int i_slave_io_running, i_slave_sql_running, i_read_master_log_pos, i_master_server_id, i_master_log_file;
     int i_last_io_errno, i_last_io_error, i_last_sql_error, i_slave_rec_hbs, i_slave_hb_period;
@@ -199,16 +195,15 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
                 heartbeat_period = result->get_uint(i_slave_hb_period);
             }
             string using_gtid = result->get_string(i_using_gtid);
-            if (gtid_domain >= 0 && (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
+            string gtid_io_pos = result->get_string(i_gtid_io_pos);
+            if (!gtid_io_pos.empty() &&
+                (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
-                string gtid_io_pos = result->get_string(i_gtid_io_pos);
-                slave_status.gtid_io_pos = !gtid_io_pos.empty() ?
-                                                      GtidTriplet(gtid_io_pos.c_str(), gtid_domain) :
-                                                      GtidTriplet();
+                slave_status.gtid_io_pos = Gtid::from_string(gtid_io_pos);
             }
             else
             {
-                slave_status.gtid_io_pos = GtidTriplet();
+                slave_status.gtid_io_pos = Gtid();
             }
         }
     }
@@ -228,23 +223,44 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
     slave_status.master_server_id = master_server_id;
     n_slaves_configured = nconfigured;
     n_slaves_running = nrunning;
-    return rval;
+    return true;
 }
 
-bool MariaDBServer::update_gtids(int64_t gtid_domain)
+bool MariaDBServer::update_gtids()
 {
-    ss_dassert(gtid_domain >= 0);
     static const string query = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
-    const int ind_current_pos = 0;
-    const int ind_binlog_pos = 1;
+    const int i_current_pos = 0;
+    const int i_binlog_pos = 1;
 
     bool rval = false;
     auto result = execute_query(query);
     if (result.get() != NULL && result->next_row())
     {
-        gtid_current_pos = result->get_gtid(ind_current_pos, gtid_domain);
-        gtid_binlog_pos = result->get_gtid(ind_binlog_pos, gtid_domain);
-        rval = true;
+        auto current_str = result->get_string(i_current_pos);
+        auto binlog_str = result->get_string(i_binlog_pos);
+        bool current_ok = false;
+        bool binlog_ok = false;
+        if (current_str.empty())
+        {
+            gtid_current_pos = Gtid();
+        }
+        else
+        {
+            gtid_current_pos = Gtid::from_string(current_str);
+            current_ok = !gtid_current_pos.empty();
+        }
+
+        if (binlog_str.empty())
+        {
+            gtid_binlog_pos = Gtid();
+        }
+        else
+        {
+            gtid_binlog_pos = Gtid::from_string(binlog_str);
+            binlog_ok = !gtid_binlog_pos.empty();
+        }
+
+        rval = (current_ok && binlog_ok);
     }
     return rval;
 }
@@ -276,23 +292,23 @@ void MariaDBServer::read_server_variables()
         columns = 3;
     }
 
-    int ind_id = 0;
-    int ind_ro = 1;
-    int ind_domain = 2;
+    int i_id = 0;
+    int i_ro = 1;
+    int i_domain = 2;
     auto result = execute_query(query);
     if (result.get() != NULL && result->next_row())
     {
-        int64_t server_id_parsed = result->get_uint(ind_id);
+        int64_t server_id_parsed = result->get_uint(i_id);
         if (server_id_parsed < 0)
         {
             server_id_parsed = SERVER_ID_UNKNOWN;
         }
         database->server->node_id = server_id_parsed;
         server_id = server_id_parsed;
-        read_only = result->get_bool(ind_ro);
+        read_only = result->get_bool(i_ro);
         if (columns == 3)
         {
-            gtid_domain_id = result->get_uint(ind_domain);
+            gtid_domain_id = result->get_uint(i_domain);
         }
     }
 }

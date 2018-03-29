@@ -658,7 +658,7 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
     /* If gtid domain exists and server is 10.0, update gtid:s */
     if (m_master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
     {
-        serv_info->update_gtids(m_master_gtid_domain);
+        serv_info->update_gtids();
     }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
@@ -693,7 +693,7 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
-    if (serv_info->do_show_slave_status(m_master_gtid_domain))
+    if (serv_info->do_show_slave_status())
     {
         /* If all configured slaves are running set this node as slave */
         if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
@@ -718,8 +718,8 @@ MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
     MariaDBServer* info = get_server_info(server);
     if (info->slave_status.slave_sql_running &&
         info->update_replication_settings() &&
-        info->update_gtids(m_master_gtid_domain) &&
-        info->do_show_slave_status(m_master_gtid_domain))
+        info->update_gtids() &&
+        info->do_show_slave_status())
     {
         return info;
     }

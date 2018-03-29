@@ -156,7 +156,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
 
             if (server_is_rejoin_suspect(mon_server, master_info, output))
             {
-                if (master_info->update_gtids(m_master_gtid_domain))
+                if (master_info->update_gtids())
                 {
                     if (can_replicate_from(mon_server, server_info, master_info))
                     {
@@ -433,7 +433,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
     bool comm_ok = true;
     if (!suspects.empty())
     {
-        if (master_info->update_gtids(m_master_gtid_domain))
+        if (master_info->update_gtids())
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
@@ -811,11 +811,10 @@ bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, i
                  new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
-        GtidTriplet old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
+        Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
-        query_ok = master_info->update_gtids(m_master_gtid_domain) &&
-                   master_info->do_show_slave_status(m_master_gtid_domain);
+        query_ok = master_info->update_gtids() && master_info->do_show_slave_status();
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -903,7 +902,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
                 if (!query_error)
                 {
                     query = "";
-                    if (info->update_gtids(m_master_gtid_domain))
+                    if (info->update_gtids())
                     {
                         success = true;
                     }
@@ -962,7 +961,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time for all servers
  */
-bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, const GtidTriplet& gtid,
+bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid,
                                                     int total_timeout, int read_timeout, json_t** err_out)
 {
     bool success = true;
@@ -1003,7 +1002,7 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, 
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time
  */
-bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const GtidTriplet& gtid,
+bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
                                           int total_timeout, int read_timeout,
                                           json_t** err_out)
 {
@@ -1071,12 +1070,12 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
     MariaDBServer* new_master_info = get_server_info(new_master);
 
     if (mxs_mysql_query(new_master->con, "FLUSH TABLES;") == 0 &&
-        new_master_info->update_gtids(m_master_gtid_domain))
+        new_master_info->update_gtids())
     {
         int query_fails = 0;
         int repl_fails = 0;
         int successes = 0;
-        const GtidTriplet target = new_master_info->gtid_current_pos;
+        const Gtid& target = new_master_info->gtid_current_pos;
         ServerVector wait_list = slaves; // Check all the servers in the list
         bool first_round = true;
         bool time_is_up = false;
@@ -1094,8 +1093,8 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             {
                 MXS_MONITORED_SERVER* slave = wait_list[i];
                 MariaDBServer* slave_info = get_server_info(slave);
-                if (slave_info->update_gtids(m_master_gtid_domain) &&
-                    slave_info->do_show_slave_status(m_master_gtid_domain))
+                if (slave_info->update_gtids() &&
+                    slave_info->do_show_slave_status())
                 {
                     if (!slave_info->slave_status.last_error.empty())
                     {
@@ -1106,7 +1105,8 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
                     }
-                    else if (slave_info->gtid_current_pos.sequence >= target.sequence)
+                    else if (Gtid::events_ahead(target, slave_info->gtid_current_pos,
+                                                Gtid::MISSING_DOMAIN_IGNORE) == 0)
                     {
                         // This slave has reached the same gtid as master, remove from list
                         wait_list.erase(wait_list.begin() + i);
@@ -1245,7 +1245,8 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
             else if (cand_info->check_replication_settings())
             {
                 // If no new master yet, accept any valid candidate. Otherwise check.
-                if (current_best == NULL || is_candidate_better(current_best_info, cand_info))
+                if (current_best == NULL ||
+                    is_candidate_better(current_best_info, cand_info, m_master_gtid_domain))
                 {
                     // The server has been selected for promotion, for now.
                     current_best = cand;
@@ -1278,7 +1279,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
             MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
             break;
         }
-        else if (is_candidate_better(current_best_info, excluded_info))
+        else if (is_candidate_better(current_best_info, excluded_info, m_master_gtid_domain))
         {
             // Print a warning if this server is actually a better candidate than the previous
             // best.
@@ -1322,15 +1323,17 @@ bool MariaDBMonitor::server_is_excluded(const MXS_MONITORED_SERVER* server)
  *
  * @param current_best_info Server info of current best choice
  * @param candidate_info Server info of new candidate
+ * @param gtid_domain Which domain to compare
  * @return True if candidate is better
  */
 bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best_info,
-                                         const MariaDBServer* candidate_info)
+                                         const MariaDBServer* candidate_info, uint32_t gtid_domain)
 {
-    uint64_t cand_io = candidate_info->slave_status.gtid_io_pos.sequence;
-    uint64_t cand_processed = candidate_info->gtid_current_pos.sequence;
-    uint64_t curr_io = current_best_info->slave_status.gtid_io_pos.sequence;
-    uint64_t curr_processed = current_best_info->gtid_current_pos.sequence;
+    uint64_t cand_io = candidate_info->slave_status.gtid_io_pos.get_triplet(gtid_domain).sequence;
+    uint64_t cand_processed = candidate_info->gtid_current_pos.get_triplet(gtid_domain).sequence;
+    uint64_t curr_io = current_best_info->slave_status.gtid_io_pos.get_triplet(gtid_domain).sequence;
+    uint64_t curr_processed = current_best_info->gtid_current_pos.get_triplet(gtid_domain).sequence;
+
     bool cand_updates = candidate_info->rpl_settings.log_slave_updates;
     bool curr_updates = current_best_info->rpl_settings.log_slave_updates;
     bool is_better = false;
@@ -1496,19 +1499,9 @@ bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
                                         MariaDBServer* slave_info, MariaDBServer* master_info)
 {
     bool rval = false;
-    if (slave_info->update_gtids(m_master_gtid_domain))
+    if (slave_info->update_gtids())
     {
-        GtidTriplet slave_gtid = slave_info->gtid_current_pos;
-        GtidTriplet master_gtid = master_info->gtid_binlog_pos;
-        // The following are not sufficient requirements for replication to work, they only cover the basics.
-        // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
-        // thread will stop in error.
-        if (slave_gtid.server_id != SERVER_ID_UNKNOWN && master_gtid.server_id != SERVER_ID_UNKNOWN &&
-            slave_gtid.domain == master_gtid.domain &&
-            slave_gtid.sequence <= master_info->gtid_current_pos.sequence)
-        {
-            rval = true;
-        }
+        rval = slave_info->gtid_current_pos.can_replicate_from(master_info->gtid_binlog_pos);
     }
     return rval;
 }
@@ -1630,7 +1623,7 @@ bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_
 {
     bool rval = false;
     const MariaDBServer* info = get_server_info(mon_server);
-    if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
+    if (info->slave_status.gtid_io_pos.empty())
     {
         string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
                                     " is not using gtid replication.";

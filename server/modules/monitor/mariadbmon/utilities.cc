@@ -446,9 +446,23 @@ void GtidTriplet::parse_triplet(const char* str)
     ss_dassert(rv == 3);
 }
 
-string GtidTriplet::generate_master_gtid_wait_cmd(double timeout) const
+string Gtid::generate_master_gtid_wait_cmd(double timeout) const
 {
     std::stringstream query_ss;
     query_ss << "SELECT MASTER_GTID_WAIT(\"" << to_string() << "\", " << timeout << ");";
     return query_ss.str();
+}
+
+GtidTriplet Gtid::get_triplet(uint32_t domain) const
+{
+    GtidTriplet rval;
+    // Make a dummy triplet for the domain search
+    GtidTriplet search_val(domain, -1, 0);
+    auto found = std::lower_bound(m_triplets.begin(), m_triplets.end(), search_val,
+                                      GtidTriplet::compare_domains);
+    if (found != m_triplets.end() && found->domain == domain)
+    {
+        rval = *found;
+    }
+    return rval;
 }

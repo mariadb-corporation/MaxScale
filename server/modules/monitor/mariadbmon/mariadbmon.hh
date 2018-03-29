@@ -197,9 +197,9 @@ private:
     bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
     bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
-    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const GtidTriplet& gtid, int total_timeout,
+    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
-    bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const GtidTriplet& gtid,
+    bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
                                        int total_timeout, int read_timeout, json_t** err_out);
     bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                                     int seconds_remaining);
@@ -207,7 +207,8 @@ private:
     bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     MXS_MONITORED_SERVER* select_new_master(ServerVector* slaves_out, json_t** err_out);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
-    bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info);
+    bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info,
+                             uint32_t gtid_domain);
     MariaDBServer* update_slave_info(MXS_MONITORED_SERVER* server);
     void init_server_info();
     bool slave_receiving_events();

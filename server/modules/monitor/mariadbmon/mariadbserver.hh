@@ -47,8 +47,7 @@ public:
                                      *   reading from. */
     uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
                                      *   binary log file. */
-    GtidTriplet gtid_io_pos;        /**< Gtid I/O position of the slave thread. Only shows the triplet with
-                                     *   the current master domain. */
+    Gtid gtid_io_pos;               /**< Gtid I/O position of the slave thread. */
     std::string last_error;         /**< Last IO or SQL error encountered. */
 
     SlaveStatusInfo();
@@ -92,21 +91,17 @@ public:
     time_t          latest_event;           /**< Time when latest event was received from the master */
     int64_t         gtid_domain_id;         /**< The value of gtid_domain_id, the domain which is used for
                                               *  new non-replicated events. */
-    GtidTriplet     gtid_current_pos;       /**< Gtid of latest event. Only shows the triplet
-                                              *  with the current master domain. */
-    GtidTriplet     gtid_binlog_pos;        /**< Gtid of latest event written to binlog. Only shows
-                                              *  the triplet with the current master domain. */
+    Gtid            gtid_current_pos;       /**< Gtid of latest event. */
+    Gtid            gtid_binlog_pos;        /**< Gtid of latest event written to binlog. */
     SlaveStatusInfo slave_status;           /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
 
     /**
-     * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
-     * or a server_id is unknown, an error value is returned.
+     * Calculate how many events are left in the relay log.
      *
-     * @return Number of events in relay log according to latest queried info. A negative value signifies
-     * an error in the gtid-values.
+     * @return Number of events in relay log according to latest queried info.
      */
     int64_t relay_log_events();
 
@@ -126,16 +121,14 @@ public:
      * @param gtid_domain Which gtid domain should be parsed.
      * @return True on success
      */
-    bool do_show_slave_status(int64_t gtid_domain);
+    bool do_show_slave_status();
 
     /**
      * Query gtid_current_pos and gtid_binlog_pos and save the values to the server.
-     * Only the given domain is parsed.
      *
-     * @param gtid_domain Which gtid domain should be parsed
      * @return True if successful
      */
-    bool update_gtids(int64_t gtid_domain);
+    bool update_gtids();
 
     /**
      * Query a few miscellaneous replication settings.
