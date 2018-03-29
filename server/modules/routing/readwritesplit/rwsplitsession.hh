@@ -35,10 +35,6 @@ typedef enum
     EXPECTING_REAL_RESULT
 } wait_gtid_state_t;
 
-/** Reply state change debug logging */
-#define LOG_RS(a, b) MXS_DEBUG("%s %s -> %s", (a)->uri(), \
-    rstostr((a)->get_reply_state()), rstostr(b));
-
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 

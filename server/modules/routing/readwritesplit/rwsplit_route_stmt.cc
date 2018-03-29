@@ -950,8 +950,6 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
         {
             /** The server will reply to this command */
             ss_dassert(target->get_reply_state() == REPLY_STATE_DONE);
-
-            LOG_RS(target, REPLY_STATE_START);
             target->set_reply_state(REPLY_STATE_START);
             rses->expected_responses++;
 
