@@ -33,12 +33,19 @@ enum reply_state_t
 
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 
+class RWBackend;
+typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
+typedef std::list<SRWBackend> SRWBackendList;
+
 class RWBackend: public mxs::Backend
 {
     RWBackend(const RWBackend&);
     RWBackend& operator=(const RWBackend&);
 
 public:
+
+    static SRWBackendList from_servers(SERVER_REF* servers);
+
     RWBackend(SERVER_REF* ref);
     ~RWBackend();
 
@@ -84,8 +91,5 @@ private:
                                       * contains very large rows */
     uint8_t          m_command;
 };
-
-typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
-typedef std::list<SRWBackend> SRWBackendList;
 
 }

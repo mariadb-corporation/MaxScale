@@ -163,4 +163,19 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
     return get_reply_state() == REPLY_STATE_DONE;
 }
 
+SRWBackendList RWBackend::from_servers(SERVER_REF* servers)
+{
+    SRWBackendList backends;
+
+    for (SERVER_REF *ref = servers; ref; ref = ref->next)
+    {
+        if (ref->active)
+        {
+            backends.push_back(mxs::SRWBackend(new mxs::RWBackend(ref)));
+        }
+    }
+
+    return backends;
+}
+
 }

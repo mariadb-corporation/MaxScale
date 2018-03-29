@@ -660,15 +660,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
     if (router->have_enough_servers())
     {
-        SRWBackendList backends;
-
-        for (SERVER_REF *sref = router->service()->dbref; sref; sref = sref->next)
-        {
-            if (sref->active)
-            {
-                backends.push_back(SRWBackend(new RWBackend(sref)));
-            }
-        }
+        SRWBackendList backends = RWBackend::from_servers(router->service()->dbref);
 
         /**
          * At least the master must be found if the router is in the strict mode.
