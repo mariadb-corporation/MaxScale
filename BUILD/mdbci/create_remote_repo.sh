@@ -2,7 +2,7 @@
 
 # Creates RPM or DEB repository for biniries from
 # $pre_repo_dir/$target/$box, signs it with keys
-# from ${gpg_keys_path} and puts signed repo to 
+# from ${gpg_keys_path} and puts signed repo to
 
 set -x
 

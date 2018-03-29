@@ -41,7 +41,7 @@ if [ $z_res -eq 127 ] && [ $y_res -eq 127 ] ; then
 		mkdir -p dists/$dist_name/main/binary-i386/
 		dpkg-scanpackages dists/$dist_name/main/binary-i386/  /dev/null | gzip -9c > dists/$dist_name/main/binary-i386/Packages.gz
 	        gunzip -c dists/$dist_name/main/binary-i386/Packages.gz > dists/$dist_name/main/binary-i386/Packages
-#	else 
+#	else
 #		 echo "Architectures: ppc64el" >> dists/$dist_name/main/$arch/Release
 	fi
 	archs=`ls -1 dists/$dist_name/main | sed "s/binary-//" | tr '\n' ' '`
@@ -55,7 +55,7 @@ if [ $z_res -eq 127 ] && [ $y_res -eq 127 ] ; then
                 exit 1
         fi
 
-	gpg -abs --digest-algo sha256 -o dists/$dist_name/Release.gpg dists/$dist_name/Release 
+	gpg -abs --digest-algo sha256 -o dists/$dist_name/Release.gpg dists/$dist_name/Release
 	if [ $? != 0 ] ; then
 		echo "Package signing failed!"
 		exit 1
@@ -72,19 +72,19 @@ else
 	echo "%_signature gpg" >> ~/.rpmmacros
         echo "%_gpg_name MariaDB Maxscale <maxscale@googlegroups.com>" >>  ~/.rpmmacros
 	echo "\r" |  setsid rpm --resign $sourcedir/*.rpm
-	
+
         if [ $? != 0 ] ; then
                 echo "Package signing failed!"
                 exit 1
         fi
-	
+
 	cp $sourcedir/* $destdir/
 	pushd ${destdir} >/dev/null 2>&1
 	    createrepo -d -s sha .
 	        if [ $? != 0 ] ; then
         	        echo "Repo creation failed!"
                 	exit 1
-	        fi	
+	        fi
 
 	popd >/dev/null 2>&1
 	gpg --output repomd.xml.key --sign $destdir/repodata/repomd.xml

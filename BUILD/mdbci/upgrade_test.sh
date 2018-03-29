@@ -37,7 +37,7 @@ ${mdbci_dir}/repository-config/generate_all.sh repo.d
 ${mdbci_dir}/repository-config/maxscale-release.sh $old_target repo.d
 
 # starting VM for build
-${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name 
+${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name
 ${mdbci_dir}/mdbci up $name --attempts=1
 if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
@@ -101,7 +101,7 @@ do
     sleep 5
     ssh $sshopt $maxadmin_command
     maxadm_exit=$?
-    if [ $maxadm_exit == 0 ] ; then 
+    if [ $maxadm_exit == 0 ] ; then
         break
     fi
 done
