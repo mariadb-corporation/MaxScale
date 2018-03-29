@@ -1393,6 +1393,12 @@ static void handleError(MXS_ROUTER *instance,
                     }
                 }
 
+                if (session_trx_is_active(session))
+                {
+                    // We have an open transaction, we can't continue
+                    can_continue = false;
+                }
+
                 *succp = can_continue;
                 backend->close();
             }
