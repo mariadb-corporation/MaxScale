@@ -32,6 +32,7 @@ add_library(maxscale-common SHARED
   mysql_utils.cc
   paths.cc
   poll.cc
+  queryclassifier.cc
   query_classifier.cc
   random_jkiss.cc
   resultset.cc
