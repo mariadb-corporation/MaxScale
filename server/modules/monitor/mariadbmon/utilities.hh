@@ -72,25 +72,40 @@ string get_connection_errors(const ServerVector& servers);
  */
 string monitored_servers_to_string(const ServerVector& array);
 
-class Gtid
+/**
+ * Class which encapsulates a gtid triplet (one <domain>-<server>-<sequence>)
+ */
+class GtidTriplet
 {
 public:
     uint32_t domain;
     int64_t server_id; // Is actually 32bit unsigned. 0 is only used by server versions  <= 10.1
     uint64_t sequence;
-    Gtid();
+
+    GtidTriplet();
+    GtidTriplet(uint32_t _domain, int64_t _server_id, uint64_t _sequence);
 
     /**
      * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
-     * the given domain is returned.
+     * the given domain is returned. TODO: Remove once no longer used
      *
      * @param str Gtid string
      * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
      * autoselect, which is only allowed when the string contains one triplet.
      */
-    Gtid(const char* str, int64_t search_domain = -1);
+    GtidTriplet(const char* str, int64_t search_domain = -1);
 
-    bool operator == (const Gtid& rhs) const;
+    /**
+     * Parse one triplet from null-terminated string. Handles multi-domain gtid:s properly. Should be called
+     * repeatedly for a multi-domain gtid string by giving the value of @c endptr as @c str.
+     *
+     * @param str First number of a triplet in a gtid-string
+     * @param endptr A pointer to save the position at after the last parsed character.
+     * @return A new GtidTriplet. If an error occurs, the server_id of the returned triplet is -1.
+     */
+    static GtidTriplet parse_one_triplet(const char* str, char** endptr);
+
+    bool eq(const GtidTriplet& rhs) const;
 
     std::string to_string() const;
 
@@ -102,9 +117,98 @@ public:
      */
     std::string generate_master_gtid_wait_cmd(double timeout) const;
 
+    /**
+     * Comparator, used when sorting by domain id.
+     *
+     * @param triplet1 Left side
+     * @param triplet2 Right side
+     * @return True if left < right
+     */
+    static bool compare_domains(const GtidTriplet& triplet1, const GtidTriplet& triplet2)
+    {
+        return triplet1.domain < triplet2.domain;
+    }
+
 private:
     void parse_triplet(const char* str);
 };
+
+inline bool operator == (const GtidTriplet& lhs, const GtidTriplet& rhs)
+{
+        return lhs.eq(rhs);
+}
+
+class Gtid
+{
+public:
+    enum substraction_mode_t
+    {
+        MISSING_DOMAIN_IGNORE,
+        MISSING_DOMAIN_LHS_ADD
+    };
+
+    /**
+     * Parse the gtid string and return an object. Orders the triplets by domain id.
+     *
+     * @param gtid_string gtid as given by server. String must not be empty.
+     * @return The parsed (possibly multidomain) gtid. In case of error, the gtid will be empty.
+     */
+    static Gtid from_string(const std::string& gtid_string);
+
+    /**
+     * Return a string version of the gtid.
+     *
+     * @return A string similar in form to how the server displays it
+     */
+    std::string to_string() const;
+
+    /**
+     * Check if a server with this gtid can replicate from a master with a given gtid. Only considers
+     * gtid:s and only detects obvious errors. The non-detected errors will mostly be detected once
+     * the slave tries to start replicating.
+     *
+     * TODO: Add support for Replicate_Do/Ignore_Id:s
+     *
+     * @param master_gtid Master server gtid
+     * @return True if replication looks possible
+     */
+    bool can_replicate_from(const Gtid& master_gtid);
+
+    /**
+     * Is the gtid empty.
+     *
+     * @return True if gtid has 0 triplets
+     */
+    bool empty() const;
+
+    /**
+     * Full comparison.
+     *
+     * @param rhs Other gtid
+     * @return True if both gtid:s have identical triplets or both are empty
+     */
+    bool operator == (const Gtid& rhs) const;
+
+    /**
+     * Calculate the number of events between two gtid:s with possibly multiple triplets. The
+     * result is always 0 or greater: if a sequence number of a domain on rhs is greater than on the same
+     * domain on lhs, the sequences are considered identical. Missing domains are handled depending on the
+     * value of @c domain_substraction_mode.
+     *
+     * @param lhs The value substracted from
+     * @param io_pos The value doing the substracting
+     * @param domain_substraction_mode How domains that exist on one side but not the other are handled. If
+     * MISSING_DOMAIN_IGNORE, these are simply ignored. If MISSING_DOMAIN_LHS_ADD, the sequence number on lhs
+     * is added to the total difference.
+     * @return The number of events between the two gtid:s
+     */
+    static uint64_t events_ahead(const Gtid& lhs, const Gtid& rhs,
+                                 substraction_mode_t domain_substraction_mode);
+
+private:
+    std::vector<GtidTriplet> m_triplets;
+};
+
 
 /**
  * Helper class for simplifying working with resultsets. Used in MariaDBServer.
@@ -181,7 +285,7 @@ public:
      * @param gtid_domain Which gtid domain to parse
      * @return Value as a gtid.
      */
-    Gtid get_gtid(int64_t column_ind, int64_t gtid_domain) const;
+    GtidTriplet get_gtid(int64_t column_ind, int64_t gtid_domain) const;
 
 private:
     MYSQL_RES* m_resultset; // Underlying result set, freed at dtor.

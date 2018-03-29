@@ -811,7 +811,7 @@ bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, i
                  new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
-        Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
+        GtidTriplet old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
         query_ok = master_info->update_gtids(m_master_gtid_domain) &&
@@ -962,7 +962,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time for all servers
  */
-bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid,
+bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, const GtidTriplet& gtid,
                                                     int total_timeout, int read_timeout, json_t** err_out)
 {
     bool success = true;
@@ -1003,7 +1003,7 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, 
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time
  */
-bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
+bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const GtidTriplet& gtid,
                                           int total_timeout, int read_timeout,
                                           json_t** err_out)
 {
@@ -1076,7 +1076,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
         int query_fails = 0;
         int repl_fails = 0;
         int successes = 0;
-        const Gtid target = new_master_info->gtid_current_pos;
+        const GtidTriplet target = new_master_info->gtid_current_pos;
         ServerVector wait_list = slaves; // Check all the servers in the list
         bool first_round = true;
         bool time_is_up = false;
@@ -1498,8 +1498,8 @@ bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
     bool rval = false;
     if (slave_info->update_gtids(m_master_gtid_domain))
     {
-        Gtid slave_gtid = slave_info->gtid_current_pos;
-        Gtid master_gtid = master_info->gtid_binlog_pos;
+        GtidTriplet slave_gtid = slave_info->gtid_current_pos;
+        GtidTriplet master_gtid = master_info->gtid_binlog_pos;
         // The following are not sufficient requirements for replication to work, they only cover the basics.
         // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
         // thread will stop in error.

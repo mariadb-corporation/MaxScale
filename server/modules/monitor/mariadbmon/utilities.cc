@@ -13,6 +13,7 @@
 
 #include "utilities.hh"
 
+#include <algorithm>
 #include <inttypes.h>
 #include <limits>
 #include <stdio.h>
@@ -201,25 +202,204 @@ bool QueryResult::get_bool(int64_t column_ind) const
     return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
 }
 
-Gtid QueryResult::get_gtid(int64_t column_ind, int64_t gtid_domain) const
+GtidTriplet QueryResult::get_gtid(int64_t column_ind, int64_t gtid_domain) const
 {
     ss_dassert(column_ind < m_columns);
     char* data = m_rowdata[column_ind];
-    Gtid rval;
+    GtidTriplet rval;
     if (data && *data)
     {
-        rval = Gtid(data, gtid_domain);
+        rval = GtidTriplet(data, gtid_domain);
     }
     return rval;
 }
 
-Gtid::Gtid()
+Gtid Gtid::from_string(const std::string& gtid_string)
+{
+    ss_dassert(gtid_string.size());
+    Gtid rval;
+    bool error = false;
+    bool have_more = false;
+    const char* str = gtid_string.c_str();
+    do
+    {
+        char* endptr = NULL;
+        auto new_triplet = GtidTriplet::parse_one_triplet(str, &endptr);
+        if (new_triplet.server_id == SERVER_ID_UNKNOWN)
+        {
+            error = true;
+        }
+        else
+        {
+            rval.m_triplets.push_back(new_triplet);
+            // The last number must be followed by ',' (another triplet) or \0 (last triplet)
+            if (*endptr == ',')
+            {
+                have_more = true;
+                str = endptr + 1;
+            }
+            else if (*endptr == '\0')
+            {
+                have_more = false;
+            }
+            else
+            {
+                error = true;
+            }
+        }
+    } while (have_more && !error);
+
+    if (error)
+    {
+        // If error occurred, clear the gtid as something is very wrong.
+        rval.m_triplets.clear();
+    }
+    else
+    {
+        // Usually the servers gives the triplets ordered by domain id:s, but this is not 100%.
+        std::sort(rval.m_triplets.begin(), rval.m_triplets.end(), GtidTriplet::compare_domains);
+    }
+    return rval;
+}
+
+string Gtid::to_string() const
+{
+    string rval;
+    string separator;
+    for (auto iter = m_triplets.begin(); iter != m_triplets.end(); iter++)
+    {
+        rval += separator + iter->to_string();
+        separator = ",";
+    }
+    return rval;
+}
+
+bool Gtid::can_replicate_from(const Gtid& master_gtid)
+{
+    /* The result of this function is false if the source and master have a common domain id where
+     * the source is ahead of the master. */
+    return (events_ahead(*this, master_gtid, MISSING_DOMAIN_IGNORE) == 0);
+}
+
+bool Gtid::empty() const
+{
+    return m_triplets.empty();
+}
+
+bool Gtid::operator == (const Gtid& rhs) const
+{
+    return m_triplets == rhs.m_triplets;
+}
+
+uint64_t Gtid::events_ahead(const Gtid& lhs, const Gtid& rhs, substraction_mode_t domain_substraction_mode)
+{
+    const size_t n_lhs = lhs.m_triplets.size();
+    const size_t n_rhs = rhs.m_triplets.size();
+    size_t ind_lhs = 0, ind_rhs = 0;
+    uint64_t events = 0;
+
+    while (ind_lhs < n_lhs && ind_rhs < n_rhs)
+    {
+        auto lhs_triplet = lhs.m_triplets[ind_lhs];
+        auto rhs_triplet = rhs.m_triplets[ind_rhs];
+        // Server id -1 should never be saved in a real gtid variable.
+        ss_dassert(lhs_triplet.server_id != SERVER_ID_UNKNOWN &&
+                   rhs_triplet.server_id != SERVER_ID_UNKNOWN);
+        // Search for matching domain_id:s, advance the smaller one.
+        if (lhs_triplet.domain < rhs_triplet.domain)
+        {
+            if (domain_substraction_mode == MISSING_DOMAIN_LHS_ADD)
+            {
+                // The domain on lhs does not exist on rhs. Add entire sequence number of lhs to the result.
+                events += lhs_triplet.sequence;
+            }
+            ind_lhs++;
+        }
+        else if (lhs_triplet.domain > rhs_triplet.domain)
+        {
+            ind_rhs++;
+        }
+        else
+        {
+            // Domains match, check sequences.
+            if (lhs_triplet.sequence > rhs_triplet.sequence)
+            {
+                /* Same domains, but lhs sequence is equal or ahead of rhs sequence.  */
+                events += lhs_triplet.sequence - rhs_triplet.sequence;
+            }
+            // Continue to next domains.
+            ind_lhs++;
+            ind_rhs++;
+        }
+    }
+    return events;
+}
+
+GtidTriplet GtidTriplet::parse_one_triplet(const char* str, char** endptr)
+{
+    /* Error checking the gtid string is a bit questionable, as having an error means that the server is
+       buggy or network has faults, in which case nothing can be trusted. But without error checking
+       MaxScale may crash if string is wrong. */
+    ss_dassert(endptr);
+    const char* ptr = str;
+    char* strtoull_endptr = NULL;
+    // Parse three numbers separated by -
+    uint64_t parsed_numbers[3];
+    bool error = false;
+    for (int i = 0; i < 3 && !error; i++)
+    {
+        errno = 0;
+        parsed_numbers[i] = strtoull(ptr, &strtoull_endptr, 10);
+        // No parse error
+        if (errno != 0)
+        {
+            error = true;
+        }
+        else if (i < 2)
+        {
+            // First two numbers must be followed by a -
+            if (*strtoull_endptr == '-')
+            {
+                ptr = strtoull_endptr + 1;
+            }
+            else
+            {
+                error = true;
+            }
+        }
+    }
+
+    // Check that none of the parsed numbers are unexpectedly large. This shouldn't really be possible unless
+    // server has a bug or network had an error.
+    if (!error && (parsed_numbers[0] > UINT32_MAX || parsed_numbers[1] > UINT32_MAX))
+    {
+        error = true;
+    }
+
+    if (!error)
+    {
+        *endptr = strtoull_endptr;
+        return GtidTriplet((uint32_t)parsed_numbers[0], parsed_numbers[1], parsed_numbers[2]);
+    }
+    else
+    {
+        return GtidTriplet();
+    }
+}
+
+GtidTriplet::GtidTriplet()
     : domain(0)
     , server_id(SERVER_ID_UNKNOWN)
     , sequence(0)
 {}
 
-Gtid::Gtid(const char* str, int64_t search_domain)
+GtidTriplet::GtidTriplet(uint32_t _domain, int64_t _server_id, uint64_t _sequence)
+    : domain(_domain)
+    , server_id(_server_id)
+    , sequence(_sequence)
+{}
+
+GtidTriplet::GtidTriplet(const char* str, int64_t search_domain)
     : domain(0)
     , server_id(SERVER_ID_UNKNOWN)
     , sequence(0)
@@ -245,14 +425,12 @@ Gtid::Gtid(const char* str, int64_t search_domain)
     }
 }
 
-bool Gtid::operator == (const Gtid& rhs) const
+bool GtidTriplet::eq(const GtidTriplet& rhs) const
 {
-    return domain == rhs.domain &&
-        server_id != SERVER_ID_UNKNOWN && server_id == rhs.server_id &&
-        sequence == rhs.sequence;
+    return domain == rhs.domain && server_id == rhs.server_id && sequence == rhs.sequence;
 }
 
-string Gtid::to_string() const
+string GtidTriplet::to_string() const
 {
     std::stringstream ss;
     if (server_id != SERVER_ID_UNKNOWN)
@@ -262,13 +440,13 @@ string Gtid::to_string() const
     return ss.str();
 }
 
-void Gtid::parse_triplet(const char* str)
+void GtidTriplet::parse_triplet(const char* str)
 {
     ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRId64 "-%" PRIu64, &domain, &server_id, &sequence);
     ss_dassert(rv == 3);
 }
 
-string Gtid::generate_master_gtid_wait_cmd(double timeout) const
+string GtidTriplet::generate_master_gtid_wait_cmd(double timeout) const
 {
     std::stringstream query_ss;
     query_ss << "SELECT MASTER_GTID_WAIT(\"" << to_string() << "\", " << timeout << ");";

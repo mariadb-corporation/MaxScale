@@ -203,11 +203,12 @@ bool MariaDBServer::do_show_slave_status(int64_t gtid_domain)
             {
                 string gtid_io_pos = result->get_string(i_gtid_io_pos);
                 slave_status.gtid_io_pos = !gtid_io_pos.empty() ?
-                                                      Gtid(gtid_io_pos.c_str(), gtid_domain) : Gtid();
+                                                      GtidTriplet(gtid_io_pos.c_str(), gtid_domain) :
+                                                      GtidTriplet();
             }
             else
             {
-                slave_status.gtid_io_pos = Gtid();
+                slave_status.gtid_io_pos = GtidTriplet();
             }
         }
     }
