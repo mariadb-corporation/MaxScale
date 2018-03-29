@@ -34,15 +34,6 @@ do{ \
 
 #define RW_CLOSE_BREF(b) do{ if (b){ (b)->closed_at = __LINE__; } } while (false)
 
-static inline bool is_ps_command(uint8_t cmd)
-{
-    return cmd == MXS_COM_STMT_EXECUTE ||
-           cmd == MXS_COM_STMT_SEND_LONG_DATA ||
-           cmd == MXS_COM_STMT_CLOSE ||
-           cmd == MXS_COM_STMT_FETCH ||
-           cmd == MXS_COM_STMT_RESET;
-}
-
 /*
  * The following are implemented in rwsplit_mysql.c
  */
@@ -50,8 +41,8 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
 void print_error_packet(RWSplitSession *rses, GWBUF *buf, DCB *dcb);
-void check_session_command_reply(GWBUF *buffer, SRWBackend& backend);
-bool execute_sescmd_in_backend(SRWBackend& backend_ref);
+void check_session_command_reply(GWBUF *buffer, mxs::SRWBackend& backend);
+bool execute_sescmd_in_backend(mxs::SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
                           RWSplit *inst, RWSplitSession *rses,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
@@ -69,20 +60,20 @@ int rses_get_max_replication_lag(RWSplitSession *rses);
 
 bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf, const RouteInfo& info);
-SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
+mxs::SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                               char *name, int max_rlag);
-SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
+mxs::SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
                                 route_target_t route_target);
-SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
+mxs::SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
                                   uint8_t cmd, uint32_t id);
 bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
-                             SRWBackend* dest);
+                             mxs::SRWBackend* dest);
 bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
-                       GWBUF *querybuf, SRWBackend& target, bool store);
+                       GWBUF *querybuf, mxs::SRWBackend& target, bool store);
 bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
 
-void process_sescmd_response(RWSplitSession* rses, SRWBackend& bref, GWBUF** ppPacket);
+void process_sescmd_response(RWSplitSession* rses, mxs::SRWBackend& bref, GWBUF** ppPacket);
 /*
  * The following are implemented in rwsplit_select_backends.c
  */
@@ -95,12 +86,12 @@ enum connection_type
 };
 
 bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
-                                    SRWBackendList& backends,
-                                    SRWBackend& current_master,
+                                    mxs::SRWBackendList& backends,
+                                    mxs::SRWBackend& current_master,
                                     mxs::SessionCommandList* sescmd,
                                     int* expected_responses,
                                     connection_type type);
-SRWBackend get_root_master(const SRWBackendList& backends);
+mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
 
 /**
  * Get total slave count and connected slave count
@@ -110,9 +101,9 @@ SRWBackend get_root_master(const SRWBackendList& backends);
  *
  * @return Total number of slaves and number of slaves we are connected to
  */
-std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& master);
+std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBackend& master);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
-void close_all_connections(SRWBackendList& backends);
+void close_all_connections(mxs::SRWBackendList& backends);

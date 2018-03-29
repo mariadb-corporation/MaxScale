@@ -22,6 +22,8 @@
 
 #include <maxscale/router.h>
 
+using namespace maxscale;
+
 /**
  * The functions that implement back end selection for the read write
  * split router. All of these functions are internal to that router and

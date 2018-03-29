@@ -568,6 +568,15 @@ bool mxs_mysql_is_result_set(GWBUF *buffer);
 bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer);
 
 /**
+ * Is this a binary protocol command
+ *
+ * @param cmd Command to check
+ *
+ * @return True if the command is a binary protocol command
+ */
+bool mxs_mysql_is_ps_command(uint8_t cmd);
+
+/**
  * @brief Check if the OK packet is followed by another result
  *
  * @param buffer Buffer to check

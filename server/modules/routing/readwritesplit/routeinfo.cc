@@ -737,7 +737,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 std::string id = get_text_ps_id(buffer);
                 *type = rses->ps_manager.get_type(id);
             }
-            else if (is_ps_command(*command))
+            else if (mxs_mysql_is_ps_command(*command))
             {
                 *stmt_id = get_internal_ps_id(rses, buffer);
                 *type = rses->ps_manager.get_type(*stmt_id);

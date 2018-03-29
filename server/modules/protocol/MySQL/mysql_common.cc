@@ -1576,6 +1576,15 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer)
     return rval;
 }
 
+bool mxs_mysql_is_ps_command(uint8_t cmd)
+{
+    return cmd == MXS_COM_STMT_EXECUTE ||
+           cmd == MXS_COM_STMT_SEND_LONG_DATA ||
+           cmd == MXS_COM_STMT_CLOSE ||
+           cmd == MXS_COM_STMT_FETCH ||
+           cmd == MXS_COM_STMT_RESET;
+}
+
 bool mxs_mysql_more_results_after_ok(GWBUF *buffer)
 {
     bool rval = false;

@@ -22,6 +22,8 @@
 
 #include <maxscale/router.h>
 
+using namespace maxscale;
+
 /**
  * Functions for session command handling
  */

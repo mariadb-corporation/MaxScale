@@ -36,6 +36,8 @@
 #include "rwsplitsession.hh"
 #include "routeinfo.hh"
 
+using namespace maxscale;
+
 /**
  * The entry points for the read/write query splitting router module.
  *

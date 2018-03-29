@@ -28,6 +28,8 @@
 #include "routeinfo.hh"
 #include "rwsplit_internal.hh"
 
+using namespace maxscale;
+
 /**
  * The functions that support the routing of queries to back end
  * servers. All the functions in this module are internal to the read
@@ -150,7 +152,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     route_target_t route_target = info.target;
     bool not_locked_to_master = !locked_to_master(rses);
 
-    if (not_locked_to_master && is_ps_command(command))
+    if (not_locked_to_master && mxs_mysql_is_ps_command(command))
     {
         /** Replace the client statement ID with our internal one only if the
          * target node is not the current master */
