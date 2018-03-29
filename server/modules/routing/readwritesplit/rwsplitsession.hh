@@ -83,6 +83,8 @@ public:
         return m_command;
     }
 
+    bool reply_is_complete(GWBUF *buffer);
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */

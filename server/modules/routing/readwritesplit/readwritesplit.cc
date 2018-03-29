@@ -517,20 +517,22 @@ static inline bool have_next_packet(GWBUF* buffer)
  * @param buffer  Buffer containing the response
  *
  * @return True if the complete response has been received
+ *
+ * TODO: Move this into a separate file
  */
-bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
+bool RWBackend::reply_is_complete(GWBUF *buffer)
 {
-    if (backend->get_reply_state() == REPLY_STATE_START &&
+    if (get_reply_state() == REPLY_STATE_START &&
         (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
         if (GWBUF_IS_COLLECTED_RESULT(buffer) ||
-            backend->current_command() == MXS_COM_STMT_PREPARE ||
+            current_command() == MXS_COM_STMT_PREPARE ||
             !mxs_mysql_is_ok_packet(buffer) ||
             !mxs_mysql_more_results_after_ok(buffer))
         {
             /** Not a result set, we have the complete response */
-            LOG_RS(backend, REPLY_STATE_DONE);
-            backend->set_reply_state(REPLY_STATE_DONE);
+            LOG_RS(this, REPLY_STATE_DONE);
+            set_reply_state(REPLY_STATE_DONE);
         }
         else
         {
@@ -540,19 +542,19 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
 
             if (have_next_packet(buffer))
             {
-                LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
-                backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
-                return reply_is_complete(backend, buffer);
+                LOG_RS(this, REPLY_STATE_RSET_COLDEF);
+                set_reply_state(REPLY_STATE_RSET_COLDEF);
+                return reply_is_complete(buffer);
             }
         }
     }
     else
     {
         bool more = false;
-        modutil_state state = {backend->is_large_packet()};
-        int n_old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
+        modutil_state state = {is_large_packet()};
+        int n_old_eof = get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
         int n_eof = modutil_count_signal_packets(buffer, n_old_eof, &more, &state);
-        backend->set_large_packet(state.state);
+        set_large_packet(state.state);
 
         if (n_eof > 2)
         {
@@ -567,33 +569,33 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
         if (n_eof == 0)
         {
             /** Waiting for the EOF packet after the column definitions */
-            LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
-            backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
+            LOG_RS(this, REPLY_STATE_RSET_COLDEF);
+            set_reply_state(REPLY_STATE_RSET_COLDEF);
         }
-        else if (n_eof == 1 && backend->current_command() != MXS_COM_FIELD_LIST)
+        else if (n_eof == 1 && current_command() != MXS_COM_FIELD_LIST)
         {
             /** Waiting for the EOF packet after the rows */
-            LOG_RS(backend, REPLY_STATE_RSET_ROWS);
-            backend->set_reply_state(REPLY_STATE_RSET_ROWS);
+            LOG_RS(this, REPLY_STATE_RSET_ROWS);
+            set_reply_state(REPLY_STATE_RSET_ROWS);
         }
         else
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && backend->current_command() == MXS_COM_FIELD_LIST));
-            LOG_RS(backend, REPLY_STATE_DONE);
-            backend->set_reply_state(REPLY_STATE_DONE);
+            ss_dassert(n_eof == 2 || (n_eof == 1 && current_command() == MXS_COM_FIELD_LIST));
+            LOG_RS(this, REPLY_STATE_DONE);
+            set_reply_state(REPLY_STATE_DONE);
 
             if (more)
             {
                 /** The server will send more resultsets */
-                LOG_RS(backend, REPLY_STATE_START);
-                backend->set_reply_state(REPLY_STATE_START);
+                LOG_RS(this, REPLY_STATE_START);
+                set_reply_state(REPLY_STATE_START);
             }
         }
     }
 
-    return backend->get_reply_state() == REPLY_STATE_DONE;
+    return get_reply_state() == REPLY_STATE_DONE;
 }
 
 void close_all_connections(SRWBackendList& backends)
@@ -1251,7 +1253,7 @@ static void clientReply(MXS_ROUTER *instance,
         session_clear_stmt(backend_dcb->session);
     }
 
-    if (reply_is_complete(backend, writebuf))
+    if (backend->reply_is_complete(writebuf))
     {
         /** Got a complete reply, acknowledge the write and decrement expected response count */
         backend->ack_write();

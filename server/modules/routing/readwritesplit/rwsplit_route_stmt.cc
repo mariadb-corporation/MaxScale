@@ -829,14 +829,6 @@ bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
     return succp;
 }
 
-static inline bool query_creates_reply(uint8_t cmd)
-{
-    return cmd != MXS_COM_QUIT &&
-           cmd != MXS_COM_STMT_SEND_LONG_DATA &&
-           cmd != MXS_COM_STMT_CLOSE &&
-           cmd != MXS_COM_STMT_FETCH; // Fetch is done mid-result
-}
-
 static inline bool is_large_query(GWBUF* buf)
 {
     uint32_t buflen = gwbuf_length(buf);
@@ -938,7 +930,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     }
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&
-        query_creates_reply(cmd))
+        mxs_mysql_command_will_respond(cmd))
     {
         response = mxs::Backend::EXPECT_RESPONSE;
     }
