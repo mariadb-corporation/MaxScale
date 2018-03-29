@@ -621,6 +621,10 @@ add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1
 # https://jira.mariadb.org/browse/MXS-1731
 add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS REPL_BACKEND)
 
+# MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
+# https://jira.mariadb.org/browse/MXS-1751
+add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS GALERA_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
