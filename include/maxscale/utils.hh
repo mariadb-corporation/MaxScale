@@ -268,4 +268,31 @@ private:
     ContainerType m_registry;
 };
 
+// binary compare of pointed-to objects
+template<typename Ptr>
+bool equal_pointees(const Ptr& lhs, const Ptr& rhs)
+{
+   return *lhs == *rhs;
+}
+
+// Unary predicate for equality of pointed-to objects
+template<typename T>
+class EqualPointees
+{
+public:
+   EqualPointees(const T& lhs) : m_ppLhs(&lhs) {}
+   bool operator()(const T& pRhs)
+   {
+       return **m_ppLhs == *pRhs;
+   }
+private:
+   const T* m_ppLhs;
+};
+
+template<typename T>
+EqualPointees<T> equal_pointees(const T& t)
+{
+   return EqualPointees<T>(t);
+}
+
 }

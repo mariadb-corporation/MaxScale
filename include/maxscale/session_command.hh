@@ -89,22 +89,6 @@ public:
      */
     bool eq(const SessionCommand& rhs) const;
 
-    class Equals: public std::unary_function<const SSessionCommand&, bool>
-    {
-    public:
-        Equals(const SSessionCommand& base):
-        m_base(base)
-        {}
-
-        bool operator ()(const SSessionCommand& rhs)
-        {
-            return m_base->eq(*rhs);
-        }
-
-    private:
-        const SSessionCommand& m_base;
-    };
-
 private:
     mxs::Buffer m_buffer;    /**< The buffer containing the command */
     uint8_t     m_command;   /**< The command being executed */
