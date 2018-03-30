@@ -96,7 +96,7 @@ int main(int argc, char** argv)
             "No master on startup",
             {
                 {"Block master and check that writes fail", block_master, rw_err},
-                {"Unblock master and check that writes still fail", unblock_master, rw_err},
+                {"Unblock master and check that writes do not fail", unblock_master, rw_ok},
                 {"Change master and check that writes work", master_change, rw_ok},
                 {"Reset cluster", reset, {}}
             }
