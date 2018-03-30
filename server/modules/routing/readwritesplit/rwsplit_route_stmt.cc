@@ -212,9 +212,14 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             }
         }
 
-        if (succp && target && prepare_target(rses, target, route_target))
+        if (succp && target)
         {
-            if (target->session_command_count())
+            if (!prepare_target(rses, target, route_target))
+            {
+                // The connection to target was down and we failed to reconnect
+                succp = false;
+            }
+            else if (target->session_command_count())
             {
                 // We need to wait until the session commands are executed
                 rses->expected_responses++;
@@ -236,10 +241,6 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
                     MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
                 }
             }
-        }
-        else
-        {
-            succp = false;
         }
     }
 
