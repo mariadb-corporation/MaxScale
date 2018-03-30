@@ -219,7 +219,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
                 // The connection to target was down and we failed to reconnect
                 succp = false;
             }
-            else if (target->session_command_count())
+            else if (target->have_session_commands())
             {
                 // We need to wait until the session commands are executed
                 rses->expected_responses++;
@@ -921,7 +921,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
              target->uri());
 
     /** The session command cursor must not be active */
-    ss_dassert(target->session_command_count() == 0);
+    ss_dassert(!target->have_session_commands());
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     rses->wait_gtid_state = EXPECTING_NOTHING;

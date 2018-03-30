@@ -398,7 +398,7 @@ static bool handle_error_new_connection(RWSplit *inst,
              */
             gwbuf_free(stored);
 
-            if (backend->session_command_count() == 0)
+            if (!backend->have_session_commands())
             {
                 /**
                  * The backend was executing a command that requires a reply.
@@ -1104,13 +1104,13 @@ static void clientReply(MXS_ROUTER *instance,
                  rses->expected_responses, backend->name());
     }
 
-    if (backend->session_command_count())
+    if (backend->have_session_commands())
     {
         /** Reply to an executed session command */
         process_sescmd_response(rses, backend, &writebuf);
     }
 
-    if (backend->session_command_count())
+    if (backend->have_session_commands())
     {
         if (backend->execute_session_command())
         {

@@ -431,7 +431,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
         MXS_INFO("Route query to \t%s:%d <", bref->backend()->server->name, bref->backend()->server->port);
 
-        if (bref->session_command_count())
+        if (bref->have_session_commands())
         {
             /** Store current statement if execution of the previous
              * session command hasn't been completed. */
@@ -490,7 +490,7 @@ void SchemaRouterSession::handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket
 
 void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket)
 {
-    if (bref->session_command_count())
+    if (bref->have_session_commands())
     {
         /** We are executing a session command */
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))

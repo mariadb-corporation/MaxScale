@@ -87,11 +87,21 @@ public:
     uint64_t complete_session_command();
 
     /**
-     * @brief Check if backend has session commands
+     * @brief Get number of session commands
      *
      * @return Number of session commands
      */
     size_t session_command_count() const;
+
+    /**
+     * @brief Check if there are session commands waiting to be executed
+     *
+     * @return True if there are session commands waiting to be executed
+     */
+    inline bool have_session_commands() const
+    {
+        return !m_session_commands.empty();
+    }
 
     /**
      * @brief Get the first session command
