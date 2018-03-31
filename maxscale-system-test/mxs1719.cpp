@@ -67,6 +67,9 @@ int main(int argc, char* argv[])
     {
         if (test.maxscales->start() == 0)
         {
+            // Give the monitor a few seconds to monitor the servers
+            sleep(5);
+
             if (test.maxscales->connect_rwsplit() == 0)
             {
                 run(test);
