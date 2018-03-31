@@ -716,7 +716,6 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
     {
         /** We found a master but it's not the same connection */
         ss_dassert(!rses->rses_config.master_reconnection);
-        ss_dassert(!curr_master->in_use());
         ss_dassert(old_master != curr_master);
         sprintf(errmsg, "Master server changed from '%s' to '%s'",
                 old_master->name(), curr_master->name());
