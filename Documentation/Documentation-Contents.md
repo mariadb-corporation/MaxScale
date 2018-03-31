@@ -66,6 +66,7 @@ of their use.
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Schemarouter](Routers/SchemaRouter.md)
+ - [Cat](Routers/Cat.md)
 
 There are also two diagnostic routing modules. The CLI is for MaxAdmin and
 the Debug CLI client for Telnet.
