@@ -207,6 +207,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 
 bool Backend::write(GWBUF* buffer, response_type type)
 {
+    ss_dassert(in_use());
     bool rval = m_dcb->func.write(m_dcb, buffer) != 0;
 
     if (rval && type == EXPECT_RESPONSE)

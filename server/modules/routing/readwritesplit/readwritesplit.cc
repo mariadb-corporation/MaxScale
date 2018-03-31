@@ -118,7 +118,7 @@ static inline SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
     {
         SRWBackend& backend = *it;
 
-        if (backend->dcb() == dcb)
+        if (backend->in_use() && backend->dcb() == dcb)
         {
             return backend;
         }
@@ -1178,6 +1178,7 @@ static void handleError(MXS_ROUTER *instance,
     ss_dassert(session);
 
     SRWBackend& backend = get_backend_from_dcb(rses, problem_dcb);
+    ss_dassert(backend->in_use());
 
     switch (action)
     {
