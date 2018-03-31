@@ -77,6 +77,10 @@ private:
     mxs::SRWBackendList::iterator m_current;
     GWBUF*                        m_query;
 
-    // Skip over unused backend servers
-    void skip_unused();
+    /**
+     * Iterate to next backend
+     *
+     * @return True if m_current points to a valid backend that is in use
+     */
+    bool next_backend();
 };
