@@ -66,6 +66,7 @@ void Backend::close(close_type type)
             }
 
             dcb_close(m_dcb);
+            m_dcb = NULL;
 
             /** decrease server current connection counters */
             atomic_add(&m_backend->connections, -1);
