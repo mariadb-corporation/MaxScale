@@ -379,10 +379,15 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     if (rses->rses_config.max_sescmd_history > 0 &&
         rses->sescmd_list.size() >= rses->rses_config.max_sescmd_history)
     {
-        MXS_WARNING("Router session exceeded session command history limit. "
-                    "Slave recovery is disabled and only slave servers with "
-                    "consistent session state are used "
-                    "for the duration of the session.");
+        static bool warn_history_exceeded = true;
+        if (warn_history_exceeded)
+        {
+            MXS_WARNING("Router session exceeded session command history limit.  Slave "
+                        "recovery is disabled and only slave servers with consistent "
+                        "session state are used for the duration of the session.");
+            warn_history_exceeded = false;
+        }
+
         rses->rses_config.disable_sescmd_history = true;
         rses->rses_config.max_sescmd_history = 0;
         rses->sescmd_list.clear();
