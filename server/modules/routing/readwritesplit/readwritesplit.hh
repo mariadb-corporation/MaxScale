@@ -173,7 +173,9 @@ struct Config
         max_slave_connections(0),
         enable_causal_read(config_get_bool(params, "enable_causal_read")),
         causal_read_timeout(config_get_string(params, "causal_read_timeout")),
-        master_reconnection(config_get_bool(params, "master_reconnection"))
+        master_reconnection(config_get_bool(params, "master_reconnection")),
+        query_retry_timeout(config_get_integer(params, "query_retry_timeout")),
+        query_retry_interval(config_get_integer(params, "query_retry_interval"))
     {
         if (enable_causal_read)
         {
@@ -199,8 +201,10 @@ struct Config
                                                   * each connection*/
     int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
     bool              enable_causal_read;        /**< Enable causual read */
-    std::string       causal_read_timeout;       /**< Timetout, second parameter of function master_wait_gtid */
+    std::string       causal_read_timeout;       /**< Timeout, second parameter of function master_wait_gtid */
     bool              master_reconnection;       /**< Allow changes in master server */
+    uint64_t          query_retry_timeout;       /**< Time window in which a query can be retried */
+    uint64_t          query_retry_interval;      /**< Time window in which a query can be retried */
 };
 
 /**

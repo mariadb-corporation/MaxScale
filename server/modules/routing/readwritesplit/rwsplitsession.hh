@@ -124,8 +124,9 @@ public:
     ExecMap                 m_exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     std::string             m_gtid_pos; /**< Gtid position for causal read */
     wait_gtid_state_t       m_wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
-    uint32_t                m_next_seq; /**< Next packet'ssequence number */
+    uint32_t                m_next_seq; /**< Next packet's sequence number */
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
+    uint64_t                m_retry_duration; /**< Total time spent retrying queries */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,

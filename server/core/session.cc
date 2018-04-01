@@ -47,6 +47,7 @@
 
 using std::string;
 using std::stringstream;
+using namespace maxscale;
 
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
@@ -1377,4 +1378,94 @@ void session_dump_statements(MXS_SESSION* pSession)
             --n;
         }
     }
+}
+
+class DelayedRoutingTask: public mxs::WorkerDisposableTask
+{
+    DelayedRoutingTask(const DelayedRoutingTask&);
+    DelayedRoutingTask& operator=(const DelayedRoutingTask&);
+
+public:
+    DelayedRoutingTask(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF *buffer):
+        m_session(session_get_ref(session)),
+        m_down(down),
+        m_buffer(buffer)
+    {
+    }
+
+    ~DelayedRoutingTask()
+    {
+        session_put_ref(m_session);
+        gwbuf_free(m_buffer);
+    }
+
+    void execute(Worker& worker)
+    {
+        if (m_session->state == SESSION_STATE_ROUTER_READY)
+        {
+            GWBUF* buffer = m_buffer;
+            m_buffer = NULL;
+
+            if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
+            {
+                // Routing failed, send a hangup to the client.
+                poll_fake_hangup_event(m_session->client_dcb);
+            }
+        }
+    }
+
+private:
+    MXS_SESSION*   m_session;
+    MXS_DOWNSTREAM m_down;
+    GWBUF*         m_buffer;
+};
+
+struct TaskAssignment
+{
+    TaskAssignment(std::auto_ptr<DelayedRoutingTask> task, Worker* worker):
+        task(task),
+        worker(worker)
+    {}
+
+    std::auto_ptr<DelayedRoutingTask> task;
+    Worker* worker;
+};
+
+static void delayed_routing_cb(void* data)
+{
+    TaskAssignment* job = static_cast<TaskAssignment*>(data);
+    job->worker->post(job->task, mxs::Worker::EXECUTE_QUEUED);
+    delete job;
+}
+
+bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds)
+{
+    bool success = false;
+
+    try
+    {
+        std::stringstream name;
+        name << "Session_" << session->ses_id << "_retry";
+
+        Worker* worker = Worker::get_current();
+        ss_dassert(worker == Worker::get(session->client_dcb->poll.thread.id));
+        std::auto_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
+        std::auto_ptr<TaskAssignment> job(new TaskAssignment(task, worker));
+        TaskAssignment* pJob = job.release();
+
+        if (hktask_oneshot(name.str().c_str(), delayed_routing_cb, pJob, seconds))
+        {
+            success = true;
+        }
+        else
+        {
+            delete pJob;
+        }
+    }
+    catch (std::bad_alloc)
+    {
+        MXS_OOM();
+    }
+
+    return success;
 }

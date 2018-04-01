@@ -477,6 +477,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
             {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
             {"master_reconnection", MXS_MODULE_PARAM_BOOL, "false"},
+            {"query_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
+            {"query_retry_interval", MXS_MODULE_PARAM_COUNT, "0"},
             {MXS_END_MODULE_PARAMS}
         }
     };

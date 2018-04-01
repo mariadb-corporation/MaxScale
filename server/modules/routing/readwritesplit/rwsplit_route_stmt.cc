@@ -205,8 +205,13 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
             }
         }
 
+        MXS_SESSION* session = m_client->session;
+
         if (succp && target)
         {
+            // We have a valid target, reset retry duration
+            m_retry_duration = 0;
+
             if (!prepare_target(target, route_target))
             {
                 // The connection to target was down and we failed to reconnect
@@ -234,6 +239,26 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
                     MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
                 }
             }
+        }
+        else if (m_config.query_retry_interval > 0 &&
+                 m_retry_duration < m_config.query_retry_timeout &&
+                 !session_trx_is_active(session))
+        {
+            // This is a more convenient type
+            typedef int32_t (*DOWNSTREAMFUNC)(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*);
+
+            MXS_DOWNSTREAM head;
+            head.instance = (MXS_FILTER*)session->service->router_instance;
+            head.session = (MXS_FILTER_SESSION*)session->router_session;
+            head.routeQuery = (DOWNSTREAMFUNC)session->service->router->routeQuery;
+
+            // Try to route the query again later
+            uint64_t interval = m_config.query_retry_interval;
+            MXS_INFO("Will try to route query again in %lu seconds", interval);
+            session_delay_routing(session, head, gwbuf_clone(querybuf), interval);
+            m_retry_duration += interval;
+
+            succp = true;
         }
     }
 

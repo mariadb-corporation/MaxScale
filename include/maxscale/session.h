@@ -673,4 +673,16 @@ void session_set_dump_statements(session_dump_statements_t value);
  */
 session_dump_statements_t session_get_dump_statements();
 
+/**
+ * @brief Route the query again after a delay
+ *
+ * @param session The current Session
+ * @param down    The downstream component, either a filter or a router
+ * @param buffer  The buffer to route
+ * @param seconds Number of seconds to wait before routing the query
+ *
+ * @return True if queuing of the query was successful
+ */
+bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds);
+
 MXS_END_DECLS
