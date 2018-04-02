@@ -24,7 +24,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/platform.h>
 #include <maxscale/semaphore.hh>
@@ -1214,12 +1214,12 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
-        uint64_t cycle_start = hkheartbeat;
+        uint64_t cycle_start = mxs_clock();
 
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
-            int64_t started = hkheartbeat;
+            int64_t started = mxs_clock();
             int64_t qtime = started - cycle_start;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
@@ -1263,7 +1263,7 @@ void Worker::poll_waitevents()
             }
 
             /** Calculate event execution statistics */
-            qtime = hkheartbeat - started;
+            qtime = mxs_clock() - started;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
             {

@@ -31,7 +31,7 @@
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.h>
 

@@ -89,6 +89,7 @@
 #include <maxscale/alloc.h>
 #include <inttypes.h>
 #include <maxscale/utils.h>
+#include <maxscale/clock.h>
 
 /**
  * This struct is used by sqlite3_exec callback routine
@@ -2540,13 +2541,12 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         /* Handle ROTATE_EVENT */
         if (hdr.event_type == ROTATE_EVENT)
         {
-            unsigned long beat1 = hkheartbeat;
-
+            int64_t beat1 = mxs_clock();
             blr_close_binlog(router, file);
-            if (hkheartbeat - beat1 > 1)
+            int64_t beat2 = mxs_clock();
+            if (beat2 - beat1 > 1)
             {
-                MXS_ERROR("blr_close_binlog took %lu maxscale beats",
-                          hkheartbeat - beat1);
+                MXS_ERROR("blr_close_binlog took %ld maxscale beats", beat2 - beat1);
             }
             /* Set new file in slave->binlogfile */
             blr_slave_rotate(router, slave, GWBUF_DATA(record));
@@ -2555,7 +2555,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             MXS_FREE(slave->encryption_ctx);
             slave->encryption_ctx = NULL;
 
-            beat1 = hkheartbeat;
+            beat1 = mxs_clock();
 
 #ifdef BLFILE_IN_SLAVE
             if ((slave->file = blr_open_binlog(router,
@@ -2623,10 +2623,10 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 #ifdef BLFILE_IN_SLAVE
             file = slave->file;
 #endif
-            if (hkheartbeat - beat1 > 1)
+            if (mxs_clock() - beat1 > 1)
             {
                 MXS_ERROR("blr_open_binlog took %lu beats",
-                          hkheartbeat - beat1);
+                          mxs_clock() - beat1);
             }
         }
 

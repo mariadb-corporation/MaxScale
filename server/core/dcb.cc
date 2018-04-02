@@ -42,7 +42,7 @@
 #include <maxscale/atomic.h>
 #include <maxscale/atomic.h>
 #include <maxscale/hashtable.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.h>
 #include <maxscale/log_manager.h>
@@ -198,7 +198,7 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     dcb_initialize(newdcb);
     newdcb->dcb_role = role;
     newdcb->listener = listener;
-    newdcb->last_read = hkheartbeat;
+    newdcb->last_read = mxs_clock();
 
     if (role == DCB_ROLE_SERVICE_LISTENER)
     {
@@ -403,7 +403,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
             MXS_DEBUG("Reusing a persistent connection, dcb %p", dcb);
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
-            dcb->last_read = hkheartbeat;
+            dcb->last_read = mxs_clock();
             atomic_add_uint64(&server->stats.n_from_pool, 1);
             return dcb;
         }
@@ -594,7 +594,7 @@ int dcb_read(DCB   *dcb,
         else
         {
             GWBUF *buffer;
-            dcb->last_read = hkheartbeat;
+            dcb->last_read = mxs_clock();
 
             buffer = dcb_basic_read(dcb, bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
@@ -748,7 +748,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
         dcb_drain_writeq(dcb);
     }
 
-    dcb->last_read = hkheartbeat;
+    dcb->last_read = mxs_clock();
     buffer = dcb_basic_read_SSL(dcb, &nsingleread);
     if (buffer)
     {
@@ -757,7 +757,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 
         while (buffer)
         {
-            dcb->last_read = hkheartbeat;
+            dcb->last_read = mxs_clock();
             buffer = dcb_basic_read_SSL(dcb, &nsingleread);
             if (buffer)
             {
@@ -2904,11 +2904,11 @@ void dcb_enable_session_timeouts()
  */
 void dcb_process_idle_sessions(int thr)
 {
-    if (this_unit.check_timeouts && hkheartbeat >= this_thread.next_timeout_check)
+    if (this_unit.check_timeouts && mxs_clock() >= this_thread.next_timeout_check)
     {
         /** Because the resolution of the timeout is one second, we only need to
          * check for it once per second. One heartbeat is 100 milliseconds. */
-        this_thread.next_timeout_check = hkheartbeat + 10;
+        this_thread.next_timeout_check = mxs_clock() + 10;
 
         for (DCB *dcb = this_unit.all_dcbs[thr]; dcb; dcb = dcb->thread.next)
         {
@@ -2919,7 +2919,7 @@ void dcb_process_idle_sessions(int thr)
 
                 if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
                 {
-                    int64_t idle = hkheartbeat - dcb->last_read;
+                    int64_t idle = mxs_clock() - dcb->last_read;
                     int64_t timeout = service->conn_idle_timeout * 10;
 
                     if (idle > timeout)

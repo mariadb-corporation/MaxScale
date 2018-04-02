@@ -20,7 +20,7 @@
 #include <strings.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/modutil.h>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
@@ -81,12 +81,12 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
         if (backend->in_use() && backend != target && !backend->is_waiting_result())
         {
             ss_debug(nserv++);
-            int diff = hkheartbeat - backend->dcb()->last_read;
+            int diff = mxs_clock() - backend->dcb()->last_read;
 
             if (diff > keepalive)
             {
                 MXS_INFO("Pinging %s, idle for %ld seconds",
-                         backend->name(), HB_TO_SEC(diff));
+                         backend->name(), MXS_CLOCK_TO_SEC(diff));
                 modutil_ignorable_ping(backend->dcb());
             }
         }

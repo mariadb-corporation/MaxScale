@@ -15,7 +15,7 @@
 
 #include <inttypes.h>
 #include <sstream>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/mysql_utils.h>
 #include "utilities.hh"
 
@@ -1498,8 +1498,8 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
                  * passive, we need to execute the failover script again if no new
                  * masters have appeared.
                  */
-                int64_t timeout = SEC_TO_HB(m_failover_timeout);
-                int64_t t = hkheartbeat - ptr->server->triggered_at;
+                int64_t timeout = MXS_SEC_TO_CLOCK(m_failover_timeout);
+                int64_t t = mxs_clock() - ptr->server->triggered_at;
 
                 if (t > timeout)
                 {

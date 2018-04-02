@@ -17,6 +17,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
+#include <maxscale/clock.h>
 #include <maxscale/config.h>
 #include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
@@ -48,7 +49,6 @@ static SPINLOCK tasklock = SPINLOCK_INIT;
 
 static bool do_shutdown = 0;
 
-int64_t hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
 static THREAD hk_thr_handle;
 
 static void hkthread(void *);
@@ -58,6 +58,14 @@ struct hkinit_result
     sem_t sem;
     bool ok;
 };
+
+// TODO: Move these into a separate file
+static int64_t mxs_clock_ticks = 0; /*< One clock tick is 100 milliseconds */
+
+int64_t mxs_clock()
+{
+    return atomic_load_int64(&mxs_clock_ticks);
+}
 
 bool
 hkinit()
@@ -240,7 +248,7 @@ void hkthread(void *data)
         for (i = 0; i < 10; i++)
         {
             thread_millisleep(100);
-            atomic_add_int64(&hkheartbeat, 1);
+            atomic_add_int64(&mxs_clock_ticks, 1);
         }
         now = time(0);
         spinlock_acquire(&tasklock);

@@ -44,7 +44,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/version.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 
 #include "internal/config.h"
 #include "internal/filter.h"
@@ -4214,7 +4214,7 @@ json_t* config_maxscale_to_json(const char* host)
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
-    time_t activated = started + HB_TO_SEC(cnf->promoted_at);
+    time_t activated = started + MXS_CLOCK_TO_SEC(cnf->promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
     json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));

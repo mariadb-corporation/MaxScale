@@ -19,7 +19,6 @@
 #include <maxscale/cdefs.h>
 #include <time.h>
 #include <maxscale/dcb.h>
-#include <maxscale/hk_heartbeat.h>
 
 MXS_BEGIN_DECLS
 

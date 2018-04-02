@@ -22,7 +22,7 @@
 #include <vector>
 
 #include <maxscale/alloc.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
@@ -953,7 +953,7 @@ bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
     if (dcb_read(dcb, &localbuf, 0) >= 0)
     {
         rval = true;
-        dcb->last_read = hkheartbeat;
+        dcb->last_read = mxs_clock();
         GWBUF *packets = modutil_get_complete_packets(&localbuf);
 
         if (packets)

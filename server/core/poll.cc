@@ -31,7 +31,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/platform.h>
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>

@@ -37,7 +37,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/json_api.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
 
@@ -514,7 +514,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     dcb_printf(dcb, "\tLast event:                          %s\n",
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
-    time_t t = maxscale_started() + HB_TO_SEC(server->triggered_at);
+    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
 
     if (server->slaves)
@@ -1421,7 +1421,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(attr, "replication_depth", json_integer(server->depth));
 
     const char* event_name = mon_get_event_name((mxs_monitor_event_t)server->last_event);
-    time_t t = maxscale_started() + HB_TO_SEC(server->triggered_at);
+    time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     json_object_set_new(attr, "last_event", json_string(event_name));
     json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));
 

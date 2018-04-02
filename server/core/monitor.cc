@@ -28,7 +28,7 @@
 #include <vector>
 
 #include <maxscale/alloc.h>
-#include <maxscale/hk_heartbeat.h>
+#include <maxscale/clock.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/mysql_utils.h>
@@ -1759,7 +1759,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
              */
             mxs_monitor_event_t event = mon_get_event_type(ptr);
             ptr->server->last_event = event;
-            ptr->server->triggered_at = hkheartbeat;
+            ptr->server->triggered_at = mxs_clock();
             ptr->server->active_event = !config_get_global_options()->passive;
             ptr->new_event = true;
             mon_log_state_change(ptr);
