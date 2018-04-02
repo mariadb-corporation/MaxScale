@@ -12,21 +12,22 @@
  */
 #include <maxscale/cppdefs.hh>
 
-#include <maxscale/housekeeper.h>
-
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/config.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/json_api.h>
+#include <maxscale/query_classifier.h>
 #include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include <maxscale/thread.h>
-#include <maxscale/query_classifier.h>
-#include <maxscale/json_api.h>
 
 /**
  * @file housekeeper.cc  Provide a mechanism to run periodic tasks
@@ -55,18 +56,30 @@ enum hktask_type
     HK_ONESHOT
 };
 
-/**
- * The housekeeper task list
- */
-struct HKTASK
+namespace
 {
-    char* name;               /*< A simple task name */
-    void (*task)(void *data); /*< The task to call */
-    void *data;               /*< Data to pass the task */
-    int frequency;            /*< How often to call the tasks (seconds) */
-    time_t nextdue;           /*< When the task should be next run */
-    enum hktask_type type;    /*< The task type */
-    struct HKTASK* next;
+
+typedef void (*TASKFN)(void *data);
+
+// A task to perform
+struct Task
+{
+    Task(std::string name, TASKFN func, void* data, int frequency, hktask_type type):
+        name(name),
+        func(func),
+        data(data),
+        frequency(frequency),
+        nextdue(time(0) + frequency),
+        type(type)
+    {
+    }
+
+    std::string name;      /*< Task name */
+    TASKFN      func;      /*< The function to call */
+    void*       data;      /*< Data to pass to the function */
+    int         frequency; /*< How often to call the tasks, in seconds */
+    time_t      nextdue;   /*< When the task should be next run */
+    hktask_type type;      /*< The task type */
 };
 
 class Housekeeper
@@ -78,10 +91,17 @@ public:
     static bool init();
     void stop();
     void run();
+    void add(std::string name, TASKFN func, void* data, int frequency, hktask_type type);
+    void remove(std::string name);
+
+    void print_tasks(DCB* pDcb);
+    json_t* tasks_json(const char* host);
 
 private:
-    THREAD   m_thread;
-    uint32_t m_running;
+    THREAD            m_thread;
+    uint32_t          m_running;
+    std::vector<Task> m_tasks;
+    mxs::SpinLock     m_lock;
 };
 
 // Helper struct used to initialize the housekeeper
@@ -91,19 +111,10 @@ struct hkinit_result
     bool ok;
 };
 
-/**
- * List of all tasks that need to be run
- */
-static HKTASK* tasks = NULL;
-/**
- * Spinlock to protect the tasks list
- */
-static SPINLOCK tasklock = SPINLOCK_INIT;
-
-static void hkthread(void *);
-
 // The Housekeeper instance
 static Housekeeper* hk = NULL;
+
+static void hkthread(void*);
 
 Housekeeper::Housekeeper():
     m_running(1)
@@ -145,34 +156,28 @@ void Housekeeper::run()
             atomic_add_int64(&mxs_clock_ticks, 1);
         }
         time_t now = time(0);
-        spinlock_acquire(&tasklock);
-        HKTASK* ptr = tasks;
+        m_lock.acquire();
 
-        while (atomic_load_uint32(&m_running) && ptr)
+        for (auto it = m_tasks.begin(); it != m_tasks.end() && atomic_load_uint32(&m_running); it++)
         {
-            if (ptr->nextdue <= now)
+            if (it->nextdue <= now)
             {
-                ptr->nextdue = now + ptr->frequency;
+                it->nextdue = now + it->frequency;
                 // We need to copy type and name, in case hktask_remove is called from
                 // the callback. Otherwise we will access freed data.
-                enum hktask_type type = ptr->type;
-                std::string name = ptr->name;
+                enum hktask_type type = it->type;
+                std::string name = it->name;
 
-                spinlock_release(&tasklock);
-                ptr->task(ptr->data);
+                m_lock.release();
+                it->func(it->data);
                 if (type == HK_ONESHOT)
                 {
-                    hktask_remove(name.c_str());
+                    remove(name);
                 }
-                spinlock_acquire(&tasklock);
-                ptr = tasks;
-            }
-            else
-            {
-                ptr = ptr->next;
+                m_lock.acquire();
             }
         }
-        spinlock_release(&tasklock);
+        m_lock.release();
     }
 }
 
@@ -181,144 +186,98 @@ void Housekeeper::stop()
     atomic_store_uint32(&m_running, 0);
 }
 
-int hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
+void Housekeeper::add(std::string name, TASKFN func, void* data, int frequency, hktask_type type)
 {
-    HKTASK *task, *ptr;
+    mxs::SpinLockGuard guard(m_lock);
+    m_tasks.push_back(Task(name, func, data, frequency, type));
+}
 
-    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
+void Housekeeper::remove(std::string name)
+{
+    mxs::SpinLockGuard guard(m_lock);
+    auto it = m_tasks.begin();
+
+    while (it != m_tasks.end())
     {
-        return 0;
-    }
-    if ((task->name = MXS_STRDUP(name)) == NULL)
-    {
-        MXS_FREE(task);
-        return 0;
-    }
-    task->task = taskfn;
-    task->data = data;
-    task->frequency = frequency;
-    task->type = HK_REPEATED;
-    task->nextdue = time(0) + frequency;
-    task->next = NULL;
-    spinlock_acquire(&tasklock);
-    ptr = tasks;
-    while (ptr && ptr->next)
-    {
-        if (strcmp(ptr->name, name) == 0)
+        if (it->name == name)
         {
-            spinlock_release(&tasklock);
-            MXS_FREE(task->name);
-            MXS_FREE(task);
-            return 0;
+            it = m_tasks.erase(it);
+            continue;
         }
-        ptr = ptr->next;
+        it++;
     }
-    if (ptr)
-    {
-        if (strcmp(ptr->name, name) == 0)
-        {
-            spinlock_release(&tasklock);
-            MXS_FREE(task->name);
-            MXS_FREE(task);
-            return 0;
-        }
-        ptr->next = task;
-    }
-    else
-    {
-        tasks = task;
-    }
-    spinlock_release(&tasklock);
-
-    return task->nextdue;
 }
 
-int hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
+void Housekeeper::print_tasks(DCB* pDcb)
 {
-    HKTASK *task, *ptr;
+    mxs::SpinLockGuard guard(m_lock);
+    dcb_printf(pDcb, "%-25s | Type     | Frequency | Next Due\n", "Name");
+    dcb_printf(pDcb, "--------------------------+----------+-----------+-------------------------\n");
 
-    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
+    for (auto ptr = m_tasks.begin(); ptr != m_tasks.end(); ptr++)
     {
-        return 0;
+        struct tm tm;
+        char buf[40];
+        localtime_r(&ptr->nextdue, &tm);
+        asctime_r(&tm, buf);
+        dcb_printf(pDcb, "%-25s | %-8s | %-9d | %s", ptr->name.c_str(),
+                   ptr->type == HK_REPEATED ? "Repeated" : "One-Shot",
+                   ptr->frequency, buf);
     }
-    if ((task->name = MXS_STRDUP(name)) == NULL)
-    {
-        MXS_FREE(task);
-        return 0;
-    }
-    task->task = taskfn;
-    task->data = data;
-    task->frequency = 0;
-    task->type = HK_ONESHOT;
-    task->nextdue = time(0) + when;
-    task->next = NULL;
-    spinlock_acquire(&tasklock);
-    ptr = tasks;
-    while (ptr && ptr->next)
-    {
-        ptr = ptr->next;
-    }
-    if (ptr)
-    {
-        ptr->next = task;
-    }
-    else
-    {
-        tasks = task;
-    }
-    spinlock_release(&tasklock);
-
-    return task->nextdue;
 }
 
-int hktask_remove(const char *name)
+json_t* Housekeeper::tasks_json(const char* host)
 {
-    HKTASK *ptr, *lptr = NULL;
+    json_t* arr = json_array();
 
-    spinlock_acquire(&tasklock);
-    ptr = tasks;
-    while (ptr && strcmp(ptr->name, name) != 0)
-    {
-        lptr = ptr;
-        ptr = ptr->next;
-    }
-    if (ptr && lptr)
-    {
-        lptr->next = ptr->next;
-    }
-    else if (ptr)
-    {
-        tasks = ptr->next;
-    }
-    spinlock_release(&tasklock);
+    mxs::SpinLockGuard guard(m_lock);
 
-    if (ptr)
+    for (auto ptr = m_tasks.begin(); ptr != m_tasks.end(); ptr++)
     {
-        MXS_FREE(ptr->name);
-        MXS_FREE(ptr);
-        return 1;
+        struct tm tm;
+        char buf[40];
+        localtime_r(&ptr->nextdue, &tm);
+        asctime_r(&tm, buf);
+        char* nl = strchr(buf, '\n');
+        ss_dassert(nl);
+        *nl = '\0';
+
+        const char* task_type = ptr->type == HK_REPEATED ? "Repeated" : "One-Shot";
+
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, CN_ID, json_string(ptr->name.c_str()));
+        json_object_set_new(obj, CN_TYPE, json_string("tasks"));
+
+        json_t* attr = json_object();
+        json_object_set_new(attr, "task_type", json_string(task_type));
+        json_object_set_new(attr, "frequency", json_integer(ptr->frequency));
+        json_object_set_new(attr, "next_execution", json_string(buf));
+
+        json_object_set_new(obj, CN_ATTRIBUTES, attr);
+        json_array_append_new(arr, obj);
     }
-    else
-    {
-        return 0;
-    }
+
+    return mxs_json_resource(host, MXS_JSON_API_TASKS, arr);
 }
 
-/**
- * The housekeeper thread implementation.
- *
- * This function is responsible for executing the housekeeper tasks.
- *
- * The implementation of the callng of the task functions is such that
- * the tasks are called without the tasklock spinlock being held. This
- * allows manipulation of the housekeeper task list during execution of
- * one of the tasks. The resutl is that upon completion of a task the
- * search for tasks to run must restart from the start of the queue.
- * It is vital that the task->nextdue tiem is updated before the task
- * is run.
- *
- * @param       data            Unused, here to satisfy the thread system
- */
+}
+
+void hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
+{
+    hk->add(name, taskfn, data, frequency, HK_REPEATED);
+}
+
+void hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
+{
+    hk->add(name, taskfn, data, when, HK_ONESHOT);
+}
+
+void hktask_remove(const char *name)
+{
+    hk->remove(name);
+}
+
 void hkthread(void *data)
 {
     struct hkinit_result* res = (struct hkinit_result*)data;
@@ -331,7 +290,10 @@ void hkthread(void *data)
 
     sem_post(&res->sem);
 
-    hk->run();
+    if (res->ok)
+    {
+        hk->run();
+    }
 
     qc_thread_end(QC_INIT_BOTH);
     MXS_NOTICE("Housekeeper shutting down.");
@@ -349,71 +311,18 @@ void hkshutdown()
 
 void hkfinish()
 {
-    ss_dassert(hk);
     MXS_NOTICE("Waiting for housekeeper to shut down.");
-
     delete hk;
-
+    hk = NULL;
     MXS_NOTICE("Housekeeper has shut down.");
 }
 
-void hkshow_tasks(DCB *pdcb)
+void hkshow_tasks(DCB *pDcb)
 {
-    HKTASK *ptr;
-    struct tm tm;
-    char buf[40];
-
-    dcb_printf(pdcb, "%-25s | Type     | Frequency | Next Due\n", "Name");
-    dcb_printf(pdcb, "--------------------------+----------+-----------+-------------------------\n");
-    spinlock_acquire(&tasklock);
-    ptr = tasks;
-    while (ptr)
-    {
-        localtime_r(&ptr->nextdue, &tm);
-        asctime_r(&tm, buf);
-        dcb_printf(pdcb, "%-25s | %-8s | %-9d | %s",
-                   ptr->name,
-                   ptr->type == HK_REPEATED ? "Repeated" : "One-Shot",
-                   ptr->frequency,
-                   buf);
-        ptr = ptr->next;
-    }
-    spinlock_release(&tasklock);
+    hk->print_tasks(pDcb);
 }
 
 json_t* hk_tasks_json(const char* host)
 {
-    json_t* arr = json_array();
-
-    spinlock_acquire(&tasklock);
-
-    for (HKTASK* ptr = tasks; ptr; ptr = ptr->next)
-    {
-        struct tm tm;
-        char buf[40];
-        localtime_r(&ptr->nextdue, &tm);
-        asctime_r(&tm, buf);
-        char* nl = strchr(buf, '\n');
-        ss_dassert(nl);
-        *nl = '\0';
-
-        const char* task_type = ptr->type == HK_REPEATED ? "Repeated" : "One-Shot";
-
-        json_t* obj = json_object();
-
-        json_object_set_new(obj, CN_ID, json_string(ptr->name));
-        json_object_set_new(obj, CN_TYPE, json_string("tasks"));
-
-        json_t* attr = json_object();
-        json_object_set_new(attr, "task_type", json_string(task_type));
-        json_object_set_new(attr, "frequency", json_integer(ptr->frequency));
-        json_object_set_new(attr, "next_execution", json_string(buf));
-
-        json_object_set_new(obj, CN_ATTRIBUTES, attr);
-        json_array_append_new(arr, obj);
-    }
-
-    spinlock_release(&tasklock);
-
-    return mxs_json_resource(host, MXS_JSON_API_TASKS, arr);
+    return hk->tasks_json(host);
 }

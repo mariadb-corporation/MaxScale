@@ -1454,14 +1454,8 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
         std::auto_ptr<TaskAssignment> job(new TaskAssignment(task, worker));
         TaskAssignment* pJob = job.release();
 
-        if (hktask_oneshot(name.str().c_str(), delayed_routing_cb, pJob, seconds))
-        {
-            success = true;
-        }
-        else
-        {
-            delete pJob;
-        }
+        hktask_oneshot(name.str().c_str(), delayed_routing_cb, pJob, seconds);
+        success = true;
     }
     catch (std::bad_alloc)
     {

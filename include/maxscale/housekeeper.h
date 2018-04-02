@@ -17,7 +17,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <time.h>
 #include <maxscale/dcb.h>
 
 MXS_BEGIN_DECLS
@@ -30,7 +29,7 @@ MXS_BEGIN_DECLS
  *
  * @return True if the housekeeper mechanism was initialized, false otherwise.
  */
-extern bool hkinit();
+bool hkinit();
 
 /**
  * Shuts down the housekeeper mechanism.
@@ -39,13 +38,13 @@ extern bool hkinit();
  *
  * @see hkinit hkfinish
  */
-extern void hkshutdown();
+void hkshutdown();
 
 /**
  * Waits for the housekeeper thread to finish. Should be called only after
  * hkshutdown() has been called.
  */
-extern void hkfinish();
+void hkfinish();
 
 /**
  * @brief Add a new task
@@ -60,10 +59,8 @@ extern void hkfinish();
  * @param task      Function to execute
  * @param data      Data passed to function as the parameter
  * @param frequency Frequency of execution
- *
- * @return 1 if task was added
  */
-int hktask_add(const char *name, void (*task)(void *) , void *data, int frequency);
+void hktask_add(const char *name, void (*task)(void *) , void *data, int frequency);
 
 /**
  * @brief Add oneshot task
@@ -74,24 +71,20 @@ int hktask_add(const char *name, void (*task)(void *) , void *data, int frequenc
  * @param task Function to execute
  * @param data Data passed to function as the parameter
  * @param when Number of seconds to wait until task is executed
- *
- * @return 1 if task was added
  */
-int hktask_oneshot(const char *name, void (*task)(void *) , void *data, int when);
+void hktask_oneshot(const char *name, void (*task)(void *) , void *data, int when);
 
 /**
- * @brief Remove a task
+ * @brief Remove all tasks with this name
  *
  * @param name Task name
- *
- * @return 1 if the task was removed
  */
-int hktask_remove(const char *name);
+void hktask_remove(const char *name);
 
 /**
  * @brief Show the tasks that are scheduled for the house keeper
  *
- * @param pdcb The DCB to send to output
+ * @param pDcb The DCB to send to output
  */
 void hkshow_tasks(DCB *pdcb);
 

@@ -366,14 +366,12 @@ static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start)
         /** Remove old task and create a new one */
         hktask_remove(tasknm);
 
-        if (!start || hktask_add(tasknm, converter_func, inst, inst->task_delay))
+        if (start)
         {
-            rval = true;
+            hktask_add(tasknm, converter_func, inst, inst->task_delay);
         }
-        else
-        {
-            MXS_ERROR("Failed to add binlog to Avro conversion task to housekeeper.");
-        }
+
+        rval = true;
     }
 
     return rval;
