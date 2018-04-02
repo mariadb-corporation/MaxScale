@@ -10,10 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <maxscale/cppdefs.hh>
+
 #include <maxscale/housekeeper.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -26,7 +29,7 @@
 #include <maxscale/json_api.h>
 
 /**
- * @file housekeeper.c  Provide a mechanism to run periodic tasks
+ * @file housekeeper.cc  Provide a mechanism to run periodic tasks
  *
  * The housekeeper provides a mechanism to allow for tasks, function
  * calls basically, to be run on a time basis. A task may be run
@@ -34,30 +37,9 @@
  * shot task that will only be run once after a specified number of
  * seconds.
  *
- * The housekeeper also maintains a global variable, hkheartbeat, that
- * is incremented every 100ms.
+ * The housekeeper also maintains a global variable that
+ * is incremented every 100ms and can be read with the mxs_clock() function.
  */
-
-/**
- * List of all tasks that need to be run
- */
-static HKTASK *tasks = NULL;
-/**
- * Spinlock to protect the tasks list
- */
-static SPINLOCK tasklock = SPINLOCK_INIT;
-
-static bool do_shutdown = 0;
-
-static THREAD hk_thr_handle;
-
-static void hkthread(void *);
-
-struct hkinit_result
-{
-    sem_t sem;
-    bool ok;
-};
 
 // TODO: Move these into a separate file
 static int64_t mxs_clock_ticks = 0; /*< One clock tick is 100 milliseconds */
@@ -67,14 +49,80 @@ int64_t mxs_clock()
     return atomic_load_int64(&mxs_clock_ticks);
 }
 
-bool
-hkinit()
+enum hktask_type
+{
+    HK_REPEATED = 1,
+    HK_ONESHOT
+};
+
+/**
+ * The housekeeper task list
+ */
+struct HKTASK
+{
+    char* name;               /*< A simple task name */
+    void (*task)(void *data); /*< The task to call */
+    void *data;               /*< Data to pass the task */
+    int frequency;            /*< How often to call the tasks (seconds) */
+    time_t nextdue;           /*< When the task should be next run */
+    enum hktask_type type;    /*< The task type */
+    struct HKTASK* next;
+};
+
+class Housekeeper
+{
+public:
+    Housekeeper();
+    ~Housekeeper();
+
+    static bool init();
+    void stop();
+    void run();
+
+private:
+    THREAD   m_thread;
+    uint32_t m_running;
+};
+
+// Helper struct used to initialize the housekeeper
+struct hkinit_result
+{
+    sem_t sem;
+    bool ok;
+};
+
+/**
+ * List of all tasks that need to be run
+ */
+static HKTASK* tasks = NULL;
+/**
+ * Spinlock to protect the tasks list
+ */
+static SPINLOCK tasklock = SPINLOCK_INIT;
+
+static void hkthread(void *);
+
+// The Housekeeper instance
+static Housekeeper* hk = NULL;
+
+Housekeeper::Housekeeper():
+    m_running(1)
+{
+}
+
+Housekeeper::~Housekeeper()
+{
+    thread_wait(m_thread);
+}
+
+bool Housekeeper::init()
 {
     struct hkinit_result res;
     sem_init(&res.sem, 0, 0);
     res.ok = false;
+    hk = new (std::nothrow) Housekeeper;
 
-    if (thread_start(&hk_thr_handle, hkthread, &res, 0) != NULL)
+    if (hk && thread_start(&hk->m_thread, hkthread, &res, 0) != NULL)
     {
         sem_wait(&res.sem);
     }
@@ -85,6 +133,52 @@ hkinit()
 
     sem_destroy(&res.sem);
     return res.ok;
+}
+
+void Housekeeper::run()
+{
+    while (atomic_load_uint32(&m_running))
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            thread_millisleep(100);
+            atomic_add_int64(&mxs_clock_ticks, 1);
+        }
+        time_t now = time(0);
+        spinlock_acquire(&tasklock);
+        HKTASK* ptr = tasks;
+
+        while (atomic_load_uint32(&m_running) && ptr)
+        {
+            if (ptr->nextdue <= now)
+            {
+                ptr->nextdue = now + ptr->frequency;
+                // We need to copy type and name, in case hktask_remove is called from
+                // the callback. Otherwise we will access freed data.
+                enum hktask_type type = ptr->type;
+                std::string name = ptr->name;
+
+                spinlock_release(&tasklock);
+                ptr->task(ptr->data);
+                if (type == HK_ONESHOT)
+                {
+                    hktask_remove(name.c_str());
+                }
+                spinlock_acquire(&tasklock);
+                ptr = tasks;
+            }
+            else
+            {
+                ptr = ptr->next;
+            }
+        }
+        spinlock_release(&tasklock);
+    }
+}
+
+void Housekeeper::stop()
+{
+    atomic_store_uint32(&m_running, 0);
 }
 
 int hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
@@ -227,12 +321,6 @@ int hktask_remove(const char *name)
  */
 void hkthread(void *data)
 {
-    HKTASK *ptr;
-    time_t now;
-    void (*taskfn)(void *);
-    void *taskdata;
-    int i;
-
     struct hkinit_result* res = (struct hkinit_result*)data;
     res->ok = qc_thread_init(QC_INIT_BOTH);
 
@@ -243,62 +331,29 @@ void hkthread(void *data)
 
     sem_post(&res->sem);
 
-    while (!do_shutdown)
-    {
-        for (i = 0; i < 10; i++)
-        {
-            thread_millisleep(100);
-            atomic_add_int64(&mxs_clock_ticks, 1);
-        }
-        now = time(0);
-        spinlock_acquire(&tasklock);
-        ptr = tasks;
-        while (!do_shutdown && ptr)
-        {
-            if (ptr->nextdue <= now)
-            {
-                ptr->nextdue = now + ptr->frequency;
-                taskfn = ptr->task;
-                taskdata = ptr->data;
-                // We need to copy type and name, in case hktask_remove is called from
-                // the callback. Otherwise we will access freed data.
-                HKTASK_TYPE type = ptr->type;
-                char name[strlen(ptr->name) + 1];
-                strcpy(name, ptr->name);
-                spinlock_release(&tasklock);
-                (*taskfn)(taskdata);
-                if (type == HK_ONESHOT)
-                {
-                    hktask_remove(name);
-                }
-                spinlock_acquire(&tasklock);
-                ptr = tasks;
-            }
-            else
-            {
-                ptr = ptr->next;
-            }
-        }
-        spinlock_release(&tasklock);
-    }
+    hk->run();
 
     qc_thread_end(QC_INIT_BOTH);
     MXS_NOTICE("Housekeeper shutting down.");
 }
 
+bool hkinit()
+{
+    return Housekeeper::init();
+}
+
 void hkshutdown()
 {
-    do_shutdown = true;
-    atomic_synchronize();
+    hk->stop();
 }
 
 void hkfinish()
 {
-    ss_dassert(do_shutdown);
-
+    ss_dassert(hk);
     MXS_NOTICE("Waiting for housekeeper to shut down.");
-    thread_wait(hk_thr_handle);
-    do_shutdown = false;
+
+    delete hk;
+
     MXS_NOTICE("Housekeeper has shut down.");
 }
 

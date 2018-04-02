@@ -22,26 +22,6 @@
 
 MXS_BEGIN_DECLS
 
-typedef enum
-{
-    HK_REPEATED = 1,
-    HK_ONESHOT
-} HKTASK_TYPE;
-
-/**
- * The housekeeper task list
- */
-typedef struct hktask
-{
-    char *name;               /*< A simple task name */
-    void (*task)(void *data); /*< The task to call */
-    void *data;               /*< Data to pass the task */
-    int frequency;            /*< How often to call the tasks (seconds) */
-    time_t nextdue;           /*< When the task should be next run */
-    HKTASK_TYPE type;         /*< The task type */
-    struct hktask *next;      /*< Next task in the list */
-} HKTASK;
-
 /**
  * Initialises the housekeeper mechanism.
  *
