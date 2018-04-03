@@ -12,7 +12,7 @@
  */
 
 #include "readwritesplit.hh"
-#include "rwsplit_internal.hh"
+#include "rwsplitsession.hh"
 
 #include <strings.h>
 #include <string.h>
@@ -79,9 +79,8 @@
  * @param qtype         Query type
  * @return bool indicating whether the session can continue
  */
-bool handle_target_is_all(route_target_t route_target, RWSplit *inst,
-                          RWSplitSession *rses, GWBUF *querybuf,
-                          int packet_type, uint32_t qtype)
+bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *querybuf,
+                                          int packet_type, uint32_t qtype)
 {
     bool result = false;
 
@@ -105,18 +104,18 @@ bool handle_target_is_all(route_target_t route_target, RWSplit *inst,
 
         if (errbuf)
         {
-            rses->client_dcb->func.write(rses->client_dcb, errbuf);
+            client_dcb->func.write(client_dcb, errbuf);
             result = true;
         }
 
         MXS_FREE(query_str);
         MXS_FREE(qtype_str);
     }
-    else if (route_session_write(rses, gwbuf_clone(querybuf), packet_type, qtype))
+    else if (route_session_write(gwbuf_clone(querybuf), packet_type, qtype))
     {
 
         result = true;
-        atomic_add_uint64(&inst->stats().n_all, 1);
+        atomic_add_uint64(&router->stats().n_all, 1);
     }
 
     return result;

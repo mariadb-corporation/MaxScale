@@ -15,6 +15,7 @@
 #include "readwritesplit.hh"
 #include "rwsplit_ps.hh"
 #include "rwbackend.hh"
+#include "routeinfo.hh"
 
 #include <string>
 
@@ -127,6 +128,53 @@ public:
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
                    const mxs::SRWBackendList& backends, const mxs::SRWBackend& master);
+
+    void process_sescmd_response(mxs::SRWBackend& backend, GWBUF** ppPacket);
+    void purge_history(mxs::SSessionCommand& sescmd);
+
+    bool route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type);
+    bool route_single_stmt(GWBUF *querybuf, const RouteInfo& info);
+    bool route_stored_query();
+    bool reroute_stored_statement(const mxs::SRWBackend& old, GWBUF *stored);
+
+    mxs::SRWBackend get_hinted_backend(char *name);
+    mxs::SRWBackend get_slave_backend(int max_rlag);
+    mxs::SRWBackend get_master_backend();
+    mxs::SRWBackend get_target_backend(backend_type_t btype, char *name, int max_rlag);
+
+    bool handle_target_is_all(route_target_t route_target, GWBUF *querybuf,
+                              int packet_type, uint32_t qtype);
+    mxs::SRWBackend handle_hinted_target(GWBUF *querybuf, route_target_t route_target);
+    mxs::SRWBackend handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
+    bool handle_master_is_target(mxs::SRWBackend* dest);
+    bool handle_got_target(GWBUF* querybuf, mxs::SRWBackend& target, bool store);
+    void handle_connection_keepalive(mxs::SRWBackend& target);
+    bool prepare_target(mxs::SRWBackend& target, route_target_t route_target);
+
+    bool should_replace_master(mxs::SRWBackend& target);
+    void replace_master(mxs::SRWBackend& target);
+    void log_master_routing_failure(bool found, mxs::SRWBackend& old_master,
+                                    mxs::SRWBackend& curr_master);
+
+    GWBUF* add_prefix_wait_gtid(SERVER *server, GWBUF *origin);
+    void correct_packet_sequence(GWBUF *buffer);
+    GWBUF* discard_master_wait_gtid_result(GWBUF *buffer);
+
+    int get_max_replication_lag();
+    mxs::SRWBackend& get_backend_from_dcb(DCB *dcb);
+
+    void handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg);
+    bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
+
+    /**
+     * Check if the session is locked to the master
+     *
+     * @return Whether the session is locked to the master
+     */
+    inline bool locked_to_master() const
+    {
+        return large_query || (current_master && target_node == current_master);
+    }
 };
 
 /**

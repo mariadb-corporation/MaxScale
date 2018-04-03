@@ -15,8 +15,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/queryclassifier.hh>
 #include "rwsplitsession.hh"
-// Only for is_ps_command
-#include "rwsplit_internal.hh"
 
 #define RWSPLIT_TRACE_MSG_LEN 1000
 

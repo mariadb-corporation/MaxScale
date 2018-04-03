@@ -12,12 +12,11 @@
  */
 
 #include "readwritesplit.hh"
+#include "rwsplit_ps.hh"
 
 #include <maxscale/alloc.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
-
-#include "rwsplit_internal.hh"
 
 uint32_t get_prepare_type(GWBUF* buffer)
 {

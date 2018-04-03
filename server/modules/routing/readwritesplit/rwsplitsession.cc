@@ -12,7 +12,6 @@
  */
 
 #include "rwsplitsession.hh"
-#include "rwsplit_internal.hh"
 #include "routeinfo.hh"
 
 #include <cmath>
@@ -69,8 +68,8 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
         SRWBackend master;
 
-        if (select_connect_backend_servers(router, session, backends, master,
-                                           NULL, NULL, connection_type::ALL))
+        if (router->select_connect_backend_servers(session, backends, master, NULL,
+                                                   NULL, connection_type::ALL))
         {
             if ((rses = new RWSplitSession(router, session, backends, master)))
             {

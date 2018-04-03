@@ -12,7 +12,6 @@
  */
 
 #include "readwritesplit.hh"
-#include "rwsplit_internal.hh"
 
 #include <stdio.h>
 #include <strings.h>
@@ -296,23 +295,23 @@ std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& maste
  *
  * @return True if session can continue
  */
-bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
-                                    SRWBackendList& backends,
-                                    SRWBackend& current_master,
-                                    mxs::SessionCommandList* sescmd_list,
-                                    int* expected_responses,
-                                    connection_type type)
+bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
+                                             SRWBackendList& backends,
+                                             SRWBackend& current_master,
+                                             SessionCommandList* sescmd_list,
+                                             int* expected_responses,
+                                             connection_type type)
 {
     SRWBackend master = get_root_master(backends);
 
-    if (!master && inst->config().master_failure_mode == RW_FAIL_INSTANTLY)
+    if (!master && config().master_failure_mode == RW_FAIL_INSTANTLY)
     {
         MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
         return false;
     }
 
     /** Check slave selection criteria and set compare function */
-    select_criteria_t select_criteria = inst->config().slave_selection_criteria;
+    select_criteria_t select_criteria = config().slave_selection_criteria;
     int (*cmpfun)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 
@@ -342,7 +341,7 @@ bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
     auto counts = get_slave_counts(backends, master);
     int slaves_found = counts.first;
     int slaves_connected = counts.second;
-    int max_nslaves = inst->max_slave_count();
+    int max_nslaves = max_slave_count();
 
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 

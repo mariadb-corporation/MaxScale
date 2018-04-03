@@ -30,9 +30,10 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/router.hh>
 #include <maxscale/service.h>
-#include <maxscale/backend.hh>
 #include <maxscale/session_command.hh>
 #include <maxscale/protocol/mysql.h>
+
+#include "rwbackend.hh"
 
 enum backend_type_t
 {
@@ -41,6 +42,12 @@ enum backend_type_t
     BE_JOINED    = BE_MASTER,
     BE_SLAVE,
     BE_COUNT
+};
+
+enum connection_type
+{
+    ALL,
+    SLAVE
 };
 
 enum route_target_t
@@ -248,7 +255,12 @@ public:
     const Stats&   stats() const;
     int max_slave_count() const;
     bool have_enough_servers() const;
-
+    bool select_connect_backend_servers(MXS_SESSION *session,
+                                        mxs::SRWBackendList& backends,
+                                        mxs::SRWBackend& current_master,
+                                        mxs::SessionCommandList* sescmd_list,
+                                        int* expected_responses,
+                                        connection_type type);
     // API functions
 
     /**
@@ -349,3 +361,23 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
         return "UNDEFINED_MODE";
     }
 }
+
+void closed_session_reply(GWBUF *querybuf);
+bool send_readonly_error(DCB *dcb);
+
+mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
+
+/**
+ * Get total slave count and connected slave count
+ *
+ * @param backends List of backend servers
+ * @param master   Current master
+ *
+ * @return Total number of slaves and number of slaves we are connected to
+ */
+std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBackend& master);
+
+/*
+ * The following are implemented in rwsplit_tmp_table_multi.c
+ */
+void close_all_connections(mxs::SRWBackendList& backends);
