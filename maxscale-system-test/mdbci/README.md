@@ -1,11 +1,11 @@
 # Running Maxscale system tests on Virtual Machines with MDBCI
 
-MDBCI is a tool to manage virtual machines (VMs). 
+MDBCI is a tool to manage virtual machines (VMs).
 VMs can be described in the simple JSON format.
 JSON templates for test configuration can be found in
 [maxscale-system-test/mdbci/templates/](templates/)
 
-'MDBCI_VM_PATH' have to be set before executing any MDBCI commands. 
+'MDBCI_VM_PATH' have to be set before executing any MDBCI commands.
 This variable points to the directory to store 'Vagrantfile's
 for all VMs as well as all additional files (e.g. *network_config)
 
@@ -17,7 +17,7 @@ Installation instructions: [PREPARATION_FOR_MDBCI](https://github.com/mariadb-co
 
 ## Basics of test setup
 
-Test setup is described in template. Templates are stored in 
+Test setup is described in template. Templates are stored in
 [maxscale-system-test/mdbci/templates/](templates/)
 Own template have to be put to the same directory.
 
@@ -44,13 +44,13 @@ Template can contain references to any environmental variables - they all
 will be replaced with values before VMs starting
 
 The [maxscale-system-test/mdbci/run_test.sh](run_test.sh) script
-brings test VMs configuration up and tries to execute 
+brings test VMs configuration up and tries to execute
 ```maxscale-system-test``` using 'ctest'.
 
-Script can be executed without any parameters and without defining any 
-environmental variables. 
+Script can be executed without any parameters and without defining any
+environmental variables.
 In this case, tests will be executed for CentOS 7, MariaDB 10.2 and
-Maxscale from current 'develop' repository 
+Maxscale from current 'develop' repository
 [http://max-tst-01.mariadb.com/ci-repository/develop/mariadb-maxscale/](http://max-tst-01.mariadb.com/ci-repository/develop/mariadb-maxscale/)
 VMs will not be destroyed after the tests.
 
@@ -73,7 +73,7 @@ Variable name|Meaning
 ```name```|The name of test run - any string to identify VMs set|
 
 
-For complete list of environmental variables see comments in 
+For complete list of environmental variables see comments in
 [maxscale-system-test/mdbci/run_test.sh](run_test.sh)
 and file [maxscale-system-test/mdbci/set_run_test_variables.sh](set_run_test_variables.sh)
 
@@ -92,7 +92,7 @@ test_set|Meaning
 
 If ```galera_version``` is not defined the value of ```version``` is used also for Galera backend
 
-### Test execution 
+### Test execution
 
 After execution of 'run_test.sh` by default VMs stay alive and other tests can be executed.
 
@@ -100,7 +100,7 @@ Test use environmental variables to get all infio about test setup (about VMs).
 
 The script [maxscale-system-test/mdbci/set_env.sh](set_env.sh)
 loads all needed values (IPs, paths to ssh keyfiles,
-user names, etc) into environmental variables. Script uses 
+user names, etc) into environmental variables. Script uses
 data from ```${MDBCI_VM_PATH}/${name}_network_config``` file
 and also calls MDBCI commands.
 
@@ -168,7 +168,7 @@ To restore backend separatelly and for intial backend setup check_backend' can b
 'run_test.sh' makes snapshot of all VMs before tests. The name of snapshot is 'clean'.
 
 In case of problem, after 'snapshot revert' it is recommended to re-create
-${name}_network_config file, re-load environmental variables and run 
+${name}_network_config file, re-load environmental variables and run
 'check_backend'
 
 ```bash

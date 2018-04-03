@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyies stuff to VM, run build on VM and copies binaries 
+# Copyies stuff to VM, run build on VM and copies binaries
 # to $pre_repo_dir/$target/$box
 
 set -x
@@ -17,7 +17,7 @@ ssh $sshopt "sudo rm -rf $work_dir"
 echo "copying stuff to $image machine"
 ssh $sshopt "mkdir -p $work_dir"
 
-rsync -avz --delete -e "ssh $scpopt" ${script_dir}/../../ $sshuser@$IP:./$work_dir/ 
+rsync -avz --delete -e "ssh $scpopt" ${script_dir}/../../ $sshuser@$IP:./$work_dir/
 if [ $? -ne 0 ] ; then
   echo "Error copying stuff to $box machine"
   exit 2

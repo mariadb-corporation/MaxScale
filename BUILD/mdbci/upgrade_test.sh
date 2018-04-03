@@ -37,7 +37,7 @@ ${mdbci_dir}/repository-config/generate_all.sh repo.d
 ${mdbci_dir}/repository-config/maxscale-release.sh $old_target repo.d
 
 # starting VM for build
-${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name 
+${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name
 ${mdbci_dir}/mdbci up $name --attempts=1
 if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
@@ -92,19 +92,25 @@ else
 	maxscale_start_cmd="sudo ./maxscale_start.sh 2> /dev/null &"
 fi
 
-
-
 ssh $sshopt "sudo cp $cnf_file /etc/maxscale.cnf"
 ssh $sshopt "$maxscale_start_cmd" &
 pid_to_kill=$!
 
-sleep 10
+for  i in {1..10}
+do
+    sleep 5
+    ssh $sshopt $maxadmin_command
+    maxadm_exit=$?
+    if [ $maxadm_exit == 0 ] ; then
+        break
+    fi
+done
 
-ssh $sshopt $maxadmin_command
-if [ $? != 0 ] ; then
+if [ $maxadm_exit != 0 ] ; then
 	echo "Maxadmin executing error"
 	res=1
 fi
+
 maxadmin_out=`ssh $sshopt $maxadmin_command`
 echo $maxadmin_out | grep "CLI"
 if [ $? != 0 ] ; then

@@ -15,6 +15,7 @@ module=mysqlmon
 servers=server1
 user=maxskysql
 passwd=skysql
+monitor_interval=1000
 
 [Masking]
 type=filter

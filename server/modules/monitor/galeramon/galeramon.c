@@ -260,6 +260,41 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     return rval;
 }
 
+static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string)
+{
+    bool rval = false;
+    MYSQL_RES* result;
+
+    if (mxs_mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
+        && (result = mysql_store_result(database->con)) != NULL)
+    {
+        if (mysql_field_count(database->con) < 2)
+        {
+            mysql_free_result(result);
+            MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
+                      "'wsrep_sst_method'\". Expected 2 columns."
+                      " MySQL Version: %s", server_string);
+        }
+
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (row[1] && strncmp(row[1], "xtrabackup", 10) == 0)
+            {
+                rval = true;
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
+    }
+
+    return rval;
+}
+
 /**
  * Monitor an individual server. Does not deal with the setting of master or
  * slave bits, except for clearing them when a server is not joined to the
@@ -273,8 +308,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 {
     GALERA_MONITOR* handle = (GALERA_MONITOR*) mon->handle;
     MYSQL_ROW row;
-    MYSQL_RES *result, *result2;
-    int isjoined = 0;
+    MYSQL_RES *result;
     char *server_string;
 
     /* Don't even probe server flagged as in maintenance */
@@ -364,6 +398,8 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                 info.local_index = local_index;
             }
 
+            ss_dassert(row[0] && row[1]);
+
             if (strcmp(row[0], "wsrep_local_state") == 0)
             {
                 if (strcmp(row[1], "4") == 0)
@@ -371,33 +407,10 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                     info.joined = 1;
                 }
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
-                else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1)
+                else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1 &&
+                         using_xtrabackup(database, server_string))
                 {
-                    if (mxs_mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
-                        && (result2 = mysql_store_result(database->con)) != NULL)
-                    {
-                        if (mysql_field_count(database->con) < 2)
-                        {
-                            mysql_free_result(result);
-                            mysql_free_result(result2);
-                            MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
-                                      "'wsrep_sst_method'\". Expected 2 columns."
-                                      " MySQL Version: %s", server_string);
-                            return;
-                        }
-                        while ((row = mysql_fetch_row(result2)))
-                        {
-                            if (strncmp(row[1], "xtrabackup", 10) == 0)
-                            {
-                                info.joined = 1;
-                            }
-                        }
-                        mysql_free_result(result2);
-                    }
-                    else
-                    {
-                        mon_report_query_error(database);
-                    }
+                    info.joined = 1;
                 }
                 else
                 {

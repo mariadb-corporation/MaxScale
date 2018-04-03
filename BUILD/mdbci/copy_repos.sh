@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyies repo from ${unsorted_repo_dir}/$target/$box to 
+# Copyes repo from ${unsorted_repo_dir}/$target/$box to
 
 dir=`pwd`
 if [ "$box_type" == "RPM" ] ; then

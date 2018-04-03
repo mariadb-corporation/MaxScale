@@ -158,7 +158,7 @@ public:
     /**
      * @brief Get a pointer to the internal DCB
      *
-     * @return Pointer to internal DCB
+     * @return Pointer to DCB or NULL if not connected
      */
     inline DCB* dcb() const
     {

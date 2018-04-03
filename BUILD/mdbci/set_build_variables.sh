@@ -23,7 +23,7 @@ export source=${scm_source}
 export source=${source:-"$branch"}
 echo "source=$source"
 
-#hack to get rid of Jenkins artifacts 
+#hack to get rid of Jenkins artifacts
 export target=`echo $target | tr -cd "[:print:]" | sed "s/?//g" | sed "s/ //g"`
 
 export target=${target:-"$source-$curr_date"}
