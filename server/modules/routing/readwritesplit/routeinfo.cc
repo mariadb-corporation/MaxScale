@@ -13,6 +13,7 @@
 
 #include "routeinfo.hh"
 #include <maxscale/alloc.h>
+#include <maxscale/queryclassifier.hh>
 #include "rwsplitsession.hh"
 // Only for is_ps_command
 #include "rwsplit_internal.hh"
@@ -43,128 +44,11 @@ route_target_t get_route_target(MXS_SESSION* session,
                                 uint32_t qtype,
                                 HINT *query_hints)
 {
-    bool trx_active = session_trx_is_active(session);
-    int target = TARGET_UNDEFINED;
+    maxscale::QueryClassifier qc(session, use_sql_variables_in);
 
-    /**
-     * Prepared statements preparations should go to all servers
-     */
-    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-        command == MXS_COM_STMT_CLOSE ||
-        command == MXS_COM_STMT_RESET)
-    {
-        target = TARGET_ALL;
-    }
-    /**
-     * These queries should be routed to all servers
-     */
-    else if (!load_active &&
-             (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
-              /** Configured to allow writing user variables to all nodes */
-              (use_sql_variables_in == TYPE_ALL &&
-               qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE)) ||
-              qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
-              /** enable or disable autocommit are always routed to all */
-              qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-              qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
-    {
-        /**
-         * This is problematic query because it would be routed to all
-         * backends but since this is SELECT that is not possible:
-         * 1. response set is not handled correctly in clientReply and
-         * 2. multiple results can degrade performance.
-         *
-         * Prepared statements are an exception to this since they do not
-         * actually do anything but only prepare the statement to be used.
-         * They can be safely routed to all backends since the execution
-         * is done later.
-         *
-         * With prepared statement caching the task of routing
-         * the execution of the prepared statements to the right server would be
-         * an easy one. Currently this is not supported.
-         */
-        if (qc_query_is_type(qtype, QUERY_TYPE_READ))
-        {
-            MXS_WARNING("The query can't be routed to all "
-                        "backend servers because it includes SELECT and "
-                        "SQL variable modifications which is not supported. "
-                        "Set use_sql_variables_in=master or split the "
-                        "query to two, where SQL variable modifications "
-                        "are done in the first and the SELECT in the "
-                        "second one.");
+    qc.set_load_active(load_active);
 
-            target = TARGET_MASTER;
-        }
-        target |= TARGET_ALL;
-    }
-    /**
-     * Hints may affect on routing of the following queries
-     */
-    else if (!trx_active && !load_active &&
-             !qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
-             !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
-             (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) ||
-              qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))
-    {
-        if (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ))
-        {
-            if (use_sql_variables_in == TYPE_ALL)
-            {
-                target = TARGET_SLAVE;
-            }
-        }
-        else if (qc_query_is_type(qtype, QUERY_TYPE_READ) || // Normal read
-                 qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || // SHOW TABLES
-                 qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) || // System variable
-                 qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)) // Global system variable
-        {
-            target = TARGET_SLAVE;
-        }
-
-        /** If nothing matches then choose the master */
-        if ((target & (TARGET_ALL | TARGET_SLAVE | TARGET_MASTER)) == 0)
-        {
-            target = TARGET_MASTER;
-        }
-    }
-    else if (session_trx_is_read_only(session))
-    {
-        /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
-        target = TARGET_SLAVE;
-    }
-    else
-    {
-        ss_dassert(trx_active || load_active ||
-                   (qc_query_is_type(qtype, QUERY_TYPE_WRITE) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
-                    (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
-                    qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)) ||
-                   qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT));
-
-        target = TARGET_MASTER;
-    }
+    int target = qc.get_route_target(command, qtype);
 
     /** Process routing hints */
     for (HINT* hint = query_hints; hint; hint = hint->next)
