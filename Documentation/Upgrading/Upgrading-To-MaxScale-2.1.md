@@ -6,22 +6,6 @@ MariaDB MaxScale from version 2.0 to 2.1.
 For more information about MariaDB MaxScale 2.1, please refer to the
 [ChangeLog](../Changelog.md).
 
-For a complete list of changes in MaxScale 2.1, refer to the
-* [MaxScale 2.1.13 Release Notes](../Release-Notes/MaxScale-2.1.13-Release-Notes.md)
-* [MaxScale 2.1.12 Release Notes](../Release-Notes/MaxScale-2.1.12-Release-Notes.md)
-* [MaxScale 2.1.11 Release Notes](../Release-Notes/MaxScale-2.1.11-Release-Notes.md)
-* [MaxScale 2.1.10 Release Notes](../Release-Notes/MaxScale-2.1.10-Release-Notes.md)
-* [MaxScale 2.1.9 Release Notes](../Release-Notes/MaxScale-2.1.9-Release-Notes.md).
-* [MaxScale 2.1.8 Release Notes](../Release-Notes/MaxScale-2.1.8-Release-Notes.md).
-* [MaxScale 2.1.7 Release Notes](../Release-Notes/MaxScale-2.1.7-Release-Notes.md).
-* [MaxScale 2.1.6 Release Notes](../Release-Notes/MaxScale-2.1.6-Release-Notes.md).
-* [MaxScale 2.1.5 Release Notes](../Release-Notes/MaxScale-2.1.5-Release-Notes.md).
-* [MaxScale 2.1.4 Release Notes](../Release-Notes/MaxScale-2.1.4-Release-Notes.md).
-* [MaxScale 2.1.3 Release Notes](../Release-Notes/MaxScale-2.1.3-Release-Notes.md).
-* [MaxScale 2.1.2 Release Notes](../Release-Notes/MaxScale-2.1.2-Release-Notes.md).
-* [MaxScale 2.1.1 Release Notes](../Release-Notes/MaxScale-2.1.1-Release-Notes.md).
-* [MaxScale 2.1.0 Release Notes](../Release-Notes/MaxScale-2.1.0-Release-Notes.md).
-
 ## Installation
 
 Before starting the upgrade, we **strongly** recommend you back up your current
