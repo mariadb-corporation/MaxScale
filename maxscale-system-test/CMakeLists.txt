@@ -234,7 +234,7 @@ add_test_executable(ccrfilter.cpp ccrfilter ccrfilter LABELS ccrfilter LIGHT REP
 add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
 
 # Executes change_user command in the loop
-add_test_executable(change_user.cpp change_user replication LABELS MySQLAuth MySQLProtocol LIGHT REPL_BACKEND)
+add_test_executable(change_user.cpp change_user replication LABELS MySQLAuth readwritesplit MySQLProtocol LIGHT REPL_BACKEND)
 
 # Tries to connect to non existing DB, expects no crash
 add_test_executable(connect_to_nonexisting_db.cpp connect_to_nonexisting_db replication LABELS MySQLAuth MySQLProtoco LIGHT REPL_BACKEND)
@@ -409,26 +409,26 @@ add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop gale
 add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication LABELS readwritesplit REPL_BACKEND)
 
 # Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
-add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol LIGHT GALERA_BACKEND)
+add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol readwritesplit LIGHT GALERA_BACKEND)
 
 # Testing of the master replacement feature
-add_test_executable(mxs359_master_switch.cpp mxs359_master_switch mxs359_master_switch LABELS REPL_BACKEND)
+add_test_executable(mxs359_master_switch.cpp mxs359_master_switch mxs359_master_switch LABELS readwritesplit REPL_BACKEND)
 
 # Test read-only connections with master replacement
-add_test_executable(mxs359_read_only.cpp mxs359_read_only mxs359_read_only LABELS REPL_BACKEND)
+add_test_executable(mxs359_read_only.cpp mxs359_read_only mxs359_read_only LABELS readwritesplit REPL_BACKEND)
 
 # Test master_failure_mode=error_on_write and master replacement
-add_test_executable(mxs359_error_on_write.cpp mxs359_error_on_write mxs359_error_on_write LABELS REPL_BACKEND)
+add_test_executable(mxs359_error_on_write.cpp mxs359_error_on_write mxs359_error_on_write LABELS readwritesplit REPL_BACKEND)
 
 # Binary protocol prepared statement tests
 add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Creates and closes a lot of connections, checks that 'maxadmin list servers' shows 0 connections at the end
-add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Crash with Galera and backend restart when persistant cfonnections are in use
-add_test_script(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
+add_test_script(mxs361 pers_02 mxs361 mxs361 LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Load huge file with 'LOAD DATA LOCAL INFILE'
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
@@ -449,7 +449,7 @@ add_test_executable(mxs47.cpp mxs47 replication LABELS MySQLProtocol LIGHT REPL_
 #add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
-add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol REPL_BACKEND)
+add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol readwritesplit REPL_BACKEND)
 
 # Playing with blocking and unblocking Master under load
 add_test_executable(mxs559_block_master.cpp mxs559_block_master mxs559 LABELS readwritesplit REPL_BACKEND)
@@ -497,7 +497,7 @@ add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BA
 # Checks "Current no. of conns" maxadmin output after long blob inserting
 add_test_executable(mxs812_2.cpp mxs812_2 replication LABELS readwritesplit REPL_BACKEND)
 
-# Execute prepared statements while master is blocked, checks "Current no. of conns" after the test
+# Tests maxpasswd
 add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxscale REPL_BACKEND)
 
 # Do only SELECTS during time > wait_timeout and then do INSERT
@@ -556,7 +556,7 @@ add_test_executable(mxs1045.cpp mxs1045 mxs1045 LABELS maxscale REPL_BACKEND)
 
 # MXS-1123: connect_timeout setting causes frequent disconnects
 # https://jira.mariadb.org/browse/MXS-1123
-add_test_executable(mxs1123.cpp mxs1123 mxs1123 LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs1123.cpp mxs1123 mxs1123 LABELS maxscale readwritesplit REPL_BACKEND)
 
 # MXS-1319: Maxscale selecting extra whitespace while loading users
 # https://jira.mariadb.org/browse/MXS-1319
@@ -564,13 +564,13 @@ add_test_executable(mxs1319.cpp mxs1319 replication LABELS MySQLAuth REPL_BACKEN
 
 # MXS-1418: Removing a server from a service breaks the connection
 # https://jira.mariadb.org/browse/MXS-1418
-add_test_executable(mxs1418.cpp mxs1418 replication LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs1418.cpp mxs1418 replication LABELS readwritesplit maxscale REPL_BACKEND)
 
 # MXS-1295: MaxScale's readwritesplit router does not take into account the fact
 # that stored procedure call may change the value of a user variable
 #
 # https://jira.mariadb.org/browse/MXS-1295
-add_test_executable(mxs1295_sp_call.cpp mxs1295_sp_call mxs1295 LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs1295_sp_call.cpp mxs1295_sp_call mxs1295 LABELS maxscale readwritesplit REPL_BACKEND)
 
 # MXS-1451: Password is not stored with skip_authentication=true
 # https://jira.mariadb.org/browse/MXS-1451
@@ -586,66 +586,66 @@ add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
 
 # MXS-1493: Use replication heartbeat in mysqlmon
 # https://jira.mariadb.org/browse/MXS-1493
-add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS REPL_BACKEND)
+add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
 # https://jira.mariadb.org/browse/MXS-1476
-add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
+add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS galeramon GALERA_BACKEND)
 
 # MXS-1503: Test master_reconnection
 # https://jira.mariadb.org/browse/MXS-1503
-add_test_executable(mxs1503_master_reconnection.cpp mxs1503_master_reconnection mxs1503_master_reconnection LABELS REPL_BACKEND)
+add_test_executable(mxs1503_master_reconnection.cpp mxs1503_master_reconnection mxs1503_master_reconnection LABELS readwritesplit REPL_BACKEND)
 
 # Master reconnection with session commands
-add_test_executable(mxs1503_queued_sescmd.cpp mxs1503_queued_sescmd mxs1503_master_reconnection LABELS REPL_BACKEND)
+add_test_executable(mxs1503_queued_sescmd.cpp mxs1503_queued_sescmd mxs1503_master_reconnection LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
-add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS REPL_BACKEND)
+add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)
 
  # MXS-1516: existing connection don't change routing, even if master switched
  # https://jira.mariadb.org/browse/MXS-1516
-add_test_executable(mxs1516.cpp mxs1516 replication LABELS REPL_BACKEND)
+add_test_executable(mxs1516.cpp mxs1516 replication LABELS readconnroute REPL_BACKEND)
 
  # MXS-1542: Check that UTF16 strings work
  # https://jira.mariadb.org/browse/MXS-1542
-add_test_executable(mxs1542.cpp mxs1542 avro LABELS REPL_BACKEND)
+add_test_executable(mxs1542.cpp mxs1542 avro LABELS avrorouter REPL_BACKEND)
 
 # MXS-1543: Avrorouter doesn't detect MIXED or STATEMENT format replication
 # https://jira.mariadb.org/browse/MXS-1543
-add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
+add_test_executable(mxs1543.cpp mxs1543 avro LABELS avrorouter REPL_BACKEND)
 
  # MXS-1585: Crash in MaxScale 2.1.12
  # https://jira.mariadb.org/browse/MXS-1585
-add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
+add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS readwritesplit REPL_BACKEND)
 
  # MXS-1643: Too many monitor events are triggered
  # https://jira.mariadb.org/browse/MXS-1643
-add_test_executable(mxs1643_extra_events.cpp mxs1643_extra_events mxs1643_extra_events LABELS REPL_BACKEND)
+add_test_executable(mxs1643_extra_events.cpp mxs1643_extra_events mxs1643_extra_events LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1653: sysbench failed to initialize w/ MaxScale read/write splitter
 # https://jira.mariadb.org/browse/MXS-1653
-add_test_executable(mxs1653_ps_hang.cpp mxs1653_ps_hang replication LABELS REPL_BACKEND)
+add_test_executable(mxs1653_ps_hang.cpp mxs1653_ps_hang replication LABELS readwritesplit REPL_BACKEND)
 
-# MXS-1677: sysbench failed to initialize w/ MaxScale read/write splitter
+# MXS-1677: "Query could not be parsed" errors
 # https://jira.mariadb.org/browse/MXS-1677
-add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS REPL_BACKEND)
+add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1678: Stopping IO thread on relay master causes it to be promoted as master
 # https://jira.mariadb.org/browse/MXS-1678
-add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS REPL_BACKEND)
+add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1713: SchemaRouter unable to process SHOW DATABASES for a lot of schemas
 # https://jira.mariadb.org/browse/MXS-1713
-add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS REPL_BACKEND)
+add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS schemarouter REPL_BACKEND)
 
 # MXS-1731: Empty version_string is not detected
 # https://jira.mariadb.org/browse/MXS-1731
-add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS REPL_BACKEND)
+add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS maxscale REPL_BACKEND)
 
 # MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
 # https://jira.mariadb.org/browse/MXS-1751
-add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS GALERA_BACKEND)
+add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)
 
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
@@ -654,7 +654,7 @@ add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LA
 add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
 # Open and immediatelly close a big number of connections
-add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale REPL_BACKEND)
+add_test_executable(open_close_connections.cpp open_close_connections replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Open and immediatelly close a big number of connections, ssl is in use
 #
@@ -664,10 +664,10 @@ add_test_executable(open_close_connections.cpp open_close_connections replicatio
 # add_test_script(open_close_connections_ssl open_close_connections ssl LABELS maxscale REPL_BACKEND)
 
 # Persistant connection test
-add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
+add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
 
 # Test with persistant connections configured and big number iof opened connections ,expect no crash
-add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
+add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
 
 # Check if prepared statement works via Maxscale (via RWSplit)
 add_test_executable(prepared_statement.cpp prepared_statement replication LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -722,8 +722,8 @@ add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND)
 # Test 10.3 SEQUENCE objects
 add_test_executable(sequence.cpp sequence replication LABELS LIGHT)
 
-# Test 10.1 compound statements
-add_test_executable(compound_statement.cpp compound_statement replication LABELS LIGHT)
+# Test 10.1 compound statements with readwritesplit
+add_test_executable(compound_statement.cpp compound_statement replication LABELS readwritesplit LIGHT)
 
 # Check if 'weightby' parameter works
 add_test_executable(server_weight.cpp server_weight galera.weight LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
@@ -785,8 +785,8 @@ add_test_executable(sysbench_kill_slave.cpp sysbench_kill_slave replication LABE
 # Check temporal tables commands functionality
 add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readwritesplit REPL_BACKEND)
 
-# Test routing hints
-add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter LIGHT REPL_BACKEND)
+# Test routing hints (mainly about how readwritesplit deals with them)
+add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwritesplit LIGHT REPL_BACKEND)
 
 # Run MaxCtrl test suite
 # add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
