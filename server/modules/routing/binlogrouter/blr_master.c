@@ -64,7 +64,7 @@ static void blr_log_packet(int priority, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
 void poll_fake_write_event(DCB *dcb);
-static void blr_check_last_master_event(void *inst);
+static bool blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
 static void blr_extract_header_semisync(uint8_t *pkt, REP_HEADER *hdr);
@@ -251,10 +251,10 @@ static void blr_start_master(void* data)
         if (name)
         {
             sprintf(name, "%s %s", router->service->name, master);
-            hktask_oneshot(name,
-                           blr_start_master_in_main,
-                           router,
-                           connect_retry);
+            hktask_add(name,
+                       blr_start_master_in_main,
+                       router,
+                       connect_retry);
             MXS_FREE(name);
         }
 
@@ -324,7 +324,7 @@ static void worker_cb_start_master(int worker_id, void* data)
  *
  * @param data  Data intended for `blr_start_master`.
  */
-void blr_start_master_in_main(void* data)
+bool blr_start_master_in_main(void* data)
 {
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_start_master` there.
@@ -339,6 +339,8 @@ void blr_start_master_in_main(void* data)
     {
         MXS_ERROR("Could not post 'blr_start_master' message to main worker.");
     }
+
+    return false;
 }
 
 /**
@@ -423,10 +425,10 @@ blr_restart_master(ROUTER_INSTANCE *router)
         if (name)
         {
             sprintf(name, "%s %s", router->service->name, master);
-            hktask_oneshot(name,
-                           blr_start_master_in_main,
-                           router,
-                           connect_retry);
+            hktask_add(name,
+                       blr_start_master_in_main,
+                       router,
+                       connect_retry);
             MXS_FREE(name);
 
             MXS_ERROR("%s: failed to connect to master server '%s', "
@@ -529,10 +531,10 @@ blr_master_delayed_connect(ROUTER_INSTANCE *router)
     if (name)
     {
         sprintf(name, "%s %s", router->service->name, master);
-        hktask_oneshot(name,
-                       blr_start_master_in_main,
-                       router,
-                       router->retry_interval);
+        hktask_add(name,
+                   blr_start_master_in_main,
+                   router,
+                   router->retry_interval);
         MXS_FREE(name);
     }
 }
@@ -1917,9 +1919,10 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
  * @param router    Current router instance
  */
 
-static void
+static bool
 blr_check_last_master_event(void *inst)
 {
+    bool rval = true;
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)inst;
     int master_check = 1;
     int master_state =  BLRM_UNCONNECTED;
@@ -1953,8 +1956,10 @@ blr_check_last_master_event(void *inst)
                  "%s heartbeat",
                  router->service->name);
 
-        hktask_remove(task_name);
+        rval = false;
     }
+
+    return rval;
 }
 
 /**

@@ -96,7 +96,7 @@ static int find_type(typelib_t* tl, const char* needle, int maxlen);
 
 static void service_add_qualified_param(SERVICE*          svc,
                                         MXS_CONFIG_PARAMETER* param);
-static void service_internal_restart(void *data);
+static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
 
 SERVICE* service_alloc(const char *name, const char *router)
@@ -427,8 +427,7 @@ int serviceStartAllPorts(SERVICE* service)
             int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
             snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
                      service->name, service->stats.n_failed_starts);
-            hktask_oneshot(taskname, service_internal_restart,
-                           (void*) service, retry_after);
+            hktask_add(taskname, service_internal_restart, service, retry_after);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
                        service->name, retry_after);
 
@@ -2212,10 +2211,11 @@ serviceGetList()
  * Function called by the housekeeper thread to retry starting of a service
  * @param data Service to restart
  */
-static void service_internal_restart(void *data)
+static bool service_internal_restart(void *data)
 {
     SERVICE* service = (SERVICE*)data;
     serviceStartAllPorts(service);
+    return false;
 }
 
 /**

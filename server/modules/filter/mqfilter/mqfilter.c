@@ -238,7 +238,7 @@ typedef struct
     bool was_query; /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
-void sendMessage(void* data);
+bool sendMessage(void* data);
 
 static const MXS_ENUM_VALUE trigger_values[] =
 {
@@ -673,7 +673,7 @@ int declareQueue(MQ_INSTANCE *my_instance, MQ_SESSION* my_session, char* qname)
  * the housekeeper thread.
  * @param data MQfilter instance
  */
-void sendMessage(void* data)
+bool sendMessage(void* data)
 {
     MQ_INSTANCE *instance = (MQ_INSTANCE*) data;
     mqmessage *tmp;
@@ -704,7 +704,7 @@ void sendMessage(void* data)
     if (err_num != AMQP_STATUS_OK)
     {
         /** No connection to the broker */
-        return;
+        return true;
     }
 
     spinlock_acquire(&instance->msg_lock);
@@ -713,7 +713,7 @@ void sendMessage(void* data)
     if (tmp == NULL)
     {
         spinlock_release(&instance->msg_lock);
-        return;
+        return true;
     }
 
     instance->messages = instance->messages->next;
@@ -745,7 +745,7 @@ void sendMessage(void* data)
             if (tmp == NULL)
             {
                 spinlock_release(&instance->msg_lock);
-                return;
+                return true;
             }
 
             instance->messages = instance->messages->next;
@@ -757,9 +757,11 @@ void sendMessage(void* data)
             tmp->next = instance->messages;
             instance->messages = tmp;
             spinlock_release(&instance->msg_lock);
-            return;
+            return true;
         }
     }
+
+    return true;
 }
 
 /**

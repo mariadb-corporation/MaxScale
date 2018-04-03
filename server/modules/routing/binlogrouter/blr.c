@@ -97,7 +97,7 @@ bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
 static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst);
 
-static void stats_func(void *);
+static bool stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
@@ -2505,7 +2505,7 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  *
  * @param inst  The router instance
  */
-static void
+static bool
 stats_func(void *inst)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)inst;
@@ -2531,6 +2531,8 @@ stats_func(void *inst)
         slave = slave->next;
     }
     spinlock_release(&router->lock);
+
+    return true;
 }
 
 /**

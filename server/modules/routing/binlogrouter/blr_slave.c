@@ -279,7 +279,7 @@ static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router,
                                                        int type,
                                                        int len,
                                                        uint8_t seqno);
-static void blr_send_slave_heartbeat(void *inst);
+static bool blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave);
 static int blr_set_master_ssl(ROUTER_INSTANCE *router,
@@ -6099,7 +6099,7 @@ blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router,
  * @param router        Current router instance
  */
 
-static void
+static bool
 blr_send_slave_heartbeat(void *inst)
 {
     ROUTER_SLAVE *sptr = NULL;
@@ -6136,6 +6136,8 @@ blr_send_slave_heartbeat(void *inst)
     }
 
     spinlock_release(&router->lock);
+
+    return true;
 }
 
 /**

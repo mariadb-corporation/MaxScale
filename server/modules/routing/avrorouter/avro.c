@@ -77,7 +77,7 @@ static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 extern int MaxScaleUptime();
 extern void avro_get_used_tables(AVRO_INSTANCE *router, DCB *dcb);
-void converter_func(void* data);
+bool converter_func(void* data);
 bool binlog_next_file_exists(const char* binlogdir, const char* binlog);
 int blr_file_get_next_binlogname(const char *router);
 bool avro_load_conversion_state(AVRO_INSTANCE *router);
@@ -1177,7 +1177,7 @@ stats_func(void *inst)
 /**
  * Conversion task: MySQL binlogs to AVRO files
  */
-void converter_func(void* data)
+bool converter_func(void* data)
 {
     AVRO_INSTANCE* router = (AVRO_INSTANCE*) data;
     bool ok = true;
@@ -1227,6 +1227,8 @@ void converter_func(void* data)
                      router->binlog_name, router->current_pos, router->task_delay);
         }
     }
+
+    return true;
 }
 
 /**

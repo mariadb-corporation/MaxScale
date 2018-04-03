@@ -22,6 +22,17 @@
 MXS_BEGIN_DECLS
 
 /**
+ * The task callback function
+ *
+ * The parameter is the user data given to the `hktask_add` function.
+ *
+ * If the function returns true, the same task is added back to the queue and
+ * executed again at a later point in time. If the function returns false,
+ * the task is removed.
+ */
+typedef bool (*TASKFN)(void *data);
+
+/**
  * Initialises the housekeeper mechanism.
  *
  * A call to any of the other housekeeper functions can be made only if
@@ -60,19 +71,7 @@ void hkfinish();
  * @param data      Data passed to function as the parameter
  * @param frequency Frequency of execution
  */
-void hktask_add(const char *name, void (*task)(void *) , void *data, int frequency);
-
-/**
- * @brief Add oneshot task
- *
- * The task will only execute once.
- *
- * @param name Task name
- * @param task Function to execute
- * @param data Data passed to function as the parameter
- * @param when Number of seconds to wait until task is executed
- */
-void hktask_oneshot(const char *name, void (*task)(void *) , void *data, int when);
+void hktask_add(const char *name, TASKFN func, void *data, int frequency);
 
 /**
  * @brief Remove all tasks with this name

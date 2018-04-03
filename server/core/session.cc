@@ -1432,11 +1432,12 @@ struct TaskAssignment
     Worker* worker;
 };
 
-static void delayed_routing_cb(void* data)
+static bool delayed_routing_cb(void* data)
 {
     TaskAssignment* job = static_cast<TaskAssignment*>(data);
     job->worker->post(job->task, mxs::Worker::EXECUTE_QUEUED);
     delete job;
+    return false;
 }
 
 bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds)
@@ -1454,7 +1455,7 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
         std::auto_ptr<TaskAssignment> job(new TaskAssignment(task, worker));
         TaskAssignment* pJob = job.release();
 
-        hktask_oneshot(name.str().c_str(), delayed_routing_cb, pJob, seconds);
+        hktask_add(name.str().c_str(), delayed_routing_cb, pJob, seconds);
         success = true;
     }
     catch (std::bad_alloc)

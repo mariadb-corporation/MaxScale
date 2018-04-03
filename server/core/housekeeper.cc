@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-#include <vector>
+#include <list>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -42,6 +42,8 @@
  * is incremented every 100ms and can be read with the mxs_clock() function.
  */
 
+static void hkthread(void*);
+
 // TODO: Move these into a separate file
 static int64_t mxs_clock_ticks = 0; /*< One clock tick is 100 milliseconds */
 
@@ -50,36 +52,40 @@ int64_t mxs_clock()
     return atomic_load_int64(&mxs_clock_ticks);
 }
 
-enum hktask_type
-{
-    HK_REPEATED = 1,
-    HK_ONESHOT
-};
-
 namespace
 {
-
-typedef void (*TASKFN)(void *data);
 
 // A task to perform
 struct Task
 {
-    Task(std::string name, TASKFN func, void* data, int frequency, hktask_type type):
+    Task(std::string name, TASKFN func, void* data, int frequency):
         name(name),
         func(func),
         data(data),
         frequency(frequency),
-        nextdue(time(0) + frequency),
-        type(type)
+        nextdue(time(0) + frequency)
     {
     }
+
+    struct NameMatch
+    {
+        NameMatch(std::string name):
+            m_name(name) {}
+
+        bool operator()(const Task& task)
+        {
+            return task.name == m_name;
+        }
+
+        std::string m_name;
+    };
+
 
     std::string name;      /*< Task name */
     TASKFN      func;      /*< The function to call */
     void*       data;      /*< Data to pass to the function */
     int         frequency; /*< How often to call the tasks, in seconds */
     time_t      nextdue;   /*< When the task should be next run */
-    hktask_type type;      /*< The task type */
 };
 
 class Housekeeper
@@ -91,7 +97,7 @@ public:
     static bool init();
     void stop();
     void run();
-    void add(std::string name, TASKFN func, void* data, int frequency, hktask_type type);
+    void add(const Task& task);
     void remove(std::string name);
 
     void print_tasks(DCB* pDcb);
@@ -100,8 +106,13 @@ public:
 private:
     THREAD            m_thread;
     uint32_t          m_running;
-    std::vector<Task> m_tasks;
+    std::list<Task>   m_tasks;
     mxs::SpinLock     m_lock;
+
+    bool is_running() const
+    {
+        return atomic_load_uint32(&m_running);
+    }
 };
 
 // Helper struct used to initialize the housekeeper
@@ -113,8 +124,6 @@ struct hkinit_result
 
 // The Housekeeper instance
 static Housekeeper* hk = NULL;
-
-static void hkthread(void*);
 
 Housekeeper::Housekeeper():
     m_running(1)
@@ -148,36 +157,33 @@ bool Housekeeper::init()
 
 void Housekeeper::run()
 {
-    while (atomic_load_uint32(&m_running))
+    while (is_running())
     {
         for (int i = 0; i < 10; i++)
         {
             thread_millisleep(100);
             atomic_add_int64(&mxs_clock_ticks, 1);
         }
-        time_t now = time(0);
-        m_lock.acquire();
 
-        for (auto it = m_tasks.begin(); it != m_tasks.end() && atomic_load_uint32(&m_running); it++)
+        mxs::SpinLockGuard guard(m_lock);
+        time_t now = time(0);
+        auto it = m_tasks.begin();
+
+        while (it != m_tasks.end() && is_running())
         {
             if (it->nextdue <= now)
             {
                 it->nextdue = now + it->frequency;
-                // We need to copy type and name, in case hktask_remove is called from
-                // the callback. Otherwise we will access freed data.
-                enum hktask_type type = it->type;
-                std::string name = it->name;
 
-                m_lock.release();
-                it->func(it->data);
-                if (type == HK_ONESHOT)
+                if (!it->func(it->data))
                 {
-                    remove(name);
+                    it = m_tasks.erase(it);
+                    continue;
                 }
-                m_lock.acquire();
             }
+
+            it++;
         }
-        m_lock.release();
     }
 }
 
@@ -186,26 +192,16 @@ void Housekeeper::stop()
     atomic_store_uint32(&m_running, 0);
 }
 
-void Housekeeper::add(std::string name, TASKFN func, void* data, int frequency, hktask_type type)
+void Housekeeper::add(const Task& task)
 {
     mxs::SpinLockGuard guard(m_lock);
-    m_tasks.push_back(Task(name, func, data, frequency, type));
+    m_tasks.push_back(task);
 }
 
 void Housekeeper::remove(std::string name)
 {
     mxs::SpinLockGuard guard(m_lock);
-    auto it = m_tasks.begin();
-
-    while (it != m_tasks.end())
-    {
-        if (it->name == name)
-        {
-            it = m_tasks.erase(it);
-            continue;
-        }
-        it++;
-    }
+    m_tasks.remove_if(Task::NameMatch(name));
 }
 
 void Housekeeper::print_tasks(DCB* pDcb)
@@ -220,9 +216,7 @@ void Housekeeper::print_tasks(DCB* pDcb)
         char buf[40];
         localtime_r(&ptr->nextdue, &tm);
         asctime_r(&tm, buf);
-        dcb_printf(pDcb, "%-25s | %-8s | %-9d | %s", ptr->name.c_str(),
-                   ptr->type == HK_REPEATED ? "Repeated" : "One-Shot",
-                   ptr->frequency, buf);
+        dcb_printf(pDcb, "%-25s | %-9d | %s", ptr->name.c_str(), ptr->frequency, buf);
     }
 }
 
@@ -242,15 +236,12 @@ json_t* Housekeeper::tasks_json(const char* host)
         ss_dassert(nl);
         *nl = '\0';
 
-        const char* task_type = ptr->type == HK_REPEATED ? "Repeated" : "One-Shot";
-
         json_t* obj = json_object();
 
         json_object_set_new(obj, CN_ID, json_string(ptr->name.c_str()));
         json_object_set_new(obj, CN_TYPE, json_string("tasks"));
 
         json_t* attr = json_object();
-        json_object_set_new(attr, "task_type", json_string(task_type));
         json_object_set_new(attr, "frequency", json_integer(ptr->frequency));
         json_object_set_new(attr, "next_execution", json_string(buf));
 
@@ -263,14 +254,10 @@ json_t* Housekeeper::tasks_json(const char* host)
 
 }
 
-void hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
+void hktask_add(const char *name, TASKFN func, void *data, int frequency)
 {
-    hk->add(name, taskfn, data, frequency, HK_REPEATED);
-}
-
-void hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
-{
-    hk->add(name, taskfn, data, when, HK_ONESHOT);
+    Task task(name, func, data, frequency);
+    hk->add(task);
 }
 
 void hktask_remove(const char *name)
