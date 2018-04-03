@@ -24,6 +24,7 @@
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/session_command.hh>
+#include <maxscale/utils.hh>
 
 #include "routeinfo.hh"
 #include "rwsplit_internal.hh"
@@ -280,13 +281,13 @@ static void purge_history(RWSplitSession* rses, mxs::SSessionCommand& sescmd)
     if (sescmd->get_command() != MXS_COM_STMT_PREPARE)
     {
         auto first = std::find_if(rses->sescmd_list.begin(), rses->sescmd_list.end(),
-                                  mxs::SessionCommand::Equals(sescmd));
+                                  mxs::equal_pointees(sescmd));
 
         if (first != rses->sescmd_list.end())
         {
             // We have at least one of these commands. See if we have a second one
             auto second = std::find_if(std::next(first), rses->sescmd_list.end(),
-                                       mxs::SessionCommand::Equals(sescmd));
+                                       mxs::equal_pointees(sescmd));
 
             if (second != rses->sescmd_list.end())
             {
