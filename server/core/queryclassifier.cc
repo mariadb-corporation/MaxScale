@@ -22,24 +22,15 @@ QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
                                  mxs_target_t use_sql_variables_in)
     : m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_load_active(false)
+    , m_load_data_state(LOAD_DATA_INACTIVE)
 {
-}
-
-void QueryClassifier::set_load_active(bool active)
-{
-    m_load_active = active;
-}
-
-bool QueryClassifier::load_active() const
-{
-    return m_load_active;
 }
 
 uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
 {
     bool trx_active = session_trx_is_active(m_pSession);
     uint32_t target = TARGET_UNDEFINED;
+    bool load_active = (m_load_data_state != LOAD_DATA_INACTIVE);
 
     /**
      * Prepared statements preparations should go to all servers
@@ -54,7 +45,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * These queries should be routed to all servers
      */
-    else if (!m_load_active &&
+    else if (!load_active &&
              (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
               /** Configured to allow writing user variables to all nodes */
               (m_use_sql_variables_in == TYPE_ALL &&
@@ -96,7 +87,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * Hints may affect on routing of the following queries
      */
-    else if (!trx_active && !m_load_active &&
+    else if (!trx_active && !load_active &&
              !qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
              !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
              (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
@@ -133,7 +124,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     }
     else
     {
-        ss_dassert(trx_active || m_load_active ||
+        ss_dassert(trx_active || load_active ||
                    (qc_query_is_type(qtype, QUERY_TYPE_WRITE) ||
                     qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
                     qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||

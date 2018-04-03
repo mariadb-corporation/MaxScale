@@ -113,15 +113,6 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
     {NULL}
 };
 
-/** States of a LOAD DATA LOCAL INFILE */
-enum ld_state
-{
-    LOAD_DATA_INACTIVE,         /**< Not active */
-    LOAD_DATA_START,            /**< Current query starts a load */
-    LOAD_DATA_ACTIVE,           /**< Load is active */
-    LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
-};
-
 #define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
 #define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
 #define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)

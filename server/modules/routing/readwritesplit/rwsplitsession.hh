@@ -107,7 +107,6 @@ public:
     bool                    m_large_query; /**< Set to true when processing payloads >= 2^24 bytes */
     Config                  m_config; /**< copied config info from router instance */
     int                     m_nbackends; /**< Number of backend servers (obsolete) */
-    enum ld_state           m_load_data_state; /**< Current load data state */
     bool                    m_have_tmp_tables; /**< True if temp tables have been created */
     uint64_t                m_load_data_sent; /**< How much data has been sent */
     DCB*                    m_client; /**< The client DCB */

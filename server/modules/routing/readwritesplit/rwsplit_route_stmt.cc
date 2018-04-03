@@ -936,7 +936,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         m_wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
     }
 
-    if (m_load_data_state != LOAD_DATA_ACTIVE &&
+    if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE &&
         mxs_mysql_command_will_respond(cmd))
     {
         response = mxs::Backend::EXPECT_RESPONSE;
@@ -960,18 +960,18 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             target->set_reply_state(REPLY_STATE_START);
             m_expected_responses++;
 
-            if (m_load_data_state == LOAD_DATA_START)
+            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_START)
             {
                 /** The first packet contains the actual query and the server
                  * will respond to it */
-                m_load_data_state = LOAD_DATA_ACTIVE;
+                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
             }
-            else if (m_load_data_state == LOAD_DATA_END)
+            else if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
             {
                 /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
                  * to which the server responds with an OK or an ERR packet */
                 ss_dassert(gwbuf_length(querybuf) == 4);
-                m_load_data_state = LOAD_DATA_INACTIVE;
+                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
             }
         }
 

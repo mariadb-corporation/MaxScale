@@ -34,18 +34,34 @@ public:
         TARGET_ALL       = 0x08
     };
 
+    /** States of a LOAD DATA LOCAL INFILE */
+    enum load_data_state_t
+    {
+        LOAD_DATA_INACTIVE,         /**< Not active */
+        LOAD_DATA_START,            /**< Current query starts a load */
+        LOAD_DATA_ACTIVE,           /**< Load is active */
+        LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
+    };
+
     QueryClassifier(MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
 
-    void set_load_active(bool active);
-    bool load_active() const;
+    load_data_state_t load_data_state() const
+    {
+        return m_load_data_state;
+    }
+
+    void set_load_data_state(load_data_state_t state)
+    {
+        m_load_data_state = state;
+    }
 
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
 private:
-    MXS_SESSION* m_pSession;
-    mxs_target_t m_use_sql_variables_in;
-    bool         m_load_active;
+    MXS_SESSION*      m_pSession;
+    mxs_target_t      m_use_sql_variables_in;
+    load_data_state_t m_load_data_state;
 };
 
 }
