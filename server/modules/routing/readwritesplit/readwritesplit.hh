@@ -28,7 +28,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/router.h>
+#include <maxscale/router.hh>
 #include <maxscale/service.h>
 #include <maxscale/backend.hh>
 #include <maxscale/session_command.hh>
@@ -228,10 +228,12 @@ public:
     uint64_t n_all;             /**< Number of stmts sent to all */
 };
 
+class RWSplitSession;
+
 /**
  * The per instance data for the router.
  */
-class RWSplit
+class RWSplit: public mxs::Router<RWSplit, RWSplitSession>
 {
     RWSplit(const RWSplit&);
     RWSplit& operator=(const RWSplit&);
@@ -243,8 +245,64 @@ public:
     SERVICE* service() const;
     const Config&  config() const;
     Stats&   stats();
+    const Stats&   stats() const;
     int max_slave_count() const;
     bool have_enough_servers() const;
+
+    // API functions
+
+    /**
+     * @brief Create a new readwritesplit router instance
+     *
+     * An instance of the router is required for each service that uses this router.
+     * One instance of the router will handle multiple router sessions.
+     *
+     * @param service The service this router is being create for
+     * @param options The options for this query router
+     *
+     * @return New router instance or NULL on error
+     */
+    static RWSplit* create(SERVICE* pService, char** pzOptions);
+
+    /**
+     * @brief Create a new session for this router instance
+     *
+     * The session is used to store all the data required by the router for a
+     * particular client connection. The instance of the router that relates to a
+     * particular service is passed as the first parameter. The second parameter is
+     * the session that has been created in response to the request from a client
+     * for a connection. The passed session contains generic information; this
+     * function creates the session structure that holds router specific data.
+     * There is often a one to one relationship between sessions and router
+     * sessions, although it is possible to create configurations where a
+     * connection is handled by multiple routers, one after another.
+     *
+     * @param session  The MaxScale session (generic connection data)
+     *
+     * @return New router session or NULL on error
+     */
+    RWSplitSession* newSession(MXS_SESSION* pSession);
+
+    /**
+     * @brief Diagnostics routine
+     *
+     * Print query router diagnostics to the DCB passed in
+     *
+     * @param dcb      The DCB for diagnostic output
+     */
+    void diagnostics(DCB* pDcb);
+
+    /**
+     * @brief JSON diagnostics routine
+     *
+     * @return The JSON representation of this router instance
+     */
+    json_t* diagnostics_json() const;
+
+    /**
+     * @brief Get router capabilities
+     */
+    uint64_t getCapabilities();
 
 private:
     SERVICE* m_service; /**< Service where the router belongs*/

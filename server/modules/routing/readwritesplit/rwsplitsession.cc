@@ -22,6 +22,7 @@ using namespace maxscale;
 RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
                                const SRWBackendList& backends,
                                const SRWBackend& master):
+    mxs::RouterSession(session),
     rses_chk_top(CHK_NUM_ROUTER_SES),
     rses_closed(false),
     backends(backends),

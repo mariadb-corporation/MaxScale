@@ -41,7 +41,7 @@ typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
 /**
  * The client session of a RWSplit instance
  */
-class RWSplitSession
+class RWSplitSession: public mxs::RouterSession
 {
     RWSplitSession(const RWSplitSession&) = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;
@@ -57,6 +57,40 @@ public:
      * @return New router session
      */
     static RWSplitSession* create(RWSplit* router, MXS_SESSION* session);
+
+    /**
+     * Called when a client session has been closed.
+     */
+    void close();
+
+    /**
+     * Called when a packet being is routed to the backend. The router should
+     * forward the packet to the appropriate server(s).
+     *
+     * @param pPacket A client packet.
+     */
+    int32_t routeQuery(GWBUF* pPacket);
+
+    /**
+     * Called when a packet is routed to the client. The router should
+     * forward the packet to the client using `MXS_SESSION_ROUTE_REPLY`.
+     *
+     * @param pPacket  A client packet.
+     * @param pBackend The backend the packet is coming from.
+     */
+    void clientReply(GWBUF* pPacket, DCB* pBackend);
+
+    /**
+     *
+     * @param pMessage  The error message.
+     * @param pProblem  The DCB on which the error occurred.
+     * @param action    The context.
+     * @param pSuccess  On output, if false, the session will be terminated.
+     */
+    void handleError(GWBUF*             pMessage,
+                     DCB*               pProblem,
+                     mxs_error_action_t action,
+                     bool*              pSuccess);
 
     // TODO: Make member variables private
     skygw_chk_t             rses_chk_top;
