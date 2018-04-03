@@ -25,8 +25,7 @@ namespace
  * Examine the query type, transaction state and routing hints. Find out the
  * target for query routing.
  *
- *  @param session               The MaxScale session.
- *  @param use_sql_variables_in  Where statements using SQL variables should be sent.
+ *  @param qc                    The query classifier.
  *  @param load_active           Whether LOAD DATA is on going.
  *  @param command               The current command.
  *  @param qtype                 Type of query
@@ -35,15 +34,12 @@ namespace
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_route_target(MXS_SESSION* session,
-                                mxs_target_t use_sql_variables_in,
+route_target_t get_route_target(mxs::QueryClassifier& qc,
                                 bool load_active,
                                 uint8_t command,
                                 uint32_t qtype,
                                 HINT *query_hints)
 {
-    maxscale::QueryClassifier qc(session, use_sql_variables_in);
-
     qc.set_load_active(load_active);
 
     int target = qc.get_route_target(command, qtype);
@@ -625,12 +621,9 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 *type = rses->m_ps_manager.get_type(*stmt_id);
             }
 
-            MXS_SESSION* session = rses->m_client->session;
-            mxs_target_t use_sql_variables_in = rses->m_config.use_sql_variables_in;
-            bool load_active = (rses->m_load_data_state != LOAD_DATA_INACTIVE);
+            bool load_active = (rses->load_data_state != LOAD_DATA_INACTIVE);
 
-            route_target = get_route_target(session,
-                                            use_sql_variables_in,
+            route_target = get_route_target(rses->qc(),
                                             load_active,
                                             *command, *type, buffer->hint);
         }

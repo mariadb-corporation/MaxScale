@@ -20,6 +20,7 @@
 #include <string>
 
 #include <maxscale/modutil.h>
+#include <maxscale/queryclassifier.hh>
 
 typedef enum
 {
@@ -93,6 +94,11 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 
+    mxs::QueryClassifier& qc()
+    {
+        return m_qc;
+    }
+
     // TODO: Make member variables private
     mxs::SRWBackendList     m_backends; /**< List of backend servers */
     mxs::SRWBackend         m_current_master; /**< Current master server */
@@ -121,6 +127,7 @@ public:
     std::string             m_gtid_pos; /**< Gtid position for causal read */
     wait_gtid_state_t       m_wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
     uint32_t                m_next_seq; /**< Next packet'ssequence number */
+    mxs::QueryClassifier    m_qc; /**< The query classifier. */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,

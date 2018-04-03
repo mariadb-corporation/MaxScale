@@ -39,7 +39,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_recv_sescmd(0),
     m_gtid_pos(""),
     m_wait_gtid_state(EXPECTING_NOTHING),
-    m_next_seq(0)
+    m_next_seq(0),
+    m_qc(session, instance->config().use_sql_variables_in)
 {
     if (m_config.rw_max_slave_conn_percent)
     {
