@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <stdio.h>
+#include <functional>
 #include <tr1/unordered_map>
 
 namespace maxscale
@@ -277,7 +278,7 @@ bool equal_pointees(const Ptr& lhs, const Ptr& rhs)
 
 // Unary predicate for equality of pointed-to objects
 template<typename T>
-class EqualPointees
+class EqualPointees : public std::unary_function<T, bool>
 {
 public:
    EqualPointees(const T& lhs) : m_ppLhs(&lhs) {}
