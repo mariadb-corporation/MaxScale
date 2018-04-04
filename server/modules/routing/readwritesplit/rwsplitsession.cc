@@ -176,13 +176,13 @@ bool RWSplitSession::route_stored_query()
      * to wait for a response before attempting another reroute */
     while (m_query_queue)
     {
-        GWBUF* query_queue = modutil_get_next_MySQL_packet(&query_queue);
+        GWBUF* query_queue = modutil_get_next_MySQL_packet(&m_query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
 
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
-        GWBUF *temp_storage = query_queue;
-        query_queue = NULL;
+        GWBUF *temp_storage = m_query_queue;
+        m_query_queue = NULL;
 
         // TODO: Move the handling of queued queries to the client protocol
         // TODO: module where the command tracking is done automatically.
@@ -195,15 +195,15 @@ bool RWSplitSession::route_stored_query()
             MXS_ERROR("Failed to route queued query.");
         }
 
-        if (query_queue == NULL)
+        if (m_query_queue == NULL)
         {
             /** Query successfully routed and no responses are expected */
-            query_queue = temp_storage;
+            m_query_queue = temp_storage;
         }
         else
         {
             /** Routing was stopped, we need to wait for a response before retrying */
-            query_queue = gwbuf_append(temp_storage, query_queue);
+            m_query_queue = gwbuf_append(temp_storage, m_query_queue);
             break;
         }
     }
