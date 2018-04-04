@@ -347,7 +347,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         (expected_responses == 0 ||
          mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
          m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE ||
-         large_query))
+         m_qc.large_query()))
     {
         /** Gather the information required to make routing decisions */
         RouteInfo info(this, querybuf);

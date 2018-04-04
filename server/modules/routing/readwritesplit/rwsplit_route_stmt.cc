@@ -164,7 +164,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
     {
         bool store_stmt = false;
 
-        if (m_large_query)
+        if (m_qc.large_query())
         {
             /** We're processing a large query that's split across multiple packets.
              * Route it to the same backend where we routed the previous packet. */
@@ -975,7 +975,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             }
         }
 
-        if ((this->m_large_query = large_query))
+        m_qc.set_large_query(large_query);
+
+        if (large_query)
         {
             /** Store the previous target as we're processing a multi-packet query */
             m_prev_target = target;

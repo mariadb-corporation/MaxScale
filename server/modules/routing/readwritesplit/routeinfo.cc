@@ -108,7 +108,7 @@ route_target_t get_route_target(mxs::QueryClassifier& qc,
 void
 log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
 {
-    if (rses->m_large_query)
+    if (rses->qc().large_query())
     {
         MXS_INFO("> Processing large request with more than 2^24 bytes of data");
     }

@@ -104,7 +104,6 @@ public:
     mxs::SRWBackend         m_current_master; /**< Current master server */
     mxs::SRWBackend         m_target_node; /**< The currently locked target node */
     mxs::SRWBackend         m_prev_target; /**< The previous target where a query was sent */
-    bool                    m_large_query; /**< Set to true when processing payloads >= 2^24 bytes */
     Config                  m_config; /**< copied config info from router instance */
     int                     m_nbackends; /**< Number of backend servers (obsolete) */
     uint64_t                m_load_data_sent; /**< How much data has been sent */
@@ -175,7 +174,11 @@ private:
      */
     inline bool locked_to_master() const
     {
+<<<<<<< bc22790e1bde96fc6a16b8c719805b9d3dd193b5
         return m_large_query || (m_current_master && m_target_node == m_current_master);
+=======
+        return m_qc.large_query() || (current_master && target_node == current_master);
+>>>>>>> MXS-1625 large_query flag moved from RWS session to query classifier
     }
 };
 

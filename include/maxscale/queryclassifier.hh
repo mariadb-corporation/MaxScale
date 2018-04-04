@@ -66,6 +66,16 @@ public:
         m_have_tmp_tables = have_tmp_tables;
     }
 
+    bool large_query() const
+    {
+        return m_large_query;
+    }
+
+    void set_large_query(bool large_query)
+    {
+        m_large_query = large_query;
+    }
+
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
 private:
@@ -73,6 +83,7 @@ private:
     mxs_target_t      m_use_sql_variables_in;
     load_data_state_t m_load_data_state;
     bool              m_have_tmp_tables;
+    bool              m_large_query;          /**< Set to true when processing payloads >= 2^24 bytes */
 };
 
 }
