@@ -611,12 +611,12 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 qc_get_operation(buffer) == QUERY_OP_EXECUTE)
             {
                 std::string id = get_text_ps_id(buffer);
-                *type = rses->m_ps_manager.get_type(id);
+                *type = rses->qc().ps_get_type(id);
             }
             else if (mxs_mysql_is_ps_command(*command))
             {
                 *stmt_id = get_internal_ps_id(rses, buffer);
-                *type = rses->m_ps_manager.get_type(*stmt_id);
+                *type = rses->qc().ps_get_type(*stmt_id);
             }
 
             route_target = get_route_target(rses->qc(), *command, *type, buffer->hint);
