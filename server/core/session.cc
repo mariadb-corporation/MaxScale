@@ -187,10 +187,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
         // NOTE: the router routeQuery into a filter routeQuery. That
         // NOTE: is in order to be able to treat the router as the first
         // NOTE: filter.
-        session->head.instance = (MXS_FILTER*)service->router_instance;
-        session->head.session = (MXS_FILTER_SESSION*)session->router_session;
-        session->head.routeQuery =
-            (int32_t (*)(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*))service->router->routeQuery;
+        session->head = router_as_downstream(session);
 
         // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
         // NOTE: and session_reply into a filter clientReply. That's dubious but ok
@@ -1462,4 +1459,13 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
     }
 
     return success;
+}
+
+MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session)
+{
+    MXS_DOWNSTREAM head;
+    head.instance = (MXS_FILTER*)session->service->router_instance;
+    head.session = (MXS_FILTER_SESSION*)session->router_session;
+    head.routeQuery = (DOWNSTREAMFUNC)session->service->router->routeQuery;
+    return head;
 }

@@ -688,4 +688,13 @@ session_dump_statements_t session_get_dump_statements();
  */
 bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buffer, int seconds);
 
+/**
+ * Cast the session's router as a MXS_DOWNSTREAM object
+ *
+ * @param session The session to use
+ *
+ * @return The router cast as MXS_DOWNSTREAM
+ */
+MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session);
+
 MXS_END_DECLS
