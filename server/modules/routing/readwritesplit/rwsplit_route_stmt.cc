@@ -845,7 +845,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
      * on master;
      **/
 
-    GWBUF *rval;
+    GWBUF* rval = origin;
     const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
             MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
     const char *gtid_wait_timeout = router->config().causal_read_timeout.c_str();
@@ -854,22 +854,27 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
     /* Create a new buffer to store prefix sql */
     size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_position) +
         strlen(gtid_wait_timeout) + strlen(wait_func);
-    char prefix_sql[prefix_len];
-    snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position, gtid_wait_timeout);
-    GWBUF *prefix_buff = modutil_create_query(prefix_sql);
 
-    /* Trim origin to sql, Append origin buffer to the prefix buffer */
-    uint8_t header[MYSQL_HEADER_LEN];
-    gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
-    /* Command length = 1 */
-    size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
-    /* Trim mysql header and command */
-    origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
-    rval = gwbuf_append(prefix_buff, origin);
+    // Only do the replacement if it fits into one packet
+    if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
+    {
+        char prefix_sql[prefix_len];
+        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position, gtid_wait_timeout);
+        GWBUF *prefix_buff = modutil_create_query(prefix_sql);
 
-    /* Modify totol length: Prefix sql len + origin sql len + command len */
-    size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;
-    gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+        /* Trim origin to sql, Append origin buffer to the prefix buffer */
+        uint8_t header[MYSQL_HEADER_LEN];
+        gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
+        /* Command length = 1 */
+        size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
+        /* Trim mysql header and command */
+        origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
+        rval = gwbuf_append(prefix_buff, origin);
+
+        /* Modify totol length: Prefix sql len + origin sql len + command len */
+        size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;
+        gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+    }
 
     return rval;
 }
