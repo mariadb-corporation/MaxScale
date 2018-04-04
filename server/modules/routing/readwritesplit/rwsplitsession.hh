@@ -159,6 +159,7 @@ private:
     void log_master_routing_failure(bool found, mxs::SRWBackend& old_master,
                                     mxs::SRWBackend& curr_master);
 
+    bool handle_causal_read_reply(GWBUF *writebuf, mxs::SRWBackend& backend);
     GWBUF* add_prefix_wait_gtid(SERVER *server, GWBUF *origin);
     void correct_packet_sequence(GWBUF *buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF *buffer);

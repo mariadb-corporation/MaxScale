@@ -383,11 +383,9 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
     }
 }
 
-void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
+bool RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& backend)
 {
-    DCB *client_dcb = backend_dcb->session->client_dcb;
-
-    SRWBackend& backend = get_backend_from_dcb(backend_dcb);
+    bool rval = true;
 
     if (m_config.enable_causal_read &&
         GWBUF_IS_REPLY_OK(writebuf) &&
@@ -403,16 +401,29 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (m_wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
     {
-        ss_dassert(m_config.enable_causal_read);
         if ((writebuf = discard_master_wait_gtid_result(writebuf)) == NULL)
         {
-            // Nothing to route, return
-            return;
+            rval = false;
         }
     }
-    if (m_wait_gtid_state == EXPECTING_REAL_RESULT)
+
+    if (rval && m_wait_gtid_state == EXPECTING_REAL_RESULT)
     {
         correct_packet_sequence(writebuf);
+    }
+
+    return rval;
+}
+
+void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
+{
+    DCB *client_dcb = backend_dcb->session->client_dcb;
+
+    SRWBackend& backend = get_backend_from_dcb(backend_dcb);
+
+    if (!handle_causal_read_reply(writebuf, backend))
+    {
+        return; // Nothing to route, return
     }
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
