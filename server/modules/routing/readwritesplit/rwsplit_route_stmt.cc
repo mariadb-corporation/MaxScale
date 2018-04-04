@@ -746,7 +746,6 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else if (old_master && curr_master && old_master->in_use())
     {
         /** We found a master but it's not the same connection */
-        ss_dassert(!m_config.master_reconnection);
         ss_dassert(old_master != curr_master);
         sprintf(errmsg, "Master server changed from '%s' to '%s'",
                 old_master->name(), curr_master->name());
