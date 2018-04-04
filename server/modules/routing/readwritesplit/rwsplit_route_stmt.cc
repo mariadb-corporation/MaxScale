@@ -560,6 +560,29 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
 }
 
 /**
+ * @brief Get the maximum replication lag for this router
+ *
+ * @param   rses    Router client session
+ * @return  Replication lag from configuration or very large number
+ */
+int RWSplitSession::get_max_replication_lag()
+{
+    int conf_max_rlag;
+
+    /** if there is no configured value, then longest possible int is used */
+    if (rses_config.max_slave_replication_lag > 0)
+    {
+        conf_max_rlag = rses_config.max_slave_replication_lag;
+    }
+    else
+    {
+        conf_max_rlag = ~(1 << 31);
+    }
+
+    return conf_max_rlag;
+}
+
+/**
  * @brief Handle hinted target query
  *
  * One of the possible types of handling required when a request is routed
