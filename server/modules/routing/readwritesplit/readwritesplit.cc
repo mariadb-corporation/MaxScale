@@ -330,6 +330,19 @@ void RWSplit::diagnostics(DCB *dcb)
                config().max_sescmd_history);
     dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
                config().master_accept_reads ? "true" : "false");
+    dcb_printf(dcb, "\tconnection_keepalive:       %d\n",
+               config().connection_keepalive);
+    dcb_printf(dcb, "\tenable_causal_read:       %s\n",
+               config().enable_causal_read ? "true" : "false");
+    dcb_printf(dcb, "\tcausal_read_timeout:       %s\n",
+               config().causal_read_timeout.c_str());
+    dcb_printf(dcb, "\tmaster_reconnection:       %s\n",
+               config().master_reconnection ? "true" : "false");
+    dcb_printf(dcb, "\tquery_retry_timeout:       %lu\n",
+               config().query_retry_timeout);
+    dcb_printf(dcb, "\tquery_retry_interval:       %lu\n",
+               config().query_retry_interval);
+
     dcb_printf(dcb, "\n");
 
     if (stats().n_queries > 0)
@@ -394,7 +407,18 @@ json_t* RWSplit::diagnostics_json() const
                         json_integer(config().max_sescmd_history));
     json_object_set_new(rval, "master_accept_reads",
                         json_boolean(config().master_accept_reads));
-
+    json_object_set_new(rval, "connection_keepalive",
+                        json_integer(config().master_accept_reads));
+    json_object_set_new(rval, "enable_causal_read",
+                        json_boolean(config().enable_causal_read));
+    json_object_set_new(rval, "causal_read_timeout",
+                        json_string(config().causal_read_timeout.c_str()));
+    json_object_set_new(rval, "master_reconnection",
+                        json_boolean(config().master_reconnection));
+    json_object_set_new(rval, "query_retry_timeout",
+                        json_integer(config().query_retry_timeout));
+    json_object_set_new(rval, "query_retry_interval",
+                        json_integer(config().query_retry_interval));
 
     json_object_set_new(rval, "connections", json_integer(stats().n_sessions));
     json_object_set_new(rval, "current_connections", json_integer(service()->stats.n_current));
