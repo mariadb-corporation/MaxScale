@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.1.16 Release Notes -- 2018-04
+# MariaDB MaxScale 2.1.16 Release Notes -- 2018-04-04
 
 Release 2.1.16 is a GA release.
 
