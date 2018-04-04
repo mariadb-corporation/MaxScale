@@ -94,33 +94,33 @@ public:
                      bool*              pSuccess);
 
     // TODO: Make member variables private
-    mxs::SRWBackendList     backends; /**< List of backend servers */
-    mxs::SRWBackend         current_master; /**< Current master server */
-    mxs::SRWBackend         target_node; /**< The currently locked target node */
-    mxs::SRWBackend         prev_target; /**< The previous target where a query was sent */
-    bool                    large_query; /**< Set to true when processing payloads >= 2^24 bytes */
-    Config                  rses_config; /**< copied config info from router instance */
-    int                     rses_nbackends;
-    enum ld_state           load_data_state; /**< Current load data state */
-    bool                    have_tmp_tables;
-    uint64_t                rses_load_data_sent; /**< How much data has been sent */
-    DCB*                    client_dcb;
-    uint64_t                sescmd_count;
-    int                     expected_responses; /**< Number of expected responses to the current query */
-    GWBUF*                  query_queue; /**< Queued commands waiting to be executed */
-    RWSplit*                router; /**< The router instance */
-    TableSet                temp_tables; /**< Set of temporary tables */
-    mxs::SessionCommandList sescmd_list; /**< List of executed session commands */
-    ResponseMap             sescmd_responses; /**< Response to each session command */
-    SlaveResponseList       slave_responses; /**< Slaves that replied before the master */
-    uint64_t                sent_sescmd; /**< ID of the last sent session command*/
-    uint64_t                recv_sescmd; /**< ID of the most recently completed session command */
-    PSManager               ps_manager;  /**< Prepared statement manager*/
-    ClientHandleMap         ps_handles;  /**< Client PS handle to internal ID mapping */
-    ExecMap                 exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
-    std::string             gtid_pos; /**< Gtid position for causal read */
-    wait_gtid_state_t       wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
-    uint32_t                next_seq; /**< Next packet'ssequence number */
+    mxs::SRWBackendList     m_backends; /**< List of backend servers */
+    mxs::SRWBackend         m_current_master; /**< Current master server */
+    mxs::SRWBackend         m_target_node; /**< The currently locked target node */
+    mxs::SRWBackend         m_prev_target; /**< The previous target where a query was sent */
+    bool                    m_large_query; /**< Set to true when processing payloads >= 2^24 bytes */
+    Config                  m_config; /**< copied config info from router instance */
+    int                     m_nbackends; /**< Number of backend servers (obsolete) */
+    enum ld_state           m_load_data_state; /**< Current load data state */
+    bool                    m_have_tmp_tables; /**< True if temp tables have been created */
+    uint64_t                m_load_data_sent; /**< How much data has been sent */
+    DCB*                    m_client; /**< The client DCB */
+    uint64_t                m_sescmd_count; /**< Number of executed session commands */
+    int                     m_expected_responses; /**< Number of expected responses to the current query */
+    GWBUF*                  m_query_queue; /**< Queued commands waiting to be executed */
+    RWSplit*                m_router; /**< The router instance */
+    TableSet                m_temp_tables; /**< Set of temporary tables */
+    mxs::SessionCommandList m_sescmd_list; /**< List of executed session commands */
+    ResponseMap             m_sescmd_responses; /**< Response to each session command */
+    SlaveResponseList       m_slave_responses; /**< Slaves that replied before the master */
+    uint64_t                m_sent_sescmd; /**< ID of the last sent session command*/
+    uint64_t                m_recv_sescmd; /**< ID of the most recently completed session command */
+    PSManager               m_ps_manager;  /**< Prepared statement manager*/
+    ClientHandleMap         m_ps_handles;  /**< Client PS handle to internal ID mapping */
+    ExecMap                 m_exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+    std::string             m_gtid_pos; /**< Gtid position for causal read */
+    wait_gtid_state_t       m_wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
+    uint32_t                m_next_seq; /**< Next packet'ssequence number */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -170,7 +170,7 @@ private:
      */
     inline bool locked_to_master() const
     {
-        return large_query || (current_master && target_node == current_master);
+        return m_large_query || (m_current_master && m_target_node == m_current_master);
     }
 };
 

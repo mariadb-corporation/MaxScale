@@ -104,7 +104,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
 
         if (errbuf)
         {
-            client_dcb->func.write(client_dcb, errbuf);
+            m_client->func.write(m_client, errbuf);
             result = true;
         }
 
@@ -115,7 +115,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
     {
 
         result = true;
-        atomic_add_uint64(&router->stats().n_all, 1);
+        atomic_add_uint64(&m_router->stats().n_all, 1);
     }
 
     return result;

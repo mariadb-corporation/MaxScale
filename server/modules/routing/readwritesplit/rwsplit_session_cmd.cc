@@ -89,18 +89,18 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
                 backend->add_ps_handle(id, resp.id);
             }
 
-            if (recv_sescmd < sent_sescmd && id == recv_sescmd + 1)
+            if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
             {
-                if (!current_master || !current_master->in_use() || // Session doesn't have a master
-                    current_master == backend) // This is the master's response
+                if (!m_current_master || !m_current_master->in_use() || // Session doesn't have a master
+                    m_current_master == backend) // This is the master's response
                 {
                     /** First reply to this session command, route it to the client */
-                    ++recv_sescmd;
+                    ++m_recv_sescmd;
                     discard = false;
 
                     /** Store the master's response so that the slave responses can
                      * be compared to it */
-                    sescmd_responses[id] = cmd;
+                    m_sescmd_responses[id] = cmd;
 
                     if (cmd == MYSQL_REPLY_ERR)
                     {
@@ -111,28 +111,28 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
                     {
                         /** Map the returned response to the internal ID */
                         MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
-                        ps_handles[resp.id] = id;
+                        m_ps_handles[resp.id] = id;
                     }
 
                     // Discard any slave connections that did not return the same result
-                    for (SlaveResponseList::iterator it = slave_responses.begin();
-                         it != slave_responses.end(); it++)
+                    for (SlaveResponseList::iterator it = m_slave_responses.begin();
+                         it != m_slave_responses.end(); it++)
                     {
                         discard_if_response_differs(it->first, cmd, it->second);
                     }
 
-                    slave_responses.clear();
+                    m_slave_responses.clear();
                 }
                 else
                 {
                     /** Record slave command so that the response can be validated
                      * against the master's response when it arrives. */
-                    slave_responses.push_back(std::make_pair(backend, cmd));
+                    m_slave_responses.push_back(std::make_pair(backend, cmd));
                 }
             }
             else
             {
-                discard_if_response_differs(backend, sescmd_responses[id], cmd);
+                discard_if_response_differs(backend, m_sescmd_responses[id], cmd);
             }
 
             if (discard)

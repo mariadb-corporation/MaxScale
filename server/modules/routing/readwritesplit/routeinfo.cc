@@ -114,11 +114,11 @@ route_target_t get_route_target(MXS_SESSION* session,
 void
 log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
 {
-    if (rses->large_query)
+    if (rses->m_large_query)
     {
         MXS_INFO("> Processing large request with more than 2^24 bytes of data");
     }
-    else if (rses->load_data_state == LOAD_DATA_INACTIVE)
+    else if (rses->m_load_data_state == LOAD_DATA_INACTIVE)
     {
         uint8_t *packet = GWBUF_DATA(querybuf);
         unsigned char command = packet[4];
@@ -135,7 +135,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
             len = RWSPLIT_TRACE_MSG_LEN;
         }
 
-        MXS_SESSION *ses = rses->client_dcb->session;
+        MXS_SESSION *ses = rses->m_client->session;
         const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
         const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
@@ -152,7 +152,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
     else
     {
         MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                 rses->rses_load_data_sent);
+                 rses->m_load_data_sent);
     }
 }
 
@@ -232,23 +232,23 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
-        ss_dassert(router_cli_ses && querybuf && router_cli_ses->client_dcb &&
-                   router_cli_ses->client_dcb->data);
+        ss_dassert(router_cli_ses && querybuf && router_cli_ses->m_client &&
+                   router_cli_ses->m_client->data);
 
-        router_cli_ses->have_tmp_tables = true;
+        router_cli_ses->m_have_tmp_tables = true;
         char* tblname = qc_get_created_table_name(querybuf);
         std::string table;
 
         if (tblname && *tblname && strchr(tblname, '.') == NULL)
         {
-            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
+            const char* db = mxs_mysql_get_current_db(router_cli_ses->m_client->session);
             table += db;
             table += ".";
             table += tblname;
         }
 
         /** Add the table to the set of temporary tables */
-        router_cli_ses->temp_tables.insert(table);
+        router_cli_ses->m_temp_tables.insert(table);
 
         MXS_FREE(tblname);
     }
@@ -259,7 +259,7 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
  */
 bool find_table(RWSplitSession* rses, const std::string& table)
 {
-    if (rses->temp_tables.find(table) != rses->temp_tables.end())
+    if (rses->m_temp_tables.find(table) != rses->m_temp_tables.end())
     {
         MXS_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -286,7 +286,7 @@ static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RW
 
     for (int i = 0; i < n_tables; i++)
     {
-        const char* db = mxs_mysql_get_current_db(rses->client_dcb->session);
+        const char* db = mxs_mysql_get_current_db(rses->m_client->session);
         std::string table;
 
         if (strchr(tables[i], '.') == NULL)
@@ -318,7 +318,7 @@ bool is_read_tmp_table(RWSplitSession *rses,
                        GWBUF *querybuf,
                        uint32_t qtype)
 {
-    ss_dassert(rses && querybuf && rses->client_dcb);
+    ss_dassert(rses && querybuf && rses->m_client);
     bool rval = false;
 
     if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
@@ -341,7 +341,7 @@ bool is_read_tmp_table(RWSplitSession *rses,
  */
 bool delete_table(RWSplitSession *rses, const std::string& table)
 {
-    rses->temp_tables.erase(table);
+    rses->m_temp_tables.erase(table);
     return true;
 }
 
@@ -465,13 +465,13 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      * effective since we don't have a node to force queries to. In this
      * situation, assigning QUERY_TYPE_WRITE for the query will trigger
      * the error processing. */
-    if ((rses->target_node == NULL || rses->target_node != rses->current_master) &&
-        (check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type) ||
+    if ((rses->m_target_node == NULL || rses->m_target_node != rses->m_current_master) &&
+        (check_for_multi_stmt(querybuf, rses->m_client->protocol, packet_type) ||
          check_for_sp_call(querybuf, packet_type)))
     {
-        if (rses->current_master && rses->current_master->in_use())
+        if (rses->m_current_master && rses->m_current_master->in_use())
         {
-            rses->target_node = rses->current_master;
+            rses->m_target_node = rses->m_current_master;
             MXS_INFO("Multi-statement query or stored procedure call, routing "
                      "all future queries to master.");
         }
@@ -486,7 +486,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      */
 
     if (rses == NULL || querybuf == NULL ||
-        rses->client_dcb == NULL || rses->client_dcb->data == NULL)
+        rses->m_client == NULL || rses->m_client->data == NULL)
     {
         if (rses == NULL || querybuf == NULL)
         {
@@ -494,12 +494,12 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
                       rses, querybuf);
         }
 
-        if (rses->client_dcb == NULL)
+        if (rses->m_client == NULL)
         {
             MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
         }
 
-        if (rses->client_dcb->data == NULL)
+        if (rses->m_client->data == NULL)
         {
             MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",
                       __FUNCTION__);
@@ -511,7 +511,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         /**
          * Check if the query has anything to do with temporary tables.
          */
-        if (rses->have_tmp_tables && is_packet_a_query(packet_type))
+        if (rses->m_have_tmp_tables && is_packet_a_query(packet_type))
         {
             check_drop_tmp_table(rses, querybuf);
             if (is_read_tmp_table(rses, querybuf, *qtype))
@@ -526,17 +526,17 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
      * to the master until the last, empty packet arrives.
      */
-    if (rses->load_data_state == LOAD_DATA_ACTIVE)
+    if (rses->m_load_data_state == LOAD_DATA_ACTIVE)
     {
-        rses->rses_load_data_sent += gwbuf_length(querybuf);
+        rses->m_load_data_sent += gwbuf_length(querybuf);
     }
     else if (is_packet_a_query(packet_type))
     {
         qc_query_op_t queryop = qc_get_operation(querybuf);
         if (queryop == QUERY_OP_LOAD)
         {
-            rses->load_data_state = LOAD_DATA_START;
-            rses->rses_load_data_sent = 0;
+            rses->m_load_data_state = LOAD_DATA_START;
+            rses->m_load_data_sent = 0;
         }
     }
 }
@@ -556,7 +556,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                                uint8_t* command, uint32_t* type, uint32_t* stmt_id)
 {
     route_target_t route_target = TARGET_MASTER;
-    bool in_read_only_trx = rses->target_node && session_trx_is_read_only(rses->client_dcb->session);
+    bool in_read_only_trx = rses->m_target_node && session_trx_is_read_only(rses->m_client->session);
 
     if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
     {
@@ -599,7 +599,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
          *   eventually to master
          */
 
-        if (rses->target_node && rses->target_node == rses->current_master)
+        if (rses->m_target_node && rses->m_target_node == rses->m_current_master)
         {
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
@@ -617,17 +617,17 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 qc_get_operation(buffer) == QUERY_OP_EXECUTE)
             {
                 std::string id = get_text_ps_id(buffer);
-                *type = rses->ps_manager.get_type(id);
+                *type = rses->m_ps_manager.get_type(id);
             }
             else if (mxs_mysql_is_ps_command(*command))
             {
                 *stmt_id = get_internal_ps_id(rses, buffer);
-                *type = rses->ps_manager.get_type(*stmt_id);
+                *type = rses->m_ps_manager.get_type(*stmt_id);
             }
 
-            MXS_SESSION* session = rses->client_dcb->session;
-            mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
-            bool load_active = (rses->load_data_state != LOAD_DATA_INACTIVE);
+            MXS_SESSION* session = rses->m_client->session;
+            mxs_target_t use_sql_variables_in = rses->m_config.use_sql_variables_in;
+            bool load_active = (rses->m_load_data_state != LOAD_DATA_INACTIVE);
 
             route_target = get_route_target(session,
                                             use_sql_variables_in,
@@ -638,9 +638,9 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
     else
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        rses->load_data_state = LOAD_DATA_END;
+        rses->m_load_data_state = LOAD_DATA_END;
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->rses_load_data_sent + gwbuf_length(buffer));
+                 rses->m_load_data_sent + gwbuf_length(buffer));
     }
 
     return route_target;

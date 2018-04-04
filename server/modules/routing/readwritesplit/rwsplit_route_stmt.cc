@@ -72,9 +72,9 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
     ss_dassert(target);
     ss_debug(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = rses_config.connection_keepalive * 10;
+    int keepalive = m_config.connection_keepalive * 10;
 
-    for (auto it = backends.begin(); it != backends.end(); it++)
+    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
         SRWBackend backend = *it;
 
@@ -92,7 +92,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
         }
     }
 
-    ss_dassert(nserv < rses_nbackends);
+    ss_dassert(nserv < m_nbackends);
 }
 
 bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_target)
@@ -103,17 +103,17 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     if (!target->in_use() && target->can_connect())
     {
         if (TARGET_IS_SLAVE(route_target) ||
-            (rses_config.master_reconnection && TARGET_IS_MASTER(route_target)))
+            (m_config.master_reconnection && TARGET_IS_MASTER(route_target)))
         {
-            if ((!rses_config.disable_sescmd_history || recv_sescmd == 0))
+            if ((!m_config.disable_sescmd_history || m_recv_sescmd == 0))
             {
-                rval = target->connect(client_dcb->session, &sescmd_list);
+                rval = target->connect(m_client->session, &m_sescmd_list);
             }
             else
             {
                 MXS_ERROR("Cannot reconnect to server '%s', session command"
                           " history is disabled (session has executed"
-                          " %lu session commands).", target->name(), recv_sescmd);
+                          " %lu session commands).", target->name(), m_recv_sescmd);
             }
         }
         else if (TARGET_IS_MASTER(route_target))
@@ -164,12 +164,12 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
     {
         bool store_stmt = false;
 
-        if (large_query)
+        if (m_large_query)
         {
             /** We're processing a large query that's split across multiple packets.
              * Route it to the same backend where we routed the previous packet. */
-            ss_dassert(prev_target);
-            target = prev_target;
+            ss_dassert(m_prev_target);
+            target = m_prev_target;
             succp = true;
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
@@ -189,19 +189,19 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
             if ((target = handle_slave_is_target(command, stmt_id)))
             {
                 succp = true;
-                store_stmt = rses_config.retry_failed_reads;
+                store_stmt = m_config.retry_failed_reads;
             }
         }
         else if (TARGET_IS_MASTER(route_target))
         {
             succp = handle_master_is_target(&target);
 
-            if (!rses_config.strict_multi_stmt &&
-                !rses_config.strict_sp_calls &&
-                target_node == current_master)
+            if (!m_config.strict_multi_stmt &&
+                !m_config.strict_sp_calls &&
+                m_target_node == m_current_master)
             {
                 /** Reset the forced node as we're in relaxed multi-statement mode */
-                target_node.reset();
+                m_target_node.reset();
             }
         }
 
@@ -215,8 +215,8 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
             else if (target->have_session_commands())
             {
                 // We need to wait until the session commands are executed
-                expected_responses++;
-                query_queue = gwbuf_append(query_queue, gwbuf_clone(querybuf));
+                m_expected_responses++;
+                m_query_queue = gwbuf_append(m_query_queue, gwbuf_clone(querybuf));
             }
             else
             {
@@ -230,14 +230,14 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
                      * information is used to route all COM_STMT_FETCH commands
                      * to the same server where the COM_STMT_EXECUTE was done. */
                     ss_dassert(stmt_id > 0);
-                    exec_map[stmt_id] = target;
+                    m_exec_map[stmt_id] = target;
                     MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
                 }
             }
         }
     }
 
-    if (succp && router->config().connection_keepalive &&
+    if (succp && m_router->config().connection_keepalive &&
         (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
     {
         handle_connection_keepalive(target);
@@ -273,21 +273,21 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
     // As the PS handles map to explicit IDs, we must retain all COM_STMT_PREPARE commands
     if (sescmd->get_command() != MXS_COM_STMT_PREPARE)
     {
-        auto first = std::find_if(sescmd_list.begin(), sescmd_list.end(),
+        auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(),
                                   mxs::equal_pointees(sescmd));
 
-        if (first != sescmd_list.end())
+        if (first != m_sescmd_list.end())
         {
             // We have at least one of these commands. See if we have a second one
-            auto second = std::find_if(std::next(first), sescmd_list.end(),
+            auto second = std::find_if(std::next(first), m_sescmd_list.end(),
                                        mxs::equal_pointees(sescmd));
 
-            if (second != sescmd_list.end())
+            if (second != m_sescmd_list.end())
             {
                 // We have a total of three commands, remove the middle one
                 auto old_cmd = *second;
-                sescmd_responses.erase(old_cmd->get_position());
-                sescmd_list.erase(second);
+                m_sescmd_responses.erase(old_cmd->get_position());
+                m_sescmd_list.erase(second);
             }
         }
     }
@@ -315,7 +315,7 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
 bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type)
 {
     /** The SessionCommand takes ownership of the buffer */
-    uint64_t id = sescmd_count++;
+    uint64_t id = m_sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
     bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
@@ -325,12 +325,12 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
         qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
     {
         gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
-        ps_manager.store(querybuf, id);
+        m_ps_manager.store(querybuf, id);
     }
 
     MXS_INFO("Session write, routing to all servers.");
 
-    for (auto it = backends.begin(); it != backends.end(); it++)
+    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
         SRWBackend& backend = *it;
 
@@ -351,7 +351,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
 
                 if (expecting_response)
                 {
-                    expected_responses++;
+                    m_expected_responses++;
                 }
 
                 MXS_INFO("Route query to %s \t%s",
@@ -365,7 +365,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
         }
     }
 
-    if (rses_config.max_sescmd_history > 0 && sescmd_list.size() >= rses_config.max_sescmd_history)
+    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history)
     {
         static bool warn_history_exceeded = true;
         if (warn_history_exceeded)
@@ -377,40 +377,40 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
                         "command history, add `disable_sescmd_history=true` to "
                         "service '%s'. To increase the limit (currently %lu), add "
                         "`max_sescmd_history` to the same service and increase the value.",
-                        router->service()->name, rses_config.max_sescmd_history);
+                        m_router->service()->name, m_config.max_sescmd_history);
             warn_history_exceeded = false;
         }
 
-        rses_config.disable_sescmd_history = true;
-        rses_config.max_sescmd_history = 0;
-        sescmd_list.clear();
+        m_config.disable_sescmd_history = true;
+        m_config.max_sescmd_history = 0;
+        m_sescmd_list.clear();
     }
 
-    if (rses_config.disable_sescmd_history)
+    if (m_config.disable_sescmd_history)
     {
         /** Prune stored responses */
-        ResponseMap::iterator it = sescmd_responses.lower_bound(lowest_pos);
+        ResponseMap::iterator it = m_sescmd_responses.lower_bound(lowest_pos);
 
-        if (it != sescmd_responses.end())
+        if (it != m_sescmd_responses.end())
         {
-            sescmd_responses.erase(sescmd_responses.begin(), it);
+            m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
         }
     }
     else
     {
         purge_history(sescmd);
-        sescmd_list.push_back(sescmd);
+        m_sescmd_list.push_back(sescmd);
     }
 
     if (nsucc)
     {
-        sent_sescmd = id;
+        m_sent_sescmd = id;
 
         if (!expecting_response)
         {
             /** The command doesn't generate a response so we increment the
              * completed session command count */
-            recv_sescmd++;
+            m_recv_sescmd++;
         }
     }
 
@@ -431,7 +431,7 @@ SRWBackend RWSplitSession::get_hinted_backend(char *name)
 {
     SRWBackend rval;
 
-    for (auto it = backends.begin(); it != backends.end(); it++)
+    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
         auto& backend = *it;
 
@@ -450,9 +450,9 @@ SRWBackend RWSplitSession::get_hinted_backend(char *name)
 SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
 {
     SRWBackend rval;
-    auto counts = get_slave_counts(backends, current_master);
+    auto counts = get_slave_counts(m_backends, m_current_master);
 
-    for (auto it = backends.begin(); it != backends.end(); it++)
+    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
         auto& backend = *it;
 
@@ -462,15 +462,15 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
             if (!rval)
             {
                 // No previous candidate, accept any valid server (includes master)
-                if ((backend->is_master() && backend == current_master) ||
+                if ((backend->is_master() && backend == m_current_master) ||
                     backend->is_slave())
                 {
                     rval = backend;
                 }
             }
-            else if (backend->in_use() || counts.second < router->max_slave_count())
+            else if (backend->in_use() || counts.second < m_router->max_slave_count())
             {
-                if (!rses_config.master_accept_reads && rval->is_master())
+                if (!m_config.master_accept_reads && rval->is_master())
                 {
                     // Pick slaves over masters with master_accept_reads=false
                     rval = backend;
@@ -478,7 +478,7 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
                 else
                 {
                     // Compare the two servers and pick the best one
-                    rval = compare_backends(rval, backend, rses_config.slave_selection_criteria);
+                    rval = compare_backends(rval, backend, m_config.slave_selection_criteria);
                 }
             }
         }
@@ -491,7 +491,7 @@ SRWBackend RWSplitSession::get_master_backend()
 {
     SRWBackend rval;
     /** get root master from available servers */
-    SRWBackend master = get_root_master(backends);
+    SRWBackend master = get_root_master(m_backends);
 
     if (master)
     {
@@ -532,10 +532,10 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
                                               char *name, int max_rlag)
 {
     /** Check whether using target_node as target SLAVE */
-    if (target_node && session_trx_is_read_only(client_dcb->session))
+    if (m_target_node && session_trx_is_read_only(m_client->session))
     {
-        MXS_DEBUG("In READ ONLY transaction, using server '%s'", target_node->name());
-        return target_node;
+        MXS_DEBUG("In READ ONLY transaction, using server '%s'", m_target_node->name());
+        return m_target_node;
     }
 
     SRWBackend rval;
@@ -570,9 +570,9 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag;
 
     /** if there is no configured value, then longest possible int is used */
-    if (rses_config.max_slave_replication_lag > 0)
+    if (m_config.max_slave_replication_lag > 0)
     {
-        conf_max_rlag = rses_config.max_slave_replication_lag;
+        conf_max_rlag = m_config.max_slave_replication_lag;
     }
     else
     {
@@ -678,9 +678,9 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     {
         /** The COM_STMT_FETCH must be executed on the same server as the
          * COM_STMT_EXECUTE was executed on */
-        ExecMap::iterator it = exec_map.find(stmt_id);
+        ExecMap::iterator it = m_exec_map.find(stmt_id);
 
-        if (it != exec_map.end())
+        if (it != m_exec_map.end())
         {
             target = it->second;
             MXS_INFO("COM_STMT_FETCH on %s", target->uri());
@@ -698,7 +698,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
     if (target)
     {
-        atomic_add_uint64(&router->stats().n_slave, 1);
+        atomic_add_uint64(&m_router->stats().n_slave, 1);
     }
     else
     {
@@ -728,7 +728,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else if (old_master && curr_master && old_master->in_use())
     {
         /** We found a master but it's not the same connection */
-        ss_dassert(!rses_config.master_reconnection);
+        ss_dassert(!m_config.master_reconnection);
         ss_dassert(old_master != curr_master);
         sprintf(errmsg, "Master server changed from '%s' to '%s'",
                 old_master->name(), curr_master->name());
@@ -744,7 +744,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else
     {
         /** We never had a master connection, the session must be in read-only mode */
-        if (rses_config.master_failure_mode != RW_FAIL_INSTANTLY)
+        if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
         {
             sprintf(errmsg, "Session is in read-only mode because it was created "
                     "when no master was available");
@@ -759,28 +759,28 @@ void RWSplitSession::log_master_routing_failure(bool found,
     }
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
-                router->service()->name, client_dcb->user,
-                client_dcb->remote, errmsg);
+                m_router->service()->name, m_client->user,
+                m_client->remote, errmsg);
 }
 
 bool RWSplitSession::should_replace_master(SRWBackend& target)
 {
-    return rses_config.master_reconnection &&
+    return m_config.master_reconnection &&
         // We have a target server and it's not the current master
-        target && target != current_master &&
+        target && target != m_current_master &&
         // We are not inside a transaction (also checks for autocommit=1)
-        !session_trx_is_active(client_dcb->session) &&
+        !session_trx_is_active(m_client->session) &&
         // We are not locked to the old master
         !locked_to_master();
 }
 
 void RWSplitSession::replace_master(SRWBackend& target)
 {
-    current_master = target;
+    m_current_master = target;
 
     // As the master has changed, we can reset the temporary table information
-    have_tmp_tables = false;
-    temp_tables.clear();
+    m_have_tmp_tables = false;
+    m_temp_tables.clear();
 }
 
 /**
@@ -801,30 +801,30 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
 
     if (should_replace_master(target))
     {
-        MXS_INFO("Replacing old master '%s' with new master '%s'", current_master ?
-                 current_master->name() : "<no previous master>", target->name());
+        MXS_INFO("Replacing old master '%s' with new master '%s'", m_current_master ?
+                 m_current_master->name() : "<no previous master>", target->name());
         replace_master(target);
     }
 
-    if (target && target == current_master)
+    if (target && target == m_current_master)
     {
-        atomic_add_uint64(&router->stats().n_master, 1);
+        atomic_add_uint64(&m_router->stats().n_master, 1);
     }
     else
     {
         /** The original master is not available, we can't route the write */
-        if (rses_config.master_failure_mode == RW_ERROR_ON_WRITE)
+        if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
         {
-            succp = send_readonly_error(client_dcb);
+            succp = send_readonly_error(m_client);
 
-            if (current_master && current_master->in_use())
+            if (m_current_master && m_current_master->in_use())
             {
-                current_master->close();
+                m_current_master->close();
             }
         }
         else
         {
-            log_master_routing_failure(succp, current_master, target);
+            log_master_routing_failure(succp, m_current_master, target);
             succp = false;
         }
     }
@@ -871,8 +871,8 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
     GWBUF* rval = origin;
     const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
             MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
-    const char *gtid_wait_timeout = router->config().causal_read_timeout.c_str();
-    const char *gtid_position = gtid_pos.c_str();
+    const char *gtid_wait_timeout = m_router->config().causal_read_timeout.c_str();
+    const char *gtid_position = m_gtid_pos.c_str();
 
     /* Create a new buffer to store prefix sql */
     size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_position) +
@@ -913,9 +913,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
      * If the transaction is READ ONLY set forced_node to this backend.
      * This SLAVE backend will be used until the COMMIT is seen.
      */
-    if (!target_node && session_trx_is_read_only(client_dcb->session))
+    if (!m_target_node && session_trx_is_read_only(m_client->session))
     {
-        target_node = target;
+        m_target_node = target;
         MXS_DEBUG("Setting forced_node SLAVE to %s within an opened READ ONLY transaction",
                   target->name());
     }
@@ -927,16 +927,16 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     ss_dassert(!target->have_session_commands());
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    wait_gtid_state = EXPECTING_NOTHING;
+    m_wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF *send_buf = gwbuf_clone(querybuf);
-    if (cmd == COM_QUERY && router->config().enable_causal_read && gtid_pos != "")
+    if (cmd == COM_QUERY && m_router->config().enable_causal_read && m_gtid_pos != "")
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
-        wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
+        m_wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
     }
 
-    if (load_data_state != LOAD_DATA_ACTIVE &&
+    if (m_load_data_state != LOAD_DATA_ACTIVE &&
         mxs_mysql_command_will_respond(cmd))
     {
         response = mxs::Backend::EXPECT_RESPONSE;
@@ -946,55 +946,55 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
 
     if (target->write(send_buf, response))
     {
-        if (store && !session_store_stmt(client_dcb->session, querybuf, target->server()))
+        if (store && !session_store_stmt(m_client->session, querybuf, target->server()))
         {
             MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
         }
 
-        atomic_add_uint64(&router->stats().n_queries, 1);
+        atomic_add_uint64(&m_router->stats().n_queries, 1);
 
         if (!large_query && response == mxs::Backend::EXPECT_RESPONSE)
         {
             /** The server will reply to this command */
             ss_dassert(target->get_reply_state() == REPLY_STATE_DONE);
             target->set_reply_state(REPLY_STATE_START);
-            expected_responses++;
+            m_expected_responses++;
 
-            if (load_data_state == LOAD_DATA_START)
+            if (m_load_data_state == LOAD_DATA_START)
             {
                 /** The first packet contains the actual query and the server
                  * will respond to it */
-                load_data_state = LOAD_DATA_ACTIVE;
+                m_load_data_state = LOAD_DATA_ACTIVE;
             }
-            else if (load_data_state == LOAD_DATA_END)
+            else if (m_load_data_state == LOAD_DATA_END)
             {
                 /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
                  * to which the server responds with an OK or an ERR packet */
                 ss_dassert(gwbuf_length(querybuf) == 4);
-                load_data_state = LOAD_DATA_INACTIVE;
+                m_load_data_state = LOAD_DATA_INACTIVE;
             }
         }
 
-        if ((this->large_query = large_query))
+        if ((this->m_large_query = large_query))
         {
             /** Store the previous target as we're processing a multi-packet query */
-            prev_target = target;
+            m_prev_target = target;
         }
         else
         {
             /** Otherwise reset it so we know the query is complete */
-            prev_target.reset();
+            m_prev_target.reset();
         }
 
         /**
          * If a READ ONLY transaction is ending set forced_node to NULL
          */
-        if (target_node &&
-            session_trx_is_read_only(client_dcb->session) &&
-            session_trx_is_ending(client_dcb->session))
+        if (m_target_node &&
+            session_trx_is_read_only(m_client->session) &&
+            session_trx_is_ending(m_client->session))
         {
             MXS_DEBUG("An opened READ ONLY transaction ends: forced_node is set to NULL");
-            target_node.reset();
+            m_target_node.reset();
         }
         return true;
     }
