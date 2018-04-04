@@ -19,6 +19,7 @@
 #include <memory>
 #include <maxscale/monitor.h>
 #include "utilities.hh"
+#include "gtid.hh"
 
 enum mysql_server_version
 {
@@ -47,7 +48,7 @@ public:
                                      *   reading from. */
     uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
                                      *   binary log file. */
-    Gtid gtid_io_pos;               /**< Gtid I/O position of the slave thread. */
+    GtidList gtid_io_pos;           /**< Gtid I/O position of the slave thread. */
     std::string last_error;         /**< Last IO or SQL error encountered. */
 
     SlaveStatusInfo();
@@ -91,8 +92,8 @@ public:
     time_t          latest_event;           /**< Time when latest event was received from the master */
     int64_t         gtid_domain_id;         /**< The value of gtid_domain_id, the domain which is used for
                                               *  new non-replicated events. */
-    Gtid            gtid_current_pos;       /**< Gtid of latest event. */
-    Gtid            gtid_binlog_pos;        /**< Gtid of latest event written to binlog. */
+    GtidList        gtid_current_pos;       /**< Gtid of latest event. */
+    GtidList        gtid_binlog_pos;        /**< Gtid of latest event written to binlog. */
     SlaveStatusInfo slave_status;           /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
 

@@ -197,9 +197,9 @@ private:
     bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
     bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
-    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid, int total_timeout,
+    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const GtidList& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
-    bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
+    bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const GtidList& gtid,
                                        int total_timeout, int read_timeout, json_t** err_out);
     bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                                     int seconds_remaining);

@@ -48,7 +48,8 @@ int64_t MariaDBServer::relay_log_events()
      * rare but is possible (I guess?) if the server is replicating a domain from multiple masters
      * and decides to process events from one relay log before getting new events to the other. In
      * any case, such events are obsolete and the server can be considered to have processed such logs. */
-    return Gtid::events_ahead(slave_status.gtid_io_pos, gtid_current_pos, Gtid::MISSING_DOMAIN_LHS_ADD);
+    return GtidList::events_ahead(slave_status.gtid_io_pos, gtid_current_pos,
+                                  GtidList::MISSING_DOMAIN_LHS_ADD);
 }
 
 std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
@@ -199,11 +200,11 @@ bool MariaDBServer::do_show_slave_status()
             if (!gtid_io_pos.empty() &&
                 (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
-                slave_status.gtid_io_pos = Gtid::from_string(gtid_io_pos);
+                slave_status.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
             else
             {
-                slave_status.gtid_io_pos = Gtid();
+                slave_status.gtid_io_pos = GtidList();
             }
         }
     }
@@ -242,21 +243,21 @@ bool MariaDBServer::update_gtids()
         bool binlog_ok = false;
         if (current_str.empty())
         {
-            gtid_current_pos = Gtid();
+            gtid_current_pos = GtidList();
         }
         else
         {
-            gtid_current_pos = Gtid::from_string(current_str);
+            gtid_current_pos = GtidList::from_string(current_str);
             current_ok = !gtid_current_pos.empty();
         }
 
         if (binlog_str.empty())
         {
-            gtid_binlog_pos = Gtid();
+            gtid_binlog_pos = GtidList();
         }
         else
         {
-            gtid_binlog_pos = Gtid::from_string(binlog_str);
+            gtid_binlog_pos = GtidList::from_string(binlog_str);
             binlog_ok = !gtid_binlog_pos.empty();
         }
 
