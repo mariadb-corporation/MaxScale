@@ -94,8 +94,6 @@ public:
                      bool*              pSuccess);
 
     // TODO: Make member variables private
-    skygw_chk_t             rses_chk_top;
-    bool                    rses_closed; /**< true when closeSession is called */
     mxs::SRWBackendList     backends; /**< List of backend servers */
     mxs::SRWBackend         current_master; /**< Current master server */
     mxs::SRWBackend         target_node; /**< The currently locked target node */
@@ -123,7 +121,6 @@ public:
     std::string             gtid_pos; /**< Gtid position for causal read */
     wait_gtid_state_t       wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
     uint32_t                next_seq; /**< Next packet'ssequence number */
-    skygw_chk_t             rses_chk_tail;
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,

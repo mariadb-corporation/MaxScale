@@ -632,26 +632,22 @@ RWSplitSession* RWSplit::newSession(MXS_SESSION *session)
  */
 void RWSplitSession::close()
 {
-    if (!rses_closed)
+    close_all_connections(backends);
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
+        sescmd_list.size())
     {
-        rses_closed = true;
-        close_all_connections(backends);
+        std::string sescmdstr;
 
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
-            sescmd_list.size())
+        for (mxs::SessionCommandList::iterator it = sescmd_list.begin();
+             it != sescmd_list.end(); it++)
         {
-            std::string sescmdstr;
-
-            for (mxs::SessionCommandList::iterator it = sescmd_list.begin();
-                 it != sescmd_list.end(); it++)
-            {
-                mxs::SSessionCommand& scmd = *it;
-                sescmdstr += scmd->to_string();
-                sescmdstr += "\n";
-            }
-
-            MXS_INFO("Executed session commands:\n%s", sescmdstr.c_str());
+            mxs::SSessionCommand& scmd = *it;
+            sescmdstr += scmd->to_string();
+            sescmdstr += "\n";
         }
+
+        MXS_INFO("Executed session commands:\n%s", sescmdstr.c_str());
     }
 }
 
@@ -659,45 +655,38 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
 
-    if (rses_closed)
+    if (query_queue == NULL &&
+        (expected_responses == 0 ||
+         mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
+         load_data_state == LOAD_DATA_ACTIVE ||
+         large_query))
     {
-        closed_session_reply(querybuf);
+        /** Gather the information required to make routing decisions */
+        RouteInfo info(this, querybuf);
+
+        /** No active or pending queries */
+        if (route_single_stmt(querybuf, info))
+        {
+            rval = 1;
+        }
     }
     else
     {
-        if (query_queue == NULL &&
-            (expected_responses == 0 ||
-             mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
-             load_data_state == LOAD_DATA_ACTIVE ||
-             large_query))
-        {
-            /** Gather the information required to make routing decisions */
-            RouteInfo info(this, querybuf);
+        /**
+         * We are already processing a request from the client. Store the
+         * new query and wait for the previous one to complete.
+         */
+        ss_dassert(expected_responses || query_queue);
+        MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
+                 gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], expected_responses);
+        query_queue = gwbuf_append(query_queue, querybuf);
+        querybuf = NULL;
+        rval = 1;
+        ss_dassert(expected_responses > 0);
 
-            /** No active or pending queries */
-            if (route_single_stmt(querybuf, info))
-            {
-                rval = 1;
-            }
-        }
-        else
+        if (expected_responses == 0 && !route_stored_query())
         {
-            /**
-             * We are already processing a request from the client. Store the
-             * new query and wait for the previous one to complete.
-             */
-            ss_dassert(expected_responses || query_queue);
-            MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
-                     gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], expected_responses);
-            query_queue = gwbuf_append(query_queue, querybuf);
-            querybuf = NULL;
-            rval = 1;
-            ss_dassert(expected_responses > 0);
-
-            if (expected_responses == 0 && !route_stored_query())
-            {
-                rval = 0;
-            }
+            rval = 0;
         }
     }
 
@@ -913,7 +902,6 @@ void RWSplitSession::correct_packet_sequence(GWBUF *buffer)
 void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 {
     DCB *client_dcb = backend_dcb->session->client_dcb;
-    ss_dassert(!rses_closed);
 
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
 
@@ -1026,13 +1014,6 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
 {
     ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(problem_dcb);
-
-    if (rses_closed)
-    {
-        *succp = false;
-        return;
-    }
-
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 

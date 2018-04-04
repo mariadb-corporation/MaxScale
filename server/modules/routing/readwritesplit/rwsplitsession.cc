@@ -22,8 +22,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
                                const SRWBackendList& backends,
                                const SRWBackend& master):
     mxs::RouterSession(session),
-    rses_chk_top(CHK_NUM_ROUTER_SES),
-    rses_closed(false),
     backends(backends),
     current_master(master),
     large_query(false),
@@ -41,8 +39,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     recv_sescmd(0),
     gtid_pos(""),
     wait_gtid_state(EXPECTING_NOTHING),
-    next_seq(0),
-    rses_chk_tail(CHK_NUM_ROUTER_SES)
+    next_seq(0)
 {
     if (rses_config.rw_max_slave_conn_percent)
     {
