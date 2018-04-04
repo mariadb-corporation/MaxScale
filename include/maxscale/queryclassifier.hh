@@ -48,6 +48,11 @@ public:
     QueryClassifier(MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
 
+    bool multi_statements_allowed() const
+    {
+        return m_multi_statements_allowed;
+    }
+
     load_data_state_t load_data_state() const
     {
         return m_load_data_state;
@@ -117,7 +122,8 @@ private:
     mxs_target_t      m_use_sql_variables_in;
     load_data_state_t m_load_data_state;
     bool              m_have_tmp_tables;
-    bool              m_large_query;          /**< Set to true when processing payloads >= 2^24 bytes */
+    bool              m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
+    bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
     SPSManager        m_sPs_manager;
 };
 

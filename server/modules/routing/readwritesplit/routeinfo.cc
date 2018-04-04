@@ -403,13 +403,11 @@ inline bool have_semicolon(const char* ptr, int len)
  * @param buf Buffer containing the full query
  * @return True if the query contains multiple statements
  */
-bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
+bool check_for_multi_stmt(const QueryClassifier& qc, GWBUF *buf, uint8_t packet_type)
 {
-    MySQLProtocol *proto = (MySQLProtocol *)protocol;
     bool rval = false;
 
-    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
-        packet_type == MXS_COM_QUERY)
+    if (qc.multi_statements_allowed() && packet_type == MXS_COM_QUERY)
     {
         char *ptr, *data = (char*)GWBUF_DATA(buf) + 5;
         /** Payload size without command byte */
@@ -460,7 +458,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      * situation, assigning QUERY_TYPE_WRITE for the query will trigger
      * the error processing. */
     if ((rses->m_target_node == NULL || rses->m_target_node != rses->m_current_master) &&
-        (check_for_multi_stmt(querybuf, rses->m_client->protocol, packet_type) ||
+        (check_for_multi_stmt(rses->qc(), querybuf, packet_type) ||
          check_for_sp_call(querybuf, packet_type)))
     {
         if (rses->m_current_master && rses->m_current_master->in_use())

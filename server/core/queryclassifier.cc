@@ -19,6 +19,21 @@
 
 namespace
 {
+
+bool are_multi_statements_allowed(MXS_SESSION* pSession)
+{
+    MySQLProtocol* pPcol = static_cast<MySQLProtocol*>(pSession->client_dcb->protocol);
+
+    if (pPcol->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 uint32_t get_prepare_type(GWBUF* buffer)
 {
     uint32_t type;
@@ -189,6 +204,7 @@ QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
     , m_load_data_state(LOAD_DATA_INACTIVE)
     , m_have_tmp_tables(false)
     , m_large_query(false)
+    , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager)
 {
 }
