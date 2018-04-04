@@ -947,7 +947,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             }
         }
 
-        if ((large_query = large_query))
+        if ((this->large_query = large_query))
         {
             /** Store the previous target as we're processing a multi-packet query */
             prev_target = target;
