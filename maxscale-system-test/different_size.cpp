@@ -61,59 +61,43 @@ void set_max_packet(TestConnections* Test, bool binlog, char * cmd)
 
 void different_packet_size(TestConnections* Test, bool binlog)
 {
-    MYSQL * conn;
     Test->set_timeout(60);
     Test->tprintf("Set big max_allowed_packet\n");
     set_max_packet(Test, binlog,  (char *) "set global max_allowed_packet = 200000000;");
 
     Test->set_timeout(40);
     Test->tprintf("Create table\n");
-    conn = connect_to_serv(Test, binlog);
-    Test->try_query(conn, (char *)
-                    "DROP TABLE IF EXISTS test.large_event;CREATE TABLE test.large_event(id INT, data LONGBLOB);");
+    MYSQL* conn = connect_to_serv(Test, binlog);
+    Test->try_query(conn, "DROP TABLE IF EXISTS test.large_event;"
+                    "CREATE TABLE test.large_event(id INT, data LONGBLOB);");
     mysql_close(conn);
 
-    int ranges_num = 3;
-    unsigned int range_min[ranges_num];
-    unsigned int range_max[ranges_num];
-    unsigned int range = Test->smoke ? 2 : 50;
+    const int loops = 3;
+    const int range = 2;
 
-    range_min[0] = 0x0ffffff - range;
-    range_max[0] = 0x0ffffff + range;
-    range_min[1] = 0x0ffffff * 2 - range;
-    range_max[1] = 0x0ffffff * 2 + range;
-    range_min[2] = 0x0ffffff * 3 - range;
-    range_max[2] = 0x0ffffff * 3 + range;
-
-    char * event;
-    int i;
-    unsigned long j;
-
-    for (i = 0; i < ranges_num; i++)
+    for (int i = 1; i <= loops; i++)
     {
-        for (j = range_min[i]; j < range_max[i]; j++)
+        for (int j = -range; j <= range; j++)
         {
+            size_t size = 0x0ffffff * i + j;
+            Test->tprintf("Trying event app. %lu bytes", size);
             Test->set_timeout(240);
-            event = create_event_size(j);
-            Test->tprintf("Trying event app. %d bytes\t", j);
-            fflush(stdout);
-            conn = connect_to_serv(Test, binlog);
-            if (execute_query_silent(conn, event) == 0)
-            {
-                Test->tprintf("OK\n");
-            }
-            else
-            {
-                Test->tprintf("FAIL\n");
-            }
 
+            char* event = create_event_size(size);
+            conn = connect_to_serv(Test, binlog);
+            Test->assert(execute_query_silent(conn, event) == 0, "Query should succeed");
             free(event);
-            execute_query_silent(conn, (char *) "DELETE FROM test.large_event WHERE id=1");
+            execute_query_silent(conn, (char *) "DELETE FROM test.large_event");
             mysql_close(conn);
         }
     }
 
     Test->set_timeout(40);
-    Test->tprintf("Restoring max_allowed_packet\n");
+    Test->tprintf("Restoring max_allowed_packet");
     set_max_packet(Test, binlog,  (char *) "set global max_allowed_packet = 1048576;");
+
+    conn = connect_to_serv(Test, binlog);
+    Test->try_query(conn, "DROP TABLE test.large_event");
+    mysql_close(conn);
+
 }
