@@ -174,11 +174,7 @@ private:
      */
     inline bool locked_to_master() const
     {
-<<<<<<< bc22790e1bde96fc6a16b8c719805b9d3dd193b5
-        return m_large_query || (m_current_master && m_target_node == m_current_master);
-=======
-        return m_qc.large_query() || (current_master && target_node == current_master);
->>>>>>> MXS-1625 large_query flag moved from RWS session to query classifier
+        return m_qc.large_query() || (m_current_master && m_target_node == m_current_master);
     }
 };
 

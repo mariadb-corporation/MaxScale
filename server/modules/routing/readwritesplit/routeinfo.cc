@@ -530,7 +530,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         if (queryop == QUERY_OP_LOAD)
         {
             rses->qc().set_load_data_state(QueryClassifier::LOAD_DATA_START);
-            rses->rses_load_data_sent = 0;
+            rses->m_load_data_sent = 0;
         }
     }
 }

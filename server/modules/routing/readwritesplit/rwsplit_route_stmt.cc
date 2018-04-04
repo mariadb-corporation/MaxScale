@@ -780,7 +780,7 @@ void RWSplitSession::replace_master(SRWBackend& target)
 
     // As the master has changed, we can reset the temporary table information
     m_qc.set_have_tmp_tables(false);
-    temp_tables.clear();
+    m_temp_tables.clear();
 }
 
 /**
