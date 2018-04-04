@@ -37,7 +37,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_wait_gtid_state(EXPECTING_NOTHING),
     m_next_seq(0),
     m_qc(this, session, instance->config().use_sql_variables_in),
-    m_retry_duration(0)
+    m_retry_duration(0),
+    m_current_query(NULL)
 {
     if (m_config.rw_max_slave_conn_percent)
     {
@@ -386,11 +387,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return;
     }
 
-    if (session_have_stmt(backend_dcb->session))
-    {
-        /** Statement was successfully executed, free the stored statement */
-        session_clear_stmt(backend_dcb->session);
-    }
+    reset_query();
 
     if (backend->reply_is_complete(writebuf))
     {
@@ -612,17 +609,12 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
          * Try to reroute the statement to a working server or send an error
          * to the client.
          */
-        GWBUF *stored = NULL;
-        const SERVER *target = NULL;
+        GWBUF *stored = release_query();
 
-        if (session_take_stmt(backend_dcb->session, &stored, &target) &&
-            m_config.retry_failed_reads)
+        if (stored && m_config.retry_failed_reads)
         {
-            ss_dassert(target == backend->server());
             MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
             MXS_SESSION* session = m_client->session;
-
-            // Try to route the failed read as often as possible
             session_delay_routing(session, router_as_downstream(session), stored, 1);
         }
         else

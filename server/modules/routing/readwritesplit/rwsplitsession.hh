@@ -127,6 +127,7 @@ public:
     uint32_t                m_next_seq; /**< Next packet's sequence number */
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */
+    GWBUF*                  m_current_query; /**< Current query being executed, NULL for no query */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -190,6 +191,37 @@ private:
         return m_config.query_retry_interval > 0 &&
                m_retry_duration < m_config.query_retry_timeout &&
                !session_trx_is_active(m_client->session);
+    }
+
+    /**
+     * Set the current query
+     *
+     * @param query The current query
+     */
+    inline void set_query(GWBUF* query)
+    {
+        ss_dassert(!m_current_query);
+        m_current_query = gwbuf_clone(query);
+    }
+
+    /**
+     * Release current query
+     *
+     * @return The current query
+     */
+    inline GWBUF* release_query()
+    {
+        GWBUF* rval = m_current_query;
+        m_current_query = NULL;
+        return rval;
+    }
+
+    /**
+     * Reset current query
+     */
+    inline void reset_query()
+    {
+        gwbuf_free(release_query());
     }
 };
 

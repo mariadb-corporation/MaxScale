@@ -959,9 +959,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
 
     if (target->write(send_buf, response))
     {
-        if (store && !session_store_stmt(m_client->session, querybuf, target->server()))
+        if (store)
         {
-            MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
+            set_query(send_buf);
         }
 
         atomic_add_uint64(&m_router->stats().n_queries, 1);

@@ -203,11 +203,6 @@ typedef struct session
     mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
     bool                    autocommit;       /*< Whether autocommit is on. */
     intptr_t                client_protocol_data; /*< Owned and managed by the client protocol. */
-    struct
-    {
-        GWBUF *buffer; /**< Buffer containing the statement */
-        const struct server *target; /**< Where the statement was sent */
-    } stmt;  /**< Current statement being executed */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
     SessionVarsByName*      variables;        /*< @maxscale variables associated with this session */
     struct
@@ -480,50 +475,6 @@ void session_close(MXS_SESSION *session);
  * @param session Session reference to release
  */
 void session_put_ref(MXS_SESSION *session);
-
-/**
- * @brief Store the current statement into session
- *
- * This creates an additional reference to the buffer. If an old statement is stored,
- * it will be replaced with a clone of @c buf.
- *
- * @param session Session where statement is stored
- * @param buf Buffer containing the current statement
- * @param server Server where the statement is being executed
- * @return True if statement was successfully stored, false if the cloning of @c buf failed.
- */
-bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const struct server *server);
-
-/**
- * @brief Fetch stored statement
- *
- * The value returned by this call must be freed by the caller with gwbuf_free().
- *
- * @param session Session with a stored statement
- * @param buffer Pointer where the buffer is stored
- * @param target Pointer where target server is stored
- * @return True if a statement was stored
- */
-bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server **target);
-
-/**
- * @brief Check if the session has a stored statement
- *
- * @param session Session to check
- *
- * @return True if the session has a stored statement
- */
-static inline bool session_have_stmt(MXS_SESSION *session)
-{
-    return session->stmt.buffer;
-}
-
-/**
- * Clear the stored statement
- *
- * @param session Session to clear
- */
-void session_clear_stmt(MXS_SESSION *session);
 
 /**
  * @brief Convert a session to JSON

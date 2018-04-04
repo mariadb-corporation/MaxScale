@@ -128,8 +128,6 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->service = service;
     session->client_dcb = client_dcb;
     session->stats.connect = time(0);
-    session->stmt.buffer = NULL;
-    session->stmt.target = NULL;
     session->qualifies_for_pooling = false;
 
     MXS_CONFIG *config = config_get_global_options();
@@ -397,7 +395,6 @@ session_final_free(MXS_SESSION *session)
         session_dump_statements(session);
     }
 
-    gwbuf_free(session->stmt.buffer);
     delete session->variables;
     delete session->last_statements;
     MXS_FREE(session);
@@ -962,50 +959,6 @@ void session_put_ref(MXS_SESSION *session)
             session_free(session);
         }
     }
-}
-
-bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const SERVER *server)
-{
-    bool rval = false;
-
-    if (session->stmt.buffer)
-    {
-        /** This should not happen with proper use */
-        ss_dassert(false);
-        gwbuf_free(session->stmt.buffer);
-    }
-
-    if ((session->stmt.buffer = gwbuf_clone(buf)))
-    {
-        session->stmt.target = server;
-        /** No old statements were stored and we successfully cloned the buffer */
-        rval = true;
-    }
-
-    return rval;
-}
-
-bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const SERVER **target)
-{
-    bool rval = false;
-
-    if (session->stmt.buffer && session->stmt.target)
-    {
-        *buffer = session->stmt.buffer;
-        *target = session->stmt.target;
-        session->stmt.buffer = NULL;
-        session->stmt.target = NULL;
-        rval = true;
-    }
-
-    return rval;
-}
-
-void session_clear_stmt(MXS_SESSION *session)
-{
-    gwbuf_free(session->stmt.buffer);
-    session->stmt.buffer = NULL;
-    session->stmt.target = NULL;
 }
 
 uint64_t session_get_next_id()
