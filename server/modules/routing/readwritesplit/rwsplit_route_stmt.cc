@@ -441,8 +441,8 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
 static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
 {
     return max_rlag == MAX_RLAG_UNDEFINED ||
-        (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-        backend->server()->rlag <= max_rlag);
+           (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
+            backend->server()->rlag <= max_rlag);
 }
 
 SRWBackend RWSplitSession::get_hinted_backend(char *name)
@@ -680,7 +680,7 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF *querybuf, route_target_t 
 }
 
 /**
- * Handle slave target type 
+ * Handle slave target type
  *
  * @param cmd     Command being executed
  * @param stmt_id Prepared statement ID
@@ -730,13 +730,14 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
  * @brief Log master write failure
  */
 void RWSplitSession::log_master_routing_failure(bool found,
-                                                       SRWBackend& old_master,
-                                                       SRWBackend& curr_master)
+                                                SRWBackend& old_master,
+                                                SRWBackend& curr_master)
 {
     /** Both backends should either be empty, not connected or the DCB should
      * be a backend (the last check is slightly redundant). */
     ss_dassert(!old_master || !old_master->in_use() || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    ss_dassert(!curr_master || !curr_master->in_use()|| curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    ss_dassert(!curr_master || !curr_master->in_use() ||
+               curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
 
     if (!found)
@@ -783,12 +784,12 @@ void RWSplitSession::log_master_routing_failure(bool found,
 bool RWSplitSession::should_replace_master(SRWBackend& target)
 {
     return m_config.master_reconnection &&
-        // We have a target server and it's not the current master
-        target && target != m_current_master &&
-        // We are not inside a transaction (also checks for autocommit=1)
-        !session_trx_is_active(m_client->session) &&
-        // We are not locked to the old master
-        !is_locked_to_master();
+           // We have a target server and it's not the current master
+           target && target != m_current_master &&
+           // We are not inside a transaction (also checks for autocommit=1)
+           !session_trx_is_active(m_client->session) &&
+           // We are not locked to the old master
+           !is_locked_to_master();
 }
 
 void RWSplitSession::replace_master(SRWBackend& target)
@@ -885,13 +886,13 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
 
     GWBUF* rval = origin;
     const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
-            MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
+                            MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
     const char *gtid_wait_timeout = m_router->config().causal_read_timeout.c_str();
     const char *gtid_position = m_gtid_pos.c_str();
 
     /* Create a new buffer to store prefix sql */
     size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_position) +
-        strlen(gtid_wait_timeout) + strlen(wait_func);
+                        strlen(gtid_wait_timeout) + strlen(wait_func);
 
     // Only do the replacement if it fits into one packet
     if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)

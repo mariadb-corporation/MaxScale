@@ -340,11 +340,11 @@ void RWSplitSession::correct_packet_sequence(GWBUF *buffer)
     {
         while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
         {
-           packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-           uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
-           *seq = m_next_seq;
-           m_next_seq++;
-           offset += packet_len;
+            packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+            uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
+            *seq = m_next_seq;
+            m_next_seq++;
+            offset += packet_len;
         }
     }
 }
@@ -577,7 +577,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                     {
                         ss_dassert(backend);
                         MXS_ERROR("Server %s (%s) lost the master status while waiting"
-                            " for a result. Client sessions will be closed.",
+                                  " for a result. Client sessions will be closed.",
                                   backend->name(), backend->uri());
                         backend->server()->master_err_is_logged = true;
                     }
@@ -595,7 +595,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
             else
             {
                 if (m_target_node && m_target_node == backend &&
-                     session_trx_is_read_only(problem_dcb->session))
+                    session_trx_is_read_only(problem_dcb->session))
                 {
                     /**
                      * We were locked to a single node but the node died. Currently
@@ -719,10 +719,10 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
     else
     {
         succp = m_router->select_connect_backend_servers(ses, m_backends,
-                                                       m_current_master,
-                                                       &m_sescmd_list,
-                                                       &m_expected_responses,
-                                                       connection_type::SLAVE);
+                                                         m_current_master,
+                                                         &m_sescmd_list,
+                                                         &m_expected_responses,
+                                                         connection_type::SLAVE);
     }
 
     return succp;

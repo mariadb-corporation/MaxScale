@@ -108,7 +108,7 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         {
             // This is an OK packet and more results will follow
             ss_dassert(mxs_mysql_is_ok_packet(buffer) &&
-                mxs_mysql_more_results_after_ok(buffer));
+                       mxs_mysql_more_results_after_ok(buffer));
 
             if (have_next_packet(buffer))
             {
