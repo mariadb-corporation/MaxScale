@@ -118,11 +118,15 @@ typedef struct
 struct mxs_filter;
 struct mxs_filter_session;
 
+// These are more convenient types
+typedef int32_t (*DOWNSTREAMFUNC)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
+typedef int32_t (*UPSTREAMFUNC)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
+
 typedef struct mxs_downstream
 {
     struct mxs_filter *instance;
     struct mxs_filter_session *session;
-    int32_t (*routeQuery)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *request);
+    DOWNSTREAMFUNC routeQuery;
 } MXS_DOWNSTREAM;
 
 /**
@@ -133,8 +137,7 @@ typedef struct mxs_upstream
 {
     struct mxs_filter *instance;
     struct mxs_filter_session *session;
-    int32_t (*clientReply)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
-    int32_t (*error)(void *instance, void *session, void *);
+    UPSTREAMFUNC clientReply;
 } MXS_UPSTREAM;
 
 /**

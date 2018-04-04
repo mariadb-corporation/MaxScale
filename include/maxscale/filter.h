@@ -214,7 +214,7 @@ typedef struct mxs_filter_object
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
-#define MXS_FILTER_VERSION  {3, 0, 0}
+#define MXS_FILTER_VERSION  {4, 0, 0}
 
 /**
  * MXS_FILTER_DEF represents a filter definition from the configuration file.

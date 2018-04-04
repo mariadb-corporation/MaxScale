@@ -1279,14 +1279,12 @@ static void session_deliver_response(MXS_SESSION* session)
         session->response.up.instance = NULL;
         session->response.up.session = NULL;
         session->response.up.clientReply = NULL;
-        session->response.up.error = NULL;
         session->response.buffer = NULL;
     }
 
     ss_dassert(!session->response.up.instance);
     ss_dassert(!session->response.up.session);
     ss_dassert(!session->response.up.clientReply);
-    ss_dassert(!session->response.up.error);
     ss_dassert(!session->response.buffer);
 }
 

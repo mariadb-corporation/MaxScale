@@ -74,7 +74,6 @@ void Client::set_as_upstream_on(FilterModule::Session& filter_session)
     upstream.instance = &m_instance;
     upstream.session = this;
     upstream.clientReply = &Client::clientReply;
-    upstream.error = NULL;
 
     filter_session.setUpstream(&upstream);
 }
