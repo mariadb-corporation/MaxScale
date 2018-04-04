@@ -56,12 +56,23 @@ public:
         m_load_data_state = state;
     }
 
+    bool have_tmp_tables() const
+    {
+        return m_have_tmp_tables;
+    }
+
+    void set_have_tmp_tables(bool have_tmp_tables)
+    {
+        m_have_tmp_tables = have_tmp_tables;
+    }
+
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
 private:
     MXS_SESSION*      m_pSession;
     mxs_target_t      m_use_sql_variables_in;
     load_data_state_t m_load_data_state;
+    bool              m_have_tmp_tables;
 };
 
 }

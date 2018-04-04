@@ -229,7 +229,7 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
         ss_dassert(router_cli_ses && querybuf && router_cli_ses->m_client &&
                    router_cli_ses->m_client->data);
 
-        router_cli_ses->m_have_tmp_tables = true;
+        router_cli_ses->qc().set_have_tmp_tables(true);
         char* tblname = qc_get_created_table_name(querybuf);
         std::string table;
 
@@ -505,7 +505,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         /**
          * Check if the query has anything to do with temporary tables.
          */
-        if (rses->m_have_tmp_tables && is_packet_a_query(packet_type))
+        if (rses->qc().have_tmp_tables() && is_packet_a_query(packet_type))
         {
             check_drop_tmp_table(rses, querybuf);
             if (is_read_tmp_table(rses, querybuf, *qtype))
