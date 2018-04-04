@@ -457,13 +457,13 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
                  m_expected_responses, backend->name());
     }
 
-    if (backend->have_session_commands())
+    if (backend->has_session_commands())
     {
         /** Reply to an executed session command */
         process_sescmd_response(backend, &writebuf);
     }
 
-    if (backend->have_session_commands())
+    if (backend->has_session_commands())
     {
         if (backend->execute_session_command())
         {
@@ -675,7 +675,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
              */
             gwbuf_free(stored);
 
-            if (!backend->have_session_commands())
+            if (!backend->has_session_commands())
             {
                 /**
                  * The backend was executing a command that requires a reply.

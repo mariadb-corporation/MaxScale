@@ -69,7 +69,7 @@ static void discard_if_response_differs(SRWBackend backend, uint8_t master_cmd, 
 
 void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPacket)
 {
-    if (backend->have_session_commands())
+    if (backend->has_session_commands())
     {
         /** We are executing a session command */
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))

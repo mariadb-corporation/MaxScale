@@ -80,7 +80,7 @@ void Backend::close(close_type type)
 
 bool Backend::execute_session_command()
 {
-    if (is_closed() || !have_session_commands())
+    if (is_closed() || !has_session_commands())
     {
         return false;
     }
@@ -150,7 +150,7 @@ size_t Backend::session_command_count() const
 
 const SSessionCommand& Backend::next_session_command() const
 {
-    ss_dassert(have_session_commands());
+    ss_dassert(has_session_commands());
     return m_session_commands.front();
 }
 

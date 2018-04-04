@@ -98,7 +98,7 @@ public:
      *
      * @return True if there are session commands waiting to be executed
      */
-    inline bool have_session_commands() const
+    inline bool has_session_commands() const
     {
         return !m_session_commands.empty();
     }
