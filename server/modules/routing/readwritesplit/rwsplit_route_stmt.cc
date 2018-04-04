@@ -205,8 +205,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
             }
         }
 
-        MXS_SESSION* session = m_client->session;
-
         if (succp && target)
         {
             // We have a valid target, reset retry duration
@@ -240,12 +238,11 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
                 }
             }
         }
-        else if (m_config.query_retry_interval > 0 &&
-                 m_retry_duration < m_config.query_retry_timeout &&
-                 !session_trx_is_active(session))
+        else if (can_retry_query())
         {
             // Try to route the query again later
             uint64_t interval = m_config.query_retry_interval;
+            MXS_SESSION* session = m_client->session;
             session_delay_routing(session, router_as_downstream(session),
                                   gwbuf_clone(querybuf), interval);
             m_retry_duration += interval;

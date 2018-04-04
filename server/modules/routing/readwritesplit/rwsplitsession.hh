@@ -138,7 +138,6 @@ private:
     bool route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type);
     bool route_single_stmt(GWBUF *querybuf, const RouteInfo& info);
     bool route_stored_query();
-    bool reroute_stored_statement(const mxs::SRWBackend& old, GWBUF *stored);
 
     mxs::SRWBackend get_hinted_backend(char *name);
     mxs::SRWBackend get_slave_backend(int max_rlag);
@@ -185,6 +184,13 @@ private:
     bool lock_to_master();
     bool is_locked_to_master() const;
     bool supports_hint(HINT_TYPE hint_type) const;
+
+    inline bool can_retry_query() const
+    {
+        return m_config.query_retry_interval > 0 &&
+               m_retry_duration < m_config.query_retry_timeout &&
+               !session_trx_is_active(m_client->session);
+    }
 };
 
 /**

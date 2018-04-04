@@ -211,56 +211,6 @@ bool RWSplitSession::route_stored_query()
     return rval;
 }
 
-bool RWSplitSession::reroute_stored_statement(const SRWBackend& old, GWBUF *stored)
-{
-    bool success = false;
-
-    if (!session_trx_is_active(m_client->session))
-    {
-        /**
-         * Only try to retry the read if autocommit is enabled and we are
-         * outside of a transaction
-         */
-        for (auto it = m_backends.begin(); it != m_backends.end(); it++)
-        {
-            SRWBackend& backend = *it;
-
-            if (backend->in_use() && backend != old &&
-                !backend->is_master() && backend->is_slave())
-            {
-                /** Found a valid candidate; a non-master slave that's in use */
-                if (backend->write(stored))
-                {
-                    MXS_INFO("Retrying failed read at '%s'.", backend->name());
-                    ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
-                    backend->set_reply_state(REPLY_STATE_START);
-                    m_expected_responses++;
-                    success = true;
-                    break;
-                }
-            }
-        }
-
-        if (!success && m_current_master && m_current_master->in_use())
-        {
-            /**
-             * Either we failed to write to the slave or no valid slave was found.
-             * Try to retry the read on the master.
-             */
-            if (m_current_master->write(stored))
-            {
-                MXS_INFO("Retrying failed read at '%s'.", m_current_master->name());
-                ss_dassert(m_current_master->get_reply_state() == REPLY_STATE_DONE);
-                m_current_master->set_reply_state(REPLY_STATE_START);
-                m_expected_responses++;
-                success = true;
-            }
-        }
-    }
-
-    return success;
-}
-
 /**
  * @bref discard the result of wait gtid statment, the result will be an error
  * packet or an error packet.
@@ -664,32 +614,31 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
          */
         GWBUF *stored = NULL;
         const SERVER *target = NULL;
-        if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
-            target != backend->backend()->server ||
-            !reroute_stored_statement(backend, stored))
+
+        if (session_take_stmt(backend_dcb->session, &stored, &target) &&
+            m_config.retry_failed_reads)
         {
-            /**
-             * We failed to route the stored statement or no statement was
-             * stored for this server. Either way we can safely free the buffer
-             * and decrement the expected response count.
-             */
+            ss_dassert(target == backend->server());
+            MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
+            MXS_SESSION* session = m_client->session;
+
+            // Try to route the failed read as often as possible
+            session_delay_routing(session, router_as_downstream(session), stored, 1);
+        }
+        else
+        {
             gwbuf_free(stored);
 
             if (!backend->has_session_commands())
             {
-                /**
-                 * The backend was executing a command that requires a reply.
-                 * Send an error to the client to let it know the query has
-                 * failed.
-                 */
-                DCB *client_dcb = ses->client_dcb;
-                client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+                /** The backend was not executing a session command so the client
+                 * is expecting a response. Send an error so they know to proceed. */
+                m_client->func.write(m_client, gwbuf_clone(errmsg));
             }
 
             if (m_expected_responses == 0)
             {
-                /** The response from this server was the last one, try to
-                 * route all queued queries */
+                // This was the last response, try to route pending queries
                 route_stored = true;
             }
         }
