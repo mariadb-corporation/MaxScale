@@ -13,6 +13,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <string>
+#include <tr1/memory>
 #include <maxscale/router.h>
 #include <maxscale/session.h>
 
@@ -76,7 +78,39 @@ public:
         m_large_query = large_query;
     }
 
+    /**
+     * @brief Store and process a prepared statement
+     *
+     * @param buffer Buffer containing either a text or a binary protocol
+     *               prepared statement
+     * @param id     The unique ID for this statement
+     */
+    void ps_store(GWBUF* buffer, uint32_t id);
+
+    /**
+     * @brief Get the type of a stored prepared statement
+     *
+     * @param id The unique identifier for the prepared statement or the plaintext
+     *           name of the prepared statement
+     *
+     * @return The type of the prepared statement
+     */
+    uint32_t ps_get_type(uint32_t id) const;
+    uint32_t ps_get_type(std::string id) const;
+
+    /**
+     * @brief Remove a prepared statement
+     *
+     * @param id Statement identifier to remove
+     */
+    void ps_erase(std::string id);
+    void ps_erase(uint32_t id);
+
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
+
+private:
+    class PSManager;
+    typedef std::shared_ptr<PSManager> SPSManager;
 
 private:
     MXS_SESSION*      m_pSession;
@@ -84,6 +118,7 @@ private:
     load_data_state_t m_load_data_state;
     bool              m_have_tmp_tables;
     bool              m_large_query;          /**< Set to true when processing payloads >= 2^24 bytes */
+    SPSManager        m_sPs_manager;
 };
 
 }

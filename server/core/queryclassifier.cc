@@ -12,11 +12,175 @@
  */
 
 #include <maxscale/queryclassifier.hh>
+#include <tr1/unordered_map>
+#include <maxscale/alloc.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 
+namespace
+{
+uint32_t get_prepare_type(GWBUF* buffer)
+{
+    uint32_t type;
+
+    if (mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE)
+    {
+        // TODO: This could be done inside the query classifier
+        size_t packet_len = gwbuf_length(buffer);
+        size_t payload_len = packet_len - MYSQL_HEADER_LEN;
+        GWBUF* stmt = gwbuf_alloc(packet_len);
+        uint8_t* ptr = GWBUF_DATA(stmt);
+
+        // Payload length
+        *ptr++ = payload_len;
+        *ptr++ = (payload_len >> 8);
+        *ptr++ = (payload_len >> 16);
+        // Sequence id
+        *ptr++ = 0x00;
+        // Command
+        *ptr++ = MXS_COM_QUERY;
+
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, payload_len - 1, ptr);
+        type = qc_get_type_mask(stmt);
+
+        gwbuf_free(stmt);
+    }
+    else
+    {
+        GWBUF* stmt = qc_get_preparable_stmt(buffer);
+        ss_dassert(stmt);
+
+        type = qc_get_type_mask(stmt);
+    }
+
+    ss_dassert((type & (QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_PREPARE_NAMED_STMT)) == 0);
+
+    return type;
+}
+
+std::string get_text_ps_id(GWBUF* buffer)
+{
+    std::string rval;
+    char* name = qc_get_prepare_name(buffer);
+
+    if (name)
+    {
+        rval = name;
+        MXS_FREE(name);
+    }
+
+    return rval;
+}
+
+void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
+{
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+    gw_mysql_set_byte4(ptr, id);
+}
+
+}
+
 namespace maxscale
 {
+
+class QueryClassifier::PSManager
+{
+    PSManager(const PSManager&) = delete;
+    PSManager& operator = (const PSManager&) = delete;
+
+public:
+    PSManager()
+    {
+    }
+
+    ~PSManager()
+    {
+    }
+
+    void store(GWBUF* buffer, uint32_t id)
+    {
+        ss_dassert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE ||
+                   qc_query_is_type(qc_get_type_mask(buffer),
+                                    QUERY_TYPE_PREPARE_NAMED_STMT));
+
+        switch (mxs_mysql_get_command(buffer))
+        {
+        case MXS_COM_QUERY:
+            m_text_ps[get_text_ps_id(buffer)] = get_prepare_type(buffer);
+            break;
+
+        case MXS_COM_STMT_PREPARE:
+            m_binary_ps[id] = get_prepare_type(buffer);
+            break;
+
+        default:
+            ss_dassert(!true);
+            break;
+        }
+    }
+
+    uint32_t get_type(uint32_t id) const
+    {
+        uint32_t rval = QUERY_TYPE_UNKNOWN;
+        BinaryPSMap::const_iterator it = m_binary_ps.find(id);
+
+        if (it != m_binary_ps.end())
+        {
+            rval = it->second;
+        }
+        else
+        {
+            MXS_WARNING("Using unknown prepared statement with ID %u", id);
+        }
+
+        return rval;
+    }
+
+    uint32_t get_type(std::string id) const
+    {
+        uint32_t rval = QUERY_TYPE_UNKNOWN;
+        TextPSMap::const_iterator it = m_text_ps.find(id);
+
+        if (it != m_text_ps.end())
+        {
+            rval = it->second;
+        }
+        else
+        {
+            MXS_WARNING("Using unknown prepared statement with ID '%s'", id.c_str());
+        }
+
+        return rval;
+    }
+
+    void erase(std::string id)
+    {
+        if (m_text_ps.erase(id) == 0)
+        {
+            MXS_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
+        }
+    }
+
+    void erase(uint32_t id)
+    {
+        if (m_binary_ps.erase(id) == 0)
+        {
+            MXS_WARNING("Closing unknown prepared statement with ID %u", id);
+        }
+    }
+
+private:
+    typedef std::tr1::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
+    typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
+
+private:
+    BinaryPSMap m_binary_ps;
+    TextPSMap   m_text_ps;
+};
+
+//
+// QueryClassifier
+//
 
 QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
                                  mxs_target_t use_sql_variables_in)
@@ -25,7 +189,33 @@ QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
     , m_load_data_state(LOAD_DATA_INACTIVE)
     , m_have_tmp_tables(false)
     , m_large_query(false)
+    , m_sPs_manager(new PSManager)
 {
+}
+
+void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
+{
+    return m_sPs_manager->store(pBuffer, id);
+}
+
+uint32_t QueryClassifier::ps_get_type(uint32_t id) const
+{
+    return m_sPs_manager->get_type(id);
+}
+
+uint32_t QueryClassifier::ps_get_type(std::string id) const
+{
+    return m_sPs_manager->get_type(id);
+}
+
+void QueryClassifier::ps_erase(std::string id)
+{
+    return m_sPs_manager->erase(id);
+}
+
+void QueryClassifier::ps_erase(uint32_t id)
+{
+    return m_sPs_manager->erase(id);
 }
 
 uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
