@@ -217,32 +217,28 @@ uint32_t determine_query_type(GWBUF *querybuf, int command)
  * the database and table name, create a hashvalue and
  * add it to the router client session's property. If property
  * doesn't exist then create it first.
- * @param router_cli_ses Router client session
+ * @param qc The query classifier.
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_create_tmp_table(RWSplitSession *router_cli_ses,
-                            GWBUF *querybuf, uint32_t type)
+void check_create_tmp_table(QueryClassifier& qc,  GWBUF *querybuf, uint32_t type)
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
-        ss_dassert(router_cli_ses && querybuf && router_cli_ses->m_client &&
-                   router_cli_ses->m_client->data);
-
-        router_cli_ses->qc().set_have_tmp_tables(true);
+        qc.set_have_tmp_tables(true);
         char* tblname = qc_get_created_table_name(querybuf);
         std::string table;
 
         if (tblname && *tblname && strchr(tblname, '.') == NULL)
         {
-            const char* db = mxs_mysql_get_current_db(router_cli_ses->m_client->session);
+            const char* db = mxs_mysql_get_current_db(qc.session());
             table += db;
             table += ".";
             table += tblname;
         }
 
         /** Add the table to the set of temporary tables */
-        router_cli_ses->qc().add_tmp_table(table);
+        qc.add_tmp_table(table);
 
         MXS_FREE(tblname);
     }
@@ -485,7 +481,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         }
     }
 
-    check_create_tmp_table(rses, querybuf, *qtype);
+    check_create_tmp_table(rses->qc(), querybuf, *qtype);
 
     /**
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries

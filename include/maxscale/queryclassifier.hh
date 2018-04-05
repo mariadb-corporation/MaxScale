@@ -151,6 +151,11 @@ public:
 
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
+    MXS_SESSION* session()
+    {
+        return m_pSession;
+    }
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
