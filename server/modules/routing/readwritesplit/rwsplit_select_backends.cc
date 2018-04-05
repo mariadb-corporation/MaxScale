@@ -331,6 +331,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
             {
                 if (backend->connect(session))
                 {
+                    MXS_INFO("Selected Master: %s", backend->name());
                     current_master = backend;
                 }
                 break;
@@ -339,7 +340,6 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     }
 
     auto counts = get_slave_counts(backends, master);
-    int slaves_found = counts.first;
     int slaves_connected = counts.second;
     int max_nslaves = max_slave_count();
 
@@ -352,32 +352,14 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     {
         if (backend->can_connect() && backend->connect(session, sescmd_list))
         {
+            MXS_INFO("Selected Slave: %s", backend->name());
+
             if (sescmd_list && sescmd_list->size() && expected_responses)
             {
                 (*expected_responses)++;
             }
 
             slaves_connected++;
-        }
-    }
-
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-    {
-        if (slaves_connected < max_nslaves)
-        {
-            MXS_INFO("Couldn't connect to maximum number of "
-                     "slaves. Connected successfully to %d slaves "
-                     "of %d of them.", slaves_connected, slaves_found);
-        }
-
-        for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
-        {
-            const SRWBackend& backend = *it;
-            if (backend->in_use())
-            {
-                MXS_INFO("Selected %s in \t%s", STRSRVSTATUS(backend->server()),
-                         backend->uri());
-            }
         }
     }
 
