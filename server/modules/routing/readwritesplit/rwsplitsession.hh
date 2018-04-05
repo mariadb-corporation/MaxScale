@@ -111,7 +111,6 @@ public:
     int                     m_expected_responses; /**< Number of expected responses to the current query */
     GWBUF*                  m_query_queue; /**< Queued commands waiting to be executed */
     RWSplit*                m_router; /**< The router instance */
-    TableSet                m_temp_tables; /**< Set of temporary tables */
     mxs::SessionCommandList m_sescmd_list; /**< List of executed session commands */
     ResponseMap             m_sescmd_responses; /**< Response to each session command */
     SlaveResponseList       m_slave_responses; /**< Slaves that replied before the master */

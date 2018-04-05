@@ -242,7 +242,7 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
         }
 
         /** Add the table to the set of temporary tables */
-        router_cli_ses->m_temp_tables.insert(table);
+        router_cli_ses->qc().add_tmp_table(table);
 
         MXS_FREE(tblname);
     }
@@ -253,7 +253,7 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
  */
 bool find_table(RWSplitSession* rses, const std::string& table)
 {
-    if (rses->m_temp_tables.find(table) != rses->m_temp_tables.end())
+    if (rses->qc().is_tmp_table(table))
     {
         MXS_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -335,7 +335,7 @@ bool is_read_tmp_table(RWSplitSession *rses,
  */
 bool delete_table(RWSplitSession *rses, const std::string& table)
 {
-    rses->m_temp_tables.erase(table);
+    rses->qc().remove_tmp_table(table);
     return true;
 }
 

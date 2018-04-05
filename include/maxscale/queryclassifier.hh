@@ -15,6 +15,7 @@
 #include <maxscale/cppdefs.hh>
 #include <string>
 #include <tr1/memory>
+#include <tr1/unordered_set>
 #include <maxscale/router.h>
 #include <maxscale/session.h>
 
@@ -27,6 +28,8 @@ class QueryClassifier
     QueryClassifier& operator = (const QueryClassifier&) = delete;
 
 public:
+    typedef std::tr1::unordered_set<std::string> TableSet;
+
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh
     enum
     {
@@ -88,6 +91,26 @@ public:
         m_have_tmp_tables = have_tmp_tables;
     }
 
+    void add_tmp_table(const std::string& table)
+    {
+        m_tmp_tables.insert(table);
+    }
+
+    void remove_tmp_table(const std::string& table)
+    {
+        m_tmp_tables.erase(table);
+    }
+
+    void clear_tmp_tables()
+    {
+        m_tmp_tables.clear();
+    }
+
+    bool is_tmp_table(const std::string& table)
+    {
+        return m_tmp_tables.find(table) != m_tmp_tables.end();
+    }
+
     bool large_query() const
     {
         return m_large_query;
@@ -138,6 +161,7 @@ private:
     load_data_state_t m_load_data_state;          /**< The LOAD DATA state */
     uint64_t          m_load_data_sent;           /**< How much data has been sent */
     bool              m_have_tmp_tables;
+    TableSet          m_tmp_tables;               /**< Set of temporary tables */
     bool              m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
     bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
     SPSManager        m_sPs_manager;
