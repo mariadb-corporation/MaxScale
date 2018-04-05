@@ -202,6 +202,7 @@ QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
     : m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_load_data_state(LOAD_DATA_INACTIVE)
+    , m_load_data_sent(0)
     , m_have_tmp_tables(false)
     , m_large_query(false)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))

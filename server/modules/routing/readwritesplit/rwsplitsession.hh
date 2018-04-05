@@ -106,7 +106,6 @@ public:
     mxs::SRWBackend         m_prev_target; /**< The previous target where a query was sent */
     Config                  m_config; /**< copied config info from router instance */
     int                     m_nbackends; /**< Number of backend servers (obsolete) */
-    uint64_t                m_load_data_sent; /**< How much data has been sent */
     DCB*                    m_client; /**< The client DCB */
     uint64_t                m_sescmd_count; /**< Number of executed session commands */
     int                     m_expected_responses; /**< Number of expected responses to the current query */

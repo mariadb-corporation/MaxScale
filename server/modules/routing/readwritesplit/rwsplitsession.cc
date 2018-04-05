@@ -26,7 +26,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_current_master(master),
     m_config(instance->config()),
     m_nbackends(instance->service()->n_dbref),
-    m_load_data_sent(0),
     m_client(session->client_dcb),
     m_sescmd_count(1), // Needs to be a positive number to work
     m_expected_responses(0),

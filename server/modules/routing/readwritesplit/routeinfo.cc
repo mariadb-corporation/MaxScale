@@ -146,7 +146,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
     else
     {
         MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                 rses->m_load_data_sent);
+                 rses->qc().load_data_sent());
     }
 }
 
@@ -493,7 +493,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      */
     if (rses->qc().load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
-        rses->m_load_data_sent += gwbuf_length(querybuf);
+        rses->qc().append_load_data_sent(querybuf);
     }
     else if (is_packet_a_query(packet_type))
     {
@@ -501,7 +501,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         if (queryop == QUERY_OP_LOAD)
         {
             rses->qc().set_load_data_state(QueryClassifier::LOAD_DATA_START);
-            rses->m_load_data_sent = 0;
+            rses->qc().reset_load_data_sent();
         }
     }
 }
@@ -597,8 +597,9 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
         rses->qc().set_load_data_state(QueryClassifier::LOAD_DATA_END);
+        rses->qc().append_load_data_sent(buffer);
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->m_load_data_sent + gwbuf_length(buffer));
+                 rses->qc().load_data_sent());
     }
 
     return route_target;

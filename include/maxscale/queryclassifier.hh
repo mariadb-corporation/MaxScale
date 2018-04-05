@@ -63,6 +63,21 @@ public:
         m_load_data_state = state;
     }
 
+    uint64_t load_data_sent() const
+    {
+        return m_load_data_sent;
+    }
+
+    void append_load_data_sent(GWBUF* pBuffer)
+    {
+        m_load_data_sent += gwbuf_length(pBuffer);
+    }
+
+    void reset_load_data_sent()
+    {
+        m_load_data_sent = 0;
+    }
+
     bool have_tmp_tables() const
     {
         return m_have_tmp_tables;
@@ -120,7 +135,8 @@ private:
 private:
     MXS_SESSION*      m_pSession;
     mxs_target_t      m_use_sql_variables_in;
-    load_data_state_t m_load_data_state;
+    load_data_state_t m_load_data_state;          /**< The LOAD DATA state */
+    uint64_t          m_load_data_sent;           /**< How much data has been sent */
     bool              m_have_tmp_tables;
     bool              m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
     bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
