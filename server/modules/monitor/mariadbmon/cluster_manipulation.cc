@@ -979,7 +979,8 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, 
         {
             time_t begin = time(NULL);
             MXS_MONITORED_SERVER* slave = *iter;
-            if (switchover_wait_slave_catchup(slave, gtid, seconds_remaining, read_timeout, err_out))
+            auto slave_server = get_server_info(slave);
+            if (slave_server->wait_until_gtid(gtid, seconds_remaining, err_out))
             {
                 seconds_remaining -= difftime(time(NULL), begin);
             }
@@ -990,67 +991,6 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerVector& slaves, 
         }
     }
     return success;
-}
-
-/**
- * Wait until slave replication catches up with the master gtid
- *
- * @param slave Slave to wait on
- * @param gtid Which gtid must be reached
- * @param total_timeout Maximum wait time in seconds TODO: timeouts
- * @param read_timeout The value of read_timeout for the connection
- * @param err_out json object for error printing. Can be NULL.
- * @return True, if target gtid was reached within allotted time
- */
-bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const GtidList& gtid,
-                                          int total_timeout, int read_timeout,
-                                          json_t** err_out)
-{
-    ss_dassert(read_timeout > 0);
-    StringVector output;
-    bool gtid_reached = false;
-    bool error = false;
-    double seconds_remaining = total_timeout;
-
-    // Determine a reasonable timeout for the MASTER_GTID_WAIT-function depending on the
-    // backend_read_timeout setting (should be >= 1) and time remaining.
-    double loop_timeout = double(read_timeout) - 0.5;
-    string cmd = gtid.generate_master_gtid_wait_cmd(loop_timeout);
-
-    while (seconds_remaining > 0 && !gtid_reached && !error)
-    {
-        if (loop_timeout > seconds_remaining)
-        {
-            // For the last iteration, change the wait timeout.
-            cmd = gtid.generate_master_gtid_wait_cmd(seconds_remaining);
-        }
-        seconds_remaining -= loop_timeout;
-
-        if (query_one_row(slave, cmd.c_str(), 1, &output))
-        {
-            if (output[0] == "0")
-            {
-                gtid_reached = true;
-            }
-            output.clear();
-        }
-        else
-        {
-            error = true;
-        }
-    }
-
-    if (error)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "MASTER_GTID_WAIT() query error on slave '%s'.",
-                             slave->server->unique_name);
-    }
-    else if (!gtid_reached)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "MASTER_GTID_WAIT() timed out on slave '%s'.",
-                             slave->server->unique_name);
-    }
-    return gtid_reached;
 }
 
 /**

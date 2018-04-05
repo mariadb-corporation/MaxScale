@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <sstream>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/thread.h>
 #include "utilities.hh"
 
 SlaveStatusInfo::SlaveStatusInfo()
@@ -346,4 +347,55 @@ bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warni
         }
     }
     return rval;
+}
+
+bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t** err_out)
+{
+    bool gtid_reached = false;
+    bool error = false;
+    /* Prefer to use gtid_binlog_pos, as that is more reliable. But if log_slave_updates is not on,
+     * use gtid_current_pos. */
+    const bool use_binlog_pos = rpl_settings.log_bin && rpl_settings.log_slave_updates;
+
+    int seconds_remaining = 1; // Cheat a bit here to allow at least one iteration.
+    int sleep_ms = 200; // How long to sleep on next iteration. Incremented slowly.
+    time_t start_time = time(NULL);
+    while (seconds_remaining > 0 && !gtid_reached && !error)
+    {
+        if (update_gtids())
+        {
+            const GtidList& compare_to = use_binlog_pos ? gtid_binlog_pos : gtid_current_pos;
+            if (GtidList::events_ahead(target, compare_to, GtidList::MISSING_DOMAIN_IGNORE) == 0)
+            {
+                gtid_reached = true;
+            }
+            else
+            {
+                // Query was successful but target gtid not yet reached. Check elapsed time.
+                seconds_remaining = timeout - difftime(time(NULL), start_time);
+                if (seconds_remaining > 0)
+                {
+                    // Sleep for a moment, then try again.
+                    thread_millisleep(sleep_ms);
+                    sleep_ms += 100; // Sleep a bit more next iteration.
+                }
+            }
+        }
+        else
+        {
+            error = true;
+        }
+    }
+
+    if (error)
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "Failed to update gtid on server '%s' while waiting for catchup.",
+                             server_base->server->unique_name);
+    }
+    else if (!gtid_reached)
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "Slave catchup timed out on slave '%s'.",
+                             server_base->server->unique_name);
+    }
+    return gtid_reached;
 }

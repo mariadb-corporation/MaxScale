@@ -16,6 +16,7 @@
 #include <maxscale/cppdefs.hh>
 #include <string>
 #include <vector>
+#include <maxscale/json_api.h>
 #include <maxscale/monitor.h>
 
 /** Utility macro for printing both MXS_ERROR and json error */

@@ -147,13 +147,11 @@ public:
                                  substraction_mode_t domain_substraction_mode);
 
     /**
-     * Generate a MASTER_GTID_WAIT()-query to this gtid.
+     * Return an individual gtid with the given domain.
      *
-     * @param timeout Maximum wait time in seconds
-     * @return The query
+     * @param domain Which domain to search for
+     * @return The gtid within the list. If domain is not found, an invalid gtid is returned.
      */
-    std::string generate_master_gtid_wait_cmd(double timeout) const;
-
     Gtid get_gtid(uint32_t domain) const;
 
 private:

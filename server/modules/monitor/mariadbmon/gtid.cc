@@ -217,11 +217,6 @@ string Gtid::to_string() const
     return rval;
 }
 
-string GtidList::generate_master_gtid_wait_cmd(double timeout) const
-{
-    return "SELECT MASTER_GTID_WAIT(\"" + to_string() + "\", " + std::to_string(timeout) + ");";
-}
-
 Gtid GtidList::get_gtid(uint32_t domain) const
 {
     Gtid rval;
