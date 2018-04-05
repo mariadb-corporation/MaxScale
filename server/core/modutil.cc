@@ -18,6 +18,8 @@
 #include <string.h>
 #include <strings.h>
 
+#include <iterator>
+
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/buffer.hh>
@@ -1649,4 +1651,27 @@ const char* STRPACKETTYPE(int p)
     snprintf(unknow_type, sizeof(unknow_type), format_str, p);
 
     return unknow_type;
+}
+
+namespace maxscale
+{
+
+std::string extract_sql(GWBUF* buffer, size_t len)
+{
+    std::string rval;
+    uint8_t cmd = mxs_mysql_get_command(buffer);
+
+    if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
+    {
+        mxs::Buffer buf(buffer);
+        size_t header_len = MYSQL_HEADER_LEN + 1;
+        size_t total_len = buf.length() - header_len;
+        // Skip the packet header and the command byte
+        std::copy_n(std::next(buf.begin(), header_len), MXS_MIN(total_len, len), std::back_inserter(rval));
+        buf.release();
+    }
+
+    return rval;
+}
+
 }
