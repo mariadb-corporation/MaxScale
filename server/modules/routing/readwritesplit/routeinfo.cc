@@ -473,46 +473,19 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         }
     }
 
-    /*
-     * Make checks prior to calling temp tables functions
+    /**
+     * Check if the query has anything to do with temporary tables.
      */
-
-    if (rses == NULL || querybuf == NULL ||
-        rses->m_client == NULL || rses->m_client->data == NULL)
+    if (rses->qc().have_tmp_tables() && is_packet_a_query(packet_type))
     {
-        if (rses == NULL || querybuf == NULL)
+        check_drop_tmp_table(rses, querybuf);
+        if (is_read_tmp_table(rses, querybuf, *qtype))
         {
-            MXS_ERROR("[%s] Error: NULL variables for temp table checks: %p %p", __FUNCTION__,
-                      rses, querybuf);
-        }
-
-        if (rses->m_client == NULL)
-        {
-            MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        }
-
-        if (rses->m_client->data == NULL)
-        {
-            MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",
-                      __FUNCTION__);
+            *qtype |= QUERY_TYPE_MASTER_READ;
         }
     }
 
-    else
-    {
-        /**
-         * Check if the query has anything to do with temporary tables.
-         */
-        if (rses->qc().have_tmp_tables() && is_packet_a_query(packet_type))
-        {
-            check_drop_tmp_table(rses, querybuf);
-            if (is_read_tmp_table(rses, querybuf, *qtype))
-            {
-                *qtype |= QUERY_TYPE_MASTER_READ;
-            }
-        }
-        check_create_tmp_table(rses, querybuf, *qtype);
-    }
+    check_create_tmp_table(rses, querybuf, *qtype);
 
     /**
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
@@ -639,5 +612,10 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer)
     , type(QUERY_TYPE_UNKNOWN)
     , stmt_id(0)
 {
+    ss_dassert(rses);
+    ss_dassert(rses->m_client);
+    ss_dassert(rses->m_client->data);
+    ss_dassert(buffer);
+
     target = get_target_type(rses, buffer, &command, &type, &stmt_id);
 }
