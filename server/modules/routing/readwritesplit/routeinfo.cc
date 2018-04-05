@@ -434,70 +434,69 @@ bool check_for_multi_stmt(const QueryClassifier& qc, GWBUF *buf, uint8_t packet_
  *
  * One of the possible types of handling required when a request is routed
  *
- *  @param ses          Router session
- *  @param querybuf     Buffer containing query to be routed
- *  @param packet_type  Type of packet (database specific)
- *  @param qtype        Query type
+ * @param qc                   The query classifier
+ * @param current_target       The current target
+ * @param querybuf             Buffer containing query to be routed
+ * @param packet_type          Type of packet (database specific)
+ * @param qtype                Query type
+ *
+ * @return QueryClassifier::CURRENT_TARGET_MASTER if the session should be fixed
+ *         to the master, QueryClassifier::CURRENT_TARGET_UNDEFINED otherwise.
  */
-void
-handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
-                           uint8_t packet_type, uint32_t *qtype)
+QueryClassifier::current_target_t
+handle_multi_temp_and_load(QueryClassifier& qc,
+                           QueryClassifier::current_target_t current_target,
+                           GWBUF *querybuf,
+                           uint8_t packet_type,
+                           uint32_t *qtype)
 {
+    QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
-     * when the query is routed.
-     *
-     * If we do not have a master node, assigning the forced node is not
-     * effective since we don't have a node to force queries to. In this
-     * situation, assigning QUERY_TYPE_WRITE for the query will trigger
-     * the error processing. */
-    if ((rses->m_target_node == NULL || rses->m_target_node != rses->m_current_master) &&
-        (check_for_multi_stmt(rses->qc(), querybuf, packet_type) ||
+     * when the query is routed. */
+    if ((current_target != QueryClassifier::CURRENT_TARGET_MASTER) &&
+        (check_for_multi_stmt(qc, querybuf, packet_type) ||
          check_for_sp_call(querybuf, packet_type)))
     {
-        if (rses->m_current_master && rses->m_current_master->in_use())
-        {
-            rses->m_target_node = rses->m_current_master;
-            MXS_INFO("Multi-statement query or stored procedure call, routing "
-                     "all future queries to master.");
-        }
-        else
-        {
-            *qtype |= QUERY_TYPE_WRITE;
-        }
+        MXS_INFO("Multi-statement query or stored procedure call, routing "
+                 "all future queries to master.");
+        rv = QueryClassifier::CURRENT_TARGET_MASTER;
     }
 
     /**
      * Check if the query has anything to do with temporary tables.
      */
-    if (rses->qc().have_tmp_tables() && is_packet_a_query(packet_type))
+    if (qc.have_tmp_tables() && is_packet_a_query(packet_type))
     {
-        check_drop_tmp_table(rses->qc(), querybuf);
-        if (is_read_tmp_table(rses->qc(), querybuf, *qtype))
+        check_drop_tmp_table(qc, querybuf);
+        if (is_read_tmp_table(qc, querybuf, *qtype))
         {
             *qtype |= QUERY_TYPE_MASTER_READ;
         }
     }
 
-    check_create_tmp_table(rses->qc(), querybuf, *qtype);
+    check_create_tmp_table(qc, querybuf, *qtype);
 
     /**
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
      * to the master until the last, empty packet arrives.
      */
-    if (rses->qc().load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    if (qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
-        rses->qc().append_load_data_sent(querybuf);
+        qc.append_load_data_sent(querybuf);
     }
     else if (is_packet_a_query(packet_type))
     {
         qc_query_op_t queryop = qc_get_operation(querybuf);
         if (queryop == QUERY_OP_LOAD)
         {
-            rses->qc().set_load_data_state(QueryClassifier::LOAD_DATA_START);
-            rses->qc().reset_load_data_sent();
+            qc.set_load_data_state(QueryClassifier::LOAD_DATA_START);
+            qc.reset_load_data_sent();
         }
     }
+
+    return rv;
 }
 
 /**
@@ -533,7 +532,41 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
         else
         {
             *type = determine_query_type(buffer, *command);
-            handle_multi_temp_and_load(rses, buffer, *command, type);
+
+            QueryClassifier::current_target_t current_target;
+
+            if (rses->m_target_node == NULL)
+            {
+                current_target = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+            }
+            else if (rses->m_target_node == rses->m_current_master)
+            {
+                current_target = QueryClassifier::CURRENT_TARGET_MASTER;
+            }
+            else
+            {
+                current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
+            }
+
+            current_target = handle_multi_temp_and_load(rses->qc(),
+                                                        current_target,
+                                                        buffer, *command, type);
+
+            if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
+            {
+                /* If we do not have a master node, assigning the forced node is not
+                 * effective since we don't have a node to force queries to. In this
+                 * situation, assigning QUERY_TYPE_WRITE for the query will trigger
+                 * the error processing. */
+                if (rses->m_current_master && rses->m_current_master->in_use())
+                {
+                    rses->m_target_node = rses->m_current_master;
+                }
+                else
+                {
+                    *type |= QUERY_TYPE_WRITE;
+                }
+            }
         }
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))

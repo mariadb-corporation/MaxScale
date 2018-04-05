@@ -39,6 +39,13 @@ public:
         TARGET_ALL       = 0x08
     };
 
+    enum current_target_t
+    {
+        CURRENT_TARGET_UNDEFINED, /**< Current target has not been set. */
+        CURRENT_TARGET_MASTER,    /**< Current target is master */
+        CURRENT_TARGET_SLAVE      /**< Current target is a slave */
+    };
+
     /** States of a LOAD DATA LOCAL INFILE */
     enum load_data_state_t
     {
