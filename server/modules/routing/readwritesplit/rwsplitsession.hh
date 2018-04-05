@@ -188,8 +188,8 @@ private:
 
     inline bool can_retry_query() const
     {
-        return m_config.query_retry_interval > 0 &&
-               m_retry_duration < m_config.query_retry_timeout &&
+        return m_config.delayed_retry &&
+               m_retry_duration < m_config.delayed_retry_timeout &&
                !session_trx_is_active(m_client->session);
     }
 

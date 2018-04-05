@@ -338,10 +338,12 @@ void RWSplit::diagnostics(DCB *dcb)
                config().causal_read_timeout.c_str());
     dcb_printf(dcb, "\tmaster_reconnection:       %s\n",
                config().master_reconnection ? "true" : "false");
-    dcb_printf(dcb, "\tquery_retry_timeout:       %lu\n",
-               config().query_retry_timeout);
-    dcb_printf(dcb, "\tquery_retry_interval:       %lu\n",
-               config().query_retry_interval);
+    dcb_printf(dcb, "\tdelayed_retry:        %s\n",
+               config().delayed_retry ? "true" : "false");
+    dcb_printf(dcb, "\tdelayed_retry_timeout:       %lu\n",
+               config().delayed_retry_timeout);
+    dcb_printf(dcb, "\tdelayed_retry_interval:       %lu\n",
+               config().delayed_retry_interval);
 
     dcb_printf(dcb, "\n");
 
@@ -415,10 +417,12 @@ json_t* RWSplit::diagnostics_json() const
                         json_string(config().causal_read_timeout.c_str()));
     json_object_set_new(rval, "master_reconnection",
                         json_boolean(config().master_reconnection));
-    json_object_set_new(rval, "query_retry_timeout",
-                        json_integer(config().query_retry_timeout));
-    json_object_set_new(rval, "query_retry_interval",
-                        json_integer(config().query_retry_interval));
+    json_object_set_new(rval, "delayed_retry",
+                        json_boolean(config().delayed_retry));
+    json_object_set_new(rval, "delayed_retry_timeout",
+                        json_integer(config().delayed_retry_timeout));
+    json_object_set_new(rval, "delayed_retry_interval",
+                        json_integer(config().delayed_retry_interval));
 
     json_object_set_new(rval, "connections", json_integer(stats().n_sessions));
     json_object_set_new(rval, "current_connections", json_integer(service()->stats.n_current));
@@ -498,8 +502,9 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
             {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
             {"master_reconnection", MXS_MODULE_PARAM_BOOL, "false"},
-            {"query_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
-            {"query_retry_interval", MXS_MODULE_PARAM_COUNT, "0"},
+            {"delayed_retry", MXS_MODULE_PARAM_BOOL, "false"},
+            {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
+            {"delayed_retry_interval", MXS_MODULE_PARAM_COUNT, "1"},
             {MXS_END_MODULE_PARAMS}
         }
     };

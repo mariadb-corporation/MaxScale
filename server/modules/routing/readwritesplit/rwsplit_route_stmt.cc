@@ -241,12 +241,14 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
         else if (can_retry_query())
         {
             // Try to route the query again later
-            uint64_t interval = m_config.query_retry_interval;
+            uint64_t interval = m_config.delayed_retry_interval;
             MXS_SESSION* session = m_client->session;
             session_delay_routing(session, router_as_downstream(session),
                                   gwbuf_clone(querybuf), interval);
-            m_retry_duration += interval;
             succp = true;
+
+            // Increment by at least one to prevent infinite delay
+            m_retry_duration += interval > 0 ? interval : 1;
 
             MXS_INFO("Will try to route query again in %lu seconds", interval);
         }

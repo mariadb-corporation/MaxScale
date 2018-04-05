@@ -174,8 +174,9 @@ struct Config
         enable_causal_read(config_get_bool(params, "enable_causal_read")),
         causal_read_timeout(config_get_string(params, "causal_read_timeout")),
         master_reconnection(config_get_bool(params, "master_reconnection")),
-        query_retry_timeout(config_get_integer(params, "query_retry_timeout")),
-        query_retry_interval(config_get_integer(params, "query_retry_interval"))
+        delayed_retry(config_get_bool(params, "delayed_retry")),
+        delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout")),
+        delayed_retry_interval(config_get_integer(params, "delayed_retry_interval"))
     {
         if (enable_causal_read)
         {
@@ -203,8 +204,9 @@ struct Config
     bool              enable_causal_read;        /**< Enable causual read */
     std::string       causal_read_timeout;       /**< Timeout, second parameter of function master_wait_gtid */
     bool              master_reconnection;       /**< Allow changes in master server */
-    uint64_t          query_retry_timeout;       /**< Time window in which a query can be retried */
-    uint64_t          query_retry_interval;      /**< Time window in which a query can be retried */
+    bool              delayed_retry;           /**< Delay routing if no target found */
+    uint64_t          delayed_retry_timeout;   /**< How long to delay until an error is returned */
+    uint64_t          delayed_retry_interval;  /**< How often to attepmt to route the delayed query */
 };
 
 /**
