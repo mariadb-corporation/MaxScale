@@ -1394,16 +1394,23 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
 
     try
     {
-        std::stringstream name;
-        name << "Session_" << session->ses_id << "_retry";
-
         Worker* worker = Worker::get_current();
         ss_dassert(worker == Worker::get(session->client_dcb->poll.thread.id));
         std::auto_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
-        std::auto_ptr<TaskAssignment> job(new TaskAssignment(task, worker));
-        TaskAssignment* pJob = job.release();
 
-        hktask_add(name.str().c_str(), delayed_routing_cb, pJob, seconds);
+        if (seconds == 0)
+        {
+            // No actual delay, just re-route query
+            worker->post(task);
+        }
+        else
+        {
+            std::stringstream name;
+            name << "Session_" << session->ses_id << "_retry";
+            std::auto_ptr<TaskAssignment> job(new TaskAssignment(task, worker));
+            hktask_add(name.str().c_str(), delayed_routing_cb, job.release(), seconds);
+        }
+
         success = true;
     }
     catch (std::bad_alloc)

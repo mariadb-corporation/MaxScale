@@ -615,7 +615,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
         {
             MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
             MXS_SESSION* session = m_client->session;
-            session_delay_routing(session, router_as_downstream(session), stored, 1);
+            session_delay_routing(session, router_as_downstream(session), stored, 0);
         }
         else
         {

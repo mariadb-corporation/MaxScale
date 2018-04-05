@@ -633,7 +633,7 @@ session_dump_statements_t session_get_dump_statements();
  * @param session The current Session
  * @param down    The downstream component, either a filter or a router
  * @param buffer  The buffer to route
- * @param seconds Number of seconds to wait before routing the query
+ * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
  *
  * @return True if queuing of the query was successful
  */
