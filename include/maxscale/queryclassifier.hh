@@ -151,7 +151,7 @@ public:
 
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
-    MXS_SESSION* session()
+    MXS_SESSION* session() const
     {
         return m_pSession;
     }

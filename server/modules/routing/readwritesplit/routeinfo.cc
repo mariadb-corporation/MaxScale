@@ -101,18 +101,18 @@ route_target_t get_route_target(mxs::QueryClassifier& qc,
  * status, along with the query type (which is a generic description that
  * should be usable across all DB types).
  *
- * @param rses      Router session
+ * @param qc        The query classifier.
  * @param querybuf  Query buffer
  * @param qtype     Query type
  */
 void
-log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
+log_transaction_status(const QueryClassifier& qc, GWBUF *querybuf, uint32_t qtype)
 {
-    if (rses->qc().large_query())
+    if (qc.large_query())
     {
         MXS_INFO("> Processing large request with more than 2^24 bytes of data");
     }
-    else if (rses->qc().load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
+    else if (qc.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
         uint8_t *packet = GWBUF_DATA(querybuf);
         unsigned char command = packet[4];
@@ -129,7 +129,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
             len = RWSPLIT_TRACE_MSG_LEN;
         }
 
-        MXS_SESSION *ses = rses->m_client->session;
+        MXS_SESSION *ses = qc.session();
         const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
         const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
@@ -146,7 +146,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
     else
     {
         MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                 rses->qc().load_data_sent());
+                 qc.load_data_sent());
     }
 }
 
@@ -540,7 +540,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(rses, buffer, *type);
+            log_transaction_status(rses->qc(), buffer, *type);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
