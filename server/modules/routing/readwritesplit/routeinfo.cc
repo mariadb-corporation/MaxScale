@@ -247,9 +247,9 @@ void check_create_tmp_table(QueryClassifier& qc,  GWBUF *querybuf, uint32_t type
 /**
  * Find callback for foreach_table
  */
-bool find_table(RWSplitSession* rses, const std::string& table)
+bool find_table(QueryClassifier& qc, const std::string& table)
 {
-    if (rses->qc().is_tmp_table(table))
+    if (qc.is_tmp_table(table))
     {
         MXS_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
@@ -261,14 +261,14 @@ bool find_table(RWSplitSession* rses, const std::string& table)
 /**
  * @brief Map a function over the list of tables in the query
  *
- * @param rses     Router client session
+ * @param qc       The query classifier.
  * @param querybuf The query to inspect
  * @param func     Callback that is called for each table
  *
  * @return True if all tables were iterated, false if the iteration was stopped early
  */
-static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RWSplitSession*,
-                                                                              const std::string&))
+static bool foreach_table(QueryClassifier& qc, GWBUF* querybuf, bool (*func)(QueryClassifier& qc,
+                                                                             const std::string&))
 {
     bool rval = true;
     int n_tables;
@@ -276,7 +276,7 @@ static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RW
 
     for (int i = 0; i < n_tables; i++)
     {
-        const char* db = mxs_mysql_get_current_db(rses->m_client->session);
+        const char* db = mxs_mysql_get_current_db(qc.session());
         std::string table;
 
         if (strchr(tables[i], '.') == NULL)
@@ -287,7 +287,7 @@ static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RW
 
         table += tables[i];
 
-        if (!func(rses, table))
+        if (!func(qc, table))
         {
             rval = false;
             break;
@@ -299,16 +299,15 @@ static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RW
 
 /**
  * Check if the query targets a temporary table.
- * @param router_cli_ses Router client session
+ * @param qc The query classifier.
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-bool is_read_tmp_table(RWSplitSession *rses,
+bool is_read_tmp_table(QueryClassifier& qc,
                        GWBUF *querybuf,
                        uint32_t qtype)
 {
-    ss_dassert(rses && querybuf && rses->m_client);
     bool rval = false;
 
     if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
@@ -317,7 +316,7 @@ bool is_read_tmp_table(RWSplitSession *rses,
         qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
         qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
-        if (!foreach_table(rses, querybuf, find_table))
+        if (!foreach_table(qc, querybuf, find_table))
         {
             rval = true;
         }
@@ -329,9 +328,9 @@ bool is_read_tmp_table(RWSplitSession *rses,
 /**
  * Delete callback for foreach_table
  */
-bool delete_table(RWSplitSession *rses, const std::string& table)
+bool delete_table(QueryClassifier& qc, const std::string& table)
 {
-    rses->qc().remove_tmp_table(table);
+    qc.remove_tmp_table(table);
     return true;
 }
 
@@ -340,15 +339,15 @@ bool delete_table(RWSplitSession *rses, const std::string& table)
  *
  * Check if the query is a DROP TABLE... query and
  * if it targets a temporary table, remove it from the hashtable.
- * @param router_cli_ses Router client session
+ * @param qc The query classifier
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(RWSplitSession *rses, GWBUF *querybuf)
+void check_drop_tmp_table(QueryClassifier& qc, GWBUF *querybuf)
 {
     if (qc_is_drop_table_query(querybuf))
     {
-        foreach_table(rses, querybuf, delete_table);
+        foreach_table(qc, querybuf, delete_table);
     }
 }
 
@@ -363,8 +362,7 @@ void check_drop_tmp_table(RWSplitSession *rses, GWBUF *querybuf)
  * @param packet_type   Type of packet (integer)
  * @return bool indicating whether packet contains a SQL query
  */
-bool
-is_packet_a_query(int packet_type)
+bool is_packet_a_query(int packet_type)
 {
     return (packet_type == MXS_COM_QUERY);
 }
@@ -474,8 +472,8 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      */
     if (rses->qc().have_tmp_tables() && is_packet_a_query(packet_type))
     {
-        check_drop_tmp_table(rses, querybuf);
-        if (is_read_tmp_table(rses, querybuf, *qtype))
+        check_drop_tmp_table(rses->qc(), querybuf);
+        if (is_read_tmp_table(rses->qc(), querybuf, *qtype))
         {
             *qtype |= QUERY_TYPE_MASTER_READ;
         }
