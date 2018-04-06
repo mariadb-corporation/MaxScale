@@ -443,7 +443,7 @@ bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
 void MariaDBMonitor::main_loop()
 {
     m_status = MXS_MONITOR_RUNNING;
-    MXS_MONITORED_SERVER *root_master = NULL;
+    MariaDBServer* root_master = NULL;
     int log_no_master = 1;
 
     if (mysql_thread_init())
@@ -476,7 +476,7 @@ void MariaDBMonitor::main_loop()
         }
 
         // Use the information to find the so far best master server.
-        find_root_master(&root_master);
+        root_master = find_root_master();
 
         if (m_master != NULL && SERVER_IS_MASTER(m_master->server))
         {
@@ -500,7 +500,7 @@ void MariaDBMonitor::main_loop()
         /* Update server status from monitor pending status on that server*/
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            update_server_states(*iter, root_master, m_detect_stale_master);
+            update_server_states(*iter, root_master);
         }
 
         /** Now that all servers have their status correctly set, we can check
@@ -513,7 +513,7 @@ void MariaDBMonitor::main_loop()
                 if (set_standalone_master(m_monitor_base->monitored_servers))
                 {
                     // Update the root_master to point to the standalone master
-                    root_master = m_master;
+                    root_master = get_server_info(m_master);
                 }
             }
             else
@@ -522,11 +522,12 @@ void MariaDBMonitor::main_loop()
             }
         }
 
-        if (root_master && SERVER_IS_MASTER(root_master->server))
+        if (root_master && SERVER_IS_MASTER(root_master->server_base->server))
         {
+            SERVER* root_master_server = root_master->server_base->server;
             // Clear slave and stale slave status bits from current master
-            server_clear_status_nolock(root_master->server, SERVER_SLAVE | SERVER_STALE_SLAVE);
-            monitor_clear_pending_status(root_master, SERVER_SLAVE | SERVER_STALE_SLAVE);
+            server_clear_status_nolock(root_master_server, SERVER_SLAVE | SERVER_STALE_SLAVE);
+            monitor_clear_pending_status(root_master->server_base, SERVER_SLAVE | SERVER_STALE_SLAVE);
 
             /**
              * Clear external slave status from master if configured to do so.
@@ -535,15 +536,15 @@ void MariaDBMonitor::main_loop()
              */
             if (m_ignore_external_masters)
             {
-                monitor_clear_pending_status(root_master, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-                server_clear_status_nolock(root_master->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                monitor_clear_pending_status(root_master->server_base, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                server_clear_status_nolock(root_master_server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
-        ss_dassert(root_master == NULL || m_master == root_master);
-        ss_dassert(!root_master ||
-                   ((root_master->server->status & (SERVER_SLAVE | SERVER_MASTER))
-                    != (SERVER_SLAVE | SERVER_MASTER)));
+        ss_dassert(root_master == NULL || root_master->server_base == m_master);
+        ss_dassert(root_master == NULL ||
+                   ((root_master->server_base->server->status & (SERVER_SLAVE | SERVER_MASTER)) !=
+                   (SERVER_SLAVE | SERVER_MASTER)));
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -562,7 +563,8 @@ void MariaDBMonitor::main_loop()
 
         /* Generate the replication heartbeat event by performing an update */
         if (m_detect_replication_lag && root_master &&
-            (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server)))
+            (SERVER_IS_MASTER(root_master->server_base->server) ||
+             SERVER_IS_RELAY_SERVER(root_master->server_base->server)))
         {
             measure_replication_lag(root_master);
         }
@@ -664,18 +666,18 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
 }
 
 /**
- * Compute replication tree, assign root master.
+ * Compute replication tree, find root master.
  *
- * @param root_master Handle to master server
+ * @return Found master server or NULL
  */
-void MariaDBMonitor::find_root_master(MXS_MONITORED_SERVER** root_master)
+MariaDBServer* MariaDBMonitor::find_root_master()
 {
+    MXS_MONITORED_SERVER* found_root_master = NULL;
     const int num_servers = m_servers.size();
     /* if only one server is configured, that's is Master */
     if (num_servers == 1)
     {
-        auto only_server = m_servers[0];
-        MXS_MONITORED_SERVER* mon_server = only_server.server_base;
+        auto mon_server = m_servers[0].server_base;
         if (SERVER_IS_RUNNING(mon_server->server))
         {
             mon_server->server->depth = 0;
@@ -686,7 +688,7 @@ void MariaDBMonitor::find_root_master(MXS_MONITORED_SERVER** root_master)
 
             mon_server->server->depth = 0;
             m_master = mon_server;
-            *root_master = mon_server;
+            found_root_master = mon_server;
         }
     }
     else
@@ -694,11 +696,11 @@ void MariaDBMonitor::find_root_master(MXS_MONITORED_SERVER** root_master)
         /* Compute the replication tree */
         if (m_mysql51_replication)
         {
-            *root_master = build_mysql51_replication_tree();
+            found_root_master = build_mysql51_replication_tree();
         }
         else
         {
-            *root_master = get_replication_tree();
+            found_root_master = get_replication_tree();
         }
     }
 
@@ -709,6 +711,8 @@ void MariaDBMonitor::find_root_master(MXS_MONITORED_SERVER** root_master)
          variable set to ON will be assigned the slave status. */
         find_graph_cycles();
     }
+
+    return found_root_master ? get_server_info(found_root_master) : NULL;
 }
 
 void MariaDBMonitor::update_gtid_domain()
@@ -778,10 +782,10 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& serv_info)
     }
 }
 
-void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MXS_MONITORED_SERVER* root_master,
-                                          bool detect_stale_master)
+void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServer* root_master_server)
 {
     MXS_MONITORED_SERVER* ptr = db_server.server_base;
+    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
     if (!SERVER_IN_MAINT(ptr->server))
     {
         MariaDBServer *serv_info = get_server_info(ptr);
@@ -794,7 +798,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MXS_MONITORE
          * the master status. An adequate solution would be to promote
          * the stale master as a real master if it is the last running server.
          */
-        if (detect_stale_master && root_master && !m_detect_multimaster &&
+        if (m_detect_stale_master && root_master && !m_detect_multimaster &&
             (strcmp(ptr->server->name, root_master->server->name) == 0 &&
             ptr->server->port == root_master->server->port) &&
             (ptr->server->status & SERVER_MASTER) &&
@@ -861,8 +865,9 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MXS_MONITORE
     }
 }
 
-void MariaDBMonitor::measure_replication_lag(MXS_MONITORED_SERVER* root_master)
+void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master_server)
 {
+    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
     set_master_heartbeat(root_master);
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -909,8 +914,9 @@ void MariaDBMonitor::handle_auto_failover(bool* failover_performed)
     }
 }
 
-void MariaDBMonitor::log_master_changes(MXS_MONITORED_SERVER* root_master, int* log_no_master)
+void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* log_no_master)
 {
+    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
     if (root_master &&
         mon_status_changed(root_master) &&
         !(root_master->server->status & SERVER_STALE_STATUS))
