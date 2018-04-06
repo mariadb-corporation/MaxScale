@@ -25,8 +25,6 @@
 #include "mariadbserver.hh"
 #include "utilities.hh"
 
-using std::string;
-
 extern const int PORT_UNKNOWN;
 extern const char * const CN_AUTO_FAILOVER;
 
@@ -37,18 +35,8 @@ typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInf
 // Server container, owns the server objects.
 typedef std::vector<MariaDBServer> ServerContainer; // TODO: Rename/get rid of ServerVector typedef!
 
-enum slave_down_setting_t
-{
-    ACCEPT_DOWN,
-    REJECT_DOWN
-};
-
 // TODO: Most of following should be class methods
 void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
-MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *, long);
-MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
-
-void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, int nservers);
 
 // MariaDB Monitor instance data
 class MariaDBMonitor
@@ -146,8 +134,6 @@ public:
      */
     const MariaDBServer* get_server_info(const MXS_MONITORED_SERVER* db) const;
 
-    bool detectStaleMaster;          /**< Monitor flag for MySQL replication Stale Master detection */
-
 private:
     MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
     THREAD m_thread;                 /**< Monitor thread */
@@ -159,12 +145,13 @@ private:
 
     // Values updated by monitor
     int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
-    string m_external_master_host;   /**< External master host, for fail/switchover */
+    std::string m_external_master_host; /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
     MXS_MONITORED_SERVER *m_master;  /**< Master server for MySQL Master/Slave replication */
 
     // Replication topology detection settings
     bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
+    bool m_detect_stale_master;      /**< Monitor flag for MySQL replication Stale Master detection */
     bool m_detect_stale_slave;       /**< Monitor flag for MySQL replication Stale Slave detection */
     bool m_detect_multimaster;       /**< Detect and handle multi-master topologies */
     bool m_ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
@@ -173,8 +160,8 @@ private:
     bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
 
     // Failover, switchover and rejoin settings
-    string m_replication_user;       /**< Replication user for CHANGE MASTER TO-commands */
-    string m_replication_password;   /**< Replication password for CHANGE MASTER TO-commands */
+    std::string m_replication_user;  /**< Replication user for CHANGE MASTER TO-commands */
+    std::string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
     int m_failcount;                 /**< How many monitoring cycles master must be down before auto-failover
                                       *   begins */
     uint32_t m_failover_timeout;     /**< Timeout in seconds for the master failover */
@@ -187,9 +174,15 @@ private:
     ServerVector m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
 
     // Other settings
-    string m_script;                 /**< Script to call when state changes occur on servers */
+    std::string m_script;            /**< Script to call when state changes occur on servers */
     uint64_t m_events;               /**< enabled events */
     bool m_detect_replication_lag;   /**< Monitor flag for MySQL replication heartbeat */
+
+    enum slave_down_setting_t
+    {
+        ACCEPT_DOWN,
+        REJECT_DOWN
+    };
 
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     ~MariaDBMonitor();
@@ -214,7 +207,7 @@ private:
     bool standalone_master_required(MXS_MONITORED_SERVER *db);
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
-    string generate_change_master_cmd(const string& master_host, int master_port);
+    std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     int redirect_slaves(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                         ServerVector* redirected_slaves);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
@@ -226,7 +219,7 @@ private:
     void set_master_heartbeat(MXS_MONITORED_SERVER *);
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();
-    MXS_MONITORED_SERVER* get_replication_tree(int num_servers);
+    MXS_MONITORED_SERVER* get_replication_tree();
     void monitor_mysql_db(MariaDBServer *serv_info);
     bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                        json_t** err_out);
@@ -254,4 +247,8 @@ private:
     void handle_auto_failover(bool* failover_performed);
     void measure_replication_lag(MXS_MONITORED_SERVER* root_master);
     void handle_auto_rejoin();
+    void find_graph_cycles();
+    void check_maxscale_schema_replication();
+    MXS_MONITORED_SERVER* getServerByNodeId(long);
+    MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
 };

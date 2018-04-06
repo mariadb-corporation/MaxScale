@@ -13,11 +13,17 @@
 
 #include "mariadbmon.hh"
 #include <inttypes.h>
+#include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 #include "utilities.hh"
 
 static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
+static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database);
+static bool check_replicate_do_table(MXS_MONITORED_SERVER* database);
+static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database);
+static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 
+static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
 static bool report_version_err = true;
 
 /**
@@ -138,11 +144,11 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
  * This function computes the replication tree from a set of monitored servers and returns the root server
  * with SERVER_MASTER bit. The tree is computed even for servers in 'maintenance' mode.
  *
- * @param num_servers The number of servers monitored
  * @return The server at root level with SERVER_MASTER bit
  */
-MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
+MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
 {
+    const int num_servers = m_servers.size();
     MXS_MONITORED_SERVER *ptr;
     MXS_MONITORED_SERVER *backend;
     SERVER *current;
@@ -172,10 +178,10 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
         /** Either this node doesn't replicate from a master or the master
          * where it replicates from is not configured to this monitor. */
         if (node_id < 1 ||
-            getServerByNodeId(m_monitor_base->monitored_servers, node_id) == NULL)
+            getServerByNodeId(node_id) == NULL)
         {
             MXS_MONITORED_SERVER *find_slave;
-            find_slave = getSlaveOfNodeId(m_monitor_base->monitored_servers, current->node_id, ACCEPT_DOWN);
+            find_slave = getSlaveOfNodeId(current->node_id, ACCEPT_DOWN);
 
             if (find_slave == NULL)
             {
@@ -202,7 +208,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
                 root_level = current->depth;
                 m_master = ptr;
             }
-            backend = getServerByNodeId(m_monitor_base->monitored_servers, node_id);
+            backend = getServerByNodeId(node_id);
 
             if (backend)
             {
@@ -224,7 +230,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
                 MXS_MONITORED_SERVER *master_cand;
                 current->depth = depth;
 
-                master_cand = getServerByNodeId(m_monitor_base->monitored_servers, current->master_id);
+                master_cand = getServerByNodeId(current->master_id);
                 if (master_cand && master_cand->server && master_cand->server->node_id > 0)
                 {
                     add_slave_to_master(master_cand->server->slaves, sizeof(master_cand->server->slaves),
@@ -310,14 +316,14 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id)
 /**
  * Fetch a node by node_id
  *
- * @param ptr     The list of servers to monitor
  * @param node_id The server_id to fetch
  *
  * @return The server with the required server_id
  */
-MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
+MXS_MONITORED_SERVER* MariaDBMonitor::getServerByNodeId(long node_id)
 {
     SERVER *current;
+    MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers;
     while (ptr)
     {
         current = ptr->server;
@@ -333,14 +339,13 @@ MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
 /**
  * Fetch a slave node from a node_id
  *
- * @param ptr                The list of servers to monitor
  * @param node_id            The server_id to fetch
  * @param slave_down_setting Whether to accept or reject slaves which are down
  * @return                   The slave server of this node_id
  */
-MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id,
-                                       slave_down_setting_t slave_down_setting)
+MXS_MONITORED_SERVER* MariaDBMonitor::getSlaveOfNodeId(long node_id, slave_down_setting_t slave_down_setting)
 {
+    MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers;
     SERVER *current;
     while (ptr)
     {
@@ -478,15 +483,16 @@ static void visit_node(struct graph_node *node, struct graph_node **stack,
  * member. Nodes in a group get a positive group ID where the nodes not in a
  * group get a group ID of 0.
  */
-void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, int nservers)
+void MariaDBMonitor::find_graph_cycles()
 {
+    const int nservers = m_servers.size();
     struct graph_node graph[nservers];
     struct graph_node *stack[nservers];
     int nodes = 0;
 
-    for (MXS_MONITORED_SERVER *db = database; db; db = db->next)
+    for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
     {
-        graph[nodes].info = handle->get_server_info(db);
+        graph[nodes].info = get_server_info(db);
         graph[nodes].db = db;
         graph[nodes].index = graph[nodes].lowest_index = 0;
         graph[nodes].cycle = 0;
@@ -543,7 +549,7 @@ void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, i
                 monitor_clear_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
             }
         }
-        else if (handle->detectStaleMaster && cycle == 0 &&
+        else if (m_detect_stale_master && cycle == 0 &&
                  graph[i].db->server->status & SERVER_MASTER &&
                  (graph[i].db->pending_status & SERVER_MASTER) == 0)
         {
@@ -724,4 +730,223 @@ MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
         return info;
     }
     return NULL;
+}
+
+/**
+ * Check if the maxscale_schema.replication_heartbeat table is replicated on all
+ * servers and log a warning if problems were found.
+ *
+ * @param monitor Monitor structure
+ */
+void MariaDBMonitor::check_maxscale_schema_replication()
+{
+    MXS_MONITORED_SERVER* database = m_monitor_base->monitored_servers;
+    bool err = false;
+
+    while (database)
+    {
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor_base, database);
+        if (rval == MONITOR_CONN_OK)
+        {
+            if (!check_replicate_ignore_table(database) ||
+                !check_replicate_do_table(database) ||
+                !check_replicate_wild_do_table(database) ||
+                !check_replicate_wild_ignore_table(database))
+            {
+                err = true;
+            }
+        }
+        else
+        {
+            mon_log_connect_error(database, rval);
+        }
+        database = database->next;
+    }
+
+    if (err)
+    {
+        MXS_WARNING("Problems were encountered when checking if '%s' is replicated. Make sure that "
+                    "the table is replicated to all slaves.", HB_TABLE_NAME);
+    }
+}
+
+/**
+ * Check if replicate_ignore_table is defined and if maxscale_schema.replication_hearbeat
+ * table is in the list.
+ * @param database Server to check
+ * @return False if the table is not replicated or an error occurred when querying
+ * the server
+ */
+static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_ignore_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0 &&
+                strcasestr(row[1], HB_TABLE_NAME))
+            {
+                MXS_WARNING("'replicate_ignore_table' is "
+                            "defined on server '%s' and '%s' was found in it. ",
+                            database->server->unique_name, HB_TABLE_NAME);
+                rval = false;
+            }
+        }
+
+        mysql_free_result(result);
+    }
+    else
+    {
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_ignore_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if replicate_do_table is defined and if maxscale_schema.replication_hearbeat
+ * table is not in the list.
+ * @param database Server to check
+ * @return False if the table is not replicated or an error occurred when querying
+ * the server
+ */
+static bool check_replicate_do_table(MXS_MONITORED_SERVER* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_do_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0 &&
+                strcasestr(row[1], HB_TABLE_NAME) == NULL)
+            {
+                MXS_WARNING("'replicate_do_table' is "
+                            "defined on server '%s' and '%s' was not found in it. ",
+                            database->server->unique_name, HB_TABLE_NAME);
+                rval = false;
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if replicate_wild_do_table is defined and if it doesn't match
+ * maxscale_schema.replication_heartbeat.
+ * @param database Database server
+ * @return False if the table is not replicated or an error occurred when trying to
+ * query the server.
+ */
+static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_wild_do_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0)
+            {
+                mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], HB_TABLE_NAME);
+                if (rc == MXS_PCRE2_NOMATCH)
+                {
+                    MXS_WARNING("'replicate_wild_do_table' is "
+                                "defined on server '%s' and '%s' does not match it. ",
+                                database->server->unique_name,
+                                HB_TABLE_NAME);
+                    rval = false;
+                }
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_wild_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if replicate_wild_ignore_table is defined and if it matches
+ * maxscale_schema.replication_heartbeat.
+ * @param database Database server
+ * @return False if the table is not replicated or an error occurred when trying to
+ * query the server.
+ */
+static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_wild_ignore_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0)
+            {
+                mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], HB_TABLE_NAME);
+                if (rc == MXS_PCRE2_MATCH)
+                {
+                    MXS_WARNING("'replicate_wild_ignore_table' is "
+                                "defined on server '%s' and '%s' matches it. ",
+                                database->server->unique_name,
+                                HB_TABLE_NAME);
+                    rval = false;
+                }
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_wild_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
 }
