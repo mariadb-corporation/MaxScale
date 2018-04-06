@@ -33,10 +33,9 @@ class MariaDBMonitor;
 // Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
 typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Server container, owns the server objects.
-typedef std::vector<MariaDBServer> ServerContainer; // TODO: Rename/get rid of ServerVector typedef!
-
-// TODO: Most of following should be class methods
-void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
+typedef std::vector<MariaDBServer> ServerArray; // TODO: Rename/get rid of ServerVector typedef!
+// Server pointer array, used for temporary server collections
+typedef std::vector<MariaDBServer*> ServerRefArray;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor
@@ -140,7 +139,7 @@ private:
     unsigned long m_id;              /**< Monitor ID */
     volatile int m_shutdown;         /**< Flag to shutdown the monitor thread. */
     volatile int m_status;           /**< Monitor status.  */
-    ServerContainer m_servers;       /**< Servers of the monitor. */
+    ServerArray m_servers;       /**< Servers of the monitor. */
     ServerInfoMap m_server_info;     /**< Contains server specific information */
 
     // Values updated by monitor
@@ -171,7 +170,7 @@ private:
     bool m_auto_failover;            /**< If automatic master failover is enabled */
     bool m_auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                       *   replicating from the wrong master automatically. */
-    ServerVector m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+    MonServerArray m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
@@ -190,13 +189,13 @@ private:
     bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
     bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
-    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const GtidList& gtid, int total_timeout,
+    bool switchover_wait_slaves_catchup(const MonServerArray& slaves, const GtidList& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
-    bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
+    bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
                                     int seconds_remaining);
     bool switchover_check_preferred_master(MXS_MONITORED_SERVER* preferred, json_t** err_out);
     bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
-    MXS_MONITORED_SERVER* select_new_master(ServerVector* slaves_out, json_t** err_out);
+    MXS_MONITORED_SERVER* select_new_master(MonServerArray* slaves_out, json_t** err_out);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info,
                              uint32_t gtid_domain);
@@ -208,13 +207,13 @@ private:
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
-    int redirect_slaves(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
-                        ServerVector* redirected_slaves);
+    int redirect_slaves(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
+                        MonServerArray* redirected_slaves);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
     bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
-    bool get_joinable_servers(ServerVector* output);
+    bool get_joinable_servers(MonServerArray* output);
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
     void set_master_heartbeat(MXS_MONITORED_SERVER *);
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
@@ -224,7 +223,7 @@ private:
     bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                        json_t** err_out);
     bool do_failover(json_t** err_out);
-    uint32_t do_rejoin(const ServerVector& joinable_servers);
+    uint32_t do_rejoin(const MonServerArray& joinable_servers);
     bool mon_process_failover(bool* cluster_modified_out);
     bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MariaDBServer* master_info,
                                   json_t** output);

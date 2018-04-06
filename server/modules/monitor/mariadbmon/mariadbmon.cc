@@ -946,7 +946,7 @@ void MariaDBMonitor::log_master_changes(MXS_MONITORED_SERVER* root_master, int* 
 
 void MariaDBMonitor::handle_auto_rejoin()
 {
-    ServerVector joinable_servers;
+    MonServerArray joinable_servers;
     if (get_joinable_servers(&joinable_servers))
     {
         uint32_t joins = do_rejoin(joinable_servers);

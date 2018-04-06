@@ -16,7 +16,9 @@
 #include <algorithm>
 #include "utilities.hh"
 
-GtidList GtidList::from_string(const std::string& gtid_string)
+using std::string;
+
+GtidList GtidList::from_string(const string& gtid_string)
 {
     ss_dassert(gtid_string.size());
     GtidList rval;

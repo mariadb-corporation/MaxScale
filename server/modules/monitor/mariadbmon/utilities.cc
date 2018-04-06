@@ -20,6 +20,8 @@
 #include <maxscale/debug.h>
 #include <maxscale/mysql_utils.h>
 
+using std::string;
+
 /** Server id default value */
 const int64_t SERVER_ID_UNKNOWN = -1;
 
@@ -39,50 +41,11 @@ int64_t scan_server_id(const char* id_string)
     return server_id;
 }
 
-bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
-                   StringVector* output)
-{
-    bool rval = false;
-    MYSQL_RES *result;
-    if (mxs_mysql_query(database->con, query) == 0 && (result = mysql_store_result(database->con)) != NULL)
-    {
-        unsigned int columns = mysql_field_count(database->con);
-        if (columns != expected_cols)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. Server version: %s",
-                      query, expected_cols, columns, database->server->version_string);
-        }
-        else
-        {
-            MYSQL_ROW row = mysql_fetch_row(result);
-            if (row)
-            {
-                for (unsigned int i = 0; i < columns; i++)
-                {
-                    output->push_back((row[i] != NULL) ? row[i] : "");
-                }
-                rval = true;
-            }
-            else
-            {
-                MXS_ERROR("Query '%s' returned no rows.", query);
-            }
-            mysql_free_result(result);
-        }
-    }
-    else
-    {
-        mon_report_query_error(database);
-    }
-    return rval;
-}
-
-string get_connection_errors(const ServerVector& servers)
+string get_connection_errors(const MonServerArray& servers)
 {
     // Get errors from all connections, form a string.
     std::stringstream ss;
-    for (ServerVector::const_iterator iter = servers.begin(); iter != servers.end(); iter++)
+    for (MonServerArray::const_iterator iter = servers.begin(); iter != servers.end(); iter++)
     {
         const char* error = mysql_error((*iter)->con);
         ss_dassert(*error); // Every connection should have an error.
@@ -95,7 +58,7 @@ string get_connection_errors(const ServerVector& servers)
     return ss.str();
 }
 
-string monitored_servers_to_string(const ServerVector& array)
+string monitored_servers_to_string(const MonServerArray& array)
 {
     string rval;
     size_t array_size = array.size();

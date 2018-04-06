@@ -19,6 +19,8 @@
 #include <maxscale/thread.h>
 #include "utilities.hh"
 
+using std::string;
+
 SlaveStatusInfo::SlaveStatusInfo()
     : master_server_id(SERVER_ID_UNKNOWN)
     , master_port(0)
