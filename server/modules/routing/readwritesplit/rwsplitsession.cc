@@ -509,7 +509,12 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                     // We were expecting a response but we aren't going to get one
                     m_expected_responses--;
 
-                    if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
+                    if (can_retry_query())
+                    {
+                        can_continue = true;
+                        retry_query(release_query());
+                    }
+                    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
                     {
                         /** In error_on_write mode, the session can continue even
                          * if the master is lost. Send a read-only error to
@@ -518,7 +523,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                         send_readonly_error(m_client);
                     }
 
-                    if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
+                    if (!can_continue && !SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
                     {
                         ss_dassert(backend);
                         MXS_ERROR("Server %s (%s) lost the master status while waiting"

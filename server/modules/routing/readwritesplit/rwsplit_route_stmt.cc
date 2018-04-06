@@ -128,6 +128,14 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     return rval;
 }
 
+void RWSplitSession::retry_query(GWBUF* querybuf)
+{
+    // Try to route the query again later
+    MXS_SESSION* session = m_client->session;
+    session_delay_routing(session, router_as_downstream(session), querybuf, 1);
+    ++m_retry_duration;
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -241,10 +249,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
         }
         else if (can_retry_query())
         {
-            // Try to route the query again later
-            MXS_SESSION* session = m_client->session;
-            session_delay_routing(session, router_as_downstream(session), gwbuf_clone(querybuf), 1);
-            ++m_retry_duration;
+            retry_query(gwbuf_clone(querybuf));
             succp = true;
 
             MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
