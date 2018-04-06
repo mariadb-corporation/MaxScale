@@ -111,7 +111,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
                     {
                         /** Map the returned response to the internal ID */
                         MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
-                        m_ps_handles[resp.id] = id;
+                        m_qc.ps_id_internal_put(resp.id, id);
                     }
 
                     // Discard any slave connections that did not return the same result

@@ -613,7 +613,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
             }
             else if (mxs_mysql_is_ps_command(*command))
             {
-                *stmt_id = get_internal_ps_id(rses, buffer);
+                *stmt_id = rses->qc().ps_id_internal_get(buffer);
                 *type = rses->qc().ps_get_type(*stmt_id);
             }
 

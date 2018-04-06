@@ -364,5 +364,52 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     return target;
 }
 
+namespace
+{
+
+// Copy of mxs_mysql_extract_ps_id() in modules/protocol/MySQL/mysql_common.cc,
+// but we do not want to create a dependency from maxscale-common to that.
+
+uint32_t mysql_extract_ps_id(GWBUF* buffer)
+{
+    uint32_t rval = 0;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    {
+        rval = gw_mysql_get_byte4(id);
+    }
+
+    return rval;
+}
+
+}
+
+uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
+{
+    uint32_t internal_id = 0;
+
+    // All COM_STMT type statements store the ID in the same place
+    uint32_t external_id = mysql_extract_ps_id(pBuffer);
+    auto it = m_ps_handles.find(external_id);
+
+    if (it != m_ps_handles.end())
+    {
+        internal_id = it->second;
+    }
+    else
+    {
+        MXS_WARNING("Client requests unknown prepared statement ID '%u' that "
+                    "does not map to an internal ID", external_id);
+    }
+
+    return internal_id;
+}
+
+void QueryClassifier::ps_id_internal_put(uint32_t external_id, uint32_t internal_id)
+{
+    m_ps_handles[external_id] = internal_id;
+}
+
 }
 

@@ -15,6 +15,7 @@
 #include <maxscale/cppdefs.hh>
 #include <string>
 #include <tr1/memory>
+#include <tr1/unordered_map>
 #include <tr1/unordered_set>
 #include <maxscale/router.h>
 #include <maxscale/session.h>
@@ -156,6 +157,23 @@ public:
     void ps_erase(std::string id);
     void ps_erase(uint32_t id);
 
+    /**
+     * @brief Get the internal ID for the given binary prepared statement
+     *
+     * @param buffer Buffer containing a binary protocol statement other than COM_STMT_PREPARE
+     *
+     * @return The internal ID of the prepared statement that the buffer contents refer to
+     */
+    uint32_t ps_id_internal_get(GWBUF* pBuffer);
+
+    /**
+     * @brief Store a mapping from an external id to the corresponding internal id
+     *
+     * @param external_id  The external id as seen by the client.
+     * @param internal_id  The corresponding internal id.
+     */
+    void ps_id_internal_put(uint32_t external_id, uint32_t internal_id);
+
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
     MXS_SESSION* session() const
@@ -167,6 +185,8 @@ private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
 
+    typedef std::tr1::unordered_map<uint32_t, uint32_t> HandleMap;
+
 private:
     MXS_SESSION*      m_pSession;
     mxs_target_t      m_use_sql_variables_in;
@@ -177,6 +197,7 @@ private:
     bool              m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
     bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
     SPSManager        m_sPs_manager;
+    HandleMap         m_ps_handles;               /** External ID to internal ID */
 };
 
 }

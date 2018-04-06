@@ -737,24 +737,3 @@ void RWSplitSession::handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg)
         m_client->func.write(m_client, gwbuf_clone(errmsg));
     }
 }
-
-uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
-{
-    uint32_t rval = 0;
-
-    // All COM_STMT type statements store the ID in the same place
-    uint32_t id = mxs_mysql_extract_ps_id(buffer);
-    ClientHandleMap::iterator it = rses->m_ps_handles.find(id);
-
-    if (it != rses->m_ps_handles.end())
-    {
-        rval = it->second;
-    }
-    else
-    {
-        MXS_WARNING("Client requests unknown prepared statement ID '%u' that "
-                    "does not map to an internal ID", id);
-    }
-
-    return rval;
-}
