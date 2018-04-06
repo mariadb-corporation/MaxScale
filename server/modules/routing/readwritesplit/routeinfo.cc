@@ -502,19 +502,29 @@ handle_multi_temp_and_load(QueryClassifier& qc,
 /**
  * @brief Get the routing requirements for a query
  *
- * @param rses Router client session
- * @param buffer Buffer containing the query
+ * @param qc      The query classifier.
+ * @param current_target
+ * @param buffer  Buffer containing the query
  * @param command Output parameter where the packet command is stored
  * @param type    Output parameter where the query type is stored
  * @param stmt_id Output parameter where statement ID, if the query is a binary protocol command, is stored
  *
  * @return The target type where this query should be routed
  */
-route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
-                               uint8_t* command, uint32_t* type, uint32_t* stmt_id)
+route_target_t get_target_type(QueryClassifier& qc,
+                               QueryClassifier::current_target_t current_target,
+                               GWBUF *buffer,
+                               uint8_t* command,
+                               uint32_t* type,
+                               uint32_t* stmt_id)
 {
     route_target_t route_target = TARGET_MASTER;
-    bool in_read_only_trx = rses->m_target_node && session_trx_is_read_only(rses->m_client->session);
+
+    // TODO: It may be sufficient to simply check whether we are in a read-only
+    // TODO: transaction.
+    bool in_read_only_trx =
+        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) &&
+        session_trx_is_read_only(qc.session());
 
     if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
     {
@@ -533,22 +543,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
         {
             *type = determine_query_type(buffer, *command);
 
-            QueryClassifier::current_target_t current_target;
-
-            if (rses->m_target_node == NULL)
-            {
-                current_target = QueryClassifier::CURRENT_TARGET_UNDEFINED;
-            }
-            else if (rses->m_target_node == rses->m_current_master)
-            {
-                current_target = QueryClassifier::CURRENT_TARGET_MASTER;
-            }
-            else
-            {
-                current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
-            }
-
-            current_target = handle_multi_temp_and_load(rses->qc(),
+            current_target = handle_multi_temp_and_load(qc,
                                                         current_target,
                                                         buffer, *command, type);
 
@@ -558,11 +553,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                  * effective since we don't have a node to force queries to. In this
                  * situation, assigning QUERY_TYPE_WRITE for the query will trigger
                  * the error processing. */
-                if (rses->m_current_master && rses->m_current_master->in_use())
-                {
-                    rses->m_target_node = rses->m_current_master;
-                }
-                else
+                if (!qc.handler()->lock_to_master())
                 {
                     *type |= QUERY_TYPE_WRITE;
                 }
@@ -571,7 +562,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(rses->qc(), buffer, *type);
+            log_transaction_status(qc, buffer, *type);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
@@ -591,7 +582,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
          *   eventually to master
          */
 
-        if (rses->m_target_node && rses->m_target_node == rses->m_current_master)
+        if (qc.handler()->is_locked_to_master())
         {
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
@@ -609,24 +600,24 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                 qc_get_operation(buffer) == QUERY_OP_EXECUTE)
             {
                 std::string id = get_text_ps_id(buffer);
-                *type = rses->qc().ps_get_type(id);
+                *type = qc.ps_get_type(id);
             }
             else if (mxs_mysql_is_ps_command(*command))
             {
-                *stmt_id = rses->qc().ps_id_internal_get(buffer);
-                *type = rses->qc().ps_get_type(*stmt_id);
+                *stmt_id = qc.ps_id_internal_get(buffer);
+                *type = qc.ps_get_type(*stmt_id);
             }
 
-            route_target = get_route_target(rses->qc(), *command, *type, buffer->hint);
+            route_target = get_route_target(qc, *command, *type, buffer->hint);
         }
     }
     else
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        rses->qc().set_load_data_state(QueryClassifier::LOAD_DATA_END);
-        rses->qc().append_load_data_sent(buffer);
+        qc.set_load_data_state(QueryClassifier::LOAD_DATA_END);
+        qc.append_load_data_sent(buffer);
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->qc().load_data_sent());
+                 qc.load_data_sent());
     }
 
     return route_target;
@@ -639,11 +630,50 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer)
     , command(0xff)
     , type(QUERY_TYPE_UNKNOWN)
     , stmt_id(0)
+    , m_rses(rses)
 {
     ss_dassert(rses);
     ss_dassert(rses->m_client);
     ss_dassert(rses->m_client->data);
     ss_dassert(buffer);
 
-    target = get_target_type(rses, buffer, &command, &type, &stmt_id);
+    QueryClassifier::current_target_t current_target;
+
+    if (rses->m_target_node == NULL)
+    {
+        current_target = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+    }
+    else if (rses->m_target_node == rses->m_current_master)
+    {
+        current_target = QueryClassifier::CURRENT_TARGET_MASTER;
+    }
+    else
+    {
+        current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
+    }
+
+    m_rses->qc().set_handler(this);
+    target = get_target_type(rses->qc(), current_target, buffer, &command, &type, &stmt_id);
+    m_rses->qc().set_handler(NULL);
+
+    m_rses = NULL;
+}
+
+
+bool RouteInfo::lock_to_master()
+{
+    bool rv = false;
+
+    if (m_rses->m_current_master && m_rses->m_current_master->in_use())
+    {
+        m_rses->m_target_node = m_rses->m_current_master;
+        rv = true;
+    }
+
+    return rv;
+}
+
+bool RouteInfo::is_locked_to_master() const
+{
+    return m_rses->m_target_node && m_rses->m_target_node == m_rses->m_current_master;
 }

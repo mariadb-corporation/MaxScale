@@ -29,6 +29,13 @@ class QueryClassifier
     QueryClassifier& operator = (const QueryClassifier&) = delete;
 
 public:
+    class Handler
+    {
+    public:
+        virtual bool lock_to_master() = 0;
+        virtual bool is_locked_to_master() const = 0;
+    };
+
     typedef std::tr1::unordered_set<std::string> TableSet;
 
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh
@@ -58,6 +65,16 @@ public:
 
     QueryClassifier(MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
+
+    void set_handler(Handler* pHandler) // TODO: Eventually to be set in constructor
+    {
+        m_pHandler = pHandler;
+    }
+
+    Handler* handler() const
+    {
+        return m_pHandler;
+    }
 
     bool multi_statements_allowed() const
     {
@@ -188,6 +205,7 @@ private:
     typedef std::tr1::unordered_map<uint32_t, uint32_t> HandleMap;
 
 private:
+    Handler*          m_pHandler;
     MXS_SESSION*      m_pSession;
     mxs_target_t      m_use_sql_variables_in;
     load_data_state_t m_load_data_state;          /**< The LOAD DATA state */

@@ -13,10 +13,11 @@
  */
 
 #include "readwritesplit.hh"
+#include <maxscale/queryclassifier.hh>
 
 class RWSplitSession;
 
-struct RouteInfo
+struct RouteInfo : private maxscale::QueryClassifier::Handler
 {
     RouteInfo(RWSplitSession* rses, GWBUF* buffer);
 
@@ -24,4 +25,11 @@ struct RouteInfo
     uint8_t        command; /**< The command byte, 0xff for unknown commands */
     uint32_t       type;    /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
     uint32_t       stmt_id; /**< Prepared statement ID, 0 for unknown */
+
+private:
+    bool lock_to_master();
+    bool is_locked_to_master() const;
+
+private:
+    RWSplitSession* m_rses;
 };
