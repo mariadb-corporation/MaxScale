@@ -139,7 +139,7 @@ void LocalClient::process(uint32_t events)
         error();
     }
 
-    if (m_queue.size() && m_state != VC_ERROR)
+    if (m_queue.size() && m_state != VC_ERROR && m_state != VC_WAITING_HANDSHAKE)
     {
         drain_queue();
     }
