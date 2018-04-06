@@ -121,31 +121,6 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
     return result;
 }
 
-/*
- * Probably MySQL specific because of modutil function
- */
-/**
- * @brief Write an error message to the log for closed session
- *
- * This happens if a request is received for a session that is already
- * closing down.
- *
- * @param querybuf      Query buffer containing packet
- */
-void closed_session_reply(GWBUF *querybuf)
-{
-    uint8_t* data = GWBUF_DATA(querybuf);
-
-    if (GWBUF_LENGTH(querybuf) >= 5 && !MYSQL_IS_COM_QUIT(data))
-    {
-        /* Note that most modutil functions are MySQL specific */
-        char *query_str = modutil_get_query(querybuf);
-        MXS_ERROR("Can't route %s:\"%s\" to backend server. Router is closed.",
-                  STRPACKETTYPE(data[4]), query_str ? query_str : "(empty)");
-        MXS_FREE(query_str);
-    }
-}
-
 /**
  * @brief Send an error message to the client telling that the server is in read only mode
  *

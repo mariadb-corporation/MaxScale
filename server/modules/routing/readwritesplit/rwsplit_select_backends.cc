@@ -312,7 +312,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
 
     /** Check slave selection criteria and set compare function */
     select_criteria_t select_criteria = config().slave_selection_criteria;
-    int (*cmpfun)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[select_criteria];
+    auto cmpfun = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))

@@ -59,22 +59,19 @@ using namespace maxscale;
  */
 static bool rwsplit_process_router_options(Config& config, char **options)
 {
-    int i;
-    char *value;
-    select_criteria_t c;
-
     if (options == NULL)
     {
         return true;
     }
 
     MXS_WARNING("Router options for readwritesplit are deprecated.");
-
     bool success = true;
 
-    for (i = 0; options[i]; i++)
+    for (int i = 0; options[i]; i++)
     {
-        if ((value = strchr(options[i], '=')) == NULL)
+        char* value = strchr(options[i], '=');
+
+        if (value == NULL)
         {
             MXS_ERROR("Unsupported router option \"%s\" for readwritesplit router.", options[i]);
             success = false;
@@ -85,7 +82,7 @@ static bool rwsplit_process_router_options(Config& config, char **options)
             value++;
             if (strcmp(options[i], "slave_selection_criteria") == 0)
             {
-                c = GET_SELECT_CRITERIA(value);
+                select_criteria_t c = GET_SELECT_CRITERIA(value);
                 ss_dassert(c == LEAST_GLOBAL_CONNECTIONS ||
                            c == LEAST_ROUTER_CONNECTIONS || c == LEAST_BEHIND_MASTER ||
                            c == LEAST_CURRENT_OPERATIONS || c == UNDEFINED_CRITERIA);
@@ -155,7 +152,7 @@ static bool rwsplit_process_router_options(Config& config, char **options)
                 success = false;
             }
         }
-    } /*< for */
+    }
 
     return success;
 }

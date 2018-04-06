@@ -222,9 +222,6 @@ bool RWSplitSession::route_stored_query()
 GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
 {
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
-    uint8_t packet_len = 0;
-    uint8_t offset = 0;
-    mxs_mysql_cmd_t com;
 
     gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN + 1, header_and_command);
     /* ignore error packet */
@@ -236,7 +233,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
 
     /* this packet must be an ok packet now */
     ss_dassert(MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK);
-    packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
+    uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
     m_wait_gtid_state = EXPECTING_REAL_RESULT;
     m_next_seq = 1;
 
@@ -284,14 +281,14 @@ SRWBackend& RWSplitSession::get_backend_from_dcb(DCB *dcb)
  */
 void RWSplitSession::correct_packet_sequence(GWBUF *buffer)
 {
-    uint8_t header[3];
-    uint32_t offset = 0;
-    uint32_t packet_len = 0;
     if (m_wait_gtid_state == EXPECTING_REAL_RESULT)
     {
+        uint8_t header[3];
+        uint32_t offset = 0;
+
         while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
         {
-            packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+            uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
             uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
             *seq = m_next_seq;
             m_next_seq++;
@@ -647,7 +644,6 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
         route_stored_query();
     }
 
-    int max_nslaves = m_router->max_slave_count();
     bool succp;
     /**
      * Try to get replacement slave or at least the minimum
