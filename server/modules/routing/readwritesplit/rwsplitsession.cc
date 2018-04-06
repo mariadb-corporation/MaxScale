@@ -93,6 +93,7 @@ void close_all_connections(SRWBackendList& backends)
 void RWSplitSession::close()
 {
     close_all_connections(m_backends);
+    reset_query();
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
         m_sescmd_list.size())
