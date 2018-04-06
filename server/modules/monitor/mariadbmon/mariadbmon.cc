@@ -133,7 +133,7 @@ MariaDBMonitor* MariaDBMonitor::start(MXS_MONITOR *monitor, const MXS_CONFIG_PAR
 
     /* Always reset these values. The server dependent values must be reset as servers could have been
      * added and removed. */
-    handle->m_shutdown = 0;
+    handle->m_keep_running = true;
     handle->m_master = NULL;
     handle->init_server_info();
 
@@ -221,7 +221,7 @@ bool MariaDBMonitor::stop()
     bool actually_stopped = false;
     if (m_status == MXS_MONITOR_RUNNING)
     {
-        m_shutdown = 1;
+        m_keep_running = false;
         thread_wait(m_thread);
         actually_stopped = true;
     }
@@ -444,9 +444,7 @@ void MariaDBMonitor::main_loop()
 {
     m_status = MXS_MONITOR_RUNNING;
     MXS_MONITORED_SERVER *root_master = NULL;
-    size_t nrounds = 0;
     int log_no_master = 1;
-    bool heartbeat_checked = false;
 
     if (mysql_thread_init())
     {
@@ -457,38 +455,16 @@ void MariaDBMonitor::main_loop()
 
     load_server_journal(m_monitor_base, &m_master);
 
-    while (1)
+    if (m_detect_replication_lag)
     {
-        if (m_shutdown)
-        {
-            m_status = MXS_MONITOR_STOPPING;
-            mysql_thread_end();
-            m_status = MXS_MONITOR_STOPPED;
-            return;
-        }
-        /** Wait base interval */
-        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+        check_maxscale_schema_replication();
+    }
 
-        if (m_detect_replication_lag && !heartbeat_checked)
-        {
-            check_maxscale_schema_replication();
-            heartbeat_checked = true;
-        }
-
-        /**
-         * Calculate how far away the monitor interval is from its full
-         * cycle and if monitor interval time further than the base
-         * interval, then skip monitoring checks. Excluding the first
-         * round.
-         */
-        if (nrounds != 0 &&
-            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % m_monitor_base->interval) >=
-             MXS_MON_BASE_INTERVAL_MS) && (!m_monitor_base->server_pending_changes))
-        {
-            nrounds += 1;
-            continue;
-        }
-        nrounds += 1;
+    while (m_keep_running)
+    {
+        timespec loop_start;
+        /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);
 
         lock_monitor_servers(m_monitor_base);
         servers_status_pending_to_current(m_monitor_base);
@@ -604,7 +580,30 @@ void MariaDBMonitor::main_loop()
         servers_status_current_to_pending(m_monitor_base);
         store_server_journal(m_monitor_base, m_master);
         release_monitor_servers(m_monitor_base);
-    } /*< while (1) */
+
+        // Check how much the monitor should sleep to get one full monitor interval.
+        timespec loop_end;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_end);
+        int64_t time_elapsed_ms = (loop_end.tv_sec - loop_start.tv_sec) * 1000 +
+                                  (loop_end.tv_nsec - loop_start.tv_nsec) / 1000000;
+
+        /* Sleep in small increments to react faster to some events. This should ideally use some type of
+         * notification mechanism. */
+        int sleep_cycles = ((m_monitor_base->interval - time_elapsed_ms) / MXS_MON_BASE_INTERVAL_MS);
+        sleep_cycles = MXS_MAX(1, sleep_cycles); // Sleep at least once.
+        for (int i = 0; i < sleep_cycles; i++)
+        {
+            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+            if (!m_keep_running || m_monitor_base->server_pending_changes)
+            {
+                break;
+            }
+        }
+    }
+
+    m_status = MXS_MONITOR_STOPPING;
+    mysql_thread_end();
+    m_status = MXS_MONITOR_STOPPED;
 }
 
 /**

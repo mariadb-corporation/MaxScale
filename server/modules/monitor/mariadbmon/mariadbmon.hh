@@ -137,9 +137,9 @@ private:
     MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
     THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
-    volatile int m_shutdown;         /**< Flag to shutdown the monitor thread. */
+    volatile bool m_keep_running;    /**< Set to false to cause monitor thread to exit. */
     volatile int m_status;           /**< Monitor status.  */
-    ServerArray m_servers;       /**< Servers of the monitor. */
+    ServerArray m_servers;           /**< Servers of the monitor. */
     ServerInfoMap m_server_info;     /**< Contains server specific information */
 
     // Values updated by monitor
