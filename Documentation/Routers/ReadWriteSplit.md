@@ -295,6 +295,40 @@ the slave server where the query is being executed fails, readwritesplit can
 retry the read on a replacement server. This makes the failure of a slave
 transparent to the client.
 
+### `delayed_retry`
+
+Retry queries over a period of time. This parameter takes a boolean value, was
+added in Maxscale 2.3.0 and is disabled by default.
+
+When this feature is enabled, a failure to route a query due to a connection
+problem will not immediately result in an error. The routing of the query is
+delayed until either a valid candidate server is available or the retry timeout
+is reached. If a candidate server becomes available before the timeout is
+reached, the query is routed normally and no connection error is returned. If no
+candidates are found and the timeout is exceeded, the router returns to normal
+behavior and returns an error.
+
+When combined with the `master_reconnection` parameter, failures of writes done
+outside of transactions can be hidden from the client connection. This allows a
+master to be replaced while a write is in progress.
+
+The delayed query retrying mode in readwritesplit does not do any sort of
+duplicate write detection. To prevent accidental data duplication, it is highly
+recommended to tune the monitor timeouts to values that produce accurate
+results.
+
+Duplicate execution of a statement can occur if the connection to the server is
+lost or the server crashes but the server comes back up before the timeout for
+the retrying is exceeded. At this point, if the server managed to read the
+client's statement, it will be executed. For this reason, it is recommended to
+only enable `delayed_retry` when the possibility of duplicate statement
+execution is an acceptable risk.
+
+### `delayed_retry_timeout`
+
+The number of seconds to wait until an error is returned to the client when
+`delayed_retry` is enabled. The default value is 10 seconds.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint
