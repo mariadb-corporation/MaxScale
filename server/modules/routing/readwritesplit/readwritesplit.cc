@@ -342,8 +342,6 @@ void RWSplit::diagnostics(DCB *dcb)
                config().delayed_retry ? "true" : "false");
     dcb_printf(dcb, "\tdelayed_retry_timeout:       %lu\n",
                config().delayed_retry_timeout);
-    dcb_printf(dcb, "\tdelayed_retry_interval:       %lu\n",
-               config().delayed_retry_interval);
 
     dcb_printf(dcb, "\n");
 
@@ -421,8 +419,6 @@ json_t* RWSplit::diagnostics_json() const
                         json_boolean(config().delayed_retry));
     json_object_set_new(rval, "delayed_retry_timeout",
                         json_integer(config().delayed_retry_timeout));
-    json_object_set_new(rval, "delayed_retry_interval",
-                        json_integer(config().delayed_retry_interval));
 
     json_object_set_new(rval, "connections", json_integer(stats().n_sessions));
     json_object_set_new(rval, "current_connections", json_integer(service()->stats.n_current));
@@ -504,7 +500,6 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"master_reconnection", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
-            {"delayed_retry_interval", MXS_MODULE_PARAM_COUNT, "1"},
             {MXS_END_MODULE_PARAMS}
         }
     };

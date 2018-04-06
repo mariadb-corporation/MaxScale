@@ -22,6 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/session_command.hh>
@@ -241,16 +242,12 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
         else if (can_retry_query())
         {
             // Try to route the query again later
-            uint64_t interval = m_config.delayed_retry_interval;
             MXS_SESSION* session = m_client->session;
-            session_delay_routing(session, router_as_downstream(session),
-                                  gwbuf_clone(querybuf), interval);
+            session_delay_routing(session, router_as_downstream(session), gwbuf_clone(querybuf), 1);
+            ++m_retry_duration;
             succp = true;
 
-            // Increment by at least one to prevent infinite delay
-            m_retry_duration += interval > 0 ? interval : 1;
-
-            MXS_INFO("Will try to route query again in %lu seconds", interval);
+            MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
         }
     }
 
