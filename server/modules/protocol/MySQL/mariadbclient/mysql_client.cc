@@ -972,6 +972,10 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
 
+        // Update the current command, required by KILL command processing
+        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+        proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+
         set_qc_mode(session, &read_buffer);
 
         session_retain_statement(session, read_buffer);
