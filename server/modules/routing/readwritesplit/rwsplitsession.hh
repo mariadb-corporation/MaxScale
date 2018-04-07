@@ -19,6 +19,7 @@
 
 #include <string>
 
+#include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/queryclassifier.hh>
 
@@ -127,7 +128,7 @@ public:
     uint32_t                m_next_seq; /**< Next packet's sequence number */
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */
-    GWBUF*                  m_current_query; /**< Current query being executed, NULL for no query */
+    mxs::Buffer             m_current_query; /**< Current query being executed */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -201,8 +202,8 @@ private:
      */
     inline void set_query(GWBUF* query)
     {
-        ss_dassert(!m_current_query);
-        m_current_query = gwbuf_clone(query);
+        ss_dassert(!m_current_query.get());
+        m_current_query.reset(gwbuf_clone(query));
     }
 
     /**
@@ -212,9 +213,7 @@ private:
      */
     inline GWBUF* release_query()
     {
-        GWBUF* rval = m_current_query;
-        m_current_query = NULL;
-        return rval;
+        return m_current_query.release();
     }
 
     /**
@@ -222,7 +221,7 @@ private:
      */
     inline void reset_query()
     {
-        gwbuf_free(release_query());
+        m_current_query.reset();
     }
 };
 
