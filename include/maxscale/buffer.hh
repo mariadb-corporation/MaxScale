@@ -424,8 +424,21 @@ public:
      */
     bool copy_from(const Buffer& rhs)
     {
+        return copy_from(rhs.m_pBuffer);
+    }
+
+    /**
+     * Clone a GWBUF and free the current buffer
+     *
+     * @param buf Buffer to clone
+     *
+     * @return True if buffer was copied
+     *
+     * @attention  Invalidates all iterators.
+     */
+    bool copy_from(GWBUF* pBuffer)
+    {
         bool copied = true;
-        GWBUF* pBuffer = rhs.m_pBuffer;
 
         if (pBuffer)
         {
