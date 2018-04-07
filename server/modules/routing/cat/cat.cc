@@ -33,13 +33,17 @@ Cat* Cat::create(SERVICE* pService, char** pzOptions)
 CatSession* Cat::newSession(MXS_SESSION* pSession)
 {
     auto backends = RWBackend::from_servers(pSession->service->dbref);
+    bool connected = false;
 
     for (auto a = backends.begin(); a != backends.end(); a++)
     {
-        (*a)->connect(pSession);
+        if ((*a)->can_connect() && (*a)->connect(pSession))
+        {
+            connected = true;
+        }
     }
 
-    return new CatSession(pSession, this, backends);
+    return connected ? new CatSession(pSession, this, backends) : NULL;
 }
 
 void Cat::diagnostics(DCB* dcb)
