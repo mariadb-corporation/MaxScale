@@ -429,7 +429,7 @@ public:
 
         if (pBuffer)
         {
-            GWBUF* pBuffer = gwbuf_clone(pBuffer);
+            pBuffer = gwbuf_clone(pBuffer);
 
             if (!pBuffer)
             {
