@@ -130,6 +130,7 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
 
 void RWSplitSession::retry_query(GWBUF* querybuf)
 {
+    ss_dassert(querybuf);
     // Try to route the query again later
     MXS_SESSION* session = m_client->session;
     session_delay_routing(session, router_as_downstream(session), querybuf, 1);
@@ -171,7 +172,8 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
     }
     else
     {
-        bool store_stmt = false;
+        // If delayed query retry is enabled, we need to store the current statement
+        bool store_stmt = m_config.delayed_retry;
 
         if (m_qc.large_query())
         {
@@ -233,7 +235,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
             else
             {
                 // Target server was found and is in the correct state
-                ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
                 succp = handle_got_target(querybuf, target, store_stmt);
 
                 if (succp && command == MXS_COM_STMT_EXECUTE && not_locked_to_master)
