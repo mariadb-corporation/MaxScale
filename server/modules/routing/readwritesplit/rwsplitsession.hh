@@ -194,35 +194,6 @@ private:
                m_retry_duration < m_config.delayed_retry_timeout &&
                !session_trx_is_active(m_client->session);
     }
-
-    /**
-     * Set the current query
-     *
-     * @param query The current query
-     */
-    inline void set_query(GWBUF* query)
-    {
-        ss_dassert(!m_current_query.get());
-        m_current_query.reset(gwbuf_clone(query));
-    }
-
-    /**
-     * Release current query
-     *
-     * @return The current query
-     */
-    inline GWBUF* release_query()
-    {
-        return m_current_query.release();
-    }
-
-    /**
-     * Reset current query
-     */
-    inline void reset_query()
-    {
-        m_current_query.reset();
-    }
 };
 
 /**

@@ -965,7 +965,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     {
         if (store)
         {
-            set_query(querybuf);
+            m_current_query.copy_from(querybuf);
         }
 
         atomic_add_uint64(&m_router->stats().n_queries, 1);

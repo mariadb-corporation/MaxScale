@@ -92,7 +92,7 @@ void close_all_connections(SRWBackendList& backends)
 void RWSplitSession::close()
 {
     close_all_connections(m_backends);
-    reset_query();
+    m_current_query.reset();
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
         m_sescmd_list.size())
@@ -384,7 +384,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return;
     }
 
-    reset_query();
+    m_current_query.reset();
 
     if (backend->reply_is_complete(writebuf))
     {
@@ -511,7 +511,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                     if (can_retry_query())
                     {
                         can_continue = true;
-                        retry_query(release_query());
+                        retry_query(m_current_query.release());
                     }
                     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
                     {
@@ -611,7 +611,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
          * Try to reroute the statement to a working server or send an error
          * to the client.
          */
-        GWBUF *stored = release_query();
+        GWBUF *stored = m_current_query.release();
 
         if (stored && m_config.retry_failed_reads)
         {
