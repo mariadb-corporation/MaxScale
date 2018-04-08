@@ -34,7 +34,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_sent_sescmd(0),
     m_recv_sescmd(0),
     m_gtid_pos(""),
-    m_wait_gtid_state(EXPECTING_NOTHING),
+    m_waiting_for_gtid(false),
     m_next_seq(0),
     m_qc(this, session, instance->config().use_sql_variables_in),
     m_retry_duration(0)
@@ -213,31 +213,31 @@ bool RWSplitSession::route_stored_query()
 }
 
 /**
- * @bref discard the result of wait gtid statment, the result will be an error
- * packet or an error packet.
- * @param buffer origin reply buffer
- * @param proto  MySQLProtocol
- * @return reset buffer
+ * @bref discard the result of MASTER_GTID_WAIT statement
+ *
+ * The result will be an error or an OK packet.
+ *
+ * @param buffer Original reply buffer
+ *
+ * @return Any data after the ERR/OK packet, NULL for no data
  */
 GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
 {
-    uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
+    // MASTER_WAIT_GTID is complete, discard the OK packet or return the ERR packet
+    m_waiting_for_gtid = false;
 
+    uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
     gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN + 1, header_and_command);
-    /* ignore error packet */
-    if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
+
+    if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK)
     {
-        m_wait_gtid_state = EXPECTING_NOTHING;
-        return buffer;
+        // Discard the OK packet and start updating sequence numbers
+        uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
+        m_next_seq = 1;
+        buffer = gwbuf_consume(buffer, packet_len);
     }
 
-    /* this packet must be an ok packet now */
-    ss_dassert(MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK);
-    uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
-    m_wait_gtid_state = EXPECTING_REAL_RESULT;
-    m_next_seq = 1;
-
-    return gwbuf_consume(buffer, packet_len);
+    return buffer;
 }
 
 /**
@@ -341,12 +341,12 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& bac
             }
         }
 
-        if (m_wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
+        if (m_waiting_for_gtid)
         {
             writebuf = discard_master_wait_gtid_result(writebuf);
         }
 
-        if (writebuf && m_wait_gtid_state == EXPECTING_REAL_RESULT)
+        if (writebuf)
         {
             correct_packet_sequence(writebuf);
         }

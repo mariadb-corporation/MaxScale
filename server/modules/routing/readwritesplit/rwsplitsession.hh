@@ -23,13 +23,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/queryclassifier.hh>
 
-typedef enum
-{
-    EXPECTING_NOTHING = 0,
-    EXPECTING_WAIT_GTID_RESULT,
-    EXPECTING_REAL_RESULT
-} wait_gtid_state_t;
-
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
 typedef std::tr1::unordered_set<std::string> TableSet;
@@ -124,7 +117,7 @@ public:
     ClientHandleMap         m_ps_handles;  /**< Client PS handle to internal ID mapping */
     ExecMap                 m_exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     std::string             m_gtid_pos; /**< Gtid position for causal read */
-    wait_gtid_state_t       m_wait_gtid_state; /**< Determine boundary of generated query result */
+    bool                    m_waiting_for_gtid; /**< Waiting for MASTER_GTID_WAIT reply */
     uint32_t                m_next_seq; /**< Next packet's sequence number */
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */

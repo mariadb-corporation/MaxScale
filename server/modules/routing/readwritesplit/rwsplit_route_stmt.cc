@@ -945,13 +945,13 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     ss_dassert(!target->has_session_commands());
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    m_wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF *send_buf = gwbuf_clone(querybuf);
-    if (cmd == COM_QUERY && m_router->config().enable_causal_read && m_gtid_pos != "")
+
+    if (cmd == COM_QUERY && m_router->config().enable_causal_read && !m_gtid_pos .empty())
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
-        m_wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
+        m_waiting_for_gtid = true;
     }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE &&
