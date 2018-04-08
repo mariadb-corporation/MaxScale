@@ -281,19 +281,15 @@ SRWBackend& RWSplitSession::get_backend_from_dcb(DCB *dcb)
  */
 void RWSplitSession::correct_packet_sequence(GWBUF *buffer)
 {
-    if (m_wait_gtid_state == EXPECTING_REAL_RESULT)
-    {
-        uint8_t header[3];
-        uint32_t offset = 0;
+    uint8_t header[3];
+    uint32_t offset = 0;
 
-        while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
-        {
-            uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-            uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
-            *seq = m_next_seq;
-            m_next_seq++;
-            offset += packet_len;
-        }
+    while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
+    {
+        uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+        uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
+        *seq = m_next_seq++;
+        offset += packet_len;
     }
 }
 
@@ -331,36 +327,32 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
     }
 }
 
-bool RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& backend)
+GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& backend)
 {
-    bool rval = true;
-
-    if (m_config.enable_causal_read &&
-        GWBUF_IS_REPLY_OK(writebuf) &&
-        backend == m_current_master)
+    if (m_config.enable_causal_read)
     {
-        /** Save gtid position */
-        char *tmp = gwbuf_get_property(writebuf, (char *)"gtid");
-        if (tmp)
+        if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
         {
-            m_gtid_pos = std::string(tmp);
+            /** Save gtid position */
+            char *tmp = gwbuf_get_property(writebuf, (char *)"gtid");
+            if (tmp)
+            {
+                m_gtid_pos = std::string(tmp);
+            }
+        }
+
+        if (m_wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
+        {
+            writebuf = discard_master_wait_gtid_result(writebuf);
+        }
+
+        if (writebuf && m_wait_gtid_state == EXPECTING_REAL_RESULT)
+        {
+            correct_packet_sequence(writebuf);
         }
     }
 
-    if (m_wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
-    {
-        if ((writebuf = discard_master_wait_gtid_result(writebuf)) == NULL)
-        {
-            rval = false;
-        }
-    }
-
-    if (rval && m_wait_gtid_state == EXPECTING_REAL_RESULT)
-    {
-        correct_packet_sequence(writebuf);
-    }
-
-    return rval;
+    return writebuf;
 }
 
 void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
@@ -369,7 +361,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
 
-    if (!handle_causal_read_reply(writebuf, backend))
+    if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
     {
         return; // Nothing to route, return
     }
