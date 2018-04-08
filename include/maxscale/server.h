@@ -283,7 +283,7 @@ extern void server_transfer_status(SERVER *dest_server, const SERVER *source_ser
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
 extern const char *server_get_parameter(const SERVER *server, char *name);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
-extern DCB  *server_get_persistent(SERVER *server, const char *user, const char *protocol, int id);
+extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);
 extern void server_update_port(SERVER *server,  unsigned short port);
 extern unsigned int server_map_status(const char *str);
