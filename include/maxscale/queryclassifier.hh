@@ -217,6 +217,12 @@ public:
                                uint8_t packet_type,
                                uint32_t *qtype);
 
+    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
+                             GWBUF *buffer,
+                             uint8_t* command,
+                             uint32_t* type,
+                             uint32_t* stmt_id);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
