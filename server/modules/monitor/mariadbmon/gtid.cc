@@ -14,6 +14,7 @@
 #include "gtid.hh"
 
 #include <algorithm>
+#include <sstream>
 #include "utilities.hh"
 
 using std::string;
@@ -210,13 +211,12 @@ bool Gtid::eq(const Gtid& rhs) const
 
 string Gtid::to_string() const
 {
-    string rval;
+    std::stringstream ss;
     if (m_server_id != SERVER_ID_UNKNOWN)
     {
-        rval += std::to_string(m_domain) + "-" + std::to_string(m_server_id) + "-" +
-                std::to_string(m_sequence);
+        ss << m_domain << "-" << m_server_id << "-" << m_sequence;
     }
-    return rval;
+    return ss.str();
 }
 
 Gtid GtidList::get_gtid(uint32_t domain) const
