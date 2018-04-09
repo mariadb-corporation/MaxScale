@@ -14,11 +14,15 @@
 #include <maxscale/queryclassifier.hh>
 #include <tr1/unordered_map>
 #include <maxscale/alloc.h>
+#include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 
 namespace
 {
+
+const int QC_TRACE_MSG_LEN = 1000;
+
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
@@ -470,6 +474,50 @@ void QueryClassifier::ps_id_internal_put(uint32_t external_id, uint32_t internal
 {
     m_ps_handles[external_id] = internal_id;
 }
+
+void QueryClassifier::log_transaction_status(GWBUF *querybuf, uint32_t qtype)
+{
+    if (large_query())
+    {
+        MXS_INFO("> Processing large request with more than 2^24 bytes of data");
+    }
+    else if (load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
+    {
+        uint8_t *packet = GWBUF_DATA(querybuf);
+        unsigned char command = packet[4];
+        int len = 0;
+        char* sql;
+        char *qtypestr = qc_typemask_to_string(qtype);
+        if (!modutil_extract_SQL(querybuf, &sql, &len))
+        {
+            sql = (char*)"<non-SQL>";
+        }
+
+        if (len > QC_TRACE_MSG_LEN)
+        {
+            len = QC_TRACE_MSG_LEN;
+        }
+
+        MXS_SESSION *ses = session();
+        const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
+        const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
+        uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
+        const char *querytype = qtypestr == NULL ? "N/A" : qtypestr;
+        const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
+        const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
+
+        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
+                 autocommit, transaction, command, STRPACKETTYPE(command), plen,
+                 querytype, len, sql, hint, hint_type);
+
+        MXS_FREE(qtypestr);
+    }
+    else
+    {
+        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", load_data_sent());
+    }
+}
+
 
 }
 

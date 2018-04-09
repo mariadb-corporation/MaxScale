@@ -199,6 +199,8 @@ public:
         return m_pSession;
     }
 
+    void log_transaction_status(GWBUF *querybuf, uint32_t qtype);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;

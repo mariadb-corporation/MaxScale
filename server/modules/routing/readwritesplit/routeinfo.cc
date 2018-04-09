@@ -24,62 +24,6 @@ namespace
 {
 
 /**
- * @brief Log the transaction status
- *
- * The router session and the query buffer are used to log the transaction
- * status, along with the query type (which is a generic description that
- * should be usable across all DB types).
- *
- * @param qc        The query classifier.
- * @param querybuf  Query buffer
- * @param qtype     Query type
- */
-void
-log_transaction_status(const QueryClassifier& qc, GWBUF *querybuf, uint32_t qtype)
-{
-    if (qc.large_query())
-    {
-        MXS_INFO("> Processing large request with more than 2^24 bytes of data");
-    }
-    else if (qc.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
-    {
-        uint8_t *packet = GWBUF_DATA(querybuf);
-        unsigned char command = packet[4];
-        int len = 0;
-        char* sql;
-        char *qtypestr = qc_typemask_to_string(qtype);
-        if (!modutil_extract_SQL(querybuf, &sql, &len))
-        {
-            sql = (char*)"<non-SQL>";
-        }
-
-        if (len > RWSPLIT_TRACE_MSG_LEN)
-        {
-            len = RWSPLIT_TRACE_MSG_LEN;
-        }
-
-        MXS_SESSION *ses = qc.session();
-        const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
-        const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
-        uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
-        const char *querytype = qtypestr == NULL ? "N/A" : qtypestr;
-        const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
-        const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
-
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
-                 autocommit, transaction, command, STRPACKETTYPE(command), plen,
-                 querytype, len, sql, hint, hint_type);
-
-        MXS_FREE(qtypestr);
-    }
-    else
-    {
-        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                 qc.load_data_sent());
-    }
-}
-
-/**
  * @brief Determine the type of a query
  *
  * @param querybuf      GWBUF containing the query
@@ -491,7 +435,7 @@ route_target_t get_target_type(QueryClassifier& qc,
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(qc, buffer, *type);
+            qc.log_transaction_status(buffer, *type);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
