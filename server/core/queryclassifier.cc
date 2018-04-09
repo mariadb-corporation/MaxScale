@@ -34,6 +34,19 @@ const char* qc_mysql_get_current_db(MXS_SESSION* session)
     return data->db;
 }
 
+bool have_semicolon(const char* ptr, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        if (ptr[i] == ';')
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
     MySQLProtocol* pPcol = static_cast<MySQLProtocol*>(pSession->client_dcb->protocol);
@@ -677,6 +690,51 @@ void QueryClassifier::check_drop_tmp_table(GWBUF *querybuf)
         foreach_table(*this, querybuf, delete_table);
     }
 }
+
+/**
+ * @brief Detect multi-statement queries
+ *
+ * It is possible that the session state is modified inside a multi-statement
+ * query which would leave any slave sessions in an inconsistent state. Due to
+ * this, for the duration of this session, all queries will be sent to the
+ * master
+ * if the current query contains a multi-statement query.
+ * @param rses Router client session
+ * @param buf Buffer containing the full query
+ * @return True if the query contains multiple statements
+ */
+bool QueryClassifier::check_for_multi_stmt(GWBUF *buf, uint8_t packet_type)
+{
+    bool rval = false;
+
+    if (multi_statements_allowed() && packet_type == MXS_COM_QUERY)
+    {
+        char *ptr, *data = (char*)GWBUF_DATA(buf) + 5;
+        /** Payload size without command byte */
+        int buflen = gw_mysql_get_byte3((uint8_t *)GWBUF_DATA(buf)) - 1;
+
+        if (have_semicolon(data, buflen) && (ptr = strnchr_esc_mysql(data, ';', buflen)))
+        {
+            /** Skip stored procedures etc. */
+            while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
+            {
+                ptr = strnchr_esc_mysql(ptr + 1, ';', buflen - (ptr - data) - 1);
+            }
+
+            if (ptr)
+            {
+                if (ptr < data + buflen &&
+                    !is_mysql_statement_end(ptr, buflen - (ptr - data)))
+                {
+                    rval = true;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
 
 }
 

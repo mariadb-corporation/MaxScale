@@ -209,6 +209,8 @@ public:
 
     void check_drop_tmp_table(GWBUF *querybuf);
 
+    bool check_for_multi_stmt(GWBUF *buf, uint8_t packet_type);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;

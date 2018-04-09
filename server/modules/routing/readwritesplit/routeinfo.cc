@@ -44,63 +44,6 @@ bool check_for_sp_call(GWBUF *buf, uint8_t packet_type)
     return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
 }
 
-inline bool have_semicolon(const char* ptr, int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        if (ptr[i] == ';')
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
- * @brief Detect multi-statement queries
- *
- * It is possible that the session state is modified inside a multi-statement
- * query which would leave any slave sessions in an inconsistent state. Due to
- * this, for the duration of this session, all queries will be sent to the
- * master
- * if the current query contains a multi-statement query.
- * @param rses Router client session
- * @param buf Buffer containing the full query
- * @return True if the query contains multiple statements
- */
-bool check_for_multi_stmt(const QueryClassifier& qc, GWBUF *buf, uint8_t packet_type)
-{
-    bool rval = false;
-
-    if (qc.multi_statements_allowed() && packet_type == MXS_COM_QUERY)
-    {
-        char *ptr, *data = (char*)GWBUF_DATA(buf) + 5;
-        /** Payload size without command byte */
-        int buflen = gw_mysql_get_byte3((uint8_t *)GWBUF_DATA(buf)) - 1;
-
-        if (have_semicolon(data, buflen) && (ptr = strnchr_esc_mysql(data, ';', buflen)))
-        {
-            /** Skip stored procedures etc. */
-            while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
-            {
-                ptr = strnchr_esc_mysql(ptr + 1, ';', buflen - (ptr - data) - 1);
-            }
-
-            if (ptr)
-            {
-                if (ptr < data + buflen &&
-                    !is_mysql_statement_end(ptr, buflen - (ptr - data)))
-                {
-                    rval = true;
-                }
-            }
-        }
-    }
-
-    return rval;
-}
-
 /**
  * @brief Handle multi statement queries and load statements
  *
@@ -128,7 +71,7 @@ handle_multi_temp_and_load(QueryClassifier& qc,
      * and a multi-statement is issued, an error is returned to the client
      * when the query is routed. */
     if ((current_target != QueryClassifier::CURRENT_TARGET_MASTER) &&
-        (check_for_multi_stmt(qc, querybuf, packet_type) ||
+        (qc.check_for_multi_stmt(querybuf, packet_type) ||
          check_for_sp_call(querybuf, packet_type)))
     {
         MXS_INFO("Multi-statement query or stored procedure call, routing "
