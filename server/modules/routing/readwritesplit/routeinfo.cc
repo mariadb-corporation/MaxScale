@@ -24,97 +24,6 @@ namespace
 {
 
 /**
- * @brief Determine if a packet contains a SQL query
- *
- * Packet type tells us this, but in a DB specific way. This function is
- * provided so that code that is not DB specific can find out whether a packet
- * contains a SQL query. Clearly, to be effective different functions must be
- * called for different DB types.
- *
- * @param packet_type   Type of packet (integer)
- * @return bool indicating whether packet contains a SQL query
- */
-bool is_packet_a_query(int packet_type)
-{
-    return (packet_type == MXS_COM_QUERY);
-}
-
-bool check_for_sp_call(GWBUF *buf, uint8_t packet_type)
-{
-    return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
-}
-
-/**
- * @brief Handle multi statement queries and load statements
- *
- * One of the possible types of handling required when a request is routed
- *
- * @param qc                   The query classifier
- * @param current_target       The current target
- * @param querybuf             Buffer containing query to be routed
- * @param packet_type          Type of packet (database specific)
- * @param qtype                Query type
- *
- * @return QueryClassifier::CURRENT_TARGET_MASTER if the session should be fixed
- *         to the master, QueryClassifier::CURRENT_TARGET_UNDEFINED otherwise.
- */
-QueryClassifier::current_target_t
-handle_multi_temp_and_load(QueryClassifier& qc,
-                           QueryClassifier::current_target_t current_target,
-                           GWBUF *querybuf,
-                           uint8_t packet_type,
-                           uint32_t *qtype)
-{
-    QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
-
-    /** Check for multi-statement queries. If no master server is available
-     * and a multi-statement is issued, an error is returned to the client
-     * when the query is routed. */
-    if ((current_target != QueryClassifier::CURRENT_TARGET_MASTER) &&
-        (qc.check_for_multi_stmt(querybuf, packet_type) ||
-         check_for_sp_call(querybuf, packet_type)))
-    {
-        MXS_INFO("Multi-statement query or stored procedure call, routing "
-                 "all future queries to master.");
-        rv = QueryClassifier::CURRENT_TARGET_MASTER;
-    }
-
-    /**
-     * Check if the query has anything to do with temporary tables.
-     */
-    if (qc.have_tmp_tables() && is_packet_a_query(packet_type))
-    {
-        qc.check_drop_tmp_table(querybuf);
-        if (qc.is_read_tmp_table(querybuf, *qtype))
-        {
-            *qtype |= QUERY_TYPE_MASTER_READ;
-        }
-    }
-
-    qc.check_create_tmp_table(querybuf, *qtype);
-
-    /**
-     * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
-     * to the master until the last, empty packet arrives.
-     */
-    if (qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
-    {
-        qc.append_load_data_sent(querybuf);
-    }
-    else if (is_packet_a_query(packet_type))
-    {
-        qc_query_op_t queryop = qc_get_operation(querybuf);
-        if (queryop == QUERY_OP_LOAD)
-        {
-            qc.set_load_data_state(QueryClassifier::LOAD_DATA_START);
-            qc.reset_load_data_sent();
-        }
-    }
-
-    return rv;
-}
-
-/**
  * @brief Get the routing requirements for a query
  *
  * @param qc      The query classifier.
@@ -158,9 +67,8 @@ route_target_t get_target_type(QueryClassifier& qc,
         {
             *type = QueryClassifier::determine_query_type(buffer, *command);
 
-            current_target = handle_multi_temp_and_load(qc,
-                                                        current_target,
-                                                        buffer, *command, type);
+            current_target = qc.handle_multi_temp_and_load(current_target,
+                                                           buffer, *command, type);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {

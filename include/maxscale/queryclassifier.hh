@@ -211,6 +211,12 @@ public:
 
     bool check_for_multi_stmt(GWBUF *buf, uint8_t packet_type);
 
+    current_target_t
+    handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
+                               GWBUF *querybuf,
+                               uint8_t packet_type,
+                               uint32_t *qtype);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;

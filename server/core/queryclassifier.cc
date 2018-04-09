@@ -47,6 +47,16 @@ bool have_semicolon(const char* ptr, int len)
     return false;
 }
 
+bool is_packet_a_query(int packet_type)
+{
+    return (packet_type == MXS_COM_QUERY);
+}
+
+bool check_for_sp_call(GWBUF *buf, uint8_t packet_type)
+{
+    return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
+}
+
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
     MySQLProtocol* pPcol = static_cast<MySQLProtocol*>(pSession->client_dcb->protocol);
@@ -733,6 +743,75 @@ bool QueryClassifier::check_for_multi_stmt(GWBUF *buf, uint8_t packet_type)
     }
 
     return rval;
+}
+
+/**
+ * @brief Handle multi statement queries and load statements
+ *
+ * One of the possible types of handling required when a request is routed
+ *
+ * @param qc                   The query classifier
+ * @param current_target       The current target
+ * @param querybuf             Buffer containing query to be routed
+ * @param packet_type          Type of packet (database specific)
+ * @param qtype                Query type
+ *
+ * @return QueryClassifier::CURRENT_TARGET_MASTER if the session should be fixed
+ *         to the master, QueryClassifier::CURRENT_TARGET_UNDEFINED otherwise.
+ */
+QueryClassifier::current_target_t
+QueryClassifier::handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
+                                            GWBUF *querybuf,
+                                            uint8_t packet_type,
+                                            uint32_t *qtype)
+{
+    QueryClassifier::current_target_t rv = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+
+    /** Check for multi-statement queries. If no master server is available
+     * and a multi-statement is issued, an error is returned to the client
+     * when the query is routed. */
+    if ((current_target != QueryClassifier::CURRENT_TARGET_MASTER) &&
+        (check_for_multi_stmt(querybuf, packet_type) ||
+         check_for_sp_call(querybuf, packet_type)))
+    {
+        MXS_INFO("Multi-statement query or stored procedure call, routing "
+                 "all future queries to master.");
+        rv = QueryClassifier::CURRENT_TARGET_MASTER;
+    }
+
+    /**
+     * Check if the query has anything to do with temporary tables.
+     */
+    if (have_tmp_tables() && is_packet_a_query(packet_type))
+    {
+        check_drop_tmp_table(querybuf);
+        if (is_read_tmp_table(querybuf, *qtype))
+        {
+            *qtype |= QUERY_TYPE_MASTER_READ;
+        }
+    }
+
+    check_create_tmp_table(querybuf, *qtype);
+
+    /**
+     * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
+     * to the master until the last, empty packet arrives.
+     */
+    if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
+    {
+        append_load_data_sent(querybuf);
+    }
+    else if (is_packet_a_query(packet_type))
+    {
+        qc_query_op_t queryop = qc_get_operation(querybuf);
+        if (queryop == QUERY_OP_LOAD)
+        {
+            set_load_data_state(QueryClassifier::LOAD_DATA_START);
+            reset_load_data_sent();
+        }
+    }
+
+    return rv;
 }
 
 
