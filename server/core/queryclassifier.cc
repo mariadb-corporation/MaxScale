@@ -21,8 +21,18 @@
 namespace
 {
 
+using namespace maxscale;
+
 const int QC_TRACE_MSG_LEN = 1000;
 
+
+// Copied from mysql_common.c
+// TODO: The current database should somehow be available in a generic fashion.
+const char* qc_mysql_get_current_db(MXS_SESSION* session)
+{
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    return data->db;
+}
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
@@ -95,6 +105,53 @@ void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
 {
     uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
     gw_mysql_set_byte4(ptr, id);
+}
+
+bool find_table(QueryClassifier& qc, const std::string& table)
+{
+    if (qc.is_tmp_table(table))
+    {
+        MXS_INFO("Query targets a temporary table: %s", table.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool delete_table(QueryClassifier& qc, const std::string& table)
+{
+    qc.remove_tmp_table(table);
+    return true;
+}
+
+bool foreach_table(QueryClassifier& qc, GWBUF* querybuf, bool (*func)(QueryClassifier& qc,
+                                                                      const std::string&))
+{
+    bool rval = true;
+    int n_tables;
+    char** tables = qc_get_table_names(querybuf, &n_tables, true);
+
+    for (int i = 0; i < n_tables; i++)
+    {
+        const char* db = qc_mysql_get_current_db(qc.session());
+        std::string table;
+
+        if (strchr(tables[i], '.') == NULL)
+        {
+            table += db;
+            table += ".";
+        }
+
+        table += tables[i];
+
+        if (!func(qc, table))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
 }
 
 }
@@ -571,19 +628,6 @@ uint32_t QueryClassifier::determine_query_type(GWBUF *querybuf, int command)
     return type;
 }
 
-namespace
-{
-
-// Copied from mysql_common.c
-// TODO: The current database should somehow be available in a generic fashion.
-const char* qc_mysql_get_current_db(MXS_SESSION* session)
-{
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
-    return data->db;
-}
-
-}
-
 void QueryClassifier::check_create_tmp_table(GWBUF *querybuf, uint32_t type)
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
@@ -604,6 +648,33 @@ void QueryClassifier::check_create_tmp_table(GWBUF *querybuf, uint32_t type)
         add_tmp_table(table);
 
         MXS_FREE(tblname);
+    }
+}
+
+bool QueryClassifier::is_read_tmp_table(GWBUF *querybuf, uint32_t qtype)
+{
+    bool rval = false;
+
+    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    {
+        if (!foreach_table(*this, querybuf, find_table))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+void QueryClassifier::check_drop_tmp_table(GWBUF *querybuf)
+{
+    if (qc_is_drop_table_query(querybuf))
+    {
+        foreach_table(*this, querybuf, delete_table);
     }
 }
 

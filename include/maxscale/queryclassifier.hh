@@ -205,6 +205,10 @@ public:
 
     void check_create_tmp_table(GWBUF *querybuf, uint32_t type);
 
+    bool is_read_tmp_table(GWBUF *querybuf, uint32_t qtype);
+
+    void check_drop_tmp_table(GWBUF *querybuf);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;

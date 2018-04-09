@@ -24,113 +24,6 @@ namespace
 {
 
 /**
- * Find callback for foreach_table
- */
-bool find_table(QueryClassifier& qc, const std::string& table)
-{
-    if (qc.is_tmp_table(table))
-    {
-        MXS_INFO("Query targets a temporary table: %s", table.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * @brief Map a function over the list of tables in the query
- *
- * @param qc       The query classifier.
- * @param querybuf The query to inspect
- * @param func     Callback that is called for each table
- *
- * @return True if all tables were iterated, false if the iteration was stopped early
- */
-static bool foreach_table(QueryClassifier& qc, GWBUF* querybuf, bool (*func)(QueryClassifier& qc,
-                                                                             const std::string&))
-{
-    bool rval = true;
-    int n_tables;
-    char** tables = qc_get_table_names(querybuf, &n_tables, true);
-
-    for (int i = 0; i < n_tables; i++)
-    {
-        const char* db = mxs_mysql_get_current_db(qc.session());
-        std::string table;
-
-        if (strchr(tables[i], '.') == NULL)
-        {
-            table += db;
-            table += ".";
-        }
-
-        table += tables[i];
-
-        if (!func(qc, table))
-        {
-            rval = false;
-            break;
-        }
-    }
-
-    return rval;
-}
-
-/**
- * Check if the query targets a temporary table.
- * @param qc The query classifier.
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- * @return The type of the query
- */
-bool is_read_tmp_table(QueryClassifier& qc,
-                       GWBUF *querybuf,
-                       uint32_t qtype)
-{
-    bool rval = false;
-
-    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
-    {
-        if (!foreach_table(qc, querybuf, find_table))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
-/**
- * Delete callback for foreach_table
- */
-bool delete_table(QueryClassifier& qc, const std::string& table)
-{
-    qc.remove_tmp_table(table);
-    return true;
-}
-
-/**
- * @brief Check for dropping of temporary tables
- *
- * Check if the query is a DROP TABLE... query and
- * if it targets a temporary table, remove it from the hashtable.
- * @param qc The query classifier
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-void check_drop_tmp_table(QueryClassifier& qc, GWBUF *querybuf)
-{
-    if (qc_is_drop_table_query(querybuf))
-    {
-        foreach_table(qc, querybuf, delete_table);
-    }
-}
-
-/**
  * @brief Determine if a packet contains a SQL query
  *
  * Packet type tells us this, but in a DB specific way. This function is
@@ -248,8 +141,8 @@ handle_multi_temp_and_load(QueryClassifier& qc,
      */
     if (qc.have_tmp_tables() && is_packet_a_query(packet_type))
     {
-        check_drop_tmp_table(qc, querybuf);
-        if (is_read_tmp_table(qc, querybuf, *qtype))
+        qc.check_drop_tmp_table(querybuf);
+        if (qc.is_read_tmp_table(querybuf, *qtype))
         {
             *qtype |= QUERY_TYPE_MASTER_READ;
         }
