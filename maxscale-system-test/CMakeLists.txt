@@ -599,6 +599,10 @@ add_test_executable(mxs1503_master_reconnection.cpp mxs1503_master_reconnection 
 # Master reconnection with session commands
 add_test_executable(mxs1503_queued_sescmd.cpp mxs1503_queued_sescmd mxs1503_master_reconnection LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1506: Delayed query retry
+# https://jira.mariadb.org/browse/MXS-1506
+add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)

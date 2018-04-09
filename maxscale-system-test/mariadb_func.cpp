@@ -214,7 +214,7 @@ int execute_query_check_one(MYSQL* conn, const char* sql, const char* expected)
                                 }
                                 else
                                 {
-                                    printf("First field is '%s, but expected %s'\n", row[0], expected);
+                                    printf("First field is '%s', but expected '%s'\n", row[0], expected);
                                 }
                             }
                             else
