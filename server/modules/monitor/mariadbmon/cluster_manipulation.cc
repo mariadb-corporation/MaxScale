@@ -24,9 +24,7 @@ using std::string;
 static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonServerArray& servers,
                                   json_t** err_out);
 
-bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
-                                       MXS_MONITORED_SERVER* given_current_master,
-                                       json_t** error_out)
+bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
     bool stopped = stop();
     if (stopped)
@@ -38,43 +36,18 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
     }
 
-    // Autoselect current master if not given as parameter.
-    MXS_MONITORED_SERVER* current_master = given_current_master;
-    if (current_master == NULL)
-    {
-        if (m_master)
-        {
-            current_master = m_master;
-        }
-        else
-        {
-            const char NO_MASTER[] = "Monitor '%s' has no master server.";
-            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
-        }
-    }
-
-    bool current_ok = (current_master != NULL) ? switchover_check_current(current_master, error_out) : false;
-    bool new_ok = switchover_check_new(new_master, error_out);
-    // Check that all slaves are using gtid-replication
-    bool gtid_ok = true;
-    for (auto mon_serv = m_monitor_base->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
-    {
-        if (SERVER_IS_SLAVE(mon_serv->server))
-        {
-            if (!uses_gtid(mon_serv, error_out))
-            {
-                gtid_ok = false;
-            }
-        }
-    }
+    MariaDBServer *found_new_master = NULL, *found_curr_master = NULL;
+    auto ok_to_switch = switchover_check(new_master, current_master, &found_new_master, &found_curr_master,
+                                         error_out);
 
     bool rval = false;
-    if (current_ok && new_ok && gtid_ok)
+    if (ok_to_switch)
     {
-        bool switched = do_switchover(current_master, new_master, error_out);
+        bool switched = do_switchover(found_curr_master->server_base, found_new_master->server_base,
+                                      error_out);
 
-        const char* curr_master_name = current_master->server->unique_name;
-        const char* new_master_name = new_master->server->unique_name;
+        const char* curr_master_name = found_curr_master->server_base->server->unique_name;
+        const char* new_master_name = found_new_master->server_base->server->unique_name;
 
         if (switched)
         {
@@ -152,21 +125,21 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
     if (cluster_can_be_joined())
     {
         const char* rejoin_serv_name = rejoin_server->unique_name;
-        MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(m_monitor_base, rejoin_server);
-        if (mon_server)
+        MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor_base, rejoin_server);
+        if (mon_slave_cand)
         {
             const char* master_name = m_master->server->unique_name;
-            MariaDBServer* master_info = get_server_info(m_master);
-            MariaDBServer* server_info = get_server_info(mon_server);
+            MariaDBServer* master = get_server_info(m_master);
+            MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
 
-            if (server_is_rejoin_suspect(mon_server, master_info, output))
+            if (server_is_rejoin_suspect(slave_cand, master, output))
             {
-                if (master_info->update_gtids())
+                if (master->update_gtids())
                 {
-                    if (can_replicate_from(mon_server, server_info, master_info))
+                    if (can_replicate_from(slave_cand, master))
                     {
-                        MonServerArray joinable_server;
-                        joinable_server.push_back(mon_server);
+                        ServerRefArray joinable_server;
+                        joinable_server.push_back(slave_cand);
                         if (do_rejoin(joinable_server) == 1)
                         {
                             rval = true;
@@ -359,33 +332,30 @@ bool MariaDBMonitor::redirect_one_slave(MXS_MONITORED_SERVER* slave, const char*
  * @param joinable_servers Which servers to rejoin
  * @return The number of servers successfully rejoined
  */
-uint32_t MariaDBMonitor::do_rejoin(const MonServerArray& joinable_servers)
+uint32_t MariaDBMonitor::do_rejoin(const ServerRefArray& joinable_servers)
 {
     SERVER* master_server = m_master->server;
+    const char* master_name = master_server->unique_name;
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
         string change_cmd = generate_change_master_cmd(master_server->name, master_server->port);
-        for (MonServerArray::const_iterator iter = joinable_servers.begin();
-             iter != joinable_servers.end();
-             iter++)
+        for (auto iter = joinable_servers.begin(); iter != joinable_servers.end(); iter++)
         {
-            MXS_MONITORED_SERVER* joinable = *iter;
-            const char* name = joinable->server->unique_name;
-            const char* master_name = master_server->unique_name;
-            MariaDBServer* redir_info = get_server_info(joinable);
-
+            auto joinable = *iter;
+            const char* name = joinable->server_base->server->unique_name;
             bool op_success;
-            if (redir_info->n_slaves_configured == 0)
+
+            if (joinable->n_slaves_configured == 0)
             {
                 MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                op_success = join_cluster(joinable, change_cmd.c_str());
+                op_success = join_cluster(joinable->server_base, change_cmd.c_str());
             }
             else
             {
                 MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
                            "redirecting it to '%s'.", name, master_name, master_name);
-                op_success = redirect_one_slave(joinable, change_cmd.c_str());
+                op_success = redirect_one_slave(joinable->server_base, change_cmd.c_str());
             }
 
             if (op_success)
@@ -416,21 +386,19 @@ bool MariaDBMonitor::cluster_can_be_joined()
  * @return False, if there were possible rejoinable servers but communications error to master server
  * prevented final checks.
  */
-bool MariaDBMonitor::get_joinable_servers(MonServerArray* output)
+bool MariaDBMonitor::get_joinable_servers(ServerRefArray* output)
 {
     ss_dassert(output);
-    MariaDBServer *master_info = get_server_info(m_master);
+    MariaDBServer* master = get_server_info(m_master);
 
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
-    MonServerArray suspects;
-    for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers;
-         server != NULL;
-         server = server->next)
+    ServerRefArray suspects;
+    for (size_t i = 0; i < m_servers.size(); i++)
     {
-        if (server_is_rejoin_suspect(server, master_info, NULL))
+        if (server_is_rejoin_suspect(&m_servers[i], master, NULL))
         {
-            suspects.push_back(server);
+            suspects.push_back(&m_servers[i]);
         }
     }
 
@@ -438,15 +406,13 @@ bool MariaDBMonitor::get_joinable_servers(MonServerArray* output)
     bool comm_ok = true;
     if (!suspects.empty())
     {
-        if (master_info->update_gtids())
+        if (master->update_gtids())
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
-                MXS_MONITORED_SERVER* suspect = suspects[i];
-                MariaDBServer* suspect_info = get_server_info(suspect);
-                if (can_replicate_from(suspect, suspect_info, master_info))
+                if (can_replicate_from(suspects[i], master))
                 {
-                    output->push_back(suspect);
+                    output->push_back(suspects[i]);
                 }
             }
         }
@@ -509,30 +475,30 @@ bool MariaDBMonitor::join_cluster(MXS_MONITORED_SERVER* server, const char* chan
  * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
  * criteria and another call to can_replicate_from() should be made.
  *
- * @param server Server to check
- * @param master_info Master server info
+ * @param rejoin_cand Server to check
+ * @param master Master server info
  * @param output Error output. If NULL, no error is printed to log.
  * @return True, if server is a rejoin suspect.
  */
-bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_server,
-                                              MariaDBServer* master_info, json_t** output)
+bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaDBServer* master,
+                                              json_t** output)
 {
     bool is_suspect = false;
-    if (!SERVER_IS_MASTER(rejoin_server->server) && SERVER_IS_RUNNING(rejoin_server->server))
+    auto rejoin_mon_serv = rejoin_cand->server_base;
+    if (!SERVER_IS_MASTER(rejoin_mon_serv->server) && SERVER_IS_RUNNING(rejoin_mon_serv->server))
     {
-        MariaDBServer* server_info = get_server_info(rejoin_server);
-        SlaveStatusInfo* slave_status = &server_info->slave_status;
+        SlaveStatusInfo* slave_status = &rejoin_cand->slave_status;
         // Has no slave connection, yet is not a master.
-        if (server_info->n_slaves_configured == 0)
+        if (rejoin_cand->n_slaves_configured == 0)
         {
             is_suspect = true;
         }
         // Or has existing slave connection ...
-        else if (server_info->n_slaves_configured == 1)
+        else if (rejoin_cand->n_slaves_configured == 1)
         {
             // which is connected to master but it's the wrong one
             if (slave_status->slave_io_running  &&
-                slave_status->master_server_id != master_info->server_id)
+                slave_status->master_server_id != master->server_id)
             {
                 is_suspect = true;
             }
@@ -548,7 +514,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_serve
     else if (output != NULL)
     {
         PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.",
-                             rejoin_server->server->unique_name);
+                             rejoin_mon_serv->server->unique_name);
     }
     return is_suspect;
 }
@@ -557,6 +523,8 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_serve
  * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
  * intermediate step fails, the cluster may be left without a master.
  *
+ * @param current_master Current master server
+ * @param new_master Slave which should be promoted
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful. If false, the cluster can be in various situations depending on which step
  * failed. In practice, manual intervention is usually required on failure.
@@ -1432,21 +1400,19 @@ bool MariaDBMonitor::failover_check(json_t** error_out)
 }
 
 /**
- * Checks if slave can replicate from master. Only considers gtid:s and only detects obvious errors. The
- * non-detected errors will mostly be detected once the slave tries to start replicating.
+ * Checks if slave candidate can replicate from master. Only considers gtid:s and only detects obvious errors.
+ * The non-detected errors will mostly be detected once the slave tries to start replicating.
  *
- * @param slave Slave server candidate
- * @param slave_info Slave info
- * @param master_info Master info
+ * @param slave_cand Slave candidate server
+ * @param master_info Master server
  * @return True if slave can replicate from master
  */
-bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
-                                        MariaDBServer* slave_info, MariaDBServer* master_info)
+bool MariaDBMonitor::can_replicate_from(MariaDBServer* slave_cand, MariaDBServer* master)
 {
     bool rval = false;
-    if (slave_info->update_gtids())
+    if (slave_cand->update_gtids())
     {
-        rval = slave_info->gtid_current_pos.can_replicate_from(master_info->gtid_binlog_pos);
+        rval = slave_cand->gtid_current_pos.can_replicate_from(master->gtid_binlog_pos);
     }
     return rval;
 }
@@ -1628,4 +1594,73 @@ static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonS
         *err_out = mxs_json_error_append(*err_out,
                                          "%s Errors: %s.", MSG, combined_error.c_str());
     }
+}
+
+/**
+ * Check cluster and parameters for suitability to switchover. Also writes found servers to output pointers.
+ * In case of error the output server values will not be written to.
+ *
+ * @param new_master New master requested by the user
+ * @param current_master Current master given by user. Can be null for autoselect.
+ * @param found_new_master Where to write found new master
+ * @param found_current_master Where to write found current master
+ * @param error_out Error output, can be null.
+ * @return True if cluster is suitable and server parameters were valid and found.
+ */
+bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master,
+                                      MariaDBServer** found_new_master, MariaDBServer** found_current_master,
+                                      json_t** error_out)
+{
+    const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
+    // Check that both .
+    MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(m_monitor_base, new_master);
+    if (mon_new_master == NULL)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, m_monitor_base->name);
+    }
+
+    // Check given current master. If NULL, autoselect.
+    MXS_MONITORED_SERVER* mon_curr_master = NULL;
+    if (current_master)
+    {
+        mon_curr_master = mon_get_monitored_server(m_monitor_base, current_master);
+        if (mon_curr_master == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name,
+                                 m_monitor_base->name);
+        }
+    }
+    else
+    {
+        // Autoselect current master.
+        if (m_master)
+        {
+            mon_curr_master = m_master;
+        }
+        else
+        {
+            const char NO_MASTER[] = "Monitor '%s' has no master server.";
+            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
+        }
+    }
+
+    bool current_ok = mon_curr_master ? switchover_check_current(mon_curr_master, error_out) : false;
+    bool new_ok = mon_new_master ? switchover_check_new(mon_new_master, error_out) : false;
+    // Check that all slaves are using gtid-replication
+    bool gtid_ok = true;
+    for (auto mon_serv = m_monitor_base->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
+    {
+        if (SERVER_IS_SLAVE(mon_serv->server) && !uses_gtid(mon_serv, error_out))
+        {
+            gtid_ok = false;
+        }
+    }
+
+    bool rval = current_ok && new_ok && gtid_ok;
+    if (rval)
+    {
+        *found_new_master = get_server_info(mon_new_master);
+        *found_current_master = get_server_info(mon_curr_master);
+    }
+    return rval;
 }

@@ -951,7 +951,7 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
 
 void MariaDBMonitor::handle_auto_rejoin()
 {
-    MonServerArray joinable_servers;
+    ServerRefArray joinable_servers;
     if (get_joinable_servers(&joinable_servers))
     {
         uint32_t joins = do_rejoin(joinable_servers);
@@ -962,8 +962,8 @@ void MariaDBMonitor::handle_auto_rejoin()
         if (joins < joinable_servers.size())
         {
             MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
-                "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                "the REST API.", CN_AUTO_REJOIN, m_monitor_base->name);
+                      "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
+                      "the REST API.", CN_AUTO_REJOIN, m_monitor_base->name);
             m_auto_rejoin = false;
             disable_setting(CN_AUTO_REJOIN);
         }
@@ -1299,7 +1299,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  *
  * @return True, if the command was executed, false otherwise.
  */
-bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
     ss_dassert((args->argc == 2) || (args->argc == 3));
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -1318,33 +1318,7 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
         auto handle = static_cast<MariaDBMonitor*>(mon->handle);
         SERVER* new_master = args->argv[1].value.server;
         SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        bool error = false;
-        const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
-
-        // Check given new master.
-        MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(mon, new_master);
-        if (mon_new_master == NULL)
-        {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, mon->name);
-            error = true;
-        }
-
-        // Check given old master. If NULL, manual_switchover() will autoselect.
-        MXS_MONITORED_SERVER* mon_curr_master = NULL;
-        if (current_master)
-        {
-            mon_curr_master = mon_get_monitored_server(mon, current_master);
-            if (mon_curr_master == NULL)
-            {
-                PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, mon->name);
-                error = true;
-            }
-        }
-
-        if (!error)
-        {
-            rval = handle->manual_switchover(mon_new_master, mon_curr_master, error_out);
-        }
+        rval = handle->manual_switchover(new_master, current_master, error_out);
     }
     return rval;
 }
@@ -1356,7 +1330,7 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
  * @param output Json error output
  * @return True on success
  */
-bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
+bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
 {
     ss_dassert(args->argc == 1);
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -1382,7 +1356,7 @@ bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
  * @param output Json error output
  * @return True on success
  */
-bool mysql_handle_rejoin(const MODULECMD_ARG* args, json_t** output)
+bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
 {
     ss_dassert(args->argc == 2);
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -1424,7 +1398,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
-                               mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv),
+                               handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv),
                                switchover_argv, "Perform master switchover");
 
     static modulecmd_arg_type_t failover_argv[] =
@@ -1436,7 +1410,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
-                               mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv),
+                               handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv),
                                failover_argv, "Perform master failover");
 
     static modulecmd_arg_type_t rejoin_argv[] =
@@ -1449,7 +1423,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
-                               mysql_handle_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
+                               handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
                                rejoin_argv, "Rejoin server to a cluster");
 
     static MXS_MONITOR_OBJECT MyObject =

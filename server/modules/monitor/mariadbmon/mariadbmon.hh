@@ -89,8 +89,7 @@ public:
      *
      * @return True, if switchover was performed, false otherwise.
      */
-    bool manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master,
-                           json_t** error_out);
+    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
 
     /**
      * Perform user-activated failover.
@@ -213,7 +212,7 @@ private:
     bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
     bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
-    bool get_joinable_servers(MonServerArray* output);
+    bool get_joinable_servers(ServerRefArray* output);
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
     void set_master_heartbeat(MXS_MONITORED_SERVER *);
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
@@ -223,18 +222,19 @@ private:
     bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                        json_t** err_out);
     bool do_failover(json_t** err_out);
-    uint32_t do_rejoin(const MonServerArray& joinable_servers);
+    uint32_t do_rejoin(const ServerRefArray& joinable_servers);
     bool mon_process_failover(bool* cluster_modified_out);
-    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MariaDBServer* master_info,
-                                  json_t** output);
+    bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaDBServer* master, json_t** output);
     bool cluster_can_be_joined();
     bool failover_check(json_t** error_out);
     void disable_setting(const char* setting);
+    bool switchover_check(SERVER* new_master, SERVER* current_master,
+                          MariaDBServer** found_new_master, MariaDBServer** found_current_master,
+                          json_t** error_out);
     bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
     bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
                                   json_t** error_out) const;
-    bool can_replicate_from(MXS_MONITORED_SERVER* slave, MariaDBServer* slave_info,
-                            MariaDBServer* master_info);
+    bool can_replicate_from(MariaDBServer* slave_cand, MariaDBServer* master);
     void monitor_one_server(MariaDBServer& server);
     MariaDBServer* find_root_master();
     void update_gtid_domain();
