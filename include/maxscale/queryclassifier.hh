@@ -203,6 +203,8 @@ public:
 
     static uint32_t determine_query_type(GWBUF *querybuf, int command);
 
+    void check_create_tmp_table(GWBUF *querybuf, uint32_t type);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;

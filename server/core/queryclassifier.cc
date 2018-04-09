@@ -571,5 +571,41 @@ uint32_t QueryClassifier::determine_query_type(GWBUF *querybuf, int command)
     return type;
 }
 
+namespace
+{
+
+// Copied from mysql_common.c
+// TODO: The current database should somehow be available in a generic fashion.
+const char* qc_mysql_get_current_db(MXS_SESSION* session)
+{
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    return data->db;
+}
+
+}
+
+void QueryClassifier::check_create_tmp_table(GWBUF *querybuf, uint32_t type)
+{
+    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    {
+        set_have_tmp_tables(true);
+        char* tblname = qc_get_created_table_name(querybuf);
+        std::string table;
+
+        if (tblname && *tblname && strchr(tblname, '.') == NULL)
+        {
+            const char* db = qc_mysql_get_current_db(session());
+            table += db;
+            table += ".";
+            table += tblname;
+        }
+
+        /** Add the table to the set of temporary tables */
+        add_tmp_table(table);
+
+        MXS_FREE(tblname);
+    }
+}
+
 }
 

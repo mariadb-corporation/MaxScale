@@ -24,38 +24,6 @@ namespace
 {
 
 /**
- * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out
- * the database and table name, create a hashvalue and
- * add it to the router client session's property. If property
- * doesn't exist then create it first.
- * @param qc The query classifier.
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-void check_create_tmp_table(QueryClassifier& qc,  GWBUF *querybuf, uint32_t type)
-{
-    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
-    {
-        qc.set_have_tmp_tables(true);
-        char* tblname = qc_get_created_table_name(querybuf);
-        std::string table;
-
-        if (tblname && *tblname && strchr(tblname, '.') == NULL)
-        {
-            const char* db = mxs_mysql_get_current_db(qc.session());
-            table += db;
-            table += ".";
-            table += tblname;
-        }
-
-        /** Add the table to the set of temporary tables */
-        qc.add_tmp_table(table);
-
-        MXS_FREE(tblname);
-    }
-}
-
-/**
  * Find callback for foreach_table
  */
 bool find_table(QueryClassifier& qc, const std::string& table)
@@ -287,7 +255,7 @@ handle_multi_temp_and_load(QueryClassifier& qc,
         }
     }
 
-    check_create_tmp_table(qc, querybuf, *qtype);
+    qc.check_create_tmp_table(querybuf, *qtype);
 
     /**
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
