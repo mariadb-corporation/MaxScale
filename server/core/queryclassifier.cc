@@ -197,9 +197,10 @@ private:
 // QueryClassifier
 //
 
-QueryClassifier::QueryClassifier(MXS_SESSION* pSession,
+QueryClassifier::QueryClassifier(Handler* pHandler,
+                                 MXS_SESSION* pSession,
                                  mxs_target_t use_sql_variables_in)
-    : m_pHandler(NULL)
+    : m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_load_data_state(LOAD_DATA_INACTIVE)

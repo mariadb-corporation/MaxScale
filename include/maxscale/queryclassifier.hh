@@ -63,13 +63,9 @@ public:
         LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
     };
 
-    QueryClassifier(MXS_SESSION* pSession,
+    QueryClassifier(Handler* pHandler,
+                    MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
-
-    void set_handler(Handler* pHandler) // TODO: Eventually to be set in constructor
-    {
-        m_pHandler = pHandler;
-    }
 
     Handler* handler() const
     {

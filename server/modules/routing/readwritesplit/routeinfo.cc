@@ -630,7 +630,6 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer)
     , command(0xff)
     , type(QUERY_TYPE_UNKNOWN)
     , stmt_id(0)
-    , m_rses(rses)
 {
     ss_dassert(rses);
     ss_dassert(rses->m_client);
@@ -652,28 +651,5 @@ RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer)
         current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
     }
 
-    m_rses->qc().set_handler(this);
     target = get_target_type(rses->qc(), current_target, buffer, &command, &type, &stmt_id);
-    m_rses->qc().set_handler(NULL);
-
-    m_rses = NULL;
-}
-
-
-bool RouteInfo::lock_to_master()
-{
-    bool rv = false;
-
-    if (m_rses->m_current_master && m_rses->m_current_master->in_use())
-    {
-        m_rses->m_target_node = m_rses->m_current_master;
-        rv = true;
-    }
-
-    return rv;
-}
-
-bool RouteInfo::is_locked_to_master() const
-{
-    return m_rses->m_target_node && m_rses->m_target_node == m_rses->m_current_master;
 }

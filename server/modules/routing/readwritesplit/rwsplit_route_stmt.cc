@@ -144,7 +144,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
     uint8_t command = info.command;
     uint32_t qtype = info.type;
     route_target_t route_target = info.target;
-    bool not_locked_to_master = !locked_to_master();
+    bool not_locked_to_master = !is_locked_to_master();
 
     if (not_locked_to_master && mxs_mysql_is_ps_command(command))
     {
@@ -771,7 +771,7 @@ bool RWSplitSession::should_replace_master(SRWBackend& target)
         // We are not inside a transaction (also checks for autocommit=1)
         !session_trx_is_active(m_client->session) &&
         // We are not locked to the old master
-        !locked_to_master();
+        !is_locked_to_master();
 }
 
 void RWSplitSession::replace_master(SRWBackend& target)

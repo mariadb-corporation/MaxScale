@@ -36,7 +36,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_gtid_pos(""),
     m_wait_gtid_state(EXPECTING_NOTHING),
     m_next_seq(0),
-    m_qc(session, instance->config().use_sql_variables_in)
+    m_qc(this, session, instance->config().use_sql_variables_in)
 {
     if (m_config.rw_max_slave_conn_percent)
     {
@@ -736,4 +736,22 @@ void RWSplitSession::handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg)
         CHK_DCB(m_client);
         m_client->func.write(m_client, gwbuf_clone(errmsg));
     }
+}
+
+bool RWSplitSession::lock_to_master()
+{
+    bool rv = false;
+
+    if (m_current_master && m_current_master->in_use())
+    {
+        m_target_node = m_current_master;
+        rv = true;
+    }
+
+    return rv;
+}
+
+bool RWSplitSession::is_locked_to_master() const
+{
+    return m_target_node && m_target_node == m_current_master;
 }

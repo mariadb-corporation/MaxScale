@@ -43,12 +43,16 @@ typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
 /**
  * The client session of a RWSplit instance
  */
-class RWSplitSession: public mxs::RouterSession
+class RWSplitSession: public mxs::RouterSession,
+                      private mxs::QueryClassifier::Handler
 {
     RWSplitSession(const RWSplitSession&) = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;
 
 public:
+    virtual ~RWSplitSession()
+    {
+    }
 
     /**
      * Create a new router session
@@ -173,6 +177,11 @@ private:
     {
         return m_qc.large_query() || (m_current_master && m_target_node == m_current_master);
     }
+
+private:
+    // QueryClassifier::Handler
+    bool lock_to_master();
+    bool is_locked_to_master() const;
 };
 
 /**
