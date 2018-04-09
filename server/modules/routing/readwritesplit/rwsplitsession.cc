@@ -755,3 +755,29 @@ bool RWSplitSession::is_locked_to_master() const
 {
     return m_target_node && m_target_node == m_current_master;
 }
+
+bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
+{
+    bool rv = true;
+
+    switch (hint_type)
+    {
+    case HINT_ROUTE_TO_MASTER:
+    case HINT_ROUTE_TO_SLAVE:
+    case HINT_ROUTE_TO_NAMED_SERVER:
+    case HINT_PARAMETER:
+        break;
+
+    case HINT_ROUTE_TO_UPTODATE_SERVER:
+    case HINT_ROUTE_TO_ALL:
+        ss_dassert(!true);
+        rv = false;
+        break;
+
+    default:
+        ss_dassert(!true);
+        rv = false;
+    }
+
+    return rv;
+}

@@ -237,7 +237,7 @@ void QueryClassifier::ps_erase(uint32_t id)
     return m_sPs_manager->erase(id);
 }
 
-uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
+uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT* pHints)
 {
     bool trx_active = session_trx_is_active(m_pSession);
     uint32_t target = TARGET_UNDEFINED;
@@ -361,6 +361,64 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
                    qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT));
 
         target = TARGET_MASTER;
+    }
+
+    /** Process routing hints */
+    HINT* pHint = pHints;
+
+    while (pHint)
+    {
+        if (m_pHandler->supports_hint(pHint->type))
+        {
+            switch (pHint->type)
+            {
+            case HINT_ROUTE_TO_MASTER:
+                // This means override, so we bail out immediately.
+                target = TARGET_MASTER;
+                MXS_DEBUG("Hint: route to master");
+                pHint = NULL;
+                break;
+
+            case HINT_ROUTE_TO_NAMED_SERVER:
+                // The router is expected to look up the named server.
+                target |= TARGET_NAMED_SERVER;
+                MXS_DEBUG("Hint: route to named server: %s", (char*)pHint->data);
+                break;
+
+            case HINT_ROUTE_TO_UPTODATE_SERVER:
+                // TODO: Add generic target type, never to be seem by RWS.
+                ss_dassert(false);
+                break;
+
+            case HINT_ROUTE_TO_ALL:
+                // TODO: Add generic target type, never to be seem by RWS.
+                ss_dassert(false);
+                break;
+
+            case HINT_PARAMETER:
+                if (strncasecmp((char*)pHint->data, "max_slave_replication_lag",
+                                strlen("max_slave_replication_lag")) == 0)
+                {
+                    target |= TARGET_RLAG_MAX;
+                }
+                else
+                {
+                    MXS_ERROR("Unknown hint parameter '%s' when "
+                              "'max_slave_replication_lag' was expected.",
+                              (char*)pHint->data);
+                }
+                break;
+
+            case HINT_ROUTE_TO_SLAVE:
+                target = TARGET_SLAVE;
+                MXS_DEBUG("Hint: route to slave.");
+            }
+        }
+
+        if (pHint)
+        {
+            pHint = pHint->next;
+        }
     }
 
     return target;

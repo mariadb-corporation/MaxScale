@@ -17,6 +17,7 @@
 #include <tr1/memory>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include <maxscale/hint.h>
 #include <maxscale/router.h>
 #include <maxscale/session.h>
 
@@ -34,6 +35,8 @@ public:
     public:
         virtual bool lock_to_master() = 0;
         virtual bool is_locked_to_master() const = 0;
+
+        virtual bool supports_hint(HINT_TYPE hint_type) const = 0;
     };
 
     typedef std::tr1::unordered_set<std::string> TableSet;
@@ -41,10 +44,12 @@ public:
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh
     enum
     {
-        TARGET_UNDEFINED = 0x00,
-        TARGET_MASTER    = 0x01,
-        TARGET_SLAVE     = 0x02,
-        TARGET_ALL       = 0x08
+        TARGET_UNDEFINED    = 0x00,
+        TARGET_MASTER       = 0x01,
+        TARGET_SLAVE        = 0x02,
+        TARGET_NAMED_SERVER = 0x04,
+        TARGET_ALL          = 0x08,
+        TARGET_RLAG_MAX     = 0x10
     };
 
     enum current_target_t
@@ -187,7 +192,7 @@ public:
      */
     void ps_id_internal_put(uint32_t external_id, uint32_t internal_id);
 
-    uint32_t get_route_target(uint8_t command, uint32_t qtype);
+    uint32_t get_route_target(uint8_t command, uint32_t qtype, HINT* pHints);
 
     MXS_SESSION* session() const
     {

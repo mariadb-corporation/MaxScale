@@ -24,77 +24,6 @@ namespace
 {
 
 /**
- * Examine the query type, transaction state and routing hints. Find out the
- * target for query routing.
- *
- *  @param qc                    The query classifier.
- *  @param command               The current command.
- *  @param qtype                 Type of query
- *  @param query_hints           Pointer to list of hints attached to the query buffer
- *
- *  @return bitfield including the routing target, or the target server name
- *          if the query would otherwise be routed to slave.
- */
-route_target_t get_route_target(mxs::QueryClassifier& qc,
-                                uint8_t command,
-                                uint32_t qtype,
-                                HINT *query_hints)
-{
-    int target = qc.get_route_target(command, qtype);
-
-    /** Process routing hints */
-    for (HINT* hint = query_hints; hint; hint = hint->next)
-    {
-        if (hint->type == HINT_ROUTE_TO_MASTER)
-        {
-            target = TARGET_MASTER; /*< override */
-            MXS_DEBUG("Hint: route to master");
-            break;
-        }
-        else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-        {
-            /**
-             * Searching for a named server. If it can't be
-             * found, the oroginal target is chosen.
-             */
-            target |= TARGET_NAMED_SERVER;
-            MXS_DEBUG("Hint: route to named server: %s", (char*)hint->data);
-        }
-        else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
-        {
-            /** not implemented */
-            ss_dassert(false);
-        }
-        else if (hint->type == HINT_ROUTE_TO_ALL)
-        {
-            /** not implemented */
-            ss_dassert(false);
-        }
-        else if (hint->type == HINT_PARAMETER)
-        {
-            if (strncasecmp((char*)hint->data, "max_slave_replication_lag",
-                            strlen("max_slave_replication_lag")) == 0)
-            {
-                target |= TARGET_RLAG_MAX;
-            }
-            else
-            {
-                MXS_ERROR("Unknown hint parameter '%s' when "
-                          "'max_slave_replication_lag' was expected.",
-                          (char*)hint->data);
-            }
-        }
-        else if (hint->type == HINT_ROUTE_TO_SLAVE)
-        {
-            target = TARGET_SLAVE;
-            MXS_DEBUG("Hint: route to slave.");
-        }
-    }
-
-    return (route_target_t)target;
-}
-
-/**
  * @brief Log the transaction status
  *
  * The router session and the query buffer are used to log the transaction
@@ -608,7 +537,7 @@ route_target_t get_target_type(QueryClassifier& qc,
                 *type = qc.ps_get_type(*stmt_id);
             }
 
-            route_target = get_route_target(qc, *command, *type, buffer->hint);
+            route_target = static_cast<route_target_t>(qc.get_route_target(*command, *type, buffer->hint));
         }
     }
     else
