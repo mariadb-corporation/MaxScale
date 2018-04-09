@@ -830,6 +830,7 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
     }
     else
     {
+        succp = false;
         /** The original master is not available, we can't route the write */
         if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
         {
@@ -840,10 +841,9 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
                 m_current_master->close();
             }
         }
-        else
+        else if (!can_retry_query())
         {
             log_master_routing_failure(succp, m_current_master, target);
-            succp = false;
         }
     }
 
