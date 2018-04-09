@@ -518,6 +518,58 @@ void QueryClassifier::log_transaction_status(GWBUF *querybuf, uint32_t qtype)
     }
 }
 
+uint32_t QueryClassifier::determine_query_type(GWBUF *querybuf, int command)
+{
+    uint32_t type = QUERY_TYPE_UNKNOWN;
+
+    switch (command)
+    {
+    case MXS_COM_QUIT: /*< 1 QUIT will close all sessions */
+    case MXS_COM_INIT_DB: /*< 2 DDL must go to the master */
+    case MXS_COM_REFRESH: /*< 7 - I guess this is session but not sure */
+    case MXS_COM_DEBUG: /*< 0d all servers dump debug info to stdout */
+    case MXS_COM_PING: /*< 0e all servers are pinged */
+    case MXS_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+    case MXS_COM_SET_OPTION: /*< 1b send options to all servers */
+        type = QUERY_TYPE_SESSION_WRITE;
+        break;
+
+    case MXS_COM_CREATE_DB: /**< 5 DDL must go to the master */
+    case MXS_COM_DROP_DB: /**< 6 DDL must go to the master */
+    case MXS_COM_STMT_CLOSE: /*< free prepared statement */
+    case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+    case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
+        type = QUERY_TYPE_WRITE;
+        break;
+
+    case MXS_COM_QUERY:
+        type = qc_get_type_mask(querybuf);
+        break;
+
+    case MXS_COM_STMT_PREPARE:
+        type = qc_get_type_mask(querybuf);
+        type |= QUERY_TYPE_PREPARE_STMT;
+        break;
+
+    case MXS_COM_STMT_EXECUTE:
+        /** Parsing is not needed for this type of packet */
+        type = QUERY_TYPE_EXEC_STMT;
+        break;
+
+    case MXS_COM_SHUTDOWN: /**< 8 where should shutdown be routed ? */
+    case MXS_COM_STATISTICS: /**< 9 ? */
+    case MXS_COM_PROCESS_INFO: /**< 0a ? */
+    case MXS_COM_CONNECT: /**< 0b ? */
+    case MXS_COM_PROCESS_KILL: /**< 0c ? */
+    case MXS_COM_TIME: /**< 0f should this be run in gateway ? */
+    case MXS_COM_DELAYED_INSERT: /**< 10 ? */
+    case MXS_COM_DAEMON: /**< 1d ? */
+    default:
+        break;
+    }
+
+    return type;
+}
 
 }
 

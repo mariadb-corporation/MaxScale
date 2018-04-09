@@ -201,6 +201,8 @@ public:
 
     void log_transaction_status(GWBUF *querybuf, uint32_t qtype);
 
+    static uint32_t determine_query_type(GWBUF *querybuf, int command);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
