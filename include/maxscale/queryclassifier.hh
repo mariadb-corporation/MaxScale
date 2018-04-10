@@ -30,6 +30,70 @@ class QueryClassifier
     QueryClassifier& operator = (const QueryClassifier&) = delete;
 
 public:
+    class RouteInfo
+    {
+    public:
+        RouteInfo();
+
+        void reset();
+
+        uint32_t target() const
+        {
+            return m_target;
+        }
+
+        uint8_t command() const
+        {
+            return m_command;
+        }
+
+        uint32_t type_mask() const
+        {
+            return m_type_mask;
+        }
+
+        uint32_t stmt_id() const
+        {
+            return m_stmt_id;
+        }
+
+        void set_command(uint8_t c)
+        {
+            m_command = c;
+        }
+
+        void set_target(uint32_t t)
+        {
+            m_target = t;
+        }
+
+        void or_target(uint32_t t)
+        {
+            m_target |= t;
+        }
+
+        void set_type_mask(uint32_t t)
+        {
+            m_type_mask = t;
+        }
+
+        void or_type_mask(uint32_t t)
+        {
+            m_type_mask |= t;
+        }
+
+        void set_stmt_id(uint32_t stmt_id)
+        {
+            m_stmt_id = stmt_id;
+        }
+
+    private:
+        uint32_t m_target;    /**< Route target type, TARGET_UNDEFINED for unknown */
+        uint8_t  m_command;   /**< The command byte, 0xff for unknown commands */
+        uint32_t m_type_mask; /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
+        uint32_t m_stmt_id;   /**< Prepared statement ID, 0 for unknown */
+    };
+
     class Handler
     {
     public:
@@ -97,6 +161,17 @@ public:
                     MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
 
+    /**
+     * @brief Return the current route info. A call to update_route_info()
+     *        will change the values.
+     *
+     * @return The current RouteInfo.
+     */
+    const RouteInfo& current_route_info()
+    {
+        return m_route_info;
+    }
+
     void master_replaced()
     {
         // As the master has changed, we can reset the temporary table information
@@ -141,11 +216,15 @@ public:
      */
     void ps_id_internal_put(uint32_t external_id, uint32_t internal_id);
 
-    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
-                             GWBUF *buffer,
-                             uint8_t* command,
-                             uint32_t* type,
-                             uint32_t* stmt_id);
+    /**
+     * @brief Update the current RouteInfo.
+     *
+     * @param current_target  What the current target is.
+     * @param pBuffer         A request buffer.
+     *
+     * @return A copy of the current route info.
+     */
+    RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
 
 private:
     bool multi_statements_allowed() const
@@ -251,6 +330,12 @@ private:
                                uint8_t packet_type,
                                uint32_t *qtype);
 
+    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
+                             GWBUF *buffer,
+                             uint8_t* command,
+                             uint32_t* type,
+                             uint32_t* stmt_id);
+
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
@@ -273,6 +358,7 @@ private:
     bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
     SPSManager        m_sPs_manager;
     HandleMap         m_ps_handles;               /** External ID to internal ID */
+    RouteInfo         m_route_info;
 };
 
 }

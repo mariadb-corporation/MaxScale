@@ -177,6 +177,22 @@ bool foreach_table(QueryClassifier& qc,
 namespace maxscale
 {
 
+QueryClassifier::RouteInfo::RouteInfo()
+    : m_target(QueryClassifier::TARGET_UNDEFINED)
+    , m_command(0xff)
+    , m_type_mask(QUERY_TYPE_UNKNOWN)
+    , m_stmt_id(0)
+{
+}
+
+void QueryClassifier::RouteInfo::reset()
+{
+    m_target = QueryClassifier::TARGET_UNDEFINED;
+    m_command = 0xff;
+    m_type_mask = QUERY_TYPE_UNKNOWN;
+    m_stmt_id = 0;
+}
+
 class QueryClassifier::PSManager
 {
     PSManager(const PSManager&) = delete;
@@ -807,6 +823,24 @@ QueryClassifier::handle_multi_temp_and_load(QueryClassifier::current_target_t cu
     }
 
     return rv;
+}
+
+QueryClassifier::RouteInfo
+QueryClassifier::update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer)
+{
+    uint8_t command;
+    uint32_t type_mask;
+    uint32_t stmt_id;
+
+    uint32_t target = get_target_type(current_target, pBuffer, &command, &type_mask, &stmt_id);
+
+    m_route_info.reset();
+    m_route_info.set_target(target);
+    m_route_info.set_command(command);
+    m_route_info.set_type_mask(type_mask);
+    m_route_info.set_stmt_id(stmt_id);
+
+    return m_route_info;
 }
 
 uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t current_target,

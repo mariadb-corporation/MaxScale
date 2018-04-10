@@ -122,7 +122,23 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
          m_qc.large_query()))
     {
         /** Gather the information required to make routing decisions */
-        RouteInfo info(this, querybuf);
+
+        QueryClassifier::current_target_t current_target;
+
+        if (m_target_node == NULL)
+        {
+            current_target = QueryClassifier::CURRENT_TARGET_UNDEFINED;
+        }
+        else if (m_target_node == m_current_master)
+        {
+            current_target = QueryClassifier::CURRENT_TARGET_MASTER;
+        }
+        else
+        {
+            current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
+        }
+
+        RouteInfo info = m_qc.update_route_info(current_target, querybuf);
 
         /** No active or pending queries */
         if (route_single_stmt(querybuf, info))

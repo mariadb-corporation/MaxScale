@@ -150,10 +150,10 @@ void RWSplitSession::retry_query(GWBUF* querybuf)
 bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
 {
     bool succp = false;
-    uint32_t stmt_id = info.stmt_id;
-    uint8_t command = info.command;
-    uint32_t qtype = info.type;
-    route_target_t route_target = info.target;
+    uint32_t stmt_id = info.stmt_id();
+    uint8_t command = info.command();
+    uint32_t qtype = info.type_mask();
+    route_target_t route_target = info.target();
     bool not_locked_to_master = !is_locked_to_master();
 
     if (not_locked_to_master && mxs_mysql_is_ps_command(command))
