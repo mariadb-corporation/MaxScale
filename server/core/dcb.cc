@@ -391,7 +391,8 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     if (user && strlen(user))
     {
         MXS_DEBUG("Looking for persistent connection DCB user %s protocol %s", user, protocol);
-        dcb = server_get_persistent(server, user, protocol, session->client_dcb->poll.thread.id);
+        dcb = server_get_persistent(server, user, session->client_dcb->remote,
+                                    protocol, session->client_dcb->poll.thread.id);
         if (dcb)
         {
             /**
@@ -427,6 +428,11 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     }
     memcpy(&(dcb->func), funcs, sizeof(MXS_PROTOCOL));
     dcb->protoname = MXS_STRDUP_A(protocol);
+
+    if (session->client_dcb->remote)
+    {
+        dcb->remote = MXS_STRDUP_A(session->client_dcb->remote);
+    }
 
     const char *authenticator = server->authenticator ?
                                 server->authenticator : dcb->func.auth_default ?

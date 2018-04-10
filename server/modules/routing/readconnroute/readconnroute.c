@@ -334,7 +334,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         {
             if (master_host)
             {
-                if (ref == master_host && (inst->bitvalue & SERVER_SLAVE))
+                if (ref == master_host && (inst->bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
                 {
                     /* Skip root master here, as it could also be slave of an external server that
                      * is not in the configuration.  Intermediate masters (Relay Servers) are also
@@ -353,16 +353,13 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
                     break;
                 }
             }
-            else
+            else if (inst->bitvalue == SERVER_MASTER)
             {
                 /* Master_host is NULL, no master server.  If requested router_option is 'master'
-                 * candidate wll be NULL.
+                 * candidate will be NULL.
                  */
-                if (inst->bitvalue & SERVER_MASTER)
-                {
-                    candidate = NULL;
-                    break;
-                }
+                candidate = NULL;
+                break;
             }
 
             /* If no candidate set, set first running server as our initial candidate server */
@@ -548,7 +545,7 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
         (router_cli_ses->backend->server->status & inst->bitmask & inst->bitvalue))
     {
-        if ((inst->bitvalue & SERVER_MASTER) && router_cli_ses->backend->active)
+        if ((inst->bitvalue == SERVER_MASTER) && router_cli_ses->backend->active)
         {
             // If we're using an active master server, verify that it is still a master
             rval = router_cli_ses->backend == get_root_master(inst->service->dbref);

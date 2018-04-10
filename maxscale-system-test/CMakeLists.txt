@@ -643,6 +643,10 @@ add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1
 # https://jira.mariadb.org/browse/MXS-1731
 add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS maxscale REPL_BACKEND)
 
+# MXS-1743: Maxscale unable to enforce round-robin between read service for Slave
+# https://jira.mariadb.org/browse/MXS-1743
+add_test_executable(mxs1743_rconn_bitmask.cpp mxs1743_rconn_bitmask mxs1743_rconn_bitmask LABELS REPL_BACKEND)
+
 # MXS-1751: Maxscale crashes when certain config is in play (with nodes down)
 # https://jira.mariadb.org/browse/MXS-1751
 add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS galeramon GALERA_BACKEND)

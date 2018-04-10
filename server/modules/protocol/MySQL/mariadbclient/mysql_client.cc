@@ -336,8 +336,8 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
 
     // Check that we match the old values
-    ss_dassert(mysql_server_capabilities_one[0] = 0xff);
-    ss_dassert(mysql_server_capabilities_one[1] = 0xf7);
+    ss_dassert(mysql_server_capabilities_one[0] == 0xff);
+    ss_dassert(mysql_server_capabilities_one[1] == 0xf7);
 
     if (is_maria)
     {
@@ -1015,6 +1015,10 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             dcb_readq_append(dcb, read_buffer);
             return 0;
         }
+
+        // Update the current command, required by KILL command processing
+        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+        proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
 
         char* message = handle_variables(session, &read_buffer);
 

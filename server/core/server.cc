@@ -213,12 +213,15 @@ server_free(SERVER *tofreeserver)
 /**
  * Get a DCB from the persistent connection pool, if possible
  *
- * @param       server      The server to set the name on
- * @param       user        The name of the user needing the connection
- * @param       protocol    The name of the protocol needed for the connection
+ * @param server      The server to set the name on
+ * @param user        The name of the user needing the connection
+ * @param ip          Client IP address
+ * @param protocol    The name of the protocol needed for the connection
+ * @param id          Thread ID
+ *
+ * @return A DCB or NULL if no connection is found
  */
-DCB *
-server_get_persistent(SERVER *server, const char *user, const char *protocol, int id)
+DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id)
 {
     DCB *dcb, *previous = NULL;
 
@@ -232,9 +235,12 @@ server_get_persistent(SERVER *server, const char *user, const char *protocol, in
         {
             if (dcb->user
                 && dcb->protoname
+                && dcb->remote
+                && ip
                 && !dcb-> dcb_errhandle_called
                 && !(dcb->flags & DCBF_HUNG)
                 && 0 == strcmp(dcb->user, user)
+                && 0 == strcmp(dcb->remote, ip)
                 && 0 == strcmp(dcb->protoname, protocol))
             {
                 if (NULL == previous)
