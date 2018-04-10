@@ -23,6 +23,12 @@
 #include <maxscale/modutil.h>
 #include <maxscale/queryclassifier.hh>
 
+#define TARGET_IS_MASTER(t)         maxscale::QueryClassifier::target_is_master(t)
+#define TARGET_IS_SLAVE(t)          maxscale::QueryClassifier::target_is_slave(t)
+#define TARGET_IS_NAMED_SERVER(t)   maxscale::QueryClassifier::target_is_named_server(t)
+#define TARGET_IS_ALL(t)            maxscale::QueryClassifier::target_is_all(t)
+#define TARGET_IS_RLAG_MAX(t)       maxscale::QueryClassifier::target_is_rlag_max(t)
+
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
 typedef std::tr1::unordered_set<std::string> TableSet;
@@ -44,6 +50,16 @@ class RWSplitSession: public mxs::RouterSession,
     RWSplitSession& operator=(const RWSplitSession&) = delete;
 
 public:
+    enum
+    {
+        TARGET_UNDEFINED    = maxscale::QueryClassifier::TARGET_UNDEFINED,
+        TARGET_MASTER       = maxscale::QueryClassifier::TARGET_MASTER,
+        TARGET_SLAVE        = maxscale::QueryClassifier::TARGET_SLAVE,
+        TARGET_NAMED_SERVER = maxscale::QueryClassifier::TARGET_NAMED_SERVER,
+        TARGET_ALL          = maxscale::QueryClassifier::TARGET_ALL,
+        TARGET_RLAG_MAX     = maxscale::QueryClassifier::TARGET_RLAG_MAX,
+    };
+
     virtual ~RWSplitSession()
     {
     }

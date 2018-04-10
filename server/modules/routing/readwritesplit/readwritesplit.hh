@@ -28,6 +28,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.h>
 #include <maxscale/session_command.hh>
@@ -50,15 +51,7 @@ enum connection_type
     SLAVE
 };
 
-enum route_target_t
-{
-    TARGET_UNDEFINED    = 0x00,
-    TARGET_MASTER       = 0x01,
-    TARGET_SLAVE        = 0x02,
-    TARGET_NAMED_SERVER = 0x04,
-    TARGET_ALL          = 0x08,
-    TARGET_RLAG_MAX     = 0x10
-};
+typedef uint32_t route_target_t;
 
 /**
  * This criteria is used when backends are chosen for a router session's use.
@@ -113,11 +106,6 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
     {NULL}
 };
 
-#define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
-#define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
-#define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
-#define TARGET_IS_ALL(t)          (t & TARGET_ALL)
-#define TARGET_IS_RLAG_MAX(t)     (t & TARGET_RLAG_MAX)
 #define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
 #define BREF_IS_IN_USE(s)           ((s)->bref_state & BREF_IN_USE)
 #define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)

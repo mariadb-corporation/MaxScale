@@ -18,7 +18,7 @@
 using namespace maxscale;
 
 RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer)
-    : target(TARGET_UNDEFINED)
+    : target(RWSplitSession::TARGET_UNDEFINED)
     , command(0xff)
     , type(QUERY_TYPE_UNKNOWN)
     , stmt_id(0)

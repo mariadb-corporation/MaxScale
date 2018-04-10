@@ -52,6 +52,31 @@ public:
         TARGET_RLAG_MAX     = 0x10
     };
 
+    static bool target_is_master(uint32_t t)
+    {
+        return (t & TARGET_MASTER);
+    }
+
+    static bool target_is_slave(uint32_t t)
+    {
+        return (t & TARGET_SLAVE);
+    }
+
+    static bool target_is_named_server(uint32_t t)
+    {
+        return (t & TARGET_NAMED_SERVER);
+    }
+
+    static bool target_is_all(uint32_t t)
+    {
+        return (t & TARGET_ALL);
+    }
+
+    static bool target_is_rlag_max(uint32_t t)
+    {
+        return (t & TARGET_RLAG_MAX);
+    }
+
     enum current_target_t
     {
         CURRENT_TARGET_UNDEFINED, /**< Current target has not been set. */
