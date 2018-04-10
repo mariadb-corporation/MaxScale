@@ -36,6 +36,9 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
     }
 
+    /* It's possible for either current_master, or both new_master & current_master to be NULL, which means
+     * autoselect. Only autoselecting new_master is not possible. Autoselection will happen at the actual
+     * switchover function. */
     MariaDBServer *found_new_master = NULL, *found_curr_master = NULL;
     auto ok_to_switch = switchover_check(new_master, current_master, &found_new_master, &found_curr_master,
                                          error_out);
@@ -43,11 +46,12 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
     bool rval = false;
     if (ok_to_switch)
     {
-        bool switched = do_switchover(found_curr_master->server_base, found_new_master->server_base,
-                                      error_out);
-
-        const char* curr_master_name = found_curr_master->server_base->server->unique_name;
-        const char* new_master_name = found_new_master->server_base->server->unique_name;
+        bool switched = do_switchover(&found_curr_master, &found_new_master, error_out);
+        const char AUTOSELECT[] = "<autoselect>";
+        const char* curr_master_name = found_curr_master ?
+                                       found_curr_master->server_base->server->unique_name : AUTOSELECT;
+        const char* new_master_name = found_new_master ?
+                                      found_new_master->server_base->server->unique_name : AUTOSELECT;
 
         if (switched)
         {
@@ -523,39 +527,75 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaD
  * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
  * intermediate step fails, the cluster may be left without a master.
  *
- * @param current_master Current master server
- * @param new_master Slave which should be promoted
+ * @param current_master Handle to current master server. If null, the autoselected server is written here.
+ * @param new_master Handle to slave which should be promoted. If null, the autoselected server is written
+ * here.
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful. If false, the cluster can be in various situations depending on which step
  * failed. In practice, manual intervention is usually required on failure.
  */
-bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
+bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer** new_master,
                                    json_t** err_out)
 {
-    MXS_MONITORED_SERVER* demotion_target = current_master ? current_master : m_master;
-    if (demotion_target == NULL)
+    ss_dassert(current_master && new_master);
+    MariaDBServer* demotion_target = NULL;
+    if (*current_master == NULL)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Cluster does not have a running master. Run failover instead.");
-        return false;
+        // Autoselect current master.
+        if (m_master && SERVER_IS_MASTER(m_master->server))
+        {
+            demotion_target = get_server_info(m_master);
+            *current_master = demotion_target;
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(err_out, "Could not autoselect current master for switchover. Cluster does "
+                                 "not have a master or master is in maintenance.");
+            return false;
+        }
     }
+    else
+    {
+        // No need to check a given current master, it has already been checked.
+        demotion_target = *current_master;
+    }
+
     if (m_master_gtid_domain < 0)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
         return false;
     }
+
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
     int seconds_remaining = m_switchover_timeout;
     time_t start_time = time(NULL);
-    // Step 1: Select promotion candidate, save all slaves except promotion target to an array. If we have a
+
+    // Step 1: Save all slaves except promotion target to an array. If we have a
     // user-defined master candidate, check it. Otherwise, autoselect.
-    MXS_MONITORED_SERVER* promotion_target = NULL;
+    MariaDBServer* promotion_target = NULL;
     MonServerArray redirectable_slaves;
-    if (new_master)
+    if (*new_master == NULL)
     {
-        if (switchover_check_preferred_master(new_master, err_out))
+        // Autoselect new master.
+        auto mon_promotion_target = select_new_master(&redirectable_slaves, err_out);
+        if (mon_promotion_target)
         {
-            promotion_target = new_master;
+            promotion_target = get_server_info(mon_promotion_target);
+            *new_master = promotion_target;
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(err_out, "Could not autoselect new master for switchover.");
+            return false;
+        }
+    }
+    else
+    {
+        // Check user-given new master. Some checks have already been performed but more is needed.
+        if (switchover_check_preferred_master((*new_master)->server_base, err_out))
+        {
+            promotion_target = *new_master;
             /* User-given candidate is good. Update info on all slave servers.
              * The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
              * path analogous with failover_select_new_master(). The later functions can then assume that
@@ -563,32 +603,27 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
              */
             for (MXS_MONITORED_SERVER* slave = m_monitor_base->monitored_servers; slave; slave = slave->next)
             {
-                if (slave != promotion_target)
+                if (slave != promotion_target->server_base)
                 {
                     MariaDBServer* slave_info = update_slave_info(slave);
                     // If master is replicating from external master, it is updated but not added to array.
-                    if (slave_info && slave != current_master)
+                    if (slave_info && slave != demotion_target->server_base)
                     {
                         redirectable_slaves.push_back(slave);
                     }
                 }
             }
         }
+        else
+        {
+            return false;
+        }
     }
-    else
-    {
-        promotion_target = select_new_master(&redirectable_slaves, err_out);
-    }
-    if (promotion_target == NULL)
-    {
-        return false;
-    }
+    ss_dassert(demotion_target && promotion_target);
 
     bool rval = false;
-    MariaDBServer* curr_master_info = get_server_info(demotion_target);
-
     // Step 2: Set read-only to on, flush logs, update master gtid:s
-    if (switchover_demote_master(demotion_target, curr_master_info, err_out))
+    if (switchover_demote_master(demotion_target->server_base, demotion_target, err_out))
     {
         bool catchup_and_promote_success = false;
         time_t step2_time = time(NULL);
@@ -596,8 +631,8 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
 
         // Step 3: Wait for the slaves (including promotion target) to catch up with master.
         MonServerArray catchup_slaves = redirectable_slaves;
-        catchup_slaves.push_back(promotion_target);
-        if (switchover_wait_slaves_catchup(catchup_slaves, curr_master_info->gtid_binlog_pos,
+        catchup_slaves.push_back(promotion_target->server_base);
+        if (switchover_wait_slaves_catchup(catchup_slaves, demotion_target->gtid_binlog_pos,
                                            seconds_remaining, m_monitor_base->read_timeout, err_out))
         {
             time_t step3_time = time(NULL);
@@ -606,18 +641,19 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
             seconds_remaining -= seconds_step3;
 
             // Step 4: On new master STOP and RESET SLAVE, set read-only to off.
-            if (promote_new_master(promotion_target, err_out))
+            if (promote_new_master(promotion_target->server_base, err_out))
             {
                 catchup_and_promote_success = true;
                 // Step 5: Redirect slaves and start replication on old master.
                 MonServerArray redirected_slaves;
-                bool start_ok = switchover_start_slave(demotion_target, promotion_target->server);
+                bool start_ok = switchover_start_slave(demotion_target->server_base,
+                                                       promotion_target->server_base->server);
                 if (start_ok)
                 {
-                    redirected_slaves.push_back(demotion_target);
+                    redirected_slaves.push_back(demotion_target->server_base);
                 }
-                int redirects = redirect_slaves(promotion_target, redirectable_slaves,
-                                                     &redirected_slaves);
+                int redirects = redirect_slaves(promotion_target->server_base, redirectable_slaves,
+                                                &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success)
@@ -633,7 +669,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
                         MXS_WARNING("Replicating from external master, skipping final check.");
                         rval = true;
                     }
-                    else if (wait_cluster_stabilization(promotion_target, redirected_slaves,
+                    else if (wait_cluster_stabilization(promotion_target->server_base, redirected_slaves,
                                                         seconds_remaining))
                     {
                         rval = true;
@@ -646,7 +682,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
                 }
                 else
                 {
-                    print_redirect_errors(demotion_target, redirectable_slaves, err_out);
+                    print_redirect_errors(demotion_target->server_base, redirectable_slaves, err_out);
                 }
             }
         }
@@ -655,21 +691,22 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
         {
             // Step 3 or 4 failed, try to undo step 2.
             const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
-            if (mxs_mysql_query(demotion_target->con, QUERY_UNDO) == 0)
+            if (mxs_mysql_query(demotion_target->server_base->con, QUERY_UNDO) == 0)
             {
                 PRINT_MXS_JSON_ERROR(err_out, "read_only disabled on server %s.",
-                                     demotion_target->server->unique_name);
+                                     demotion_target->server_base->server->unique_name);
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(err_out, "Could not disable read_only on server %s: '%s'.",
-                                     demotion_target->server->unique_name, mysql_error(demotion_target->con));
+                                     demotion_target->server_base->server->unique_name,
+                                     mysql_error(demotion_target->server_base->con));
             }
 
             // Try to reactivate external replication if any.
             if (m_external_master_port != PORT_UNKNOWN)
             {
-                start_external_replication(new_master, err_out);
+                start_external_replication(promotion_target->server_base, err_out);
             }
         }
     }
@@ -1598,69 +1635,67 @@ static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonS
 
 /**
  * Check cluster and parameters for suitability to switchover. Also writes found servers to output pointers.
- * In case of error the output server values will not be written to.
+ * If a server parameter is NULL, the corresponding output parameter is not written to.
  *
- * @param new_master New master requested by the user
- * @param current_master Current master given by user. Can be null for autoselect.
- * @param found_new_master Where to write found new master
- * @param found_current_master Where to write found current master
+ * @param new_master New master requested by the user. Can be null for autoselect.
+ * @param current_master Current master given by the user. Can be null for autoselect.
+ * @param new_master_out Where to write found new master.
+ * @param current_master_out Where to write found current master.
  * @param error_out Error output, can be null.
  * @return True if cluster is suitable and server parameters were valid and found.
  */
 bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master,
-                                      MariaDBServer** found_new_master, MariaDBServer** found_current_master,
+                                      MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                                       json_t** error_out)
 {
+    bool new_master_ok = true, current_master_ok = true;
     const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
-    // Check that both .
-    MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(m_monitor_base, new_master);
-    if (mon_new_master == NULL)
+    // Check that both servers are ok if specified. Null is a valid value.
+    if (new_master)
     {
-        PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, m_monitor_base->name);
-    }
-
-    // Check given current master. If NULL, autoselect.
-    MXS_MONITORED_SERVER* mon_curr_master = NULL;
-    if (current_master)
-    {
-        mon_curr_master = mon_get_monitored_server(m_monitor_base, current_master);
-        if (mon_curr_master == NULL)
+        auto mon_new_master = mon_get_monitored_server(m_monitor_base, new_master);
+        if (mon_new_master == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name,
-                                 m_monitor_base->name);
+            new_master_ok = false;
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, m_monitor_base->name);
         }
-    }
-    else
-    {
-        // Autoselect current master.
-        if (m_master)
+        else if (!switchover_check_new(mon_new_master, error_out))
         {
-            mon_curr_master = m_master;
+            new_master_ok = false;
         }
         else
         {
-            const char NO_MASTER[] = "Monitor '%s' has no master server.";
-            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
+            *new_master_out = get_server_info(mon_new_master);
         }
     }
 
-    bool current_ok = mon_curr_master ? switchover_check_current(mon_curr_master, error_out) : false;
-    bool new_ok = mon_new_master ? switchover_check_new(mon_new_master, error_out) : false;
-    // Check that all slaves are using gtid-replication
-    bool gtid_ok = true;
-    for (auto mon_serv = m_monitor_base->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
+    if (current_master)
     {
-        if (SERVER_IS_SLAVE(mon_serv->server) && !uses_gtid(mon_serv, error_out))
+        auto mon_curr_master = mon_get_monitored_server(m_monitor_base, current_master);
+        if (mon_curr_master == NULL)
+        {
+            current_master_ok = false;
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, m_monitor_base->name);
+        }
+        else if (!switchover_check_current(mon_curr_master, error_out))
+        {
+            current_master_ok = false;
+        }
+        else
+        {
+            *current_master_out = get_server_info(mon_curr_master);
+        }
+    }
+
+    // Check that all slaves are using gtid-replication.
+    bool gtid_ok = true;
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        if (SERVER_IS_SLAVE(iter->server_base->server) && !uses_gtid(iter->server_base, error_out))
         {
             gtid_ok = false;
         }
     }
 
-    bool rval = current_ok && new_ok && gtid_ok;
-    if (rval)
-    {
-        *found_new_master = get_server_info(mon_new_master);
-        *found_current_master = get_server_info(mon_curr_master);
-    }
-    return rval;
+    return new_master_ok && current_master_ok && gtid_ok;
 }

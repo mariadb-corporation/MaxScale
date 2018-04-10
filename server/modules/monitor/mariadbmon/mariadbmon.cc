@@ -1301,10 +1301,10 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  */
 bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
-    ss_dassert((args->argc == 2) || (args->argc == 3));
+    ss_dassert((args->argc >= 1) && (args->argc <= 3));
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
-    ss_dassert((args->argc == 2) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+    ss_dassert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
+    ss_dassert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     bool rval = false;
     if (config_get_global_options()->passive)
@@ -1316,7 +1316,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon->handle);
-        SERVER* new_master = args->argv[1].value.server;
+        SERVER* new_master = (args->argc >= 2) ? args->argv[1].value.server : NULL;
         SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
         rval = handle->manual_switchover(new_master, current_master, error_out);
     }
@@ -1393,7 +1393,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
             ARG_MONITOR_DESC
         },
-        { MODULECMD_ARG_SERVER, "New master" },
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "New master (optional)" },
         { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)" }
     };
 

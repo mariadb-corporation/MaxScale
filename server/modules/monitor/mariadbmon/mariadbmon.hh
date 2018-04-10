@@ -219,8 +219,7 @@ private:
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();
     MXS_MONITORED_SERVER* get_replication_tree();
     void monitor_mysql_db(MariaDBServer *serv_info);
-    bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
-                       json_t** err_out);
+    bool do_switchover(MariaDBServer** current_master, MariaDBServer** new_master, json_t** err_out);
     bool do_failover(json_t** err_out);
     uint32_t do_rejoin(const ServerRefArray& joinable_servers);
     bool mon_process_failover(bool* cluster_modified_out);
@@ -229,7 +228,7 @@ private:
     bool failover_check(json_t** error_out);
     void disable_setting(const char* setting);
     bool switchover_check(SERVER* new_master, SERVER* current_master,
-                          MariaDBServer** found_new_master, MariaDBServer** found_current_master,
+                          MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                           json_t** error_out);
     bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
     bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
