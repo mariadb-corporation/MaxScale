@@ -169,7 +169,7 @@ private:
     bool m_auto_failover;            /**< If automatic master failover is enabled */
     bool m_auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                       *   replicating from the wrong master automatically. */
-    MonServerArray m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+    ServerRefArray m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
@@ -188,13 +188,13 @@ private:
     bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
     bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
-    bool switchover_wait_slaves_catchup(const MonServerArray& slaves, const GtidList& gtid, int total_timeout,
+    bool switchover_wait_slaves_catchup(const ServerRefArray& slaves, const GtidList& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
-    bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
+    bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerRefArray& slaves,
                                     int seconds_remaining);
     bool switchover_check_preferred_master(MXS_MONITORED_SERVER* preferred, json_t** err_out);
     bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
-    MXS_MONITORED_SERVER* select_new_master(MonServerArray* slaves_out, json_t** err_out);
+    MariaDBServer* select_new_master(ServerRefArray* slaves_out, json_t** err_out);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info,
                              uint32_t gtid_domain);
@@ -206,8 +206,8 @@ private:
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
-    int redirect_slaves(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
-                        MonServerArray* redirected_slaves);
+    int redirect_slaves(MariaDBServer* new_master, const ServerRefArray& slaves,
+                        ServerRefArray* redirected_slaves);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
@@ -249,3 +249,19 @@ private:
     MXS_MONITORED_SERVER* getServerByNodeId(long);
     MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
 };
+
+/**
+ * Generates a list of server names separated by ', '
+ *
+ * @param servers The servers
+ * @return Server names
+ */
+std::string monitored_servers_to_string(const ServerRefArray& servers);
+
+/**
+ * Get MariaDB connection error strings from all the given servers, form one string.
+ *
+ * @param servers Servers with errors
+ * @return Concatenated string.
+ */
+std::string get_connection_errors(const ServerRefArray& servers);

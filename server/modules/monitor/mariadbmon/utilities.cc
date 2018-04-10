@@ -16,9 +16,7 @@
 #include <inttypes.h>
 #include <limits>
 #include <string>
-#include <sstream>
 #include <maxscale/debug.h>
-#include <maxscale/mysql_utils.h>
 
 using std::string;
 
@@ -39,40 +37,6 @@ int64_t scan_server_id(const char* id_string)
 #endif
     ss_dassert(server_id >= SERVER_ID_MIN && server_id <= SERVER_ID_MAX);
     return server_id;
-}
-
-string get_connection_errors(const MonServerArray& servers)
-{
-    // Get errors from all connections, form a string.
-    std::stringstream ss;
-    for (MonServerArray::const_iterator iter = servers.begin(); iter != servers.end(); iter++)
-    {
-        const char* error = mysql_error((*iter)->con);
-        ss_dassert(*error); // Every connection should have an error.
-        ss << (*iter)->server->unique_name << ": '" << error << "'";
-        if (iter + 1 != servers.end())
-        {
-            ss << ", ";
-        }
-    }
-    return ss.str();
-}
-
-string monitored_servers_to_string(const MonServerArray& array)
-{
-    string rval;
-    size_t array_size = array.size();
-    if (array_size > 0)
-    {
-        const char* separator = "";
-        for (size_t i = 0; i < array_size; i++)
-        {
-            rval += separator;
-            rval += array[i]->server->unique_name;
-            separator = ",";
-        }
-    }
-    return rval;
 }
 
 QueryResult::QueryResult(MYSQL_RES* resultset)

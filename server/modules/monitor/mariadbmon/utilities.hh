@@ -29,8 +29,6 @@
        }\
     } while (false)
 
-typedef std::vector<MXS_MONITORED_SERVER*> MonServerArray;
-
 extern const int64_t SERVER_ID_UNKNOWN;
 
 /**
@@ -40,22 +38,6 @@ extern const int64_t SERVER_ID_UNKNOWN;
  * @return Server id, or -1 if scanning fails
  */
 int64_t scan_server_id(const char* id_string);
-
-/**
- * Get MariaDB connection error strings from all the given servers, form one string.
- *
- * @param slaves Servers with errors
- * @return Concatenated string.
- */
-std::string get_connection_errors(const MonServerArray& servers);
-
-/**
- * Generates a list of server names separated by ', '
- *
- * @param array The servers
- * @return Server names
- */
-std::string monitored_servers_to_string(const MonServerArray& array);
 
 /**
  * Helper class for simplifying working with resultsets. Used in MariaDBServer.

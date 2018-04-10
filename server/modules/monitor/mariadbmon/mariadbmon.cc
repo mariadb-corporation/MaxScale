@@ -196,7 +196,7 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
     int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor_base, &excluded_array);
     for (int i = 0; i < n_excluded; i++)
     {
-        m_excluded_servers.push_back(excluded_array[i]);
+        m_excluded_servers.push_back(get_server_info(excluded_array[i]));
     }
     MXS_FREE(excluded_array);
 
@@ -1375,6 +1375,38 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
         rv = handle->manual_rejoin(server, output);
     }
     return rv;
+}
+
+string monitored_servers_to_string(const ServerRefArray& servers)
+{
+    string rval;
+    size_t array_size = servers.size();
+    if (array_size > 0)
+    {
+        const char* separator = "";
+        for (size_t i = 0; i < array_size; i++)
+        {
+            rval += separator;
+            rval += servers[i]->server_base->server->unique_name;
+            separator = ",";
+        }
+    }
+    return rval;
+}
+
+string get_connection_errors(const ServerRefArray& servers)
+{
+    // Get errors from all connections, form a string.
+    string rval;
+    string separator;
+    for (auto iter = servers.begin(); iter != servers.end(); iter++)
+    {
+        const char* error = mysql_error((*iter)->server_base->con);
+        ss_dassert(*error); // Every connection should have an error.
+        rval += separator + (*iter)->server_base->server->unique_name + ": '" + error + "'";
+        separator = ", ";
+    }
+    return rval;
 }
 
 MXS_BEGIN_DECLS

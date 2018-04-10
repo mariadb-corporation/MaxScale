@@ -21,7 +21,7 @@
 
 using std::string;
 
-static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonServerArray& servers,
+static void print_redirect_errors(MariaDBServer* first_server, const ServerRefArray& servers,
                                   json_t** err_out);
 
 bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -216,21 +216,22 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
 /**
  * Redirects slaves to replicate from another master server.
  *
- * @param slaves An array of slaves
  * @param new_master The replication master
+ * @param slaves An array of slaves
  * @param redirected_slaves A vector where to insert successfully redirected slaves.
  * @return The number of slaves successfully redirected.
  */
-int MariaDBMonitor::redirect_slaves(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
-                                    MonServerArray* redirected_slaves)
+int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerRefArray& slaves,
+                                    ServerRefArray* redirected_slaves)
 {
     ss_dassert(redirected_slaves != NULL);
     MXS_NOTICE("Redirecting slaves to new master.");
-    string change_cmd = generate_change_master_cmd(new_master->server->name, new_master->server->port);
+    string change_cmd = generate_change_master_cmd(new_master->server_base->server->name,
+                                                   new_master->server_base->server->port);
     int successes = 0;
-    for (MonServerArray::const_iterator iter = slaves.begin(); iter != slaves.end(); iter++)
+    for (auto iter = slaves.begin(); iter != slaves.end(); iter++)
     {
-        if (redirect_one_slave(*iter, change_cmd.c_str()))
+        if (redirect_one_slave((*iter)->server_base, change_cmd.c_str()))
         {
             successes++;
             redirected_slaves->push_back(*iter);
@@ -574,14 +575,13 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
     // Step 1: Save all slaves except promotion target to an array. If we have a
     // user-defined master candidate, check it. Otherwise, autoselect.
     MariaDBServer* promotion_target = NULL;
-    MonServerArray redirectable_slaves;
+    ServerRefArray redirectable_slaves;
     if (*new_master == NULL)
     {
         // Autoselect new master.
-        auto mon_promotion_target = select_new_master(&redirectable_slaves, err_out);
-        if (mon_promotion_target)
+        promotion_target = select_new_master(&redirectable_slaves, err_out);
+        if (promotion_target)
         {
-            promotion_target = get_server_info(mon_promotion_target);
             *new_master = promotion_target;
         }
         else
@@ -599,17 +599,18 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
             /* User-given candidate is good. Update info on all slave servers.
              * The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
              * path analogous with failover_select_new_master(). The later functions can then assume that
-             * slave server info is up to date.
-             */
-            for (MXS_MONITORED_SERVER* slave = m_monitor_base->monitored_servers; slave; slave = slave->next)
+             * slave server info is up to date. If the master is replicating from external master, it is
+             * updated by update_slave_info() but not added to array. */
+            for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
             {
-                if (slave != promotion_target->server_base)
+                MariaDBServer& server = *iter;
+                if (&server != promotion_target)
                 {
-                    MariaDBServer* slave_info = update_slave_info(slave);
+                    MariaDBServer* slave_info = update_slave_info(server.server_base);
                     // If master is replicating from external master, it is updated but not added to array.
-                    if (slave_info && slave != demotion_target->server_base)
+                    if (slave_info && &server != demotion_target)
                     {
-                        redirectable_slaves.push_back(slave);
+                        redirectable_slaves.push_back(&server);
                     }
                 }
             }
@@ -630,8 +631,8 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
         seconds_remaining -= difftime(step2_time, start_time);
 
         // Step 3: Wait for the slaves (including promotion target) to catch up with master.
-        MonServerArray catchup_slaves = redirectable_slaves;
-        catchup_slaves.push_back(promotion_target->server_base);
+        ServerRefArray catchup_slaves = redirectable_slaves;
+        catchup_slaves.push_back(promotion_target);
         if (switchover_wait_slaves_catchup(catchup_slaves, demotion_target->gtid_binlog_pos,
                                            seconds_remaining, m_monitor_base->read_timeout, err_out))
         {
@@ -645,15 +646,14 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
             {
                 catchup_and_promote_success = true;
                 // Step 5: Redirect slaves and start replication on old master.
-                MonServerArray redirected_slaves;
+                ServerRefArray redirected_slaves;
                 bool start_ok = switchover_start_slave(demotion_target->server_base,
                                                        promotion_target->server_base->server);
                 if (start_ok)
                 {
-                    redirected_slaves.push_back(demotion_target->server_base);
+                    redirected_slaves.push_back(demotion_target);
                 }
-                int redirects = redirect_slaves(promotion_target->server_base, redirectable_slaves,
-                                                &redirected_slaves);
+                int redirects = redirect_slaves(promotion_target, redirectable_slaves, &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success)
@@ -669,7 +669,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
                         MXS_WARNING("Replicating from external master, skipping final check.");
                         rval = true;
                     }
-                    else if (wait_cluster_stabilization(promotion_target->server_base, redirected_slaves,
+                    else if (wait_cluster_stabilization(promotion_target, redirected_slaves,
                                                         seconds_remaining))
                     {
                         rval = true;
@@ -682,7 +682,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
                 }
                 else
                 {
-                    print_redirect_errors(demotion_target->server_base, redirectable_slaves, err_out);
+                    print_redirect_errors(demotion_target, redirectable_slaves, err_out);
                 }
             }
         }
@@ -732,8 +732,8 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
     int seconds_remaining = m_failover_timeout;
     time_t start_time = time(NULL);
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
-    MonServerArray redirectable_slaves;
-    MXS_MONITORED_SERVER* new_master = select_new_master(&redirectable_slaves, err_out);
+    ServerRefArray redirectable_slaves;
+    MariaDBServer* new_master = select_new_master(&redirectable_slaves, err_out);
     if (new_master == NULL)
     {
         return false;
@@ -743,7 +743,7 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
 
     bool rval = false;
     // Step 2: Wait until relay log consumed.
-    if (failover_wait_relay_log(new_master, seconds_remaining, err_out))
+    if (failover_wait_relay_log(new_master->server_base, seconds_remaining, err_out))
     {
         time_t step2_time = time(NULL);
         int seconds_step2 = difftime(step2_time, step1_time);
@@ -751,10 +751,10 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
         seconds_remaining -= seconds_step2;
 
         // Step 3: Stop and reset slave, set read-only to 0.
-        if (promote_new_master(new_master, err_out))
+        if (promote_new_master(new_master->server_base, err_out))
         {
             // Step 4: Redirect slaves.
-            MonServerArray redirected_slaves;
+            ServerRefArray redirected_slaves;
             int redirects = redirect_slaves(new_master, redirectable_slaves, &redirected_slaves);
             bool success = redirectable_slaves.empty() ? true : redirects > 0;
             if (success)
@@ -971,15 +971,13 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time for all servers
  */
-bool MariaDBMonitor::switchover_wait_slaves_catchup(const MonServerArray& slaves, const GtidList& gtid,
+bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerRefArray& slaves, const GtidList& gtid,
                                                     int total_timeout, int read_timeout, json_t** err_out)
 {
     bool success = true;
     int seconds_remaining = total_timeout;
 
-    for (MonServerArray::const_iterator iter = slaves.begin();
-         iter != slaves.end() && success;
-         iter++)
+    for (auto iter = slaves.begin(); iter != slaves.end() && success; iter++)
     {
         if (seconds_remaining <= 0)
         {
@@ -988,8 +986,7 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const MonServerArray& slaves
         else
         {
             time_t begin = time(NULL);
-            MXS_MONITORED_SERVER* slave = *iter;
-            auto slave_server = get_server_info(slave);
+            MariaDBServer* slave_server = *iter;
             if (slave_server->wait_until_gtid(gtid, seconds_remaining, err_out))
             {
                 seconds_remaining -= difftime(time(NULL), begin);
@@ -1011,22 +1008,21 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const MonServerArray& slaves
  * @param seconds_remaining How long can we wait
  * @return True, if at least one slave got the new event within the time limit
  */
-bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const MonServerArray& slaves,
+bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const ServerRefArray& slaves,
                                                 int seconds_remaining)
 {
     ss_dassert(!slaves.empty());
     bool rval = false;
     time_t begin = time(NULL);
-    MariaDBServer* new_master_info = get_server_info(new_master);
 
-    if (mxs_mysql_query(new_master->con, "FLUSH TABLES;") == 0 &&
-        new_master_info->update_gtids())
+    if (mxs_mysql_query(new_master->server_base->con, "FLUSH TABLES;") == 0 &&
+        new_master->update_gtids())
     {
         int query_fails = 0;
         int repl_fails = 0;
         int successes = 0;
-        const GtidList& target = new_master_info->gtid_current_pos;
-        MonServerArray wait_list = slaves; // Check all the servers in the list
+        const GtidList& target = new_master->gtid_current_pos;
+        ServerRefArray wait_list = slaves; // Check all the servers in the list
         bool first_round = true;
         bool time_is_up = false;
 
@@ -1041,22 +1037,21 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             int i = wait_list.size() - 1;
             while (i >= 0)
             {
-                MXS_MONITORED_SERVER* slave = wait_list[i];
-                MariaDBServer* slave_info = get_server_info(slave);
-                if (slave_info->update_gtids() &&
-                    slave_info->do_show_slave_status())
+                MariaDBServer* slave = wait_list[i];
+                if (slave->update_gtids() &&
+                    slave->do_show_slave_status())
                 {
-                    if (!slave_info->slave_status.last_error.empty())
+                    if (!slave->slave_status.last_error.empty())
                     {
                         // IO or SQL error on slave, replication is a fail
                         MXS_WARNING("Slave '%s' cannot start replication: '%s'.",
-                                    slave->server->unique_name,
-                                    slave_info->slave_status.last_error.c_str());
+                                    slave->server_base->server->unique_name,
+                                    slave->slave_status.last_error.c_str());
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
                     }
-                    else if (GtidList::events_ahead(target, slave_info->gtid_current_pos,
-                                                GtidList::MISSING_DOMAIN_IGNORE) == 0)
+                    else if (GtidList::events_ahead(target, slave->gtid_current_pos,
+                                                    GtidList::MISSING_DOMAIN_IGNORE) == 0)
                     {
                         // This slave has reached the same gtid as master, remove from list
                         wait_list.erase(wait_list.begin() + i);
@@ -1078,7 +1073,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             }
         }
 
-        MonServerArray::size_type fails = repl_fails + query_fails + wait_list.size();
+        auto fails = repl_fails + query_fails + wait_list.size();
         if (fails > 0)
         {
             const char MSG[] = "Replication from the new master could not be confirmed for %lu slaves. "
@@ -1163,7 +1158,7 @@ bool MariaDBMonitor::promote_new_master(MXS_MONITORED_SERVER* new_master, json_t
  * @param err_out json object for error printing. Can be NULL.
  * @return The found master, or NULL if not found
  */
-MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(MonServerArray* slaves_out, json_t** err_out)
+MariaDBServer* MariaDBMonitor::select_new_master(ServerRefArray* slaves_out, json_t** err_out)
 {
     ss_dassert(slaves_out && slaves_out->size() == 0);
     /* Select a new master candidate. Selects the one with the latest event in relay log.
@@ -1171,36 +1166,37 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(MonServerArray* slaves_o
     MXS_MONITORED_SERVER* current_best = NULL;
     MariaDBServer* current_best_info = NULL;
      // Servers that cannot be selected because of exclusion, but seem otherwise ok.
-    MonServerArray valid_but_excluded;
+    ServerRefArray valid_but_excluded;
     // Index of the current best candidate in slaves_out
     int master_vector_index = -1;
 
-    for (MXS_MONITORED_SERVER *cand = m_monitor_base->monitored_servers; cand; cand = cand->next)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        // If a server cannot be connected to, it won't be considered for promotion or redirected.
-        // Do not worry about the exclusion list yet, querying the excluded servers is ok.
-        MariaDBServer* cand_info = update_slave_info(cand);
-        // If master is replicating from external master, it is updated but not added to array.
-        if (cand_info && cand != m_master)
+        /* If a server cannot be connected to, it won't be considered for promotion or redirected.
+         * Do not worry about the exclusion list yet, querying the excluded servers is ok.
+         * If master is replicating from external master, it is updated by update_slave_info()
+         * but not added to array. */
+        MariaDBServer* cand = update_slave_info(iter->server_base);
+        if (cand && cand->server_base != m_master)
         {
             slaves_out->push_back(cand);
             // Check that server is not in the exclusion list while still being a valid choice.
-            if (server_is_excluded(cand) && cand_info->check_replication_settings(WARNINGS_OFF))
+            if (server_is_excluded(cand->server_base) && cand->check_replication_settings(WARNINGS_OFF))
             {
                 valid_but_excluded.push_back(cand);
                 const char CANNOT_SELECT[] = "Promotion candidate '%s' is excluded from new "
                 "master selection.";
-                MXS_INFO(CANNOT_SELECT, cand->server->unique_name);
+                MXS_INFO(CANNOT_SELECT, cand->server_base->server->unique_name);
             }
-            else if (cand_info->check_replication_settings())
+            else if (cand->check_replication_settings())
             {
                 // If no new master yet, accept any valid candidate. Otherwise check.
                 if (current_best == NULL ||
-                    is_candidate_better(current_best_info, cand_info, m_master_gtid_domain))
+                    is_candidate_better(current_best_info, cand, m_master_gtid_domain))
                 {
                     // The server has been selected for promotion, for now.
-                    current_best = cand;
-                    current_best_info = cand_info;
+                    current_best = cand->server_base;
+                    current_best_info = cand;
                     master_vector_index = slaves_out->size() - 1;
                 }
             }
@@ -1210,18 +1206,16 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(MonServerArray* slaves_o
     if (current_best)
     {
         // Remove the selected master from the vector.
-        MonServerArray::iterator remove_this = slaves_out->begin();
-        remove_this += master_vector_index;
-        slaves_out->erase(remove_this);
+        auto it_remove = slaves_out->begin();
+        it_remove += master_vector_index;
+        slaves_out->erase(it_remove);
     }
 
     // Check if any of the excluded servers would be better than the best candidate.
-    for (MonServerArray::const_iterator iter = valid_but_excluded.begin();
-         iter != valid_but_excluded.end();
-         iter++)
+    for (auto iter = valid_but_excluded.begin(); iter != valid_but_excluded.end(); iter++)
     {
-        MariaDBServer* excluded_info = get_server_info(*iter);
-        const char* excluded_name = (*iter)->server->unique_name;
+        MariaDBServer* excluded_info = *iter;
+        const char* excluded_name = (*iter)->server_base->server->unique_name;
         if (current_best == NULL)
         {
             const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
@@ -1245,7 +1239,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(MonServerArray* slaves_o
     {
         PRINT_MXS_JSON_ERROR(err_out, "No suitable promotion candidate found.");
     }
-    return current_best;
+    return current_best ? get_server_info(current_best) : NULL;
 }
 
 /**
@@ -1260,7 +1254,7 @@ bool MariaDBMonitor::server_is_excluded(const MXS_MONITORED_SERVER* server)
     size_t n_excluded = m_excluded_servers.size();
     for (size_t i = 0; i < n_excluded; i++)
     {
-        if (m_excluded_servers[i] == server)
+        if (m_excluded_servers[i]->server_base == server)
         {
             return true;
         }
@@ -1611,7 +1605,7 @@ bool MariaDBMonitor::slave_receiving_events()
  * @param redirectable_slaves Other servers to query for errors.
  * @param err_out If not null, the error output object.
  */
-static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonServerArray& servers,
+static void print_redirect_errors(MariaDBServer* first_server, const ServerRefArray& servers,
                                   json_t** err_out)
 {
     // Individual server errors have already been printed to the log.
@@ -1620,16 +1614,18 @@ static void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const MonS
     MXS_ERROR(MSG);
     if (err_out)
     {
-        MonServerArray failed_slaves;
+        ServerRefArray failed_slaves;
         if (first_server)
         {
             failed_slaves.push_back(first_server);
         }
-        failed_slaves.insert(failed_slaves.end(),
-                             servers.begin(), servers.end());
+        for (auto iter = servers.begin(); iter != servers.end(); iter++)
+        {
+            failed_slaves.push_back(*iter);
+        }
+
         string combined_error = get_connection_errors(failed_slaves);
-        *err_out = mxs_json_error_append(*err_out,
-                                         "%s Errors: %s.", MSG, combined_error.c_str());
+        *err_out = mxs_json_error_append(*err_out, "%s Errors: %s.", MSG, combined_error.c_str());
     }
 }
 
