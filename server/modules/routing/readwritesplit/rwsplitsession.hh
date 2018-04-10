@@ -15,7 +15,6 @@
 #include "readwritesplit.hh"
 #include "rwsplit_ps.hh"
 #include "rwbackend.hh"
-#include "routeinfo.hh"
 
 #include <string>
 
@@ -147,7 +146,7 @@ private:
     void purge_history(mxs::SSessionCommand& sescmd);
 
     bool route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type);
-    bool route_single_stmt(GWBUF *querybuf, const RouteInfo& info);
+    bool route_single_stmt(GWBUF *querybuf);
     bool route_stored_query();
 
     mxs::SRWBackend get_hinted_backend(char *name);

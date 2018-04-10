@@ -28,8 +28,6 @@
 #include <maxscale/session_command.hh>
 #include <maxscale/utils.hh>
 
-#include "routeinfo.hh"
-
 using namespace maxscale;
 
 /**
@@ -140,16 +138,16 @@ void RWSplitSession::retry_query(GWBUF* querybuf)
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
- * @param inst      router instance
- * @param rses      router session
  * @param querybuf  GWBUF including the query
  *
  * @return true if routing succeed or if it failed due to unsupported query.
  * false if backend failure was encountered.
  */
-bool RWSplitSession::route_single_stmt(GWBUF *querybuf, const RouteInfo& info)
+bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
 {
     bool succp = false;
+
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     uint32_t stmt_id = info.stmt_id();
     uint8_t command = info.command();
     uint32_t qtype = info.type_mask();

@@ -12,7 +12,6 @@
  */
 
 #include "rwsplitsession.hh"
-#include "routeinfo.hh"
 
 #include <cmath>
 
@@ -138,10 +137,10 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
             current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
         }
 
-        RouteInfo info = m_qc.update_route_info(current_target, querybuf);
+        m_qc.update_route_info(current_target, querybuf);
 
         /** No active or pending queries */
-        if (route_single_stmt(querybuf, info))
+        if (route_single_stmt(querybuf))
         {
             rval = 1;
         }

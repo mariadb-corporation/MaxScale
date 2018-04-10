@@ -33,7 +33,6 @@
 #include <maxscale/mysql_utils.h>
 
 #include "rwsplitsession.hh"
-#include "routeinfo.hh"
 
 using namespace maxscale;
 
