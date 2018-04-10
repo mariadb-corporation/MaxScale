@@ -342,10 +342,6 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
     mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
 
-    // Check that we match the old values
-    ss_dassert(mysql_server_capabilities_one[0] == 0xff);
-    ss_dassert(mysql_server_capabilities_one[1] == 0xf7);
-
     if (is_maria)
     {
         /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
