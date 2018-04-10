@@ -202,6 +202,11 @@ private:
                m_retry_duration < m_config.delayed_retry_timeout &&
                !session_trx_is_active(m_client->session);
     }
+
+    inline bool can_recover_servers() const
+    {
+        return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
+    }
 };
 
 /**

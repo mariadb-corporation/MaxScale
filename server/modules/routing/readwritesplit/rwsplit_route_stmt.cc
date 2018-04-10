@@ -99,28 +99,11 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     bool rval = true;
 
     // Check if we need to connect to the server in order to use it
-    if (!target->in_use() && target->can_connect())
+    if (!target->in_use())
     {
-        if (TARGET_IS_SLAVE(route_target) ||
-            (m_config.master_reconnection && TARGET_IS_MASTER(route_target)))
-        {
-            if ((!m_config.disable_sescmd_history || m_recv_sescmd == 0))
-            {
-                rval = target->connect(m_client->session, &m_sescmd_list);
-            }
-            else
-            {
-                MXS_ERROR("Cannot reconnect to server '%s', session command"
-                          " history is disabled (session has executed"
-                          " %lu session commands).", target->name(), m_recv_sescmd);
-            }
-        }
-        else if (TARGET_IS_MASTER(route_target))
-        {
-            MXS_ERROR("The connection to the master was lost and the connection "
-                      "could be recreated but 'master_reconnection' is not enabled.");
-            rval = false;
-        }
+        ss_dassert(target->can_connect() && can_recover_servers());
+        ss_dassert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
+        rval = target->connect(m_client->session, &m_sescmd_list);
     }
 
     return rval;
@@ -454,7 +437,8 @@ SRWBackend RWSplitSession::get_hinted_backend(char *name)
         auto& backend = *it;
 
         /** The server must be a valid slave, relay server, or master */
-        if (backend->in_use() && strcasecmp(name, backend->name()) == 0 &&
+        if ((backend->in_use() || (can_recover_servers() && backend->can_connect())) &&
+            strcasecmp(name, backend->name()) == 0 &&
             (backend->is_slave() || backend->is_relay() || backend->is_master()))
         {
             rval = backend;
@@ -477,26 +461,29 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
         if ((backend->is_master() || backend->is_slave()) && // Either a master or a slave
             rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
         {
-            if (!rval)
+            if (backend->in_use() || (can_recover_servers() && backend->can_connect()))
             {
-                // No previous candidate, accept any valid server (includes master)
-                if ((backend->is_master() && backend == m_current_master) ||
-                    backend->is_slave())
+                if (!rval)
                 {
-                    rval = backend;
+                    // No previous candidate, accept any valid server (includes master)
+                    if ((backend->is_master() && backend == m_current_master) ||
+                        backend->is_slave())
+                    {
+                        rval = backend;
+                    }
                 }
-            }
-            else if (backend->in_use() || counts.second < m_router->max_slave_count())
-            {
-                if (!m_config.master_accept_reads && rval->is_master())
+                else if (backend->in_use() || counts.second < m_router->max_slave_count())
                 {
-                    // Pick slaves over masters with master_accept_reads=false
-                    rval = backend;
-                }
-                else
-                {
-                    // Compare the two servers and pick the best one
-                    rval = compare_backends(rval, backend, m_config.slave_selection_criteria);
+                    if (!m_config.master_accept_reads && rval->is_master())
+                    {
+                        // Pick slaves over masters with master_accept_reads=false
+                        rval = backend;
+                    }
+                    else
+                    {
+                        // Compare the two servers and pick the best one
+                        rval = compare_backends(rval, backend, m_config.slave_selection_criteria);
+                    }
                 }
             }
         }
@@ -513,7 +500,7 @@ SRWBackend RWSplitSession::get_master_backend()
 
     if (master)
     {
-        if (master->in_use() || master->can_connect())
+        if (master->in_use() || (m_config.master_reconnection && master->can_connect()))
         {
             if (master->is_master())
             {
@@ -925,6 +912,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
  */
 bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool store)
 {
+    ss_dassert(target->in_use());
     /**
      * If the transaction is READ ONLY set forced_node to this backend.
      * This SLAVE backend will be used until the COMMIT is seen.
