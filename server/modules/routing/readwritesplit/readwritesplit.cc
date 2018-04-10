@@ -1150,6 +1150,12 @@ static void clientReply(MXS_ROUTER *instance,
 
     SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
+    if (rses->load_data_state == LOAD_DATA_ACTIVE && mxs_mysql_is_err_packet(writebuf))
+    {
+        // Server responded with an error to the LOAD DATA LOCAL INFILE
+        rses->load_data_state = LOAD_DATA_INACTIVE;
+    }
+
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
         /** If we receive an unexpected response from the server, the internal
