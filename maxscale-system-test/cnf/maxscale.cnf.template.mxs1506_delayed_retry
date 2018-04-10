@@ -6,7 +6,7 @@ log_info=1
 type=monitor
 module=mysqlmon
 ###repl51###
-servers=server1,server2,server3,server4
+servers=server1,server2
 user=maxskysql
 passwd=skysql
 monitor_interval=1000
@@ -16,7 +16,7 @@ backend_connect_timeout=1
 [RW Split Router]
 type=service
 router=readwritesplit
-servers=server1,server2,server3,server4
+servers=server1,server2
 user=maxskysql
 passwd=skysql
 master_failure_mode=fail_on_write
@@ -50,16 +50,4 @@ protocol=MySQLBackend
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
-protocol=MySQLBackend
-
-[server3]
-type=server
-address=###node_server_IP_3###
-port=###node_server_port_3###
-protocol=MySQLBackend
-
-[server4]
-type=server
-address=###node_server_IP_4###
-port=###node_server_port_4###
 protocol=MySQLBackend

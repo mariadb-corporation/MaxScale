@@ -30,13 +30,18 @@ int main(int argc, char** argv)
         return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
     };
 
-    auto check = [&test](string q, string res)
+    auto compare = [&test](string q, string res)
+    {
+        auto rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
+        test.assert(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
+    };
+
+    auto check = [&test, &compare](string q, string res)
     {
         test.repl->sync_slaves();
         test.maxscales->connect();
-        auto rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
+        compare(q, res);
         test.maxscales->disconnect();
-        test.assert(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
     };
 
     auto ok = [&test, &query](string q, int t = 0)
@@ -49,78 +54,108 @@ int main(int argc, char** argv)
         test.assert(!query(q, t), "Query should fail: %s", q.c_str());
     };
 
-    auto block_master = [&test](int pre = 0)
+    auto block = [&test](int pre = 0, int node = 0)
     {
         sleep(pre);
-        test.repl->block_node(0);
+        test.repl->block_node(node);
         sleep(10);
-        test.repl->unblock_node(0);
+        test.repl->unblock_node(node);
     };
+
+    auto noop = [](){};
 
     vector<TestCase> tests(
     {
         {
             "Normal insert",
-            bind(ok, "SELECT 1"),
-            bind(block_master, 0),
+            noop,
+            block,
             bind(ok, "INSERT INTO test.t1 VALUES (1)", 5),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 1", "1")
         },
         {
             "Insert with user variables",
             bind(ok, "SET @a = 2"),
-            bind(block_master, 0),
+            block,
             bind(ok, "INSERT INTO test.t1 VALUES (@a)", 5),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 2", "1")
         },
         {
             "Normal transaction",
             bind(ok, "START TRANSACTION"),
-            bind(block_master, 0),
+            block,
             bind(err, "INSERT INTO test.t1 VALUES (3)", 5),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 3", "0")
         },
         {
             "Read-only transaction",
             bind(ok, "START TRANSACTION READ ONLY"),
-            bind(block_master, 0),
+            block,
             bind(err, "INSERT INTO test.t1 VALUES (4)", 5),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 4", "0")
         },
         {
             "Insert with autocommit=0",
             bind(ok, "SET autocommit=0"),
-            bind(block_master, 0),
+            block,
             bind(err, "INSERT INTO test.t1 VALUES (5)", 5),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 5", "0")
         },
         {
             "Interrupted insert (should cause duplicate statement execution)",
-            bind(ok, "SELECT 1"),
-            bind(block_master, 5),
+            noop,
+            bind(block, 5),
             bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 6))", 0),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 6", "2")
         },
         {
             "Interrupted insert with user variable (should cause duplicate statement execution)",
             bind(ok, "SET @b = 7"),
-            bind(block_master, 5),
+            bind(block, 5),
             bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + @b))", 0),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 7", "2")
         },
         {
             "Interrupted insert in transaction",
             bind(ok, "START TRANSACTION"),
-            bind(block_master, 5),
+            bind(block, 5),
             bind(err, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 8))", 0),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 8", "0")
         },
         {
             "Interrupted insert in read-only transaction",
             bind(ok, "START TRANSACTION READ ONLY"),
-            bind(block_master, 5),
+            bind(block, 5),
             bind(err, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 9))", 0),
             bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 9", "0")
+        },
+        {
+            "Interrupted select",
+            noop,
+            bind(block, 5, 1),
+            bind(compare, "SELECT SLEEP(10) + 10", "10"),
+            noop
+        },
+        {
+            "Interrupted select with user variable",
+            bind(ok, "SET @c = 11"),
+            bind(block, 5, 1),
+            bind(compare, "SELECT SLEEP(10) + @c", "11"),
+            noop
+        },
+        {
+            "Interrupted select in transaction",
+            bind(ok, "START TRANSACTION"),
+            bind(block, 5, 0),
+            bind(err, "SELECT SLEEP(10)"),
+            noop
+        },
+        {
+            "Interrupted select in read-only transaction",
+            bind(ok, "START TRANSACTION READ ONLY"),
+            bind(block, 5, 1),
+            bind(err, "SELECT SLEEP(10)"),
+            noop
         }
     });
 
