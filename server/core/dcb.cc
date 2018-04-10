@@ -387,7 +387,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     {
         MXS_DEBUG("Looking for persistent connection DCB user %s protocol %s", user, protocol);
         dcb = server_get_persistent(server, user, session->client_dcb->remote,
-                                    protocol, session->client_dcb->thread.id);
+                                    protocol, session->client_dcb->poll.thread.id);
         if (dcb)
         {
             /**
