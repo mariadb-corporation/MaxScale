@@ -72,14 +72,21 @@ public:
                     MXS_SESSION* pSession,
                     mxs_target_t use_sql_variables_in);
 
-    Handler* handler() const
+    void master_replaced()
     {
-        return m_pHandler;
+        // As the master has changed, we can reset the temporary table information
+        set_have_tmp_tables(false);
+        clear_tmp_tables();
     }
 
-    bool multi_statements_allowed() const
+    bool large_query() const
     {
-        return m_multi_statements_allowed;
+        return m_large_query;
+    }
+
+    void set_large_query(bool large_query)
+    {
+        m_large_query = large_query;
     }
 
     load_data_state_t load_data_state() const
@@ -90,6 +97,35 @@ public:
     void set_load_data_state(load_data_state_t state)
     {
         m_load_data_state = state;
+    }
+
+    /**
+     * @brief Store and process a prepared statement
+     *
+     * @param buffer Buffer containing either a text or a binary protocol
+     *               prepared statement
+     * @param id     The unique ID for this statement
+     */
+    void ps_store(GWBUF* buffer, uint32_t id);
+
+    /**
+     * @brief Store a mapping from an external id to the corresponding internal id
+     *
+     * @param external_id  The external id as seen by the client.
+     * @param internal_id  The corresponding internal id.
+     */
+    void ps_id_internal_put(uint32_t external_id, uint32_t internal_id);
+
+    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
+                             GWBUF *buffer,
+                             uint8_t* command,
+                             uint32_t* type,
+                             uint32_t* stmt_id);
+
+private:
+    bool multi_statements_allowed() const
+    {
+        return m_multi_statements_allowed;
     }
 
     uint64_t load_data_sent() const
@@ -137,25 +173,6 @@ public:
         return m_tmp_tables.find(table) != m_tmp_tables.end();
     }
 
-    bool large_query() const
-    {
-        return m_large_query;
-    }
-
-    void set_large_query(bool large_query)
-    {
-        m_large_query = large_query;
-    }
-
-    /**
-     * @brief Store and process a prepared statement
-     *
-     * @param buffer Buffer containing either a text or a binary protocol
-     *               prepared statement
-     * @param id     The unique ID for this statement
-     */
-    void ps_store(GWBUF* buffer, uint32_t id);
-
     /**
      * @brief Get the type of a stored prepared statement
      *
@@ -184,14 +201,6 @@ public:
      */
     uint32_t ps_id_internal_get(GWBUF* pBuffer);
 
-    /**
-     * @brief Store a mapping from an external id to the corresponding internal id
-     *
-     * @param external_id  The external id as seen by the client.
-     * @param internal_id  The corresponding internal id.
-     */
-    void ps_id_internal_put(uint32_t external_id, uint32_t internal_id);
-
     uint32_t get_route_target(uint8_t command, uint32_t qtype, HINT* pHints);
 
     MXS_SESSION* session() const
@@ -217,17 +226,15 @@ public:
                                uint8_t packet_type,
                                uint32_t *qtype);
 
-    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
-                             GWBUF *buffer,
-                             uint8_t* command,
-                             uint32_t* type,
-                             uint32_t* stmt_id);
-
 private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
 
     typedef std::tr1::unordered_map<uint32_t, uint32_t> HandleMap;
+
+    static bool find_table(QueryClassifier& qc, const std::string& table);
+    static bool delete_table(QueryClassifier& qc, const std::string& table);
+
 
 private:
     Handler*          m_pHandler;

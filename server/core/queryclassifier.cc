@@ -140,25 +140,10 @@ void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
     gw_mysql_set_byte4(ptr, id);
 }
 
-bool find_table(QueryClassifier& qc, const std::string& table)
-{
-    if (qc.is_tmp_table(table))
-    {
-        MXS_INFO("Query targets a temporary table: %s", table.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool delete_table(QueryClassifier& qc, const std::string& table)
-{
-    qc.remove_tmp_table(table);
-    return true;
-}
-
-bool foreach_table(QueryClassifier& qc, GWBUF* querybuf, bool (*func)(QueryClassifier& qc,
-                                                                      const std::string&))
+bool foreach_table(QueryClassifier& qc,
+                   MXS_SESSION* pSession,
+                   GWBUF* querybuf,
+                   bool (*func)(QueryClassifier& qc, const std::string&))
 {
     bool rval = true;
     int n_tables;
@@ -166,7 +151,7 @@ bool foreach_table(QueryClassifier& qc, GWBUF* querybuf, bool (*func)(QueryClass
 
     for (int i = 0; i < n_tables; i++)
     {
-        const char* db = qc_mysql_get_current_db(qc.session());
+        const char* db = qc_mysql_get_current_db(pSession);
         std::string table;
 
         if (strchr(tables[i], '.') == NULL)
@@ -694,7 +679,7 @@ bool QueryClassifier::is_read_tmp_table(GWBUF *querybuf, uint32_t qtype)
         qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
         qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
-        if (!foreach_table(*this, querybuf, find_table))
+        if (!foreach_table(*this, m_pSession, querybuf, &QueryClassifier::find_table))
         {
             rval = true;
         }
@@ -707,7 +692,7 @@ void QueryClassifier::check_drop_tmp_table(GWBUF *querybuf)
 {
     if (qc_is_drop_table_query(querybuf))
     {
-        foreach_table(*this, querybuf, delete_table);
+        foreach_table(*this, m_pSession, querybuf, &QueryClassifier::delete_table);
     }
 }
 
@@ -864,7 +849,7 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
                  * effective since we don't have a node to force queries to. In this
                  * situation, assigning QUERY_TYPE_WRITE for the query will trigger
                  * the error processing. */
-                if (!handler()->lock_to_master())
+                if (!m_pHandler->lock_to_master())
                 {
                     *type |= QUERY_TYPE_WRITE;
                 }
@@ -893,7 +878,7 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
          *   eventually to master
          */
 
-        if (handler()->is_locked_to_master())
+        if (m_pHandler->is_locked_to_master())
         {
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
@@ -932,6 +917,25 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
     }
 
     return route_target;
+}
+
+// static
+bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
+{
+    if (qc.is_tmp_table(table))
+    {
+        MXS_INFO("Query targets a temporary table: %s", table.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+// static
+bool QueryClassifier::delete_table(QueryClassifier& qc, const std::string& table)
+{
+    qc.remove_tmp_table(table);
+    return true;
 }
 
 }
