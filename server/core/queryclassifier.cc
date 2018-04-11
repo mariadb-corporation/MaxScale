@@ -134,12 +134,6 @@ std::string get_text_ps_id(GWBUF* buffer)
     return rval;
 }
 
-void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
-{
-    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-    gw_mysql_set_byte4(ptr, id);
-}
-
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
                    GWBUF* querybuf,

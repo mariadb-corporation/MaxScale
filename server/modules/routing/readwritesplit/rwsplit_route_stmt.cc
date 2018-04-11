@@ -118,6 +118,17 @@ void RWSplitSession::retry_query(GWBUF* querybuf)
     ++m_retry_duration;
 }
 
+namespace
+{
+
+void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
+{
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+    gw_mysql_set_byte4(ptr, id);
+}
+
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).

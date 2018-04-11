@@ -13,7 +13,6 @@
  */
 
 #include "readwritesplit.hh"
-#include "rwsplit_ps.hh"
 #include "rwbackend.hh"
 
 #include <string>
