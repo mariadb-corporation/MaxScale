@@ -225,7 +225,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
                      * to the same server where the COM_STMT_EXECUTE was done. */
                     ss_dassert(stmt_id > 0);
                     m_exec_map[stmt_id] = target;
-                    MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
+                    MXS_INFO("COM_STMT_EXECUTE on %s: %s", target->name(), target->uri());
                 }
             }
         }
@@ -355,13 +355,14 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
                     m_expected_responses++;
                 }
 
-                MXS_INFO("Route query to %s \t%s",
+                MXS_INFO("Route query to %s: %s \t%s",
                          backend->is_master() ? "master" : "slave",
-                         backend->uri());
+                         backend->name(), backend->uri());
             }
             else
             {
-                MXS_ERROR("Failed to execute session command in %s", backend->uri());
+                MXS_ERROR("Failed to execute session command in %s (%s)",
+                          backend->name(),backend->uri());
             }
         }
     }
@@ -688,7 +689,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
         if (it != m_exec_map.end())
         {
             target = it->second;
-            MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+            MXS_INFO("COM_STMT_FETCH on %s (%s)", target->name(), target->uri());
         }
         else
         {
@@ -924,8 +925,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
                   target->name());
     }
 
-    MXS_INFO("Route query to %s \t%s <", target->is_master() ? "master" : "slave",
-             target->uri());
+    MXS_INFO("Route query to %s: %s \t%s <", target->is_master() ? "master" : "slave",
+             target->name(), target->uri());
 
     /** The session command cursor must not be active */
     ss_dassert(!target->has_session_commands());
