@@ -185,6 +185,17 @@ QueryClassifier::RouteInfo::RouteInfo()
 {
 }
 
+QueryClassifier::RouteInfo::RouteInfo(uint32_t target,
+                                      uint8_t command,
+                                      uint32_t type_mask,
+                                      uint32_t stmt_id)
+    : m_target(target)
+    , m_command(command)
+    , m_type_mask(type_mask)
+    , m_stmt_id(stmt_id)
+{
+}
+
 void QueryClassifier::RouteInfo::reset()
 {
     m_target = QueryClassifier::TARGET_UNDEFINED;
@@ -828,28 +839,10 @@ QueryClassifier::handle_multi_temp_and_load(QueryClassifier::current_target_t cu
 QueryClassifier::RouteInfo
 QueryClassifier::update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer)
 {
-    uint8_t command;
-    uint32_t type_mask;
-    uint32_t stmt_id;
-
-    uint32_t target = get_target_type(current_target, pBuffer, &command, &type_mask, &stmt_id);
-
-    m_route_info.reset();
-    m_route_info.set_target(target);
-    m_route_info.set_command(command);
-    m_route_info.set_type_mask(type_mask);
-    m_route_info.set_stmt_id(stmt_id);
-
-    return m_route_info;
-}
-
-uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t current_target,
-                                          GWBUF *buffer,
-                                          uint8_t* command,
-                                          uint32_t* type,
-                                          uint32_t* stmt_id)
-{
     uint32_t route_target = TARGET_MASTER;
+    uint8_t command = 0xFF;
+    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+    uint32_t stmt_id = 0;
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
@@ -857,9 +850,9 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
         (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) &&
         session_trx_is_read_only(session());
 
-    if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
+    if (gwbuf_length(pBuffer) > MYSQL_HEADER_LEN)
     {
-        *command = mxs_mysql_get_command(buffer);
+        command = mxs_mysql_get_command(pBuffer);
 
         /**
          * If the session is inside a read-only transaction, we trust that the
@@ -868,14 +861,14 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
          */
         if (in_read_only_trx)
         {
-            *type = QUERY_TYPE_READ;
+            type_mask = QUERY_TYPE_READ;
         }
         else
         {
-            *type = QueryClassifier::determine_query_type(buffer, *command);
+            type_mask = QueryClassifier::determine_query_type(pBuffer, command);
 
             current_target = handle_multi_temp_and_load(current_target,
-                                                        buffer, *command, type);
+                                                        pBuffer, command, &type_mask);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
@@ -885,14 +878,14 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
                  * the error processing. */
                 if (!m_pHandler->lock_to_master())
                 {
-                    *type |= QUERY_TYPE_WRITE;
+                    type_mask |= QUERY_TYPE_WRITE;
                 }
             }
         }
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(buffer, *type);
+            log_transaction_status(pBuffer, type_mask);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
@@ -917,40 +910,42 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
 
-            if (qc_query_is_type(*type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-                qc_query_is_type(*type, QUERY_TYPE_PREPARE_STMT))
+            if (qc_query_is_type(type_mask, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+                qc_query_is_type(type_mask, QUERY_TYPE_PREPARE_STMT))
             {
-                gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+                gwbuf_set_type(pBuffer, GWBUF_TYPE_COLLECT_RESULT);
             }
         }
         else
         {
             if (!in_read_only_trx &&
-                *command == MXS_COM_QUERY &&
-                qc_get_operation(buffer) == QUERY_OP_EXECUTE)
+                command == MXS_COM_QUERY &&
+                qc_get_operation(pBuffer) == QUERY_OP_EXECUTE)
             {
-                std::string id = get_text_ps_id(buffer);
-                *type = ps_get_type(id);
+                std::string id = get_text_ps_id(pBuffer);
+                type_mask = ps_get_type(id);
             }
-            else if (qc_mysql_is_ps_command(*command))
+            else if (qc_mysql_is_ps_command(command))
             {
-                *stmt_id = ps_id_internal_get(buffer);
-                *type = ps_get_type(*stmt_id);
+                stmt_id = ps_id_internal_get(pBuffer);
+                type_mask = ps_get_type(stmt_id);
             }
 
-            route_target = get_route_target(*command, *type, buffer->hint);
+            route_target = get_route_target(command, type_mask, pBuffer->hint);
         }
     }
     else if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
         set_load_data_state(QueryClassifier::LOAD_DATA_END);
-        append_load_data_sent(buffer);
+        append_load_data_sent(pBuffer);
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
                  load_data_sent());
     }
 
-    return route_target;
+    m_route_info = RouteInfo(route_target, command, type_mask, stmt_id);
+
+    return m_route_info;
 }
 
 // static

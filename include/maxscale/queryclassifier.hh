@@ -34,6 +34,10 @@ public:
     {
     public:
         RouteInfo();
+        RouteInfo(uint32_t target,
+                  uint8_t command,
+                  uint32_t type_mask,
+                  uint32_t stmt_id);
 
         void reset();
 
@@ -329,12 +333,6 @@ private:
                                GWBUF *querybuf,
                                uint8_t packet_type,
                                uint32_t *qtype);
-
-    uint32_t get_target_type(QueryClassifier::current_target_t current_target,
-                             GWBUF *buffer,
-                             uint8_t* command,
-                             uint32_t* type,
-                             uint32_t* stmt_id);
 
 private:
     class PSManager;
