@@ -106,10 +106,6 @@ usernames in MariaDB MaxScale.
 
 ## Filter limitations
 
-Filters are not guaranteed to receive complete MySQL packets if they are used
-with the readconnroute router. This can be fixed by using the readwritesplit
-router.
-
 ### Database Firewall limitations (dbfwfilter)
 
 The Database Firewall filter does not support multi-statements. Using them will
@@ -119,13 +115,18 @@ result in an error being sent to the client.
 
 The Tee filter does not support binary protocol prepared statements. The
 execution of a prepared statements through a service that uses the tee filter is
-not guaranteed to produce the same result on the service where the filter
-branches to as it does on the original service.
+not guaranteed to succeed on the service where the filter branches to as it does
+on the original service.
+
+This possibility exists due to the fact that the binary protocol prepared
+statements are identified by a server-generated ID. The ID sent to the client
+from the main service is not guaranteed to be the same that is sent by the
+branch service.
 
 ## Monitor limitations
 
-A server can only be monitored by one monitor. If multiple monitors monitor the
-same server, the state of the server is non-deterministic.
+A server can only be monitored by one monitor. Two or more monitors monitoring
+the same server is considered an error.
 
 ### Limitations with Galera Cluster Monitoring (galeramon)
 
@@ -156,9 +157,6 @@ on this issue.
 
 ### Limitations in the connection router (readconnroute)
 
-If Master changes (ie. new Master promotion) during current connection, the
-router cannot check the change.
-
 Sending of binary data with `LOAD DATA LOCAL INFILE` is not supported.
 
 ### Limitations in the Read/Write Splitter (readwritesplit)
@@ -172,14 +170,9 @@ LAST_INSERT_ID();`
 
 #### JDBC Batched Statements
 
-Readwritesplit does not support execution of JDBC batched statements with
-non-INSERT statements mixed in it. This is caused by the fact that
-readwritesplit expects that the protocol is idle before another command is sent.
-
-Most clients conform to this expectation but some JDBC drivers send multiple
-requests without waiting for the protocol to be idle. If you are using the
-MariaDB Connector/J, add `useBatchMultiSend=false` to the JDBC connection string
-to disable batched statement execution.
+Readwritesplit does not support pipelining of JDBC batched statements. This is
+caused by the fact that readwritesplit executes the statements one at a time to
+track the state of the response.
 
 #### Prepared Statement Limitations
 
@@ -193,18 +186,9 @@ statements to stall.
 #### Limitations in multi-statement handling
 
 When a multi-statement query is executed through the readwritesplit router, it
-will always be routed to the master. With the default configuration, all queries
-after a multi-statement query will be routed to the master to prevent possible
-reads of false data.
-
-You can override this behavior with the `strict_multi_stmt=false` router option.
-In this mode, the multi-statement queries will still be routed to the master but
-individual statements are routed normally. If you use multi-statements and you
-know they don't modify the session state in any relevant way, you can disable
-this option for better performance.
-
-For more information, read the
-[ReadWriteSplit](../Routers/ReadWriteSplit.md) router documentation.
+will always be routed to the master. See
+[`strict_multi_stmt`](../Routers/ReadWriteSplit.md#strict_multi_stmt) for more
+details.
 
 #### Limitations in client session handling
 
@@ -234,21 +218,20 @@ SET autocommit=1|0
 ```
 
 There is a possibility for misbehavior. If `USE mytable` is executed in one of
-the slaves and fails, it may be due to replication lag rather than the
-database not existing. Thus, the same command may produce different result in
-different backend servers. The slaves which fail to execute a session command
-will be dropped from the active list of slaves for this session to guarantee a
-consistent session state across all the servers used by the session.
+the slaves and fails, it may be due to replication lag rather than the database
+not existing. Thus, the same command may produce different result in different
+backend servers. The slaves which fail to execute a session command will be
+dropped from the active list of slaves for this session to guarantee a
+consistent session state across all the servers used by the session. In
+addition, the server will not used again for routing for the duration of the
+session.
 
-The above-mentioned behavior can be partially controlled with the configuration
-parameter `use_sql_variables_in`:
+The above-mentioned behavior for user variables can be partially controlled with
+the configuration parameter `use_sql_variables_in`:
+
 ```
 use_sql_variables_in=[master|all] (default: all)
 ```
-
-Server-side session variables are handled similar to SQL variables. If "master"
-is set, SQL variables are read and written in master only. Autocommit values and
-prepared statements are routed to all nodes always.
 
 **WARNING**
 
@@ -266,27 +249,9 @@ MySQL [(none)]> SELECT @id := @id + 1 FROM test.t1;
 ERROR 1064 (42000): Routing query to backend failed. See the error log for further details.
 ```
 
-Allow user variable modification in SELECT queries by setting the value of
-`use_sql_variables_in` to `master`. This will route all queries that use user
+Allow user variable modification in SELECT queries by setting
+`use_sql_variables_in=master`. This will route all queries that use user
 variables to the master.
-
-#### Examples of session command limitations
-
-In a situation where a new database `db` is created, immediately after which a client executes `USE db`, it is possible that the command is routed
-to a slave before the `CREATE DATABASE` clause is replicated to all slaves. In this case a query may be executed in the wrong database. Similarly, if any response
-that ReadWriteSplit sends back to the client differ from that of the master,
-there is a risk for misbehavior. To prevent this, any failures in session
-command execution are treated as fatal errors and all connections by the session
-to that particular slave server will be closed. In addition, the server will not
-used again for routing for the duration of the session.
-
-The most likely reasons are related to replication lag but it could be possible
-that a slave fails to execute something because of some non-fatal, temporary
-failure, while the execution of the same command succeeds in other backends.
-
-The preparation of a prepared statement is routed to all servers. The execution
-of a prepared statement is routed to the first available server or to the server
-pointed by a routing hint attached to the query.
 
 ### Schemarouter limitations (schemarouter)
 
