@@ -86,12 +86,22 @@ void MariaDBMonitor::init_server_info()
     }
 }
 
+/**
+     * Get monitor-specific server info for the monitored server.
+     *
+     * @param handle
+     * @param db Server to get info for. Must be a valid server or function crashes.
+     * @return The server info.
+     */
 MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 {
     ss_dassert(m_server_info.count(db) == 1); // Should always exist in the map
     return m_server_info[db];
 }
 
+/**
+ * Constant version of get_server_info().
+ */
 const MariaDBServer* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
 {
     return const_cast<MariaDBMonitor*>(this)->get_server_info(const_cast<MXS_MONITORED_SERVER*>(db));
@@ -359,87 +369,6 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return rval;
 }
 
-/**
- * @brief Check whether standalone master conditions have been met
- *
- * This function checks whether all the conditions to use a standalone master are met. For this to happen,
- * only one server must be available and other servers must have passed the configured tolerance level of
- * failures.
- *
- * @param db     Monitor servers
- *
- * @return True if standalone master should be used
- */
-bool MariaDBMonitor::standalone_master_required(MXS_MONITORED_SERVER *db)
-{
-    int candidates = 0;
-
-    while (db)
-    {
-        if (SERVER_IS_RUNNING(db->server))
-        {
-            candidates++;
-            MariaDBServer *server_info = get_server_info(db);
-
-            if (server_info->read_only || server_info->slave_configured || candidates > 1)
-            {
-                return false;
-            }
-        }
-        else if (db->mon_err_count < m_failcount)
-        {
-            return false;
-        }
-
-        db = db->next;
-    }
-
-    return candidates == 1;
-}
-
-/**
- * @brief Use standalone master
- *
- * This function assigns the last remaining server the master status and sets all other servers into
- * maintenance mode. By setting the servers into maintenance mode, we prevent any possible conflicts when
- * the failed servers come back up.
- *
- * @param db     Monitor servers
- */
-bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
-{
-    bool rval = false;
-
-    while (db)
-    {
-        if (SERVER_IS_RUNNING(db->server))
-        {
-            if (!SERVER_IS_MASTER(db->server) && m_warn_set_standalone_master)
-            {
-                MXS_WARNING("Setting standalone master, server '%s' is now the master.%s",
-                            db->server->unique_name,
-                            m_allow_cluster_recovery ?
-                            "" : " All other servers are set into maintenance mode.");
-                m_warn_set_standalone_master = false;
-            }
-
-            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
-            monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
-            monitor_clear_pending_status(db, SERVER_SLAVE);
-            m_master = db;
-            rval = true;
-        }
-        else if (!m_allow_cluster_recovery)
-        {
-            server_set_status_nolock(db->server, SERVER_MAINT);
-            monitor_set_pending_status(db, SERVER_MAINT);
-        }
-        db = db->next;
-    }
-
-    return rval;
-}
-
 void MariaDBMonitor::main_loop()
 {
     m_status = MXS_MONITOR_RUNNING;
@@ -608,113 +537,6 @@ void MariaDBMonitor::main_loop()
     m_status = MXS_MONITOR_STOPPED;
 }
 
-/**
- * Monitor a server. Should be moved to the server class later on.
- *
- * @param server The server
- */
-void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
-{
-    MXS_MONITORED_SERVER* ptr = server.server_base;
-
-    ptr->mon_prev_status = ptr->server->status;
-    /* copy server status into monitor pending_status */
-    ptr->pending_status = ptr->server->status;
-
-    /* monitor current node */
-    monitor_database(get_server_info(ptr));
-
-    /* reset the slave list of current node */
-    memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
-
-    if (mon_status_changed(ptr))
-    {
-        if (SRV_MASTER_STATUS(ptr->mon_prev_status))
-        {
-            /** Master failed, can't recover */
-            MXS_NOTICE("Server [%s]:%d lost the master status.",
-                ptr->server->name,
-                ptr->server->port);
-        }
-    }
-
-    if (mon_status_changed(ptr))
-    {
-#if defined(SS_DEBUG)
-        MXS_INFO("Backend server [%s]:%d state : %s",
-            ptr->server->name,
-            ptr->server->port,
-            STRSRVSTATUS(ptr->server));
-#else
-        MXS_DEBUG("Backend server [%s]:%d state : %s",
-            ptr->server->name,
-            ptr->server->port,
-            STRSRVSTATUS(ptr->server));
-#endif
-    }
-
-    if (SERVER_IS_DOWN(ptr->server))
-    {
-        /** Increase this server'e error count */
-        ptr->mon_err_count += 1;
-    }
-    else
-    {
-        /** Reset this server's error count */
-        ptr->mon_err_count = 0;
-    }
-}
-
-/**
- * Compute replication tree, find root master.
- *
- * @return Found master server or NULL
- */
-MariaDBServer* MariaDBMonitor::find_root_master()
-{
-    MXS_MONITORED_SERVER* found_root_master = NULL;
-    const int num_servers = m_servers.size();
-    /* if only one server is configured, that's is Master */
-    if (num_servers == 1)
-    {
-        auto mon_server = m_servers[0].server_base;
-        if (SERVER_IS_RUNNING(mon_server->server))
-        {
-            mon_server->server->depth = 0;
-            /* status cleanup */
-            monitor_clear_pending_status(mon_server, SERVER_SLAVE);
-            /* master status set */
-            monitor_set_pending_status(mon_server, SERVER_MASTER);
-
-            mon_server->server->depth = 0;
-            m_master = mon_server;
-            found_root_master = mon_server;
-        }
-    }
-    else
-    {
-        /* Compute the replication tree */
-        if (m_mysql51_replication)
-        {
-            found_root_master = build_mysql51_replication_tree();
-        }
-        else
-        {
-            found_root_master = get_replication_tree();
-        }
-    }
-
-    if (m_detect_multimaster && num_servers > 0)
-    {
-        /** Find all the master server cycles in the cluster graph. If
-         multiple masters are found, the servers with the read_only
-         variable set to ON will be assigned the slave status. */
-        find_graph_cycles();
-    }
-
-    return found_root_master ? get_server_info(found_root_master) : NULL;
-}
-
 void MariaDBMonitor::update_gtid_domain()
 {
     MariaDBServer* master_info = get_server_info(m_master);
@@ -760,108 +582,6 @@ void MariaDBMonitor::update_external_master()
         }
         m_external_master_host.clear();
         m_external_master_port = PORT_UNKNOWN;
-    }
-}
-
-/**
- * TODO: Move to MariaDBServer.
- *
- * @param serv_info
- */
-void MariaDBMonitor::assign_relay_master(MariaDBServer& serv_info)
-{
-    MXS_MONITORED_SERVER* ptr = serv_info.server_base;
-    if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
-        getSlaveOfNodeId(ptr->server->node_id, REJECT_DOWN) &&
-        getServerByNodeId(ptr->server->master_id) &&
-        (!m_detect_multimaster || serv_info.group == 0))
-    {
-        /** This server is both a slave and a master i.e. a relay master */
-        monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
-        monitor_clear_pending_status(ptr, SERVER_MASTER);
-    }
-}
-
-void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServer* root_master_server)
-{
-    MXS_MONITORED_SERVER* ptr = db_server.server_base;
-    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
-    if (!SERVER_IN_MAINT(ptr->server))
-    {
-        MariaDBServer *serv_info = get_server_info(ptr);
-
-        /** If "detect_stale_master" option is On, let's use the previous master.
-         *
-         * Multi-master mode detects the stale masters in find_graph_cycles().
-         *
-         * TODO: If a stale master goes down and comes back up, it loses
-         * the master status. An adequate solution would be to promote
-         * the stale master as a real master if it is the last running server.
-         */
-        if (m_detect_stale_master && root_master && !m_detect_multimaster &&
-            (strcmp(ptr->server->name, root_master->server->name) == 0 &&
-            ptr->server->port == root_master->server->port) &&
-            (ptr->server->status & SERVER_MASTER) &&
-            !(ptr->pending_status & SERVER_MASTER) &&
-            !serv_info->read_only)
-        {
-            /**
-             * In this case server->status will not be updated from pending_status
-             * Set the STALE bit for this server in server struct
-             */
-            server_set_status_nolock(ptr->server, SERVER_STALE_STATUS | SERVER_MASTER);
-            monitor_set_pending_status(ptr, SERVER_STALE_STATUS | SERVER_MASTER);
-
-            /** Log the message only if the master server didn't have
-             * the stale master bit set */
-            if ((ptr->mon_prev_status & SERVER_STALE_STATUS) == 0)
-            {
-                MXS_WARNING("All slave servers under the current master "
-                    "server have been lost. Assigning Stale Master"
-                    " status to the old master server '%s' (%s:%i).",
-                    ptr->server->unique_name, ptr->server->name,
-                    ptr->server->port);
-            }
-        }
-
-        if (m_detect_stale_slave)
-        {
-            unsigned int bits = SERVER_SLAVE | SERVER_RUNNING;
-
-            if ((ptr->mon_prev_status & bits) == bits &&
-                root_master && SERVER_IS_MASTER(root_master->server))
-            {
-                /** Slave with a running master, assign stale slave candidacy */
-                if ((ptr->pending_status & bits) == bits)
-                {
-                    monitor_set_pending_status(ptr, SERVER_STALE_SLAVE);
-                }
-                /** Server lost slave when a master is available, remove
-                 * stale slave candidacy */
-                else if ((ptr->pending_status & bits) == SERVER_RUNNING)
-                {
-                    monitor_clear_pending_status(ptr, SERVER_STALE_SLAVE);
-                }
-            }
-            /** If this server was a stale slave candidate, assign
-             * slave status to it */
-            else if (ptr->mon_prev_status & SERVER_STALE_SLAVE &&
-                ptr->pending_status & SERVER_RUNNING &&
-                // Master is down
-                (!root_master || !SERVER_IS_MASTER(root_master->server) ||
-                // Master just came up
-                (SERVER_IS_MASTER(root_master->server) &&
-                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
-            {
-                monitor_set_pending_status(ptr, SERVER_SLAVE);
-            }
-            else if (root_master == NULL && serv_info->slave_configured)
-            {
-                monitor_set_pending_status(ptr, SERVER_SLAVE);
-            }
-        }
-
-        ptr->server->status = ptr->pending_status;
     }
 }
 

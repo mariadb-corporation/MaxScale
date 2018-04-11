@@ -1531,6 +1531,14 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
     return rval;
 }
 
+/**
+ * Check if server is using gtid replication.
+ *
+ * @param mon_server Server to check
+ * @param error_out Error output
+ * @return True if using gtid-replication. False if not, or if server is not a slave or otherwise does
+ * not have a gtid_IO_Pos.
+ */
 bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out)
 {
     bool rval = false;
