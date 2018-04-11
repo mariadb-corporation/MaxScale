@@ -606,6 +606,10 @@ add_test_executable(mxs1503_extra_slaves.cpp mxs1503_extra_slaves mxs1503_extra_
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1506: Delayed retry without master
+# https://jira.mariadb.org/browse/MXS-1506
+add_test_executable(mxs1506_no_master.cpp mxs1506_no_master mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)
