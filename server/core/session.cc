@@ -1400,8 +1400,13 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
 
         if (seconds == 0)
         {
-            // No actual delay, just re-route query
-            worker->post(task);
+            /**
+             * No actual delay, just re-route query. The worker task should
+             * never be immediately executed. They must be executed on the next
+             * "tick" of the worker to prevent recursive calls to
+             * e.g. routeQuery in readwritesplit when errors are handled.
+             */
+            worker->post(task, Worker::EXECUTE_QUEUED);
         }
         else
         {
