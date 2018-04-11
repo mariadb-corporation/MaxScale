@@ -1068,6 +1068,21 @@ int modutil_count_statements(GWBUF* buffer)
     return num;
 }
 
+int modutil_count_packets(GWBUF* buffer)
+{
+    int packets = 0;
+    size_t offset = 0;
+    uint8_t len[3];
+
+    while (gwbuf_copy_data(buffer, offset, 3, len) == 3)
+    {
+        ++packets;
+        offset += gw_mysql_get_byte3(len) + MYSQL_HEADER_LEN;
+    }
+
+    return packets;
+}
+
 /**
  * Initialize the PCRE2 patterns used when converting MySQL wildcards to PCRE syntax.
  */

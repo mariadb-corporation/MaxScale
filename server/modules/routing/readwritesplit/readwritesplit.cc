@@ -520,7 +520,20 @@ static inline bool have_next_packet(GWBUF* buffer)
  */
 bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
 {
-    if (backend->get_reply_state() == REPLY_STATE_START &&
+    if (backend->current_command() == MXS_COM_STMT_FETCH)
+    {
+        bool more = false;
+        modutil_state state = {backend->is_large_packet()};
+        int n_eof = modutil_count_signal_packets(buffer, 0, &more, &state);
+        backend->set_large_packet(state.state);
+
+        if (n_eof > 0 || backend->consume_fetched_rows(buffer))
+        {
+            LOG_RS(backend, REPLY_STATE_DONE);
+            backend->set_reply_state(REPLY_STATE_DONE);
+        }
+    }
+    else if (backend->get_reply_state() == REPLY_STATE_START &&
         (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
         if (GWBUF_IS_COLLECTED_RESULT(buffer) ||
@@ -575,6 +588,13 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
             /** Waiting for the EOF packet after the rows */
             LOG_RS(backend, REPLY_STATE_RSET_ROWS);
             backend->set_reply_state(REPLY_STATE_RSET_ROWS);
+
+            if (backend->cursor_is_open())
+            {
+                MXS_INFO("Cursor successfully opened");
+                LOG_RS(backend, REPLY_STATE_DONE);
+                backend->set_reply_state(REPLY_STATE_DONE);
+            }
         }
         else
         {
@@ -927,7 +947,6 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     {
         if (rses->query_queue == NULL &&
             (rses->expected_responses == 0 ||
-             mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
              rses->load_data_state == LOAD_DATA_ACTIVE ||
              rses->large_query))
         {

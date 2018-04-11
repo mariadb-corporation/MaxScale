@@ -45,6 +45,7 @@ int             modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
 void            modutil_reply_parse_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 void            modutil_reply_auth_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 int             modutil_count_statements(GWBUF* buffer);
+int             modutil_count_packets(GWBUF* buffer);
 GWBUF*          modutil_create_query(const char* query);
 GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              int             affected_rows,

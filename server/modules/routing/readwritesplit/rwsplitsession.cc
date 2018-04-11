@@ -17,7 +17,9 @@
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
-    m_large_packet(false)
+    m_large_packet(false),
+    m_open_cursor(false),
+    m_expected_rows(0)
 {
 }
 
@@ -72,10 +74,38 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
             /** Replace the client handle with the real PS handle */
             uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
             gw_mysql_set_byte4(ptr, it->second);
+            uint8_t buf[4];
+
+            if (cmd == MXS_COM_STMT_EXECUTE &&
+                // Skip header and command byte for the 4 byte ID
+                gwbuf_copy_data(buffer, 5, 4, buf) == sizeof(buf) &&
+                // A flag value of 0 is no cursor
+                gw_mysql_get_byte4(buf) != 0)
+            {
+                m_open_cursor = true;
+            }
+            else if (cmd == MXS_COM_STMT_FETCH)
+            {
+                ss_dassert(m_open_cursor);
+                // Number of rows to fetch is a 4 byte integer after the ID
+                gwbuf_copy_data(buffer, 5 + 4, 4, buf);
+                m_expected_rows = gw_mysql_get_byte4(buf);
+            }
+            else
+            {
+                m_open_cursor = false;
+            }
         }
     }
 
     return mxs::Backend::write(buffer);
+}
+
+bool RWBackend::consume_fetched_rows(GWBUF* buffer)
+{
+    m_expected_rows -= modutil_count_packets(buffer);
+    ss_dassert(m_expected_rows >= 0);
+    return m_expected_rows == 0;
 }
 
 uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)

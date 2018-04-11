@@ -1111,8 +1111,7 @@ static inline bool query_creates_reply(uint8_t cmd)
 {
     return cmd != MXS_COM_QUIT &&
            cmd != MXS_COM_STMT_SEND_LONG_DATA &&
-           cmd != MXS_COM_STMT_CLOSE &&
-           cmd != MXS_COM_STMT_FETCH; // Fetch is done mid-result
+           cmd != MXS_COM_STMT_CLOSE;
 }
 
 static inline bool is_large_query(GWBUF* buf)
