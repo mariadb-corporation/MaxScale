@@ -13,8 +13,6 @@
 
 #include "utilities.hh"
 
-#include <inttypes.h>
-#include <limits>
 #include <string>
 #include <maxscale/debug.h>
 
@@ -22,22 +20,6 @@ using std::string;
 
 /** Server id default value */
 const int64_t SERVER_ID_UNKNOWN = -1;
-
-int64_t scan_server_id(const char* id_string)
-{
-    int64_t server_id = SERVER_ID_UNKNOWN;
-    ss_debug(int rv = ) sscanf(id_string, "%" PRId64, &server_id);
-    ss_dassert(rv == 1);
-    // Server id can be 0, which was even the default value until 10.2.1.
-    // KB is a bit hazy on this, but apparently when replicating, the server id should not be 0. Not sure,
-    // so MaxScale allows this.
-#if defined(SS_DEBUG)
-    const int64_t SERVER_ID_MIN = std::numeric_limits<uint32_t>::min();
-    const int64_t SERVER_ID_MAX = std::numeric_limits<uint32_t>::max();
-#endif
-    ss_dassert(server_id >= SERVER_ID_MIN && server_id <= SERVER_ID_MAX);
-    return server_id;
-}
 
 QueryResult::QueryResult(MYSQL_RES* resultset)
     : m_resultset(resultset)
@@ -107,11 +89,12 @@ int64_t QueryResult::get_uint(int64_t column_ind) const
     ss_dassert(column_ind < m_columns);
     char* data = m_rowdata[column_ind];
     int64_t rval = -1;
-    if (data)
+    if (data && *data)
     {
         errno = 0; // strtoll sets this
-        auto parsed = strtoll(data, NULL, 10);
-        if (parsed >= 0 && errno == 0)
+        char* endptr = NULL;
+        auto parsed = strtoll(data, &endptr, 10);
+        if (parsed >= 0 && errno == 0 && *endptr == '\0')
         {
             rval = parsed;
         }

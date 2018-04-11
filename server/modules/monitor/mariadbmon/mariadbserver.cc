@@ -179,7 +179,11 @@ bool MariaDBServer::do_show_slave_status()
             server_version != MYSQL_SERVER_VERSION_51)
         {
             /* Get Master_Server_Id */
-            master_server_id = scan_server_id(result->get_string(i_master_server_id).c_str());
+            auto parsed = result->get_uint(i_master_server_id);
+            if (parsed >= 0)
+            {
+                master_server_id = parsed;
+            }
         }
 
         if (server_version == MYSQL_SERVER_VERSION_100)

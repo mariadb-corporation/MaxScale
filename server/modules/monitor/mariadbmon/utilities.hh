@@ -32,14 +32,6 @@
 extern const int64_t SERVER_ID_UNKNOWN;
 
 /**
- * Scan a server id from a string.
- *
- * @param id_string
- * @return Server id, or -1 if scanning fails
- */
-int64_t scan_server_id(const char* id_string);
-
-/**
  * Helper class for simplifying working with resultsets. Used in MariaDBServer.
  */
 class QueryResult

@@ -155,8 +155,9 @@ Gtid Gtid::from_string(const char* str, char** endptr)
     {
         errno = 0;
         parsed_numbers[i] = strtoull(ptr, &strtoull_endptr, 10);
-        // No parse error
-        if (errno != 0)
+        // Check for parse error. Even this is not quite enough because strtoull will silently convert
+        // negative values. Yet, strtoull is required for the third value.
+        if (errno != 0 || strtoull_endptr == ptr)
         {
             error = true;
         }
