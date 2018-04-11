@@ -633,6 +633,10 @@ add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_whe
 # https://jira.mariadb.org/browse/MXS-1773
 add_test_executable(mxs1773_failing_ldli.cpp mxs1773_failing_ldli replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1776: recursive COM_STMT_EXECUTE execution
+# https://jira.mariadb.org/browse/MXS-1776
+add_test_executable(mxs1776_ps_exec_hang.cpp mxs1776_ps_exec_hang replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
