@@ -180,16 +180,6 @@ private:
     void handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg);
     bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
 
-    /**
-     * Check if the session is locked to the master
-     *
-     * @return Whether the session is locked to the master
-     */
-    inline bool locked_to_master() const
-    {
-        return m_qc.large_query() || (m_current_master && m_target_node == m_current_master);
-    }
-
 private:
     // QueryClassifier::Handler
     bool lock_to_master();

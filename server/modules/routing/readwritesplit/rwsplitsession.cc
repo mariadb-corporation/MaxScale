@@ -720,7 +720,7 @@ bool RWSplitSession::lock_to_master()
 
 bool RWSplitSession::is_locked_to_master() const
 {
-    return m_target_node && m_target_node == m_current_master;
+    return m_current_master && m_target_node == m_current_master;
 }
 
 bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
