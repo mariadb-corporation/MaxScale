@@ -534,6 +534,12 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
             backend->set_reply_state(REPLY_STATE_DONE);
         }
     }
+    else if (backend->current_command() == MXS_COM_STATISTICS)
+    {
+        // COM_STATISTICS returns a single string and thus requires special handling
+        LOG_RS(backend, REPLY_STATE_DONE);
+        backend->set_reply_state(REPLY_STATE_DONE);
+    }
     else if (backend->get_reply_state() == REPLY_STATE_START &&
         (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
