@@ -641,6 +641,10 @@ add_test_executable(mxs1776_ps_exec_hang.cpp mxs1776_ps_exec_hang replication LA
 # https://jira.mariadb.org/browse/MXS-1786
 add_test_executable(mxs1786_statistics.cpp mxs1786_statistics replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1787: Crash with PS: CALL p1((SELECT f1()), ?)
+# https://jira.mariadb.org/browse/MXS-1787
+add_test_executable(mxs1787_call_ps.cpp mxs1787_call_ps replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
