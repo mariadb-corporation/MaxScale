@@ -168,7 +168,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
             route_target = get_route_target(rses, *command, *type, buffer->hint);
         }
     }
-    else
+    else if (rses->load_data_state == LOAD_DATA_ACTIVE)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
         rses->load_data_state = LOAD_DATA_END;
