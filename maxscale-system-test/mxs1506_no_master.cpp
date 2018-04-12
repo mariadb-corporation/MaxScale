@@ -17,7 +17,7 @@ bool query(TestConnections& test)
     test.maxscales->connect();
     execute_query_silent(test.maxscales->conn_rwsplit[0], "SET @a = 1") == 0;
     sleep(5);
-    auto row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @a");
+    Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @a");
     test.maxscales->disconnect();
     return row[0] == "1";
 }

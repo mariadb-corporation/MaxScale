@@ -525,9 +525,9 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
     return ret;
 }
 
-std::vector<std::string> get_row(MYSQL* conn, std::string sql)
+Row get_row(MYSQL* conn, std::string sql)
 {
-    std::vector<std::string> rval;
+    Row rval;
     MYSQL_RES* res;
 
     if (mysql_query(conn, sql.c_str()) == 0 && (res = mysql_store_result(conn)))

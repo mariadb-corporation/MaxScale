@@ -26,6 +26,8 @@
 #include <string>
 #include <vector>
 
+typedef std::vector<std::string> Row;
+
 /**
  * Opens connection to DB: wropper over mysql_real_connect
  *
