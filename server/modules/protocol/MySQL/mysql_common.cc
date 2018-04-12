@@ -1657,8 +1657,7 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
 {
     return cmd != MXS_COM_STMT_SEND_LONG_DATA &&
            cmd != MXS_COM_QUIT &&
-           cmd != MXS_COM_STMT_CLOSE &&
-           cmd != MXS_COM_STMT_FETCH;
+           cmd != MXS_COM_STMT_CLOSE;
 }
 
 typedef std::vector< std::pair<SERVER*, uint64_t> > TargetList;

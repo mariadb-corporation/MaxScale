@@ -527,6 +527,7 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
         int n_eof = modutil_count_signal_packets(buffer, 0, &more, &state);
         backend->set_large_packet(state.state);
 
+        // If the server responded with an error, n_eof > 0
         if (n_eof > 0 || backend->consume_fetched_rows(buffer))
         {
             LOG_RS(backend, REPLY_STATE_DONE);
