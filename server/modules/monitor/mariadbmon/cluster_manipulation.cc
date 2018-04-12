@@ -47,10 +47,8 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
     {
         bool switched = do_switchover(&found_curr_master, &found_new_master, error_out);
         const char AUTOSELECT[] = "<autoselect>";
-        const char* curr_master_name = found_curr_master ?
-                                       found_curr_master->server_base->server->unique_name : AUTOSELECT;
-        const char* new_master_name = found_new_master ?
-                                      found_new_master->server_base->server->unique_name : AUTOSELECT;
+        const char* curr_master_name = found_curr_master ? found_curr_master->name() : AUTOSELECT;
+        const char* new_master_name = found_new_master ? found_new_master->name() : AUTOSELECT;
 
         if (switched)
         {
@@ -131,7 +129,6 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor_base, rejoin_server);
         if (mon_slave_cand)
         {
-            const char* master_name = m_master->server_base->server->unique_name;
             MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
 
             if (server_is_rejoin_suspect(slave_cand, m_master, output))
@@ -155,13 +152,14 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     else
                     {
                         PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
-                                             "or it could not be queried.", rejoin_serv_name, master_name);
+                                             "or it could not be queried.", rejoin_serv_name,
+                                             m_master->name());
                     }
                 }
                 else
                 {
                     PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
-                                         master_name);
+                                         m_master->name());
                 }
             }
         }
@@ -346,7 +344,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers)
         for (auto iter = joinable_servers.begin(); iter != joinable_servers.end(); iter++)
         {
             MariaDBServer* joinable = *iter;
-            const char* name = joinable->server_base->server->unique_name;
+            const char* name = joinable->name();
             bool op_success;
 
             if (joinable->n_slaves_configured == 0)
@@ -377,7 +375,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers)
  */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (m_master != NULL && SERVER_IS_MASTER(m_master->server_base->server) && m_master_gtid_domain >= 0);
+    return (m_master != NULL && m_master->is_master() && m_master_gtid_domain >= 0);
 }
 
 /**
@@ -486,8 +484,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaD
                                               json_t** output)
 {
     bool is_suspect = false;
-    auto rejoin_mon_serv = rejoin_cand->server_base;
-    if (!SERVER_IS_MASTER(rejoin_mon_serv->server) && SERVER_IS_RUNNING(rejoin_mon_serv->server))
+    if (rejoin_cand->is_running() && !rejoin_cand->is_master())
     {
         SlaveStatusInfo* slave_status = &rejoin_cand->slave_status;
         // Has no slave connection, yet is not a master.
@@ -515,8 +512,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaD
     }
     else if (output != NULL)
     {
-        PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.",
-                             rejoin_mon_serv->server->unique_name);
+        PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.", rejoin_cand->name());
     }
     return is_suspect;
 }
@@ -540,7 +536,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
     if (*current_master == NULL)
     {
         // Autoselect current master.
-        if (m_master && SERVER_IS_MASTER(m_master->server_base->server))
+        if (m_master && m_master->is_master())
         {
             demotion_target = m_master;
             *current_master = demotion_target;
@@ -690,13 +686,12 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
             const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
             if (mxs_mysql_query(demotion_target->server_base->con, QUERY_UNDO) == 0)
             {
-                PRINT_MXS_JSON_ERROR(err_out, "read_only disabled on server %s.",
-                                     demotion_target->server_base->server->unique_name);
+                PRINT_MXS_JSON_ERROR(err_out, "read_only disabled on server %s.", demotion_target->name());
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(err_out, "Could not disable read_only on server %s: '%s'.",
-                                     demotion_target->server_base->server->unique_name,
+                                     demotion_target->name(),
                                      mysql_error(demotion_target->server_base->con));
             }
 
@@ -1041,8 +1036,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
                     if (!slave->slave_status.last_error.empty())
                     {
                         // IO or SQL error on slave, replication is a fail
-                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.",
-                                    slave->server_base->server->unique_name,
+                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.", slave->name(),
                                     slave->slave_status.last_error.c_str());
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
@@ -1183,7 +1177,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
                 valid_but_excluded.push_back(cand);
                 const char CANNOT_SELECT[] = "Promotion candidate '%s' is excluded from new "
                 "master selection.";
-                MXS_INFO(CANNOT_SELECT, cand->server_base->server->unique_name);
+                MXS_INFO(CANNOT_SELECT, cand->name());
             }
             else if (cand->check_replication_settings())
             {
@@ -1212,7 +1206,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
     for (auto iter = valid_but_excluded.begin(); iter != valid_but_excluded.end(); iter++)
     {
         MariaDBServer* excluded_info = *iter;
-        const char* excluded_name = (*iter)->server_base->server->unique_name;
+        const char* excluded_name = (*iter)->name();
         if (current_best == NULL)
         {
             const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
@@ -1458,8 +1452,7 @@ bool MariaDBMonitor::can_replicate_from(MariaDBServer* slave_cand, MariaDBServer
 bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
 {
     ss_dassert(*cluster_modified_out == false);
-    if (config_get_global_options()->passive ||
-        (m_master && SERVER_IS_MASTER(m_master->server_base->server)))
+    if (config_get_global_options()->passive || (m_master && m_master->is_master()))
     {
         return true;
     }
@@ -1692,7 +1685,7 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
     bool gtid_ok = true;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        if (SERVER_IS_SLAVE((*iter)->server_base->server) && !uses_gtid((*iter)->server_base, error_out))
+        if ((*iter)->is_slave() && !uses_gtid((*iter)->server_base, error_out))
         {
             gtid_ok = false;
         }

@@ -407,7 +407,7 @@ void MariaDBMonitor::main_loop()
         // Use the information to find the so far best master server.
         root_master = find_root_master();
 
-        if (m_master != NULL && SERVER_IS_MASTER(m_master->server_base->server))
+        if (m_master != NULL && m_master->is_master())
         {
             // Update cluster-wide values dependant on the current master.
             update_gtid_domain();
@@ -451,7 +451,7 @@ void MariaDBMonitor::main_loop()
             }
         }
 
-        if (root_master && SERVER_IS_MASTER(root_master->server_base->server))
+        if (root_master && root_master->is_master())
         {
             SERVER* root_master_server = root_master->server_base->server;
             // Clear slave and stale slave status bits from current master
@@ -492,8 +492,7 @@ void MariaDBMonitor::main_loop()
 
         /* Generate the replication heartbeat event by performing an update */
         if (m_detect_replication_lag && root_master &&
-            (SERVER_IS_MASTER(root_master->server_base->server) ||
-             SERVER_IS_RELAY_SERVER(root_master->server_base->server)))
+            (root_master->is_master() || SERVER_IS_RELAY_SERVER(root_master->server_base->server)))
         {
             measure_replication_lag(root_master);
         }
@@ -618,8 +617,7 @@ void MariaDBMonitor::handle_auto_failover(bool* failover_performed)
         disable_setting(CN_AUTO_FAILOVER);
     }
     // If master seems to be down, check if slaves are receiving events.
-    else if (m_verify_master_failure && m_master &&
-             SERVER_IS_DOWN(m_master->server_base->server) && slave_receiving_events())
+    else if (m_verify_master_failure && m_master && m_master->is_down() && slave_receiving_events())
     {
         MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
     }
@@ -688,8 +686,7 @@ void MariaDBMonitor::handle_auto_rejoin()
     }
     else
     {
-        MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.",
-                  m_master->server_base->server->unique_name);
+        MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.", m_master->name());
     }
 }
 
@@ -1116,7 +1113,7 @@ string monitored_servers_to_string(const ServerArray& servers)
         for (size_t i = 0; i < array_size; i++)
         {
             rval += separator;
-            rval += servers[i]->server_base->server->unique_name;
+            rval += servers[i]->name();
             separator = ",";
         }
     }
@@ -1132,7 +1129,7 @@ string get_connection_errors(const ServerArray& servers)
     {
         const char* error = mysql_error((*iter)->server_base->con);
         ss_dassert(*error); // Every connection should have an error.
-        rval += separator + (*iter)->server_base->server->unique_name + ": '" + error + "'";
+        rval += separator + (*iter)->name() + ": '" + error + "'";
         separator = ", ";
     }
     return rval;

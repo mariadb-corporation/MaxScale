@@ -161,6 +161,41 @@ public:
      * @return True, if target gtid was reached within allotted time
      */
     bool wait_until_gtid(const GtidList& target, int timeout, json_t** err_out);
+
+    /**
+     * Convenience method for SERVER_IS_MASTER
+     *
+     * @return True if server is a master
+     */
+    bool is_master() const;
+
+    /**
+     * Convenience method for SERVER_IS_SLAVE
+     *
+     * @return True if server is a slave
+     */
+    bool is_slave() const;
+
+    /**
+     * Convenience method for SERVER_IS_RUNNING
+     *
+     * @return True if server is running
+     */
+    bool is_running() const;
+
+    /**
+     * Convenience method for SERVER_IS_DOWN
+     *
+     * @return True if server is down
+     */
+    bool is_down() const;
+
+    /**
+     * Returns the server name.
+     *
+     * @return Server unique name
+     */
+    const char* name() const;
 };
 
 /**

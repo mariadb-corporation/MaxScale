@@ -42,7 +42,9 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     , heartbeat_period(0)
     , latest_event(0)
     , gtid_domain_id(-1)
-{}
+{
+    ss_dassert(monitored_server);
+}
 
 int64_t MariaDBServer::relay_log_events()
 {
@@ -323,7 +325,7 @@ void MariaDBServer::read_server_variables()
 bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings)
 {
     bool rval = true;
-    const char* servername = server_base->server->unique_name;
+    const char* servername = name();
     if (rpl_settings.log_bin == false)
     {
         if (print_warnings == WARNINGS_ON)
@@ -395,14 +397,38 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
     if (error)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Failed to update gtid on server '%s' while waiting for catchup.",
-                             server_base->server->unique_name);
+                             name());
     }
     else if (!gtid_reached)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Slave catchup timed out on slave '%s'.",
-                             server_base->server->unique_name);
+        PRINT_MXS_JSON_ERROR(err_out, "Slave catchup timed out on slave '%s'.", name());
     }
     return gtid_reached;
+}
+
+bool MariaDBServer::is_master() const
+{
+    return SERVER_IS_MASTER(server_base->server);
+}
+
+bool MariaDBServer::is_slave() const
+{
+    return SERVER_IS_SLAVE(server_base->server);
+}
+
+bool MariaDBServer::is_running() const
+{
+    return SERVER_IS_RUNNING(server_base->server);
+}
+
+bool MariaDBServer::is_down() const
+{
+    return SERVER_IS_DOWN(server_base->server);
+}
+
+const char* MariaDBServer::name() const
+{
+    return server_base->server->unique_name;
 }
 
 QueryResult::QueryResult(MYSQL_RES* resultset)
