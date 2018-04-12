@@ -18,6 +18,7 @@ RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
     m_large_packet(false),
+    m_command(0),
     m_open_cursor(false),
     m_expected_rows(0)
 {
