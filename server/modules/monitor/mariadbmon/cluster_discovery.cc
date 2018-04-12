@@ -15,7 +15,6 @@
 #include <inttypes.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
-#include "utilities.hh"
 
 static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
 static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database);

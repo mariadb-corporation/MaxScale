@@ -15,7 +15,7 @@
 
 #include <algorithm>
 #include <sstream>
-#include "utilities.hh"
+#include <maxscale/debug.h>
 
 using std::string;
 

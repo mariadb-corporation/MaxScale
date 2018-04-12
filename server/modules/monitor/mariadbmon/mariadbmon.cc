@@ -14,9 +14,6 @@
 /**
  * @file A MariaDB replication cluster monitor
  */
-
-#define MXS_MODULE_NAME "mariadbmon"
-
 #include "mariadbmon.hh"
 #include <inttypes.h>
 #include <sstream>
@@ -30,7 +27,6 @@
 #include <maxscale/utils.h>
 // TODO: For monitorAddParameters
 #include "../../../core/internal/monitor.h"
-#include "utilities.hh"
 
 using std::string;
 

@@ -17,7 +17,6 @@
 #include <sstream>
 #include <maxscale/clock.h>
 #include <maxscale/mysql_utils.h>
-#include "utilities.hh"
 
 using std::string;
 

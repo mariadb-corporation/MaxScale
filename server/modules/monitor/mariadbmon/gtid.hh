@@ -12,8 +12,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#include <maxscale/cppdefs.hh>
+#include "mariadbmon_common.hh"
 #include <string>
 #include <vector>
 

@@ -12,18 +12,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#include <maxscale/cppdefs.hh>
+#include "mariadbmon_common.hh"
 #include <string>
 #include <tr1/unordered_map>
 #include <vector>
 
-#include <maxscale/json_api.h>
 #include <maxscale/monitor.h>
 #include <maxscale/thread.h>
 
 #include "mariadbserver.hh"
-#include "utilities.hh"
 
 extern const int PORT_UNKNOWN;
 extern const char * const CN_AUTO_FAILOVER;
