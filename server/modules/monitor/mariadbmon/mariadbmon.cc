@@ -65,19 +65,23 @@ MariaDBMonitor::~MariaDBMonitor()
  */
 void MariaDBMonitor::init_server_info()
 {
-    m_servers.clear();
-    for (auto server = m_monitor_base->monitored_servers; server; server = server->next)
+    // If this monitor is being restarted, the server data needs to be freed.
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        m_servers.push_back(MariaDBServer(server));
+        delete *iter;
+    }
+    m_servers.clear();
+    for (auto mon_server = m_monitor_base->monitored_servers; mon_server; mon_server = mon_server->next)
+    {
+        m_servers.push_back(new MariaDBServer(mon_server));
     }
 
-    // All servers have been inserted into the vector. The data in the vector should no longer move so it's
-    // safe to take addresses.
     m_server_info.clear();
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        ss_dassert(m_server_info.count(iter->server_base) == 0);
-        ServerInfoMap::value_type new_val(iter->server_base, &*iter);
+        auto mon_server = (*iter)->server_base;
+        ss_dassert(m_server_info.count(mon_server) == 0);
+        ServerInfoMap::value_type new_val(mon_server, *iter);
         m_server_info.insert(new_val);
     }
 }
@@ -397,7 +401,7 @@ void MariaDBMonitor::main_loop()
         // Query all servers for their status.
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            monitor_one_server(*iter);
+            monitor_one_server(**iter);
         }
 
         // Use the information to find the so far best master server.
@@ -413,19 +417,19 @@ void MariaDBMonitor::main_loop()
         // Assign relay masters, clear SERVER_SLAVE from binlog relays
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            assign_relay_master(*iter);
+            assign_relay_master(**iter);
 
             /* Remove SLAVE status if this server is a Binlog Server relay */
-            if (iter->binlog_relay)
+            if ((*iter)->binlog_relay)
             {
-                monitor_clear_pending_status(iter->server_base, SERVER_SLAVE);
+                monitor_clear_pending_status((*iter)->server_base, SERVER_SLAVE);
             }
         }
 
         /* Update server status from monitor pending status on that server*/
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            update_server_states(*iter, root_master);
+            update_server_states(**iter, root_master);
         }
 
         /** Now that all servers have their status correctly set, we can check
@@ -585,13 +589,13 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master_server)
     set_master_heartbeat(root_master);
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        MXS_MONITORED_SERVER* ptr = iter->server_base;
+        MXS_MONITORED_SERVER* ptr = (*iter)->server_base;
         if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
         {
             if (ptr->server->node_id != root_master->server->node_id &&
                 (SERVER_IS_SLAVE(ptr->server) ||
                 SERVER_IS_RELAY_SERVER(ptr->server)) &&
-                !iter->binlog_relay)  // No select lag for Binlog Server
+                !(*iter)->binlog_relay)  // No select lag for Binlog Server
             {
                 set_slave_heartbeat(ptr);
             }
@@ -665,7 +669,7 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
 
 void MariaDBMonitor::handle_auto_rejoin()
 {
-    ServerRefArray joinable_servers;
+    ServerArray joinable_servers;
     if (get_joinable_servers(&joinable_servers))
     {
         uint32_t joins = do_rejoin(joinable_servers);
@@ -1102,7 +1106,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
     return rv;
 }
 
-string monitored_servers_to_string(const ServerRefArray& servers)
+string monitored_servers_to_string(const ServerArray& servers)
 {
     string rval;
     size_t array_size = servers.size();
@@ -1119,7 +1123,7 @@ string monitored_servers_to_string(const ServerRefArray& servers)
     return rval;
 }
 
-string get_connection_errors(const ServerRefArray& servers)
+string get_connection_errors(const ServerArray& servers)
 {
     // Get errors from all connections, form a string.
     string rval;

@@ -29,10 +29,8 @@ class MariaDBMonitor;
 
 // Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
 typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
-// Server container, owns the server objects.
-typedef std::vector<MariaDBServer> ServerArray; // TODO: Rename/get rid of ServerVector typedef!
-// Server pointer array, used for temporary server collections
-typedef std::vector<MariaDBServer*> ServerRefArray;
+// Server pointer array
+typedef std::vector<MariaDBServer*> ServerArray;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor
@@ -142,7 +140,7 @@ private:
     bool m_auto_failover;            /**< If automatic master failover is enabled */
     bool m_auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                       *   replicating from the wrong master automatically. */
-    ServerRefArray m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+    ServerArray m_excluded_servers;  /**< Servers banned for master promotion during auto-failover. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
@@ -197,7 +195,7 @@ private:
     bool switchover_check_preferred_master(MXS_MONITORED_SERVER* preferred, json_t** err_out);
     bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
-    bool switchover_wait_slaves_catchup(const ServerRefArray& slaves, const GtidList& gtid, int total_timeout,
+    bool switchover_wait_slaves_catchup(const ServerArray& slaves, const GtidList& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
     bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
 
@@ -213,26 +211,26 @@ private:
     // Rejoin methods
     bool cluster_can_be_joined();
     void handle_auto_rejoin();
-    bool get_joinable_servers(ServerRefArray* output);
+    bool get_joinable_servers(ServerArray* output);
     bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaDBServer* master, json_t** output);
     bool can_replicate_from(MariaDBServer* slave_cand, MariaDBServer* master);
-    uint32_t do_rejoin(const ServerRefArray& joinable_servers);
+    uint32_t do_rejoin(const ServerArray& joinable_servers);
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
 
     // Methods common to failover/switchover/rejoin
     bool uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out);
-    MariaDBServer* select_new_master(ServerRefArray* slaves_out, json_t** err_out);
+    MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
     MariaDBServer* update_slave_info(MXS_MONITORED_SERVER* server);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info,
                              uint32_t gtid_domain);
     bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
-    int redirect_slaves(MariaDBServer* new_master, const ServerRefArray& slaves,
-                        ServerRefArray* redirected_slaves);
+    int redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
+                        ServerArray* redirected_slaves);
     bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
-    bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerRefArray& slaves,
+    bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                     int seconds_remaining);
     void disable_setting(const char* setting);
     void load_journal();
@@ -244,7 +242,7 @@ private:
  * @param servers The servers
  * @return Server names
  */
-std::string monitored_servers_to_string(const ServerRefArray& servers);
+std::string monitored_servers_to_string(const ServerArray& servers);
 
 /**
  * Get MariaDB connection error strings from all the given servers, form one string.
@@ -252,4 +250,4 @@ std::string monitored_servers_to_string(const ServerRefArray& servers);
  * @param servers Servers with errors
  * @return Concatenated string.
  */
-std::string get_connection_errors(const ServerRefArray& servers);
+std::string get_connection_errors(const ServerArray& servers);

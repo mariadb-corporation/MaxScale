@@ -1100,7 +1100,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
     /* if only one server is configured, that's is Master */
     if (num_servers == 1)
     {
-        auto mon_server = m_servers[0].server_base;
+        auto mon_server = m_servers[0]->server_base;
         if (SERVER_IS_RUNNING(mon_server->server))
         {
             mon_server->server->depth = 0;
@@ -1110,7 +1110,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
             monitor_set_pending_status(mon_server, SERVER_MASTER);
 
             mon_server->server->depth = 0;
-            m_master = &m_servers[0];
+            m_master = m_servers[0];
             found_root_master = mon_server;
         }
     }
