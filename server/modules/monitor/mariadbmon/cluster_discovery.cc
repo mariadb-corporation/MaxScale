@@ -87,7 +87,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
             /* Set the Slave Role */
             if (ismaster)
             {
-                m_master = database;
+                m_master = get_server_info(database);
 
                 MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
                           database->server->name,
@@ -128,7 +128,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
         }
         if (SERVER_IS_SLAVE(database->server) &&
             (database->server->master_id <= 0 ||
-             database->server->master_id != m_master->server->node_id))
+             database->server->master_id != m_master->server_base->server->node_id))
         {
 
             monitor_set_pending_status(database, SERVER_SLAVE);
@@ -205,7 +205,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
             if (current->depth > -1 && current->depth < root_level)
             {
                 root_level = current->depth;
-                m_master = ptr;
+                m_master = get_server_info(ptr);
             }
             backend = getServerByNodeId(node_id);
 
@@ -236,12 +236,12 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                                         current->node_id);
                     master_cand->server->depth = current->depth - 1;
 
-                    if (m_master && master_cand->server->depth < m_master->server->depth)
+                    if (m_master && master_cand->server->depth < m_master->server_base->server->depth)
                     {
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */
-                        monitor_clear_pending_status(m_master, SERVER_MASTER);
-                        m_master = master_cand;
+                        monitor_clear_pending_status(m_master->server_base, SERVER_MASTER);
+                        m_master = get_server_info(master_cand);
                     }
 
                     MariaDBServer* info = get_server_info(master_cand);
@@ -275,13 +275,13 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
     if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (SERVER_IN_MAINT(m_master->server))
+        if (SERVER_IN_MAINT(m_master->server_base->server))
         {
             return NULL;
         }
         else
         {
-            return m_master;
+            return m_master->server_base;
         }
     }
     else
@@ -1017,7 +1017,7 @@ bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
-            m_master = db;
+            m_master = get_server_info(db);
             rval = true;
         }
         else if (!m_allow_cluster_recovery)
@@ -1110,7 +1110,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
             monitor_set_pending_status(mon_server, SERVER_MASTER);
 
             mon_server->server->depth = 0;
-            m_master = mon_server;
+            m_master = &m_servers[0];
             found_root_master = mon_server;
         }
     }

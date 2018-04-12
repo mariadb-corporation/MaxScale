@@ -131,15 +131,14 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor_base, rejoin_server);
         if (mon_slave_cand)
         {
-            const char* master_name = m_master->server->unique_name;
-            MariaDBServer* master = get_server_info(m_master);
+            const char* master_name = m_master->server_base->server->unique_name;
             MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
 
-            if (server_is_rejoin_suspect(slave_cand, master, output))
+            if (server_is_rejoin_suspect(slave_cand, m_master, output))
             {
-                if (master->update_gtids())
+                if (m_master->update_gtids())
                 {
-                    if (can_replicate_from(slave_cand, master))
+                    if (can_replicate_from(slave_cand, m_master))
                     {
                         ServerRefArray joinable_server;
                         joinable_server.push_back(slave_cand);
@@ -338,7 +337,7 @@ bool MariaDBMonitor::redirect_one_slave(MXS_MONITORED_SERVER* slave, const char*
  */
 uint32_t MariaDBMonitor::do_rejoin(const ServerRefArray& joinable_servers)
 {
-    SERVER* master_server = m_master->server;
+    SERVER* master_server = m_master->server_base->server;
     const char* master_name = master_server->unique_name;
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
@@ -346,7 +345,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerRefArray& joinable_servers)
         string change_cmd = generate_change_master_cmd(master_server->name, master_server->port);
         for (auto iter = joinable_servers.begin(); iter != joinable_servers.end(); iter++)
         {
-            auto joinable = *iter;
+            MariaDBServer* joinable = *iter;
             const char* name = joinable->server_base->server->unique_name;
             bool op_success;
 
@@ -378,7 +377,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerRefArray& joinable_servers)
  */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (m_master != NULL && SERVER_IS_MASTER(m_master->server) && m_master_gtid_domain >= 0);
+    return (m_master != NULL && SERVER_IS_MASTER(m_master->server_base->server) && m_master_gtid_domain >= 0);
 }
 
 /**
@@ -393,14 +392,13 @@ bool MariaDBMonitor::cluster_can_be_joined()
 bool MariaDBMonitor::get_joinable_servers(ServerRefArray* output)
 {
     ss_dassert(output);
-    MariaDBServer* master = get_server_info(m_master);
 
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
     ServerRefArray suspects;
     for (size_t i = 0; i < m_servers.size(); i++)
     {
-        if (server_is_rejoin_suspect(&m_servers[i], master, NULL))
+        if (server_is_rejoin_suspect(&m_servers[i], m_master, NULL))
         {
             suspects.push_back(&m_servers[i]);
         }
@@ -410,11 +408,11 @@ bool MariaDBMonitor::get_joinable_servers(ServerRefArray* output)
     bool comm_ok = true;
     if (!suspects.empty())
     {
-        if (master->update_gtids())
+        if (m_master->update_gtids())
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
-                if (can_replicate_from(suspects[i], master))
+                if (can_replicate_from(suspects[i], m_master))
                 {
                     output->push_back(suspects[i]);
                 }
@@ -508,8 +506,8 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaD
             }
             // or is disconnected but master host or port is wrong.
             else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
-                     (slave_status->master_host != m_master->server->name ||
-                      slave_status->master_port != m_master->server->port))
+                     (slave_status->master_host != m_master->server_base->server->name ||
+                      slave_status->master_port != m_master->server_base->server->port))
             {
                 is_suspect = true;
             }
@@ -542,9 +540,9 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
     if (*current_master == NULL)
     {
         // Autoselect current master.
-        if (m_master && SERVER_IS_MASTER(m_master->server))
+        if (m_master && SERVER_IS_MASTER(m_master->server_base->server))
         {
-            demotion_target = get_server_info(m_master);
+            demotion_target = m_master;
             *current_master = demotion_target;
         }
         else
@@ -1176,7 +1174,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerRefArray* slaves_out, jso
          * If master is replicating from external master, it is updated by update_slave_info()
          * but not added to array. */
         MariaDBServer* cand = update_slave_info(iter->server_base);
-        if (cand && cand->server_base != m_master)
+        if (cand && cand != m_master)
         {
             slaves_out->push_back(cand);
             // Check that server is not in the exclusion list while still being a valid choice.
@@ -1461,7 +1459,7 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
 {
     ss_dassert(*cluster_modified_out == false);
     if (config_get_global_options()->passive ||
-        (m_master && SERVER_IS_MASTER(m_master->server)))
+        (m_master && SERVER_IS_MASTER(m_master->server_base->server)))
     {
         return true;
     }
@@ -1583,7 +1581,7 @@ bool MariaDBMonitor::slave_receiving_events()
 {
     ss_dassert(m_master);
     bool received_event = false;
-    int64_t master_id = m_master->server->node_id;
+    int64_t master_id = m_master->server_base->server->node_id;
     for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers; server; server = server->next)
     {
         MariaDBServer* info = get_server_info(server);

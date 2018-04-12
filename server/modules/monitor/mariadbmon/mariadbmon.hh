@@ -118,7 +118,7 @@ private:
     int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
     std::string m_external_master_host; /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
-    MXS_MONITORED_SERVER *m_master;  /**< Master server for MySQL Master/Slave replication */
+    MariaDBServer *m_master;         /**< Master server for MySQL Master/Slave replication */
 
     // Replication topology detection settings
     bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
@@ -235,6 +235,7 @@ private:
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerRefArray& slaves,
                                     int seconds_remaining);
     void disable_setting(const char* setting);
+    void load_journal();
 };
 
 /**
