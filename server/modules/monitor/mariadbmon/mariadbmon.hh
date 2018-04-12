@@ -107,45 +107,44 @@ private:
     MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
     THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
-    volatile bool m_keep_running;    /**< Set to false to cause monitor thread to exit. */
-    volatile int m_status;           /**< Monitor status.  */
-    ServerArray m_servers;           /**< Servers of the monitor. */
-    ServerInfoMap m_server_info;     /**< Contains server specific information */
+    volatile bool m_keep_running;    /**< Should monitor main loop keep running? */
+    volatile int m_status;           /**< Monitor status  */
+    ServerArray m_servers;           /**< Servers of the monitor */
+    ServerInfoMap m_server_info;     /**< Map from server base struct to MariaDBServer */
 
     // Values updated by monitor
-    int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
+    MariaDBServer* m_master;         /**< Master server for Master/Slave replication */
+    int64_t m_master_gtid_domain;    /**< gtid_domain_id most recently seen on the master  */
     std::string m_external_master_host; /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
-    MariaDBServer *m_master;         /**< Master server for MySQL Master/Slave replication */
 
     // Replication topology detection settings
-    bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
+    bool m_allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
+    bool m_detect_replication_lag;   /**< Monitor flag for MySQL replication heartbeat */
+    bool m_detect_multimaster;       /**< Detect and handle multi-master topologies */
     bool m_detect_stale_master;      /**< Monitor flag for MySQL replication Stale Master detection */
     bool m_detect_stale_slave;       /**< Monitor flag for MySQL replication Stale Slave detection */
-    bool m_detect_multimaster;       /**< Detect and handle multi-master topologies */
-    bool m_ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
     bool m_detect_standalone_master; /**< If standalone master are detected */
-    bool m_allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
-    bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
+    bool m_ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
+    bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
 
     // Failover, switchover and rejoin settings
+    bool m_auto_failover;            /**< Is automatic master failover is enabled? */
+    bool m_auto_rejoin;              /**< Is automatic rejoin enabled? */
+    int m_failcount;                 /**< Numer of cycles master must be down before auto-failover begins */
     std::string m_replication_user;  /**< Replication user for CHANGE MASTER TO-commands */
     std::string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
-    int m_failcount;                 /**< How many monitoring cycles master must be down before auto-failover
-                                      *   begins */
-    uint32_t m_failover_timeout;     /**< Timeout in seconds for the master failover */
-    uint32_t m_switchover_timeout;   /**< Timeout in seconds for the master switchover */
-    bool m_verify_master_failure;    /**< Whether master failure is verified via slaves */
+    uint32_t m_failover_timeout;     /**< Time limit in seconds for master failover */
+    uint32_t m_switchover_timeout;   /**< Time limit in seconds for master switchover */
+    bool m_verify_master_failure;    /**< Is master failure is verified via slaves? */
     int m_master_failure_timeout;    /**< Master failure verification (via slaves) time in seconds */
-    bool m_auto_failover;            /**< If automatic master failover is enabled */
-    bool m_auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
-                                      *   replicating from the wrong master automatically. */
-    ServerArray m_excluded_servers;  /**< Servers banned for master promotion during auto-failover. */
+    ServerArray m_excluded_servers;  /**< Servers banned for master promotion during auto-failover or
+                                      *   autoselect switchover. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
     uint64_t m_events;               /**< enabled events */
-    bool m_detect_replication_lag;   /**< Monitor flag for MySQL replication heartbeat */
+    bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
 
     enum slave_down_setting_t
     {

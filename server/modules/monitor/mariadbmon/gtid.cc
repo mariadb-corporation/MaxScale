@@ -52,7 +52,8 @@ GtidList GtidList::from_string(const string& gtid_string)
                 error = true;
             }
         }
-    } while (have_more && !error);
+    }
+    while (have_more && !error);
 
     if (error)
     {
@@ -96,7 +97,8 @@ bool GtidList::operator == (const GtidList& rhs) const
     return m_triplets == rhs.m_triplets;
 }
 
-uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs, substraction_mode_t domain_substraction_mode)
+uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs,
+                                substraction_mode_t domain_substraction_mode)
 {
     const size_t n_lhs = lhs.m_triplets.size();
     const size_t n_rhs = rhs.m_triplets.size();
@@ -226,7 +228,7 @@ Gtid GtidList::get_gtid(uint32_t domain) const
     // Make a dummy triplet for the domain search
     Gtid search_val(domain, -1, 0);
     auto found = std::lower_bound(m_triplets.begin(), m_triplets.end(), search_val,
-                                      Gtid::compare_domains);
+                                  Gtid::compare_domains);
     if (found != m_triplets.end() && found->m_domain == domain)
     {
         rval = *found;

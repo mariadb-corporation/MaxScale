@@ -798,7 +798,7 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
  * @return True if relay log was processed within time limit, or false if time ran out or an error occurred.
  */
 bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining,
-                             json_t** err_out)
+                                             json_t** err_out)
 {
     MariaDBServer* master_info = get_server_info(new_master);
     time_t begin = time(NULL);
@@ -1156,7 +1156,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
      * If multiple slaves have same number of events, select the one with most processed events. */
     MXS_MONITORED_SERVER* current_best = NULL;
     MariaDBServer* current_best_info = NULL;
-     // Servers that cannot be selected because of exclusion, but seem otherwise ok.
+    // Servers that cannot be selected because of exclusion, but seem otherwise ok.
     ServerArray valid_but_excluded;
     // Index of the current best candidate in slaves_out
     int master_vector_index = -1;
@@ -1176,7 +1176,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
             {
                 valid_but_excluded.push_back(cand);
                 const char CANNOT_SELECT[] = "Promotion candidate '%s' is excluded from new "
-                "master selection.";
+                                             "master selection.";
                 MXS_INFO(CANNOT_SELECT, cand->name());
             }
             else if (cand->check_replication_settings())
@@ -1210,7 +1210,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
         if (current_best == NULL)
         {
             const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
-            "but cannot be selected as it's excluded.";
+                                              "but cannot be selected as it's excluded.";
             MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
             break;
         }
@@ -1219,8 +1219,8 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
             // Print a warning if this server is actually a better candidate than the previous
             // best.
             const char EXCLUDED_CAND[] = "Server '%s' is superior to current "
-            "best candidate '%s', but cannot be selected as it's excluded. This may lead to "
-            "loss of data if '%s' is ahead of other servers.";
+                                         "best candidate '%s', but cannot be selected as it's excluded. This may lead to "
+                                         "loss of data if '%s' is ahead of other servers.";
             MXS_WARNING(EXCLUDED_CAND, excluded_name, current_best->server->unique_name, excluded_name);
             break;
         }
@@ -1401,11 +1401,11 @@ bool MariaDBMonitor::failover_check(json_t** error_out)
         {
             if (uses_gtid(mon_server, error_out))
             {
-                 slaves++;
+                slaves++;
             }
             else
             {
-                 error = true;
+                error = true;
             }
         }
     }

@@ -1056,8 +1056,8 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
         {
             /** Master failed, can't recover */
             MXS_NOTICE("Server [%s]:%d lost the master status.",
-                ptr->server->name,
-                ptr->server->port);
+                       ptr->server->name,
+                       ptr->server->port);
         }
     }
 
@@ -1065,14 +1065,14 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
     {
 #if defined(SS_DEBUG)
         MXS_INFO("Backend server [%s]:%d state : %s",
-            ptr->server->name,
-            ptr->server->port,
-            STRSRVSTATUS(ptr->server));
+                 ptr->server->name,
+                 ptr->server->port,
+                 STRSRVSTATUS(ptr->server));
 #else
         MXS_DEBUG("Backend server [%s]:%d state : %s",
-            ptr->server->name,
-            ptr->server->port,
-            STRSRVSTATUS(ptr->server));
+                  ptr->server->name,
+                  ptr->server->port,
+                  STRSRVSTATUS(ptr->server));
 #endif
     }
 
@@ -1181,7 +1181,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
          */
         if (m_detect_stale_master && root_master && !m_detect_multimaster &&
             (strcmp(ptr->server->name, root_master->server->name) == 0 &&
-            ptr->server->port == root_master->server->port) &&
+             ptr->server->port == root_master->server->port) &&
             (ptr->server->status & SERVER_MASTER) &&
             !(ptr->pending_status & SERVER_MASTER) &&
             !serv_info->read_only)
@@ -1198,10 +1198,10 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             if ((ptr->mon_prev_status & SERVER_STALE_STATUS) == 0)
             {
                 MXS_WARNING("All slave servers under the current master "
-                    "server have been lost. Assigning Stale Master"
-                    " status to the old master server '%s' (%s:%i).",
-                    ptr->server->unique_name, ptr->server->name,
-                    ptr->server->port);
+                            "server have been lost. Assigning Stale Master"
+                            " status to the old master server '%s' (%s:%i).",
+                            ptr->server->unique_name, ptr->server->name,
+                            ptr->server->port);
             }
         }
 
@@ -1227,12 +1227,12 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             /** If this server was a stale slave candidate, assign
              * slave status to it */
             else if (ptr->mon_prev_status & SERVER_STALE_SLAVE &&
-                ptr->pending_status & SERVER_RUNNING &&
-                // Master is down
-                (!root_master || !SERVER_IS_MASTER(root_master->server) ||
-                // Master just came up
-                (SERVER_IS_MASTER(root_master->server) &&
-                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
+                     ptr->pending_status & SERVER_RUNNING &&
+                     // Master is down
+                     (!root_master || !SERVER_IS_MASTER(root_master->server) ||
+                      // Master just came up
+                      (SERVER_IS_MASTER(root_master->server) &&
+                       (root_master->mon_prev_status & SERVER_MASTER) == 0)))
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }

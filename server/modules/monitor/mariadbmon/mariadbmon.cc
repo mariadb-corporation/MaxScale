@@ -354,7 +354,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
             json_object_set_new(srv, "gtid_binlog_pos",
                                 json_string(serv_info->gtid_binlog_pos.to_string().c_str()));
             json_object_set_new(srv, "gtid_io_pos",
-                                    json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
+                                json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
             if (m_detect_multimaster)
             {
                 json_object_set_new(srv, "master_group", json_integer(serv_info->group));
@@ -473,7 +473,7 @@ void MariaDBMonitor::main_loop()
         ss_dassert(root_master == NULL || root_master == m_master);
         ss_dassert(root_master == NULL ||
                    ((root_master->server_base->server->status & (SERVER_SLAVE | SERVER_MASTER)) !=
-                   (SERVER_SLAVE | SERVER_MASTER)));
+                    (SERVER_SLAVE | SERVER_MASTER)));
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -559,13 +559,13 @@ void MariaDBMonitor::update_external_master()
             if (m_external_master_port == PORT_UNKNOWN)
             {
                 MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
-                    new_ext_host.c_str(), new_ext_port);
+                           new_ext_host.c_str(), new_ext_port);
             }
             else
             {
                 MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
-                    m_external_master_host.c_str(), m_external_master_port,
-                    new_ext_host.c_str(), new_ext_port);
+                           m_external_master_host.c_str(), m_external_master_port,
+                           new_ext_host.c_str(), new_ext_port);
             }
             m_external_master_host = new_ext_host;
             m_external_master_port = new_ext_port;
@@ -593,7 +593,7 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master_server)
         {
             if (ptr->server->node_id != root_master->server->node_id &&
                 (SERVER_IS_SLAVE(ptr->server) ||
-                SERVER_IS_RELAY_SERVER(ptr->server)) &&
+                 SERVER_IS_RELAY_SERVER(ptr->server)) &&
                 !(*iter)->binlog_relay)  // No select lag for Binlog Server
             {
                 set_slave_heartbeat(ptr);
@@ -643,15 +643,15 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
                 !(root_master->server->status & SERVER_MAINT))
             {
                 MXS_NOTICE("A Master Server is now available: %s:%i",
-                    root_master->server->name,
-                    root_master->server->port);
+                           root_master->server->name,
+                           root_master->server->port);
             }
         }
         else
         {
             MXS_ERROR("No Master can be determined. Last known was %s:%i",
-                root_master->server->name,
-                root_master->server->port);
+                      root_master->server->name,
+                      root_master->server->port);
         }
         *log_no_master = 1;
     }
@@ -869,7 +869,7 @@ void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
 
     /* if there is a master then send the query to the slave with master_id */
     if (m_master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
-                           && (result = mysql_store_result(database->con)) != NULL))
+                             && (result = mysql_store_result(database->con)) != NULL))
     {
         int rows_found = 0;
 
