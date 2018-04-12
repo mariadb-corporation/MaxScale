@@ -41,9 +41,9 @@
 #include <maxscale/protocol/mysql.h>
 
 #include "internal/dcb.h"
-#include "internal/session.h"
 #include "internal/filter.h"
-#include "internal/worker.hh"
+#include "internal/routingworker.hh"
+#include "internal/session.h"
 #include "internal/workertask.hh"
 
 using std::string;

@@ -36,7 +36,7 @@
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>
 #include "internal/poll.h"
-#include "internal/worker.hh"
+#include "internal/routingworker.hh"
 
 using maxscale::Worker;
 

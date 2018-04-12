@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
-#include "internal/worker.hh"
+#include "internal/routingworker.hh"
 
 namespace
 {
@@ -165,7 +165,7 @@ bool MessageQueue::post(const Message& message) const
     return rv;
 }
 
-bool MessageQueue::add_to_worker(Worker* pWorker)
+bool MessageQueue::add_to_worker(RoutingWorker* pWorker)
 {
     if (m_pWorker)
     {
@@ -181,9 +181,9 @@ bool MessageQueue::add_to_worker(Worker* pWorker)
     return m_pWorker != NULL;
 }
 
-Worker* MessageQueue::remove_from_worker()
+RoutingWorker* MessageQueue::remove_from_worker()
 {
-    Worker* pWorker = m_pWorker;
+    RoutingWorker* pWorker = m_pWorker;
 
     if (m_pWorker)
     {

@@ -35,7 +35,7 @@
 #include "internal/config_runtime.h"
 #include "internal/modules.h"
 #include "internal/worker.h"
-#include "internal/worker.hh"
+#include "internal/routingworker.hh"
 
 using std::list;
 using std::map;

@@ -19,7 +19,7 @@ namespace maxscale
 {
 
 class MessageQueue;
-class Worker;
+class RoutingWorker;
 
 /**
  * An instance of @c MessageQueueMessage can be sent over a @c MessageQueue from
@@ -180,7 +180,7 @@ public:
      * @attention If the message queue is currently added to a worker, it
      *            will first be removed from that worker.
      */
-    bool add_to_worker(Worker* pWorker);
+    bool add_to_worker(RoutingWorker* pWorker);
 
     /**
      * Removes the message queue from the worker it is currently added to.
@@ -188,7 +188,7 @@ public:
      * @return The worker the message queue was associated with, or NULL
      *         if it was not associated with any.
      */
-    Worker* remove_from_worker();
+    RoutingWorker* remove_from_worker();
 
 private:
     MessageQueue(Handler* pHandler, int read_fd, int write_fd);
@@ -198,10 +198,10 @@ private:
     static uint32_t poll_handler(MXS_POLL_DATA* pData, int thread_id, uint32_t events);
 
 private:
-    Handler& m_handler;
-    int      m_read_fd;
-    int      m_write_fd;
-    Worker*  m_pWorker;
+    Handler&       m_handler;
+    int            m_read_fd;
+    int            m_write_fd;
+    RoutingWorker* m_pWorker;
 };
 
 }

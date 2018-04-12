@@ -44,7 +44,7 @@
 #include "internal/monitor.h"
 #include "internal/poll.h"
 #include "internal/workertask.hh"
-#include "internal/worker.hh"
+#include "internal/routingworker.hh"
 
 using maxscale::Semaphore;
 using maxscale::Worker;

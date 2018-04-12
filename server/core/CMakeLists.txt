@@ -38,6 +38,7 @@ add_library(maxscale-common SHARED
   resultset.cc
   resource.cc
   router.cc
+  routingworker.cc
   secrets.cc
   semaphore.cc
   server.cc
@@ -51,7 +52,6 @@ add_library(maxscale-common SHARED
   thread.cc
   users.cc
   utils.cc
-  worker.cc
   workertask.cc
   )
 

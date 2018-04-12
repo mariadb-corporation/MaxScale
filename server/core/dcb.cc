@@ -57,8 +57,8 @@
 #include <maxscale/semaphore.hh>
 
 #include "internal/modules.h"
+#include "internal/routingworker.hh"
 #include "internal/session.h"
-#include "internal/worker.hh"
 #include "internal/workertask.hh"
 
 using maxscale::Worker;

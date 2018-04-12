@@ -53,16 +53,16 @@
 #include <maxscale/version.h>
 #include <maxscale/random_jkiss.h>
 
+#include "internal/admin.hh"
 #include "internal/config.h"
 #include "internal/maxscale.h"
 #include "internal/messagequeue.hh"
 #include "internal/modules.h"
 #include "internal/monitor.h"
 #include "internal/poll.h"
+#include "internal/routingworker.hh"
 #include "internal/service.h"
 #include "internal/statistics.h"
-#include "internal/admin.hh"
-#include "internal/worker.hh"
 
 using namespace maxscale;
 

@@ -422,13 +422,15 @@ private:
     Average1      m_load_1_second;  /*< The load during the last 1-second period. */
 };
 
+class RoutingWorker;
+typedef RoutingWorker Worker;
 
-class Worker : public MXS_WORKER
+class RoutingWorker : public MXS_WORKER
     , private MessageQueue::Handler
     , private MXS_POLL_DATA
 {
-    Worker(const Worker&);
-    Worker& operator = (const Worker&);
+    RoutingWorker(const RoutingWorker&);
+    RoutingWorker& operator = (const RoutingWorker&);
 
 public:
     typedef WORKER_STATISTICS     STATISTICS;
@@ -833,14 +835,14 @@ public:
      * @return The corresponding worker instance, or NULL if the id does
      *         not correspond to a worker.
      */
-    static Worker* get(int worker_id);
+    static RoutingWorker* get(int worker_id);
 
     /**
      * Return the worker associated with the current thread.
      *
      * @return The worker instance, or NULL if the current thread does not have a worker.
      */
-    static Worker* get_current();
+    static RoutingWorker* get_current();
 
     /**
      * Return the worker id associated with the current thread.
@@ -865,11 +867,11 @@ public:
     static void set_maxwait(unsigned int maxwait);
 
 private:
-    Worker(int id,
-           int epoll_fd);
-    virtual ~Worker();
+    RoutingWorker(int id,
+                  int epoll_fd);
+    virtual ~RoutingWorker();
 
-    static Worker* create(int id, int epoll_listener_fd);
+    static RoutingWorker* create(int id, int epoll_listener_fd);
 
     void delete_zombies();
 

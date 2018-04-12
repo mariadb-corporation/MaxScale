@@ -27,8 +27,8 @@
 #include <sys/stat.h>
 
 #include "../internal/poll.h"
+#include "../internal/routingworker.hh"
 #include "../internal/statistics.h"
-#include "../internal/worker.hh"
 
 
 void init_test_env(char *path)
