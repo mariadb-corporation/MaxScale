@@ -76,21 +76,22 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
             /** Replace the client handle with the real PS handle */
             uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
             gw_mysql_set_byte4(ptr, it->second);
-            uint8_t buf[4];
 
-            if (cmd == MXS_COM_STMT_EXECUTE &&
-                // Skip header and command byte for the 4 byte ID
-                gwbuf_copy_data(buffer, 5, 4, buf) == sizeof(buf) &&
-                // A flag value of 0 is no cursor
-                gw_mysql_get_byte4(buf) != 0)
+            if (cmd == MXS_COM_STMT_EXECUTE)
             {
-                m_open_cursor = true;
+                // Extract the flag byte after the statement ID
+                uint8_t flags = 0;
+                gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE, 1, &flags);
+
+                // Any non-zero flag value means that we have an open cursor
+                m_open_cursor = flags != 0;
             }
             else if (cmd == MXS_COM_STMT_FETCH)
             {
                 ss_dassert(m_open_cursor);
                 // Number of rows to fetch is a 4 byte integer after the ID
-                gwbuf_copy_data(buffer, 5 + 4, 4, buf);
+                uint8_t buf[4];
+                gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE, 4, buf);
                 m_expected_rows = gw_mysql_get_byte4(buf);
             }
             else
