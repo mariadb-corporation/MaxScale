@@ -297,8 +297,7 @@ int main(int argc, char *argv[])
     create_t1(Test->maxscales->conn_rwsplit[0]);
     insert_into_t1(Test->maxscales->conn_rwsplit[0], 1);
     Test->stop_timeout();
-    sleep(5);
-
+    Test->repl->sync_slaves();
 
     Test->tprintf("**** Test 1 ****\n");
 
@@ -316,7 +315,8 @@ int main(int argc, char *argv[])
     create_t1(Test->maxscales->conn_rwsplit[0]);
     insert_into_t1(Test->maxscales->conn_rwsplit[0], 3);
     Test->stop_timeout();
-    sleep(5);
+    Test->repl->sync_slaves();
+
 
     Test->tprintf("**** Test 2 ****\n");
     exp_rows[0] = 0;
