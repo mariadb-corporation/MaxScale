@@ -713,22 +713,15 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
 }
 
 /**
- * Update replication settings and gtid:s of the slave server.
+ * Update replication settings, gtid:s and slave status of the server.
  *
  * @param server Slave to update
- * @return Slave server info. NULL on error, or if server is not a slave.
+ * @return True on success. False on error, or if server is not a slave (slave SQL not running).
  */
-MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
+bool MariaDBMonitor::update_slave_info(MariaDBServer* server)
 {
-    MariaDBServer* info = get_server_info(server);
-    if (info->slave_status.slave_sql_running &&
-        info->update_replication_settings() &&
-        info->update_gtids() &&
-        info->do_show_slave_status())
-    {
-        return info;
-    }
-    return NULL;
+    return (server->slave_status.slave_sql_running && server->update_replication_settings() &&
+            server->update_gtids() && server->do_show_slave_status());
 }
 
 /**
@@ -957,32 +950,26 @@ static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
  * only one server must be available and other servers must have passed the configured tolerance level of
  * failures.
  *
- * @param db     Monitor servers
- *
  * @return True if standalone master should be used
  */
-bool MariaDBMonitor::standalone_master_required(MXS_MONITORED_SERVER *db)
+bool MariaDBMonitor::standalone_master_required()
 {
     int candidates = 0;
-
-    while (db)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        if (SERVER_IS_RUNNING(db->server))
+        MariaDBServer* server = *iter;
+        if (server->is_running())
         {
             candidates++;
-            MariaDBServer *server_info = get_server_info(db);
-
-            if (server_info->read_only || server_info->slave_configured || candidates > 1)
+            if (server->read_only || server->slave_configured || candidates > 1)
             {
                 return false;
             }
         }
-        else if (db->mon_err_count < m_failcount)
+        else if (server->server_base->mon_err_count < m_failcount)
         {
             return false;
         }
-
-        db = db->next;
     }
 
     return candidates == 1;
@@ -995,37 +982,36 @@ bool MariaDBMonitor::standalone_master_required(MXS_MONITORED_SERVER *db)
  * maintenance mode. By setting the servers into maintenance mode, we prevent any possible conflicts when
  * the failed servers come back up.
  *
- * @param db     Monitor servers
+ * @return True if standalone master was set
  */
-bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
+bool MariaDBMonitor::set_standalone_master()
 {
     bool rval = false;
-
-    while (db)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        if (SERVER_IS_RUNNING(db->server))
+        MariaDBServer* server = *iter;
+        auto mon_server = server->server_base;
+        if (server->is_running())
         {
-            if (!SERVER_IS_MASTER(db->server) && m_warn_set_standalone_master)
+            if (!server->is_master() && m_warn_set_standalone_master)
             {
                 MXS_WARNING("Setting standalone master, server '%s' is now the master.%s",
-                            db->server->unique_name,
-                            m_allow_cluster_recovery ?
-                            "" : " All other servers are set into maintenance mode.");
+                            server->name(), m_allow_cluster_recovery ? "" :
+                            " All other servers are set into maintenance mode.");
                 m_warn_set_standalone_master = false;
             }
 
-            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
-            monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
-            monitor_clear_pending_status(db, SERVER_SLAVE);
-            m_master = get_server_info(db);
+            server_clear_set_status(mon_server->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_set_pending_status(mon_server, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_clear_pending_status(mon_server, SERVER_SLAVE);
+            m_master = server;
             rval = true;
         }
         else if (!m_allow_cluster_recovery)
         {
-            server_set_status_nolock(db->server, SERVER_MAINT);
-            monitor_set_pending_status(db, SERVER_MAINT);
+            server_set_status_nolock(mon_server->server, SERVER_MAINT);
+            monitor_set_pending_status(mon_server, SERVER_MAINT);
         }
-        db = db->next;
     }
 
     return rval;

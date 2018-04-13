@@ -436,10 +436,10 @@ void MariaDBMonitor::main_loop()
             if we need to use standalone master. */
         if (m_detect_standalone_master)
         {
-            if (standalone_master_required(m_monitor_base->monitored_servers))
+            if (standalone_master_required())
             {
                 // Other servers have died, set last remaining server as master
-                if (set_standalone_master(m_monitor_base->monitored_servers))
+                if (set_standalone_master())
                 {
                     // Update the root_master to point to the standalone master
                     root_master = m_master;
@@ -582,21 +582,22 @@ void MariaDBMonitor::update_external_master()
     }
 }
 
-void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master_server)
+void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
 {
-    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
+    ss_dassert(root_master);
+    MXS_MONITORED_SERVER* mon_root_master = root_master->server_base;
     set_master_heartbeat(root_master);
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        MXS_MONITORED_SERVER* ptr = (*iter)->server_base;
-        if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
+        MariaDBServer* server = *iter;
+        MXS_MONITORED_SERVER* ptr = server->server_base;
+        if ((!SERVER_IN_MAINT(ptr->server)) && server->is_running())
         {
-            if (ptr->server->node_id != root_master->server->node_id &&
-                (SERVER_IS_SLAVE(ptr->server) ||
-                 SERVER_IS_RELAY_SERVER(ptr->server)) &&
-                !(*iter)->binlog_relay)  // No select lag for Binlog Server
+            if (ptr->server->node_id != mon_root_master->server->node_id &&
+                (server->is_slave() || SERVER_IS_RELAY_SERVER(ptr->server)) &&
+                !server->binlog_relay)  // No select lag for Binlog Server
             {
-                set_slave_heartbeat(ptr);
+                set_slave_heartbeat(server);
             }
         }
     }
@@ -731,9 +732,9 @@ static int get_row_count(MXS_MONITORED_SERVER *database, const char* query)
  * Write the replication heartbeat into the maxscale_schema.replication_heartbeat table in the current master.
  * The inserted value will be seen from all slaves replicating from this master.
  *
- * @param database      The number database server
+ * @param server      The server to write the heartbeat to
  */
-void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
 {
     time_t heartbeat;
     time_t purge_time;
@@ -746,6 +747,7 @@ void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
         return;
     }
 
+    MXS_MONITORED_SERVER* database = server->server_base;
     int n_db = get_row_count(database, "SELECT schema_name FROM information_schema.schemata "
                              "WHERE schema_name = 'maxscale_schema'");
     int n_tbl = get_row_count(database, "SELECT table_name FROM information_schema.tables "
@@ -845,9 +847,9 @@ void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
  * This function gets the replication heartbeat from the maxscale_schema.replication_heartbeat table in
  * the current slave and stores the timestamp and replication lag in the slave server struct.
  *
- * @param database      The number database server
+ * @param server      The slave to measure lag at
  */
-void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
 {
     time_t heartbeat;
     char select_heartbeat_query[256] = "";
@@ -867,6 +869,7 @@ void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
             "WHERE maxscale_id = %lu AND master_server_id = %li",
             m_id, m_master->server_base->server->node_id);
 
+    MXS_MONITORED_SERVER* database = server->server_base;
     /* if there is a master then send the query to the slave with master_id */
     if (m_master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
                              && (result = mysql_store_result(database->con)) != NULL))
