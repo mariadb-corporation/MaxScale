@@ -1074,7 +1074,8 @@ public:
 
                         if (pExpr->flags & EP_xIsSelect)
                         {
-                            update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, pExclude);
+                            ss_dassert(pAliases);
+                            update_field_infos_from_subselect(*pAliases, pExpr->x.pSelect, pExclude);
 
 
                             if (zName)
@@ -1299,7 +1300,7 @@ public:
 
                 while (pPrior)
                 {
-                    update_field_infos_from_subselect(&aliases, pPrior, pExclude,
+                    update_field_infos_from_subselect(aliases, pPrior, pExclude,
                                                       IGNORE_COMPOUND_SELECTS);
                     pPrior = pPrior->pPrior;
                 }
@@ -1307,12 +1308,12 @@ public:
         }
     }
 
-    void update_field_infos_from_subselect(QcAliases* pAliases,
+    void update_field_infos_from_subselect(const QcAliases& existing_aliases,
                                            const Select* pSelect,
                                            const ExprList* pExclude,
                                            compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
-        QcAliases aliases(*pAliases);
+        QcAliases aliases(existing_aliases);
 
         update_field_infos_from_select(aliases, pSelect, pExclude, compound_approach);
     }
@@ -1325,7 +1326,8 @@ public:
 
             if (pCte->pSelect)
             {
-                update_field_infos_from_subselect(pAliases, pCte->pSelect, NULL);
+                ss_dassert(pAliases);
+                update_field_infos_from_subselect(*pAliases, pCte->pSelect, NULL);
             }
         }
     }
@@ -2064,7 +2066,8 @@ public:
 
         if (pExprList)
         {
-            update_field_infos_from_exprlist(NULL, pExprList, NULL);
+            QcAliases aliases;
+            update_field_infos_from_exprlist(&aliases, pExprList, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);

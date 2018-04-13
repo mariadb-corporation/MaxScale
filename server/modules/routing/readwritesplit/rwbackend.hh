@@ -66,6 +66,9 @@ public:
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
     void close(close_type type = CLOSE_NORMAL);
 
+    // For COM_STMT_FETCH processing
+    bool consume_fetched_rows(GWBUF* buffer);
+
     inline void set_large_packet(bool value)
     {
         m_large_packet = value;
@@ -81,6 +84,11 @@ public:
         return m_command;
     }
 
+    inline bool cursor_is_open() const
+    {
+        return m_open_cursor;
+    }
+
     bool reply_is_complete(GWBUF *buffer);
 
 private:
@@ -90,6 +98,8 @@ private:
                                       *calculation for result sets when the result
                                       * contains very large rows */
     uint8_t          m_command;
+    bool             m_open_cursor; /**< Whether we have an open cursor */
+    uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
 };
 
 }

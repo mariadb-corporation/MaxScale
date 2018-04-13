@@ -116,7 +116,6 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 
     if (m_query_queue == NULL &&
         (m_expected_responses == 0 ||
-         mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
          m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE ||
          m_qc.large_query()))
     {
@@ -375,6 +374,13 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     DCB *client_dcb = backend_dcb->session->client_dcb;
 
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
+
+    if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE &&
+        mxs_mysql_is_err_packet(writebuf))
+    {
+        // Server responded with an error to the LOAD DATA LOCAL INFILE
+        m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
+    }
 
     if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
     {

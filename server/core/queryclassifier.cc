@@ -941,7 +941,7 @@ uint32_t QueryClassifier::get_target_type(QueryClassifier::current_target_t curr
             route_target = get_route_target(*command, *type, buffer->hint);
         }
     }
-    else
+    else if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
         set_load_data_state(QueryClassifier::LOAD_DATA_END);
