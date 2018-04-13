@@ -154,6 +154,7 @@ createInstance(SERVICE *service, char **options)
         return NULL;
     }
 
+    inst->sessions = NULL;
     inst->service = service;
     spinlock_init(&inst->lock);
 
