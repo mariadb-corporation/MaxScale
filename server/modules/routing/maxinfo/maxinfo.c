@@ -173,6 +173,7 @@ createInstance(SERVICE *service, char **options)
     spinlock_acquire(&instlock);
     inst->next = instances;
     instances = inst;
+    inst->sessions = NULL;
     spinlock_release(&instlock);
 
     return (MXS_ROUTER *)inst;
