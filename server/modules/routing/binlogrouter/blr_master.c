@@ -44,13 +44,13 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.h>
+#include <maxscale/routingworker.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
-#include <maxscale/worker.h>
 
 static GWBUF *blr_make_query(DCB *dcb, char *query);
 static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);
@@ -149,7 +149,7 @@ typedef enum
 static void blr_start_master(void* data)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
-    ss_dassert(mxs_worker_get_current_id() == 0);
+    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     if (router->client)
     {
@@ -235,7 +235,7 @@ static void blr_start_master(void* data)
      * 'client' is the fake DCB that emulates a client session:
      * we need to set the poll.thread.id for the "dummy client"
      */
-    client->session->client_dcb->poll.thread.id = mxs_worker_get_current_id();
+    client->session->client_dcb->poll.thread.id = mxs_rworker_get_current_id();
 
     /* Connect to configured master server */
     if ((router->master = dcb_connect(router->service->dbref->server,
@@ -329,7 +329,7 @@ bool blr_start_master_in_main(void* data)
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_start_master` there.
 
-    MXS_WORKER* worker = mxs_worker_get(0); // The worker running in the main thread.
+    MXS_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_start_master;
@@ -367,7 +367,7 @@ void blr_close_master_in_main(void* data)
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_master_close` there.
 
-    MXS_WORKER* worker = mxs_worker_get(0); // The worker running in the main thread.
+    MXS_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_close_master;

@@ -1399,8 +1399,6 @@ bool set_dirs(const char *basedir)
 int main(int argc, char **argv)
 {
     int      rc = MAXSCALE_SHUTDOWN;
-    int      n_threads; /*< number of epoll listener threads */
-    size_t   thread_stack_size;
     int      n_services;
     int      eno = 0;   /*< local variable for errno */
     int      opt;
@@ -2129,6 +2127,13 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    if (!RoutingWorker::init())
+    {
+        MXS_ERROR("Failed to initialize routing workers.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /* Init MaxScale modules */
     if (!modules_process_init())
     {
@@ -2183,27 +2188,14 @@ int main(int argc, char **argv)
     }
 
     /*<
-     * Start the polling threads, note this is one less than is
-     * configured as the main thread will also poll.
+     * Start the routing workers running in their own thread.
      */
-    n_threads = config_threadcount();
-
-    /*<
-     * Start workers. We start from 1, worker 0 will be running in the main thread.
-     */
-    thread_stack_size = config_thread_stack_size();
-    for (int i = 1; i < n_threads; i++)
+    if (!RoutingWorker::start_threaded_workers())
     {
-        worker = Worker::get(i);
-        ss_dassert(worker);
-
-        if (!worker->start(thread_stack_size))
-        {
-            const char* logerr = "Failed to start worker thread.";
-            print_log_n_stderr(true, true, logerr, logerr, 0);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
+        const char* logerr = "Failed to start routing workers.";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
 
     if (cnf->admin_enabled)
@@ -2232,7 +2224,7 @@ int main(int argc, char **argv)
     }
 
     MXS_NOTICE("MaxScale started with %d worker threads, each with a stack size of %lu bytes.",
-               n_threads, thread_stack_size);
+               config_threadcount(), config_thread_stack_size());
 
     /**
      * Successful start, notify the parent process that it can exit.
@@ -2246,7 +2238,7 @@ int main(int argc, char **argv)
     /*<
      * Run worker 0 in the main thread.
      */
-    worker = Worker::get(0);
+    worker = RoutingWorker::get(RoutingWorker::MAIN);
     ss_dassert(worker);
     worker->run();
 
@@ -2267,13 +2259,7 @@ int main(int argc, char **argv)
     /*<
      * Wait for worker threads to exit.
      */
-    for (int i = 1; i < n_threads; i++)
-    {
-        worker = Worker::get(i);
-        ss_dassert(worker);
-
-        worker->join();
-    }
+    RoutingWorker::join_threaded_workers();
 
     MXS_NOTICE("All workers have shut down.");
 
@@ -2282,6 +2268,7 @@ int main(int argc, char **argv)
      */
     service_destroy_instances();
 
+    RoutingWorker::finish();
     Worker::finish();
     MessageQueue::finish();
 

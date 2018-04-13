@@ -61,6 +61,7 @@
 #include "internal/session.h"
 #include "internal/workertask.hh"
 
+using maxscale::RoutingWorker;
 using maxscale::Worker;
 using maxscale::WorkerTask;
 using maxscale::Semaphore;
@@ -208,8 +209,8 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     else
     {
         /** Otherwise the DCB is owned by the thread that allocates it */
-        ss_dassert(Worker::get_current_id() != -1);
-        newdcb->poll.thread.id = Worker::get_current_id();
+        ss_dassert(RoutingWorker::get_current_id() != -1);
+        newdcb->poll.thread.id = RoutingWorker::get_current_id();
     }
 
     return newdcb;
@@ -1148,7 +1149,7 @@ void dcb_close(DCB *dcb)
         }
         else
         {
-            Worker* worker = Worker::get(dcb->poll.thread.id);
+            RoutingWorker* worker = RoutingWorker::get(dcb->poll.thread.id);
             ss_dassert(worker);
 
             worker->register_zombie(dcb);
@@ -1179,7 +1180,7 @@ void dcb_close_in_owning_thread(DCB* dcb)
     // TODO: reference counted, so that we could addref before posting, thus
     // TODO: preventing too early a deletion.
 
-    MXS_WORKER* worker = mxs_worker_get(dcb->poll.thread.id); // The owning worker
+    MXS_WORKER* worker = mxs_rworker_get(dcb->poll.thread.id); // The owning worker
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)cb_dcb_close_in_owning_thread;

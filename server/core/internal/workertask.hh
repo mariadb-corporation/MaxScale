@@ -17,7 +17,7 @@
 namespace maxscale
 {
 
-class RoutingWorker;
+class Worker;
 
 /**
  * A WorkerTask represents a task to be performed by a Worker.
@@ -38,7 +38,7 @@ public:
      * @attention As the function is called by a worker, the body of `execute`
      *            should execute quickly and not perform any blocking operations.
      */
-    virtual void execute(RoutingWorker& worker) = 0;
+    virtual void execute(Worker& worker) = 0;
 };
 
 /**
@@ -69,10 +69,10 @@ protected:
      * @attention As the function is called by a worker, the body of `execute`
      *            should execute quickly and not perform any blocking operations.
      */
-    virtual void execute(RoutingWorker& worker) = 0;
+    virtual void execute(Worker& worker) = 0;
 
 private:
-    friend class RoutingWorker;
+    friend class Worker;
 
     void inc_ref();
     void dec_ref();

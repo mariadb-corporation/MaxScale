@@ -39,6 +39,7 @@
 #include "internal/routingworker.hh"
 
 using maxscale::Worker;
+using maxscale::RoutingWorker;
 
 static int n_threads;                      /*< Number of threads */
 
@@ -63,17 +64,17 @@ static bool add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* da
     return worker->add_fd(fd, events, data);
 }
 
-static bool add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
+static bool add_fd_to_routing_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 {
     bool rv = true;
     int thread_id = data->thread.id;
 
-    rv = Worker::add_shared_fd(fd, events, data);
+    rv = RoutingWorker::add_shared_fd(fd, events, data);
 
     if (rv)
     {
         // The DCB will appear on the list of the calling thread.
-        int wid = Worker::get_current_id();
+        int wid = RoutingWorker::get_current_id();
 
         if (wid == -1)
         {
@@ -101,7 +102,7 @@ bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data
 
     if (wid == MXS_WORKER_ALL)
     {
-        rv = add_fd_to_workers(fd, events, data);
+        rv = add_fd_to_routing_workers(fd, events, data);
     }
     else
     {
@@ -123,9 +124,9 @@ static bool remove_fd_from_worker(int wid, int fd)
     return worker->remove_fd(fd);
 }
 
-static bool remove_fd_from_workers(int fd)
+static bool remove_fd_from_routing_workers(int fd)
 {
-    return Worker::remove_shared_fd(fd);
+    return RoutingWorker::remove_shared_fd(fd);
 }
 
 bool poll_remove_fd_from_worker(int wid, int fd)
@@ -134,7 +135,7 @@ bool poll_remove_fd_from_worker(int wid, int fd)
 
     if (wid == MXS_WORKER_ALL)
     {
-        rv = remove_fd_from_workers(fd);
+        rv = remove_fd_from_routing_workers(fd);
     }
     else
     {
@@ -156,7 +157,7 @@ bool poll_remove_fd_from_worker(int wid, int fd)
 void
 poll_set_nonblocking_polls(unsigned int nbpolls)
 {
-    Worker::set_nonblocking_polls(nbpolls);
+    RoutingWorker::set_nonblocking_polls(nbpolls);
 }
 
 /**
@@ -169,7 +170,7 @@ poll_set_nonblocking_polls(unsigned int nbpolls)
 void
 poll_set_maxwait(unsigned int maxwait)
 {
-    Worker::set_maxwait(maxwait);
+    RoutingWorker::set_maxwait(maxwait);
 }
 
 /**

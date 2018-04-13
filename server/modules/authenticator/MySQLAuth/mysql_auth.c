@@ -34,7 +34,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
-#include <maxscale/worker.h>
+#include <maxscale/routingworker.h>
 
 static void* mysql_auth_init(char **options);
 static bool mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
@@ -137,7 +137,7 @@ static bool open_instance_database(const char *path, sqlite3 **handle)
 
 sqlite3* get_handle(MYSQL_AUTH* instance)
 {
-    int i = mxs_worker_get_current_id();
+    int i = mxs_rworker_get_current_id();
     ss_dassert(i >= 0);
 
     if (instance->handles[i] == NULL)

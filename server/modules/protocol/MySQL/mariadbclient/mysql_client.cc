@@ -33,10 +33,10 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
+#include <maxscale/routingworker.h>
 #include <maxscale/session.h>
 #include <maxscale/ssl.h>
 #include <maxscale/utils.h>
-#include <maxscale/worker.h>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -711,7 +711,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            ss_debug(bool check = ) mxs_worker_register_session(session);
+            ss_debug(bool check = ) mxs_rworker_register_session(session);
             ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
@@ -1439,7 +1439,7 @@ static int gw_client_close(DCB *dcb)
         {
             ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
                        target->state == SESSION_STATE_STOPPING);
-            ss_debug(bool removed = ) mxs_worker_deregister_session(target->ses_id);
+            ss_debug(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
             ss_dassert(removed);
             session_close(target);
         }

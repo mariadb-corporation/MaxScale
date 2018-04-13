@@ -71,11 +71,16 @@ MXS_WORKER* mxs_worker_get(int worker_id);
 int mxs_worker_id(MXS_WORKER* pWorker);
 
 /**
+ * Return the current worker.
+ *
+ * @return A worker, or NULL if there is no current worker.
+ */
+MXS_WORKER* mxs_worker_get_current();
+
+/**
  * Return the id of the worker.
  *
- * @return The id of the worker.
- *
- * @attention If there is no current worker, then -1 will be returned.
+ * @return The id of the worker, or -1 if there is no current worker.
  */
 int mxs_worker_get_current_id();
 
@@ -116,32 +121,6 @@ bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1,
  * @attention This function is signal safe.
  */
 size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
-
-/**
- * Add a session to the current worker's session container. Currently only
- * required for some special commands e.g. "KILL <process_id>" to work.
- *
- * @param session Session to add.
- * @return true if successful, false if id already existed in map.
- */
-bool mxs_worker_register_session(MXS_SESSION* session);
-
-/**
- * Remove a session from the current worker's session container. Does not actually
- * remove anything from an epoll-set or affect the session in any way.
- *
- * @param id Which id to remove.
- * @return The removed session or NULL if not found.
- */
-bool mxs_worker_deregister_session(uint64_t id);
-
-/**
- * Find a session in the current worker's session container.
- *
- * @param id Which id to find.
- * @return The found session or NULL if not found.
- */
-MXS_SESSION* mxs_worker_find_session(uint64_t id);
 
 /**
  * @brief Convert a worker to JSON format

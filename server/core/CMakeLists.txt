@@ -52,6 +52,7 @@ add_library(maxscale-common SHARED
   thread.cc
   users.cc
   utils.cc
+  worker.cc
   workertask.cc
   )
 

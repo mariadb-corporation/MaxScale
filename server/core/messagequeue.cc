@@ -165,7 +165,7 @@ bool MessageQueue::post(const Message& message) const
     return rv;
 }
 
-bool MessageQueue::add_to_worker(RoutingWorker* pWorker)
+bool MessageQueue::add_to_worker(Worker* pWorker)
 {
     if (m_pWorker)
     {
@@ -181,9 +181,9 @@ bool MessageQueue::add_to_worker(RoutingWorker* pWorker)
     return m_pWorker != NULL;
 }
 
-RoutingWorker* MessageQueue::remove_from_worker()
+Worker* MessageQueue::remove_from_worker()
 {
-    RoutingWorker* pWorker = m_pWorker;
+    Worker* pWorker = m_pWorker;
 
     if (m_pWorker)
     {

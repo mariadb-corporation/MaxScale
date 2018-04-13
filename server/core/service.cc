@@ -50,7 +50,7 @@
 #include <maxscale/version.h>
 #include <maxscale/jansson.h>
 #include <maxscale/json_api.h>
-#include <maxscale/worker.h>
+#include <maxscale/routingworker.h>
 
 #include "internal/config.h"
 #include "internal/filter.h"
@@ -1695,7 +1695,7 @@ int service_refresh_users(SERVICE *service)
 {
     ss_dassert(service);
     int ret = 1;
-    int self = mxs_worker_get_current_id();
+    int self = mxs_rworker_get_current_id();
     ss_dassert(self >= 0);
     time_t now = time(NULL);
 

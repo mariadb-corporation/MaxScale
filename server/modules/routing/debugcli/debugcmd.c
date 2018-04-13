@@ -52,7 +52,7 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
-#include <maxscale/worker.h>
+#include <maxscale/routingworker.h>
 
 #include <debugcli.h>
 
@@ -876,21 +876,9 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
  */
 void ping_workers(DCB* dcb)
 {
-    int n_workers = config_threadcount();
+    int n = mxs_rworker_broadcast_message(MXS_WORKER_MSG_PING, 0, 0);
 
-    for (int i = 0; i < n_workers; ++i)
-    {
-        MXS_WORKER *worker = mxs_worker_get(i);
-
-        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_PING, 0, 0))
-        {
-            dcb_printf(dcb, "Posted message to worker %d.\n", i);
-        }
-        else
-        {
-            dcb_printf(dcb, "Could not post message to worker %d: %s\n", i, mxs_strerror(errno));
-        }
-    }
+    dcb_printf(dcb, "Broadcasted ping message to %d workers.\n", n);
 }
 
 struct subcommand pingoptions[] =

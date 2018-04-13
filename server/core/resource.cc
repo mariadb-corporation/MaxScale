@@ -34,7 +34,6 @@
 #include "internal/service.h"
 #include "internal/config_runtime.h"
 #include "internal/modules.h"
-#include "internal/worker.h"
 #include "internal/routingworker.hh"
 
 using std::list;
@@ -128,7 +127,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             char* end;
             int id = strtol(target.c_str(), &end, 10);
 
-            if (*end == '\0' && mxs_worker_get(id))
+            if (*end == '\0' && mxs_rworker_get(id))
             {
                 rval = true;
             }
