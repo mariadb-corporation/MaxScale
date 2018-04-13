@@ -249,9 +249,17 @@ should use when starting replication. These are given in `replication_user` and
 All three operations can be activated manually through MaxAdmin/MaxCtrl. All
 commands require the monitor instance name as first parameter. Failover selects
 the new master server automatically and does not require additional parameters.
-Switchover requires the new master server name. Additionally, the user may
-designate the current master server in the switchover command. Rejoin requires
-the name of the joining server. Example commands are below:
+Rejoin requires the name of the joining server as second parameter.
+
+Switchover takes one to three parameters. If only the monitor name is given,
+switchover will autoselect both the slave to promote and the current master. If
+two parameters are given, the second parameter is interpreted as the slave to
+promote. If three parameters are given, the third parameter is interpreted as
+the current master. The user-given current master is compared to the master
+server currently deduced by the monitor and if the two are unequal, an error is
+given.
+
+Example commands are below:
 
 ```
 call command mariadbmon failover MyMonitor
@@ -265,9 +273,9 @@ configuration name (MyMonitor) as the first parameter. For switchover, the
 following parameters define the server to promote (SlaveServ3) and the server to
 demote (MasterServ). For rejoin, the server to join (NewServer2) is required.
 
-Failover can also activate automatically, if `auto_failover` is on. The
-activation begins when the master has been down for a number of monitor
-iterations defined in `failcount`.
+Failover can activate automatically, if `auto_failover` is on. The activation
+begins when the master has been down for a number of monitor iterations defined
+in `failcount`.
 
 Rejoin stands for starting replication on a standalone server or redirecting a
 slave replicating from the wrong master (any server that is not the cluster
@@ -283,9 +291,10 @@ connecting but the master server host or port information differs from the
 cluster master info. These criteria mean that a STOP SLAVE does not yet set a
 slave as standalone.
 
-With `auto_rejoin` active, the monitor will try to rejoin any server matching
-the above requirements. When activating rejoin manually, the user-designated
-server must fulfill the same requirements.
+With `auto_rejoin` active, the monitor will try to rejoin any servers matching
+the above requirements. Rejoin does not obey `failcount` and will attempt to
+rejoin any valid servers immediately. When activating rejoin manually, the
+user-designated server must fulfill the same requirements.
 
 ### Limitations and requirements
 
@@ -431,25 +440,36 @@ met.
 #### `servers_no_promotion`
 
 This is a comma-separated list of server names that will not be chosen for
-master promotion during a failover. This does not affect switchover since in
-that case the user selects the server. Using this list can disrupt new master
-selection such that an unoptimal server is chosen. At worst, this will cause
-replication to break.
+master promotion during a failover or autoselected for switchover. This does not
+affect switchover if the user selects the server to promote. Using this setting
+can disrupt new master selection for failover such that an nonoptimal server is
+chosen. At worst, this will cause replication to break. Alternatively, failover
+may fail if all valid promotion candidates are in the exclusion list.
 
 ```
 servers_no_promotion=backup_dc_server1,backup_dc_server2
 ```
 
-### Manual switchover and failover
+### Manual activation
 
-Both failover and switchover can be activated manually through the REST API or
-MaxAdmin. The commands are only performed when MaxScale is in active mode.
+Failover, switchover and rejoin can be activated manually through the REST API
+or MaxAdmin. The commands are only performed when MaxScale is in active mode.
 
-It is safe to perform switchover or failover even with `auto_failover` on, since
-the automatic operation cannot happen simultaneously with the manual one.
+It is safe to perform manual operations even with `auto_failover` on, since
+the automatic operations cannot happen simultaneously with the manual one.
 
-If a switchover or failover fails, automatic failover is disabled. It can be
-turned on manually via the REST API or MaxAdmin.
+If a switchover or failover fails, automatic failover is disabled to prevent
+master changes to a possibly malfunctioning cluster. Automatic failover can be
+turned on manually via the REST API or MaxAdmin. Example commands are listed
+below.
+
+```
+maxadmin alter monitor MariaDB-Monitor auto_failover=true
+maxctrl alter monitor MariaDB-Monitor auto_failover true
+```
+
+If automatic rejoin fails, it is disabled. To re-enable, use a similar command
+as with automatic failover, replacing `auto_failover` with `auto_rejoin`.
 
 When switchover is iniated via the REST-API, the URL path is:
 ```
@@ -475,10 +495,12 @@ path for making `server4` the new master would be:
 /v1/maxscale/mariadbmon/switchover?Cluster1&server4&server2
 ```
 
-The REST-API path for manual failover is similar, although the `<new-master>`
-and `<current-master>` fields are left out.
+The REST-API paths for manual failover and manual rejoin are mostly similar.
+Failover does not accept any server parameters, rejoin requires the name of the
+joining server.
 ```
 /v1/maxscale/mariadbmon/failover?Cluster1
+/v1/maxscale/mariadbmon/rejoin?Cluster1&server3
 ```
 
 ## Using the MariaDB Monitor With Binlogrouter

@@ -28,6 +28,12 @@ still retaining the relative order of each command.
 To keep the old functionality, add `disable_sescmd_history=true` to the service
 definition.
 
+###  Switchover new master autoselection
+
+The switchover command in *mariadbmon* can now be called with just the monitor
+name as parameter. In this case the monitor will automatically select a server
+for promotion.
+
 ## Dropped Features
 
 ## New Features
