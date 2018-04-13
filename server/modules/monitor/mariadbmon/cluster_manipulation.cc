@@ -161,7 +161,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
                                          m_master->name());
                 }
-            }
+            } // server_is_rejoin_suspect has added any error messages to the output, no need to print here
         }
         else
         {
@@ -513,6 +513,24 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaD
                       slave_status->master_port != m_master->server_base->server->port))
             {
                 is_suspect = true;
+            }
+        }
+
+        if (output != NULL && !is_suspect)
+        {
+            /* User has requested a manual rejoin but with a server which has multiple slave connections or
+             * is already connected or trying to connect to the correct master. TODO: Slave IO stopped is
+             * not yet handled perfectly. */
+            if (rejoin_cand->n_slaves_configured > 1)
+            {
+                const char MULTI_SLAVE[] = "Server '%s' has multiple slave connections, cannot rejoin.";
+                PRINT_MXS_JSON_ERROR(output, MULTI_SLAVE, rejoin_cand->name());
+            }
+            else
+            {
+                const char CONNECTED[] = "Server '%s' is already connected or trying to connect to the "
+                                         "correct master server.";
+                PRINT_MXS_JSON_ERROR(output, CONNECTED, rejoin_cand->name());
             }
         }
     }
