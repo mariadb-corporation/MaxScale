@@ -124,7 +124,14 @@ GET /v1/maxscale/threads/:id
                 "event_queue_length": 1,
                 "max_event_queue_length": 1,
                 "max_exec_time": 0,
-                "max_queue_time": 0
+                "max_queue_time": 0,
+                "current_descriptors": 1,
+                "total_descriptors": 1,
+                "load": {
+                    "last_second": 0,
+                    "last_minute": 0,
+                    "last_hour": 0
+                }
             }
         },
         "links": {
@@ -166,7 +173,14 @@ GET /v1/maxscale/threads
                     "event_queue_length": 1,
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
-                    "max_queue_time": 0
+                    "max_queue_time": 0,
+                    "current_descriptors": 1,
+                    "total_descriptors": 1,
+                    "load": {
+                        "last_second": 0,
+                        "last_minute": 0,
+                        "last_hour": 0
+                    }
                 }
             },
             "links": {
@@ -187,7 +201,14 @@ GET /v1/maxscale/threads
                     "event_queue_length": 1,
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
-                    "max_queue_time": 0
+                    "max_queue_time": 0,
+                    "current_descriptors": 1,
+                    "total_descriptors": 1,
+                    "load": {
+                        "last_second": 0,
+                        "last_minute": 0,
+                        "last_hour": 0
+                    }
                 }
             },
             "links": {
@@ -208,7 +229,14 @@ GET /v1/maxscale/threads
                     "event_queue_length": 1,
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
-                    "max_queue_time": 0
+                    "max_queue_time": 0,
+                    "current_descriptors": 1,
+                    "total_descriptors": 1,
+                    "load": {
+                        "last_second": 0,
+                        "last_minute": 0,
+                        "last_hour": 0
+                    }
                 }
             },
             "links": {
@@ -229,7 +257,14 @@ GET /v1/maxscale/threads
                     "event_queue_length": 1,
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
-                    "max_queue_time": 0
+                    "max_queue_time": 0,
+                    "current_descriptors": 1,
+                    "total_descriptors": 1,
+                    "load": {
+                        "last_second": 0,
+                        "last_minute": 0,
+                        "last_hour": 0
+                    }
                 }
             },
             "links": {

@@ -973,6 +973,18 @@ public:
         json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
         json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
 
+        uint32_t nCurrent;
+        uint64_t nTotal;
+        worker.get_descriptor_counts(&nCurrent, &nTotal);
+        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
+        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
+
+        json_t* load = json_object();
+        json_object_set_new(load, "last_second", json_integer(worker.load(Worker::Load::ONE_SECOND)));
+        json_object_set_new(load, "last_minute", json_integer(worker.load(Worker::Load::ONE_MINUTE)));
+        json_object_set_new(load, "last_hour", json_integer(worker.load(Worker::Load::ONE_HOUR)));
+        json_object_set_new(pStats, "load", load);
+
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
 
