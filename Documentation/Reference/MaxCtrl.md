@@ -148,6 +148,7 @@ Commands:
   filter <filter>    Show filter
   module <module>    Show loaded module
   maxscale           Show MaxScale information
+  threads            Show worker thread information
   logging            Show MaxScale logging information
   commands <module>  Show module commands of a module
 
@@ -203,6 +204,10 @@ information of a loaded module.
 `Usage: show maxscale`
 
 See `help alter maxscale` for more details about altering MaxScale parameters.
+
+### show threads
+
+`Usage: show threads`
 
 ### show logging
 

@@ -146,6 +146,20 @@ exports.builder = function(yargs) {
                 ])
             })
         })
+        .command('threads', 'Show worker thread information', function(yargs) {
+            return yargs.usage('Usage: show threads')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'maxscale/threads', [
+                    {'ID': 'id'},
+                    {'Current File Descriptors': 'attributes.stats.current_descriptors'},
+                    {'Total File Descriptors': 'attributes.stats.total_descriptors'},
+                    {'Load Percentage (1s)': 'attributes.stats.load.last_second'},
+                    {'Load Percentage (1m)': 'attributes.stats.load.last_minute'},
+                    {'Load Percentage (1h)': 'attributes.stats.load.last_hour'}
+                ])
+            })
+        })
         .command('logging', 'Show MaxScale logging information', function(yargs) {
             return yargs.epilog('See `help alter logging` for more details about altering ' +
                                 'logging parameters.')
