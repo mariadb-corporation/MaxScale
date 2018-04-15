@@ -527,6 +527,7 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
     }
 
     json_t* attr = json_object();
+    json_object_set_new(attr, CN_STATE, json_string(listener_state_to_string(listener)));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
     if (listener->listener->authfunc.diagnostic_json)
@@ -540,9 +541,9 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
     }
 
     json_t* rval = json_object();
-    json_object_set_new(rval, CN_ATTRIBUTES, attr);
     json_object_set_new(rval, CN_ID, json_string(listener->name));
     json_object_set_new(rval, CN_TYPE, json_string(CN_LISTENERS));
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     return rval;
 }
@@ -579,4 +580,29 @@ SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter)
     }
 
     return iter->current;
+}
+
+const char* listener_state_to_string(const SERV_LISTENER* listener)
+{
+    ss_dassert(listener);
+
+    if (listener->listener && listener->listener->session)
+    {
+        switch (listener->listener->session->state)
+        {
+            case SESSION_STATE_LISTENER_STOPPED:
+                return "Stopped";
+
+            case SESSION_STATE_LISTENER:
+                return "Running";
+
+            default:
+                ss_dassert(!true);
+                return "Unknown";
+        }
+    }
+    else
+    {
+        return "Failed";
+    }
 }

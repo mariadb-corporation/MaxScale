@@ -1626,10 +1626,7 @@ dListListeners(DCB *dcb)
                            listener->name, service->name, listener->protocol,
                            (listener && listener->address) ? listener->address : "*",
                            listener->port,
-                           (!listener->listener ||
-                            !listener->listener->session ||
-                            listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ?
-                           "Stopped" : "Running");
+                           listener_state_to_string(listener));
             }
         }
         service = service->next;
@@ -2099,10 +2096,7 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     resultset_row_set(row, 2, (lptr && lptr->address) ? lptr->address : "*");
     sprintf(buf, "%d", lptr->port);
     resultset_row_set(row, 3, buf);
-    resultset_row_set(row, 4,
-                      (!lptr->listener || !lptr->listener->session ||
-                       lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ?
-                      "Stopped" : "Running");
+    resultset_row_set(row, 4, listener_state_to_string(lptr));
     spinlock_release(&service_spin);
     return row;
 }

@@ -104,7 +104,8 @@ exports.builder = function(yargs) {
                 return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners', [
                     {'Name': 'id'},
                     {'Port': 'attributes.parameters.port'},
-                    {'Host': 'attributes.parameters.host'}
+                    {'Host': 'attributes.parameters.host'},
+                    {'State': 'attributes.state'}
                 ])
             })
         })

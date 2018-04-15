@@ -121,4 +121,13 @@ SERV_LISTENER* listener_iterator_init(const struct service* service, LISTENER_IT
  */
 SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter);
 
+/**
+ * Get listener state as a string
+ *
+ * @param listener Listener to inspect
+ *
+ * @return State of the listener as a string
+ */
+const char* listener_state_to_string(const SERV_LISTENER* listener);
+
 MXS_END_DECLS
