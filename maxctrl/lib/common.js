@@ -169,29 +169,39 @@ module.exports = function() {
         })
     }
 
+    this.formatResource = function (fields, data) {
+        var table = getList()
+
+        fields.forEach(function(i) {
+            var k = Object.keys(i)[0]
+            var path = i[k]
+            var v = _.getPath(data, path, '')
+
+            if (Array.isArray(v) && typeof(v[0]) != 'object') {
+                v = v.join(', ')
+            } else if (typeof(v) == 'object') {
+                v = JSON.stringify(v, null, 4)
+            }
+
+            var o = {}
+            o[k] = v
+            table.push(o)
+        })
+
+        return tableToString(table)
+    }
+
     // Request a single resource and format it as a key-value list
     this.getResource = function (host, resource, fields) {
+        return doRequest(host, resource, (res) => {
+            return formatResource(fields, res.data)
+        })
+    }
 
-        return doRequest(host, resource, function(res) {
-            var table = getList()
-
-            fields.forEach(function(i) {
-                var k = Object.keys(i)[0]
-                var path = i[k]
-                var v = _.getPath(res.data, path, '')
-
-                if (Array.isArray(v) && typeof(v[0]) != 'object') {
-                    v = v.join(', ')
-                } else if (typeof(v) == 'object') {
-                    v = JSON.stringify(v, null, 4)
-                }
-
-                var o = {}
-                o[k] = v
-                table.push(o)
-            })
-
-            return tableToString(table)
+    this.getCollectionAsResource = function(host, resource, fields) {
+        return doRequest(host, resource, (res) => {
+            //return formatResource(fields, res.data[0])
+            return res.data.map((i) => formatResource(fields, i)).join('\n')
         })
     }
 
