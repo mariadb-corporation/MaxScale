@@ -2,6 +2,24 @@
 [maxscale]
 threads=auto
 
+[server1]
+type=server
+address=master
+port=3306
+protocol=MariaDBBackend
+
+[server2]
+type=server
+address=slave1
+port=3306
+protocol=MariaDBBackend
+
+[server3]
+type=server
+address=slave2
+port=3306
+protocol=MariaDBBackend
+
 # Monitor for the servers
 # This will keep MaxScale aware of the state of the servers.
 # MySQL Monitor documentation:
@@ -10,9 +28,10 @@ threads=auto
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
-user=myuser
-passwd=mypwd
-monitor_interval=1000
+servers=server1,server2,server3
+user=maxuser
+passwd=maxpwd
+monitor_interval=2000
 
 # Service definitions
 # Service Definition for a read-only service and a read/write splitting service.
@@ -23,8 +42,9 @@ monitor_interval=1000
 [Read-Only-Service]
 type=service
 router=readconnroute
-user=myuser
-passwd=mypwd
+servers=server1,server2,server3
+user=maxuser
+passwd=maxpwd
 router_options=slave
 
 # ReadWriteSplit documentation:
@@ -33,9 +53,9 @@ router_options=slave
 [Read-Write-Service]
 type=service
 router=readwritesplit
-user=myuser
-passwd=mypwd
-max_slave_connections=100%
+servers=server1,server2,server3
+user=maxuser
+passwd=maxpwd
 
 # Listener definitions for the services
 # Listeners represent the ports the services will listen on.
