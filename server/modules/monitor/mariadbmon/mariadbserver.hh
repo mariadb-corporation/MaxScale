@@ -196,6 +196,22 @@ public:
      * @return Server unique name
      */
     const char* name() const;
+
+    /**
+     * Print server information to a json object.
+     *
+     * @param multimaster Print multimaster group
+     * @return Json diagnostics object
+     */
+    json_t* diagnostics_json(bool multimaster) const;
+
+    /**
+     * Print server information to a string.
+     *
+     * @param multimaster Print multimaster group
+     * @return Diagnostics string
+     */
+    std::string diagnostics(bool multimaster) const;
 };
 
 /**

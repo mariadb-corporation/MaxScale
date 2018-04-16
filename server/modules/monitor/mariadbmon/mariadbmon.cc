@@ -256,47 +256,10 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
     }
 
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
-    for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        const MariaDBServer* serv_info = get_server_info(db);
-        dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
-        dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
-        dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
-        dcb_printf(dcb, "Slave configured:       %s\n", serv_info->slave_configured ? "YES" : "NO");
-        if (serv_info->slave_configured)
-        {
-            dcb_printf(dcb, "Slave IO running:       %s\n",
-                       serv_info->slave_status.slave_io_running ? "YES" : "NO");
-            dcb_printf(dcb, "Slave SQL running:      %s\n",
-                       serv_info->slave_status.slave_sql_running ? "YES" : "NO");
-            dcb_printf(dcb, "Master ID:              %" PRId64 "\n",
-                       serv_info->slave_status.master_server_id);
-            dcb_printf(dcb, "Master binlog file:     %s\n",
-                       serv_info->slave_status.master_log_file.c_str());
-            dcb_printf(dcb, "Master binlog position: %lu\n",
-                       serv_info->slave_status.read_master_log_pos);
-        }
-        if (!serv_info->gtid_current_pos.empty())
-        {
-            dcb_printf(dcb, "Gtid current position:  %s\n",
-                       serv_info->gtid_current_pos.to_string().c_str());
-        }
-        if (!serv_info->gtid_binlog_pos.empty())
-        {
-            dcb_printf(dcb, "Gtid binlog position:   %s\n",
-                       serv_info->gtid_current_pos.to_string().c_str());
-        }
-        if (!serv_info->slave_status.gtid_io_pos.empty())
-        {
-            dcb_printf(dcb, "Gtid slave IO position: %s\n",
-                       serv_info->slave_status.gtid_io_pos.to_string().c_str());
-        }
-        if (m_detect_multimaster)
-        {
-            dcb_printf(dcb, "Master group:           %d\n", serv_info->group);
-        }
-
-        dcb_printf(dcb, "\n");
+        string server_info = (*iter)->diagnostics(m_detect_multimaster) + "\n";
+        dcb_printf(dcb, "%s", server_info.c_str());
     }
 }
 
@@ -326,43 +289,14 @@ json_t* MariaDBMonitor::diagnostics_json() const
         string list = monitored_servers_to_string(m_excluded_servers);
         json_object_set_new(rval, CN_NO_PROMOTE_SERVERS, json_string(list.c_str()));
     }
-    if (m_monitor_base->monitored_servers)
+
+    if (!m_servers.empty())
     {
         json_t* arr = json_array();
-
-        for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
+        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            json_t* srv = json_object();
-            const MariaDBServer* serv_info = get_server_info(db);
-            json_object_set_new(srv, "name", json_string(db->server->unique_name));
-            json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
-            json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
-
-            json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
-            json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
-            json_object_set_new(srv, "slave_io_running",
-                                json_boolean(serv_info->slave_status.slave_io_running));
-            json_object_set_new(srv, "slave_sql_running",
-                                json_boolean(serv_info->slave_status.slave_sql_running));
-
-            json_object_set_new(srv, "master_binlog_file",
-                                json_string(serv_info->slave_status.master_log_file.c_str()));
-            json_object_set_new(srv, "master_binlog_position",
-                                json_integer(serv_info->slave_status.read_master_log_pos));
-            json_object_set_new(srv, "gtid_current_pos",
-                                json_string(serv_info->gtid_current_pos.to_string().c_str()));
-            json_object_set_new(srv, "gtid_binlog_pos",
-                                json_string(serv_info->gtid_binlog_pos.to_string().c_str()));
-            json_object_set_new(srv, "gtid_io_pos",
-                                json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
-            if (m_detect_multimaster)
-            {
-                json_object_set_new(srv, "master_group", json_integer(serv_info->group));
-            }
-
-            json_array_append_new(arr, srv);
+            json_array_append_new(arr, (*iter)->diagnostics_json(m_detect_multimaster));
         }
-
         json_object_set_new(rval, "server_info", arr);
     }
 

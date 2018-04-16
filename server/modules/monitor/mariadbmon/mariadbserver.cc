@@ -431,6 +431,64 @@ const char* MariaDBServer::name() const
     return server_base->server->unique_name;
 }
 
+string MariaDBServer::diagnostics(bool multimaster) const
+{
+    std::stringstream ss;
+    ss << "Server:                 " << name() << "\n";
+    ss << "Server ID:              " << server_id << "\n";
+    ss << "Read only:              " << (read_only ? "YES" : "NO") << "\n";
+    ss << "Slave configured:       " << (slave_configured ? "YES" : "NO") << "\n";
+    if (slave_configured)
+    {
+        ss << "Slave IO running:       " << (slave_status.slave_io_running ? "YES" : "NO") << "\n";
+        ss << "Slave SQL running:      " << (slave_status.slave_sql_running ? "YES" : "NO") << "\n";
+        ss << "Master ID:              " << slave_status.master_server_id << "\n";
+        ss << "Master binlog file:     " << slave_status.master_log_file << "\n";
+        ss << "Master binlog position: " << slave_status.read_master_log_pos << "\n";
+    }
+    if (!gtid_current_pos.empty())
+    {
+        ss << "Gtid current position:  " << gtid_current_pos.to_string() << "\n";
+    }
+    if (!gtid_binlog_pos.empty())
+    {
+        ss << "Gtid binlog position:   " << gtid_binlog_pos.to_string() << "\n";
+    }
+    if (!slave_status.gtid_io_pos.empty())
+    {
+        ss << "Gtid slave IO position: " << slave_status.gtid_io_pos.to_string() << "\n";
+    }
+    if (multimaster)
+    {
+        ss << "Master group:           " << group << "\n";
+    }
+    return ss.str();
+}
+
+json_t* MariaDBServer::diagnostics_json(bool multimaster) const
+{
+    json_t* srv = json_object();
+    json_object_set_new(srv, "name", json_string(name()));
+    json_object_set_new(srv, "server_id", json_integer(server_id));
+    json_object_set_new(srv, "master_id", json_integer(slave_status.master_server_id));
+
+    json_object_set_new(srv, "read_only", json_boolean(read_only));
+    json_object_set_new(srv, "slave_configured", json_boolean(slave_configured));
+    json_object_set_new(srv, "slave_io_running", json_boolean(slave_status.slave_io_running));
+    json_object_set_new(srv, "slave_sql_running", json_boolean(slave_status.slave_sql_running));
+
+    json_object_set_new(srv, "master_binlog_file", json_string(slave_status.master_log_file.c_str()));
+    json_object_set_new(srv, "master_binlog_position", json_integer(slave_status.read_master_log_pos));
+    json_object_set_new(srv, "gtid_current_pos", json_string(gtid_current_pos.to_string().c_str()));
+    json_object_set_new(srv, "gtid_binlog_pos", json_string(gtid_binlog_pos.to_string().c_str()));
+    json_object_set_new(srv, "gtid_io_pos", json_string(slave_status.gtid_io_pos.to_string().c_str()));
+    if (multimaster)
+    {
+        json_object_set_new(srv, "master_group", json_integer(group));
+    }
+    return srv;
+}
+
 QueryResult::QueryResult(MYSQL_RES* resultset)
     : m_resultset(resultset)
     , m_columns(-1)
