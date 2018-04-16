@@ -489,6 +489,154 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
     return srv;
 }
 
+bool MariaDBServer::uses_gtid(json_t** error_out)
+{
+    bool using_gtid = !slave_status.gtid_io_pos.empty();
+    if (!using_gtid)
+    {
+        string slave_not_gtid_msg = string("Slave server ") + name() + " is not using gtid replication.";
+        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+    }
+    return using_gtid;
+}
+
+bool MariaDBServer::update_slave_info()
+{
+    return (slave_status.slave_sql_running && update_replication_settings() &&
+            update_gtids() && do_show_slave_status());
+}
+
+bool MariaDBServer::can_replicate_from(MariaDBServer* master)
+{
+    bool rval = false;
+    if (update_gtids())
+    {
+        rval = gtid_current_pos.can_replicate_from(master->gtid_binlog_pos);
+    }
+    return rval;
+}
+
+bool MariaDBServer::redirect_one_slave(const string& change_cmd)
+{
+    bool success = false;
+    MYSQL* slave_conn = server_base->con;
+    const char* query = "STOP SLAVE;";
+    if (mxs_mysql_query(slave_conn, query) == 0)
+    {
+        query = "RESET SLAVE;"; // To erase any old I/O or SQL errors
+        if (mxs_mysql_query(slave_conn, query) == 0)
+        {
+            query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+            if (mxs_mysql_query(slave_conn, change_cmd.c_str()) == 0)
+            {
+                query = "START SLAVE;";
+                if (mxs_mysql_query(slave_conn, query) == 0)
+                {
+                    success = true;
+                    MXS_NOTICE("Slave '%s' redirected to new master.", name());
+                }
+            }
+        }
+    }
+
+    if (!success)
+    {
+        MXS_WARNING("Slave '%s' redirection failed: '%s'. Query: '%s'.", name(),
+                    mysql_error(slave_conn), query);
+    }
+    return success;
+}
+
+bool MariaDBServer::join_cluster(const string& change_cmd)
+{
+    /* Server does not have slave connections. This operation can fail, or the resulting
+     * replication may end up broken. */
+    bool success = false;
+    string error_msg;
+    MYSQL* server_conn = server_base->con;
+    const char* query = "SET GLOBAL read_only=1;";
+    if (mxs_mysql_query(server_conn, query) == 0)
+    {
+        query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+        if (mxs_mysql_query(server_conn, change_cmd.c_str()) == 0)
+        {
+            query = "START SLAVE;";
+            if (mxs_mysql_query(server_conn, query) == 0)
+            {
+                success = true;
+                MXS_NOTICE("Standalone server '%s' starting replication.", name());
+            }
+        }
+
+        if (!success)
+        {
+            // A step after "SET GLOBAL read_only=1" failed, try to undo. First, backup error message.
+            error_msg = mysql_error(server_conn);
+            mxs_mysql_query(server_conn, "SET GLOBAL read_only=0;");
+        }
+    }
+
+    if (!success)
+    {
+        if (error_msg.empty())
+        {
+            error_msg = mysql_error(server_conn);
+        }
+        MXS_WARNING("Standalone server '%s' failed to start replication: '%s'. Query: '%s'.",
+                    name(), error_msg.c_str(), query);
+    }
+    return success;
+}
+
+bool MariaDBServer::failover_wait_relay_log(int seconds_remaining, json_t** err_out)
+{
+    time_t begin = time(NULL);
+    bool query_ok = true;
+    bool io_pos_stable = true;
+    while (relay_log_events() > 0 &&
+           query_ok &&
+           io_pos_stable &&
+           difftime(time(NULL), begin) < seconds_remaining)
+    {
+        MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
+                 name(), relay_log_events());
+        thread_millisleep(1000); // Sleep for a while before querying server again.
+        // Todo: check server version before entering failover.
+        GtidList old_gtid_io_pos = slave_status.gtid_io_pos;
+        // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
+        // It doesn't matter here, but is a general rule.
+        query_ok = update_gtids() && do_show_slave_status();
+        io_pos_stable = (old_gtid_io_pos == slave_status.gtid_io_pos);
+    }
+
+    bool rval = false;
+    if (relay_log_events() == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        string reason = "Timeout";
+        if (!query_ok)
+        {
+            reason = "Query error";
+        }
+        else if (!io_pos_stable)
+        {
+            reason = "Old master sent new event(s)";
+        }
+        else if (relay_log_events() < 0) // TODO: This is currently impossible
+        {
+            reason = "Invalid Gtid(s) (current_pos: " + gtid_current_pos.to_string() +
+                     ", io_pos: " + slave_status.gtid_io_pos.to_string() + ")";
+        }
+        PRINT_MXS_JSON_ERROR(err_out, "Failover: %s while waiting for server '%s' to process relay log. "
+                             "Cancelling failover.", reason.c_str(), name());
+        rval = false;
+    }
+    return rval;
+}
+
 QueryResult::QueryResult(MYSQL_RES* resultset)
     : m_resultset(resultset)
     , m_columns(-1)

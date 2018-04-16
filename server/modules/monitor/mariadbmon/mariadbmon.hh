@@ -204,28 +204,22 @@ private:
     bool slave_receiving_events();
     bool failover_check(json_t** error_out);
     bool do_failover(json_t** err_out);
-    bool failover_wait_relay_log(MariaDBServer* new_master, int seconds_remaining, json_t** err_out);
 
     // Rejoin methods
     bool cluster_can_be_joined();
     void handle_auto_rejoin();
     bool get_joinable_servers(ServerArray* output);
-    bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, MariaDBServer* master, json_t** output);
-    bool can_replicate_from(MariaDBServer* slave_cand, MariaDBServer* master);
+    bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
     uint32_t do_rejoin(const ServerArray& joinable_servers);
-    bool join_cluster(MariaDBServer* server, const std::string& change_cmd);
 
     // Methods common to failover/switchover/rejoin
-    bool uses_gtid(MariaDBServer* mon_server, json_t** error_out);
     MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
-    bool update_slave_info(MariaDBServer* server);
     bool server_is_excluded(const MariaDBServer* server);
     bool is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
                              uint32_t gtid_domain);
     bool promote_new_master(MariaDBServer* new_master, json_t** err_out);
     int redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
                         ServerArray* redirected_slaves);
-    bool redirect_one_slave(MariaDBServer* slave, const std::string& change_cmd);
     std::string generate_change_master_cmd(const std::string& master_host, int master_port);
     bool start_external_replication(MariaDBServer* new_master, json_t** err_out);
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,

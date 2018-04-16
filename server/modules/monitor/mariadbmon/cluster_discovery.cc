@@ -713,18 +713,6 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
 }
 
 /**
- * Update replication settings, gtid:s and slave status of the server.
- *
- * @param server Slave to update
- * @return True on success. False on error, or if server is not a slave (slave SQL not running).
- */
-bool MariaDBMonitor::update_slave_info(MariaDBServer* server)
-{
-    return (server->slave_status.slave_sql_running && server->update_replication_settings() &&
-            server->update_gtids() && server->do_show_slave_status());
-}
-
-/**
  * Check if the maxscale_schema.replication_heartbeat table is replicated on all
  * servers and log a warning if problems were found.
  *
