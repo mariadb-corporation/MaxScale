@@ -19,7 +19,9 @@ exports.builder = function(yargs) {
     yargs
         .command('get <resource> [path]', 'Get raw JSON', function(yargs) {
             return yargs.epilog('Perform a raw REST API call. ' +
-                                'The path definition uses JavaScript syntax to extract values.')
+                                'The path definition uses JavaScript syntax to extract values. ' +
+                                'For example, the following command extracts all server states ' +
+                                'as an array of JSON values: maxctrl api get servers data[].attributes.state')
                 .usage('Usage: get <resource> [path]')
         }, function(argv) {
             maxctrl(argv, function(host) {

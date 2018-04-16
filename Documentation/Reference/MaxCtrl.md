@@ -32,6 +32,7 @@ For more information about the MaxScale REST API, refer to the
 * [rotate](#rotate)
 * [call](#call)
 * [cluster](#cluster)
+* [api](#api)
 
 ## Options
 
@@ -39,7 +40,9 @@ All command accept the following global options.
 
 ```
   -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user            [string] [default: "mariadb"]
+  -p, --password  Password for the user. To input the password manually, give -p
+                  as the last argument or use --password=''
+                                                   [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
                                             [string] [default: "localhost:8989"]
@@ -663,4 +666,22 @@ instance. Synchronization can be attempted again if a previous attempt failed
 due to a network failure or some other ephemeral error. Any other errors require
 manual synchronization of the MaxScale configuration files and a restart of the
 failed Maxscale.
+
+## api
+
+```
+Usage: api <command>
+
+Commands:
+  get <resource> [path]  Get raw JSON
+
+```
+
+### api get
+
+`Usage: get <resource> [path]`
+
+Perform a raw REST API call. The path definition uses JavaScript syntax to
+extract values. For example, the following command extracts all server states as
+an array of JSON values: maxctrl api get servers data[].attributes.state
 
