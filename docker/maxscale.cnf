@@ -1,18 +1,12 @@
 # MaxScale documentation on GitHub:
-# https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Documentation-Contents.md
+# https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Documentation-Contents.md
 
 # Complete list of configuration options:
-# https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Getting-Started/Configuration-Guide.md
-
-# Global parameters
-
-[maxscale]
-threads=2
+# https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Getting-Started/Configuration-Guide.md
 
 # This service enables the use of the MaxAdmin interface
 # MaxScale administration guide:
-# https://github.com/mariadb-corporation/MaxScale/blob/develop/Documentation/Reference/MaxAdmin.md
-
+# https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Reference/MaxAdmin.md
 [MaxAdmin-Service]
 type=service
 router=cli
