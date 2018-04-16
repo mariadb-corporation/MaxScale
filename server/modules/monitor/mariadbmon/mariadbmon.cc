@@ -508,7 +508,7 @@ void MariaDBMonitor::main_loop()
 
         mon_hangup_failed_servers(m_monitor_base);
         servers_status_current_to_pending(m_monitor_base);
-        store_server_journal(m_monitor_base, m_master->server_base);
+        store_server_journal(m_monitor_base, m_master ? m_master->server_base : NULL);
         release_monitor_servers(m_monitor_base);
 
         // Check how much the monitor should sleep to get one full monitor interval.
