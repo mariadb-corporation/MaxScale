@@ -1450,56 +1450,63 @@ bool MariaDBMonitor::can_replicate_from(MariaDBServer* slave_cand, MariaDBServer
  *
  * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
  * executes failover to select and promote a new master server. This function should be called immediately
- * after @c mon_process_state_changes.
+ * after @c mon_process_state_changes. If an error occurs, this method disables automatic failover.
  *
- * @param cluster_modified_out Set to true if modifying cluster
- * @return True on success, false on error
+ * @return True if failover was performed, or at least attempted
 */
-bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
+bool MariaDBMonitor::handle_auto_failover()
 {
-    ss_dassert(*cluster_modified_out == false);
+    const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
+                                 "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
+    bool cluster_modified = false;
     if (config_get_global_options()->passive || (m_master && m_master->is_master()))
     {
-        return true;
+        return cluster_modified;
     }
-    bool rval = true;
-    MXS_MONITORED_SERVER* failed_master = NULL;
 
-    for (MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers; ptr; ptr = ptr->next)
+    if (failover_not_possible())
     {
-        if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
-        {
-            if (failed_master)
-            {
-                MXS_ALERT("Multiple failed master servers detected: "
-                          "'%s' is the first master to fail but server "
-                          "'%s' has also triggered a master_down event.",
-                          failed_master->server->unique_name,
-                          ptr->server->unique_name);
-                return false;
-            }
+        const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
+                                "replication configuration, disabling automatic failover. Failover "
+                                "should only be enabled after the replication configuration has been "
+                                "fixed.";
+        MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor_base->name);
+        m_auto_failover = false;
+        disable_setting(CN_AUTO_FAILOVER);
+        return cluster_modified;
+    }
 
-            if (ptr->server->active_event)
+    // If master seems to be down, check if slaves are receiving events.
+    if (m_verify_master_failure && m_master && m_master->is_down() && slave_receiving_events())
+    {
+        MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
+        return cluster_modified;
+    }
+
+    MariaDBServer* failed_master = NULL;
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        MXS_MONITORED_SERVER* mon_server = server->server_base;
+        if (mon_server->new_event && mon_server->server->last_event == MASTER_DOWN_EVENT)
+        {
+            if (mon_server->server->active_event)
             {
                 // MaxScale was active when the event took place
-                failed_master = ptr;
+                failed_master = server;
             }
-            else if (m_monitor_base->master_has_failed)
+            else
             {
-                /**
-                 * If a master_down event was triggered when this MaxScale was
-                 * passive, we need to execute the failover script again if no new
-                 * masters have appeared.
-                 */
+                /* If a master_down event was triggered when this MaxScale was passive, we need to execute
+                 * the failover script again if no new masters have appeared. */
                 int64_t timeout = MXS_SEC_TO_CLOCK(m_failover_timeout);
-                int64_t t = mxs_clock() - ptr->server->triggered_at;
+                int64_t t = mxs_clock() - mon_server->server->triggered_at;
 
                 if (t > timeout)
                 {
-                    MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover needs to be re-triggered",
-                                ptr->server->unique_name, m_failover_timeout);
-                    failed_master = ptr;
+                    MXS_WARNING("Failover of server '%s' did not take place within %u seconds, "
+                                "failover needs to be re-triggered", server->name(), m_failover_timeout);
+                    failed_master = server;
                 }
             }
         }
@@ -1507,24 +1514,30 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
 
     if (failed_master)
     {
-        if (m_failcount > 1 && failed_master->mon_err_count == 1)
+        if (m_failcount > 1 && failed_master->server_base->mon_err_count == 1)
         {
             MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
                         "begins.", m_failcount - 1);
         }
-        else if (failed_master->mon_err_count >= m_failcount)
+        else if (failed_master->server_base->mon_err_count >= m_failcount)
         {
-            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                       failed_master->server->unique_name);
-            failed_master->new_event = false;
-            rval = failover_check(NULL) && do_failover(NULL);
-            if (rval)
+            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", failed_master->name());
+            failed_master->server_base->new_event = false;
+            if (failover_check(NULL))
             {
-                *cluster_modified_out = true;
+                if (!do_failover(NULL))
+                {
+                    const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
+                    MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, m_monitor_base->name);
+                    m_auto_failover = false;
+                    disable_setting(CN_AUTO_FAILOVER);
+                }
+                cluster_modified = true;
             }
         }
     }
-    return rval;
+
+    return cluster_modified;
 }
 
 /**

@@ -199,10 +199,9 @@ private:
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
 
     // Failover methods
-    void handle_auto_failover(bool* failover_performed);
+    bool handle_auto_failover();
     bool failover_not_possible();
     bool slave_receiving_events();
-    bool mon_process_failover(bool* cluster_modified_out);
     bool failover_check(json_t** error_out);
     bool do_failover(json_t** err_out);
     bool failover_wait_relay_log(MariaDBServer* new_master, int seconds_remaining, json_t** err_out);

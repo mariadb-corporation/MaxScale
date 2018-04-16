@@ -480,11 +480,11 @@ void MariaDBMonitor::main_loop()
          * need to be launched.
          */
         mon_process_state_changes(m_monitor_base, m_script.c_str(), m_events);
-        bool failover_performed = false; // Has an automatic failover been performed this loop?
+        bool failover_performed = false; // Has an automatic failover been performed (or attempted) this loop?
 
         if (m_auto_failover)
         {
-            handle_auto_failover(&failover_performed);
+            failover_performed = handle_auto_failover();
         }
 
         /* log master detection failure of first master becomes available after failure */
@@ -600,34 +600,6 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
                 set_slave_heartbeat(server);
             }
         }
-    }
-}
-
-void MariaDBMonitor::handle_auto_failover(bool* failover_performed)
-{
-    const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
-                                 "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-    if (failover_not_possible())
-    {
-        const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
-                                "replication configuration, disabling automatic failover. Failover "
-                                "should only be enabled after the replication configuration has been "
-                                "fixed.";
-        MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor_base->name);
-        m_auto_failover = false;
-        disable_setting(CN_AUTO_FAILOVER);
-    }
-    // If master seems to be down, check if slaves are receiving events.
-    else if (m_verify_master_failure && m_master && m_master->is_down() && slave_receiving_events())
-    {
-        MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
-    }
-    else if (!mon_process_failover(failover_performed))
-    {
-        const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
-        MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, m_monitor_base->name);
-        m_auto_failover = false;
-        disable_setting(CN_AUTO_FAILOVER);
     }
 }
 

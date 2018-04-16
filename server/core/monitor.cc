@@ -1780,21 +1780,9 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
         }
     }
 
-    if (master_down != master_up)
+    if (master_down && master_up)
     {
-        // We either lost the master or gained a new one
-        if (master_down)
-        {
-            monitor->master_has_failed = true;
-        }
-        else if (master_up)
-        {
-            monitor->master_has_failed = false;
-        }
-    }
-    else if (master_down && master_up)
-    {
-        MXS_INFO("Master switch detected: lost a master and gained a new one");
+        MXS_NOTICE("Master switch detected: lost a master and gained a new one");
     }
 }
 
