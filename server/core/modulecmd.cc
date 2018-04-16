@@ -124,7 +124,7 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char *domain)
 
     for (dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcmp(dm->domain, domain) == 0)
+        if (strcasecmp(dm->domain, domain) == 0)
         {
             return dm;
         }
@@ -210,7 +210,7 @@ static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
 {
     for (MODULECMD *cmd = dm->commands; cmd; cmd = cmd->next)
     {
-        if (strcmp(cmd->identifier, id) == 0)
+        if (strcasecmp(cmd->identifier, id) == 0)
         {
             return true;
         }
@@ -463,11 +463,11 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
 
     for (MODULECMD_DOMAIN *dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcmp(effective_domain, dm->domain) == 0)
+        if (strcasecmp(effective_domain, dm->domain) == 0)
         {
             for (MODULECMD *cmd = dm->commands; cmd; cmd = cmd->next)
             {
-                if (strcmp(cmd->identifier, identifier) == 0)
+                if (strcasecmp(cmd->identifier, identifier) == 0)
                 {
                     rval = cmd;
                     break;
@@ -625,7 +625,7 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
     {
         int err;
         mxs_pcre2_result_t d_res = domain_re ?
-                                   mxs_pcre2_simple_match(domain_re, domain->domain, 0, &err) :
+                                   mxs_pcre2_simple_match(domain_re, domain->domain, PCRE2_CASELESS, &err) :
                                    MXS_PCRE2_MATCH;
 
         if (d_res == MXS_PCRE2_MATCH)
@@ -633,7 +633,7 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
             for (MODULECMD *cmd = domain->commands; cmd && rval; cmd = cmd->next)
             {
                 mxs_pcre2_result_t i_res = ident_re ?
-                                           mxs_pcre2_simple_match(ident_re, cmd->identifier, 0, &err) :
+                                           mxs_pcre2_simple_match(ident_re, cmd->identifier, PCRE2_CASELESS, &err) :
                                            MXS_PCRE2_MATCH;
 
                 if (i_res == MXS_PCRE2_MATCH)
