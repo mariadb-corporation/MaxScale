@@ -1,0 +1,34 @@
+version: '2'
+services:
+    master:
+        image: mariadb:10.2
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: Y
+        volumes:
+            - ./sql/master:/docker-entrypoint-initdb.d
+        command: mysqld --log-bin=mariadb-bin --binlog-format=ROW --server-id=3000
+
+    slave1:
+        image: mariadb:10.2
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: Y
+        volumes:
+            - ./sql/slave:/docker-entrypoint-initdb.d
+        command: mysqld --log-bin=mariadb-bin --binlog-format=ROW --server-id=3001
+
+    slave2:
+        image: mariadb:10.2
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: Y
+        volumes:
+            - ./sql/slave:/docker-entrypoint-initdb.d
+        command: mysqld --log-bin=mariadb-bin --binlog-format=ROW --server-id=3002
+
+    maxscale:
+        build: .
+        container_name: maxscale
+        volumes:
+            - ./maxscale.cnf.d:/etc/maxscale.cnf.d
+        ports:
+            - "4006:4006"
+            - "4008:4008"

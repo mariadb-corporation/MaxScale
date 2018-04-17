@@ -381,6 +381,9 @@ add_test_executable(max_connections.cpp max_connections replication LABELS MySQL
 # Test of Maxinfo interface (http)
 #add_test_executable(maxinfo.cpp maxinfocpp maxinfo LABELS maxinfo UNSTABLE HEAVY REPL_BACKEND)
 
+# Test of Maxinfo SQL interface
+add_test_executable(maxinfo_sql.cpp maxinfo_sql maxinfo_sql LABELS maxinfo REPL_BACKEND)
+
 # Test of Maxinfo interface (http), python impelemntation
 add_test_script(maxinfo.py maxinfo.py maxinfo LABELS maxinfo LIGHT REPL_BACKEND)
 
