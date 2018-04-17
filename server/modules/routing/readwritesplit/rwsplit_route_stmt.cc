@@ -242,7 +242,13 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             if ((target = handle_slave_is_target(inst, rses, command, stmt_id)))
             {
                 succp = true;
-                store_stmt = rses->rses_config.retry_failed_reads;
+
+                if (rses->rses_config.retry_failed_reads &&
+                    (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE))
+                {
+                    // Only commands that can contain an SQL statement should be stored
+                    store_stmt = true;
+                }
             }
         }
         else if (TARGET_IS_MASTER(route_target))

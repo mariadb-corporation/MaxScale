@@ -648,6 +648,10 @@ add_test_executable(mxs1786_statistics.cpp mxs1786_statistics replication LABELS
 # https://jira.mariadb.org/browse/MXS-1787
 add_test_executable(mxs1787_call_ps.cpp mxs1787_call_ps replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1808: Crash with mysql_stmt_send_long_data
+# https://jira.mariadb.org/browse/MXS-1808
+add_test_executable(mxs1808_long_data.cpp mxs1808_long_data replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
