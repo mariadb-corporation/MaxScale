@@ -1418,7 +1418,7 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
 
         success = true;
     }
-    catch (std::bad_alloc)
+    catch (std::bad_alloc&)
     {
         MXS_OOM();
     }
