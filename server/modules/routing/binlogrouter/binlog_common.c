@@ -78,11 +78,11 @@ bool binlog_next_file_exists(const char* binlogdir, const char* binlog)
         {
             char buf[BLRM_BINLOG_NAME_STR_LEN + 1];
             char filename[PATH_MAX + 1];
-            char next_file[BLRM_BINLOG_NAME_STR_LEN + 1];
+            char next_file[BLRM_BINLOG_NAME_STR_LEN + 1 + 20];
             int offset = sptr - binlog;
             memcpy(buf, binlog, offset);
             buf[offset] = '\0';
-            sprintf(next_file, BINLOG_NAMEFMT, buf, filenum);
+            snprintf(next_file, sizeof(next_file), BINLOG_NAMEFMT, buf, filenum);
             snprintf(filename, PATH_MAX, "%s/%s", binlogdir, next_file);
             filename[PATH_MAX] = '\0';
 

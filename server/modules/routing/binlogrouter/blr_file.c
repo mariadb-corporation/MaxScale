@@ -240,7 +240,7 @@ typedef struct start_encryption_event
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-    char path[PATH_MAX + 1] = "";
+    char path[PATH_MAX + 1 - BINLOG_FILE_EXTRA_INFO - BINLOG_FNAMELEN - 2] = "";
     char filename[PATH_MAX + 1] = "";
     int file_found, n = 1;
     int root_len, i;
@@ -262,9 +262,7 @@ blr_file_init(ROUTER_INSTANCE *router)
             return 0;
         }
 
-        strcpy(path, datadir);
-        strcat(path, "/");
-        strcat(path, router->service->name);
+        snprintf(path, sizeof(path), "%s/%s", datadir, router->service->name);
 
         if (access(path, R_OK) == -1)
         {
