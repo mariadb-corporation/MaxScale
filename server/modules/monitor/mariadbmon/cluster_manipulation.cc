@@ -413,7 +413,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
     bool is_suspect = false;
     if (rejoin_cand->is_running() && !rejoin_cand->is_master())
     {
-        SlaveStatusInfo* slave_status = &rejoin_cand->slave_status;
+        SlaveStatus* slave_status = &rejoin_cand->slave_status;
         // Has no slave connection, yet is not a master.
         if (rejoin_cand->n_slaves_configured == 0)
         {
@@ -423,12 +423,14 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
         else if (rejoin_cand->n_slaves_configured == 1)
         {
             // which is connected to master but it's the wrong one
-            if (slave_status->slave_io_running  && slave_status->master_server_id != m_master->server_id)
+            if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_YES  &&
+                slave_status->master_server_id != m_master->server_id)
             {
                 is_suspect = true;
             }
             // or is disconnected but master host or port is wrong.
-            else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
+            else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING &&
+                     slave_status->slave_sql_running &&
                      (slave_status->master_host != m_master->server_base->server->name ||
                       slave_status->master_port != m_master->server_base->server->port))
             {
@@ -1436,7 +1438,7 @@ bool MariaDBMonitor::slave_receiving_events()
         MariaDBServer* info = get_server_info(server);
 
         if (info->slave_configured &&
-            info->slave_status.slave_io_running &&
+            info->slave_status.slave_io_running == SlaveStatus::SLAVE_IO_YES &&
             info->slave_status.master_server_id == master_id &&
             difftime(time(NULL), info->latest_event) < m_master_failure_timeout)
         {

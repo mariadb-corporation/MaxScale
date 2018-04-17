@@ -34,15 +34,22 @@ enum print_repl_warnings_t
 class QueryResult;
 
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
-class SlaveStatusInfo
+class SlaveStatus
 {
 public:
+    enum slave_io_running_t
+    {
+        SLAVE_IO_YES,
+        SLAVE_IO_CONNECTING,
+        SLAVE_IO_NO,
+    };
+
     int64_t master_server_id;       /**< The master's server_id value. Valid ids are 32bit unsigned. -1 is
                                      *   unread/error. */
     std::string master_host;        /**< Master server host name. */
     int master_port;                /**< Master server port. */
-    bool slave_io_running;          /**< Whether the slave I/O thread is running and connected. */
-    bool slave_sql_running;         /**< Whether or not the SQL thread is running. */
+    slave_io_running_t slave_io_running; /**< Slave I/O thread running state: "Yes", "Connecting" or "No" */
+    bool slave_sql_running;         /**< Slave SQL thread running state, true if "Yes" */
     std::string master_log_file;    /**< Name of the master binary log file that the I/O thread is currently
                                      *   reading from. */
     uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
@@ -50,7 +57,9 @@ public:
     GtidList gtid_io_pos;           /**< Gtid I/O position of the slave thread. */
     std::string last_error;         /**< Last IO or SQL error encountered. */
 
-    SlaveStatusInfo();
+    SlaveStatus();
+    static slave_io_running_t slave_io_from_string(const std::string& str);
+    static std::string slave_io_to_string(slave_io_running_t slave_io);
 };
 
 // This class groups some miscellaneous replication related settings together.
@@ -93,7 +102,7 @@ public:
                                               *  new non-replicated events. */
     GtidList        gtid_current_pos;       /**< Gtid of latest event. */
     GtidList        gtid_binlog_pos;        /**< Gtid of latest event written to binlog. */
-    SlaveStatusInfo slave_status;           /**< Data returned from SHOW SLAVE STATUS */
+    SlaveStatus     slave_status;           /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
