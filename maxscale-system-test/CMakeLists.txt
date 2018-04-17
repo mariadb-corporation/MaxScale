@@ -648,6 +648,10 @@ add_test_executable(mxs1786_statistics.cpp mxs1786_statistics replication LABELS
 # https://jira.mariadb.org/browse/MXS-1787
 add_test_executable(mxs1787_call_ps.cpp mxs1787_call_ps replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1804: request 16M-1 stmt_prepare command packet connect hang
+# https://jira.mariadb.org/browse/MXS-1804
+add_test_executable(mxs1804_long_ps_hang.cpp mxs1804_long_ps_hang replication LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1808: Crash with mysql_stmt_send_long_data
 # https://jira.mariadb.org/browse/MXS-1808
 add_test_executable(mxs1808_long_data.cpp mxs1808_long_data replication LABELS readwritesplit REPL_BACKEND)

@@ -290,6 +290,18 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     return succp;
 }
 
+static inline bool is_large_query(GWBUF* buf)
+{
+    uint32_t buflen = gwbuf_length(buf);
+
+    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
+    ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+    // ... and the payload should be buflen - 4 bytes
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+
+    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -313,6 +325,13 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
 bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type)
 {
+    if (is_large_query(querybuf))
+    {
+        MXS_ERROR("Session command is too large, session cannot continue. "
+                  "Large session commands are not supported in 2.2.");
+        return false;
+    }
+
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = rses->sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
@@ -1118,18 +1137,6 @@ static inline bool query_creates_reply(uint8_t cmd)
     return cmd != MXS_COM_QUIT &&
            cmd != MXS_COM_STMT_SEND_LONG_DATA &&
            cmd != MXS_COM_STMT_CLOSE;
-}
-
-static inline bool is_large_query(GWBUF* buf)
-{
-    uint32_t buflen = gwbuf_length(buf);
-
-    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-    ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
-    // ... and the payload should be buflen - 4 bytes
-    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
-
-    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
 /**
