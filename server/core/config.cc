@@ -1481,12 +1481,12 @@ handle_global_item(const char *name, const char *value)
             }
         }
 
-        if (gateway.n_threads > MXS_MAX_THREADS)
+        if (gateway.n_threads > MXS_MAX_ROUTING_THREADS)
         {
             MXS_WARNING("Number of threads set to %d, which is greater than the "
                         "hard maximum of %d. Number of threads adjusted down "
-                        "accordingly.", gateway.n_threads, MXS_MAX_THREADS);
-            gateway.n_threads = MXS_MAX_THREADS;
+                        "accordingly.", gateway.n_threads, MXS_MAX_ROUTING_THREADS);
+            gateway.n_threads = MXS_MAX_ROUTING_THREADS;
         }
     }
     else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)

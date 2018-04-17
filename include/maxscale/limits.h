@@ -64,11 +64,15 @@ MXS_BEGIN_DECLS
 /**
  * MXS_MAX_THREADS
  *
- * Thread information is stored in a bitmask whose size must be a
- * multiple of 8. The bitmask is indexed using the thread id that start
- * from 1. Hence, the hard maximum number of threads must be a
- * multiple of 8 minus 1.
+ * The maximum number of threads/workers.
  */
-#define MXS_MAX_THREADS 255
+#define MXS_MAX_THREADS 128
+
+/**
+ * MXS_MAX_ROUTING_THREADS
+ *
+ * The maximum number of routing threads/workers.
+ */
+#define MXS_MAX_ROUTING_THREADS 100
 
 MXS_END_DECLS

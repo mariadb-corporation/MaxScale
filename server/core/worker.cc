@@ -25,6 +25,7 @@
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
+#include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/platform.h>
 #include <maxscale/semaphore.hh>
@@ -57,13 +58,11 @@ const int MXS_WORKER_MSG_DISPOSABLE_TASK = -2;
 struct this_unit
 {
     bool     initialized;    // Whether the initialization has been performed.
-    int      n_workers;      // How many workers there are.
     Worker** ppWorkers;      // Array of worker instances.
     int      next_worker_id; // Next worker id.
 } this_unit =
 {
     false, // initialized
-    0,     // n_workers
     NULL,  // ppWorkers
     0,     // next_worker_id
 };
@@ -197,13 +196,11 @@ bool Worker::init()
 {
     ss_dassert(!this_unit.initialized);
 
-    int n_workers = config_threadcount();
-    Worker** ppWorkers = new (std::nothrow) Worker* [n_workers] (); // Zero initialized array
+    Worker** ppWorkers = new (std::nothrow) Worker* [MXS_MAX_THREADS] (); // Zero initialized array
 
     if (ppWorkers)
     {
         this_unit.ppWorkers = ppWorkers;
-        this_unit.n_workers = n_workers;
 
         this_unit.initialized = true;
     }
@@ -233,7 +230,9 @@ int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type
 {
     int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = Worker::get(i);
         ss_dassert(pWorker);
@@ -265,7 +264,7 @@ int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type
         }
     }
 
-    return type == TS_STATS_AVG ? best / this_unit.n_workers : best;
+    return type == TS_STATS_AVG ? best / (nWorkers != 0 ? nWorkers : 1) : best;
 }
 
 }
@@ -291,7 +290,7 @@ Worker::STATISTICS Worker::get_statistics()
 
     for (int i = 0; i < Worker::STATISTICS::MAXNFDS - 1; i++)
     {
-        for (int j = 0; j < this_unit.n_workers; ++j)
+        for (int j = 0; j < this_unit.next_worker_id; ++j)
         {
             Worker* pWorker = Worker::get(j);
             ss_dassert(pWorker);
@@ -302,7 +301,9 @@ Worker::STATISTICS Worker::get_statistics()
 
     for (int i = 0; i <= Worker::STATISTICS::N_QUEUE_TIMES; ++i)
     {
-        for (int j = 0; j < this_unit.n_workers; ++j)
+        int nWorkers = this_unit.next_worker_id;
+
+        for (int j = 0; j < nWorkers; ++j)
         {
             Worker* pWorker = Worker::get(j);
             ss_dassert(pWorker);
@@ -311,8 +312,8 @@ Worker::STATISTICS Worker::get_statistics()
             cs.exectimes[i] += pWorker->statistics().exectimes[i];
         }
 
-        cs.qtimes[i] /= this_unit.n_workers;
-        cs.exectimes[i] /= this_unit.n_workers;
+        cs.qtimes[i] /= (nWorkers != 0 ? nWorkers : 1);
+        cs.exectimes[i] /= (nWorkers != 0 ? nWorkers : 1);
     }
 
     return cs;
@@ -440,7 +441,7 @@ bool Worker::remove_fd(int fd)
 
 Worker* Worker::get(int worker_id)
 {
-    ss_dassert(worker_id < this_unit.n_workers);
+    ss_dassert((worker_id >= 0) && (worker_id < this_unit.next_worker_id));
 
     return this_unit.ppWorkers[worker_id];
 }
@@ -528,9 +529,11 @@ size_t Worker::broadcast(Task* pTask, Semaphore* pSem)
     // No logging here, function must be signal safe.
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         if (pWorker->post(pTask, pSem))
         {
@@ -549,9 +552,11 @@ size_t Worker::broadcast(std::auto_ptr<DisposableTask> sTask)
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         if (pWorker->post_disposable(pTask))
         {
@@ -570,9 +575,11 @@ size_t Worker::execute_serially(Task& task)
     Semaphore sem;
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         if (pWorker->post(&task, &sem))
         {
@@ -605,9 +612,11 @@ size_t Worker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         if (pWorker->post_message(msg_id, arg1, arg2))
         {
@@ -672,9 +681,10 @@ void Worker::shutdown()
 void Worker::shutdown_all()
 {
     // NOTE: No logging here, this function must be signal safe.
-    ss_dassert((this_unit.n_workers == 0) || (this_unit.ppWorkers != NULL));
+    ss_dassert((this_unit.next_worker_id == 0) || (this_unit.ppWorkers != NULL));
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);

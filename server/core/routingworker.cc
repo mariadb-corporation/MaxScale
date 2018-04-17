@@ -25,7 +25,7 @@
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/limits.h>
 #include <maxscale/platform.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/json_api.h>
@@ -67,6 +67,8 @@ struct this_unit
     int             max_poll_sleep;    // Maximum block time
     int             epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
     int             id_main_worker;    // The id of the worker running in the main thread.
+    int             id_min_worker;     // The smallest routing worker id.
+    int             id_max_worker;     // The largest routing worker id.
 } this_unit =
 {
     false,            // initialized
@@ -75,7 +77,9 @@ struct this_unit
     0,                // number_poll_spins
     0,                // max_poll_sleep
     -1,               // epoll_listener_fd
-    WORKER_ABSENT_ID  // id_main_worker
+    WORKER_ABSENT_ID, // id_main_worker
+    WORKER_ABSENT_ID, // id_min_worker
+    WORKER_ABSENT_ID, // id_max_worker
 };
 
 thread_local struct this_thread
@@ -180,11 +184,14 @@ bool RoutingWorker::init()
     if (this_unit.epoll_listener_fd != -1)
     {
         int nWorkers = config_threadcount();
-        RoutingWorker** ppWorkers = new (std::nothrow) RoutingWorker* [nWorkers] (); // Zero inited array
+        RoutingWorker** ppWorkers = new (std::nothrow) RoutingWorker* [MXS_MAX_THREADS] (); // 0-inited array
 
         if (ppWorkers)
         {
             int id_main_worker = WORKER_ABSENT_ID;
+            int id_min_worker = INT_MAX;
+            int id_max_worker = INT_MIN;
+
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
@@ -192,10 +199,22 @@ bool RoutingWorker::init()
 
                 if (pWorker)
                 {
+                    int id = pWorker->id();
+
                     // The first created worker will be the main worker.
                     if (id_main_worker == WORKER_ABSENT_ID)
                     {
-                        id_main_worker = pWorker->id();
+                        id_main_worker = id;
+                    }
+
+                    if (id < id_min_worker)
+                    {
+                        id_min_worker = id;
+                    }
+
+                    if (id > id_max_worker)
+                    {
+                        id_max_worker = id;
                     }
 
                     ppWorkers[i] = pWorker;
@@ -218,6 +237,8 @@ bool RoutingWorker::init()
                 this_unit.ppWorkers = ppWorkers;
                 this_unit.nWorkers = nWorkers;
                 this_unit.id_main_worker = id_main_worker;
+                this_unit.id_min_worker = id_min_worker;
+                this_unit.id_max_worker = id_max_worker;
 
                 this_unit.initialized = true;
             }
@@ -250,9 +271,10 @@ void RoutingWorker::finish()
 {
     ss_dassert(this_unit.initialized);
 
-    for (int i = this_unit.nWorkers - 1; i >= 0; --i)
+    for (int i = this_unit.id_max_worker; i >= this_unit.id_min_worker; --i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
@@ -329,7 +351,7 @@ RoutingWorker* RoutingWorker::get(int worker_id)
         worker_id = this_unit.id_main_worker;
     }
 
-    ss_dassert(worker_id < this_unit.nWorkers);
+    ss_dassert((worker_id >= this_unit.id_min_worker) && (worker_id <= this_unit.id_max_worker));
 
     return this_unit.ppWorkers[worker_id];
 }
@@ -359,19 +381,22 @@ bool RoutingWorker::start_threaded_workers()
     bool rv = true;
     size_t stack_size = config_thread_stack_size();
 
-    // The first RoutingWorker will be run in the main thread, so
-    // we start from 1 and not 0.
-    for (int i = 1; i < this_unit.nWorkers; ++i)
+    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; ++i)
     {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
-
-        if (!pWorker->start(stack_size))
+        // The main RoutingWorker will run in the main thread, so
+        // we exclude that.
+        if (i != this_unit.id_main_worker)
         {
-            MXS_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
-            rv = false;
-            // At startup, so we don't even try to clean up.
-            break;
+            RoutingWorker* pWorker = this_unit.ppWorkers[i];
+            ss_dassert(pWorker);
+
+            if (!pWorker->start(stack_size))
+            {
+                MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
+                rv = false;
+                // At startup, so we don't even try to clean up.
+                break;
+            }
         }
     }
 
@@ -381,12 +406,15 @@ bool RoutingWorker::start_threaded_workers()
 //static
 void RoutingWorker::join_threaded_workers()
 {
-    for (int i = 1; i < this_unit.nWorkers; i++)
+    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
     {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        if (i != this_unit.id_main_worker)
+        {
+            RoutingWorker* pWorker = this_unit.ppWorkers[i];
+            ss_dassert(pWorker);
 
-        pWorker->join();
+            pWorker->join();
+        }
     }
 }
 
