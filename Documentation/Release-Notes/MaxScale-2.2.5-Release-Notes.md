@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.2.5 Release Notes
+# MariaDB MaxScale 2.2.5 Release Notes -- 2018-04
 
 Release 2.2.5 is a GA release.
 
@@ -30,6 +30,7 @@ done with the following command:
 
 ## Bug fixes
 
+* [MXS-1805](https://jira.mariadb.org/browse/MXS-1805) MaxScale may hang with multiple concurrent maxadmin calls.
 * [MXS-1787](https://jira.mariadb.org/browse/MXS-1787) Crash with mysql client test `test_bug49972`
 * [MXS-1786](https://jira.mariadb.org/browse/MXS-1786) Hang with COM_STATISTICS
 * [MXS-1785](https://jira.mariadb.org/browse/MXS-1785) request 16M-1 normal sql + 'select 1' core dump with debug mode
