@@ -422,6 +422,59 @@ private:
     Average1      m_load_1_second;  /*< The load during the last 1-second period. */
 };
 
+/**
+ * WorkerTimer is a timer class built on top of timerfd_create(2),
+ * which means that each WorkerTimer instance will consume one file
+ * descriptor. The implication of that is that there should not be
+ * too many WorkerTimer instances. In order to be used, a WorkerTimer
+ * needs a Worker instance in whose context the timer is triggered.
+ */
+class WorkerTimer : private MXS_POLL_DATA
+{
+    WorkerTimer(const WorkerTimer&) = delete;
+    WorkerTimer& operator = (const WorkerTimer&) = delete;
+
+public:
+    ~WorkerTimer();
+
+    /**
+     * @brief Start the timer.
+     *
+     * @param internal The initial delay before the timer is
+     *                 triggered, and the subsequent interval
+     *                 between triggers.
+     *
+     * @attention A value of 0 means that the timer is cancelled.
+     */
+    void start(uint64_t interval);
+
+    /**
+     * @brief Cancel the timer.
+     */
+    void cancel();
+
+protected:
+    /**
+     * @brief Constructor
+     *
+     * @param pWorker  The worker in whose context the timer is to run.
+     */
+    WorkerTimer(Worker* pWorker);
+
+    /**
+     * @brief Called when the timer is triggered.
+     */
+    virtual void tick() = 0;
+
+private:
+    uint32_t handle(int wid, uint32_t events);
+
+    static uint32_t handler(MXS_POLL_DATA* pThis, int wid, uint32_t events);
+
+private:
+    int     m_fd;      /**< The timerfd descriptor. */
+    Worker* m_pWorker; /**< The worker in whose context the timer runs. */
+};
 
 class Worker : public MXS_WORKER
              , private MessageQueue::Handler
@@ -434,6 +487,46 @@ public:
     typedef WorkerTask            Task;
     typedef WorkerDisposableTask  DisposableTask;
     typedef WorkerLoad            Load;
+    typedef WorkerTimer           Timer;
+
+    /**
+     * A delegating timer that delegates the timer tick handling
+     * to another object.
+     */
+    template<class T>
+    class DelegatingTimer : public Timer
+    {
+        DelegatingTimer(const DelegatingTimer&) = delete;
+        DelegatingTimer& operator = (const DelegatingTimer&) = delete;
+
+    public:
+        typedef void (T::*PMethod)();
+
+        /**
+         * @brief Constructor
+         *
+         * @param pWorker     The worker in whose context the timer runs.
+         * @param pDelegatee  The object to whom the timer tick is delivered.
+         * @param pMethod     The method to call on @c pDelegatee when the
+         *                    timer is triggered.
+         */
+        DelegatingTimer(Worker* pWorker, T* pDelegatee, PMethod pMethod)
+            : Timer(pWorker)
+            , m_pDelegatee(pDelegatee)
+            , m_pMethod(pMethod)
+        {
+        }
+
+    private:
+        void tick() /* final */
+        {
+            (m_pDelegatee->*m_pMethod)();
+        }
+
+    private:
+        T*      m_pDelegatee;
+        PMethod m_pMethod;
+    };
 
     enum state_t
     {
@@ -847,7 +940,11 @@ private:
 
     void poll_waitevents();
 
+    void tick();
+
 private:
+    typedef DelegatingTimer<Worker> PrivateTimer;
+
     STATISTICS    m_statistics;           /*< Worker statistics. */
     MessageQueue* m_pQueue;               /*< The message queue of the worker. */
     THREAD        m_thread;               /*< The thread handle of the worker. */
@@ -856,7 +953,8 @@ private:
     bool          m_shutdown_initiated;   /*< Whether shutdown has been initated. */
     uint32_t      m_nCurrent_descriptors; /*< Current number of descriptors. */
     uint64_t      m_nTotal_descriptors;   /*< Total number of descriptors. */
-    Load          m_load;
+    Load          m_load;                 /*< The worker load. */
+    PrivateTimer  m_timer;                /*< The worker's own timer. */
 };
 
 }

@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <vector>
 #include <sstream>
+#include <sys/timerfd.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -141,9 +142,168 @@ uint64_t WorkerLoad::get_time()
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
 
+namespace
+{
+
+int create_timerfd()
+{
+    int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+
+    if (fd == -1)
+    {
+        if (errno == EINVAL)
+        {
+            // Ok, we may be running on an old kernel, let's try again but without flags.
+            fd = timerfd_create(CLOCK_MONOTONIC, 0);
+
+            if (fd != -1)
+            {
+                int flags = fcntl(fd, F_GETFL, 0);
+                if (flags != -1)
+                {
+                    flags |= O_NONBLOCK;
+                    if (fcntl(fd, F_SETFL, flags) == -1)
+                    {
+                        MXS_ALERT("Could not make timer fd non-blocking, MaxScale will not work: %s",
+                                  mxs_strerror(errno));
+                        close(fd);
+                        fd = -1;
+                        ss_dassert(!true);
+                    }
+                }
+                else
+                {
+                    MXS_ALERT("Could not get timer fd flags, MaxScale will not work: %s",
+                              mxs_strerror(errno));
+                    close(fd);
+                    fd = -1;
+                    ss_dassert(!true);
+                }
+            }
+            else
+            {
+                MXS_ALERT("Could not create timer file descriptor even with no flags, MaxScale "
+                          "will not work: %s", mxs_strerror(errno));
+                ss_dassert(!true);
+            }
+        }
+        else
+        {
+            MXS_ALERT("Could not create timer file descriptor, MaxScale will not work: %s",
+                      mxs_strerror(errno));
+            ss_dassert(!true);
+        }
+    }
+
+    return fd;
+}
+
+}
+
+WorkerTimer::WorkerTimer(Worker* pWorker)
+    : m_fd(create_timerfd())
+    , m_pWorker(pWorker)
+{
+    MXS_POLL_DATA::handler = handler;
+    MXS_POLL_DATA::thread.id = m_pWorker->id();
+
+    if (m_fd != -1)
+    {
+        if (!m_pWorker->add_fd(m_fd, EPOLLIN, this))
+        {
+            MXS_ALERT("Could not add timer descriptor to worker, MaxScale will not work.");
+            ::close(m_fd);
+            m_fd = -1;
+            ss_dassert(!true);
+        }
+    }
+}
+
+WorkerTimer::~WorkerTimer()
+{
+    if (m_fd != -1)
+    {
+        if (!m_pWorker->remove_fd(m_fd))
+        {
+            MXS_ERROR("Could not remove timer fd from worker.");
+        }
+
+        ::close(m_fd);
+    }
+}
+
+void WorkerTimer::start(uint64_t interval)
+{
+    // TODO: Add possibility to set initial delay and interval.
+    time_t initial_sec = interval / 1000;
+    long initial_nsec = (interval - initial_sec * 1000) * 1000;
+
+    time_t interval_sec = (interval / 1000);
+    long interval_nsec = (interval - interval_sec * 1000) * 1000;
+
+    struct itimerspec time;
+
+    time.it_value.tv_sec = initial_sec;
+    time.it_value.tv_nsec = initial_nsec;
+    time.it_interval.tv_sec = interval_sec;
+    time.it_interval.tv_nsec = interval_nsec;
+
+    if (timerfd_settime(m_fd, 0, &time, NULL) != 0)
+    {
+        MXS_ERROR("Could not set timer settings.");
+    }
+}
+
+void WorkerTimer::cancel()
+{
+    start(0);
+}
+
+uint32_t WorkerTimer::handle(int wid, uint32_t events)
+{
+    ss_dassert(wid == m_pWorker->id());
+    ss_dassert(events & EPOLLIN);
+    ss_dassert((events & ~EPOLLIN) == 0);
+
+    // Read all events
+    uint64_t expirations;
+    while (read(m_fd, &expirations, sizeof(expirations)) == 0)
+    {
+    }
+
+    tick();
+
+    return MXS_POLL_READ;
+}
+
+//static
+uint32_t WorkerTimer::handler(MXS_POLL_DATA* pThis, int wid, uint32_t events)
+{
+    return static_cast<WorkerTimer*>(pThis)->handle(wid, events);
+}
+
+namespace
+{
+
+int create_epoll_instance()
+{
+    int fd = ::epoll_create(MAX_EVENTS);
+
+    if (fd == -1)
+    {
+        MXS_ALERT("Could not create epoll-instance for worker, MaxScale will not work: %s",
+                  mxs_strerror(errno));
+        ss_dassert(!true);
+    }
+
+    return fd;
+}
+
+}
+
 Worker::Worker()
     : m_id(next_worker_id())
-    , m_epoll_fd(epoll_create(MAX_EVENTS))
+    , m_epoll_fd(create_epoll_instance())
     , m_state(STOPPED)
     , m_pQueue(NULL)
     , m_thread(0)
@@ -152,6 +312,7 @@ Worker::Worker()
     , m_shutdown_initiated(false)
     , m_nCurrent_descriptors(0)
     , m_nTotal_descriptors(0)
+    , m_timer(this, this, &Worker::tick)
 {
     if (m_epoll_fd != -1)
     {
@@ -161,21 +322,15 @@ Worker::Worker()
         {
             if (!m_pQueue->add_to_worker(this))
             {
-                MXS_ALERT("Could not add message queue to worker. MaxScale will not work.");
+                MXS_ALERT("Could not add message queue to worker, MaxScale will not work.");
                 ss_dassert(!true);
             }
         }
         else
         {
-            MXS_ALERT("Could not create message queue for worker. MaxScale will not work.");
+            MXS_ALERT("Could not create message queue for worker, MaxScale will not work.");
             ss_dassert(!true);
         }
-    }
-    else
-    {
-        MXS_ALERT("Could not create epoll-instance for worker: %s. MaxScale will not work.",
-                  mxs_strerror(errno));
-        ss_dassert(!true);
     }
 
     this_unit.ppWorkers[m_id] = this;
@@ -951,6 +1106,12 @@ void Worker::poll_waitevents()
     } /*< while(1) */
 
     m_state = STOPPED;
+}
+
+void Worker::tick()
+{
+    // TODO: Add timer management here once function for adding delayed calls
+    // TODO: to Worker has been added.
 }
 
 }
