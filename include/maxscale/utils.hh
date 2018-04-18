@@ -190,7 +190,7 @@ struct RegistryTraits
     static id_type get_id(entry_type entry)
     {
         static_assert(sizeof(EntryType) != sizeof(EntryType), "get_id() and the"
-                " surrounding struct must be specialized for every EntryType!");
+                      " surrounding struct must be specialized for every EntryType!");
         return 0;
     }
     static entry_type null_entry()
@@ -273,7 +273,7 @@ private:
 template<typename Ptr>
 bool equal_pointees(const Ptr& lhs, const Ptr& rhs)
 {
-   return *lhs == *rhs;
+    return *lhs == *rhs;
 }
 
 // Unary predicate for equality of pointed-to objects
@@ -281,19 +281,19 @@ template<typename T>
 class EqualPointees : public std::unary_function<T, bool>
 {
 public:
-   EqualPointees(const T& lhs) : m_ppLhs(&lhs) {}
-   bool operator()(const T& pRhs)
-   {
-       return **m_ppLhs == *pRhs;
-   }
+    EqualPointees(const T& lhs) : m_ppLhs(&lhs) {}
+    bool operator()(const T& pRhs)
+    {
+        return **m_ppLhs == *pRhs;
+    }
 private:
-   const T* m_ppLhs;
+    const T* m_ppLhs;
 };
 
 template<typename T>
 EqualPointees<T> equal_pointees(const T& t)
 {
-   return EqualPointees<T>(t);
+    return EqualPointees<T>(t);
 }
 
 }
