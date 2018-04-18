@@ -29,6 +29,7 @@
  */
 
 #include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -1135,4 +1136,17 @@ long get_processor_count()
 #error _SC_NPROCESSORS_ONLN not available.
 #endif
     return processors;
+}
+
+namespace maxscale
+{
+
+std::string to_hex(uint8_t value)
+{
+    std::string out;
+    out += hex_lower[value >> 4];
+    out += hex_lower[value & 0x0F];
+    return out;
+}
+
 }

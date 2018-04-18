@@ -15,6 +15,8 @@
 #include <maxscale/cppdefs.hh>
 #include <stdio.h>
 #include <functional>
+#include <iterator>
+#include <string>
 #include <tr1/unordered_map>
 
 namespace maxscale
@@ -294,6 +296,48 @@ template<typename T>
 EqualPointees<T> equal_pointees(const T& t)
 {
     return EqualPointees<T>(t);
+}
+
+/**
+ * Get hexadecimal string representation of @c value
+ *
+ * @param value Value to convert
+ *
+ * @return Hexadecimal string representation of @c value
+ */
+std::string to_hex(uint8_t value);
+
+template <typename T, typename V>
+struct hex_iterator
+{
+};
+
+template <typename T>
+struct hex_iterator<T, uint8_t>
+{
+    std::string operator()(T begin, T end)
+    {
+        std::string rval;
+        for (auto it = begin; it != end; it++)
+        {
+            rval += to_hex(*it);
+        }
+        return rval;
+    }
+};
+
+/**
+ * Create hexadecimal representation of a type
+ *
+ * @param begin Starting iterator
+ * @param end   End iterator
+ *
+ * @return Hexadecimal string representation of the data
+ */
+template <typename Iter>
+std::string to_hex(Iter begin, Iter end)
+{
+    return hex_iterator<Iter, typename std::iterator_traits<Iter>::value_type > ()(begin, end);
 }
 
 }
