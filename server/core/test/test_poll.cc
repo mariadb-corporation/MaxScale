@@ -52,6 +52,9 @@ test1()
     int eno = 0;
     SERV_LISTENER dummy;
 
+    SERVICE service;
+    service.routerModule = (char*)"required by a check in dcb.cc";
+
     /* Poll tests */
     ss_dfprintf(stderr,
                 "testpoll : Initialise the polling system.");
@@ -66,6 +69,7 @@ test1()
     }
 
     dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    dcb->service = &service;
 
     if (dcb->fd < 0)
     {
