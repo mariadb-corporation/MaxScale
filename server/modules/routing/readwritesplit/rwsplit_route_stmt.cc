@@ -192,7 +192,13 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
             if ((target = handle_slave_is_target(command, stmt_id)))
             {
                 succp = true;
-                store_stmt = m_config.retry_failed_reads;
+
+                if (m_config.retry_failed_reads &&
+                    (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE))
+                {
+                    // Only commands that can contain an SQL statement should be stored
+                    store_stmt = true;
+                }
             }
         }
         else if (TARGET_IS_MASTER(route_target))
@@ -256,6 +262,18 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
     }
 
     return succp;
+}
+
+static inline bool is_large_query(GWBUF* buf)
+{
+    uint32_t buflen = gwbuf_length(buf);
+
+    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
+    ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+    // ... and the payload should be buflen - 4 bytes
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+
+    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
 /**
@@ -326,6 +344,13 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
  */
 bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type)
 {
+    if (is_large_query(querybuf))
+    {
+        MXS_ERROR("Session command is too large, session cannot continue. "
+                  "Large session commands are not supported in 2.2.");
+        return false;
+    }
+
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = m_sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
@@ -846,18 +871,6 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
 
     *dest = target;
     return succp;
-}
-
-static inline bool is_large_query(GWBUF* buf)
-{
-    uint32_t buflen = gwbuf_length(buf);
-
-    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-    ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
-    // ... and the payload should be buflen - 4 bytes
-    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
-
-    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
 /*

@@ -217,6 +217,9 @@ SELECT ..INTO variable|OUTFILE|DUMPFILE
 SET autocommit=1|0
 ```
 
+Session commands that are 2²⁴ - 1 bytes or longer are not supported and
+cause the session to be closed.
+
 There is a possibility for misbehavior. If `USE mytable` is executed in one of
 the slaves and fails, it may be due to replication lag rather than the database
 not existing. Thus, the same command may produce different result in different

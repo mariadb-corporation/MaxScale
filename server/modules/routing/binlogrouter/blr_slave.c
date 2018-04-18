@@ -7047,9 +7047,9 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
                             SQLITE_OPEN_READONLY,
                             NULL) != SQLITE_OK)
         {
-            char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+            char errmsg[BINLOG_ERROR_MSG_LEN + sizeof(dbpath) + 1];
             snprintf(errmsg,
-                     BINLOG_ERROR_MSG_LEN,
+                     sizeof(errmsg),
                      "Slave %lu: failed to open GTID maps db '%s': %s",
                       (unsigned long)slave->serverid,
                       dbpath,
@@ -8180,7 +8180,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
             else
             {
                 int rc;
-                char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+                char error_string[BINLOG_ERROR_MSG_LEN + 1 + BINLOG_ERROR_MSG_LEN + 1] = "";
                 MASTER_SERVER_CFG *current_master = NULL;
 
                 current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
@@ -8228,7 +8228,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 
                         spinlock_release(&router->lock);
 
-                        snprintf(error_string, BINLOG_ERROR_MSG_LEN,
+                        snprintf(error_string, sizeof(error_string),
                                  "Error writing into %s/master.ini: %s",
                                  router->binlogdir,
                                  error);
