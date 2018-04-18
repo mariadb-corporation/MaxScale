@@ -18,6 +18,7 @@
 #define MXS_MODULE_NAME "mariadbmon"
 
 #include "../mysqlmon.h"
+#include <fstream>
 #include <inttypes.h>
 #include <limits>
 #include <string>
@@ -118,7 +119,7 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
 static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
                                      MySqlServerInfo* master_info, json_t** output);
 static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output);
-static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers);
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers, json_t** output);
 static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
 static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
 static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
@@ -130,6 +131,8 @@ static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER*
 static string get_connection_errors(const ServerVector& servers);
 static int64_t scan_server_id(const char* id_string);
 static string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port);
+static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, json_t** error_out);
+static bool check_sql_files(MYSQL_MONITOR* mon);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -140,6 +143,8 @@ static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 static const char CN_FAILCOUNT[]          = "failcount";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
+static const char CN_PROMOTION_SQL_FILE[] = "promotion_sql_file";
+static const char CN_DEMOTION_SQL_FILE[]  = "demotion_sql_file";
 
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
@@ -737,7 +742,7 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
                     {
                         ServerVector joinable_server;
                         joinable_server.push_back(mon_server);
-                        if (do_rejoin(handle, joinable_server) == 1)
+                        if (do_rejoin(handle, joinable_server, output) == 1)
                         {
                             rval = true;
                             MXS_NOTICE("Rejoin performed.");
@@ -915,6 +920,8 @@ extern "C"
                 {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
                 {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
                 {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
+                {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
+                {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
                 {MXS_END_MODULE_PARAMS}
             }
         };
@@ -1095,11 +1102,18 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
     handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
+    handle->promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
+    handle->demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
 
     handle->excluded_servers = NULL;
     handle->n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor,
                                                 &handle->excluded_servers);
     if (handle->n_excluded < 0)
+    {
+        error = true;
+    }
+
+    if (!check_sql_files(handle))
     {
         error = true;
     }
@@ -2586,7 +2600,7 @@ monitorMain(void *arg)
             ServerVector joinable_servers;
             if (get_joinable_servers(handle, &joinable_servers))
             {
-                uint32_t joins = do_rejoin(handle, joinable_servers);
+                uint32_t joins = do_rejoin(handle, joinable_servers, NULL);
                 if (joins > 0)
                 {
                     MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
@@ -3728,13 +3742,24 @@ bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, js
         PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'. Query: '%s'.",
                              mysql_error(new_master->con), query);
     }
-    // If the previous master was a slave to an external master, start the equivalent slave connection on
-    // the new master. Success of replication is not checked.
-    else if (mon->external_master_port != PORT_UNKNOWN &&
-             !start_external_replication(mon, new_master, err_out))
+    else
     {
-        success = false;
+        // Promotion commands ran successfully, run promotion sql script file before external replication.
+        if (*mon->promote_sql_file && !run_sql_from_file(new_master, mon->promote_sql_file, err_out))
+        {
+            PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when promoting server '%s'.",
+                                 CN_PROMOTION_SQL_FILE, new_master->server->unique_name);
+            success = false;
+        }
+        // If the previous master was a slave to an external master, start the equivalent slave connection on
+        // the new master. Success of replication is not checked.
+        else if (mon->external_master_port != PORT_UNKNOWN &&
+                 !start_external_replication(mon, new_master, err_out))
+        {
+            success = false;
+        }
     }
+
     return success;
 }
 
@@ -4148,6 +4173,13 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
             PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR);
         }
     }
+    else if (*mon->demote_sql_file && !run_sql_from_file(current_master, mon->demote_sql_file, err_out))
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when demoting server '%s'.",
+                             CN_DEMOTION_SQL_FILE, current_master->server->unique_name);
+        success = false;
+    }
+
     return success;
 }
 
@@ -4742,9 +4774,10 @@ static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
  *
  * @param mon Cluster monitor
  * @param joinable_servers Which servers to rejoin
+ * @param output Error output. Can be null.
  * @return The number of servers successfully rejoined
  */
-static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_servers)
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_servers, json_t** output)
 {
     SERVER* master = mon->master->server;
     uint32_t servers_joined = 0;
@@ -4760,22 +4793,30 @@ static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_serve
             const char* master_name = master->unique_name;
             MySqlServerInfo* redir_info = get_server_info(mon, joinable);
 
-            bool op_success;
-            if (redir_info->n_slaves_configured == 0)
+            if (*mon->demote_sql_file && !run_sql_from_file(joinable, mon->demote_sql_file, output))
             {
-                MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                op_success = join_cluster(joinable, change_cmd.c_str());
+                PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
+                                     CN_DEMOTION_SQL_FILE, joinable->server->unique_name);
             }
             else
             {
-                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                           "redirecting it to '%s'.", name, master_name, master_name);
-                op_success = redirect_one_slave(joinable, change_cmd.c_str());
-            }
+                bool op_success;
+                if (redir_info->n_slaves_configured == 0)
+                {
+                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
+                    op_success = join_cluster(joinable, change_cmd.c_str());
+                }
+                else
+                {
+                    MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                               "redirecting it to '%s'.", name, master_name, master_name);
+                    op_success = redirect_one_slave(joinable, change_cmd.c_str());
+                }
 
-            if (op_success)
-            {
-                servers_joined++;
+                if (op_success)
+                {
+                    servers_joined++;
+                }
             }
         }
     }
@@ -4875,4 +4916,84 @@ static int64_t scan_server_id(const char* id_string)
 #endif
     ss_dassert(server_id >= SERVER_ID_MIN && server_id <= SERVER_ID_MAX);
     return server_id;
+}
+
+/**
+ * Read the file contents and send them as sql queries to the server. Queries should not return any data.
+ *
+ * @param server Server to send queries to
+ * @param path Text file path.
+ * @param error_out Error output
+ * @return True if file was read and all commands were completed successfully
+ */
+static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, json_t** error_out)
+{
+    MYSQL* conn = server->con;
+    bool error = false;
+    std::ifstream sql_file(path);
+    if (sql_file.is_open())
+    {
+        MXS_NOTICE("Executing sql queries from file '%s'.", path.c_str());
+        int lines_executed = 0;
+
+        while (!sql_file.eof() && !error)
+        {
+            string line;
+            std::getline(sql_file, line);
+            if (sql_file.bad())
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Error when reading sql text file '%s': '%s'.",
+                                     path.c_str(), mxs_strerror(errno));
+                error = true;
+            }
+            // Skip empty lines and comment lines
+            else if (!line.empty() && line[0] != '#')
+            {
+                if (mxs_mysql_query(conn, line.c_str()) == 0)
+                {
+                    lines_executed++;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out, "Failed to execute sql from text file '%s'. Query: '%s'. "
+                                         "Error: '%s'.", path.c_str(), line.c_str(), mysql_error(conn));
+                    error = true;
+                }
+            }
+        }
+        MXS_NOTICE("%d queries executed successfully.", lines_executed);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Could not open sql text file '%s'.", path.c_str());
+        error = true;
+    }
+    return !error;
+}
+
+/**
+ * Check sql text file parameters. A parameter should either be empty or a valid file which can be opened.
+ *
+ * @param mon The monitor
+ * @return True if no errors occurred when opening the files
+ */
+static bool check_sql_files(MYSQL_MONITOR* mon)
+{
+    const char ERRMSG[] = "%s ('%s') does not exist or cannot be accessed for reading: '%s'.";
+    const char* promote_file = mon->promote_sql_file;
+    const char* demote_file = mon->demote_sql_file;
+
+    bool rval = true;
+    if (*promote_file && access(promote_file, R_OK) != 0)
+    {
+        rval = false;
+        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, promote_file, mxs_strerror(errno));
+    }
+
+    if (*demote_file && access(demote_file, R_OK) != 0)
+    {
+        rval = false;
+        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, demote_file, mxs_strerror(errno));
+    }
+    return rval;
 }

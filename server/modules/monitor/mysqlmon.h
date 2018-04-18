@@ -77,6 +77,8 @@ typedef struct
                                         replicating from the wrong master. */
     int n_excluded;                /**< Number of excluded servers */
     MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+    const char* promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
+    const char* demote_sql_file;   /**< File with sql commands which are ran to a server being demoted. */
 
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
