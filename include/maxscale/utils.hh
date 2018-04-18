@@ -13,11 +13,17 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
 #include <stdio.h>
+#include <openssl/sha.h>
+
+#include <array>
 #include <functional>
 #include <iterator>
 #include <string>
 #include <tr1/unordered_map>
+
+#include <maxscale/buffer.h>
 
 namespace maxscale
 {
@@ -338,6 +344,93 @@ template <typename Iter>
 std::string to_hex(Iter begin, Iter end)
 {
     return hex_iterator<Iter, typename std::iterator_traits<Iter>::value_type > ()(begin, end);
+}
+
+/**
+ * A SHA1 wrapper class
+ */
+class Checksum
+{
+public:
+
+    typedef std::array<uint8_t, SHA_DIGEST_LENGTH> Sum;
+
+    /**
+     * Create a new Checksum
+     */
+    Checksum()
+    {
+        SHA1_Init(&m_ctx);
+    }
+
+    /**
+     * Update the checksum calculation
+     *
+     * @param buffer Buffer to add to the calculation
+     */
+    void update(GWBUF* buffer)
+    {
+        for (GWBUF* b = buffer; b; b = b->next)
+        {
+            SHA1_Update(&m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
+        }
+    }
+
+    /**
+     * Finalize the calculation
+     *
+     * This function must be called before the hex function is called or
+     * a comparison between two Checksums is made. This resets the calculation
+     * state so a new checksum can be started after a call to this function is
+     * made.
+     *
+     * Calling finalize will overwrite the currently stored calculation.
+     *
+     * @param buffer Optional buffer to process before finalizing
+     */
+    void finalize(GWBUF* buffer = NULL)
+    {
+        update(buffer);
+        SHA1_Final(&m_sum.front(), &m_ctx);
+        SHA1_Init(&m_ctx);
+    }
+
+    /**
+     * Equality comparison to another checksum
+     *
+     * @param rhs Right hand side
+     *
+     * @return True both checksums are equal
+     */
+    bool eq(const Checksum& rhs) const
+    {
+        return m_sum == rhs.m_sum;
+    }
+
+    /**
+     * Get hexadecimal representation of the checksum
+     *
+     * @return String containing the hexadecimal form of the checksum
+     */
+    std::string hex() const
+    {
+        return mxs::to_hex(m_sum.begin(), m_sum.end());
+    }
+
+private:
+
+    SHA_CTX m_ctx; /**< SHA1 context */
+    Sum     m_sum; /**< Final checksum */
+};
+
+static inline bool operator ==(const Checksum& lhs, const Checksum& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+static inline bool operator !=(const Checksum& lhs, const Checksum& rhs)
+{
+    return !(lhs == rhs);
 }
 
 }
