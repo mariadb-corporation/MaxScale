@@ -3458,7 +3458,7 @@ int poll_add_dcb(DCB *dcb)
         worker_id = MXS_WORKER_ALL;
     }
     else if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
-             (strcasecmp(dcb->service->routerModule, "cli") == 0))
+             strcasecmp(dcb->service->routerModule, "cli") == 0)
     {
         // If the DCB refers to an accepted maxadmin socket, we force it
         // to the main thread. That's done in order to prevent a deadlock
