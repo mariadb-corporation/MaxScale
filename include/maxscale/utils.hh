@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <openssl/sha.h>
+#include <zlib.h>
 
 #include <array>
 #include <functional>
@@ -347,34 +348,20 @@ std::string to_hex(Iter begin, Iter end)
 }
 
 /**
- * A SHA1 wrapper class
+ * Base class for checksums
  */
 class Checksum
 {
 public:
 
-    typedef std::array<uint8_t, SHA_DIGEST_LENGTH> Sum;
-
-    /**
-     * Create a new Checksum
-     */
-    Checksum()
-    {
-        SHA1_Init(&m_ctx);
-    }
+    virtual ~Checksum() {}
 
     /**
      * Update the checksum calculation
      *
      * @param buffer Buffer to add to the calculation
      */
-    void update(GWBUF* buffer)
-    {
-        for (GWBUF* b = buffer; b; b = b->next)
-        {
-            SHA1_Update(&m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
-        }
-    }
+    virtual void update(GWBUF* buffer) = 0;
 
     /**
      * Finalize the calculation
@@ -388,6 +375,38 @@ public:
      *
      * @param buffer Optional buffer to process before finalizing
      */
+    virtual void finalize(GWBUF* buffer = NULL) = 0;
+
+    /**
+     * Get hexadecimal representation of the checksum
+     *
+     * @return String containing the hexadecimal form of the checksum
+     */
+    virtual std::string hex() const = 0;
+};
+
+/**
+ * A SHA1 checksum
+ */
+class SHA1Checksum: public Checksum
+{
+public:
+
+    typedef std::array<uint8_t, SHA_DIGEST_LENGTH> Sum;
+
+    SHA1Checksum()
+    {
+        SHA1_Init(&m_ctx);
+    }
+
+    void update(GWBUF* buffer)
+    {
+        for (GWBUF* b = buffer; b; b = b->next)
+        {
+            SHA1_Update(&m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
+        }
+    }
+
     void finalize(GWBUF* buffer = NULL)
     {
         update(buffer);
@@ -395,26 +414,14 @@ public:
         SHA1_Init(&m_ctx);
     }
 
-    /**
-     * Equality comparison to another checksum
-     *
-     * @param rhs Right hand side
-     *
-     * @return True both checksums are equal
-     */
-    bool eq(const Checksum& rhs) const
-    {
-        return m_sum == rhs.m_sum;
-    }
-
-    /**
-     * Get hexadecimal representation of the checksum
-     *
-     * @return String containing the hexadecimal form of the checksum
-     */
     std::string hex() const
     {
         return mxs::to_hex(m_sum.begin(), m_sum.end());
+    }
+
+    bool eq(const SHA1Checksum& rhs) const
+    {
+        return m_sum == rhs.m_sum;
     }
 
 private:
@@ -423,12 +430,67 @@ private:
     Sum     m_sum; /**< Final checksum */
 };
 
-static inline bool operator ==(const Checksum& lhs, const Checksum& rhs)
+static inline bool operator ==(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 {
     return lhs.eq(rhs);
 }
 
-static inline bool operator !=(const Checksum& lhs, const Checksum& rhs)
+static inline bool operator !=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
+{
+    return !(lhs == rhs);
+}
+
+/**
+ * A CRC32 checksum
+ */
+class CRC32Checksum: public Checksum
+{
+public:
+
+    CRC32Checksum()
+    {
+        m_ctx = crc32(0L, NULL, 0);
+    }
+
+    void update(GWBUF* buffer)
+    {
+        for (GWBUF* b = buffer; b; b = b->next)
+        {
+            m_ctx = crc32(m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
+        }
+    }
+
+    void finalize(GWBUF* buffer = NULL)
+    {
+        update(buffer);
+        m_sum = m_ctx;
+        m_ctx = crc32(0L, NULL, 0);
+    }
+
+    std::string hex() const
+    {
+        const uint8_t* start = reinterpret_cast<const uint8_t*>(&m_sum);
+        const uint8_t* end = start + sizeof(m_sum);
+        return mxs::to_hex(start, end);
+    }
+
+    bool eq(const CRC32Checksum& rhs) const
+    {
+        return m_sum == rhs.m_sum;
+    }
+
+private:
+
+    uint32_t m_ctx; /**< Ongoing checksum value */
+    uint32_t m_sum; /**< Final checksum */
+};
+
+static inline bool operator ==(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+static inline bool operator !=(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
 {
     return !(lhs == rhs);
 }

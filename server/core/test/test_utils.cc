@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <string.h>
 #include <iostream>
 
@@ -118,6 +119,52 @@ int test_trim_trailing()
 
 }
 
+template <typename T>
+int test_checksums()
+{
+    uint8_t data[] =
+    {
+        'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'
+    };
+
+    GWBUF* d1 = gwbuf_alloc_and_load(sizeof(data), data);
+    GWBUF* d2 = gwbuf_alloc_and_load(sizeof(data), data);
+
+    T sum1, sum2;
+    sum1.update(d1);
+    sum1.finalize();
+    sum2.finalize(d1);
+    ss_dassert(sum1 == sum2);
+
+    // Check that the hex strings match
+    ss_dassert(sum1.hex() == sum2.hex());
+
+    std::string saved = sum1.hex();
+
+    // The checksum must not be empty
+    ss_dassert(!saved.empty());
+
+    // Repeat the same test, should produce the same checksums
+    sum1.update(d1);
+    sum1.finalize();
+    sum2.finalize(d1);
+    ss_dassert(sum1 == sum2);
+    ss_dassert(sum1.hex() == saved);
+    ss_dassert(sum2.hex() == saved);
+
+    // Check that different buffers but same content produce the same checksum
+    sum1.finalize(d2);
+    sum2.finalize(d1);
+    ss_dassert(sum1 == sum2);
+    ss_dassert(sum1.hex() == saved);
+    ss_dassert(sum2.hex() == saved);
+
+    gwbuf_free(d1);
+    gwbuf_free(d2);
+
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
     int rv = 0;
@@ -125,6 +172,8 @@ int main(int argc, char* argv[])
     rv += test_trim();
     rv += test_trim_leading();
     rv += test_trim_trailing();
+    rv += test_checksums<mxs::SHA1Checksum>();
+    rv += test_checksums<mxs::CRC32Checksum>();
 
     return rv;
 }
