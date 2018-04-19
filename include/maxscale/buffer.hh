@@ -337,9 +337,10 @@ public:
      *
      * @see Buffer::copy_from
      */
-    Buffer& operator = (Buffer rhs)
+    Buffer& operator = (const Buffer& rhs)
     {
-        swap(rhs);
+        Buffer temp(rhs);
+        swap(temp);
         return *this;
     }
 
