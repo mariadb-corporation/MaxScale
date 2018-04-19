@@ -140,6 +140,7 @@ public:
     Trx                     m_trx; /**< Current transaction */
     bool                    m_is_replay_active; /**< Whether we are actively replaying a transaction */
     Trx                     m_replayed_trx; /**< The transaction we are replaying */
+    mxs::Buffer             m_interrupted_query; /**< Query that was interrupted mid-transaction. */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -194,6 +195,12 @@ private:
 
     inline bool can_retry_query() const
     {
+        /** Individual queries can only be retried if we are not inside
+         * a transaction. If a query in a transaction needs to be retried,
+         * the whole transaction must be replayed before the retrying is done.
+         *
+         * @see handle_trx_replay
+         */
         return m_config.delayed_retry &&
                m_retry_duration < m_config.delayed_retry_timeout &&
                !session_trx_is_active(m_client->session);

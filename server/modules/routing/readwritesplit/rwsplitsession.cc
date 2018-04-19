@@ -387,6 +387,12 @@ void RWSplitSession::handle_trx_replay()
         if (chksum == m_replayed_trx.checksum())
         {
             MXS_INFO("Checksums match, replay successful.");
+
+            if (m_interrupted_query.get())
+            {
+                MXS_INFO("Resuming execution: %s", mxs::extract_sql(m_interrupted_query.get()).c_str());
+                retry_query(m_interrupted_query.release(), 0);
+            }
         }
         else
         {
@@ -431,11 +437,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return;
     }
 
-    m_current_query.reset();
-
     if (session_trx_is_active(m_client->session))
     {
+        m_trx.add_stmt(m_current_query.release());
         m_trx.add_result(writebuf);
+    }
+    else
+    {
+        m_current_query.reset();
     }
 
     if (backend->reply_is_complete(writebuf))
@@ -622,16 +631,10 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 }
                 else if (session_trx_is_active(session))
                 {
-                    if (m_current_query.get())
-                    {
-                        // TODO: Re-execute interrupted queries in transactions
-                        can_continue = false;
-                    }
-                    else
-                    {
-                        can_continue = true;
-                        start_trx_replay();
-                    }
+                    // Stash any interrupted queries while we replay the transaction
+                    m_interrupted_query.reset(m_current_query.release());
+                    can_continue = true;
+                    start_trx_replay();
                 }
 
                 *succp = can_continue;
