@@ -399,6 +399,16 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     m_current_query.reset();
 
+    if (session_trx_is_ending(m_client->session))
+    {
+        m_trx_checksum.finalize(writebuf);
+        MXS_INFO("Transaction checksum: %s", m_trx_checksum.hex().c_str());
+    }
+    else if (session_trx_is_active(m_client->session))
+    {
+        m_trx_checksum.update(writebuf);
+    }
+
     if (backend->reply_is_complete(writebuf))
     {
         /** Got a complete reply, acknowledge the write and decrement expected response count */
@@ -548,6 +558,8 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 if (session_trx_is_active(session))
                 {
                     // We have an open transaction, we can't continue
+                    m_trx_checksum.finalize();
+                    MXS_INFO("Checksum of failed transaction: %s", m_trx_checksum.hex().c_str());
                     can_continue = false;
                 }
 

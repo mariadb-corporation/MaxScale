@@ -19,6 +19,7 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
+#include <maxscale/utils.hh>
 #include <maxscale/queryclassifier.hh>
 
 #define TARGET_IS_MASTER(t)         maxscale::QueryClassifier::target_is_master(t)
@@ -136,6 +137,7 @@ public:
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */
     mxs::Buffer             m_current_query; /**< Current query being executed */
+    mxs::SHA1Checksum       m_trx_checksum; /**< Transaction checksum */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
