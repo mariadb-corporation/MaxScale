@@ -254,7 +254,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
                 }
             }
         }
-        else if (can_retry_query())
+        else if (can_retry_query() || m_is_replay_active)
         {
             retry_query(gwbuf_clone(querybuf));
             succp = true;
@@ -819,7 +819,7 @@ bool RWSplitSession::should_replace_master(SRWBackend& target)
            // We have a target server and it's not the current master
            target && target != m_current_master &&
            // We are not inside a transaction (also checks for autocommit=1)
-           !session_trx_is_active(m_client->session) &&
+           (!session_trx_is_active(m_client->session) || m_is_replay_active) &&
            // We are not locked to the old master
            !is_locked_to_master();
 }

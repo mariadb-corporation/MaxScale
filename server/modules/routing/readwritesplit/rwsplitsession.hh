@@ -138,6 +138,8 @@ public:
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */
     mxs::Buffer             m_current_query; /**< Current query being executed */
     Trx                     m_trx; /**< Current transaction */
+    bool                    m_is_replay_active; /**< Whether we are actively replaying a transaction */
+    Trx                     m_replayed_trx; /**< The transaction we are replaying */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -181,8 +183,8 @@ private:
     void handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg);
     bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
 
-    // Currently only for diagnostic purposes
-    void close_transaction();
+    void handle_trx_replay();
+    void start_trx_replay();
 
 private:
     // QueryClassifier::Handler

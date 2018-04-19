@@ -19,13 +19,12 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
 
-// A log of executed queries, for transaction replay
-typedef std::deque<mxs::Buffer> TrxLog;
-
 // A transaction
 class Trx
 {
 public:
+    // A log of executed queries, for transaction replay
+    typedef std::deque<mxs::Buffer> TrxLog;
 
     /**
      * Add a statement to the transaction
@@ -57,9 +56,10 @@ public:
      *
      * @return The oldest statement in this transaction
      */
-    mxs::Buffer pop_stmt()
+    GWBUF* pop_stmt()
     {
-        mxs::Buffer rval = m_log.front();
+        ss_dassert(!m_log.empty());
+        GWBUF* rval = m_log.front().release();
         m_log.pop_front();
         return rval;
     }
@@ -84,6 +84,17 @@ public:
     bool empty() const
     {
         return m_log.empty();
+    }
+
+    /**
+     * Close the transaction
+     *
+     * This clears out the stored statements and resets the checksum state.
+     */
+    void close()
+    {
+        m_checksum.reset();
+        m_log.clear();
     }
 
     /**
