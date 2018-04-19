@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <queue>
 #include <vector>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
@@ -435,13 +436,13 @@ class WorkerTimer : private MXS_POLL_DATA
     WorkerTimer& operator = (const WorkerTimer&) = delete;
 
 public:
-    ~WorkerTimer();
+    virtual ~WorkerTimer();
 
     /**
      * @brief Start the timer.
      *
-     * @param internal The initial delay before the timer is
-     *                 triggered, and the subsequent interval
+     * @param interval The initial delay in milliseconds before the
+     *                 timer is triggered, and the subsequent interval
      *                 between triggers.
      *
      * @attention A value of 0 means that the timer is cancelled.
@@ -895,6 +896,67 @@ public:
      */
     static int get_current_id();
 
+    /**
+     * Push a function for delayed execution.
+     *
+     * @param delay      The delay in milliseconds.
+     * @param pFunction  The function to call.
+     *
+     * @attention When invoked, if the provided function returns true, then it will
+     *            be called again after @c delay milliseconds.
+     */
+    void delayed_call(uint32_t delay, bool (*pFunction)())
+    {
+        add_delayed_call(new DelayedCallFunctionVoid(delay, pFunction));
+    }
+
+    /**
+     * Push a function for delayed execution.
+     *
+     * @param delay      The delay in milliseconds.
+     * @param pFunction  The function to call.
+     * @param data       The data to be provided to the function when invoked.
+     *
+     * @attention When invoked, if the provided function returns true, then it will
+     *            be called again after @c delay milliseconds.
+     */
+    template<class D>
+    void delayed_call(uint32_t delay, bool (*pFunction)(D data), D data)
+    {
+        add_delayed_call(new DelayedCallFunction<D>(delay, pFunction, data));
+    }
+
+    /**
+     * Push a member function for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param pMethod  The member function to call.
+     *
+     * @attention When invoked, if the provided function returns true, then it will
+     *            be called again after @c delay milliseconds.
+     */
+    template<class T>
+    void delayed_call(uint32_t delay, T* pT, bool (T::*pMethod)())
+    {
+        add_delayed_call(new DelayedCallMethodVoid<T>(delay, pT, pMethod));
+    }
+
+    /**
+     * Push a member function for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param pMethod  The member function to call.
+     * @param data     The data to be provided to the function when invoked.
+     *
+     * @attention When invoked, if the provided function returns true, then it will
+     *            be called again after @c delay milliseconds.
+     */
+    template<class T, class D>
+    void delayed_call(uint32_t delay, T* pT, bool (T::*pMethod)(D data), D data)
+    {
+        add_delayed_call(new DelayedCallMethod<T, D>(delay, pT, pMethod, data));
+    }
+
 protected:
     Worker();
     virtual ~Worker();
@@ -932,6 +994,164 @@ protected:
     state_t   m_state;                /*< The state of the worker */
 
 private:
+    class DelayedCall
+    {
+        DelayedCall(const DelayedCall&) = delete;;
+        DelayedCall& operator = (const DelayedCall&) = delete;
+
+    public:
+        virtual ~DelayedCall()
+        {
+        }
+
+        uint32_t delay() const
+        {
+            return m_delay;
+        }
+
+        uint64_t at() const
+        {
+            return m_at;
+        }
+
+        bool call()
+        {
+            bool rv = do_call();
+            // We try to invoke the function as often as it was specified. If the
+            // delay is very short and the execution time for the function very long,
+            // then we will not succeed with that and the function will simply be
+            // invoked as frequently as possible.
+            m_at += m_delay;
+            return rv;
+        }
+
+    protected:
+        DelayedCall(uint32_t delay)
+            : m_delay(delay)
+            , m_at(get_at(delay))
+        {
+        }
+
+        virtual bool do_call() = 0;
+
+    private:
+        static uint64_t get_at(uint32_t delay)
+        {
+            struct timespec ts;
+            ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+            ss_dassert(rv == 0);
+
+            return delay + (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+        }
+
+    private:
+        uint32_t m_delay; // The delay in milliseconds.
+        uint64_t m_at;    // The next time the function should be invoked.
+    };
+
+    template<class D>
+    class DelayedCallFunction : public DelayedCall
+    {
+        DelayedCallFunction(const DelayedCallFunction&) = delete;
+        DelayedCallFunction& operator = (const DelayedCallFunction&) = delete;
+
+    public:
+        DelayedCallFunction(uint32_t delay, bool (*pFunction)(D data), D data)
+            : DelayedCall(delay)
+            , m_pFunction(pFunction)
+            , m_data(data)
+        {
+        }
+
+    private:
+        bool do_call()
+        {
+            return m_pFunction(m_data);
+        }
+
+    private:
+        bool (*m_pFunction)(D);
+        D      m_data;
+    };
+
+    // Explicit specialization requires namespace scope
+    class DelayedCallFunctionVoid : public DelayedCall
+    {
+        DelayedCallFunctionVoid(const DelayedCallFunctionVoid&) = delete;
+        DelayedCallFunctionVoid& operator = (const DelayedCallFunctionVoid&) = delete;
+
+    public:
+        DelayedCallFunctionVoid(uint32_t delay, bool (*pFunction)())
+            : DelayedCall(delay)
+            , m_pFunction(pFunction)
+        {
+        }
+
+    private:
+        bool do_call()
+        {
+            return m_pFunction();
+        }
+
+    private:
+        bool (*m_pFunction)();
+    };
+
+    template<class T, class D>
+    class DelayedCallMethod : public DelayedCall
+    {
+        DelayedCallMethod(const DelayedCallMethod&) = delete;
+        DelayedCallMethod& operator = (const DelayedCallMethod&) = delete;
+
+    public:
+        DelayedCallMethod(uint32_t delay, T* pT, bool (T::*pMethod)(D data), D data)
+            : DelayedCall(delay)
+            , m_pT(pT)
+            , m_pMethod(pMethod)
+            , m_data(data)
+        {
+        }
+
+    private:
+        bool do_call()
+        {
+            return (m_pT->*m_pMethod)(m_data);
+        }
+
+    private:
+        T* m_pT;
+        bool (T::*m_pMethod)(D);
+        D m_data;
+    };
+
+    template<class T>
+    class DelayedCallMethodVoid : public DelayedCall
+    {
+        DelayedCallMethodVoid(const DelayedCallMethodVoid&) = delete;
+        DelayedCallMethodVoid& operator = (const DelayedCallMethodVoid&) = delete;
+
+    public:
+        DelayedCallMethodVoid(uint32_t delay, T* pT, bool (T::*pMethod)())
+            : DelayedCall(delay)
+            , m_pT(pT)
+            , m_pMethod(pMethod)
+        {
+        }
+
+    private:
+        bool do_call()
+        {
+            return (m_pT->*m_pMethod)();
+        }
+
+    private:
+        T* m_pT;
+        bool (T::*m_pMethod)();
+    };
+
+    void add_delayed_call(DelayedCall* pDelayed_call);
+    void adjust_timer();
+
     bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
@@ -943,7 +1163,17 @@ private:
     void tick();
 
 private:
+    class LaterAt : public std::binary_function<const DelayedCall*, const DelayedCall*, bool>
+    {
+    public:
+        bool operator () (const DelayedCall* pLhs, const DelayedCall* pRhs)
+        {
+            return pLhs->at() > pRhs->at();
+        }
+    };
+
     typedef DelegatingTimer<Worker> PrivateTimer;
+    typedef std::priority_queue<DelayedCall*, std::vector<DelayedCall*>, LaterAt> DelayedCalls;
 
     STATISTICS    m_statistics;           /*< Worker statistics. */
     MessageQueue* m_pQueue;               /*< The message queue of the worker. */
@@ -954,7 +1184,9 @@ private:
     uint32_t      m_nCurrent_descriptors; /*< Current number of descriptors. */
     uint64_t      m_nTotal_descriptors;   /*< Total number of descriptors. */
     Load          m_load;                 /*< The worker load. */
-    PrivateTimer  m_timer;                /*< The worker's own timer. */
+    PrivateTimer* m_pTimer;               /*< The worker's own timer. */
+    DelayedCalls  m_delayed_calls;        /*< Current delayed calls. */
+    uint64_t      m_last_delayed_call;    /*< When was the last delayed call made. */
 };
 
 }
