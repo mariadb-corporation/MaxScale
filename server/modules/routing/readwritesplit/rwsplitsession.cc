@@ -407,7 +407,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (session_trx_is_active(m_client->session))
     {
-        m_trx_checksum.update(writebuf);
+        m_trx.add_result(writebuf);
     }
 
     if (backend->reply_is_complete(writebuf))
@@ -763,14 +763,14 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
 
 void RWSplitSession::close_transaction()
 {
-    m_trx_checksum.finalize();
-    MXS_INFO("Checksum of current transaction: %s", m_trx_checksum.hex().c_str());
+    m_trx.finalize();
+    MXS_INFO("Checksum of current transaction: %s", m_trx.checksum().hex().c_str());
     int i = 1;
 
-    while (!m_trx_log.empty())
+    while (!m_trx.empty())
     {
         const int max_len = 1024;
-        MXS_INFO("%d: %s", i++, mxs::extract_sql(m_trx_log.front().get(), max_len).c_str());
-        m_trx_log.pop_front();
+        mxs::Buffer buf = m_trx.pop_stmt();
+        MXS_INFO("%d: %s", i++, mxs::extract_sql(buf.get(), max_len).c_str());
     }
 }
