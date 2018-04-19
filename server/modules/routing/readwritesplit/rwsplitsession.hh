@@ -16,6 +16,7 @@
 #include "rwbackend.hh"
 
 #include <string>
+#include <deque>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
@@ -38,6 +39,9 @@ typedef std::list< std::pair<mxs::SRWBackend, uint8_t> > SlaveResponseList;
 
 /** Map of COM_STMT_EXECUTE targets by internal ID */
 typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
+
+// A log of executed queries, for transaction replay
+typedef std::deque<mxs::Buffer> TrxLog;
 
 /**
  * The client session of a RWSplit instance
@@ -138,6 +142,7 @@ public:
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */
     mxs::Buffer             m_current_query; /**< Current query being executed */
     mxs::SHA1Checksum       m_trx_checksum; /**< Transaction checksum */
+    TrxLog                  m_trx_log; /**< Log of executed queries in the current transaction */
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -180,6 +185,9 @@ private:
 
     void handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg);
     bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
+
+    // Currently only for diagnostic purposes
+    void close_transaction();
 
 private:
     // QueryClassifier::Handler

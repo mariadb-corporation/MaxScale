@@ -15,6 +15,8 @@
 
 #include <cmath>
 
+#include <maxscale/modutil.hh>
+
 using namespace maxscale;
 
 RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -401,8 +403,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (session_trx_is_ending(m_client->session))
     {
-        m_trx_checksum.finalize(writebuf);
-        MXS_INFO("Transaction checksum: %s", m_trx_checksum.hex().c_str());
+        close_transaction();
     }
     else if (session_trx_is_active(m_client->session))
     {
@@ -558,9 +559,8 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 if (session_trx_is_active(session))
                 {
                     // We have an open transaction, we can't continue
-                    m_trx_checksum.finalize();
-                    MXS_INFO("Checksum of failed transaction: %s", m_trx_checksum.hex().c_str());
                     can_continue = false;
+                    close_transaction();
                 }
 
                 *succp = can_continue;
@@ -759,4 +759,18 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     }
 
     return rv;
+}
+
+void RWSplitSession::close_transaction()
+{
+    m_trx_checksum.finalize();
+    MXS_INFO("Checksum of current transaction: %s", m_trx_checksum.hex().c_str());
+    int i = 1;
+
+    while (!m_trx_log.empty())
+    {
+        const int max_len = 1024;
+        MXS_INFO("%d: %s", i++, mxs::extract_sql(m_trx_log.front().get(), max_len).c_str());
+        m_trx_log.pop_front();
+    }
 }

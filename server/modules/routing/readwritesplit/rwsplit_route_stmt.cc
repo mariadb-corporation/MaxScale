@@ -244,6 +244,11 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
                     m_exec_map[stmt_id] = target;
                     MXS_INFO("COM_STMT_EXECUTE on %s: %s", target->name(), target->uri());
                 }
+
+                if (succp && session_trx_is_active(m_client->session))
+                {
+                    m_trx_log.push_back(gwbuf_clone(querybuf));
+                }
             }
         }
         else if (can_retry_query())
