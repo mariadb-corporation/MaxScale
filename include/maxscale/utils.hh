@@ -378,6 +378,11 @@ public:
     virtual void finalize(GWBUF* buffer = NULL) = 0;
 
     /**
+     * Reset the checksum to a zero state
+     */
+    virtual void reset() = 0;
+
+    /**
      * Get hexadecimal representation of the checksum
      *
      * @return String containing the hexadecimal form of the checksum
@@ -411,6 +416,10 @@ public:
     {
         update(buffer);
         SHA1_Final(&m_sum.front(), &m_ctx);
+    }
+
+    void reset()
+    {
         SHA1_Init(&m_ctx);
     }
 
@@ -464,6 +473,11 @@ public:
     {
         update(buffer);
         m_sum = m_ctx;
+        reset();
+    }
+
+    void reset()
+    {
         m_ctx = crc32(0L, NULL, 0);
     }
 
