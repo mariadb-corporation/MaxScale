@@ -109,12 +109,12 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     return rval;
 }
 
-void RWSplitSession::retry_query(GWBUF* querybuf)
+void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
     ss_dassert(querybuf);
     // Try to route the query again later
     MXS_SESSION* session = m_client->session;
-    session_delay_routing(session, router_as_downstream(session), querybuf, 1);
+    session_delay_routing(session, router_as_downstream(session), querybuf, delay);
     ++m_retry_duration;
 }
 
