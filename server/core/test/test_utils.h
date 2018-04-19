@@ -47,6 +47,7 @@ void init_test_env(char *path)
     poll_init();
     maxscale::MessageQueue::init();
     maxscale::Worker::init();
+    maxscale::RoutingWorker::init();
     hkinit();
 }
 

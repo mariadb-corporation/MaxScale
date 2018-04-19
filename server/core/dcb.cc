@@ -3473,8 +3473,8 @@ int poll_add_dcb(DCB *dcb)
     {
         ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
                    dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-        ss_dassert(Worker::get_current_id() != -1);
-        ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
+        ss_dassert(RoutingWorker::get_current_id() != -1);
+        ss_dassert(RoutingWorker::get_current_id() == dcb->poll.thread.id);
 
         new_state = DCB_STATE_POLLING;
         worker_id = dcb->poll.thread.id;

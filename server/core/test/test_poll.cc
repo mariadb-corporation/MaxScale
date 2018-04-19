@@ -74,8 +74,8 @@ test1()
     if (dcb->fd < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
-        ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n", errno, strerror_r(errno, errbuf,
-                                                                                                      sizeof(errbuf)));
+        ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",
+                    errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         return 1;
     }
 

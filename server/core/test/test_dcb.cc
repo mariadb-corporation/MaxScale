@@ -40,6 +40,7 @@
 #include "../internal/messagequeue.hh"
 #include "../internal/routingworker.hh"
 #include "../dcb.cc"
+#include "test_utils.h"
 
 /**
  * test1    Allocate a dcb and do lots of other things
@@ -55,7 +56,11 @@ test1()
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
     printDCB(dcb);
     ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
-    printAllDCBs();
+    //TODO: Without running workers, the following will hang. As it does not
+    //TODO: really add value (the only created dcb is the one above), we'll
+    //TODO: exclude it.
+    //TODO: Some kind of test environment with workers would be needed.
+    //printAllDCBs();
     ss_dfprintf(stderr, "\t..done\n");
     dcb->state = DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
@@ -68,20 +73,11 @@ test1()
 
 int main(int argc, char **argv)
 {
-    int result = 1;
-    MXS_CONFIG* glob_conf = config_get_global_options();
-    glob_conf->n_threads = 1;
-    dcb_global_init();
-    if (maxscale::MessageQueue::init())
-    {
-        if (maxscale::Worker::init())
-        {
-            result = 0;
-            result += test1();
-            maxscale::Worker::finish();
-        }
-        maxscale::MessageQueue::finish();
-    }
+    int result = 0;
+
+    init_test_env(NULL);
+
+    result += test1();
 
     exit(result);
 }
