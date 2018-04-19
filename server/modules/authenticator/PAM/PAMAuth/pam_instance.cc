@@ -216,8 +216,11 @@ int PamInstance::load_users(SERVICE* service)
                                          row[3] && strcasecmp(row[3], "Y") == 0,
                                          row[4]);
                         }
-                        rval = MXS_AUTH_LOADUSERS_OK;
                         mysql_free_result(res);
+                        if (query_anon_proxy_user(servers->server, mysql))
+                        {
+                            rval = MXS_AUTH_LOADUSERS_OK;
+                        }
                     }
                 }
                 mysql_close(mysql);
@@ -286,4 +289,70 @@ json_t* PamInstance::diagnostic_json()
     }
 
     return rval;
+}
+
+bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
+{
+    bool success = true;
+    bool anon_user_found = false;
+    string anon_pam_service;
+    const char ANON_USER_QUERY[] = "SELECT authentication_string FROM mysql.user WHERE "
+                                   "(plugin = 'pam' AND user = '' AND host = '%');";
+    const char ANON_GRANT_QUERY[] = "SHOW GRANTS FOR ''@'%';";
+    const char GRANT_PROXY[] = "GRANT PROXY ON";
+
+    // Query for the anonymous user which is used with group mappings
+    if (mysql_query(conn, ANON_USER_QUERY))
+    {
+        MXS_ERROR("Failed to query server '%s' for the anonymous PAM user: '%s'.",
+                  server->unique_name, mysql_error(conn));
+        success = false;
+    }
+    else
+    {
+        MYSQL_RES *res = mysql_store_result(conn);
+        if (res)
+        {
+            MYSQL_ROW row = mysql_fetch_row(res);
+            if (row)
+            {
+                anon_user_found = true;
+                if (row[0])
+                {
+                    anon_pam_service = row[0];
+                }
+            }
+            mysql_free_result(res);
+        }
+
+        if (anon_user_found)
+        {
+            // Check that the anon user has a proxy grant
+            if (mysql_query(conn, ANON_GRANT_QUERY))
+            {
+                MXS_ERROR("Failed to query server '%s' for the grants of the anonymous PAM user: '%s'.",
+                          server->unique_name, mysql_error(conn));
+                success = false;
+            }
+            else
+            {
+                if ((res = mysql_store_result(conn)))
+                {
+                    MYSQL_ROW row;
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        if (row[0] && strncmp(row[0], GRANT_PROXY, sizeof(GRANT_PROXY) - 1) == 0)
+                        {
+                            MXS_NOTICE("Anonymous PAM user with proxy grant found. User account mapping "
+                                       "enabled.");
+                            add_pam_user("", "%", NULL, false, anon_pam_service.c_str());
+                        }
+                    }
+                    mysql_free_result(res);
+                }
+            }
+        }
+    }
+
+    return success;
 }

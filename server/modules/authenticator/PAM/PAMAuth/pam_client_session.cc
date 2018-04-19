@@ -238,14 +238,25 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
                             ") ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
     char *err;
-    if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb,
-                     services_out, &err) != SQLITE_OK)
+    if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to execute query: '%s'", err);
         sqlite3_free(err);
     }
     MXS_DEBUG("User '%s' matched %lu rows in %s db.", session->user,
               services_out->size(), m_instance.m_tablename.c_str());
+
+    if (services_out->empty())
+    {
+        // No service found for user with correct username & password. Check if anonymous user exists.
+        const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename +
+                                  " WHERE " + FIELD_USER + " = '' AND " + FIELD_HOST + " = '%';";
+        if (sqlite3_exec(m_dbhandle, anon_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to execute query: '%s'", err);
+            sqlite3_free(err);
+        }
+    }
 }
 
 /**
