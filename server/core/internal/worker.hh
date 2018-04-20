@@ -952,7 +952,8 @@ public:
      */
     template<class D>
     uint32_t delayed_call(int32_t delay,
-                          bool (*pFunction)(Worker::Call::action_t action, D data), D data)
+                          bool (*pFunction)(Worker::Call::action_t action, D data),
+                          D data)
     {
         return add_delayed_call(new DelayedCallFunction<D>(delay, pFunction, data));
     }
@@ -978,10 +979,10 @@ public:
      */
     template<class T>
     uint32_t delayed_call(int32_t delay,
-                          T* pT,
-                          bool (T::*pMethod)(Worker::Call::action_t action))
+                          bool (T::*pMethod)(Worker::Call::action_t action),
+                          T* pT)
     {
-        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, pT, pMethod));
+        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, pMethod, pT));
     }
 
     /**
@@ -1006,10 +1007,11 @@ public:
      */
     template<class T, class D>
     uint32_t delayed_call(int32_t delay,
+                          bool (T::*pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
-                          bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
+                          D data)
     {
-        return add_delayed_call(new DelayedCallMethod<T, D>(delay, pT, pMethod, data));
+        return add_delayed_call(new DelayedCallMethod<T, D>(delay, pMethod, pT, data));
     }
 
     /**
@@ -1196,11 +1198,12 @@ private:
 
     public:
         DelayedCallMethod(int32_t delay,
+                          bool (T::*pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
-                          bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
+                          D data)
             : DelayedCall(delay)
-            , m_pT(pT)
             , m_pMethod(pMethod)
+            , m_pT(pT)
             , m_data(data)
         {
         }
@@ -1212,8 +1215,8 @@ private:
         }
 
     private:
-        T* m_pT;
         bool (T::*m_pMethod)(Worker::Call::action_t, D);
+        T* m_pT;
         D m_data;
     };
 
@@ -1225,11 +1228,11 @@ private:
 
     public:
         DelayedCallMethodVoid(int32_t delay,
-                              T* pT,
-                              bool (T::*pMethod)(Worker::Call::action_t))
+                              bool (T::*pMethod)(Worker::Call::action_t),
+                              T* pT)
             : DelayedCall(delay)
-            , m_pT(pT)
             , m_pMethod(pMethod)
+            , m_pT(pT)
         {
         }
 
@@ -1240,8 +1243,8 @@ private:
         }
 
     private:
-        T* m_pT;
         bool (T::*m_pMethod)(Worker::Call::action_t);
+        T* m_pT;
     };
 
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);

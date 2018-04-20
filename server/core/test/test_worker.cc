@@ -129,11 +129,11 @@ int run()
     TimerTest t4(&rv, 500);
     TimerTest t5(&rv, 600);
 
-    w.delayed_call(t1.delay(), &t1, &TimerTest::tick);
-    w.delayed_call(t2.delay(), &t2, &TimerTest::tick);
-    w.delayed_call(t3.delay(), &t3, &TimerTest::tick);
-    w.delayed_call(t4.delay(), &t4, &TimerTest::tick);
-    w.delayed_call(t5.delay(), &t5, &TimerTest::tick);
+    w.delayed_call(t1.delay(), &TimerTest::tick, &t1);
+    w.delayed_call(t2.delay(), &TimerTest::tick, &t2);
+    w.delayed_call(t3.delay(), &TimerTest::tick, &t3);
+    w.delayed_call(t4.delay(), &TimerTest::tick, &t4);
+    w.delayed_call(t5.delay(), &TimerTest::tick, &t5);
 
     w.run();
 
