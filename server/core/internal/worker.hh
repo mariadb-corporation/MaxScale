@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <map>
+#include <tr1/unordered_set>
 #include <memory>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
@@ -1296,20 +1297,23 @@ private:
         }
     };
 
-    typedef DelegatingTimer<Worker> PrivateTimer;
-    typedef std::multimap<int64_t, DelayedCall*> DelayedCalls;
+    typedef DelegatingTimer<Worker>                         PrivateTimer;
+    typedef std::tr1::unordered_set<DelayedCall*>           DelayedCalls;
+    typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
+    typedef std::tr1::unordered_map<intptr_t, DelayedCalls> DelayedCallsByTag;
 
-    STATISTICS    m_statistics;           /*< Worker statistics. */
-    MessageQueue* m_pQueue;               /*< The message queue of the worker. */
-    THREAD        m_thread;               /*< The thread handle of the worker. */
-    bool          m_started;              /*< Whether the thread has been started or not. */
-    bool          m_should_shutdown;      /*< Whether shutdown should be performed. */
-    bool          m_shutdown_initiated;   /*< Whether shutdown has been initated. */
-    uint32_t      m_nCurrent_descriptors; /*< Current number of descriptors. */
-    uint64_t      m_nTotal_descriptors;   /*< Total number of descriptors. */
-    Load          m_load;                 /*< The worker load. */
-    PrivateTimer* m_pTimer;               /*< The worker's own timer. */
-    DelayedCalls  m_delayed_calls;        /*< Current delayed calls. */
+    STATISTICS         m_statistics;           /*< Worker statistics. */
+    MessageQueue*      m_pQueue;               /*< The message queue of the worker. */
+    THREAD             m_thread;               /*< The thread handle of the worker. */
+    bool               m_started;              /*< Whether the thread has been started or not. */
+    bool               m_should_shutdown;      /*< Whether shutdown should be performed. */
+    bool               m_shutdown_initiated;   /*< Whether shutdown has been initated. */
+    uint32_t           m_nCurrent_descriptors; /*< Current number of descriptors. */
+    uint64_t           m_nTotal_descriptors;   /*< Total number of descriptors. */
+    Load               m_load;                 /*< The worker load. */
+    PrivateTimer*      m_pTimer;               /*< The worker's own timer. */
+    DelayedCallsByTime m_delayed_calls;        /*< Current delayed calls ordered by time. */
+    DelayedCallsByTag  m_tagged_calls;         /*< Current delayed calls ordered by tag. */
 };
 
 }
