@@ -329,6 +329,36 @@ execution is an acceptable risk.
 The number of seconds to wait until an error is returned to the client when
 `delayed_retry` is enabled. The default value is 10 seconds.
 
+### `transaction_replay`
+
+Replay interrupted transactions. This parameter was added in MaxScale 2.3.0 and
+is disabled by default. Enabling this parameter implicitly enables both the
+`delayed_retry` and `master_reconnection` parameters.
+
+When the server where the transaction is in progress fails, readwritesplit can
+migrate the transaction to a replacement server. This can completely hide the
+failure of a master node without any visible effects to the client.
+
+If no replacement node becomes available before the timeout controlled by
+`delayed_retry_timeout` is exceeded, the client connection is closed.
+
+Not all transactions can be safely replayed. Only when the following criteria
+are met, the transaction can be safely replayed.
+
+* Transaction contains only data modification (`INSERT`, `UPDATE`, `DELETE`
+  etc.) or `SELECT ... FOR UPDATE` statements.
+
+* The replacement server where the transaction is applied returns results
+  identical to the original partial transaction.
+
+If the results from the replacement server are not identical when the
+transaction is replayed, the client connection is closed.
+
+Performing MVCC reads (`SELECT` queries without `FOR UPDATE` or `LOCK IN SHARE MODE`)
+with transaction replay is discouraged. If such statements are executed
+but the results of each reply are identical, the transaction is replayed but the results
+are not guaranteed to be consistent on the database level.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint

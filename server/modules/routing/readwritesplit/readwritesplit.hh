@@ -163,7 +163,8 @@ struct Config
         causal_read_timeout(config_get_string(params, "causal_read_timeout")),
         master_reconnection(config_get_bool(params, "master_reconnection")),
         delayed_retry(config_get_bool(params, "delayed_retry")),
-        delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout"))
+        delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout")),
+        transaction_replay(config_get_bool(params, "transaction_replay"))
     {
         if (enable_causal_read)
         {
@@ -191,8 +192,9 @@ struct Config
     bool              enable_causal_read;        /**< Enable causual read */
     std::string       causal_read_timeout;       /**< Timeout, second parameter of function master_wait_gtid */
     bool              master_reconnection;       /**< Allow changes in master server */
-    bool              delayed_retry;           /**< Delay routing if no target found */
-    uint64_t          delayed_retry_timeout;   /**< How long to delay until an error is returned */
+    bool              delayed_retry;             /**< Delay routing if no target found */
+    uint64_t          delayed_retry_timeout;     /**< How long to delay until an error is returned */
+    bool              transaction_replay;        /**< Replay failed transactions */
 };
 
 /**

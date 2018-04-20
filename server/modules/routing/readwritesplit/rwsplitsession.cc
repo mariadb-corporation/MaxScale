@@ -437,7 +437,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return;
     }
 
-    if (session_trx_is_active(m_client->session))
+    if (m_config.transaction_replay && session_trx_is_active(m_client->session))
     {
         m_trx.add_stmt(m_current_query.release());
         m_trx.add_result(writebuf);
@@ -464,13 +464,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (m_is_replay_active)
     {
+        ss_dassert(m_config.transaction_replay);
         handle_trx_replay();
 
         // Ignore the response, the client doesn't need it
         gwbuf_free(writebuf);
         return;
     }
-    else if (session_trx_is_ending(m_client->session))
+    else if (m_config.transaction_replay && session_trx_is_ending(m_client->session))
     {
         m_trx.close();
     }
@@ -631,10 +632,17 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 }
                 else if (session_trx_is_active(session))
                 {
-                    // Stash any interrupted queries while we replay the transaction
-                    m_interrupted_query.reset(m_current_query.release());
-                    can_continue = true;
-                    start_trx_replay();
+                    if (m_config.transaction_replay)
+                    {
+                        // Stash any interrupted queries while we replay the transaction
+                        m_interrupted_query.reset(m_current_query.release());
+                        can_continue = true;
+                        start_trx_replay();
+                    }
+                    else
+                    {
+                        can_continue = false;
+                    }
                 }
 
                 *succp = can_continue;

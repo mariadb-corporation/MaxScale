@@ -290,6 +290,16 @@ RWSplit* RWSplit::create(SERVICE *service, char **options)
         config.max_sescmd_history = 0;
     }
 
+    if (config.transaction_replay)
+    {
+        /**
+         * Replaying transactions requires that we are able to do delayed query
+         * retries and reconnect to a master.
+         */
+        config.delayed_retry = true;
+        config.master_reconnection = true;
+    }
+
     return new (std::nothrow) RWSplit(service, config);
 }
 
@@ -496,6 +506,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"master_reconnection", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
+            {"transaction_replay", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
