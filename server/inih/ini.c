@@ -117,7 +117,7 @@ int ini_parse_file(FILE* file,
             end = find_char_or_comment(start + 1, ']');
             if (*end == ']') {
                 *end = '\0';
-                strncpy0(section, start + 1, sizeof(section));
+                strncpy0(section, start + 1, sizeof(section) - 1);
                 *prev_name = '\0';
             }
             else if (!error) {
@@ -141,7 +141,7 @@ int ini_parse_file(FILE* file,
                 rstrip(value);
 
                 /* Valid name[=:]value pair found, call handler */
-                strncpy0(prev_name, name, sizeof(prev_name));
+                strncpy0(prev_name, name, sizeof(prev_name) - 1);
                 if (!handler(user, section, name, value) && !error)
                     error = lineno;
             }

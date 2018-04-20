@@ -2537,7 +2537,8 @@ config_get_release_string(char* release)
                     }
 
                     have_distribution = true;
-                    strncpy(release, new_to, RELEASE_STR_LENGTH);
+                    strncpy(release, new_to, RELEASE_STR_LENGTH - 1);
+                    release[RELEASE_STR_LENGTH - 1] = '\0';
                 }
             }
         }
