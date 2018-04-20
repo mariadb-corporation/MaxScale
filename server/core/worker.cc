@@ -232,8 +232,10 @@ WorkerTimer::~WorkerTimer()
     }
 }
 
-void WorkerTimer::start(uint64_t interval)
+void WorkerTimer::start(int32_t interval)
 {
+    ss_dassert(interval > 0);
+
     // TODO: Add possibility to set initial delay and interval.
     time_t initial_sec = interval / 1000;
     long initial_nsec = (interval - initial_sec * 1000) * 1000000;
@@ -1112,7 +1114,7 @@ void Worker::poll_waitevents()
 namespace
 {
 
-uint64_t get_current_time_ms()
+int64_t get_current_time_ms()
 {
     struct timespec ts;
     ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -1125,7 +1127,7 @@ uint64_t get_current_time_ms()
 
 void Worker::tick()
 {
-    uint64_t now = get_current_time_ms();
+    int64_t now = get_current_time_ms();
 
     ss_dassert(!m_delayed_calls.empty());
 

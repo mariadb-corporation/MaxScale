@@ -447,7 +447,7 @@ public:
      *
      * @attention A value of 0 means that the timer is cancelled.
      */
-    void start(uint64_t interval);
+    void start(int32_t interval);
 
     /**
      * @brief Cancel the timer.
@@ -922,14 +922,14 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       intptr_t tag,
                       bool (*pFunction)(Worker::Call::action_t action))
     {
         add_delayed_call(new DelayedCallFunctionVoid(delay, tag, pFunction));
     }
 
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       void* tag,
                       bool (*pFunction)(Worker::Call::action_t action))
     {
@@ -955,7 +955,7 @@ public:
      *            be called again.
      */
     template<class D>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       intptr_t tag,
                       bool (*pFunction)(Worker::Call::action_t action, D data), D data)
     {
@@ -963,7 +963,7 @@ public:
     }
 
     template<class D>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       void* pTag,
                       bool (*pFunction)(Worker::Call::action_t action, D data), D data)
     {
@@ -988,7 +988,7 @@ public:
      *            be called again.
      */
     template<class T>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       intptr_t tag,
                       T* pT,
                       bool (T::*pMethod)(Worker::Call::action_t action))
@@ -997,7 +997,7 @@ public:
     }
 
     template<class T>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       void* pTag,
                       T* pT,
                       bool (T::*pMethod)(Worker::Call::action_t action))
@@ -1024,7 +1024,7 @@ public:
      *            be called again.
      */
     template<class T, class D>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       intptr_t tag,
                       T* pT,
                       bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
@@ -1033,7 +1033,7 @@ public:
     }
 
     template<class T, class D>
-    void delayed_call(uint32_t delay,
+    void delayed_call(int32_t delay,
                       void* pTag,
                       T* pT,
                       bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
@@ -1109,7 +1109,7 @@ private:
         {
         }
 
-        uint32_t delay() const
+        int32_t delay() const
         {
             return m_delay;
         }
@@ -1119,7 +1119,7 @@ private:
             return m_tag;
         }
 
-        uint64_t at() const
+        int64_t at() const
         {
             return m_at;
         }
@@ -1136,18 +1136,21 @@ private:
         }
 
     protected:
-        DelayedCall(uint32_t delay, intptr_t tag)
+        DelayedCall(int32_t delay, intptr_t tag)
             : m_delay(delay)
             , m_tag(tag)
             , m_at(get_at(delay))
         {
+            ss_dassert(delay > 0);
         }
 
         virtual bool do_call(Worker::Call::action_t action) = 0;
 
     private:
-        static uint64_t get_at(uint32_t delay)
+        static int64_t get_at(int32_t delay)
         {
+            ss_dassert(delay > 0);
+
             struct timespec ts;
             ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
             ss_dassert(rv == 0);
@@ -1156,9 +1159,9 @@ private:
         }
 
     private:
-        uint32_t m_delay; // The delay in milliseconds.
-        intptr_t m_tag;   // Tag identifying the delayed call.
-        uint64_t m_at;    // The next time the function should be invoked.
+        int32_t m_delay; // The delay in milliseconds.
+        intptr_t m_tag;  // Tag identifying the delayed call.
+        int64_t m_at;    // The next time the function should be invoked.
     };
 
     template<class D>
@@ -1168,7 +1171,7 @@ private:
         DelayedCallFunction& operator = (const DelayedCallFunction&) = delete;
 
     public:
-        DelayedCallFunction(uint32_t delay,
+        DelayedCallFunction(int32_t delay,
                             void* pTag,
                             bool (*pFunction)(Worker::Call::action_t action, D data), D data)
             : DelayedCall(delay, pTag)
@@ -1195,7 +1198,7 @@ private:
         DelayedCallFunctionVoid& operator = (const DelayedCallFunctionVoid&) = delete;
 
     public:
-        DelayedCallFunctionVoid(uint32_t delay,
+        DelayedCallFunctionVoid(int32_t delay,
                                 intptr_t tag,
                                 bool (*pFunction)(Worker::Call::action_t action))
             : DelayedCall(delay, tag)
@@ -1220,7 +1223,7 @@ private:
         DelayedCallMethod& operator = (const DelayedCallMethod&) = delete;
 
     public:
-        DelayedCallMethod(uint32_t delay,
+        DelayedCallMethod(int32_t delay,
                           intptr_t tag,
                           T* pT,
                           bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
@@ -1250,7 +1253,7 @@ private:
         DelayedCallMethodVoid& operator = (const DelayedCallMethodVoid&) = delete;
 
     public:
-        DelayedCallMethodVoid(uint32_t delay,
+        DelayedCallMethodVoid(int32_t delay,
                               intptr_t tag,
                               T* pT,
                               bool (T::*pMethod)(Worker::Call::action_t))
