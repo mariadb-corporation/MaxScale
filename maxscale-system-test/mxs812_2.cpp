@@ -54,6 +54,8 @@ void* test_thr(void *data)
 
         mysql_close(mysql);
     }
+
+    return NULL;
 }
 
 #define THREADS 5

@@ -22,7 +22,7 @@ static std::string required_repl_version;
 static std::string required_galera_version;
 }
 
-static int signal_set(int sig, void (*handler)(int))
+static void signal_set(int sig, void (*handler)(int))
 {
     struct sigaction sigact = {};
     sigact.sa_handler = handler;
@@ -381,7 +381,7 @@ void TestConnections::assert(bool result, const char *format, ...)
     }
 }
 
-int TestConnections::read_env()
+void TestConnections::read_env()
 {
 
     char *env;
@@ -497,7 +497,7 @@ int TestConnections::read_env()
     }
 }
 
-int TestConnections::print_env()
+void TestConnections::print_env()
 {
     int  i;
     printf("Maxscale IP\t%s\n", maxscales->IP[0]);
@@ -611,7 +611,7 @@ void TestConnections::process_template(int m, const char *template_name, const c
     maxscales->copy_to_node_legacy((char *) "maxscale.cnf", (char *) dest, m);
 }
 
-int TestConnections::init_maxscales()
+void TestConnections::init_maxscales()
 {
     for (int i = 0; i < maxscales->N; i++)
     {
@@ -619,7 +619,7 @@ int TestConnections::init_maxscales()
     }
 }
 
-int TestConnections::init_maxscale(int m)
+void TestConnections::init_maxscale(int m)
 {
     const char * template_name = get_template_name(test_name);
 
@@ -1598,7 +1598,7 @@ int TestConnections::stop_timeout()
     return 0;
 }
 
-int TestConnections::tprintf(const char *format, ...)
+void TestConnections::tprintf(const char *format, ...)
 {
     timeval t2;
     gettimeofday(&t2, NULL);

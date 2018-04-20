@@ -94,4 +94,6 @@ void *query_thread1( void *ptr )
         Test->maxscales->execute_maxadmin_command(0, shutdown_cmd);
         Test->maxscales->execute_maxadmin_command(0, restart_cmd);
     }
+
+    return NULL;
 }

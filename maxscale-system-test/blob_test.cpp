@@ -188,6 +188,8 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
     mysql_stmt_free_result(stmt);
 
     mysql_stmt_close(stmt);
+
+    return 0;
 }
 
 

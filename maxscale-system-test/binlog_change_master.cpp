@@ -226,7 +226,7 @@ const char * setup_slave_gtid =
                      MASTER_USE_GTID=Slave_pos";
 
 
-int select_new_master(TestConnections * test)
+void select_new_master(TestConnections * test)
 {
     char log_file[256];
     char log_file_new[256];
@@ -265,7 +265,7 @@ int select_new_master(TestConnections * test)
     if (!maxscale_log_file[0] || !maxscale_log_pos[0])
     {
         test->add_result(1, "Failed to query for master status");
-        return 1;
+        return;
     }
 
     test->tprintf("Real master file: %s\n", maxscale_log_file);
@@ -320,7 +320,6 @@ int select_new_master(TestConnections * test)
     test->tprintf("slave started!\n");
 
     test->repl->close_connections();
-
 }
 
 void *disconnect_thread( void *ptr )

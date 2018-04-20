@@ -168,14 +168,13 @@ public:
 
     /**
      * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
-     * @return 0
      */
-    int read_env();
+    void read_env();
     /**
      * @brief  prints all nodes information
      * @return 0
      */
-    int print_env();
+    void print_env();
 
     /**
      * @brief find_master Tries to find Master node
@@ -186,9 +185,8 @@ public:
      * @brief change_master set a new master node for Master/Slave setup
      * @param NewMaster index of new Master node
      * @param OldMaster index of current Master node
-     * @return  0 in case of success
      */
-    int change_master(int NewMaster, int OldMaster);
+    void change_master(int NewMaster, int OldMaster);
 
     /**
      * @brief stop_nodes stops mysqld on all nodes

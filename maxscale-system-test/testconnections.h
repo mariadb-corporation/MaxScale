@@ -251,28 +251,24 @@ public:
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
-     * @return 0 in case of success
      */
-    int read_env();
+    void read_env();
 
     /**
      * @brief PrintIP   Prints all Maxscale and Master/Slave and Galera setups info
-     * @return 0
      */
-    int print_env();
+    void print_env();
 
     /**
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @param m Number of Maxscale node
-     * @return 0 if case of success
      */
-    int init_maxscale(int m = 0);
+    void init_maxscale(int m = 0);
 
     /**
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale on all Maxscale nodes
-     * @return 0 if case of success
      */
-    int init_maxscales();
+    void init_maxscales();
 
     /**
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
@@ -366,11 +362,9 @@ public:
     int stop_timeout();
 
     /**
-     * @brief printf adds timestam to printf
-     * @param __format
-     * @return
+     * @brief printf with automatic timestamps
      */
-    int tprintf(const char *format, ...);
+    void tprintf(const char *format, ...);
 
     /**
      * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale services

@@ -196,6 +196,7 @@ int bind_by_row(MYSQL *mysql)
         return show_mysql_error(mysql);
     }
 
+    return 0;
 }
 
 int main(int argc, char** argv)

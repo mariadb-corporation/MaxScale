@@ -298,4 +298,5 @@ int get_x_fl_from_json(char * line, long long int * x1, long long int * fl)
     json_decref(x_json);
     json_decref(fl_json);
     json_decref(root);
+    return 0;
 }

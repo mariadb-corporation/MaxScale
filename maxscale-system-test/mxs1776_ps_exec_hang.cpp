@@ -30,7 +30,7 @@ struct TestCase
     std::function<bool (MYSQL*, MYSQL_STMT*, Bind&)> func;
 };
 
-bool run_test(TestConnections& test, TestCase test_case)
+void run_test(TestConnections& test, TestCase test_case)
 {
     test.maxscales->connect();
 

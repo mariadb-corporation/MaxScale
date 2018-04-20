@@ -251,4 +251,6 @@ void *query_thread(void *ptr)
     }
 
     Test->repl->close_connections();
+
+    return NULL;
 }

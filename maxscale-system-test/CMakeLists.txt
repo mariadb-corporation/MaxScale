@@ -53,7 +53,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   blob_test.cpp keepalived_func.cpp
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
-target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
+target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
 add_dependencies(testcore connector-c jansson)
 
