@@ -1770,6 +1770,12 @@ handle_global_item(const char *name, const char *value)
     }
     else
     {
+#ifndef SS_DEBUG
+        if (strcmp(name, "log_debug") == 0)
+        {
+            MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+        }
+#endif
         for (i = 0; lognames[i].name; i++)
         {
             if (strcasecmp(name, lognames[i].name) == 0)
