@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
     char pass_file[4096];
     char deny_file[4096];
     char rules_dir[4096];
-    FILE* file;
 
     sprintf(rules_dir, "%s/fw2/", test_dir);
     int N = 5;

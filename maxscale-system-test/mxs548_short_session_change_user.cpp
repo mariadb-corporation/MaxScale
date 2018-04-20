@@ -76,10 +76,8 @@ int main(int argc, char *argv[])
     }
 
     pthread_t thread1[threads_num];
-    int iret1[threads_num];
 
     pthread_t thread_master[master_load_threads_num];
-    int iret_master[master_load_threads_num];
 
     Test->repl->connect();
     Test->maxscales->connect_maxscale(0);
@@ -98,13 +96,13 @@ int main(int argc, char *argv[])
     /* Create independent threads each of them will create some load on Master */
     for (i = 0; i < master_load_threads_num; i++)
     {
-        iret_master[i] = pthread_create(&thread_master[i], NULL, query_thread_master, &data_master[i]);
+        pthread_create(&thread_master[i], NULL, query_thread_master, &data_master[i]);
     }
 
     /* Create independent threads each of them will execute function */
     for (i = 0; i < threads_num; i++)
     {
-        iret1[i] = pthread_create(&thread1[i], NULL, query_thread1, &data[i]);
+        pthread_create(&thread1[i], NULL, query_thread1, &data[i]);
     }
 
     Test->tprintf("Threads are running %d seconds \n", run_time);

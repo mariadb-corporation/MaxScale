@@ -57,7 +57,6 @@ int main(int argc, char *argv[])
 
 
     pthread_t parall_traffic1[100];
-    int check_iret[100];
 
     Test->set_timeout(60);
     Test->repl->connect();
@@ -75,7 +74,7 @@ int main(int argc, char *argv[])
 
     for (int j = 0; j < 25; j++)
     {
-        check_iret[j] = pthread_create(&parall_traffic1[j], NULL, parall_traffic, NULL);
+        pthread_create(&parall_traffic1[j], NULL, parall_traffic, NULL);
     }
 
     Test->tprintf("Doing change_user in the loop");

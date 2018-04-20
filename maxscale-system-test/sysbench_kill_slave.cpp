@@ -16,14 +16,13 @@ TestConnections * Test ;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 int start_flag = 0;
-unsigned int old_slave;
+int old_slave;
 void *kill_vm_thread( void *ptr );
 
 int main(int argc, char *argv[])
 {
     Test = new TestConnections(argc, argv);
     pthread_t kill_vm_thread1;
-    int check_iret;
     char sys1[4096];
     int port[3];
 
@@ -53,7 +52,7 @@ int main(int argc, char *argv[])
     for (int k = 0; k < 3; k++)
     {
         Test->tprintf("Trying test with port %d\n", port[k]);
-        check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
+        pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
 
         if (port[k] == Test->maxscales->readconn_slave_port[0] )
         {
@@ -137,7 +136,7 @@ void *kill_vm_thread( void *ptr )
         fflush(stdout);
         old_slave = 1;
     }
-    char sys1[4096];
+
     printf("Killing VM %s\n", Test->repl->IP[old_slave]);
     fflush(stdout);
     Test->repl->block_node(old_slave);

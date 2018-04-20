@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     char** local_argv = &argv[1];
 
     TestConnections * Test = new TestConnections(local_argc, local_argv);
-
+    (void)Test;
     sleep(3);
 
     return 0;

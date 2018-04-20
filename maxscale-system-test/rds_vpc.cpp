@@ -35,7 +35,6 @@ json_t * RDS::get_subnets_group_descr(char * json)
 {
     json_t *root;
     json_error_t error;
-    char * j;
 
     root = json_loads( json, 0, &error );
     if ( !root )
@@ -167,7 +166,6 @@ int RDS::destroy_subnets()
 int RDS::destroy_route_tables()
 {
     json_t *root;
-    json_error_t error;
     char cmd[1024];
     char * json;
 

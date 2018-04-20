@@ -5,13 +5,13 @@ static struct
 {
     const char* test_name;
     const char* test_template;
-} cnf_templates[] = {
+} cnf_templates[] __attribute__((unused)) = {
 @CNF_TEMPLATES@ {NULL, NULL}};
 
 /** The default template to use */
-static const char * default_template = "replication";
+static const char * default_template __attribute__((unused)) = "replication";
 
 /** This is the working directory for all tests */
-static const char *test_dir = "@CMAKE_SOURCE_DIR@";
+static const char *test_dir __attribute__((unused)) = "@CMAKE_SOURCE_DIR@";
 
 #endif

@@ -130,13 +130,9 @@ bool cdc_com(TestConnections *Test)
 
         if (nfds > 0)
         {
-            // for each ready socket
-            //for(int i = 0; i < nfds; i++)
-            //{
-            int fd = events[0].data.fd;
             char *json = read_sc(sock);
             Test->tprintf("%s", json);
-            //}
+
             if (ignore_first > 0)
             {
                 ignore_first--; // ignoring first reads

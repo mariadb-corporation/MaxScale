@@ -25,7 +25,6 @@ int main(int argc, char *argv[])
 {
     Test = new TestConnections(argc, argv);
     pthread_t restart_t;
-    int check_iret;
     int i, j;
 
 
@@ -33,7 +32,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(2000);
 
-    check_iret = pthread_create(&restart_t, NULL, kill_vm_thread, NULL);
+    pthread_create(&restart_t, NULL, kill_vm_thread, NULL);
 
     int iter = 1000;
     if (Test->smoke)

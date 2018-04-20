@@ -28,9 +28,8 @@ int main(int argc, char *argv[])
     Test->start_binlog(0);
 
     pthread_t threads;
-    int  iret;
     exit_flag = 0;
-    iret = pthread_create( &threads, NULL, disconnect_thread, NULL);
+    pthread_create( &threads, NULL, disconnect_thread, NULL);
 
     Test->repl->connect();
     for (int i = 0; i < 100000; i++)

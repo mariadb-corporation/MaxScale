@@ -31,7 +31,6 @@ int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
 
-    char server_id[2][1024];
     test.repl->connect();
     std::string master = test.repl->get_server_id_str(0);
     std::string slave = test.repl->get_server_id_str(1);

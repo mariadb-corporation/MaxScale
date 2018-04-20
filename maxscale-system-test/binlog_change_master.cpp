@@ -132,15 +132,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Starting binlog configuration\n");
     Test->start_binlog(0);
 
-    pthread_t disconnec_thread_t;
-    int  disconnect_iret;
     pthread_t transaction_thread_t;
-    int  transaction_iret;
 
     exit_flag = 0;
     Test->tprintf("Starting query thread\n");
 
-    transaction_iret = pthread_create(&transaction_thread_t, NULL, transaction_thread, NULL);
+    pthread_create(&transaction_thread_t, NULL, transaction_thread, NULL);
 
     Test->tprintf("Sleeping\n");
     Test->stop_timeout();
@@ -229,7 +226,6 @@ const char * setup_slave_gtid =
 void select_new_master(TestConnections * test)
 {
     char log_file[256];
-    char log_file_new[256];
     char log_pos[256];
 
     char maxscale_log_file[256];

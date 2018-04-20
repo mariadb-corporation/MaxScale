@@ -67,7 +67,6 @@ void TestConnections::require_galera_version(const char *version)
 TestConnections::TestConnections(int argc, char *argv[]):
     enable_timeouts(true),
     global_result(0),
-    use_ipv6(false),
     use_snapshots(false),
     no_backend_log_copy(false),
     verbose(false),
@@ -79,7 +78,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
     binlog_slave_gtid(false),
     no_galera(false),
     no_vm_revert(true),
-    threads(4)
+    threads(4),
+    use_ipv6(false)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -499,7 +499,6 @@ void TestConnections::read_env()
 
 void TestConnections::print_env()
 {
-    int  i;
     printf("Maxscale IP\t%s\n", maxscales->IP[0]);
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
@@ -664,7 +663,7 @@ void TestConnections::init_maxscale(int m)
 
         for (waits = 0; waits < 15; waits++)
         {
-            if (maxscales->ssh_node(m, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"", true) == 0);
+            if (maxscales->ssh_node(m, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"", true) == 0)
             {
                 break;
             }
@@ -1517,11 +1516,8 @@ int TestConnections::get_client_ip(int m, char * ip)
     MYSQL_RES *res;
     MYSQL_ROW row;
     int ret = 1;
-    unsigned long long int num_fields;
-    //unsigned long long int row_i=0;
     unsigned long long int rows;
     unsigned long long int i;
-    unsigned int conn_num = 0;
 
     maxscales->connect_rwsplit(m);
     if (execute_query(maxscales->conn_rwsplit[m],
@@ -1540,7 +1536,6 @@ int TestConnections::get_client_ip(int m, char * ip)
         {
             printf("Error: can't execute SQL-query: show processlist\n");
             printf("%s\n\n", mysql_error(conn));
-            conn_num = 0;
         }
         else
         {
@@ -1548,11 +1543,10 @@ int TestConnections::get_client_ip(int m, char * ip)
             if (res == NULL)
             {
                 printf("Error: can't get the result description\n");
-                conn_num = -1;
             }
             else
             {
-                num_fields = mysql_num_fields(res);
+                mysql_num_fields(res);
                 rows = mysql_num_rows(res);
                 for (i = 0; i < rows; i++)
                 {
@@ -1906,8 +1900,6 @@ int TestConnections::revert_snapshot(char * snapshot_name)
 
 bool TestConnections::test_bad_config(int m, const char *config)
 {
-    char src[PATH_MAX];
-
     process_template(m, config, "./");
 
     // Set the timeout to prevent hangs with configurations that work

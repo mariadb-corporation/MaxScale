@@ -60,8 +60,6 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
 
         pthread_t thread1[threads_num];
         pthread_t thread2[threads_num];
-        int  iret1[threads_num];
-        int  iret2[threads_num];
 
         Test->tprintf("COM_INSERT and COM_SELECT before executing test\n");
 
@@ -72,8 +70,8 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++)
         {
-            iret1[i] = pthread_create(&thread1[i], NULL, query_thread1, &data);
-            iret2[i] = pthread_create(&thread2[i], NULL, query_thread2, &data);
+            pthread_create(&thread1[i], NULL, query_thread1, &data);
+            pthread_create(&thread2[i], NULL, query_thread2, &data);
         }
         Test->tprintf("Threads are running %d seconds \n", run_time);
         sleep(run_time);

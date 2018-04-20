@@ -24,7 +24,7 @@ void create_data_file(char* filename, size_t size)
     while (filesize < maxsize)
     {
         char buffer[1024];
-        sprintf(buffer, "%d,'%x','%x'\n", i, i << 10 + i, i << 5 + i);
+        sprintf(buffer, "%d,'%x','%x'\n", i, i << (10 + i), i << (5 + i));
         int written = write(fd, buffer, strlen(buffer));
         if (written <= 0)
         {
@@ -67,8 +67,8 @@ int main(int argc, char *argv[])
     test->tprintf("Re-connect to Maxscale\n");
     test->set_timeout(20);
     test->maxscales->connect_maxscale(0);
-    char query[1024];
-    snprintf(query, sizeof (filename),
+    char query[1024 + sizeof(filename)];
+    snprintf(query, sizeof (query),
              "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
              filename);
     test->tprintf("Loading data\n");

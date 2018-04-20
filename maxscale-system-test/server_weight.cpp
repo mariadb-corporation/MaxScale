@@ -61,11 +61,11 @@ serversize_rws=1000000
 
 #include "testconnections.h"
 
-void check_conn_num(TestConnections* Test, int * Nc, unsigned int conn_num)
+void check_conn_num(TestConnections* Test, int * Nc)
 {
     for (int i = 0; i < 4; i++)
     {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0],
+        int conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0],
                                 (char *) "test");
         Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i < 4) && (Nc[i] != conn_num))
@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
     Test->tprintf("Sleeping 15 seconds\n");
     sleep(15);
 
-    unsigned int conn_num;
     int Nc[4];
 
     Nc[0] = maxscale_conn_num / 6;
@@ -105,7 +104,7 @@ int main(int argc, char *argv[])
     Nc[3] = 0;
 
     Test->set_timeout(30);
-    check_conn_num(Test, Nc, conn_num);
+    check_conn_num(Test, Nc);
 
     for (i = 0; i < maxscale_conn_num; i++)
     {
@@ -136,7 +135,7 @@ int main(int argc, char *argv[])
     Nc[0] = maxscale_conn_num;
 
     Test->set_timeout(30);
-    check_conn_num(Test, Nc, conn_num);
+    check_conn_num(Test, Nc);
 
 
     for (i = 0; i < maxscale_conn_num; i++)

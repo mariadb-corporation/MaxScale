@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
     test.set_timeout(60);
     for (int i = 0; i < 2; i++)
     {
-        char result[1024];
         test.add_result(test.maxscales->ssh_node_f(0, true, "maxadmin show dbusers \"RW Split Router\"|grep 'User names'"),
                         "Old style objects in maxadmin commands should succeed");
         test.add_result(test.maxscales->ssh_node_f(0, true, "maxadmin show dbusers RW-Split-Router|grep 'User names'"),

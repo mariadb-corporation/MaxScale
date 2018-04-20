@@ -15,7 +15,7 @@ char * get_maxinfo(const char *page, TestConnections* Test);
 
 char * read_sc(int sock);
 int send_so(int sock, char * data);
-static char hexconvtab[] = "0123456789abcdef";
+static char hexconvtab[] __attribute__((unused)) = "0123456789abcdef";
 static char* bin2hex(const unsigned char *old, const size_t oldlen);
 char * cdc_auth_srt(char * user, char * password);
 int setnonblocking(int sock);

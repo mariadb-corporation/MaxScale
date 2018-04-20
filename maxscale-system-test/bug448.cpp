@@ -12,7 +12,6 @@ int main(int argc, char *argv[])
 {
     char my_ip[1024];
     char my_ip_db[1024];
-    char sql[1024];
     char * first_dot;
     TestConnections * Test = new TestConnections(argc, argv);
 

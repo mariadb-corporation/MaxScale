@@ -40,7 +40,6 @@ int hash_password(TestConnections *test)
     test->maxscales->stop_maxscale(0);
     test->stop_timeout();
 
-    int res = 0;
     int exit_code;
     test->tprintf("Creating a new encrypted password\n");
     char *enc_pw = test->maxscales->ssh_node_output(0, "maxpasswd /var/lib/maxscale/ skysql", true, &exit_code);

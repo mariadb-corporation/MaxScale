@@ -22,7 +22,6 @@ int main(int argc, char *argv[])
     MYSQL *conn[TestConnNum];
     int i;
     int conn_num;
-    int res = 0;
 
     MYSQL * backend_conn;
     for (i = 0; i < Test->repl->N; i++)

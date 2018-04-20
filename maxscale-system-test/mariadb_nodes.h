@@ -38,7 +38,7 @@ public:
      */
     Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose);
 
-    ~Mariadb_nodes();
+    virtual ~Mariadb_nodes();
 
     /**
     * @brief  MYSQL structs for every backend node

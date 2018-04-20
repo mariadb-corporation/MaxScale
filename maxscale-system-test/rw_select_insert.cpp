@@ -79,10 +79,7 @@ int check_com_select(long int *new_selects, long int *new_inserts, long int *sel
 int check_com_insert(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts,
                      Mariadb_nodes * Nodes, int expected)
 {
-    int i;
     int result = 0;
-    int NodesNum = Nodes->N;
-
     int diff_ins = new_inserts[0] - inserts[0];
     int diff_sel = new_selects[0] - selects[0];
 
