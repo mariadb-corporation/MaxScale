@@ -1433,10 +1433,7 @@ handle_global_item(const char *name, const char *value)
     {
         if (strcmp(value, CN_AUTO) == 0)
         {
-            if ((gateway.n_threads = get_processor_count()) > 1)
-            {
-                gateway.n_threads--;
-            }
+            gateway.n_threads = get_processor_count();
         }
         else
         {
