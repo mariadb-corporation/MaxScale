@@ -13,9 +13,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <map>
 #include <memory>
-#include <queue>
-#include <vector>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
@@ -1298,7 +1297,7 @@ private:
     };
 
     typedef DelegatingTimer<Worker> PrivateTimer;
-    typedef std::priority_queue<DelayedCall*, std::vector<DelayedCall*>, LaterAt> DelayedCalls;
+    typedef std::multimap<int64_t, DelayedCall*> DelayedCalls;
 
     STATISTICS    m_statistics;           /*< Worker statistics. */
     MessageQueue* m_pQueue;               /*< The message queue of the worker. */
@@ -1311,7 +1310,6 @@ private:
     Load          m_load;                 /*< The worker load. */
     PrivateTimer* m_pTimer;               /*< The worker's own timer. */
     DelayedCalls  m_delayed_calls;        /*< Current delayed calls. */
-    uint64_t      m_last_delayed_call;    /*< When was the last delayed call made. */
 };
 
 }

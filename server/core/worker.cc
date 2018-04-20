@@ -1133,12 +1133,13 @@ void Worker::tick()
 
     vector<DelayedCall*> repeating_calls;
 
-    DelayedCall* pDelayed_call;
+    auto i = m_delayed_calls.begin();
 
-    while (!m_delayed_calls.empty() && (m_delayed_calls.top()->at() <= now))
+    while ((i != m_delayed_calls.end()) && (i->first <= now))
     {
-        pDelayed_call = m_delayed_calls.top();
-        m_delayed_calls.pop();
+        DelayedCall* pDelayed_call = i->second;
+
+        m_delayed_calls.erase(i++);
 
         if (pDelayed_call->call(Worker::Call::EXECUTE))
         {
@@ -1152,7 +1153,9 @@ void Worker::tick()
 
     for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
     {
-        m_delayed_calls.push(*i);
+        DelayedCall* pCall = *i;
+
+        m_delayed_calls.insert(std::make_pair(pCall->at(), pCall));
     }
 
     adjust_timer();
@@ -1164,18 +1167,18 @@ void Worker::add_delayed_call(DelayedCall* pDelayed_call)
 
     if (!m_delayed_calls.empty())
     {
-        DelayedCall* pTop = m_delayed_calls.top();
+        DelayedCall* pFirst = m_delayed_calls.begin()->second;
 
-        if (pDelayed_call->at() < pTop->at())
+        if (pDelayed_call->at() > pFirst->at())
         {
-            // If the added delayed call needs to be called sooner
-            // than the top-most delayed call, then we must adjust
-            // the timer.
-            adjust = true;
+            // If the added delayed call needs to be called later
+            // than the first delayed call, then we do not need to
+            // adjust the timer.
+            adjust = false;
         }
     }
 
-    m_delayed_calls.push(pDelayed_call);
+    m_delayed_calls.insert(std::make_pair(pDelayed_call->at(), pDelayed_call));
 
     if (adjust)
     {
@@ -1187,7 +1190,7 @@ void Worker::adjust_timer()
 {
     if (!m_delayed_calls.empty())
     {
-        DelayedCall* pNext_call = m_delayed_calls.top();
+        DelayedCall* pNext_call = m_delayed_calls.begin()->second;
 
         uint64_t now = get_current_time_ms();
         int64_t delay = pNext_call->at() - now;
