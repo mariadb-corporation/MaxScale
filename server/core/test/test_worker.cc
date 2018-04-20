@@ -78,8 +78,10 @@ public:
         return m_delay;
     }
 
-    bool tick()
+    bool tick(mxs::Worker::Call::action_t action)
     {
+        ss_dassert(action == mxs::Worker::Call::EXECUTE);
+
         int64_t now = get_monotonic_time_ms();
         int64_t diff = abs(now - m_at);
 
@@ -127,11 +129,11 @@ int run()
     TimerTest t4(&rv, 500);
     TimerTest t5(&rv, 600);
 
-    w.delayed_call(t1.delay(), &t1, &TimerTest::tick);
-    w.delayed_call(t2.delay(), &t2, &TimerTest::tick);
-    w.delayed_call(t3.delay(), &t3, &TimerTest::tick);
-    w.delayed_call(t4.delay(), &t4, &TimerTest::tick);
-    w.delayed_call(t5.delay(), &t5, &TimerTest::tick);
+    w.delayed_call(t1.delay(), NULL, &t1, &TimerTest::tick);
+    w.delayed_call(t2.delay(), NULL, &t2, &TimerTest::tick);
+    w.delayed_call(t3.delay(), NULL, &t3, &TimerTest::tick);
+    w.delayed_call(t4.delay(), NULL, &t4, &TimerTest::tick);
+    w.delayed_call(t5.delay(), NULL, &t5, &TimerTest::tick);
 
     w.run();
 

@@ -1138,7 +1138,7 @@ void Worker::tick()
         pDelayed_call = m_delayed_calls.top();
         m_delayed_calls.pop();
 
-        if (pDelayed_call->call())
+        if (pDelayed_call->call(Worker::Call::EXECUTE))
         {
             repeating_calls.push_back(pDelayed_call);
         }
@@ -1201,6 +1201,13 @@ void Worker::adjust_timer()
     {
         m_pTimer->cancel();
     }
+}
+
+int32_t Worker::cancel_delayed_calls(intptr_t tag)
+{
+    // TODO: Implement
+    ss_dassert(!true);
+    return 0;
 }
 
 }
