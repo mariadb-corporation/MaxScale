@@ -303,6 +303,9 @@ int create_epoll_instance()
 
 }
 
+//static
+uint32_t Worker::s_next_delayed_call_id = 1;
+
 Worker::Worker()
     : m_id(next_worker_id())
     , m_epoll_fd(create_epoll_instance())
@@ -1129,57 +1132,55 @@ void Worker::tick()
 {
     int64_t now = get_current_time_ms();
 
-    ss_dassert(!m_delayed_calls.empty());
-
     vector<DelayedCall*> repeating_calls;
 
-    auto i = m_delayed_calls.begin();
+    auto i = m_sorted_calls.begin();
 
-    while ((i != m_delayed_calls.end()) && (i->first <= now))
+    // i->first is the time when the first call should be invoked.
+    while (!m_sorted_calls.empty() && (i->first <= now))
     {
-        DelayedCall* pDelayed_call = i->second;
+        DelayedCall* pCall = i->second;
 
-        m_delayed_calls.erase(i++);
+        auto j = m_calls.find(pCall->id());
+        ss_dassert(j != m_calls.end());
 
-        ss_dassert(m_tagged_calls.find(pDelayed_call->tag()) != m_tagged_calls.end());
+        m_sorted_calls.erase(i);
+        m_calls.erase(j);
 
-        DelayedCalls& delayed_calls = m_tagged_calls[pDelayed_call->tag()];
-
-        auto j = delayed_calls.find(pDelayed_call);
-        ss_dassert(j != delayed_calls.end());
-
-        if (pDelayed_call->call(Worker::Call::EXECUTE))
+        if (pCall->call(Worker::Call::EXECUTE))
         {
-            repeating_calls.push_back(pDelayed_call);
+            repeating_calls.push_back(pCall);
         }
         else
         {
-            // If the call is not repeated, we remove it from the set
-            // associated with the tag.
-            delayed_calls.erase(j);
-            delete pDelayed_call;
+            delete pCall;
         }
+
+        // NOTE: Must be reassigned, ++i will not work in case a delayed
+        // NOTE: call cancels another delayed call.
+        i = m_sorted_calls.begin();
     }
 
     for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
     {
         DelayedCall* pCall = *i;
 
-        m_delayed_calls.insert(std::make_pair(pCall->at(), pCall));
+        m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
+        m_calls.insert(std::make_pair(pCall->id(), pCall));
     }
 
     adjust_timer();
 }
 
-void Worker::add_delayed_call(DelayedCall* pDelayed_call)
+uint32_t Worker::add_delayed_call(DelayedCall* pCall)
 {
     bool adjust = true;
 
-    if (!m_delayed_calls.empty())
+    if (!m_sorted_calls.empty())
     {
-        DelayedCall* pFirst = m_delayed_calls.begin()->second;
+        DelayedCall* pFirst = m_sorted_calls.begin()->second;
 
-        if (pDelayed_call->at() > pFirst->at())
+        if (pCall->at() > pFirst->at())
         {
             // If the added delayed call needs to be called later
             // than the first delayed call, then we do not need to
@@ -1189,28 +1190,28 @@ void Worker::add_delayed_call(DelayedCall* pDelayed_call)
     }
 
     // Insert the delayed call into the map ordered by invocation time.
-    m_delayed_calls.insert(std::make_pair(pDelayed_call->at(), pDelayed_call));
+    m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
 
-    // Insert the delayed call into the set associated with the tag of
-    // the delayed call.
-    DelayedCalls& delayed_calls = m_tagged_calls[pDelayed_call->tag()];
-    ss_dassert(delayed_calls.find(pDelayed_call) == delayed_calls.end());
-    delayed_calls.insert(pDelayed_call);
+    // Insert the delayed call into the map indexed by id.
+    ss_dassert(m_calls.find(pCall->id()) == m_calls.end());
+    m_calls.insert(std::make_pair(pCall->id(), pCall));
 
     if (adjust)
     {
         adjust_timer();
     }
+
+    return pCall->id();
 }
 
 void Worker::adjust_timer()
 {
-    if (!m_delayed_calls.empty())
+    if (!m_sorted_calls.empty())
     {
-        DelayedCall* pNext_call = m_delayed_calls.begin()->second;
+        DelayedCall* pCall = m_sorted_calls.begin()->second;
 
         uint64_t now = get_current_time_ms();
-        int64_t delay = pNext_call->at() - now;
+        int64_t delay = pCall->at() - now;
 
         if (delay <= 0)
         {
@@ -1225,60 +1226,50 @@ void Worker::adjust_timer()
     }
 }
 
-int32_t Worker::cancel_delayed_calls(intptr_t tag)
+bool Worker::cancel_delayed_call(uint32_t id)
 {
-    int n = 0;
+    bool found = false;
 
-    auto i = m_tagged_calls.find(tag);
+    auto i = m_calls.find(id);
 
-    if (i != m_tagged_calls.end())
+    if (i != m_calls.end())
     {
-        // All delayed calls associated with the provided tag.
-        DelayedCalls& delayed_calls = i->second;
-        ss_debug(int nDelayed_calls = delayed_calls.size());
+        DelayedCall* pCall = i->second;
+        m_calls.erase(i);
 
-        for (auto j = delayed_calls.begin(); j != delayed_calls.end(); ++j)
+        // All delayed calls with exactly the same trigger time.
+        // Not particularly likely there will be many of those.
+        auto range = m_sorted_calls.equal_range(pCall->at());
+
+        auto k = range.first;
+        ss_dassert(k != range.second);
+
+        while (k != range.second)
         {
-            DelayedCall* pDelayed_call = *j;
-
-            // All delayed calls with exactly the same trigger time.
-            // Not particularly likely there will be many of those.
-            auto range = m_delayed_calls.equal_range(pDelayed_call->at());
-
-            auto k = range.first;
-            ss_dassert(k != range.second);
-            ss_debug(bool found = false);
-
-            while (k != range.second)
+            if (k->second == pCall)
             {
-                if (k->second == pDelayed_call)
-                {
-                    m_delayed_calls.erase(k);
-                    delete pDelayed_call;
-                    ++n;
+                m_sorted_calls.erase(k);
+                delete pCall;
 
-                    k = range.second;
+                k = range.second;
 
-                    ss_debug(found = true);
-                }
-                else
-                {
-                    ++k;
-                }
+                found = true;
             }
-
-            ss_dassert(found);
+            else
+            {
+                ++k;
+            }
         }
 
-        ss_dassert(nDelayed_calls == n);
+        ss_dassert(found);
     }
     else
     {
         ss_dassert(!true);
-        MXS_WARNING("Attempt to remove calls associated with non-existing tag.");
+        MXS_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
     }
 
-    return n;
+    return found;
 }
 
 }

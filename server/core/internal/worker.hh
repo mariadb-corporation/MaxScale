@@ -909,8 +909,10 @@ public:
      * Push a function for delayed execution.
      *
      * @param delay      The delay in milliseconds.
-     * @param tag        A tag identifying this and possibly other delayed calls.
      * @param pFunction  The function to call.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
      *
      * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
      *            function should perform the delayed call and return @true, if
@@ -922,28 +924,22 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    void delayed_call(int32_t delay,
-                      intptr_t tag,
-                      bool (*pFunction)(Worker::Call::action_t action))
+    uint32_t delayed_call(int32_t delay,
+                          bool (*pFunction)(Worker::Call::action_t action))
     {
-        add_delayed_call(new DelayedCallFunctionVoid(delay, tag, pFunction));
-    }
-
-    void delayed_call(int32_t delay,
-                      void* tag,
-                      bool (*pFunction)(Worker::Call::action_t action))
-    {
-        return delayed_call(delay, reinterpret_cast<intptr_t>(tag), pFunction);
+        return add_delayed_call(new DelayedCallFunctionVoid(delay, pFunction));
     }
 
     /**
      * Push a function for delayed execution.
      *
      * @param delay      The delay in milliseconds.
-     * @param tag        A tag identifying this and possibly other delayed calls.
      * @param pFunction  The function to call.
      * @param data       The data to be provided to the function when invoked.
      *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
      * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
      *            function should perform the delayed call and return @true, if
      *            the function should be called again. If the function returns
@@ -955,28 +951,21 @@ public:
      *            be called again.
      */
     template<class D>
-    void delayed_call(int32_t delay,
-                      intptr_t tag,
-                      bool (*pFunction)(Worker::Call::action_t action, D data), D data)
+    uint32_t delayed_call(int32_t delay,
+                          bool (*pFunction)(Worker::Call::action_t action, D data), D data)
     {
-        add_delayed_call(new DelayedCallFunction<D>(delay, tag, pFunction, data));
-    }
-
-    template<class D>
-    void delayed_call(int32_t delay,
-                      void* pTag,
-                      bool (*pFunction)(Worker::Call::action_t action, D data), D data)
-    {
-        return delayed_call(delay, reinterpret_cast<intptr_t>(pTag), pFunction);
+        return add_delayed_call(new DelayedCallFunction<D>(delay, pFunction, data));
     }
 
     /**
      * Push a member function for delayed execution.
      *
      * @param delay    The delay in milliseconds.
-     * @param pTag       A tag identifying this and possibly other delayed calls.
      * @param pMethod  The member function to call.
      *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
      * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
      *            function should perform the delayed call and return @true, if
      *            the function should be called again. If the function returns
@@ -988,31 +977,23 @@ public:
      *            be called again.
      */
     template<class T>
-    void delayed_call(int32_t delay,
-                      intptr_t tag,
-                      T* pT,
-                      bool (T::*pMethod)(Worker::Call::action_t action))
+    uint32_t delayed_call(int32_t delay,
+                          T* pT,
+                          bool (T::*pMethod)(Worker::Call::action_t action))
     {
-        add_delayed_call(new DelayedCallMethodVoid<T>(delay, tag, pT, pMethod));
-    }
-
-    template<class T>
-    void delayed_call(int32_t delay,
-                      void* pTag,
-                      T* pT,
-                      bool (T::*pMethod)(Worker::Call::action_t action))
-    {
-        return delayed_call(delay, reinterpret_cast<intptr_t>(pTag), pT, pMethod);
+        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, pT, pMethod));
     }
 
     /**
      * Push a member function for delayed execution.
      *
      * @param delay    The delay in milliseconds.
-     * @param tag      A tag identifying this and possibly other delayed calls.
      * @param pMethod  The member function to call.
      * @param data     The data to be provided to the function when invoked.
      *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
      * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
      *            function should perform the delayed call and return @true, if
      *            the function should be called again. If the function returns
@@ -1024,43 +1005,25 @@ public:
      *            be called again.
      */
     template<class T, class D>
-    void delayed_call(int32_t delay,
-                      intptr_t tag,
-                      T* pT,
-                      bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
+    uint32_t delayed_call(int32_t delay,
+                          T* pT,
+                          bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
     {
-        add_delayed_call(new DelayedCallMethod<T, D>(delay, tag, pT, pMethod, data));
-    }
-
-    template<class T, class D>
-    void delayed_call(int32_t delay,
-                      void* pTag,
-                      T* pT,
-                      bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
-    {
-        return delayed_call(delay, reinterpret_cast<intptr_t>(pTag), pT, pMethod);
+        return add_delayed_call(new DelayedCallMethod<T, D>(delay, pT, pMethod, data));
     }
 
     /**
-     * Cancel delayed calls.
+     * Cancel delayed call.
      *
-     * When this function is called, all current scheduled delayed calls, that
-     * were scheduled using the specified tag, will be called *synchronously* with
-     * the @c action argument being @c Worker::Call::CANCEL. That is, when this
-     * function returns, all function have been canceled.
+     * When this function is called, the delayed call in question will be called
+     * *synchronously* with the @c action argument being @c Worker::Call::CANCEL.
+     * That is, when this function returns, the function has been canceled.
      *
-     * @attention If any of the called function schedules a new delayed call using
-     *            the same tag, then they will *not* be canceled as a result of
-     *            this call.
+     * @param id  The id that was returned when the delayed call was scheduled.
      *
-     * @param tag  The tag that was used when a delayed call was scheduled.
+     * @return True, if the id represented an existing delayed call.
      */
-    int32_t cancel_delayed_calls(intptr_t tag);
-
-    int32_t cancel_delayed_calls(void* pTag)
-    {
-        return cancel_delayed_calls(reinterpret_cast<intptr_t>(pTag));
-    }
+    bool cancel_delayed_call(uint32_t id);
 
 protected:
     Worker();
@@ -1099,6 +1062,17 @@ protected:
     state_t   m_state;                /*< The state of the worker */
 
 private:
+    class DelayedCall;
+    friend class DelayedCall;
+
+    static uint32_t next_delayed_call_id()
+    {
+        // Called in single-thread context. Wrapping does not matter
+        // as it is unlikely there would be 4 billion pending delayed
+        // calls.
+        return ++s_next_delayed_call_id;
+    }
+
     class DelayedCall
     {
         DelayedCall(const DelayedCall&) = delete;;
@@ -1114,9 +1088,9 @@ private:
             return m_delay;
         }
 
-        intptr_t tag() const
+        uint32_t id() const
         {
-            return m_tag;
+            return m_id;
         }
 
         int64_t at() const
@@ -1136,9 +1110,9 @@ private:
         }
 
     protected:
-        DelayedCall(int32_t delay, intptr_t tag)
-            : m_delay(delay)
-            , m_tag(tag)
+        DelayedCall(int32_t delay)
+            : m_id(Worker::next_delayed_call_id())
+            , m_delay(delay)
             , m_at(get_at(delay))
         {
             ss_dassert(delay > 0);
@@ -1159,9 +1133,9 @@ private:
         }
 
     private:
-        int32_t m_delay; // The delay in milliseconds.
-        intptr_t m_tag;  // Tag identifying the delayed call.
-        int64_t m_at;    // The next time the function should be invoked.
+        uint32_t m_id;    // The id of the delayed call.
+        int32_t  m_delay; // The delay in milliseconds.
+        int64_t  m_at;    // The next time the function should be invoked.
     };
 
     template<class D>
@@ -1172,9 +1146,8 @@ private:
 
     public:
         DelayedCallFunction(int32_t delay,
-                            void* pTag,
                             bool (*pFunction)(Worker::Call::action_t action, D data), D data)
-            : DelayedCall(delay, pTag)
+            : DelayedCall(delay)
             , m_pFunction(pFunction)
             , m_data(data)
         {
@@ -1199,9 +1172,8 @@ private:
 
     public:
         DelayedCallFunctionVoid(int32_t delay,
-                                intptr_t tag,
                                 bool (*pFunction)(Worker::Call::action_t action))
-            : DelayedCall(delay, tag)
+            : DelayedCall(delay)
             , m_pFunction(pFunction)
         {
         }
@@ -1224,10 +1196,9 @@ private:
 
     public:
         DelayedCallMethod(int32_t delay,
-                          intptr_t tag,
                           T* pT,
                           bool (T::*pMethod)(Worker::Call::action_t action, D data), D data)
-            : DelayedCall(delay, tag)
+            : DelayedCall(delay)
             , m_pT(pT)
             , m_pMethod(pMethod)
             , m_data(data)
@@ -1254,10 +1225,9 @@ private:
 
     public:
         DelayedCallMethodVoid(int32_t delay,
-                              intptr_t tag,
                               T* pT,
                               bool (T::*pMethod)(Worker::Call::action_t))
-            : DelayedCall(delay, tag)
+            : DelayedCall(delay)
             , m_pT(pT)
             , m_pMethod(pMethod)
         {
@@ -1274,7 +1244,7 @@ private:
         bool (T::*m_pMethod)(Worker::Call::action_t);
     };
 
-    void add_delayed_call(DelayedCall* pDelayed_call);
+    uint32_t add_delayed_call(DelayedCall* pDelayed_call);
     void adjust_timer();
 
     bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
@@ -1298,9 +1268,8 @@ private:
     };
 
     typedef DelegatingTimer<Worker>                         PrivateTimer;
-    typedef std::tr1::unordered_set<DelayedCall*>           DelayedCalls;
     typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
-    typedef std::tr1::unordered_map<intptr_t, DelayedCalls> DelayedCallsByTag;
+    typedef std::tr1::unordered_map<uint32_t, DelayedCall*> DelayedCallsById;
 
     STATISTICS         m_statistics;           /*< Worker statistics. */
     MessageQueue*      m_pQueue;               /*< The message queue of the worker. */
@@ -1312,8 +1281,10 @@ private:
     uint64_t           m_nTotal_descriptors;   /*< Total number of descriptors. */
     Load               m_load;                 /*< The worker load. */
     PrivateTimer*      m_pTimer;               /*< The worker's own timer. */
-    DelayedCallsByTime m_delayed_calls;        /*< Current delayed calls ordered by time. */
-    DelayedCallsByTag  m_tagged_calls;         /*< Current delayed calls ordered by tag. */
+    DelayedCallsByTime m_sorted_calls;         /*< Current delayed calls sorted by time. */
+    DelayedCallsById   m_calls;                /*< Current delayed calls indexed by id. */
+
+    static uint32_t    s_next_delayed_call_id; /*< The next delayed call id. */
 };
 
 }
