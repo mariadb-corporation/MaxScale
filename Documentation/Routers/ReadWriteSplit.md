@@ -351,8 +351,9 @@ are met, the transaction can be safely replayed.
 * The replacement server where the transaction is applied returns results
   identical to the original partial transaction.
 
-If the results from the replacement server are not identical when the
-transaction is replayed, the client connection is closed.
+If the results from the replacement server are not identical when the transaction is
+replayed, the client connection is closed. This means that any transaction with a server
+specific result (e.g. `NOW()`, `@@server_id`) cannot be replayed.
 
 Performing MVCC reads (`SELECT` queries without `FOR UPDATE` or `LOCK IN SHARE MODE`)
 with transaction replay is discouraged. If such statements are executed
