@@ -525,22 +525,33 @@ void check_and_log_backend_state(const SRWBackend& backend, DCB* problem_dcb)
     }
 }
 
-void RWSplitSession::start_trx_replay()
+bool RWSplitSession::start_trx_replay()
 {
-    MXS_INFO("Starting transaction replay");
-    m_is_replay_active = true;
+    bool rval = false;
 
-    /**
-     * Copy the transaction for replaying and finalize it. This
-     * allows the checksums to be compared. The current transaction
-     * is closed as the replaying opens a new transaction.
-     */
-    m_replayed_trx = m_trx;
-    m_replayed_trx.finalize();
-    m_trx.close();
+    if (!m_is_replay_active && m_config.transaction_replay)
+    {
+        // Stash any interrupted queries while we replay the transaction
+        m_interrupted_query.reset(m_current_query.release());
 
-    // Pop the first statement and start replaying the transaction
-    retry_query(m_replayed_trx.pop_stmt(), 0);
+        MXS_INFO("Starting transaction replay");
+        m_is_replay_active = true;
+
+        /**
+         * Copy the transaction for replaying and finalize it. This
+         * allows the checksums to be compared. The current transaction
+         * is closed as the replaying opens a new transaction.
+         */
+        m_replayed_trx = m_trx;
+        m_replayed_trx.finalize();
+        m_trx.close();
+
+        // Pop the first statement and start replaying the transaction
+        retry_query(m_replayed_trx.pop_stmt(), 0);
+        rval = true;
+    }
+
+    return rval;
 }
 
 /**
@@ -573,11 +584,11 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
     {
     case ERRACT_NEW_CONNECTION:
         {
+            bool can_continue = false;
+
             if (m_current_master && m_current_master->in_use() && m_current_master == backend)
             {
                 /** The connection to the master has failed */
-                SERVER *srv = m_current_master->server();
-                bool can_continue = false;
 
                 if (!backend->is_waiting_result())
                 {
@@ -615,9 +626,9 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                         send_readonly_error(m_client);
                     }
 
-                    if (!can_continue && !SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
+                    if (!can_continue && !backend->is_master() &&
+                        !backend->server()->master_err_is_logged)
                     {
-                        ss_dassert(backend);
                         MXS_ERROR("Server %s (%s) lost the master status while waiting"
                                   " for a result. Client sessions will be closed.",
                                   backend->name(), backend->uri());
@@ -625,27 +636,11 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                     }
                 }
 
-                if (m_is_replay_active)
+                if (session_trx_is_active(session))
                 {
-                    MXS_INFO("Failed to replay transaction. Closing connection.");
-                    can_continue = false;
-                }
-                else if (session_trx_is_active(session))
-                {
-                    if (m_config.transaction_replay)
-                    {
-                        // Stash any interrupted queries while we replay the transaction
-                        m_interrupted_query.reset(m_current_query.release());
-                        can_continue = true;
-                        start_trx_replay();
-                    }
-                    else
-                    {
-                        can_continue = false;
-                    }
+                    can_continue = start_trx_replay();
                 }
 
-                *succp = can_continue;
                 backend->close();
             }
             else
@@ -653,21 +648,21 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 if (m_target_node && m_target_node == backend &&
                     session_trx_is_read_only(problem_dcb->session))
                 {
-                    /**
-                     * We were locked to a single node but the node died. Currently
-                     * this only happens with read-only transactions so the only
-                     * thing we can do is to close the connection.
-                     */
-                    *succp = false;
-                    backend->close(mxs::Backend::CLOSE_FATAL);
+                    // We're no longer locked to this server as it failed
+                    m_target_node.reset();
+
+                    // Try to replay the transaction on another node
+                    can_continue = start_trx_replay();
+                    backend->close();
                 }
                 else
                 {
                     /** Try to replace the failed connection with a new one */
-                    *succp = handle_error_new_connection(problem_dcb, errmsgbuf);
+                    can_continue = handle_error_new_connection(problem_dcb, errmsgbuf);
                 }
             }
 
+            *succp = can_continue;
             check_and_log_backend_state(backend, problem_dcb);
             break;
         }

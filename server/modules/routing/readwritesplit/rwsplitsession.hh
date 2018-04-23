@@ -185,7 +185,13 @@ private:
     bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
 
     void handle_trx_replay();
-    void start_trx_replay();
+
+    /**
+     * Start the replaying of the latest transaction
+     *
+     * @return True if the session can continue. False if the session must be closed.
+     */
+    bool start_trx_replay();
 
 private:
     // QueryClassifier::Handler
