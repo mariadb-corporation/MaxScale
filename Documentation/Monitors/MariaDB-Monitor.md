@@ -459,7 +459,8 @@ from an external master if any.
 `demotion_sql_file` is ran on an old master during demotion to slave, before the
 old master starts replicating from the new master. The file is also ran before
 rejoining a standalone server to the cluster, as the standalone server is
-typically a former master server.
+typically a former master server. When redirecting a slave replicating from a
+wrong master, the sql-file is not executed.
 
 Since the queries in the files are ran during operations which modify
 replication topology, care is required. If `promotion_sql_file` contains data

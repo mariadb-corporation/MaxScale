@@ -4793,30 +4793,30 @@ static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_serve
             const char* master_name = master->unique_name;
             MySqlServerInfo* redir_info = get_server_info(mon, joinable);
 
-            if (*mon->demote_sql_file && !run_sql_from_file(joinable, mon->demote_sql_file, output))
+            bool op_success = false;
+            if (redir_info->n_slaves_configured == 0)
             {
-                PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
-                                     CN_DEMOTION_SQL_FILE, joinable->server->unique_name);
-            }
-            else
-            {
-                bool op_success;
-                if (redir_info->n_slaves_configured == 0)
+                if (*mon->demote_sql_file && !run_sql_from_file(joinable, mon->demote_sql_file, output))
+                {
+                    PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
+                                         CN_DEMOTION_SQL_FILE, joinable->server->unique_name);
+                }
+                else
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     op_success = join_cluster(joinable, change_cmd.c_str());
                 }
-                else
-                {
-                    MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                               "redirecting it to '%s'.", name, master_name, master_name);
-                    op_success = redirect_one_slave(joinable, change_cmd.c_str());
-                }
+            }
+            else
+            {
+                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                           "redirecting it to '%s'.", name, master_name, master_name);
+                op_success = redirect_one_slave(joinable, change_cmd.c_str());
+            }
 
-                if (op_success)
-                {
-                    servers_joined++;
-                }
+            if (op_success)
+            {
+                servers_joined++;
             }
         }
     }
@@ -4933,7 +4933,8 @@ static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, 
     std::ifstream sql_file(path);
     if (sql_file.is_open())
     {
-        MXS_NOTICE("Executing sql queries from file '%s'.", path.c_str());
+        MXS_NOTICE("Executing sql queries from file '%s' on server '%s'.", path.c_str(),
+                   server->server->unique_name);
         int lines_executed = 0;
 
         while (!sql_file.eof() && !error)
