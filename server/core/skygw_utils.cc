@@ -84,7 +84,7 @@ size_t snprint_timestamp(char* p_ts, size_t tslen)
 
     t = time(NULL);
     localtime_r(&t, &tm);
-    snprintf(p_ts, MXS_MIN(tslen, timestamp_len), timestamp_formatstr,
+    snprintf(p_ts, tslen, timestamp_formatstr,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
              tm.tm_min, tm.tm_sec);
     rval = strlen(p_ts) * sizeof (char);
@@ -125,7 +125,7 @@ size_t snprint_timestamp_hp(char* p_ts, size_t tslen)
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, &tm);
     usec = tv.tv_usec / 1000;
-    snprintf(p_ts, MXS_MIN(tslen, timestamp_len_hp), timestamp_formatstr_hp,
+    snprintf(p_ts, tslen, timestamp_formatstr_hp,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
              tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
     rval = strlen(p_ts) * sizeof (char);

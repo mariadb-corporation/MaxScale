@@ -46,12 +46,11 @@ typedef enum { MES_RC_FAIL, MES_RC_SUCCESS, MES_RC_TIMEOUT } skygw_mes_rc_t;
 
 static const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
 /** One for terminating '\0' */
-static const size_t timestamp_len = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 3 + 1 + 16) * sizeof(char);
+static const size_t timestamp_len = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 3 + 1);
 
 static const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
 /** One for terminating '\0' */
-static const size_t timestamp_len_hp = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 3 + 3  + 1 + 16) *
-                                       sizeof(char);
+static const size_t timestamp_len_hp = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 3 + 3  + 1);
 
 struct skygw_thread_st
 {
