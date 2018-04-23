@@ -13,6 +13,7 @@ plugin modules that tailor the behavior of the program.
 * [Configuration](#configuration)
   * [Special Parameter Types](#special-parameter-types)
   * [Global Settings](#global-settings)
+    * [REST API Configuration](#rest-api-configuration)
   * [Service](#service)
   * [Server](#server)
   * [Listener](#listener)
@@ -607,61 +608,6 @@ is placed in the configuration file. However, in the `[maxscale]` section,
 to ensure that substitution will take place, place the
 `substitute_variables=true` line first.
 
-### REST API Configuration
-
-The MaxScale REST API is an HTTP interface that provides JSON format data
-intended to be consumed by monitoring appllications and visualization tools.
-
-The following options must be defined under the `[maxscale]` section in the
-configuration file.
-
-#### `admin_host`
-
-The network interface where the HTTP admin interface listens on. The default
-value is the IPv4 address `127.0.0.1` which only listens for local connections.
-
-#### `admin_port`
-
-The port where the HTTP admin interface listens on. The default value is port
-8989.
-
-#### `admin_auth`
-
-Enable HTTP admin interface authentication using HTTP Basic Access
-authentication. This is not a secure method of authentication without HTTPS but
-it does add a small layer of security. This option is enabled by default.
-
-The admin interface authentication uses the same user as MaxAdmin network
-interface. This means that new users can be added with both MaxAdmin and the
-REST API. The default credentials for the interface are `admin:mariadb`.
-
-#### `admin_ssl_key`
-
-The path to the TLS private key in PEM format for the admin interface.
-
-If the `admin_ssl_key`, `admin_ssl_cert` and `admin_ssl_ca_cert` options are all
-defined, the admin interface will use encrypted HTTPS instead of plain HTTP.
-
-#### `admin_ssl_cert`
-
-The path to the TLS public certificate in PEM format. See `admin_ssl_key`
-documentation for more details.
-
-#### `admin_ssl_ca_cert`
-
-The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
-documentation for more details.
-
-#### `admin_enabled`
-
-Enable or disable the admin interface. This allows the admin interface to
-be completely disabled to prevent access to it.
-
-#### `admin_log_auth_failures`
-
-Log authentication failures for the admin interface. This parameter expects a
-boolean value and is enabled by default.
-
 #### `sql_mode`
 
 Specifies whether the query classifier parser should initially expect _MariaDB_
@@ -759,6 +705,61 @@ Default is `never`.
 Note that you need to specify with `retain_last_statements` how many statements
 MaxScale should retain for each session. Unless it has been set to another value
 than `0`, this configuration setting will not have an effect.
+
+### REST API Configuration
+
+The MaxScale REST API is an HTTP interface that provides JSON format data
+intended to be consumed by monitoring appllications and visualization tools.
+
+The following options must be defined under the `[maxscale]` section in the
+configuration file.
+
+#### `admin_host`
+
+The network interface where the HTTP admin interface listens on. The default
+value is the IPv4 address `127.0.0.1` which only listens for local connections.
+
+#### `admin_port`
+
+The port where the HTTP admin interface listens on. The default value is port
+8989.
+
+#### `admin_auth`
+
+Enable HTTP admin interface authentication using HTTP Basic Access
+authentication. This is not a secure method of authentication without HTTPS but
+it does add a small layer of security. This option is enabled by default.
+
+The admin interface authentication uses the same user as MaxAdmin network
+interface. This means that new users can be added with both MaxAdmin and the
+REST API. The default credentials for the interface are `admin:mariadb`.
+
+#### `admin_ssl_key`
+
+The path to the TLS private key in PEM format for the admin interface.
+
+If the `admin_ssl_key`, `admin_ssl_cert` and `admin_ssl_ca_cert` options are all
+defined, the admin interface will use encrypted HTTPS instead of plain HTTP.
+
+#### `admin_ssl_cert`
+
+The path to the TLS public certificate in PEM format. See `admin_ssl_key`
+documentation for more details.
+
+#### `admin_ssl_ca_cert`
+
+The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
+documentation for more details.
+
+#### `admin_enabled`
+
+Enable or disable the admin interface. This allows the admin interface to
+be completely disabled to prevent access to it.
+
+#### `admin_log_auth_failures`
+
+Log authentication failures for the admin interface. This parameter expects a
+boolean value and is enabled by default.
 
 ### Service
 

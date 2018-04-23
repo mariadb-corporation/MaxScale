@@ -102,7 +102,7 @@ void Mariadb_nodes::close_connections()
 
 
 
-int Mariadb_nodes::read_env()
+void Mariadb_nodes::read_env()
 {
     char * env;
     char env_name[64];
@@ -207,7 +207,7 @@ int Mariadb_nodes::read_env()
     }
 }
 
-int Mariadb_nodes::print_env()
+void Mariadb_nodes::print_env()
 {
     for (int i = 0; i < N; i++)
     {
@@ -255,7 +255,7 @@ int Mariadb_nodes::find_master()
     return master_node;
 }
 
-int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
+void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
 {
     for (int i = 0; i < N; i++)
     {

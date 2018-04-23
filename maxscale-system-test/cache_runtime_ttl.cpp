@@ -145,9 +145,6 @@ void init(TestConnections& test)
 void run(TestConnections& test)
 {
     init(test);
-
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
-
     int value;
 
     // Let's set a long hard_ttl so that it will not interfere

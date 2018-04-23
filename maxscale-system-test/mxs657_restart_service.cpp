@@ -32,12 +32,11 @@ void sht_rst_service()
     int threads_num = 5;
     pthread_t thread1[threads_num];
 
-    int  iret1[threads_num];
     int i;
 
     for (i = 0; i < threads_num; i++)
     {
-        iret1[i] = pthread_create(&thread1[i], NULL, query_thread1, NULL);
+        pthread_create(&thread1[i], NULL, query_thread1, NULL);
     }
 
     Test->tprintf("Trying to shutdown and restart RW Split router in the loop\n");
@@ -94,4 +93,6 @@ void *query_thread1( void *ptr )
         Test->maxscales->execute_maxadmin_command(0, shutdown_cmd);
         Test->maxscales->execute_maxadmin_command(0, restart_cmd);
     }
+
+    return NULL;
 }

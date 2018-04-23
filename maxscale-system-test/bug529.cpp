@@ -140,7 +140,6 @@ int main(int argc, char *argv[])
     char sql[100];
 
     pthread_t parall_traffic1;
-    int check_iret;
 
     MYSQL * conn;
     MYSQL * rwsplit_conn[conn_N];
@@ -199,7 +198,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Opening more connection to ReadConn slave in parallel thread\n");
 
-    check_iret = pthread_create( &parall_traffic1, NULL, parall_traffic, NULL);
+    pthread_create( &parall_traffic1, NULL, parall_traffic, NULL);
 
     for (i = 0; i < Test->repl->N; i++)
     {

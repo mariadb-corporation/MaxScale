@@ -137,14 +137,9 @@ int main(int argc, char *argv[])
     add_remove_maxadmin_user(Test);
 
     Test->tprintf("trying long wierd user\n");
-    char * st10 = Test->maxscales->ssh_node_output(0,
+    Test->maxscales->ssh_node_output(0,
                                                    "maxadmin enable account yygrgtrпрекури6н33имн756ККККЕН:УИГГГГ*?:*:*fj34oru34h275g23457g2v90590+u764gv56837fbv62381§SDFERGtrg45ergfergergefewfergt456ty",
                                                    true, &exit_code);
-    /*Test->tprintf("Result: %s\n", st10);
-    if (strstr(st10, "has been successfully added") == NULL)
-    {
-        Test->add_result(1, "Wrong list of MaxAdmin users\n");
-    }*/
 
     Test->check_maxscale_alive(0);
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/passwd");

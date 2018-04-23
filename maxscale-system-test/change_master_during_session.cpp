@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     Test->repl->change_master(1, 0);
     Test->tprintf("executing 3 INSERTs\n");
-    for (int i = 0; i++; i < 3)
+    for (int i = 0; i < 3; i++)
     {
         Test->set_timeout(60);
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);

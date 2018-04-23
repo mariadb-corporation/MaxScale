@@ -33,11 +33,11 @@ int get_my_ip(char * remote_ip, char * my_ip )
     serv.sin_addr.s_addr = inet_addr( remote_ip );
     serv.sin_port = htons( dns_port );
 
-    int err = connect( sock , (const struct sockaddr*) &serv , sizeof(serv) );
+    connect( sock , (const struct sockaddr*) &serv , sizeof(serv) );
 
     struct sockaddr_in name;
     socklen_t namelen = sizeof(name);
-    err = getsockname(sock, (struct sockaddr*) &name, &namelen);
+    getsockname(sock, (struct sockaddr*) &name, &namelen);
 
     char buffer[100];
     const char* p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);

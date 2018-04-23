@@ -1,7 +1,3 @@
-if(NOT ${CMAKE_VERSION} VERSION_LESS 3.0.0)
-  cmake_policy(SET CMP0046 OLD)
-endif()
-
 include(ExternalProject)
 
 ExternalProject_Add(maxscale_sqlite
@@ -10,7 +6,6 @@ ExternalProject_Add(maxscale_sqlite
   CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100/configure --with-pic --enable-maxscale
   BUILD_COMMAND make sqlite3.c
   INSTALL_COMMAND "")
-add_dependencies(maxscale_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100/src/parse.y)
 
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100/tsrc)
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100)

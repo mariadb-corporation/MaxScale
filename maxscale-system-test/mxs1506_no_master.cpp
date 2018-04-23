@@ -15,7 +15,7 @@ using namespace std;
 bool query(TestConnections& test)
 {
     test.maxscales->connect();
-    execute_query_silent(test.maxscales->conn_rwsplit[0], "SET @a = 1") == 0;
+    execute_query_silent(test.maxscales->conn_rwsplit[0], "SET @a = 1");
     sleep(5);
     Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @a");
     test.maxscales->disconnect();

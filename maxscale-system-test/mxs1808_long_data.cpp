@@ -19,11 +19,11 @@ static int test_long_data(MYSQL *conn, int sqlsize)
 
     MYSQL_STMT *stmt;
     stmt = mysql_stmt_init(conn);
-    int        rc, int_data;
+    int        int_data;
     MYSQL_RES  *result;
     MYSQL_BIND my_bind[1];
 
-    rc = mysql_autocommit(conn, 1);
+    mysql_autocommit(conn, 1);
 
     if (NULL == stmt)
     {

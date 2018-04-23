@@ -107,7 +107,7 @@ char * get_maxinfo(const char * page, TestConnections* Test)
     //Test->tprintf("Query is:\n<<START>>\n%s<<END>>\n", get);
 
     //Send the query to the server
-    int sent = 0;
+    size_t sent = 0;
     while (sent < strlen(get))
     {
         tmpres = send(sock, get + sent, strlen(get) - sent, 0);
@@ -178,7 +178,7 @@ char * read_sc(int sock)
 int send_so(int sock, char * data)
 {
     int tmpres;
-    int sent = 0;
+    size_t sent = 0;
     while (sent < strlen(data))
     {
         tmpres = send(sock, data + sent, strlen(data) - sent, 0);
@@ -298,4 +298,5 @@ int get_x_fl_from_json(char * line, long long int * x1, long long int * fl)
     json_decref(x_json);
     json_decref(fl_json);
     json_decref(root);
+    return 0;
 }

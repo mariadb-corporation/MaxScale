@@ -230,7 +230,7 @@ private:
         int id = s_nRows * random_decimal_fraction();
 
         ss_dassert(id >= 0);
-        ss_dassert(id <= s_nRows);
+        ss_dassert(id <= (int)s_nRows);
 
         return id;
     }
@@ -559,8 +559,6 @@ void switchover(TestConnections& test, int next_master_id, int current_master_id
 
 void run(TestConnections& test)
 {
-    int n_threads = Client::DEFAULT_N_CLIENTS;
-
     cout << "\nConnecting to MaxScale." << endl;
     test.maxscales->connect_maxscale();
 

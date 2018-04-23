@@ -12,7 +12,7 @@
 
 using namespace std;
 
-int check_max_conn(int router, int max_conn, TestConnections * Test)
+void check_max_conn(int router, int max_conn, TestConnections * Test)
 {
     MYSQL * conn[max_conn + 1];
 

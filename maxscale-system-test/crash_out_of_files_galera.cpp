@@ -15,7 +15,6 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
-    int q;
     long int i1, i2;
 
     long int selects[256];

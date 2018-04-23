@@ -3,9 +3,9 @@
 int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, unsigned long chunk_size, int chunks,
                   int rows)
 {
-    unsigned long size = chunk_size;
+    int size = chunk_size;
     unsigned long * data;
-    unsigned long i, j;
+    int i, j;
     MYSQL_BIND param[1];
     char sql[256];
     int global_res = Test->global_result;
@@ -171,9 +171,9 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
         {
             Test->add_result(1, "id field is wrong! Expected %d, but it is %d\n", row + 1, r_id);
         }
-        for (int y = 0; y < chunk_size * chunks; y++)
+        for (int y = 0; y < (int)chunk_size * chunks; y++)
         {
-            if (data[y] != y)
+            if ((int)data[y] != y)
             {
                 Test->add_result(1, "expected %d, got %d", data[y], y);
                 break;
@@ -188,6 +188,8 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
     mysql_stmt_free_result(stmt);
 
     mysql_stmt_close(stmt);
+
+    return 0;
 }
 
 

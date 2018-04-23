@@ -390,7 +390,7 @@ int execute_query_count_rows(MYSQL* conn, const char* sql)
     {
         rval = 0;
 
-        for (int i = 0; i < total && i < 1024; i++)
+        for (unsigned int i = 0; i < total && i < 1024; i++)
         {
             rval += num_of_rows[i];
         }
@@ -403,7 +403,6 @@ int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string 
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
-    unsigned long long int num_fields;
     unsigned long long int rows;
     unsigned long long int i;
     unsigned int conn_num = 0;
@@ -436,7 +435,7 @@ int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string 
             }
             else
             {
-                num_fields = mysql_num_fields(res);
+                mysql_num_fields(res);
                 rows = mysql_num_rows(res);
                 for (i = 0; i < rows; i++)
                 {
@@ -472,7 +471,6 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
     MYSQL_RES *res;
     MYSQL_ROW row;
     MYSQL_FIELD *field;
-    unsigned long long int num_fields;
     unsigned int ret = 1;
     unsigned long long int filed_i = 0;
     unsigned long long int i = 0;
@@ -492,7 +490,7 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
             }
             else
             {
-                num_fields = mysql_num_fields(res);
+                mysql_num_fields(res);
                 while ((field = mysql_fetch_field(res)) && ret != 0)
                 {
                     if (strstr(field->name, field_name) != NULL)
@@ -536,7 +534,7 @@ Row get_row(MYSQL* conn, std::string sql)
 
         if (row)
         {
-            for (int i = 0; i < mysql_num_fields(res); i++)
+            for (unsigned int i = 0; i < mysql_num_fields(res); i++)
             {
                 rval.push_back(row[i]);
             }

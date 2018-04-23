@@ -1669,7 +1669,7 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
         sprintf(buf, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
         sprintf(bigbuf, "%s/%s", router->binlogdir, buf);
         // Set the new file name in the output
-        strncpy(next_file, buf, BINLOG_FNAMELEN);
+        memcpy(next_file, buf, BINLOG_FNAMELEN);
         next_file[BINLOG_FNAMELEN] = '\0';
     }
     else
@@ -1712,7 +1712,7 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
                     result.gtid_elms.server_id,
                     result.file);
             // Set the new file name in the output
-            strncpy(next_file, result.file, BINLOG_FNAMELEN);
+            memcpy(next_file, result.file, BINLOG_FNAMELEN);
             next_file[BINLOG_FNAMELEN] = '\0';
 
             MXS_DEBUG("The next Binlog file from GTID maps repo is [%s]",

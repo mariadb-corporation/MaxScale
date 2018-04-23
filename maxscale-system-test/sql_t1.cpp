@@ -149,7 +149,7 @@ char* allocate_insert_string(int fl, int N)
         sql_size = 16;
     }
 
-    if (fl >= sql_size)
+    if ((size_t)fl >= sql_size)
     {
         fprintf(stderr, "Insert index %d is too large, setting it to %lu", fl, sql_size - 1);
         fl = sql_size - 1;
@@ -212,7 +212,6 @@ int check_if_t1_exists(MYSQL *conn)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
-    unsigned long long int num_fields;
 
     int t1 = 0;
     if (conn != NULL)
@@ -232,7 +231,7 @@ int check_if_t1_exists(MYSQL *conn)
             }
             else
             {
-                num_fields = mysql_num_fields(res);
+                mysql_num_fields(res);
                 if (mysql_num_rows(res) > 0)
                 {
                     while ((row = mysql_fetch_row(res)) != NULL)

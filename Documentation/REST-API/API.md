@@ -21,6 +21,11 @@ Although JSON does not define a syntax for comments, some of the JSON examples
 have C-style inline comments in them. These comments use `//` to mark the start
 of the comment and extend to the end of the current line.
 
+## Configuration
+
+Read the [REST API](../Getting-Started/Configuration-Guide.md#rest-api-configuration)
+section of the configuration guide for more details on how to configure the REST API.
+
 ## Authentication
 
 The MaxScale REST API uses [HTTP Basic Access](https://tools.ietf.org/html/rfc2617#section-2)

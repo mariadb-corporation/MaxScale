@@ -185,7 +185,6 @@ void check(XTestConnections& test)
     }
 
     std::string values;
-    MYSQL_ROW row;
     int num_rows = mysql_num_rows(pRes);
     test.add_result(num_rows != i_end, "Query returned %d rows when %d rows were expected",
                     num_rows, i_end);

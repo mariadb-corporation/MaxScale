@@ -17,11 +17,6 @@ int main(int argc, char *argv[])
 
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(3000);
-    int options_set = 3;
-    if (Test->smoke)
-    {
-        options_set = 1;
-    }
 
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
@@ -30,12 +25,8 @@ int main(int argc, char *argv[])
 
     Test->binlog_master_gtid = true;
     Test->binlog_slave_gtid = true;
-//    for (int option = 0; option < options_set; option++)
-    //{
-    //      Test->binlog_cmd_option = option;
     Test->start_binlog(0);
     test_binlog(Test);
-    //}
 
     Test->check_log_err(0, "SET NAMES utf8mb4", false);
     Test->check_log_err(0, "set autocommit=1", false);

@@ -1454,10 +1454,7 @@ handle_global_item(const char *name, const char *value)
     {
         if (strcmp(value, CN_AUTO) == 0)
         {
-            if ((gateway.n_threads = get_processor_count()) > 1)
-            {
-                gateway.n_threads--;
-            }
+            gateway.n_threads = get_processor_count();
         }
         else
         {
@@ -1819,6 +1816,12 @@ handle_global_item(const char *name, const char *value)
     }
     else
     {
+#ifndef SS_DEBUG
+        if (strcmp(name, "log_debug") == 0)
+        {
+            MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+        }
+#endif
         for (i = 0; lognames[i].name; i++)
         {
             if (strcasecmp(name, lognames[i].name) == 0)
@@ -2585,7 +2588,8 @@ config_get_release_string(char* release)
                     }
 
                     have_distribution = true;
-                    strncpy(release, new_to, RELEASE_STR_LENGTH);
+                    strncpy(release, new_to, RELEASE_STR_LENGTH - 1);
+                    release[RELEASE_STR_LENGTH - 1] = '\0';
                 }
             }
         }

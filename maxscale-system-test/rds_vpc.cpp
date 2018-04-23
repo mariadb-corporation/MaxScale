@@ -35,7 +35,6 @@ json_t * RDS::get_subnets_group_descr(char * json)
 {
     json_t *root;
     json_error_t error;
-    char * j;
 
     root = json_loads( json, 0, &error );
     if ( !root )
@@ -167,7 +166,6 @@ int RDS::destroy_subnets()
 int RDS::destroy_route_tables()
 {
     json_t *root;
-    json_error_t error;
     char cmd[1024];
     char * json;
 
@@ -202,6 +200,7 @@ int RDS::destroy_route_tables()
         }
     }
 
+    return 0;
 }
 
 int RDS::detach_and_destroy_gw()
@@ -552,7 +551,7 @@ int RDS::destroy_subnets_group()
     char * result;
     sprintf(cmd, "aws rds delete-db-subnet-group --db-subnet-group-name %s", get_subnetgroup_name());
     puts(cmd);
-    execute_cmd(cmd, &result);
+    return execute_cmd(cmd, &result);
 }
 
 int RDS::create_rds_db(int N)
@@ -679,7 +678,7 @@ int RDS::delete_rds_cluster()
     detach_and_destroy_gw();
 
     printf("Destroy vpc\n");
-    destroy_vpc();
+    return destroy_vpc();
 }
 
 int RDS::wait_for_nodes(size_t N)

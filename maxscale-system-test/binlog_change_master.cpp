@@ -132,15 +132,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Starting binlog configuration\n");
     Test->start_binlog(0);
 
-    pthread_t disconnec_thread_t;
-    int  disconnect_iret;
     pthread_t transaction_thread_t;
-    int  transaction_iret;
 
     exit_flag = 0;
     Test->tprintf("Starting query thread\n");
 
-    transaction_iret = pthread_create(&transaction_thread_t, NULL, transaction_thread, NULL);
+    pthread_create(&transaction_thread_t, NULL, transaction_thread, NULL);
 
     Test->tprintf("Sleeping\n");
     Test->stop_timeout();
@@ -226,10 +223,9 @@ const char * setup_slave_gtid =
                      MASTER_USE_GTID=Slave_pos";
 
 
-int select_new_master(TestConnections * test)
+void select_new_master(TestConnections * test)
 {
     char log_file[256];
-    char log_file_new[256];
     char log_pos[256];
 
     char maxscale_log_file[256];
@@ -265,7 +261,7 @@ int select_new_master(TestConnections * test)
     if (!maxscale_log_file[0] || !maxscale_log_pos[0])
     {
         test->add_result(1, "Failed to query for master status");
-        return 1;
+        return;
     }
 
     test->tprintf("Real master file: %s\n", maxscale_log_file);
@@ -320,7 +316,6 @@ int select_new_master(TestConnections * test)
     test->tprintf("slave started!\n");
 
     test->repl->close_connections();
-
 }
 
 void *disconnect_thread( void *ptr )
