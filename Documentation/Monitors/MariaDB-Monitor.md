@@ -287,6 +287,10 @@ With `auto_rejoin` active, the monitor will try to rejoin any server matching
 the above requirements. When activating rejoin manually, the user-designated
 server must fulfill the same requirements.
 
+The user can define files with SQL statements which are executed on any server
+being demoted or promoted by cluster manipulation commands. See the sections on
+`promotion_sql_file` and `demotion_sql_file` for more information.
+
 ### Limitations and requirements
 
 Switchover and failover only understand simple topologies. They will not work if
@@ -438,6 +442,35 @@ replication to break.
 
 ```
 servers_no_promotion=backup_dc_server1,backup_dc_server2
+```
+
+#### `promotion_sql_file` and `demotion_sql_file`
+
+These are paths to text files with SQL statements in them. During promotion or
+demotion, the contents are read line-by-line and executed on the backend. Empty
+lines or lines starting with '#' are ignored. All statements must succeed and
+none may return results, otherwise the switchover or failover fails.
+
+When promoting a slave to master during switchover or failover, the
+`promotion_sql_file` is read and executed on the new master server after its
+read-only flag is disabled. The commands are ran *before* starting replication
+from an external master if any.
+
+`demotion_sql_file` is ran on an old master during demotion to slave, before the
+old master starts replicating from the new master. The file is also ran before
+rejoining a standalone server to the cluster, as the standalone server is
+typically a former master server.
+
+Since the queries in the files are ran during operations which modify
+replication topology, care is required. If `promotion_sql_file` contains data
+modification (DML) queries, the new master server may not be able to
+successfully replicate from an external master. `demotion_sql_file` should never
+contain DML queries, as these may not replicate to the slave servers before
+slave threads are stopped, breaking replication.
+
+```
+promotion_sql_file=/home/root/scripts/promotion.sql
+demotion_sql_file=/home/root/scripts/demotion.sql
 ```
 
 ### Manual switchover and failover
