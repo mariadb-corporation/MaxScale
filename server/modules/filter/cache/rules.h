@@ -108,22 +108,34 @@ void cache_rules_free(CACHE_RULES *rules);
 /**
  * Loads the caching rules from a file and returns corresponding object.
  *
- * @param path  The path of the file containing the rules.
- * @param debug The debug level.
+ * @param path     The path of the file containing the rules.
+ * @param debug    The debug level.
+ * @param pppRules [out] Pointer to array of pointers to CACHE_RULES objects.
+ * @param pnRules  [out] Pointer to number of items in @c *ppRules.
  *
- * @return The corresponding rules object, or NULL in case of error.
+ * @note The caller must free the array @c *pppRules and each rules
+ *       object in the array.
+ *
+ * @return bool True, if the rules could be loaded, false otherwise.
  */
-CACHE_RULES *cache_rules_load(const char *path, uint32_t debug);
+bool cache_rules_load(const char* zPath, uint32_t debug,
+                      CACHE_RULES*** pppRules, int32_t* pnRules);
 
 /**
  * Parses the caching rules from a string and returns corresponding object.
  *
- * @param json  String containing json.
- * @param debug The debug level.
+ * @param json     String containing json.
+ * @param debug    The debug level.
+ * @param pppRules [out] Pointer to array of pointers to CACHE_RULES objects.
+ * @param pnRules  [out] Pointer to number of items in *ppRules.
  *
- * @return The corresponding rules object, or NULL in case of error.
+ * @note The caller must free the array @c *ppRules and each rules
+ *       object in the array.
+ *
+ * @return bool True, if the rules could be parsed, false otherwise.
  */
-CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug);
+bool cache_rules_parse(const char *json, uint32_t debug,
+                       CACHE_RULES*** pppRules, int32_t* pnRules);
 
 /**
  * Prints the rules.

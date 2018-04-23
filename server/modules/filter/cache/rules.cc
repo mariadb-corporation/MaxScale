@@ -153,6 +153,8 @@ static void cache_rule_free(CACHE_RULE *rule);
 static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule);
 static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule);
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug);
+static bool cache_rules_create_from_json(json_t* root, uint32_t debug,
+                                         CACHE_RULES*** ppRules, int32_t* pnRules);
 static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root);
 
 typedef bool (*cache_rules_parse_element_t)(CACHE_RULES *self, json_t *object, size_t index);
@@ -228,57 +230,65 @@ CACHE_RULES *cache_rules_create(uint32_t debug)
     return rules;
 }
 
-CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
+bool cache_rules_load(const char* zPath, uint32_t debug,
+                      CACHE_RULES*** pppRules, int32_t* pnRules)
 {
-    CACHE_RULES *rules = NULL;
+    bool rv = false;
 
-    FILE *fp = fopen(path, "r");
+    *pppRules = NULL;
+    *pnRules = 0;
 
-    if (fp)
+    FILE* pF = fopen(zPath, "r");
+
+    if (pF)
     {
         json_error_t error;
-        json_t *root = json_loadf(fp, JSON_DISABLE_EOF_CHECK, &error);
+        json_t* pRoot = json_loadf(pF, JSON_DISABLE_EOF_CHECK, &error);
 
-        if (root)
+        if (pRoot)
         {
-            rules = cache_rules_create_from_json(root, debug);
+            rv = cache_rules_create_from_json(pRoot, debug, pppRules, pnRules);
 
-            if (!rules)
+            if (!rv)
             {
-                json_decref(root);
+                json_decref(pRoot);
             }
         }
         else
         {
             MXS_ERROR("Loading rules file failed: (%s:%d:%d): %s",
-                      path, error.line, error.column, error.text);
+                      zPath, error.line, error.column, error.text);
         }
 
-        fclose(fp);
+        fclose(pF);
     }
     else
     {
         MXS_ERROR("Could not open rules file %s for reading: %s",
-                  path, mxs_strerror(errno));
+                  zPath, mxs_strerror(errno));
     }
 
-    return rules;
+    return rv;
 }
 
-CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
+bool cache_rules_parse(const char* zJson, uint32_t debug,
+                       CACHE_RULES*** pppRules, int32_t* pnRules)
 {
-    CACHE_RULES *rules = NULL;
+    bool rv = false;
+
+    *pppRules = NULL;
+    *pnRules = 0;
 
     json_error_t error;
-    json_t *root = json_loads(json, JSON_DISABLE_EOF_CHECK, &error);
+    json_t* pRoot = json_loads(zJson, JSON_DISABLE_EOF_CHECK, &error);
 
-    if (root)
+    if (pRoot)
     {
-        rules = cache_rules_create_from_json(root, debug);
+        rv = cache_rules_create_from_json(pRoot, debug, pppRules, pnRules);
 
-        if (!rules)
+        if (!rv)
         {
-            json_decref(root);
+            json_decref(pRoot);
         }
     }
     else
@@ -287,7 +297,7 @@ CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
                   error.line, error.column, error.text);
     }
 
-    return rules;
+    return rv;
 }
 
 void cache_rules_free(CACHE_RULES *rules)
@@ -414,11 +424,17 @@ CacheRules* CacheRules::load(const char *zPath, uint32_t debug)
 {
     CacheRules* pThis = NULL;
 
-    CACHE_RULES* pRules = cache_rules_load(zPath, debug);
+    CACHE_RULES** ppRules;
+    int32_t nRules;
 
-    if (pRules)
+    if (cache_rules_load(zPath, debug, &ppRules, &nRules))
     {
-        pThis = new (std::nothrow) CacheRules(pRules);
+        // TODO: Handle more that one CACHE_RULES object at this level.
+        ss_dassert(nRules == 1);
+
+        pThis = new (std::nothrow) CacheRules(ppRules[0]);
+
+        MXS_FREE(ppRules);
     }
 
     return pThis;
@@ -1874,7 +1890,7 @@ static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
 /**
  * Creates a rules object from a JSON object.
  *
- * @param root  The root JSON object in the rules file.
+ * @param root  The root JSON rule object.
  * @param debug The debug level.
  *
  * @return A rules object if the json object could be parsed, NULL otherwise.
@@ -1899,6 +1915,99 @@ static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
     }
 
     return rules;
+}
+
+/**
+ * Parses the caching rules from a json object and returns corresponding object(s).
+ *
+ * @param pRoot    The root JSON object in the rules file.
+ * @param debug    The debug level.
+ * @param pppRules [out] Pointer to array of pointers to CACHE_RULES objects.
+ * @param pnRules  [out] Pointer to number of items in *ppRules.
+ *
+ * @note The caller must free the array @c *ppRules and each rules
+ *       object in the array.
+ *
+ * @return bool True, if the rules could be parsed, false otherwise.
+ */
+static bool cache_rules_create_from_json(json_t* pRoot, uint32_t debug,
+                                         CACHE_RULES*** pppRules, int32_t* pnRules)
+{
+    bool rv = false;
+
+    *pppRules = NULL;
+    *pnRules = 0;
+
+    if (json_is_array(pRoot))
+    {
+        int32_t nRules = json_array_size(pRoot);
+
+        CACHE_RULES** ppRules = (CACHE_RULES**)MXS_MALLOC(nRules * sizeof(CACHE_RULES*));
+
+        if (ppRules)
+        {
+            int i;
+            for (i = 0; i < nRules; ++i)
+            {
+                json_t* pObject = json_array_get(pRoot, i);
+                ss_dassert(pObject);
+
+                CACHE_RULES* pRules = cache_rules_create_from_json(pObject, debug);
+
+                if (pRules)
+                {
+                    ppRules[i] = pRules;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (i == nRules)
+            {
+                *pppRules = ppRules;
+                *pnRules = nRules;
+
+                rv = true;
+            }
+            else
+            {
+                // Ok, so something went astray.
+                for (int j = 0; j < i; ++j)
+                {
+                    cache_rules_free(ppRules[j]);
+                }
+
+                MXS_FREE(ppRules);
+            }
+        }
+    }
+    else
+    {
+        CACHE_RULES** ppRules = (CACHE_RULES**)MXS_MALLOC(1 * sizeof(CACHE_RULES*));
+
+        if (ppRules)
+        {
+            CACHE_RULES* pRules = cache_rules_create_from_json(pRoot, debug);
+
+            if (pRules)
+            {
+                ppRules[0] = pRules;
+
+                *pppRules = ppRules;
+                *pnRules = 1;
+
+                rv = true;
+            }
+            else
+            {
+                MXS_FREE(ppRules);
+            }
+        }
+    }
+
+    return rv;
 }
 
 /**

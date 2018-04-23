@@ -84,33 +84,42 @@ int test_user()
 
     for (size_t i = 0; i < n_user_test_cases; ++i)
     {
-        const struct user_test_case *test_case = &user_test_cases[i];
+        const struct user_test_case& test_case = user_test_cases[i];
 
-        CACHE_RULES *rules = cache_rules_parse(test_case->json, 0);
-        ss_dassert(rules);
+        CACHE_RULES** ppRules;
+        int32_t nRules;
+        bool rv = cache_rules_parse(test_case.json, 0, &ppRules, &nRules);
+        ss_dassert(rv);
 
-        CACHE_RULE *rule = rules->use_rules;
-        ss_dassert(rule);
-
-        if (rule->op != test_case->expect.op)
+        for (int i = 0; i < nRules; ++i)
         {
-            printf("%s\nExpected: %s,\nGot     : %s\n",
-                   test_case->json,
-                   cache_rule_op_to_string(test_case->expect.op),
-                   cache_rule_op_to_string(rule->op));
-            ++errors;
+            CACHE_RULES* pRules = ppRules[i];
+
+            CACHE_RULE* pRule = pRules->use_rules;
+            ss_dassert(pRule);
+
+            if (pRule->op != test_case.expect.op)
+            {
+                printf("%s\nExpected: %s,\nGot     : %s\n",
+                       test_case.json,
+                       cache_rule_op_to_string(test_case.expect.op),
+                       cache_rule_op_to_string(pRule->op));
+                ++errors;
+            }
+
+            if (strcmp(pRule->value, test_case.expect.value) != 0)
+            {
+                printf("%s\nExpected: %s,\nGot     : %s\n",
+                       test_case.json,
+                       test_case.expect.value,
+                       pRule->value);
+                ++errors;
+            }
+
+            cache_rules_free(pRules);
         }
 
-        if (strcmp(rule->value, test_case->expect.value) != 0)
-        {
-            printf("%s\nExpected: %s,\nGot     : %s\n",
-                   test_case->json,
-                   test_case->expect.value,
-                   rule->value);
-            ++errors;
-        }
-
-        cache_rules_free(rules);
+        MXS_FREE(ppRules);
     }
 
     return errors;
@@ -188,35 +197,45 @@ int test_store()
     for (size_t i = 0; i < n_store_test_cases; ++i)
     {
         printf("TC      : %d\n", (int)(i + 1));
-        const struct store_test_case *test_case = &store_test_cases[i];
+        const struct store_test_case& test_case = store_test_cases[i];
 
-        CACHE_RULES *rules = cache_rules_parse(test_case->rule, 0);
-        ss_dassert(rules);
+        CACHE_RULES** ppRules;
+        int32_t nRules;
 
-        CACHE_RULE *rule = rules->store_rules;
-        ss_dassert(rule);
+        bool rv = cache_rules_parse(test_case.rule, 0, &ppRules, &nRules);
+        ss_dassert(rv);
 
-        GWBUF *packet = create_gwbuf(test_case->query);
-
-        bool matches = cache_rules_should_store(rules, 0, test_case->default_db, packet);
-
-        if  (matches != test_case->matches)
+        for (int i = 0; i < nRules; ++i)
         {
-            printf("Query   : %s\n"
-                   "Rule    : %s\n"
-                   "Def-db  : %s\n"
-                   "Expected: %s\n"
-                   "Result  : %s\n\n",
-                   test_case->query,
-                   test_case->rule,
-                   test_case->default_db,
-                   test_case->matches ? "A match" : "Not a match",
-                   matches ? "A match" : "Not a match");
+            CACHE_RULES* pRules = ppRules[i];
+
+            CACHE_RULE* pRule = pRules->store_rules;
+            ss_dassert(pRule);
+
+            GWBUF* pPacket = create_gwbuf(test_case.query);
+
+            bool matches = cache_rules_should_store(pRules, 0, test_case.default_db, pPacket);
+
+            if  (matches != test_case.matches)
+            {
+                printf("Query   : %s\n"
+                       "Rule    : %s\n"
+                       "Def-db  : %s\n"
+                       "Expected: %s\n"
+                       "Result  : %s\n\n",
+                       test_case.query,
+                       test_case.rule,
+                       test_case.default_db,
+                       test_case.matches ? "A match" : "Not a match",
+                       matches ? "A match" : "Not a match");
+            }
+
+            gwbuf_free(pPacket);
+
+            cache_rules_free(pRules);
         }
 
-        gwbuf_free(packet);
-
-        cache_rules_free(rules);
+        MXS_FREE(ppRules);
     }
 
     return errors;
