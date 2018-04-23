@@ -264,6 +264,16 @@ public:
      * or an error occurred.
      */
     bool failover_wait_relay_log(int seconds_remaining, json_t** err_out);
+
+    /**
+     * Read the file contents and send them as sql queries to the server. Queries should not return any data.
+     *
+     * @param server Server to send queries to
+     * @param path Text file path.
+     * @param error_out Error output
+     * @return True if file was read and all commands were completed successfully
+     */
+    bool run_sql_from_file(const std::string& path, json_t** error_out);
 };
 
 /**

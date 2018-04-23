@@ -139,7 +139,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     {
                         ServerArray joinable_server;
                         joinable_server.push_back(slave_cand);
-                        if (do_rejoin(joinable_server) == 1)
+                        if (do_rejoin(joinable_server, output) == 1)
                         {
                             rval = true;
                             MXS_NOTICE("Rejoin performed.");
@@ -298,9 +298,10 @@ bool MariaDBMonitor::switchover_start_slave(MariaDBServer* old_master, MariaDBSe
  * Usually the list is created by get_joinable_servers().
  *
  * @param joinable_servers Which servers to rejoin
+ * @param output Error output. Can be null.
  * @return The number of servers successfully rejoined
  */
-uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers)
+uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t** output)
 {
     SERVER* master_server = m_master->server_base->server;
     const char* master_name = master_server->unique_name;
@@ -312,23 +313,30 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers)
         {
             MariaDBServer* joinable = *iter;
             const char* name = joinable->name();
-            bool op_success;
-
-            if (joinable->n_slaves_configured == 0)
+            if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
             {
-                MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                op_success = joinable->join_cluster(change_cmd);
+                PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
+                                     CN_DEMOTION_SQL_FILE, joinable->name());
             }
             else
             {
-                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                           "redirecting it to '%s'.", name, master_name, master_name);
-                op_success = joinable->redirect_one_slave(change_cmd);
-            }
+                bool op_success;
+                if (joinable->n_slaves_configured == 0)
+                {
+                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
+                    op_success = joinable->join_cluster(change_cmd);
+                }
+                else
+                {
+                    MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                               "redirecting it to '%s'.", name, master_name, master_name);
+                    op_success = joinable->redirect_one_slave(change_cmd);
+                }
 
-            if (op_success)
-            {
-                servers_joined++;
+                if (op_success)
+                {
+                    servers_joined++;
+                }
             }
         }
     }
@@ -818,6 +826,13 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
             PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR);
         }
     }
+    else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, err_out))
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when demoting server '%s'.",
+                             CN_DEMOTION_SQL_FILE, current_master->name());
+        success = false;
+    }
+
     return success;
 }
 
@@ -1000,12 +1015,23 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
         PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'. Query: '%s'.",
                              mysql_error(new_master_conn), query);
     }
-    // If the previous master was a slave to an external master, start the equivalent slave connection on
-    // the new master. Success of replication is not checked.
-    else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, err_out))
+    else
     {
-        success = false;
+        // Promotion commands ran successfully, run promotion sql script file before external replication.
+        if (!m_promote_sql_file.empty() && !new_master->run_sql_from_file(m_promote_sql_file, err_out))
+        {
+            PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when promoting server '%s'.",
+                                 CN_PROMOTION_SQL_FILE, new_master->name());
+            success = false;
+        }
+        // If the previous master was a slave to an external master, start the equivalent slave connection on
+        // the new master. Success of replication is not checked.
+        else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, err_out))
+        {
+            success = false;
+        }
     }
+
     return success;
 }
 

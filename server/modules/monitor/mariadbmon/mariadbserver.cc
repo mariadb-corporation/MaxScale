@@ -13,6 +13,7 @@
 
 #include "mariadbserver.hh"
 
+#include <fstream>
 #include <inttypes.h>
 #include <sstream>
 #include <maxscale/mysql_utils.h>
@@ -635,6 +636,51 @@ bool MariaDBServer::failover_wait_relay_log(int seconds_remaining, json_t** err_
         rval = false;
     }
     return rval;
+}
+
+bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
+{
+    MYSQL* conn = server_base->con;
+    bool error = false;
+    std::ifstream sql_file(path);
+    if (sql_file.is_open())
+    {
+        MXS_NOTICE("Executing sql queries from file '%s'.", path.c_str());
+        int lines_executed = 0;
+
+        while (!sql_file.eof() && !error)
+        {
+            string line;
+            std::getline(sql_file, line);
+            if (sql_file.bad())
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Error when reading sql text file '%s': '%s'.",
+                                     path.c_str(), mxs_strerror(errno));
+                error = true;
+            }
+            // Skip empty lines and comment lines
+            else if (!line.empty() && line[0] != '#')
+            {
+                if (mxs_mysql_query(conn, line.c_str()) == 0)
+                {
+                    lines_executed++;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(error_out, "Failed to execute sql from text file '%s'. Query: '%s'. "
+                                         "Error: '%s'.", path.c_str(), line.c_str(), mysql_error(conn));
+                    error = true;
+                }
+            }
+        }
+        MXS_NOTICE("%d queries executed successfully.", lines_executed);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Could not open sql text file '%s'.", path.c_str());
+        error = true;
+    }
+    return !error;
 }
 
 QueryResult::QueryResult(MYSQL_RES* resultset)

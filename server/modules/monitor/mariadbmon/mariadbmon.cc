@@ -34,11 +34,15 @@ static void monitorMain(void *);
 
 // Config parameter names
 const char * const CN_AUTO_FAILOVER       = "auto_failover";
+const char * const CN_PROMOTION_SQL_FILE  = "promotion_sql_file";
+const char * const CN_DEMOTION_SQL_FILE   = "demotion_sql_file";
+
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 static const char CN_FAILCOUNT[]          = "failcount";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
+
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
@@ -200,6 +204,8 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
     m_auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
     m_verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
+    m_promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
+    m_demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
 
     m_excluded_servers.clear();
     MXS_MONITORED_SERVER** excluded_array = NULL;
@@ -211,6 +217,10 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
     MXS_FREE(excluded_array);
 
     bool settings_ok = true;
+    if (!check_sql_files())
+    {
+        settings_ok = false;
+    }
     if (!set_replication_credentials(params))
     {
         MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
@@ -577,7 +587,7 @@ void MariaDBMonitor::handle_auto_rejoin()
     ServerArray joinable_servers;
     if (get_joinable_servers(&joinable_servers))
     {
-        uint32_t joins = do_rejoin(joinable_servers);
+        uint32_t joins = do_rejoin(joinable_servers, NULL);
         if (joins > 0)
         {
             MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
@@ -880,6 +890,30 @@ void MariaDBMonitor::load_journal()
 }
 
 /**
+ * Check sql text file parameters. A parameter should either be empty or a valid file which can be opened.
+ *
+ * @return True if no errors occurred when opening the files
+ */
+bool MariaDBMonitor::check_sql_files()
+{
+    const char ERRMSG[] = "%s ('%s') does not exist or cannot be accessed for reading: '%s'.";
+
+    bool rval = true;
+    if (!m_promote_sql_file.empty() && access(m_promote_sql_file.c_str(), R_OK) != 0)
+    {
+        rval = false;
+        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, m_promote_sql_file.c_str(), mxs_strerror(errno));
+    }
+
+    if (!m_demote_sql_file.empty() && access(m_demote_sql_file.c_str(), R_OK) != 0)
+    {
+        rval = false;
+        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, m_demote_sql_file.c_str(), mxs_strerror(errno));
+    }
+    return rval;
+}
+
+/**
  * Start the monitor instance and return the instance data. This function creates a thread to
  * execute the monitoring. Use stopMonitor() to stop the thread.
  *
@@ -1146,6 +1180,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, "10"},
             {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
+            {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
+            {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
             {MXS_END_MODULE_PARAMS}
         }
     };

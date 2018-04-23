@@ -24,6 +24,8 @@
 
 extern const int PORT_UNKNOWN;
 extern const char * const CN_AUTO_FAILOVER;
+extern const char * const CN_PROMOTION_SQL_FILE;
+extern const char * const CN_DEMOTION_SQL_FILE;
 
 class MariaDBMonitor;
 
@@ -140,6 +142,8 @@ private:
     int m_master_failure_timeout;    /**< Master failure verification (via slaves) time in seconds */
     ServerArray m_excluded_servers;  /**< Servers banned for master promotion during auto-failover or
                                       *   autoselect switchover. */
+    std::string m_promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
+    std::string m_demote_sql_file;   /**< File with sql commands which are ran to a server being demoted. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
@@ -210,7 +214,7 @@ private:
     void handle_auto_rejoin();
     bool get_joinable_servers(ServerArray* output);
     bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
-    uint32_t do_rejoin(const ServerArray& joinable_servers);
+    uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
     // Methods common to failover/switchover/rejoin
     MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
@@ -226,6 +230,7 @@ private:
                                     int seconds_remaining);
     void disable_setting(const char* setting);
     void load_journal();
+    bool check_sql_files();
 };
 
 /**
