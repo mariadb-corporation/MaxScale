@@ -10,6 +10,9 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+* Info level messages will now also be logged to syslog, if logging to
+  syslog is enabled.
+
 ## Dropped Features
 
 ## New Features
@@ -30,7 +33,13 @@ done with the following command:
 
 ## Bug fixes
 
+* [MXS-1819](https://jira.mariadb.org/browse/MXS-1819) log_info does not log to syslog
+* [MXS-1815](https://jira.mariadb.org/browse/MXS-1815) threads=auto doesn't work as documented
+* [MXS-1814](https://jira.mariadb.org/browse/MXS-1814) Log warning when log_debug is used with release packages
+* [MXS-1808](https://jira.mariadb.org/browse/MXS-1808) COM_STMT_SEND_LONG_DATA lead to crash
+* [MXS-1807](https://jira.mariadb.org/browse/MXS-1807) Module command domains are case sensitive
 * [MXS-1805](https://jira.mariadb.org/browse/MXS-1805) MaxScale may hang with multiple concurrent maxadmin calls.
+* [MXS-1803](https://jira.mariadb.org/browse/MXS-1803) MaxScale docker image does not work
 * [MXS-1787](https://jira.mariadb.org/browse/MXS-1787) Crash with mysql client test `test_bug49972`
 * [MXS-1786](https://jira.mariadb.org/browse/MXS-1786) Hang with COM_STATISTICS
 * [MXS-1785](https://jira.mariadb.org/browse/MXS-1785) request 16M-1 normal sql + 'select 1' core dump with debug mode
