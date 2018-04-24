@@ -37,6 +37,7 @@ public:
         SLAVE_IO_NO,
     };
 
+    std::string name;               /**< Slave connection name. Must be unique. */
     int64_t master_server_id;       /**< The master's server_id value. Valid ids are 32bit unsigned. -1 is
                                      *   unread/error. */
     std::string master_host;        /**< Master server host name. */
@@ -76,6 +77,7 @@ public:
 class MariaDBServer
 {
 public:
+    typedef std::vector<SlaveStatus> SlaveStatusArray;
     enum mariadb_version
     {
         MARIADB_VERSION_UNKNOWN, // Anything older than 5.5. These are no longer supported by the monitor.
@@ -91,10 +93,8 @@ public:
     int             m_group;                /**< Multi-master group where this server belongs,
                                               *  0 for servers not in groups */
     bool            m_read_only;            /**< Value of @@read_only */
-    bool            m_slave_configured;     /**< Whether SHOW SLAVE STATUS returned rows */
     bool            m_binlog_relay;         /** Server is a Binlog Relay */
-    int             m_n_slaves_configured;  /**< Number of configured slave connections*/
-    int             m_n_slaves_running;     /**< Number of running slave connections */
+    size_t          m_n_slaves_running;     /**< Number of running slave connections */
     int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
     double          m_heartbeat_period;     /**< The time interval between heartbeats */
     time_t          m_latest_event;         /**< Time when latest event was received from the master */
@@ -102,7 +102,7 @@ public:
                                               *  new non-replicated events. */
     GtidList        m_gtid_current_pos;     /**< Gtid of latest event. */
     GtidList        m_gtid_binlog_pos;      /**< Gtid of latest event written to binlog. */
-    SlaveStatus     m_slave_status;         /**< Data returned from SHOW SLAVE STATUS */
+    SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);

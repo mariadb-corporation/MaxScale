@@ -43,9 +43,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_group(0)
     , m_read_only(false)
-    , m_slave_configured(false)
     , m_binlog_relay(false)
-    , m_n_slaves_configured(0)
     , m_n_slaves_running(0)
     , m_n_slave_heartbeats(0)
     , m_heartbeat_period(0)
@@ -61,8 +59,9 @@ int64_t MariaDBServer::relay_log_events()
      * rare but is possible (I guess?) if the server is replicating a domain from multiple masters
      * and decides to process events from one relay log before getting new events to the other. In
      * any case, such events are obsolete and the server can be considered to have processed such logs. */
-    return GtidList::events_ahead(m_slave_status.gtid_io_pos, m_gtid_current_pos,
-                                  GtidList::MISSING_DOMAIN_LHS_ADD);
+    // TODO: Fix for multisource repl
+    return !m_slave_status.empty() ? GtidList::events_ahead(m_slave_status[0].gtid_io_pos, m_gtid_current_pos,
+                                                            GtidList::MISSING_DOMAIN_LHS_ADD) : 0;
 }
 
 std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
@@ -134,81 +133,55 @@ bool MariaDBServer::do_show_slave_status()
         return false;
     }
 
-    int64_t i_slave_rec_hbs = -1, i_slave_hb_period = -1;
+    int64_t i_connection_name = -1, i_slave_rec_hbs = -1, i_slave_hb_period = -1;
     int64_t i_using_gtid = -1, i_gtid_io_pos = -1;
     if (m_version == MARIADB_VERSION_100)
     {
+        i_connection_name = result->get_col_index("Connection_name");
         i_slave_rec_hbs = result->get_col_index("Slave_received_heartbeats");
         i_slave_hb_period = result->get_col_index("Slave_heartbeat_period");
         i_using_gtid = result->get_col_index("Using_Gtid");
         i_gtid_io_pos = result->get_col_index("Gtid_IO_Pos");
-        if (i_slave_rec_hbs < 0 || i_slave_hb_period < 0 || i_using_gtid < 0 || i_gtid_io_pos < 0)
+        if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0 ||
+            i_using_gtid < 0 || i_gtid_io_pos < 0)
         {
             MXS_ERROR(INVALID_DATA, query.c_str());
             return false;
         }
     }
 
-    int64_t master_server_id = SERVER_ID_UNKNOWN;
-    int nconfigured = 0;
+    m_slave_status.clear();
     int nrunning = 0;
     while (result->next_row())
     {
-        nconfigured++;
-        m_slave_status.master_host = result->get_string(i_master_host);
-        m_slave_status.master_port = result->get_uint(i_master_port);
+        SlaveStatus sstatus;
+        sstatus.master_host = result->get_string(i_master_host);
+        sstatus.master_port = result->get_uint(i_master_port);
         string last_io_error = result->get_string(i_last_io_error);
         string last_sql_error = result->get_string(i_last_sql_error);
-        m_slave_status.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
+        sstatus.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-        /* get Slave_IO_Running and Slave_SQL_Running values*/
-        m_slave_status.slave_io_running =
+        sstatus.slave_io_running =
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
-        m_slave_status.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
+        sstatus.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
 
-        if (m_slave_status.slave_io_running == SlaveStatus::SLAVE_IO_YES && m_slave_status.slave_sql_running)
+        if (sstatus.slave_io_running == SlaveStatus::SLAVE_IO_YES)
         {
-            if (nrunning == 0)
+            // TODO: Fix for multisource replication, check changes to IO_Pos here and save somewhere.
+            sstatus.master_server_id = result->get_uint(i_master_server_id);
+            sstatus.master_log_file = result->get_string(i_master_log_file);
+            sstatus.read_master_log_pos = result->get_uint(i_read_master_log_pos);
+            if (sstatus.slave_sql_running)
             {
-                /** Only check binlog name for the first running slave */
-                string master_log_file = result->get_string(i_master_log_file);
-                uint64_t read_master_log_pos = result->get_uint(i_read_master_log_pos);
-                if (m_slave_status.master_log_file != master_log_file ||
-                    m_slave_status.read_master_log_pos != read_master_log_pos)
-                {
-                    // IO thread is reading events from the master
-                    m_latest_event = time(NULL);
-                }
-
-                m_slave_status.master_log_file = master_log_file;
-                m_slave_status.read_master_log_pos = read_master_log_pos;
-            }
-            nrunning++;
-        }
-
-        /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-         * the replication tree, slaves ids will be added to master(s) and we will have at least the
-         * root master server.
-         * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-         */
-        int64_t last_io_errno = result->get_uint(i_last_io_errno);
-        int io_errno = last_io_errno;
-        const int connection_errno = 2003;
-
-        if (io_errno == 0 || io_errno == connection_errno)
-        {
-            /* Get Master_Server_Id */
-            auto parsed = result->get_uint(i_master_server_id);
-            if (parsed >= 0)
-            {
-                master_server_id = parsed;
+                nrunning++;
             }
         }
 
         if (m_version == MARIADB_VERSION_100)
         {
-            int heartbeats = result->get_uint(i_slave_rec_hbs);
-            if (m_n_slave_heartbeats < heartbeats)
+            sstatus.name = result->get_string(i_connection_name);
+            auto heartbeats = result->get_uint(i_slave_rec_hbs);
+            if (m_n_slave_heartbeats < heartbeats) // TODO: Fix for multisource replication
             {
                 m_latest_event = time(NULL);
                 m_n_slave_heartbeats = heartbeats;
@@ -219,29 +192,18 @@ bool MariaDBServer::do_show_slave_status()
             if (!gtid_io_pos.empty() &&
                 (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
-                m_slave_status.gtid_io_pos = GtidList::from_string(gtid_io_pos);
-            }
-            else
-            {
-                m_slave_status.gtid_io_pos = GtidList();
+                sstatus.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
         }
+        m_slave_status.push_back(sstatus);
     }
 
-    if (nconfigured > 0)
-    {
-        m_slave_configured = true;
-    }
-    else
+    if (m_slave_status.empty())
     {
         /** Query returned no rows, replication is not configured */
-        m_slave_configured = false;
         m_n_slave_heartbeats = 0;
-        m_slave_status = SlaveStatus();
     }
 
-    m_slave_status.master_server_id = master_server_id;
-    m_n_slaves_configured = nconfigured;
     m_n_slaves_running = nrunning;
     return true;
 }
@@ -448,15 +410,15 @@ string MariaDBServer::diagnostics(bool multimaster) const
     ss << "Server:                 " << name() << "\n";
     ss << "Server ID:              " << m_server_id << "\n";
     ss << "Read only:              " << (m_read_only ? "YES" : "NO") << "\n";
-    ss << "Slave configured:       " << (m_slave_configured ? "YES" : "NO") << "\n";
-    if (m_slave_configured)
+    ss << "Slave configured:       " << (!m_slave_status.empty() ? "YES" : "NO") << "\n";
+    if (!m_slave_status.empty())
     {
         ss << "Slave IO running:       " <<
-            SlaveStatus::slave_io_to_string(m_slave_status.slave_io_running) << "\n";
-        ss << "Slave SQL running:      " << (m_slave_status.slave_sql_running ? "YES" : "NO") << "\n";
-        ss << "Master ID:              " << m_slave_status.master_server_id << "\n";
-        ss << "Master binlog file:     " << m_slave_status.master_log_file << "\n";
-        ss << "Master binlog position: " << m_slave_status.read_master_log_pos << "\n";
+            SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running) << "\n";
+        ss << "Slave SQL running:      " << (m_slave_status[0].slave_sql_running ? "YES" : "NO") << "\n";
+        ss << "Master ID:              " << m_slave_status[0].master_server_id << "\n";
+        ss << "Master binlog file:     " << m_slave_status[0].master_log_file << "\n";
+        ss << "Master binlog position: " << m_slave_status[0].read_master_log_pos << "\n";
     }
     if (!m_gtid_current_pos.empty())
     {
@@ -466,9 +428,9 @@ string MariaDBServer::diagnostics(bool multimaster) const
     {
         ss << "Gtid binlog position:   " << m_gtid_binlog_pos.to_string() << "\n";
     }
-    if (!m_slave_status.gtid_io_pos.empty())
+    if (!m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty())
     {
-        ss << "Gtid slave IO position: " << m_slave_status.gtid_io_pos.to_string() << "\n";
+        ss << "Gtid slave IO position: " << m_slave_status[0].gtid_io_pos.to_string() << "\n";
     }
     if (multimaster)
     {
@@ -482,19 +444,32 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
     json_t* srv = json_object();
     json_object_set_new(srv, "name", json_string(name()));
     json_object_set_new(srv, "server_id", json_integer(m_server_id));
-    json_object_set_new(srv, "master_id", json_integer(m_slave_status.master_server_id));
-
     json_object_set_new(srv, "read_only", json_boolean(m_read_only));
-    json_object_set_new(srv, "slave_configured", json_boolean(m_slave_configured));
-    json_object_set_new(srv, "slave_io_running",
-        json_string(SlaveStatus::slave_io_to_string(m_slave_status.slave_io_running).c_str()));
-    json_object_set_new(srv, "slave_sql_running", json_boolean(m_slave_status.slave_sql_running));
-
-    json_object_set_new(srv, "master_binlog_file", json_string(m_slave_status.master_log_file.c_str()));
-    json_object_set_new(srv, "master_binlog_position", json_integer(m_slave_status.read_master_log_pos));
-    json_object_set_new(srv, "gtid_current_pos", json_string(m_gtid_current_pos.to_string().c_str()));
-    json_object_set_new(srv, "gtid_binlog_pos", json_string(m_gtid_binlog_pos.to_string().c_str()));
-    json_object_set_new(srv, "gtid_io_pos", json_string(m_slave_status.gtid_io_pos.to_string().c_str()));
+    json_object_set_new(srv, "slave_configured", json_boolean(!m_slave_status.empty()));
+    if (!m_slave_status.empty())
+    {
+        json_object_set_new(srv, "slave_io_running",
+            json_string(SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running).c_str()));
+        json_object_set_new(srv, "slave_sql_running", json_boolean(m_slave_status[0].slave_sql_running));
+        json_object_set_new(srv, "master_id", json_integer(m_slave_status[0].master_server_id));
+        json_object_set_new(srv, "master_binlog_file",
+                            json_string(m_slave_status[0].master_log_file.c_str()));
+        json_object_set_new(srv, "master_binlog_position",
+                            json_integer(m_slave_status[0].read_master_log_pos));
+    }
+    if (!m_gtid_current_pos.empty())
+    {
+        json_object_set_new(srv, "gtid_current_pos", json_string(m_gtid_current_pos.to_string().c_str()));
+    }
+    if (!m_gtid_binlog_pos.empty())
+    {
+        json_object_set_new(srv, "gtid_binlog_pos", json_string(m_gtid_binlog_pos.to_string().c_str()));
+    }
+    if (!m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty())
+    {
+        json_object_set_new(srv, "gtid_io_pos",
+                            json_string(m_slave_status[0].gtid_io_pos.to_string().c_str()));
+    }
     if (multimaster)
     {
         json_object_set_new(srv, "master_group", json_integer(m_group));
@@ -504,7 +479,7 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
 
 bool MariaDBServer::uses_gtid(json_t** error_out)
 {
-    bool using_gtid = !m_slave_status.gtid_io_pos.empty();
+    bool using_gtid = !m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty();
     if (!using_gtid)
     {
         string slave_not_gtid_msg = string("Slave server ") + name() + " is not using gtid replication.";
@@ -515,7 +490,8 @@ bool MariaDBServer::uses_gtid(json_t** error_out)
 
 bool MariaDBServer::update_slave_info()
 {
-    return (m_slave_status.slave_sql_running && update_replication_settings() &&
+    // TODO: fix for multisource repl
+    return (!m_slave_status.empty() && m_slave_status[0].slave_sql_running && update_replication_settings() &&
             update_gtids() && do_show_slave_status());
 }
 
@@ -614,12 +590,13 @@ bool MariaDBServer::failover_wait_relay_log(int seconds_remaining, json_t** err_
         MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                  name(), relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
-        // Todo: check server version before entering failover.
-        GtidList old_gtid_io_pos = m_slave_status.gtid_io_pos;
+        // TODO: check server version before entering failover.
+        // TODO: fix for multisource
+        GtidList old_gtid_io_pos = m_slave_status[0].gtid_io_pos;
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
         query_ok = update_gtids() && do_show_slave_status();
-        io_pos_stable = (old_gtid_io_pos == m_slave_status.gtid_io_pos);
+        io_pos_stable = (old_gtid_io_pos == m_slave_status[0].gtid_io_pos);
     }
 
     bool rval = false;
@@ -641,7 +618,7 @@ bool MariaDBServer::failover_wait_relay_log(int seconds_remaining, json_t** err_
         else if (relay_log_events() < 0) // TODO: This is currently impossible
         {
             reason = "Invalid Gtid(s) (current_pos: " + m_gtid_current_pos.to_string() +
-                     ", io_pos: " + m_slave_status.gtid_io_pos.to_string() + ")";
+                     ", io_pos: " + m_slave_status[0].gtid_io_pos.to_string() + ")";
         }
         PRINT_MXS_JSON_ERROR(err_out, "Failover: %s while waiting for server '%s' to process relay log. "
                              "Cancelling failover.", reason.c_str(), name());
@@ -797,14 +774,14 @@ int64_t QueryResult::get_col_index(const string& col_name) const
 
 string QueryResult::get_string(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns);
+    ss_dassert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? data : "";
 }
 
 int64_t QueryResult::get_uint(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns);
+    ss_dassert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     int64_t rval = -1;
     if (data && *data)
@@ -822,7 +799,7 @@ int64_t QueryResult::get_uint(int64_t column_ind) const
 
 bool QueryResult::get_bool(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns);
+    ss_dassert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
 }

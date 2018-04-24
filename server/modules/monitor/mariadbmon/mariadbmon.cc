@@ -493,11 +493,12 @@ void MariaDBMonitor::update_external_master()
 {
     if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(m_master->m_server_base->server))
     {
-        if (m_master->m_slave_status.master_host != m_external_master_host ||
-            m_master->m_slave_status.master_port != m_external_master_port)
+        ss_dassert(!m_master->m_slave_status.empty());
+        if (m_master->m_slave_status[0].master_host != m_external_master_host ||
+            m_master->m_slave_status[0].master_port != m_external_master_port)
         {
-            const string new_ext_host =  m_master->m_slave_status.master_host;
-            const int new_ext_port = m_master->m_slave_status.master_port;
+            const string new_ext_host =  m_master->m_slave_status[0].master_host;
+            const int new_ext_port = m_master->m_slave_status[0].master_port;
             if (m_external_master_port == PORT_UNKNOWN)
             {
                 MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",

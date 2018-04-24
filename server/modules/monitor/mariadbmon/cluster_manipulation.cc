@@ -315,7 +315,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             const char* name = joinable->name();
 
             bool op_success = false;
-            if (joinable->m_n_slaves_configured == 0)
+            if (joinable->m_slave_status.empty())
             {
                 if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
                 {
@@ -413,15 +413,15 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
     bool is_suspect = false;
     if (rejoin_cand->is_running() && !rejoin_cand->is_master())
     {
-        SlaveStatus* slave_status = &rejoin_cand->m_slave_status;
         // Has no slave connection, yet is not a master.
-        if (rejoin_cand->m_n_slaves_configured == 0)
+        if (rejoin_cand->m_slave_status.empty())
         {
             is_suspect = true;
         }
         // Or has existing slave connection ...
-        else if (rejoin_cand->m_n_slaves_configured == 1)
+        else if (rejoin_cand->m_slave_status.size() == 1)
         {
+            SlaveStatus* slave_status = &rejoin_cand->m_slave_status[0];
             // which is connected to master but it's the wrong one
             if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_YES  &&
                 slave_status->master_server_id != m_master->m_server_id)
@@ -443,7 +443,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             /* User has requested a manual rejoin but with a server which has multiple slave connections or
              * is already connected or trying to connect to the correct master. TODO: Slave IO stopped is
              * not yet handled perfectly. */
-            if (rejoin_cand->m_n_slaves_configured > 1)
+            if (rejoin_cand->m_slave_status.size() > 1)
             {
                 const char MULTI_SLAVE[] = "Server '%s' has multiple slave connections, cannot rejoin.";
                 PRINT_MXS_JSON_ERROR(output, MULTI_SLAVE, rejoin_cand->name());
@@ -915,14 +915,13 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
             while (i >= 0)
             {
                 MariaDBServer* slave = wait_list[i];
-                if (slave->update_gtids() &&
-                    slave->do_show_slave_status())
+                if (slave->update_gtids() && slave->do_show_slave_status() && !slave->m_slave_status.empty())
                 {
-                    if (!slave->m_slave_status.last_error.empty())
+                    if (!slave->m_slave_status[0].last_error.empty())
                     {
                         // IO or SQL error on slave, replication is a fail
                         MXS_WARNING("Slave '%s' cannot start replication: '%s'.", slave->name(),
-                                    slave->m_slave_status.last_error.c_str());
+                                    slave->m_slave_status[0].last_error.c_str());
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
                     }
@@ -1154,9 +1153,9 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
 bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
                                          uint32_t gtid_domain)
 {
-    uint64_t cand_io = candidate->m_slave_status.gtid_io_pos.get_gtid(gtid_domain).m_sequence;
+    uint64_t cand_io = candidate->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
     uint64_t cand_processed = candidate->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
-    uint64_t curr_io = current_best->m_slave_status.gtid_io_pos.get_gtid(gtid_domain).m_sequence;
+    uint64_t curr_io = current_best->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
     uint64_t curr_processed = current_best->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
 
     bool cand_updates = candidate->m_rpl_settings.log_slave_updates;
@@ -1412,7 +1411,7 @@ bool MariaDBMonitor::failover_not_possible()
     {
         MariaDBServer* info = get_server_info(s);
 
-        if (info->m_n_slaves_configured > 1)
+        if (info->m_slave_status.size() > 1)
         {
             MXS_ERROR("Server '%s' is configured to replicate from multiple "
                       "masters, failover is not possible.", s->server->unique_name);
@@ -1437,9 +1436,9 @@ bool MariaDBMonitor::slave_receiving_events()
     {
         MariaDBServer* info = get_server_info(server);
 
-        if (info->m_slave_configured &&
-            info->m_slave_status.slave_io_running == SlaveStatus::SLAVE_IO_YES &&
-            info->m_slave_status.master_server_id == master_id &&
+        if (!info->m_slave_status.empty() &&
+            info->m_slave_status[0].slave_io_running == SlaveStatus::SLAVE_IO_YES &&
+            info->m_slave_status[0].master_server_id == master_id &&
             difftime(time(NULL), info->m_latest_event) < m_master_failure_timeout)
         {
             /**

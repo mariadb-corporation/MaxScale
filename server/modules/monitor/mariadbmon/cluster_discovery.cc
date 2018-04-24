@@ -390,12 +390,12 @@ void MariaDBMonitor::find_graph_cycles()
     /** Build the graph */
     for (int i = 0; i < nservers; i++)
     {
-        if (graph[i].info->m_slave_status.master_server_id > 0)
+        if (!graph[i].info->m_slave_status.empty() && graph[i].info->m_slave_status[0].master_server_id > 0)
         {
             /** Found a connected node */
             for (int k = 0; k < nservers; k++)
             {
-                if (graph[k].info->m_server_id == graph[i].info->m_slave_status.master_server_id)
+                if (graph[k].info->m_server_id == graph[i].info->m_slave_status[0].master_server_id)
                 {
                     graph[i].parent = &graph[k];
                     break;
@@ -582,14 +582,15 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
     if (serv_info->do_show_slave_status())
     {
         /* If all configured slaves are running set this node as slave */
-        if (serv_info->m_slave_configured && serv_info->m_n_slaves_running > 0 &&
-            serv_info->m_n_slaves_running == serv_info->m_n_slaves_configured)
+        if (serv_info->m_n_slaves_running > 0 &&
+            serv_info->m_n_slaves_running == serv_info->m_slave_status.size())
         {
             monitor_set_pending_status(database, SERVER_SLAVE);
         }
 
         /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = serv_info->m_slave_status.master_server_id;
+        database->server->master_id = !serv_info->m_slave_status.empty() ?
+                                       serv_info->m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
 }
 
@@ -830,7 +831,7 @@ bool MariaDBMonitor::standalone_master_required()
         if (server->is_running())
         {
             candidates++;
-            if (server->m_read_only || server->m_slave_configured || candidates > 1)
+            if (server->m_read_only || !server->m_slave_status.empty() || candidates > 1)
             {
                 return false;
             }
@@ -1084,7 +1085,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
-            else if (root_master == NULL && serv_info->m_slave_configured)
+            else if (root_master == NULL && !serv_info->m_slave_status.empty())
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
