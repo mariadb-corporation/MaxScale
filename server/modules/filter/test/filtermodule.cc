@@ -72,6 +72,11 @@ auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* 
 
     if (pFilter_session)
     {
+        // TODO: Won't work with multiple filters in chain.
+        pSession->head.instance = m_pInstance;
+        pSession->head.session = pFilter_session;
+        pSession->head.routeQuery = m_module.m_pApi->routeQuery;
+
         sFilter_session.reset(new Session(this, pFilter_session));
     }
 

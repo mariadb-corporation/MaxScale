@@ -66,6 +66,11 @@ public:
         session_set_trx_state(this, state);
     }
 
+    bool route_query(GWBUF* pBuffer)
+    {
+        return session_route_query(this, pBuffer);
+    }
+
 private:
     Client&       m_client;
     Dcb           m_client_dcb;
