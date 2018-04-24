@@ -51,6 +51,7 @@ done with the following command:
 * [MXS-1747](https://jira.mariadb.org/browse/MXS-1747) Rejoin functions should print better errors
 * [MXS-1746](https://jira.mariadb.org/browse/MXS-1746) The session-specific gtid_domain_id is queried instead of the global one
 * [MXS-1743](https://jira.mariadb.org/browse/MXS-1743) Maxscale unable to enforce round-robin between read service for Slave
+* [MXS-1618](https://jira.mariadb.org/browse/MXS-1618) Maxadmin Binary Hangs on a Big endian Platform
 
 ## Known Issues and Limitations
 
