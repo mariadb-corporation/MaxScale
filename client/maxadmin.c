@@ -142,7 +142,7 @@ main(int argc, char **argv)
     bool use_unix_socket = false;
 
     int option_index = 0;
-    char c;
+    int c;
     while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?ei",
                             long_options, &option_index)) >= 0)
     {

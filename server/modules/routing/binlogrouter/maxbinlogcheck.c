@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     char *key_file = NULL;
     char *aes_algo = NULL;
     int report_header = 0;
-    char c;
+    int c;
 
     while ((c = getopt_long(argc, argv, "dVfMHK:A:?", long_options, &option_index)) >= 0)
     {
