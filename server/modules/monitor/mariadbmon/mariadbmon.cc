@@ -977,7 +977,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     bool rval = false;
     if (config_get_global_options()->passive)
     {
-        const char MSG[] = "Switchover requested but not performed, as MaxScale is in passive mode.";
+        const char* const MSG = "Switchover requested but not performed, as MaxScale is in passive mode.";
         PRINT_MXS_JSON_ERROR(error_out, MSG);
     }
     else

@@ -824,8 +824,8 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
         }
         else
         {
-            const char GTID_ERROR[] = "Demotion failed due to an error in updating gtid:s. "
-                                      "Check log for more details.";
+            const char * const GTID_ERROR = "Demotion failed due to an error in updating gtid:s. "
+                                            "Check log for more details.";
             PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR);
         }
     }
@@ -1465,7 +1465,7 @@ static void print_redirect_errors(MariaDBServer* first_server, const ServerArray
 {
     // Individual server errors have already been printed to the log.
     // For JSON, gather the errors again.
-    const char MSG[] = "Could not redirect any slaves to the new master.";
+    const char* const MSG = "Could not redirect any slaves to the new master.";
     MXS_ERROR(MSG);
     if (err_out)
     {
