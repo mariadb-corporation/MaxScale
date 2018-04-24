@@ -446,10 +446,15 @@ servers_no_promotion=backup_dc_server1,backup_dc_server2
 
 #### `promotion_sql_file` and `demotion_sql_file`
 
-These are paths to text files with SQL statements in them. During promotion or
-demotion, the contents are read line-by-line and executed on the backend. Empty
-lines or lines starting with '#' are ignored. All statements must succeed and
-none may return results, otherwise the switchover or failover fails.
+These optional settings are paths to text files with SQL statements in them.
+During promotion or demotion, the contents are read line-by-line and executed on
+the backend. Use these settings to execute custom statements on the servers to
+complement the built-in operations.
+
+Empty lines or lines starting with '#' are ignored. Any results returned by the
+statements are ignored. All statements must succeed for the failover, switchover
+or rejoin to continue. The monitor user may require additional privileges and
+grants for the custom commands to succeed.
 
 When promoting a slave to master during switchover or failover, the
 `promotion_sql_file` is read and executed on the new master server after its

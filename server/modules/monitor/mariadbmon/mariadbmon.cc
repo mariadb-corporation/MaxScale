@@ -4919,7 +4919,8 @@ static int64_t scan_server_id(const char* id_string)
 }
 
 /**
- * Read the file contents and send them as sql queries to the server. Queries should not return any data.
+ * Read the file contents and send them as sql queries to the server. Any data returned by the queries is
+ * discarded.
  *
  * @param server Server to send queries to
  * @param path Text file path.
@@ -4953,6 +4954,12 @@ static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, 
                 if (mxs_mysql_query(conn, line.c_str()) == 0)
                 {
                     lines_executed++;
+                    // Discard results if any.
+                    MYSQL_RES* res = mysql_store_result(conn);
+                    if (res != NULL)
+                    {
+                        mysql_free_result(res);
+                    }
                 }
                 else
                 {
