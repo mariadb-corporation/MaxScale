@@ -17,6 +17,10 @@ report at [Jira](https://jira.mariadb.org).
 
 ## New Features
 
+* The user can define custom SQL queries which are executed during switchover,
+  failover and rejoin. See [MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md)
+  for more information.
+
 ### MaxCtrl: Raw REST API Calls
 
 MaxCtrl is now able to perform raw HTTP GET calls that return the JSON
