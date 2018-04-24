@@ -306,9 +306,10 @@ not regularly.
 Since *MariaDB MaxScale* can log to both file and *syslog* an approach that
 provides maximum flexibility is to enable *syslog* and *log_to_shm*, and to
 disable *maxlog*. That way messages will normally be logged to *syslog*, but if
-there is something to investigate, *log_info* and *maxlog* can be enabled from
+there is something to investigate, *log_debug* and *maxlog* can be enabled from
 *maxadmin*, in which case informational messages will be logged to the
-*maxscale.log* file that resides in shared memory.
+*maxscale.log* file that resides in shared memory. But note that *log_debug*
+messages will only be available if MaxScale has been built in debug mode.
 
 By default, logging to shared memory is disabled.
 
