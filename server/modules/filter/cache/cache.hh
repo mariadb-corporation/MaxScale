@@ -56,18 +56,9 @@ public:
      * @param zDefaultDb  The current default database.
      * @param pQuery      Buffer containing a SELECT.
      *
-     * @return True of the result should be cached.
+     * @return A rules object, if the query should be stored, NULL otherwise.
      */
-    bool should_store(const char* zDefaultDb, const GWBUF* pQuery);
-
-    /**
-     * Returns whether cached results should be used.
-     *
-     * @param pSession  The session in question.
-     *
-     * @return True of cached results should be used.
-     */
-    bool should_use(const MXS_SESSION* pSession);
+    const CacheRules* should_store(const char* zDefaultDb, const GWBUF* pQuery);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
@@ -134,14 +125,14 @@ public:
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
 protected:
-    Cache(const std::string&  name,
-          const CACHE_CONFIG* pConfig,
-          SCacheRules         sRules,
-          SStorageFactory     sFactory);
+    Cache(const std::string&              name,
+          const CACHE_CONFIG*             pConfig,
+          const std::vector<SCacheRules>& rules,
+          SStorageFactory                 sFactory);
 
-    static bool Create(const CACHE_CONFIG& config,
-                       CacheRules**        ppRules,
-                       StorageFactory**    ppFactory);
+    static bool Create(const CACHE_CONFIG&       config,
+                       std::vector<SCacheRules>* pRules,
+                       StorageFactory**          ppFactory);
 
     json_t* do_get_info(uint32_t what) const;
 
@@ -150,8 +141,8 @@ private:
     Cache& operator = (const Cache&);
 
 protected:
-    const std::string   m_name;     // The name of the instance; the section name in the config.
-    const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
-    SCacheRules         m_sRules;   // The rules of the cache instance.
-    SStorageFactory     m_sFactory; // The storage factory.
+    const std::string        m_name;     // The name of the instance; the section name in the config.
+    const CACHE_CONFIG&      m_config;   // The configuration of the cache instance.
+    std::vector<SCacheRules> m_rules;    // The rules of the cache instance.
+    SStorageFactory          m_sFactory; // The storage factory.
 };

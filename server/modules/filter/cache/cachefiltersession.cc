@@ -1005,13 +1005,15 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
     if (cache_action != CACHE_IGNORE)
     {
-        if (m_pCache->should_store(m_zDefaultDb, pPacket))
+        const CacheRules* pRules = m_pCache->should_store(m_zDefaultDb, pPacket);
+
+        if (pRules)
         {
             cache_result_t result = m_pCache->get_key(m_zDefaultDb, pPacket, &m_key);
 
             if (CACHE_RESULT_IS_OK(result))
             {
-                routing_action = route_SELECT(cache_action, pPacket);
+                routing_action = route_SELECT(cache_action, *pRules, pPacket);
             }
             else
             {
@@ -1033,6 +1035,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
  * Routes a SELECT packet.
  *
  * @param cache_action  The desired action.
+ * @param rules         The current rules.
  * @param pPacket       A contiguous COM_QUERY packet containing a SELECT.
  *
  * @return ROUTING_ABORT if the processing of the packet should be aborted
@@ -1040,11 +1043,12 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
  *         ROUTING_CONTINUE if the normal processing should continue.
  */
 CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_action_t cache_action,
+                                                                      const CacheRules& rules,
                                                                       GWBUF* pPacket)
 {
     routing_action_t routing_action = ROUTING_CONTINUE;
 
-    if (should_use(cache_action) && m_pCache->should_use(m_pSession))
+    if (should_use(cache_action) && rules.should_use(m_pSession))
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;

@@ -30,16 +30,16 @@ public:
     void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession);
 
 private:
-    CacheMT(const std::string&  name,
-            const CACHE_CONFIG* pConfig,
-            SCacheRules         sRules,
-            SStorageFactory     sFactory,
-            Storage*            pStorage);
+    CacheMT(const std::string&              name,
+            const CACHE_CONFIG*             pConfig,
+            const std::vector<SCacheRules>& rules,
+            SStorageFactory                 sFactory,
+            Storage*                        pStorage);
 
-    static CacheMT* Create(const std::string&  name,
-                           const CACHE_CONFIG* pConfig,
-                           SCacheRules         sRules,
-                           SStorageFactory     sFactory);
+    static CacheMT* Create(const std::string&              name,
+                           const CACHE_CONFIG*             pConfig,
+                           const std::vector<SCacheRules>& rules,
+                           SStorageFactory                 sFactory);
 
 private:
     CacheMT(const CacheMT&);

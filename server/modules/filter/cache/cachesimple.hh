@@ -34,15 +34,15 @@ public:
     cache_result_t del_value(const CACHE_KEY& key);
 
 protected:
-    CacheSimple(const std::string&  name,
-                const CACHE_CONFIG* pConfig,
-                SCacheRules         sRules,
-                SStorageFactory     sFactory,
-                Storage*            pStorage);
+    CacheSimple(const std::string&              name,
+                const CACHE_CONFIG*             pConfig,
+                const std::vector<SCacheRules>& Rules,
+                SStorageFactory                 sFactory,
+                Storage*                        pStorage);
 
-    static bool Create(const CACHE_CONFIG& config,
-                       CacheRules**        ppRules,
-                       StorageFactory**    ppFactory);
+    static bool Create(const CACHE_CONFIG&       config,
+                       std::vector<SCacheRules>* pRules,
+                       StorageFactory**          ppFactory);
 
 
     json_t* do_get_info(uint32_t what) const;

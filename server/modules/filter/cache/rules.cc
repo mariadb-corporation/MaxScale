@@ -315,6 +315,16 @@ void cache_rules_free(CACHE_RULES *rules)
     }
 }
 
+void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules)
+{
+    for (auto i = 0; i < nRules; ++i)
+    {
+        cache_rules_free(ppRules[i]);
+    }
+
+    MXS_FREE(ppRules);
+}
+
 void cache_rules_print(const CACHE_RULES *self, DCB *dcb, size_t indent)
 {
     if (self->root)
@@ -405,39 +415,64 @@ CacheRules::~CacheRules()
 }
 
 // static
-CacheRules* CacheRules::create(uint32_t debug)
+std::auto_ptr<CacheRules> CacheRules::create(uint32_t debug)
 {
-    CacheRules* pThis = NULL;
+    std::auto_ptr<CacheRules> sThis;
 
     CACHE_RULES* pRules = cache_rules_create(debug);
 
     if (pRules)
     {
-        pThis = new (std::nothrow) CacheRules(pRules);
+        sThis = std::auto_ptr<CacheRules>(new (std::nothrow) CacheRules(pRules));
     }
 
-    return pThis;
+    return sThis;
 }
 
 // static
-CacheRules* CacheRules::load(const char *zPath, uint32_t debug)
+bool CacheRules::load(const char *zPath, uint32_t debug, std::vector<SCacheRules>* pRules)
 {
-    CacheRules* pThis = NULL;
+    bool rv = false;
+
+    pRules->clear();
 
     CACHE_RULES** ppRules;
     int32_t nRules;
 
     if (cache_rules_load(zPath, debug, &ppRules, &nRules))
     {
-        // TODO: Handle more that one CACHE_RULES object at this level.
-        ss_dassert(nRules == 1);
+        int j = 0;
 
-        pThis = new (std::nothrow) CacheRules(ppRules[0]);
+        try
+        {
+            std::vector<SCacheRules> rules;
+            rules.reserve(nRules);
+
+            for (int i = 0; i < nRules; ++i)
+            {
+                j = i;
+                CacheRules* pRules = new CacheRules(ppRules[i]);
+                j = i + 1;
+
+                rules.push_back(SCacheRules(pRules));
+            }
+
+            pRules->swap(rules);
+            rv = true;
+        }
+        catch (const std::exception&)
+        {
+            // Free all CACHE_RULES objects that were not pushed into 'rules' above.
+            for (; j < nRules; ++j)
+            {
+                cache_rules_free(ppRules[j]);
+            }
+        }
 
         MXS_FREE(ppRules);
     }
 
-    return pThis;
+    return rv;
 }
 
 const json_t* CacheRules::json() const

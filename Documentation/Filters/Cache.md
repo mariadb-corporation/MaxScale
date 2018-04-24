@@ -481,13 +481,14 @@ SET @maxscale.cache.populate=false;
 
 # Rules
 
-The caching rules are expressed as a JSON object.
+The caching rules are expressed as a JSON object or as an array
+of JSON objects.
 
 There are two decisions to be made regarding the caching; in what circumstances
 should data be stored to the cache and in what circumstances should the data in
 the cache be used.
 
-In the JSON object this is visible as follows:
+Expressed in JSON this looks as follows
 
 ```
 {
@@ -495,11 +496,26 @@ In the JSON object this is visible as follows:
     use: [ ... ]
 }
 ```
+or, in case an array is used, as
+```
+[
+    {
+        store: [ ... ],
+        use: [ ... ]
+    },
+    { ... }
+]
+```
 
 The `store` field specifies in what circumstances data should be stored to
 the cache and the `use` field specifies in what circumstances the data in
 the cache should be used. In both cases, the value is a JSON array containg
 objects.
+
+If an array of rule objects is specified, then, when looking for a rule that
+matches, the `store` field of each object are evaluated in sequential order
+until a match is found. Then, the `use` field of that object is used when
+deciding whether data in the cache should be used.
 
 ## When to Store
 

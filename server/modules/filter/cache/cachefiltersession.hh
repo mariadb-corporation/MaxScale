@@ -139,7 +139,7 @@ private:
     };
 
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
-    routing_action_t route_SELECT(cache_action_t action, GWBUF* pPacket);
+    routing_action_t route_SELECT(cache_action_t action, const CacheRules& rules, GWBUF* pPacket);
 
     char* set_cache_populate(const char* zName,
                              const char* pValue_begin,

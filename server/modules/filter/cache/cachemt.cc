@@ -19,12 +19,12 @@
 using maxscale::SpinLockGuard;
 using std::tr1::shared_ptr;
 
-CacheMT::CacheMT(const std::string&  name,
-                 const CACHE_CONFIG* pConfig,
-                 SCacheRules         sRules,
-                 SStorageFactory     sFactory,
-                 Storage*            pStorage)
-    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
+CacheMT::CacheMT(const std::string&              name,
+                 const CACHE_CONFIG*             pConfig,
+                 const std::vector<SCacheRules>& rules,
+                 SStorageFactory                 sFactory,
+                 Storage*                        pStorage)
+    : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
     spinlock_init(&m_lock_pending);
 
@@ -41,15 +41,14 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CacheMT* pCache = NULL;
 
-    CacheRules* pRules = NULL;
+    std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
+    if (CacheSimple::Create(*pConfig, &rules, &pFactory))
     {
-        shared_ptr<CacheRules> sRules(pRules);
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = Create(name, pConfig, sRules, sFactory);
+        pCache = Create(name, pConfig, rules, sFactory);
     }
 
     return pCache;
@@ -77,10 +76,10 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSessio
 }
 
 // static
-CacheMT* CacheMT::Create(const std::string&  name,
-                         const CACHE_CONFIG* pConfig,
-                         SCacheRules         sRules,
-                         SStorageFactory     sFactory)
+CacheMT* CacheMT::Create(const std::string&              name,
+                         const CACHE_CONFIG*             pConfig,
+                         const std::vector<SCacheRules>& rules,
+                         SStorageFactory                 sFactory)
 {
     CacheMT* pCache = NULL;
 
@@ -99,7 +98,7 @@ CacheMT* CacheMT::Create(const std::string&  name,
     {
         MXS_EXCEPTION_GUARD(pCache = new CacheMT(name,
                                                  pConfig,
-                                                 sRules,
+                                                 rules,
                                                  sFactory,
                                                  pStorage));
 

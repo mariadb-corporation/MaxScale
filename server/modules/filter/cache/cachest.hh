@@ -22,7 +22,7 @@ public:
 
     static CacheST* Create(const std::string& name, const CACHE_CONFIG* pConfig);
     static CacheST* Create(const std::string& name,
-                           SCacheRules sRules,
+                           const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory,
                            const CACHE_CONFIG* pConfig);
 
@@ -33,16 +33,16 @@ public:
     void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession);
 
 private:
-    CacheST(const std::string&  name,
-            const CACHE_CONFIG* pConfig,
-            SCacheRules         sRules,
-            SStorageFactory     sFactory,
-            Storage*            pStorage);
+    CacheST(const std::string&              name,
+            const CACHE_CONFIG*             pConfig,
+            const std::vector<SCacheRules>& rules,
+            SStorageFactory                 sFactory,
+            Storage*                        pStorage);
 
-    static CacheST* Create(const std::string&  name,
-                           const CACHE_CONFIG* pConfig,
-                           SCacheRules         sRules,
-                           SStorageFactory     sFactory);
+    static CacheST* Create(const std::string&              name,
+                           const CACHE_CONFIG*             pConfig,
+                           const std::vector<SCacheRules>& rules,
+                           SStorageFactory                 sFactory);
 private:
     CacheST(const CacheST&);
     CacheST& operator = (const CacheST&);

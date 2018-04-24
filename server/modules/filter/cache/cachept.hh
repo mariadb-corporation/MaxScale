@@ -44,16 +44,16 @@ private:
     typedef std::tr1::shared_ptr<Cache> SCache;
     typedef std::vector<SCache>         Caches;
 
-    CachePT(const std::string&  name,
-            const CACHE_CONFIG* pConfig,
-            SCacheRules         sRules,
-            SStorageFactory     sFactory,
-            const Caches&       caches);
+    CachePT(const std::string&              name,
+            const CACHE_CONFIG*             pConfig,
+            const std::vector<SCacheRules>& rules,
+            SStorageFactory                 sFactory,
+            const Caches&                   caches);
 
-    static CachePT* Create(const std::string&  name,
-                           const CACHE_CONFIG* pConfig,
-                           SCacheRules         sRules,
-                           SStorageFactory     sFactory);
+    static CachePT* Create(const std::string&              name,
+                           const CACHE_CONFIG*             pConfig,
+                           const std::vector<SCacheRules>& rules,
+                           SStorageFactory                 sFactory);
 
     Cache& thread_cache();
 

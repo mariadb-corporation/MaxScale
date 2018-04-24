@@ -16,12 +16,12 @@
 #include "storage.hh"
 #include "storagefactory.hh"
 
-CacheSimple::CacheSimple(const std::string&  name,
-                         const CACHE_CONFIG* pConfig,
-                         SCacheRules         sRules,
-                         SStorageFactory     sFactory,
-                         Storage*            pStorage)
-    : Cache(name, pConfig, sRules, sFactory)
+CacheSimple::CacheSimple(const std::string&              name,
+                         const CACHE_CONFIG*             pConfig,
+                         const std::vector<SCacheRules>& rules,
+                         SStorageFactory                 sFactory,
+                         Storage*                        pStorage)
+    : Cache(name, pConfig, rules, sFactory)
     , m_pStorage(pStorage)
 {
 }
@@ -32,22 +32,24 @@ CacheSimple::~CacheSimple()
 }
 
 // static
-bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CacheRules**        ppRules,
-                         StorageFactory**    ppFactory)
+bool CacheSimple::Create(const CACHE_CONFIG&       config,
+                         std::vector<SCacheRules>* pRules,
+                         StorageFactory**          ppFactory)
 {
     int rv = false;
 
-    CacheRules* pRules = NULL;
+    std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (Cache::Create(config, &pRules, &pFactory))
+    rv = Cache::Create(config, &rules, &pFactory);
+
+    if (rv)
     {
-        *ppRules = pRules;
+        pRules->swap(rules);
         *ppFactory = pFactory;
     }
 
-    return pRules != NULL;
+    return rv;
 }
 
 cache_result_t CacheSimple::get_value(const CACHE_KEY& key,

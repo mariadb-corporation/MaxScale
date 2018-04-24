@@ -17,6 +17,7 @@
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <jansson.h>
+#include <tr1/memory>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include <maxscale/pcre2.h>
@@ -106,6 +107,14 @@ CACHE_RULES *cache_rules_create(uint32_t debug);
 void cache_rules_free(CACHE_RULES *rules);
 
 /**
+ * Frees all rules in an array of rules *and* the array itself.
+ *
+ * @param ppRules Pointer to array of pointers to rules.
+ * @param nRules  The number of items in the array.
+ */
+void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules);
+
+/**
  * Loads the caching rules from a file and returns corresponding object.
  *
  * @param path     The path of the file containing the rules.
@@ -175,6 +184,8 @@ MXS_END_DECLS
 class CacheRules
 {
 public:
+    typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
+
     ~CacheRules();
 
     /**
@@ -184,17 +195,18 @@ public:
      *
      * @return An empty rules object, or NULL in case of error.
      */
-    static CacheRules* create(uint32_t debug);
+    static std::auto_ptr<CacheRules> create(uint32_t debug);
 
     /**
      * Loads the caching rules from a file and returns corresponding object.
      *
-     * @param path  The path of the file containing the rules.
-     * @param debug The debug level.
+     * @param path   The path of the file containing the rules.
+     * @param debug  The debug level.
+     * @param pRules [out] The loaded rules.
      *
-     * @return The corresponding rules object, or NULL in case of error.
+     * @return True, if the rules could be loaded, false otherwise.
      */
-    static CacheRules* load(const char *zPath, uint32_t debug);
+    static bool load(const char *zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
 
     /**
      * Returns the json rules object.

@@ -27,13 +27,13 @@
 
 using namespace std;
 
-Cache::Cache(const std::string&  name,
-             const CACHE_CONFIG* pConfig,
-             SCacheRules         sRules,
-             SStorageFactory     sFactory)
+Cache::Cache(const std::string&              name,
+             const CACHE_CONFIG*             pConfig,
+             const std::vector<SCacheRules>& rules,
+             SStorageFactory                 sFactory)
     : m_name(name)
     , m_config(*pConfig)
-    , m_sRules(sRules)
+    , m_rules(rules)
     , m_sFactory(sFactory)
 {
 }
@@ -43,35 +43,42 @@ Cache::~Cache()
 }
 
 //static
-bool Cache::Create(const CACHE_CONFIG& config,
-                   CacheRules**        ppRules,
-                   StorageFactory**    ppFactory)
+bool Cache::Create(const CACHE_CONFIG&       config,
+                   std::vector<SCacheRules>* pRules,
+                   StorageFactory**          ppFactory)
 {
-    CacheRules* pRules = NULL;
+    std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
+
+    bool rv = false;
 
     if (config.rules)
     {
-        pRules = CacheRules::load(config.rules, config.debug);
+        rv = CacheRules::load(config.rules, config.debug, &rules);
     }
     else
     {
-        pRules = CacheRules::create(config.debug);
+        auto_ptr<CacheRules> sRules(CacheRules::create(config.debug));
+
+        if (sRules.get())
+        {
+            rules.push_back(SCacheRules(sRules.release()));
+            rv = true;
+        }
     }
 
-    if (pRules)
+    if (rv)
     {
         pFactory = StorageFactory::Open(config.storage);
 
         if (pFactory)
         {
             *ppFactory = pFactory;
-            *ppRules = pRules;
+            pRules->swap(rules);
         }
         else
         {
             MXS_ERROR("Could not open storage factory '%s'.", config.storage);
-            delete pRules;
         }
     }
     else
@@ -155,14 +162,25 @@ cache_result_t Cache::get_default_key(const char* zDefault_db,
     return CACHE_RESULT_OK;
 }
 
-bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
+const CacheRules* Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
-    return m_sRules->should_store(zDefaultDb, pQuery);
-}
+    CacheRules* pRules = NULL;
 
-bool Cache::should_use(const MXS_SESSION* pSession)
-{
-    return m_sRules->should_use(pSession);
+    auto i = m_rules.begin();
+
+    while (!pRules && (i != m_rules.end()))
+    {
+        if ((*i)->should_store(zDefaultDb, pQuery))
+        {
+            pRules = (*i).get();
+        }
+        else
+        {
+            ++i;
+        }
+    }
+
+    return pRules;
 }
 
 json_t* Cache::do_get_info(uint32_t what) const
@@ -173,9 +191,18 @@ json_t* Cache::do_get_info(uint32_t what) const
     {
         if (what & INFO_RULES)
         {
-            json_t* pRules = const_cast<json_t*>(m_sRules->json());
+            json_t* pArray = json_array();
 
-            json_object_set(pInfo, "rules", pRules); // Increases ref-count of pRules, we ignore failure.
+            if (pArray)
+            {
+                for (auto i = m_rules.begin(); i < m_rules.end(); ++i)
+                {
+                    json_t* pRules = const_cast<json_t*>((*i)->json());
+                    json_array_append(pArray, pRules); // Increases ref-count of pRules, we ignore failure.
+                }
+
+                json_object_set(pInfo, "rules", pArray);
+            }
         }
     }
 
