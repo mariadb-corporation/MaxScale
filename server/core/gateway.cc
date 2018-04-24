@@ -2142,6 +2142,15 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    // Start the housekeeper thread
+    if (!hkinit())
+    {
+        const char* logerr = "Failed to start housekeeper thread.";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /** Start all monitors */
     monitorStartAll();
 
@@ -2171,17 +2180,6 @@ int main(int argc, char **argv)
     if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms, 0) == NULL)
     {
         const char* logerr = "Failed to start log flushing thread.";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    /*
-     * Start the housekeeper thread
-     */
-    if (!hkinit())
-    {
-        const char* logerr = "Failed to start housekeeper thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;

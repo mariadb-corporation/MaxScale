@@ -36,7 +36,9 @@ typedef bool (*TASKFN)(void *data);
  * Initialises the housekeeper mechanism.
  *
  * A call to any of the other housekeeper functions can be made only if
- * this function returns successfully.
+ * this function returns successfully. This function must be called after all
+ * module level initialization is done but before any monitors or services are
+ * started.
  *
  * @return True if the housekeeper mechanism was initialized, false otherwise.
  */

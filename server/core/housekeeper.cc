@@ -256,12 +256,14 @@ json_t* Housekeeper::tasks_json(const char* host)
 
 void hktask_add(const char *name, TASKFN func, void *data, int frequency)
 {
+    ss_dassert(hk);
     Task task(name, func, data, frequency);
     hk->add(task);
 }
 
 void hktask_remove(const char *name)
 {
+    ss_dassert(hk);
     hk->remove(name);
 }
 
@@ -293,6 +295,7 @@ bool hkinit()
 
 void hkshutdown()
 {
+    ss_dassert(hk);
     hk->stop();
 }
 
@@ -306,10 +309,12 @@ void hkfinish()
 
 void hkshow_tasks(DCB *pDcb)
 {
+    ss_dassert(hk);
     hk->print_tasks(pDcb);
 }
 
 json_t* hk_tasks_json(const char* host)
 {
+    ss_dassert(hk);
     return hk->tasks_json(host);
 }
