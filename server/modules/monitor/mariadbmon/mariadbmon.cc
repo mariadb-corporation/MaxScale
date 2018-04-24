@@ -83,7 +83,7 @@ void MariaDBMonitor::init_server_info()
     m_server_info.clear();
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        auto mon_server = (*iter)->server_base;
+        auto mon_server = (*iter)->m_server_base;
         ss_dassert(m_server_info.count(mon_server) == 0);
         ServerInfoMap::value_type new_val(mon_server, *iter);
         m_server_info.insert(new_val);
@@ -364,9 +364,9 @@ void MariaDBMonitor::main_loop()
             assign_relay_master(**iter);
 
             /* Remove SLAVE status if this server is a Binlog Server relay */
-            if ((*iter)->binlog_relay)
+            if ((*iter)->m_binlog_relay)
             {
-                monitor_clear_pending_status((*iter)->server_base, SERVER_SLAVE);
+                monitor_clear_pending_status((*iter)->m_server_base, SERVER_SLAVE);
             }
         }
 
@@ -397,10 +397,10 @@ void MariaDBMonitor::main_loop()
 
         if (root_master && root_master->is_master())
         {
-            SERVER* root_master_server = root_master->server_base->server;
+            SERVER* root_master_server = root_master->m_server_base->server;
             // Clear slave and stale slave status bits from current master
             server_clear_status_nolock(root_master_server, SERVER_SLAVE | SERVER_STALE_SLAVE);
-            monitor_clear_pending_status(root_master->server_base, SERVER_SLAVE | SERVER_STALE_SLAVE);
+            monitor_clear_pending_status(root_master->m_server_base, SERVER_SLAVE | SERVER_STALE_SLAVE);
 
             /**
              * Clear external slave status from master if configured to do so.
@@ -409,14 +409,14 @@ void MariaDBMonitor::main_loop()
              */
             if (m_ignore_external_masters)
             {
-                monitor_clear_pending_status(root_master->server_base, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                monitor_clear_pending_status(root_master->m_server_base, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                 server_clear_status_nolock(root_master_server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
         ss_dassert(root_master == NULL || root_master == m_master);
         ss_dassert(root_master == NULL ||
-                   ((root_master->server_base->server->status & (SERVER_SLAVE | SERVER_MASTER)) !=
+                   ((root_master->m_server_base->server->status & (SERVER_SLAVE | SERVER_MASTER)) !=
                     (SERVER_SLAVE | SERVER_MASTER)));
 
         /**
@@ -436,7 +436,7 @@ void MariaDBMonitor::main_loop()
 
         /* Generate the replication heartbeat event by performing an update */
         if (m_detect_replication_lag && root_master &&
-            (root_master->is_master() || SERVER_IS_RELAY_SERVER(root_master->server_base->server)))
+            (root_master->is_master() || SERVER_IS_RELAY_SERVER(root_master->m_server_base->server)))
         {
             measure_replication_lag(root_master);
         }
@@ -452,7 +452,7 @@ void MariaDBMonitor::main_loop()
 
         mon_hangup_failed_servers(m_monitor_base);
         servers_status_current_to_pending(m_monitor_base);
-        store_server_journal(m_monitor_base, m_master ? m_master->server_base : NULL);
+        store_server_journal(m_monitor_base, m_master ? m_master->m_server_base : NULL);
         release_monitor_servers(m_monitor_base);
 
         // Check how much the monitor should sleep to get one full monitor interval.
@@ -482,7 +482,7 @@ void MariaDBMonitor::main_loop()
 
 void MariaDBMonitor::update_gtid_domain()
 {
-    int64_t domain = m_master->gtid_domain_id;
+    int64_t domain = m_master->m_gtid_domain_id;
     if (m_master_gtid_domain >= 0 && domain != m_master_gtid_domain)
     {
         MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
@@ -493,13 +493,13 @@ void MariaDBMonitor::update_gtid_domain()
 
 void MariaDBMonitor::update_external_master()
 {
-    if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(m_master->server_base->server))
+    if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(m_master->m_server_base->server))
     {
-        if (m_master->slave_status.master_host != m_external_master_host ||
-            m_master->slave_status.master_port != m_external_master_port)
+        if (m_master->m_slave_status.master_host != m_external_master_host ||
+            m_master->m_slave_status.master_port != m_external_master_port)
         {
-            const string new_ext_host =  m_master->slave_status.master_host;
-            const int new_ext_port = m_master->slave_status.master_port;
+            const string new_ext_host =  m_master->m_slave_status.master_host;
+            const int new_ext_port = m_master->m_slave_status.master_port;
             if (m_external_master_port == PORT_UNKNOWN)
             {
                 MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
@@ -529,17 +529,17 @@ void MariaDBMonitor::update_external_master()
 void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
 {
     ss_dassert(root_master);
-    MXS_MONITORED_SERVER* mon_root_master = root_master->server_base;
+    MXS_MONITORED_SERVER* mon_root_master = root_master->m_server_base;
     set_master_heartbeat(root_master);
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        MXS_MONITORED_SERVER* ptr = server->server_base;
+        MXS_MONITORED_SERVER* ptr = server->m_server_base;
         if ((!SERVER_IN_MAINT(ptr->server)) && server->is_running())
         {
             if (ptr->server->node_id != mon_root_master->server->node_id &&
                 (server->is_slave() || SERVER_IS_RELAY_SERVER(ptr->server)) &&
-                !server->binlog_relay)  // No select lag for Binlog Server
+                !server->m_binlog_relay)  // No select lag for Binlog Server
             {
                 set_slave_heartbeat(server);
             }
@@ -549,7 +549,7 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
 
 void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* log_no_master)
 {
-    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
+    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
     if (root_master &&
         mon_status_changed(root_master) &&
         !(root_master->server->status & SERVER_STALE_STATUS))
@@ -663,7 +663,7 @@ void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
         return;
     }
 
-    MXS_MONITORED_SERVER* database = server->server_base;
+    MXS_MONITORED_SERVER* database = server->m_server_base;
     int n_db = get_row_count(database, "SELECT schema_name FROM information_schema.schemata "
                              "WHERE schema_name = 'maxscale_schema'");
     int n_tbl = get_row_count(database, "SELECT table_name FROM information_schema.tables "
@@ -707,7 +707,7 @@ void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
     sprintf(heartbeat_insert_query,
             "UPDATE maxscale_schema.replication_heartbeat "
             "SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
-            heartbeat, m_master->server_base->server->node_id, m_id);
+            heartbeat, m_master->m_server_base->server->node_id, m_id);
 
     /* Try to insert MaxScale timestamp into master */
     if (mxs_mysql_query(database->con, heartbeat_insert_query))
@@ -727,7 +727,7 @@ void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
             sprintf(heartbeat_insert_query,
                     "REPLACE INTO maxscale_schema.replication_heartbeat "
                     "(master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
-                    m_master->server_base->server->node_id, m_id, heartbeat);
+                    m_master->m_server_base->server->node_id, m_id, heartbeat);
 
             if (mxs_mysql_query(database->con, heartbeat_insert_query))
             {
@@ -783,9 +783,9 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
     sprintf(select_heartbeat_query, "SELECT master_timestamp "
             "FROM maxscale_schema.replication_heartbeat "
             "WHERE maxscale_id = %lu AND master_server_id = %li",
-            m_id, m_master->server_base->server->node_id);
+            m_id, m_master->m_server_base->server->node_id);
 
-    MXS_MONITORED_SERVER* database = server->server_base;
+    MXS_MONITORED_SERVER* database = server->m_server_base;
     /* if there is a master then send the query to the slave with master_id */
     if (m_master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
                              && (result = mysql_store_result(database->con)) != NULL))
@@ -845,7 +845,7 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
         database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
         database->server->node_ts = 0;
 
-        if (m_master->server_base->server->node_id < 0)
+        if (m_master->m_server_base->server->node_id < 0)
         {
             MXS_ERROR("error: replication heartbeat: "
                       "master_server_id NOT available for %s:%i",
@@ -1070,7 +1070,7 @@ string get_connection_errors(const ServerArray& servers)
     string separator;
     for (auto iter = servers.begin(); iter != servers.end(); iter++)
     {
-        const char* error = mysql_error((*iter)->server_base->con);
+        const char* error = mysql_error((*iter)->m_server_base->con);
         ss_dassert(*error); // Every connection should have an error.
         rval += separator + (*iter)->name() + ": '" + error + "'";
         separator = ", ";

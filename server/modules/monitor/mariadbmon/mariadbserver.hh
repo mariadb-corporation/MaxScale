@@ -83,27 +83,27 @@ public:
 class MariaDBServer
 {
 public:
-    MXS_MONITORED_SERVER* server_base;      /**< Monitored server base class/struct. MariaDBServer does not
+    MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
-    mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
-    int64_t         server_id;              /**< Value of @@server_id. Valid values are 32bit unsigned. */
-    int             group;                  /**< Multi-master group where this server belongs,
+    mysql_server_version m_version;         /**< Server version, 10.X, 5.5 or 5.1 */
+    int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
+    int             m_group;                /**< Multi-master group where this server belongs,
                                               *  0 for servers not in groups */
-    bool            read_only;              /**< Value of @@read_only */
-    bool            slave_configured;       /**< Whether SHOW SLAVE STATUS returned rows */
-    bool            binlog_relay;           /** Server is a Binlog Relay */
-    int             n_slaves_configured;    /**< Number of configured slave connections*/
-    int             n_slaves_running;       /**< Number of running slave connections */
-    int             slave_heartbeats;       /**< Number of received heartbeats */
-    double          heartbeat_period;       /**< The time interval between heartbeats */
-    time_t          latest_event;           /**< Time when latest event was received from the master */
-    int64_t         gtid_domain_id;         /**< The value of gtid_domain_id, the domain which is used for
+    bool            m_read_only;            /**< Value of @@read_only */
+    bool            m_slave_configured;     /**< Whether SHOW SLAVE STATUS returned rows */
+    bool            m_binlog_relay;         /** Server is a Binlog Relay */
+    int             m_n_slaves_configured;  /**< Number of configured slave connections*/
+    int             m_n_slaves_running;     /**< Number of running slave connections */
+    int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
+    double          m_heartbeat_period;     /**< The time interval between heartbeats */
+    time_t          m_latest_event;         /**< Time when latest event was received from the master */
+    int64_t         m_gtid_domain_id;       /**< The value of gtid_domain_id, the domain which is used for
                                               *  new non-replicated events. */
-    GtidList        gtid_current_pos;       /**< Gtid of latest event. */
-    GtidList        gtid_binlog_pos;        /**< Gtid of latest event written to binlog. */
-    SlaveStatus     slave_status;           /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
+    GtidList        m_gtid_current_pos;     /**< Gtid of latest event. */
+    GtidList        m_gtid_binlog_pos;      /**< Gtid of latest event written to binlog. */
+    SlaveStatus     m_slave_status;         /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
 

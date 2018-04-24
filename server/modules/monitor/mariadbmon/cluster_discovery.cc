@@ -128,7 +128,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
         }
         if (SERVER_IS_SLAVE(database->server) &&
             (database->server->master_id <= 0 ||
-             database->server->master_id != m_master->server_base->server->node_id))
+             database->server->master_id != m_master->m_server_base->server->node_id))
         {
 
             monitor_set_pending_status(database, SERVER_SLAVE);
@@ -236,11 +236,11 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                                         current->node_id);
                     master_cand->server->depth = current->depth - 1;
 
-                    if (m_master && master_cand->server->depth < m_master->server_base->server->depth)
+                    if (m_master && master_cand->server->depth < m_master->m_server_base->server->depth)
                     {
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */
-                        monitor_clear_pending_status(m_master->server_base, SERVER_MASTER);
+                        monitor_clear_pending_status(m_master->m_server_base, SERVER_MASTER);
                         m_master = get_server_info(master_cand);
                     }
 
@@ -249,7 +249,8 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                     if (SERVER_IS_RUNNING(master_cand->server))
                     {
                         /** Only set the Master status if read_only is disabled */
-                        monitor_set_pending_status(master_cand, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
+                        monitor_set_pending_status(master_cand,
+                                                   info->m_read_only ? SERVER_SLAVE : SERVER_MASTER);
                     }
                 }
                 else
@@ -275,13 +276,13 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
     if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (SERVER_IN_MAINT(m_master->server_base->server))
+        if (SERVER_IN_MAINT(m_master->m_server_base->server))
         {
             return NULL;
         }
         else
         {
-            return m_master->server_base;
+            return m_master->m_server_base;
         }
     }
     else
@@ -503,12 +504,12 @@ void MariaDBMonitor::find_graph_cycles()
     /** Build the graph */
     for (int i = 0; i < nservers; i++)
     {
-        if (graph[i].info->slave_status.master_server_id > 0)
+        if (graph[i].info->m_slave_status.master_server_id > 0)
         {
             /** Found a connected node */
             for (int k = 0; k < nservers; k++)
             {
-                if (graph[k].info->server_id == graph[i].info->slave_status.master_server_id)
+                if (graph[k].info->m_server_id == graph[i].info->m_slave_status.master_server_id)
                 {
                     graph[i].parent = &graph[k];
                     break;
@@ -532,12 +533,12 @@ void MariaDBMonitor::find_graph_cycles()
 
     for (int i = 0; i < nservers; i++)
     {
-        graph[i].info->group = graph[i].cycle;
+        graph[i].info->m_group = graph[i].cycle;
 
         if (graph[i].cycle > 0)
         {
             /** We have at least one cycle in the graph */
-            if (graph[i].info->read_only)
+            if (graph[i].info->m_read_only)
             {
                 monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
                 monitor_clear_pending_status(graph[i].db, SERVER_MASTER);
@@ -562,7 +563,7 @@ void MariaDBMonitor::find_graph_cycles()
              * slave in this case can be either a normal slave or another
              * master.
              */
-            if (graph[i].info->read_only)
+            if (graph[i].info->m_read_only)
             {
                 /** The master is in read-only mode, set it into Slave state */
                 monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
@@ -584,7 +585,7 @@ void MariaDBMonitor::find_graph_cycles()
  */
 void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
 {
-    MXS_MONITORED_SERVER* database = serv_info->server_base;
+    MXS_MONITORED_SERVER* database = serv_info->m_server_base;
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
     {
@@ -634,12 +635,12 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
         (result = mysql_store_result(database->con)) != NULL)
     {
-        serv_info->binlog_relay = true;
+        serv_info->m_binlog_relay = true;
         mysql_free_result(result);
     }
     else
     {
-        serv_info->binlog_relay = false;
+        serv_info->m_binlog_relay = false;
     }
 
     /* Get server version string, also get/set numeric representation. */
@@ -648,25 +649,25 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
     uint64_t version_num = server_get_version(database->server);
     if (version_num >= 100000)
     {
-        serv_info->version = MYSQL_SERVER_VERSION_100;
+        serv_info->m_version = MYSQL_SERVER_VERSION_100;
     }
     else if (version_num >= 5 * 10000 + 5 * 100)
     {
-        serv_info->version = MYSQL_SERVER_VERSION_55;
+        serv_info->m_version = MYSQL_SERVER_VERSION_55;
     }
     else
     {
-        serv_info->version = MYSQL_SERVER_VERSION_51;
+        serv_info->m_version = MYSQL_SERVER_VERSION_51;
     }
     /* Query a few settings. */
     serv_info->read_server_variables();
     /* If gtid domain exists and server is 10.0, update gtid:s */
-    if (m_master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
+    if (m_master_gtid_domain >= 0 && serv_info->m_version == MYSQL_SERVER_VERSION_100)
     {
         serv_info->update_gtids();
     }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
-    if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
+    if (serv_info->m_version == MYSQL_SERVER_VERSION_100 || serv_info->m_version == MYSQL_SERVER_VERSION_55)
     {
         monitor_mysql_db(serv_info);
     }
@@ -693,7 +694,7 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
  */
 void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
 {
-    MXS_MONITORED_SERVER* database = serv_info->server_base;
+    MXS_MONITORED_SERVER* database = serv_info->m_server_base;
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
@@ -701,14 +702,14 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
     if (serv_info->do_show_slave_status())
     {
         /* If all configured slaves are running set this node as slave */
-        if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
-            serv_info->n_slaves_running == serv_info->n_slaves_configured)
+        if (serv_info->m_slave_configured && serv_info->m_n_slaves_running > 0 &&
+            serv_info->m_n_slaves_running == serv_info->m_n_slaves_configured)
         {
             monitor_set_pending_status(database, SERVER_SLAVE);
         }
 
         /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = serv_info->slave_status.master_server_id;
+        database->server->master_id = serv_info->m_slave_status.master_server_id;
     }
 }
 
@@ -949,12 +950,12 @@ bool MariaDBMonitor::standalone_master_required()
         if (server->is_running())
         {
             candidates++;
-            if (server->read_only || server->slave_configured || candidates > 1)
+            if (server->m_read_only || server->m_slave_configured || candidates > 1)
             {
                 return false;
             }
         }
-        else if (server->server_base->mon_err_count < m_failcount)
+        else if (server->m_server_base->mon_err_count < m_failcount)
         {
             return false;
         }
@@ -978,7 +979,7 @@ bool MariaDBMonitor::set_standalone_master()
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        auto mon_server = server->server_base;
+        auto mon_server = server->m_server_base;
         if (server->is_running())
         {
             if (!server->is_master() && m_warn_set_standalone_master)
@@ -1012,7 +1013,7 @@ bool MariaDBMonitor::set_standalone_master()
  */
 void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
 {
-    MXS_MONITORED_SERVER* ptr = server.server_base;
+    MXS_MONITORED_SERVER* ptr = server.m_server_base;
 
     ptr->mon_prev_status = ptr->server->status;
     /* copy server status into monitor pending_status */
@@ -1074,7 +1075,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
     /* if only one server is configured, that's is Master */
     if (num_servers == 1)
     {
-        auto mon_server = m_servers[0]->server_base;
+        auto mon_server = m_servers[0]->m_server_base;
         if (SERVER_IS_RUNNING(mon_server->server))
         {
             mon_server->server->depth = 0;
@@ -1119,11 +1120,11 @@ MariaDBServer* MariaDBMonitor::find_root_master()
  */
 void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
 {
-    MXS_MONITORED_SERVER* ptr = candidate.server_base;
+    MXS_MONITORED_SERVER* ptr = candidate.m_server_base;
     if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
         getSlaveOfNodeId(ptr->server->node_id, REJECT_DOWN) &&
         getServerByNodeId(ptr->server->master_id) &&
-        (!m_detect_multimaster || candidate.group == 0))
+        (!m_detect_multimaster || candidate.m_group == 0))
     {
         /** This server is both a slave and a master i.e. a relay master */
         monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
@@ -1139,8 +1140,8 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
  */
 void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServer* root_master_server)
 {
-    MXS_MONITORED_SERVER* ptr = db_server.server_base;
-    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->server_base : NULL;
+    MXS_MONITORED_SERVER* ptr = db_server.m_server_base;
+    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
     if (!SERVER_IN_MAINT(ptr->server))
     {
         MariaDBServer *serv_info = get_server_info(ptr);
@@ -1158,7 +1159,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
              ptr->server->port == root_master->server->port) &&
             (ptr->server->status & SERVER_MASTER) &&
             !(ptr->pending_status & SERVER_MASTER) &&
-            !serv_info->read_only)
+            !serv_info->m_read_only)
         {
             /**
              * In this case server->status will not be updated from pending_status
@@ -1210,7 +1211,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
-            else if (root_master == NULL && serv_info->slave_configured)
+            else if (root_master == NULL && serv_info->m_slave_configured)
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
