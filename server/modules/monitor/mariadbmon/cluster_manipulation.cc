@@ -313,30 +313,31 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
         {
             MariaDBServer* joinable = *iter;
             const char* name = joinable->name();
-            if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
+
+            bool op_success = false;
+            if (joinable->n_slaves_configured == 0)
             {
-                PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
-                                     CN_DEMOTION_SQL_FILE, joinable->name());
-            }
-            else
-            {
-                bool op_success;
-                if (joinable->n_slaves_configured == 0)
+                if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
+                {
+                    PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
+                                         CN_DEMOTION_SQL_FILE, joinable->name());
+                }
+                else
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     op_success = joinable->join_cluster(change_cmd);
                 }
-                else
-                {
-                    MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                               "redirecting it to '%s'.", name, master_name, master_name);
-                    op_success = joinable->redirect_one_slave(change_cmd);
-                }
+            }
+            else
+            {
+                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                           "redirecting it to '%s'.", name, master_name, master_name);
+                op_success = joinable->redirect_one_slave(change_cmd);
+            }
 
-                if (op_success)
-                {
-                    servers_joined++;
-                }
+            if (op_success)
+            {
+                servers_joined++;
             }
         }
     }

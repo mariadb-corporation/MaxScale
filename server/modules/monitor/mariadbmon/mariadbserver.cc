@@ -645,7 +645,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     std::ifstream sql_file(path);
     if (sql_file.is_open())
     {
-        MXS_NOTICE("Executing sql queries from file '%s'.", path.c_str());
+        MXS_NOTICE("Executing sql queries from file '%s' on server '%s'.", path.c_str(), name());
         int lines_executed = 0;
 
         while (!sql_file.eof() && !error)
@@ -664,6 +664,12 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 if (mxs_mysql_query(conn, line.c_str()) == 0)
                 {
                     lines_executed++;
+                    // Discard results if any.
+                    MYSQL_RES* res = mysql_store_result(conn);
+                    if (res != NULL)
+                    {
+                        mysql_free_result(res);
+                    }
                 }
                 else
                 {

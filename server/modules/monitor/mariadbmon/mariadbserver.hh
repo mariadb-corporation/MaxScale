@@ -266,7 +266,8 @@ public:
     bool failover_wait_relay_log(int seconds_remaining, json_t** err_out);
 
     /**
-     * Read the file contents and send them as sql queries to the server. Queries should not return any data.
+     * Read the file contents and send them as sql queries to the server. Any data returned by the queries is
+     * discarded.
      *
      * @param server Server to send queries to
      * @param path Text file path.
