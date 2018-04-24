@@ -21,6 +21,7 @@ For any problems you encounter, please consider submitting a bug report at
 * [MXS-1788](https://jira.mariadb.org/browse/MXS-1788) MaxInfo crash
 * [MXS-1767](https://jira.mariadb.org/browse/MXS-1767) Server capabilities are not correct
 * [MXS-1762](https://jira.mariadb.org/browse/MXS-1762) The client IP should be considered when choosing a persistent connection
+* [MXS-1618](https://jira.mariadb.org/browse/MXS-1618) Maxadmin Binary Hangs on a Big endian Platform
 
 ## Packaging
 
