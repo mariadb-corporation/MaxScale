@@ -18,13 +18,6 @@
 #include <maxscale/monitor.h>
 #include "gtid.hh"
 
-enum mysql_server_version
-{
-    MYSQL_SERVER_VERSION_100,
-    MYSQL_SERVER_VERSION_55,
-    MYSQL_SERVER_VERSION_51
-};
-
 enum print_repl_warnings_t
 {
     WARNINGS_ON,
@@ -83,10 +76,17 @@ public:
 class MariaDBServer
 {
 public:
+    enum mariadb_version
+    {
+        MARIADB_VERSION_UNKNOWN, // Anything older than 5.5. These are no longer supported by the monitor.
+        MARIADB_VERSION_55, // 5.5, oldest still supported release. Not all monitor features work.
+        MARIADB_VERSION_100 // 10.0 and greater. In practice though, 10.0.2 or greater is assumed.
+    };
+
     MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
-    mysql_server_version m_version;         /**< Server version, 10.X, 5.5 or 5.1 */
+    mariadb_version m_version;              /**< Server version */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int             m_group;                /**< Multi-master group where this server belongs,
                                               *  0 for servers not in groups */

@@ -39,7 +39,7 @@ SlaveStatus::SlaveStatus()
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     : m_server_base(monitored_server)
-    , m_version(MYSQL_SERVER_VERSION_51)
+    , m_version(MARIADB_VERSION_UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_group(0)
     , m_read_only(false)
@@ -87,20 +87,17 @@ bool MariaDBServer::do_show_slave_status()
     string query;
     switch (m_version)
     {
-        case MYSQL_SERVER_VERSION_100:
+        case MARIADB_VERSION_100:
             columns = 42;
             query = "SHOW ALL SLAVES STATUS";
             break;
-        case MYSQL_SERVER_VERSION_55:
+        case MARIADB_VERSION_55:
             columns = 40;
             query = "SHOW SLAVE STATUS";
             break;
-        case MYSQL_SERVER_VERSION_51: // TODO: Remove support?
-            columns = 38;
-            query = "SHOW SLAVE STATUS";
-            break;
         default:
-            ss_dassert(!true);
+            ss_dassert(!true); // This method should not be called for versions < 5.5
+            return false;
     }
 
     auto result = execute_query(query);
@@ -139,7 +136,7 @@ bool MariaDBServer::do_show_slave_status()
 
     int64_t i_slave_rec_hbs = -1, i_slave_hb_period = -1;
     int64_t i_using_gtid = -1, i_gtid_io_pos = -1;
-    if (m_version == MYSQL_SERVER_VERSION_100)
+    if (m_version == MARIADB_VERSION_100)
     {
         i_slave_rec_hbs = result->get_col_index("Slave_received_heartbeats");
         i_slave_hb_period = result->get_col_index("Slave_heartbeat_period");
@@ -198,7 +195,7 @@ bool MariaDBServer::do_show_slave_status()
         int io_errno = last_io_errno;
         const int connection_errno = 2003;
 
-        if ((io_errno == 0 || io_errno == connection_errno) && m_version != MYSQL_SERVER_VERSION_51)
+        if (io_errno == 0 || io_errno == connection_errno)
         {
             /* Get Master_Server_Id */
             auto parsed = result->get_uint(i_master_server_id);
@@ -208,7 +205,7 @@ bool MariaDBServer::do_show_slave_status()
             }
         }
 
-        if (m_version == MYSQL_SERVER_VERSION_100)
+        if (m_version == MARIADB_VERSION_100)
         {
             int heartbeats = result->get_uint(i_slave_rec_hbs);
             if (m_n_slave_heartbeats < heartbeats)
@@ -308,7 +305,7 @@ void MariaDBServer::read_server_variables()
     MXS_MONITORED_SERVER* database = m_server_base;
     string query = "SELECT @@global.server_id, @@read_only;";
     int columns = 2;
-    if (m_version ==  MYSQL_SERVER_VERSION_100)
+    if (m_version ==  MARIADB_VERSION_100)
     {
         query.erase(query.end() - 1);
         query += ", @@global.gtid_domain_id;";

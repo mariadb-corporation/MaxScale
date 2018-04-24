@@ -195,7 +195,6 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
     m_detect_standalone_master = config_get_bool(params, "detect_standalone_master");
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
     m_allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
-    m_mysql51_replication = config_get_bool(params, "mysql51_replication");
     m_script = config_get_string(params, "script");
     m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
@@ -284,7 +283,6 @@ json_t* MariaDBMonitor::diagnostics_json() const
     json_object_set_new(rval, "detect_standalone_master", json_boolean(m_detect_standalone_master));
     json_object_set_new(rval, CN_FAILCOUNT, json_integer(m_failcount));
     json_object_set_new(rval, "allow_cluster_recovery", json_boolean(m_allow_cluster_recovery));
-    json_object_set_new(rval, "mysql51_replication", json_boolean(m_mysql51_replication));
     json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(m_auto_failover));
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(m_failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(m_switchover_timeout));
@@ -1152,7 +1150,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
             {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
-            {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
             {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
             {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
             {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},

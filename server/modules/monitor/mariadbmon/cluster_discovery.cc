@@ -26,120 +26,6 @@ static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
 static bool report_version_err = true;
 
 /**
- * Build the replication tree for a MySQL 5.1 cluster
- *
- * This function queries each server with SHOW SLAVE HOSTS to determine which servers have slaves replicating
- * from them.
- *
- * @return Lowest server ID master in the monitor
- */
-MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
-{
-    /** Column positions for SHOW SLAVE HOSTS */
-    const size_t SLAVE_HOSTS_SERVER_ID = 0;
-    const size_t SLAVE_HOSTS_HOSTNAME = 1;
-    const size_t SLAVE_HOSTS_PORT = 2;
-
-    MXS_MONITORED_SERVER* database = m_monitor_base->monitored_servers;
-    MXS_MONITORED_SERVER *ptr, *rval = NULL;
-    int i;
-
-    while (database)
-    {
-        bool ismaster = false;
-        MYSQL_RES* result;
-        MYSQL_ROW row;
-        int nslaves = 0;
-        if (database->con)
-        {
-            if (mxs_mysql_query(database->con, "SHOW SLAVE HOSTS") == 0
-                && (result = mysql_store_result(database->con)) != NULL)
-            {
-                if (mysql_field_count(database->con) < 4)
-                {
-                    mysql_free_result(result);
-                    MXS_ERROR("\"SHOW SLAVE HOSTS\" "
-                              "returned less than the expected amount of columns. "
-                              "Expected 4 columns.");
-                    return NULL;
-                }
-
-                if (mysql_num_rows(result) > 0)
-                {
-                    ismaster = true;
-                    while (nslaves < MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
-                    {
-                        /* get Slave_IO_Running and Slave_SQL_Running values*/
-                        database->server->slaves[nslaves] = atol(row[SLAVE_HOSTS_SERVER_ID]);
-                        nslaves++;
-                        MXS_DEBUG("Found slave at %s:%s", row[SLAVE_HOSTS_HOSTNAME], row[SLAVE_HOSTS_PORT]);
-                    }
-                    database->server->slaves[nslaves] = 0;
-                }
-
-                mysql_free_result(result);
-            }
-            else
-            {
-                mon_report_query_error(database);
-            }
-
-            /* Set the Slave Role */
-            if (ismaster)
-            {
-                m_master = get_server_info(database);
-
-                MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
-                          database->server->name,
-                          database->server->port,
-                          nslaves);
-
-                monitor_set_pending_status(database, SERVER_MASTER);
-                database->server->depth = 0; // Add Depth 0 for Master
-
-                if (rval == NULL || rval->server->node_id > database->server->node_id)
-                {
-                    rval = database;
-                }
-            }
-        }
-        database = database->next;
-    }
-
-    database = m_monitor_base->monitored_servers;
-
-    /** Set master server IDs */
-    while (database)
-    {
-        ptr = m_monitor_base->monitored_servers;
-
-        while (ptr)
-        {
-            for (i = 0; ptr->server->slaves[i]; i++)
-            {
-                if (ptr->server->slaves[i] == database->server->node_id)
-                {
-                    database->server->master_id = ptr->server->node_id;
-                    database->server->depth = 1; // Add Depth 1 for Slave
-                    break;
-                }
-            }
-            ptr = ptr->next;
-        }
-        if (SERVER_IS_SLAVE(database->server) &&
-            (database->server->master_id <= 0 ||
-             database->server->master_id != m_master->m_server_base->server->node_id))
-        {
-
-            monitor_set_pending_status(database, SERVER_SLAVE);
-            monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-        }
-        database = database->next;
-    }
-    return rval;
-}
-
-/**
  * This function computes the replication tree from a set of monitored servers and returns the root server
  * with SERVER_MASTER bit. The tree is computed even for servers in 'maintenance' mode.
  *
@@ -649,41 +535,35 @@ void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
     uint64_t version_num = server_get_version(database->server);
     if (version_num >= 100000)
     {
-        serv_info->m_version = MYSQL_SERVER_VERSION_100;
+        serv_info->m_version = MariaDBServer::MARIADB_VERSION_100;
     }
     else if (version_num >= 5 * 10000 + 5 * 100)
     {
-        serv_info->m_version = MYSQL_SERVER_VERSION_55;
+        serv_info->m_version = MariaDBServer::MARIADB_VERSION_55;
     }
     else
     {
-        serv_info->m_version = MYSQL_SERVER_VERSION_51;
+        serv_info->m_version = MariaDBServer::MARIADB_VERSION_UNKNOWN;
     }
     /* Query a few settings. */
     serv_info->read_server_variables();
     /* If gtid domain exists and server is 10.0, update gtid:s */
-    if (m_master_gtid_domain >= 0 && serv_info->m_version == MYSQL_SERVER_VERSION_100)
+    if (m_master_gtid_domain >= 0 && serv_info->m_version == MariaDBServer::MARIADB_VERSION_100)
     {
         serv_info->update_gtids();
     }
-    /* Check for MariaDB 10.x.x and get status for multi-master replication */
-    if (serv_info->m_version == MYSQL_SERVER_VERSION_100 || serv_info->m_version == MYSQL_SERVER_VERSION_55)
+
+    /* Check for valid server version */
+    if (serv_info->m_version == MariaDBServer::MARIADB_VERSION_100 ||
+        serv_info->m_version == MariaDBServer::MARIADB_VERSION_55)
     {
         monitor_mysql_db(serv_info);
     }
-    else
+    else if (report_version_err)
     {
-        if (m_mysql51_replication)
-        {
-            monitor_mysql_db(serv_info);
-        }
-        else if (report_version_err)
-        {
-            report_version_err = false;
-            MXS_ERROR("MySQL version is lower than 5.5 and 'mysql51_replication' option is "
-                      "not enabled, replication tree cannot be resolved. To enable MySQL 5.1 replication "
-                      "detection, add 'mysql51_replication=true' to the monitor section.");
-        }
+        MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
+                  "The server is ignored by the monitor.", serv_info->name());
+        report_version_err = false;
     }
 }
 
@@ -1092,14 +972,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
     else
     {
         /* Compute the replication tree */
-        if (m_mysql51_replication)
-        {
-            found_root_master = build_mysql51_replication_tree();
-        }
-        else
-        {
-            found_root_master = get_replication_tree();
-        }
+        found_root_master = get_replication_tree();
     }
 
     if (m_detect_multimaster && num_servers > 0)
