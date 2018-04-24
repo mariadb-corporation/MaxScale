@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     char *key_file = NULL;
     char *aes_algo = NULL;
     int report_header = 0;
-    char c;
+    int c;
     BINLOG_FILE_FIX binlog_file = {0, false, false};
 
 #ifdef HAVE_GLIBC
