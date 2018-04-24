@@ -895,11 +895,12 @@ static int logmanager_write_log(int            priority,
         case LOG_ERR:
         case LOG_WARNING:
         case LOG_NOTICE:
+        case LOG_INFO:
             syslog(priority, "%s", message);
             break;
 
         default:
-            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
+            // LOG_DEBUG messages are never written to syslog.
             break;
         }
     }
