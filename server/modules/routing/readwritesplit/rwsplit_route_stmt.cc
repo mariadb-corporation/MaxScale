@@ -274,7 +274,6 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
                 /** Track the targets of the COM_STMT_EXECUTE statements. This
                  * information is used to route all COM_STMT_FETCH commands
                  * to the same server where the COM_STMT_EXECUTE was done. */
-                ss_dassert(stmt_id > 0);
                 rses->exec_map[stmt_id] = target;
                 MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
             }
