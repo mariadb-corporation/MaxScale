@@ -139,6 +139,7 @@ public:
     mxs::Buffer             m_current_query; /**< Current query being executed */
     Trx                     m_trx; /**< Current transaction */
     bool                    m_is_replay_active; /**< Whether we are actively replaying a transaction */
+    bool                    m_can_replay_trx; /**< Whether the transaction can be replayed */
     Trx                     m_replayed_trx; /**< The transaction we are replaying */
     mxs::Buffer             m_interrupted_query; /**< Query that was interrupted mid-transaction. */
 

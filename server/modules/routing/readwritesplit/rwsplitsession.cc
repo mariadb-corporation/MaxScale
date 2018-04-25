@@ -40,7 +40,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_next_seq(0),
     m_qc(this, session, instance->config().use_sql_variables_in),
     m_retry_duration(0),
-    m_is_replay_active(false)
+    m_is_replay_active(false),
+    m_can_replay_trx(true)
 {
     if (m_config.rw_max_slave_conn_percent)
     {
@@ -437,10 +438,25 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return;
     }
 
-    if (m_config.transaction_replay && session_trx_is_active(m_client->session))
+    if (m_config.transaction_replay && m_can_replay_trx &&
+        session_trx_is_active(m_client->session))
     {
-        m_trx.add_stmt(m_current_query.release());
-        m_trx.add_result(writebuf);
+        size_t size{m_trx.size() + m_current_query.length()};
+        // A transaction is open and it is eligible for replaying
+        if (size < m_config.trx_max_size)
+        {
+            /** Transaction size is OK, store the statement for replaying and
+             * update the checksum of the result */
+            m_trx.add_stmt(m_current_query.release());
+            m_trx.add_result(writebuf);
+        }
+        else
+        {
+            MXS_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
+            m_current_query.reset();
+            m_trx.close();
+            m_can_replay_trx = false;
+        }
     }
     else
     {
@@ -474,6 +490,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     else if (m_config.transaction_replay && session_trx_is_ending(m_client->session))
     {
         m_trx.close();
+        m_can_replay_trx = true;
     }
 
     if (backend->has_session_commands())
@@ -529,7 +546,7 @@ bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (!m_is_replay_active && m_config.transaction_replay)
+    if (!m_is_replay_active && m_config.transaction_replay && m_can_replay_trx)
     {
         // Stash any interrupted queries while we replay the transaction
         m_interrupted_query.reset(m_current_query.release());

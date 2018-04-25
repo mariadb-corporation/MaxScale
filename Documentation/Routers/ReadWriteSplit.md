@@ -360,6 +360,13 @@ with transaction replay is discouraged. If such statements are executed
 but the results of each reply are identical, the transaction is replayed but the results
 are not guaranteed to be consistent on the database level.
 
+### `transaction_replay_max_size`
+
+The limit on transaction size for transaction replay in bytes. Any transaction
+that exceeds this limit will not be replayed. The default size limit is 1
+MiB. Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
+for more details on size type parameters in MaxScale.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint

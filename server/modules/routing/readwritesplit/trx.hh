@@ -26,6 +26,11 @@ public:
     // A log of executed queries, for transaction replay
     typedef std::deque<mxs::Buffer> TrxLog;
 
+    Trx():
+        m_size(0)
+    {
+    }
+
     /**
      * Add a statement to the transaction
      *
@@ -33,6 +38,7 @@ public:
      */
     void add_stmt(GWBUF* buf)
     {
+        m_size += gwbuf_length(buf);
         m_log.push_back(buf);
     }
 
@@ -87,6 +93,16 @@ public:
     }
 
     /**
+     * Get transaction size in bytes
+     *
+     * @return Size of the transaction in bytes
+     */
+    size_t size() const
+    {
+        return m_size;
+    }
+
+    /**
      * Close the transaction
      *
      * This clears out the stored statements and resets the checksum state.
@@ -95,6 +111,7 @@ public:
     {
         m_checksum.reset();
         m_log.clear();
+        m_size = 0;
     }
 
     /**
@@ -112,4 +129,5 @@ public:
 private:
     mxs::SHA1Checksum m_checksum; /**< Checksum of the transaction */
     TrxLog            m_log; /**< The transaction contents */
-} ;
+    size_t            m_size; /**< Transaction size in bytes */
+};

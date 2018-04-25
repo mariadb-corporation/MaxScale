@@ -507,6 +507,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"delayed_retry", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
             {"transaction_replay", MXS_MODULE_PARAM_BOOL, "false"},
+            {"transaction_replay_max_size", MXS_MODULE_PARAM_COUNT, "1Mi"},
             {MXS_END_MODULE_PARAMS}
         }
     };
