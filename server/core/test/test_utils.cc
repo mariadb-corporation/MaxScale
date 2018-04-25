@@ -135,6 +135,8 @@ int test_checksums()
     sum1.finalize();
     sum2.finalize(d1);
     ss_dassert(sum1 == sum2);
+    sum1.reset();
+    sum2.reset();
 
     // Check that the hex strings match
     ss_dassert(sum1.hex() == sum2.hex());
@@ -151,6 +153,8 @@ int test_checksums()
     ss_dassert(sum1 == sum2);
     ss_dassert(sum1.hex() == saved);
     ss_dassert(sum2.hex() == saved);
+    sum1.reset();
+    sum2.reset();
 
     // Check that different buffers but same content produce the same checksum
     sum1.finalize(d2);
