@@ -18,6 +18,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
 transaction_replay=true
+transaction_replay_max_size=200
 
 [RW Split Listener]
 type=listener
