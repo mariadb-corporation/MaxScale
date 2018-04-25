@@ -596,8 +596,9 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_RSET_ROWS);
             backend->set_reply_state(REPLY_STATE_RSET_ROWS);
 
-            if (backend->cursor_is_open())
+            if (backend->is_opening_cursor())
             {
+                backend->set_cursor_opened();
                 MXS_INFO("Cursor successfully opened");
                 LOG_RS(backend, REPLY_STATE_DONE);
                 backend->set_reply_state(REPLY_STATE_DONE);

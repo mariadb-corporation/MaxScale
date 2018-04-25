@@ -19,7 +19,7 @@ RWBackend::RWBackend(SERVER_REF* ref):
     m_reply_state(REPLY_STATE_DONE),
     m_large_packet(false),
     m_command(0),
-    m_open_cursor(false),
+    m_opening_cursor(false),
     m_expected_rows(0)
 {
 }
@@ -84,19 +84,14 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
                 gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE, 1, &flags);
 
                 // Any non-zero flag value means that we have an open cursor
-                m_open_cursor = flags != 0;
+                m_opening_cursor = flags != 0;
             }
             else if (cmd == MXS_COM_STMT_FETCH)
             {
-                ss_dassert(m_open_cursor);
                 // Number of rows to fetch is a 4 byte integer after the ID
                 uint8_t buf[4];
                 gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE, 4, buf);
                 m_expected_rows = gw_mysql_get_byte4(buf);
-            }
-            else
-            {
-                m_open_cursor = false;
             }
         }
     }

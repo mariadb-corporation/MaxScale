@@ -77,9 +77,14 @@ public:
         return m_command;
     }
 
-    inline bool cursor_is_open() const
+    inline bool is_opening_cursor() const
     {
-        return m_open_cursor;
+        return m_opening_cursor;
+    }
+
+    inline void set_cursor_opened()
+    {
+        m_opening_cursor = false;
     }
 
 private:
@@ -89,7 +94,7 @@ private:
                                       *calculation for result sets when the result
                                       * contains very large rows */
     uint8_t          m_command;
-    bool             m_open_cursor; /**< Whether we have an open cursor */
+    bool             m_opening_cursor; /**< Whether we are opening a cursor */
     uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
 };
 
