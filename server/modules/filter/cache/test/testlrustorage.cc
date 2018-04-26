@@ -54,7 +54,5 @@ int main(int argc, char* argv[])
     TestLRUStorage test(&cout);
     int rv = test.run(argc, argv);
 
-    // TODO: Remove this once globally allocated memory is freed
-    MXS_FREE(libdir);
     return rv;
 }
