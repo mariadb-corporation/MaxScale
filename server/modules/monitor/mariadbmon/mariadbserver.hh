@@ -46,8 +46,6 @@ public:
     bool slave_sql_running;         /**< Slave SQL thread running state, true if "Yes" */
     std::string master_log_file;    /**< Name of the master binary log file that the I/O thread is currently
                                      *   reading from. */
-    uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
-                                     *   binary log file. */
     GtidList gtid_io_pos;           /**< Gtid I/O position of the slave thread. */
     std::string last_error;         /**< Last IO or SQL error encountered. */
 

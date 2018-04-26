@@ -34,7 +34,6 @@ SlaveStatus::SlaveStatus()
     , master_port(0)
     , slave_io_running(SLAVE_IO_NO)
     , slave_sql_running(false)
-    , read_master_log_pos(0)
 {}
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
@@ -118,16 +117,13 @@ bool MariaDBServer::do_show_slave_status()
     auto i_slave_io_running = result->get_col_index("Slave_IO_Running");
     auto i_slave_sql_running = result->get_col_index("Slave_SQL_Running");
     auto i_master_server_id = result->get_col_index("Master_Server_Id");
-    auto i_master_log_file = result->get_col_index("Master_Log_File");
-    auto i_read_master_log_pos = result->get_col_index("Read_Master_Log_Pos");
     auto i_last_io_errno = result->get_col_index("Last_IO_Errno");
     auto i_last_io_error = result->get_col_index("Last_IO_Error");
     auto i_last_sql_error = result->get_col_index("Last_SQL_Error");
 
     const char INVALID_DATA[] = "'%s' returned invalid data.";
     if (i_master_host < 0 || i_master_port < 0 || i_slave_io_running < 0 || i_slave_sql_running < 0 ||
-        i_master_log_file < 0 || i_read_master_log_pos < 0 || i_master_server_id < 0 ||
-        i_last_io_errno < 0  || i_last_io_error < 0 || i_last_sql_error < 0)
+        i_master_server_id < 0 || i_last_io_errno < 0  || i_last_io_error < 0 || i_last_sql_error < 0)
     {
         MXS_ERROR(INVALID_DATA, query.c_str());
         return false;
@@ -169,8 +165,6 @@ bool MariaDBServer::do_show_slave_status()
         {
             // TODO: Fix for multisource replication, check changes to IO_Pos here and save somewhere.
             sstatus.master_server_id = result->get_uint(i_master_server_id);
-            sstatus.master_log_file = result->get_string(i_master_log_file);
-            sstatus.read_master_log_pos = result->get_uint(i_read_master_log_pos);
             if (sstatus.slave_sql_running)
             {
                 nrunning++;
@@ -417,8 +411,6 @@ string MariaDBServer::diagnostics(bool multimaster) const
             SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running) << "\n";
         ss << "Slave SQL running:      " << (m_slave_status[0].slave_sql_running ? "YES" : "NO") << "\n";
         ss << "Master ID:              " << m_slave_status[0].master_server_id << "\n";
-        ss << "Master binlog file:     " << m_slave_status[0].master_log_file << "\n";
-        ss << "Master binlog position: " << m_slave_status[0].read_master_log_pos << "\n";
     }
     if (!m_gtid_current_pos.empty())
     {
@@ -452,10 +444,6 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
             json_string(SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running).c_str()));
         json_object_set_new(srv, "slave_sql_running", json_boolean(m_slave_status[0].slave_sql_running));
         json_object_set_new(srv, "master_id", json_integer(m_slave_status[0].master_server_id));
-        json_object_set_new(srv, "master_binlog_file",
-                            json_string(m_slave_status[0].master_log_file.c_str()));
-        json_object_set_new(srv, "master_binlog_position",
-                            json_integer(m_slave_status[0].read_master_log_pos));
     }
     if (!m_gtid_current_pos.empty())
     {
