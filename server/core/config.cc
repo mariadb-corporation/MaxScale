@@ -1344,6 +1344,16 @@ MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
     return p2;
 }
 
+void config_free_one_param(MXS_CONFIG_PARAMETER* p1)
+{
+    if (p1)
+    {
+        MXS_FREE(p1->name);
+        MXS_FREE(p1->value);
+        MXS_FREE(p1);
+    }
+}
+
 /**
  * Free a configuration parameter
  * @param p1 Parameter to free
@@ -1352,11 +1362,9 @@ void config_parameter_free(MXS_CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
-        MXS_FREE(p1->name);
-        MXS_FREE(p1->value);
-        MXS_CONFIG_PARAMETER* p2 = p1->next;
-        MXS_FREE(p1);
-        p1 = p2;
+        MXS_CONFIG_PARAMETER* tmp = p1;
+        p1 = p1->next;
+        config_free_one_param(tmp);
     }
 }
 
@@ -1371,6 +1379,96 @@ void config_context_free(CONFIG_CONTEXT *context)
         MXS_FREE(context->object);
         MXS_FREE(context);
         context = obj;
+    }
+}
+
+bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    ss_dassert(config_get_param(obj->parameters, key) == NULL);
+    bool rval = false;
+    char *my_key = MXS_STRDUP(key);
+    char *my_value = MXS_STRDUP(value);
+    MXS_CONFIG_PARAMETER* param = (MXS_CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
+
+    if (my_key && my_value && param)
+    {
+        param->name = my_key;
+        param->value = my_value;
+        param->next = obj->parameters;
+        obj->parameters = param;
+        rval = true;
+    }
+    else
+    {
+        MXS_FREE(my_key);
+        MXS_FREE(my_value);
+        MXS_FREE(param);
+    }
+
+    return rval;
+}
+
+bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    ss_dassert(param);
+    int paramlen = strlen(param->value) + strlen(value) + 2;
+    char tmp[paramlen];
+    bool rval = false;
+
+    strcpy(tmp, param->value);
+    strcat(tmp, ",");
+    strcat(tmp, value);
+
+    char *new_value = config_clean_string_list(tmp);
+
+    if (new_value)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    ss_dassert(param);
+    char *new_value = MXS_STRDUP(value);
+    bool rval;
+
+    if (new_value)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+        rval = true;
+    }
+
+    return rval;
+}
+
+void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
+{
+    if (obj->parameters && strcmp(obj->parameters->name, name) == 0)
+    {
+        MXS_CONFIG_PARAMETER* tmp = obj->parameters;
+        obj->parameters = obj->parameters->next;
+        config_free_one_param(tmp);
+    }
+    else
+    {
+        for (MXS_CONFIG_PARAMETER* p = obj->parameters; p && p->next; p = p->next)
+        {
+            if (strcmp(p->next->name, name) == 0)
+            {
+                MXS_CONFIG_PARAMETER* tmp = p->next;
+                p->next = tmp->next;
+                config_free_one_param(tmp);
+                break;
+            }
+        }
     }
 }
 
@@ -1758,7 +1856,7 @@ handle_global_item(const char *name, const char *value)
             if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
             {
                 MXS_WARNING("The specified writeq high water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
-                    gateway.writeq_high_water, MIN_WRITEQ_HIGH_WATER);
+                            gateway.writeq_high_water, MIN_WRITEQ_HIGH_WATER);
                 gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
             }
             MXS_NOTICE("Writeq high water mark set to: %d", gateway.writeq_high_water);
@@ -1769,7 +1867,7 @@ handle_global_item(const char *name, const char *value)
             if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
             {
                 MXS_WARNING("The specified writeq low water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
-                    gateway.writeq_low_water, MIN_WRITEQ_LOW_WATER);
+                            gateway.writeq_low_water, MIN_WRITEQ_LOW_WATER);
                 gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
             }
             MXS_NOTICE("Writeq low water mark set to: %d", gateway.writeq_low_water);
@@ -2609,73 +2707,6 @@ config_get_release_string(char* release)
 unsigned long config_get_gateway_id()
 {
     return gateway.id;
-}
-
-bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
-{
-    ss_dassert(config_get_param(obj->parameters, key) == NULL);
-    bool rval = false;
-    char *my_key = MXS_STRDUP(key);
-    char *my_value = MXS_STRDUP(value);
-    MXS_CONFIG_PARAMETER* param = (MXS_CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
-
-    if (my_key && my_value && param)
-    {
-        param->name = my_key;
-        param->value = my_value;
-        param->next = obj->parameters;
-        obj->parameters = param;
-        rval = true;
-    }
-    else
-    {
-        MXS_FREE(my_key);
-        MXS_FREE(my_value);
-        MXS_FREE(param);
-    }
-
-    return rval;
-}
-
-bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
-{
-    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
-    ss_dassert(param);
-    int paramlen = strlen(param->value) + strlen(value) + 2;
-    char tmp[paramlen];
-    bool rval = false;
-
-    strcpy(tmp, param->value);
-    strcat(tmp, ",");
-    strcat(tmp, value);
-
-    char *new_value = config_clean_string_list(tmp);
-
-    if (new_value)
-    {
-        MXS_FREE(param->value);
-        param->value = new_value;
-        rval = true;
-    }
-
-    return rval;
-}
-
-bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
-{
-    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
-    ss_dassert(param);
-    char *new_value = MXS_STRDUP(value);
-    bool rval;
-
-    if (new_value)
-    {
-        MXS_FREE(param->value);
-        param->value = new_value;
-        rval = true;
-    }
-
-    return rval;
 }
 
 MXS_CONFIG* config_get_global_options()

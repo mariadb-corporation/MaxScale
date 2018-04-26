@@ -112,6 +112,14 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 
 /**
+ * @brief Remove a parameter
+ *
+ * @param obj Configuration context
+ * @param key Name of the parameter to remove
+ */
+void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
+
+/**
  * @brief Construct an SSL structure
  *
  * The SSL structure is used by both listeners and servers.
