@@ -3152,7 +3152,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     fprintf(config_file, "[%s]\n", section);
 
     /* write ini file key=value */
-    fprintf(config_file, "master_host=%s\n", router->service->dbref->server->name);
+    fprintf(config_file, "master_host=%s\n", router->service->dbref->server->address);
     fprintf(config_file, "master_port=%d\n", router->service->dbref->server->port);
     fprintf(config_file, "master_user=%s\n", router->user);
     fprintf(config_file, "master_password=%s\n", router->password);

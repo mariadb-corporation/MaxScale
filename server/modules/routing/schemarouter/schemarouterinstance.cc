@@ -216,7 +216,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
             MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
                      b->connections,
                      b->server->stats.n_current,
-                     b->server->name,
+                     b->server->address,
                      b->server->port,
                      STRSRVSTATUS(b->server));
         }
@@ -250,7 +250,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
                     succp = false;
                     MXS_ERROR("Unable to establish "
                               "connection with slave %s:%d",
-                              b->server->name,
+                              b->server->address,
                               b->server->port);
                     /* handle connect error */
                     break;
@@ -273,7 +273,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
                 {
                     MXS_INFO("Connected %s in \t%s:%d",
                              STRSRVSTATUS(b->server),
-                             b->server->name,
+                             b->server->address,
                              b->server->port);
                 }
             }

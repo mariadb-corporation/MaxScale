@@ -1403,7 +1403,7 @@ printService(SERVICE *service)
     printf("\tBackend databases\n");
     while (ptr)
     {
-        printf("\t\t[%s]:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
+        printf("\t\t[%s]:%d  Protocol: %s\n", ptr->server->address, ptr->server->port, ptr->server->protocol);
         ptr = ptr->next;
     }
     if (service->n_filters)
@@ -1517,8 +1517,8 @@ void dprintService(DCB *dcb, SERVICE *service)
         if (SERVER_REF_IS_ACTIVE(server))
         {
             dcb_printf(dcb, "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
-                       server->server->name, server->server->port,
-                       server->server->protocol, server->server->unique_name);
+                       server->server->address, server->server->port,
+                       server->server->protocol, server->server->name);
         }
         server = server->next;
     }
@@ -1570,11 +1570,11 @@ dListServices(DCB *dcb)
             {
                 if (first)
                 {
-                    dcb_printf(dcb, "%s", server_ref->server->unique_name);
+                    dcb_printf(dcb, "%s", server_ref->server->name);
                 }
                 else
                 {
-                    dcb_printf(dcb, ", %s", server_ref->server->unique_name);
+                    dcb_printf(dcb, ", %s", server_ref->server->name);
                 }
                 first = false;
             }
@@ -2291,14 +2291,14 @@ static void service_calculate_weights(SERVICE *service)
                                     " of %d for service '%s'. No queries will be "
                                     "routed to this server as long as a server with"
                                     " positive weight is available.",
-                                    weightby, wght, server->server->unique_name,
+                                    weightby, wght, server->server->name,
                                     total, service->name);
                     }
                     else if (perc < 0)
                     {
                         MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
                                   "maximum value is %d. No weighting will be used for this "
-                                  "server.", weightby, server->server->unique_name,
+                                  "server.", weightby, server->server->name,
                                   INT_MAX / SERVICE_BASE_SERVER_WEIGHT);
                         perc = SERVICE_BASE_SERVER_WEIGHT;
                     }
@@ -2307,7 +2307,7 @@ static void service_calculate_weights(SERVICE *service)
                 else
                 {
                     MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
-                                " for service '%s'.", server->server->unique_name,
+                                " for service '%s'.", server->server->name,
                                 weightby, service->name);
                 }
             }
@@ -2408,7 +2408,7 @@ static bool create_service_config(const SERVICE *service, const char *filename)
         {
             if (SERVER_REF_IS_ACTIVE(db))
             {
-                dprintf(file, "%s%s", sep, db->server->unique_name);
+                dprintf(file, "%s%s", sep, db->server->name);
                 sep = ",";
             }
         }
@@ -2708,7 +2708,7 @@ json_t* service_relationships(const SERVICE* service, const char* host)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                mxs_json_add_relation(servers, ref->server->unique_name, CN_SERVERS);
+                mxs_json_add_relation(servers, ref->server->name, CN_SERVERS);
             }
         }
 

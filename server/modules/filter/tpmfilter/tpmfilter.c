@@ -578,7 +578,7 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
             fprintf(my_instance->fp, "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
                     my_instance->delimiter,
-                    reply->server->unique_name,
+                    reply->server->name,
                     my_instance->delimiter,
                     my_session->userName,
                     my_instance->delimiter,

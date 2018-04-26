@@ -191,7 +191,7 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         }
     }
 
-    MYSQL* mysql = mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
+    MYSQL* mysql = mysql_real_connect(con, server->address, user, passwd, NULL, server->port, NULL, 0);
 
     if (mysql)
     {
@@ -202,12 +202,12 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
 
         if (listener && mysql_get_ssl_cipher(con) == NULL)
         {
-            if (server->log_warning.ssl_not_enabled)
+            if (server->warn_ssl_not_enabled)
             {
-                server->log_warning.ssl_not_enabled = false;
+                server->warn_ssl_not_enabled = false;
                 MXS_ERROR("An encrypted connection to '%s' could not be created, "
                           "ensure that TLS is enabled on the target server.",
-                          server->unique_name);
+                          server->name);
             }
             // Don't close the connection as it is closed elsewhere, just set to NULL
             mysql = NULL;

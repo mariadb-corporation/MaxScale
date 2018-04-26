@@ -519,7 +519,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
         MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
-                  service->name, server->unique_name, server->name, server->port,
+                  service->name, server->name, server->address, server->port,
                   my_errno, mysql_error(mysql));
 
         mysql_close(mysql);
@@ -869,7 +869,7 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
             {
                 MXS_ERROR("Failure loading users data from backend "
                           "[%s:%i] for service [%s]. MySQL error %i, %s",
-                          server->server->name, server->server->port,
+                          server->server->address, server->server->port,
                           service->name, mysql_errno(con), mysql_error(con));
                 mysql_close(con);
             }

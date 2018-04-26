@@ -311,7 +311,7 @@ bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
 
     if (monitor_server_in_use(server))
     {
-        MXS_ERROR("Server '%s' is already monitored.", server->unique_name);
+        MXS_ERROR("Server '%s' is already monitored.", server->name);
     }
     else
     {
@@ -529,7 +529,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
 
     for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
     {
-        dcb_printf(dcb, "%s[%s]:%d", sep, db->server->name, db->server->port);
+        dcb_printf(dcb, "%s[%s]:%d", sep, db->server->address, db->server->port);
         sep = ", ";
     }
 
@@ -798,7 +798,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
-                      monitor->name, mondb->server->unique_name, mondb->server->name,
+                      monitor->name, mondb->server->name, mondb->server->address,
                       mondb->server->port, mysql_error(mondb->con));
             switch (mysql_errno(mondb->con))
             {
@@ -1135,7 +1135,7 @@ static void mon_append_node_names(MXS_MONITOR* mon,
         {
             if (approach == CREDENTIALS_EXCLUDE)
             {
-                snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->name,
+                snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->address,
                          servers->server->port);
             }
             else
@@ -1157,7 +1157,7 @@ static void mon_append_node_names(MXS_MONITOR* mon,
                          separator,
                          user,
                          password,
-                         servers->server->name,
+                         servers->server->address,
                          servers->server->port);
             }
 
@@ -1257,7 +1257,7 @@ static std::string child_nodes(MXS_MONITORED_SERVER* servers,
                     ss << ",";
                 }
 
-                ss << "[" << node->server->name << "]:" << node->server->port;
+                ss << "[" << node->server->address << "]:" << node->server->port;
                 have_content = true;
             }
         }
@@ -1270,8 +1270,8 @@ int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCM
 {
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
-        char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
-        snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->name, ptr->server->port);
+        char initiator[strlen(ptr->server->address) + 24]; // Extra space for port
+        snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->address, ptr->server->port);
         externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
     }
 
@@ -1282,7 +1282,7 @@ int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCM
 
         if (parent)
         {
-            ss << "[" << parent->server->name << "]:" << parent->server->port;
+            ss << "[" << parent->server->address << "]:" << parent->server->port;
         }
         externcmd_substitute_arg(cmd, "[$]PARENT", ss.str().c_str());
     }
@@ -1505,7 +1505,7 @@ mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval)
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
               "Monitor timed out when connecting to server [%s]:%d : \"%s\"" :
               "Monitor was unable to connect to server [%s]:%d : \"%s\"",
-              database->server->name, database->server->port,
+              database->server->address, database->server->port,
               mysql_error(database->con));
 }
 
@@ -1516,7 +1516,7 @@ static void mon_log_state_change(MXS_MONITORED_SERVER *ptr)
     char *prev = server_status(&srv);
     char *next = server_status(ptr->server);
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
-               ptr->server->unique_name, ptr->server->name, ptr->server->port,
+               ptr->server->name, ptr->server->address, ptr->server->port,
                mon_get_event_name(ptr), prev, next);
     MXS_FREE(prev);
     MXS_FREE(next);
@@ -1586,7 +1586,7 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
             {
                 dprintf(file, ",");
             }
-            dprintf(file, "%s", db->server->unique_name);
+            dprintf(file, "%s", db->server->name);
         }
         dprintf(file, "\n");
     }
@@ -1676,7 +1676,7 @@ void mon_hangup_failed_servers(MXS_MONITOR *monitor)
 void mon_report_query_error(MXS_MONITORED_SERVER* db)
 {
     MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              db->server->unique_name, db->server->name,
+              db->server->name, db->server->address,
               db->server->port, mysql_error(db->con));
 }
 
@@ -1871,7 +1871,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 
         for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
         {
-            mxs_json_add_relation(mon_rel, db->server->unique_name, CN_SERVERS);
+            mxs_json_add_relation(mon_rel, db->server->name, CN_SERVERS);
         }
 
         json_object_set_new(rel, CN_SERVERS, mon_rel);
@@ -2044,8 +2044,8 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
     for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
     {
         *ptr++ = (char)SVT_SERVER; // Value type
-        memcpy(ptr, db->server->unique_name, strlen(db->server->unique_name)); // Name of the server
-        ptr += strlen(db->server->unique_name);
+        memcpy(ptr, db->server->name, strlen(db->server->name)); // Name of the server
+        ptr += strlen(db->server->name);
         *ptr++ = '\0'; // Null-terminate the string
 
         uint32_t status = db->server->status; // Server status as 4 byte integer
@@ -2057,8 +2057,8 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
     if (master)
     {
         *ptr++ = (char)SVT_MASTER;
-        memcpy(ptr, master->server->unique_name, strlen(master->server->unique_name));
-        ptr += strlen(master->server->unique_name);
+        memcpy(ptr, master->server->name, strlen(master->server->name));
+        ptr += strlen(master->server->name);
         *ptr++ = '\0'; // Null-terminate the string
     }
 
@@ -2129,7 +2129,7 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
 {
     for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
     {
-        if (strcmp(db->server->unique_name, data) == 0)
+        if (strcmp(db->server->name, data) == 0)
         {
             const unsigned char *sptr = (unsigned char*)strchr(data, '\0');
             ss_dassert(sptr);
@@ -2159,7 +2159,7 @@ static const char* process_master(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **m
     {
         for (MXS_MONITORED_SERVER* db = monitor->monitored_servers; db; db = db->next)
         {
-            if (strcmp(db->server->unique_name, data) == 0)
+            if (strcmp(db->server->name, data) == 0)
             {
                 *master = db;
                 break;
@@ -2235,13 +2235,13 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master)
     {
         /** Each server is stored as a type byte and a null-terminated string
          * followed by eight byte server status. */
-        size += MMB_LEN_VALUE_TYPE + strlen(db->server->unique_name) + 1 + MMB_LEN_SERVER_STATUS;
+        size += MMB_LEN_VALUE_TYPE + strlen(db->server->name) + 1 + MMB_LEN_SERVER_STATUS;
     }
 
     if (master)
     {
         /** The master server name is stored as a null terminated string */
-        size += MMB_LEN_VALUE_TYPE + strlen(master->server->unique_name) + 1;
+        size += MMB_LEN_VALUE_TYPE + strlen(master->server->name) + 1;
     }
 
     /** 4 bytes for file length, 1 byte for schema version and 4 bytes for CRC32 */
@@ -2451,7 +2451,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
             else
             {
                 MXS_WARNING("Server '%s' is not monitored by monitor '%s'.",
-                            servers[i]->unique_name, mon->name);
+                            servers[i]->name, mon->name);
             }
         }
         MXS_FREE(servers);

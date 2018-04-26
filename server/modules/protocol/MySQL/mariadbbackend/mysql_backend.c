@@ -180,7 +180,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
 
     /*< if succeed, fd > 0, -1 otherwise */
     /* TODO: Better if function returned a protocol auth state */
-    rv = gw_do_connect_to_backend(server->name, server->port, &fd);
+    rv = gw_do_connect_to_backend(server->address, server->port, &fd);
     /*< Assign protocol with backend_dcb */
     backend_dcb->protocol = protocol;
 
@@ -194,7 +194,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         MXS_DEBUG("Established "
                   "connection to %s:%i, protocol fd %d client "
                   "fd %d.",
-                  server->name,
+                  server->address,
                   server->port,
                   protocol->fd,
                   session->client_dcb->fd);
@@ -214,7 +214,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         protocol->fd = fd;
         MXS_DEBUG("Connection "
                   "pending to %s:%i, protocol fd %d client fd %d.",
-                  server->name,
+                  server->address,
                   server->port,
                   protocol->fd,
                   session->client_dcb->fd);
@@ -311,7 +311,7 @@ static void handle_error_response(DCB *dcb, GWBUF *buffer)
     bufstr[len - 3] = '\0';
 
     MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
-              "Msg : %s", dcb->server->unique_name, errcode, bufstr);
+              "Msg : %s", dcb->server->name, errcode, bufstr);
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenace mode.
      * This will prevent repeated authentication failures. */
@@ -321,8 +321,8 @@ static void handle_error_response(DCB *dcb, GWBUF *buffer)
                   "to the server blocking connections from MaxScale. "
                   "Run 'mysqladmin -h %s -P %d flush-hosts' on this "
                   "server before taking this server out of maintenance "
-                  "mode.", dcb->server->unique_name,
-                  dcb->server->name, dcb->server->port);
+                  "mode.", dcb->server->name,
+                  dcb->server->address, dcb->server->port);
 
         server_set_status(dcb->server, SERVER_MAINT);
     }
@@ -1177,7 +1177,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         {
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
-                      dcb->server->unique_name,
+                      dcb->server->name,
                       backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
                       "handshake" : "authentication",
                       STRSRVSTATUS(dcb->server));
@@ -2083,7 +2083,7 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb)
     if (headerbuf)
     {
         MXS_INFO("Sending proxy-protocol header '%s' to backend %s.", proxy_header,
-                 backend_dcb->server->unique_name);
+                 backend_dcb->server->name);
         if (!dcb_write(backend_dcb, headerbuf))
         {
             gwbuf_free(headerbuf);

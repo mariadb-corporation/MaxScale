@@ -81,7 +81,7 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
     SERVER server;
     memset(&server, 0, sizeof(server));
 
-    strcpy(server.name, zHost);
+    strcpy(server.address, zHost);
     server.port = 3306;
 
     MYSQL* pMysql = mysql_init(NULL);

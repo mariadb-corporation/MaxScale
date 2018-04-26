@@ -431,7 +431,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     CHK_CLIENT_RSES(client_rses);
 
     MXS_INFO("New session for server %s. Connections : %d",
-             candidate->server->unique_name, candidate->connections);
+             candidate->server->name, candidate->connections);
 
     return (void *) client_rses;
 }
@@ -514,16 +514,16 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, bool is_closed,
     }
     else if (SERVER_IS_DOWN(ref->server))
     {
-        sprintf(msg, "Server '%s' is down.", ref->server->unique_name);
+        sprintf(msg, "Server '%s' is down.", ref->server->name);
     }
     else if (SERVER_IN_MAINT(ref->server))
     {
-        sprintf(msg, "Server '%s' is in maintenance.", ref->server->unique_name);
+        sprintf(msg, "Server '%s' is in maintenance.", ref->server->name);
     }
     else if (!valid)
     {
         sprintf(msg, "Server '%s' no longer qualifies as a target server.",
-                ref->server->unique_name);
+                ref->server->name);
     }
 
     MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
@@ -640,7 +640,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
 
     MXS_INFO("Routed [%s] to '%s'%s%s",
              STRPACKETTYPE(mysql_command),
-             backend_dcb->server->unique_name,
+             backend_dcb->server->name,
              trc ? ": " : ".",
              trc ? trc : "");
     MXS_FREE(trc);
@@ -678,7 +678,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
         for (SERVER_REF *ref = router_inst->service->dbref; ref; ref = ref->next)
         {
             dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
-                       ref->server->unique_name,
+                       ref->server->name,
                        (float) ref->weight / 10,
                        ref->connections);
         }

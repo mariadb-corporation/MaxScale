@@ -861,12 +861,12 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
     {
         if (runtime_link_server(server, values[i]))
         {
-            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->unique_name, values[i]);
+            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->name, values[i]);
         }
         else
         {
             dcb_printf(dcb, "Could not add server '%s' to object '%s'. See error log for more details.\n",
-                       server->unique_name, values[i]);
+                       server->name, values[i]);
         }
     }
 }
@@ -956,7 +956,7 @@ static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char 
     {
         if (runtime_unlink_server(server, values[i]))
         {
-            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->unique_name, values[i]);
+            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->name, values[i]);
         }
         else
         {
@@ -1248,8 +1248,8 @@ static void destroyServer(DCB *dcb, SERVER *server)
     /** Do this so that we don't directly access the server. Currently, the
      * destruction of a server does not free any memory and the server stays
      * valid. */
-    char name[strlen(server->unique_name) + 1];
-    strcpy(name, server->unique_name);
+    char name[strlen(server->name) + 1];
+    strcpy(name, server->name);
 
     if (runtime_destroy_server(server))
     {
@@ -1411,7 +1411,7 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                                            ssl_version, ssl_depth))
             {
                 dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
-                           "for more details.\n", server->unique_name);
+                           "for more details.\n", server->name);
             }
         }
         else

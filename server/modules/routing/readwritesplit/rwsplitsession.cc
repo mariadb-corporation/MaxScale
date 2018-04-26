@@ -329,19 +329,19 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
             MXS_INFO("Connection from '%s'@'%s' to '%s' was killed",
                      dcb->session->client_dcb->user,
                      dcb->session->client_dcb->remote,
-                     dcb->server->unique_name);
+                     dcb->server->name);
         }
         else
         {
             MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
-                        dcb->server->unique_name, errcode, errstr.c_str());
+                        dcb->server->name, errcode, errstr.c_str());
         }
     }
     else
     {
         MXS_ERROR("Unexpected internal state: received response 0x%02hhx from "
                   "server '%s' when no response was expected",
-                  mxs_mysql_get_command(buffer), dcb->server->unique_name);
+                  mxs_mysql_get_command(buffer), dcb->server->name);
         ss_dassert(false);
     }
 }
@@ -534,7 +534,7 @@ void check_and_log_backend_state(const SRWBackend& backend, DCB* problem_dcb)
     else
     {
         const char *remote = problem_dcb->state == DCB_STATE_POLLING &&
-                             problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
+                             problem_dcb->server ? problem_dcb->server->name : "CLOSED";
 
         MXS_ERROR("DCB connected to '%s' is not in use by the router "
                   "session, not closing it. DCB is in state '%s'",

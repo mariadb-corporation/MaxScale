@@ -194,7 +194,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
                                    HintRouterSession::BackendMap* all_backends)
 {
     Dcb result(NULL);
-    HR_DEBUG("Connecting to %s.", sref->server->unique_name);
+    HR_DEBUG("Connecting to %s.", sref->server->name);
     DCB* new_connection = dcb_connect(sref->server, session, sref->server->protocol);
 
     if (new_connection)
@@ -204,7 +204,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
         new_connection->service = session->service;
 
         result = Dcb(new_connection);
-        string name(new_connection->server->unique_name);
+        string name(new_connection->server->name);
         all_backends->insert(HintRouterSession::MapElement(name, result));
     }
     else

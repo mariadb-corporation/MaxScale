@@ -196,7 +196,7 @@ static void blr_start_master(void* data)
                   "reached %d maximum number of retries. "
                   "Replication is stopped.",
                   router->service->name,
-                  router->service->dbref->server->unique_name,
+                  router->service->dbref->server->name,
                   router->retry_limit);
         return;
     }
@@ -261,17 +261,17 @@ static void blr_start_master(void* data)
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "retrying in %d seconds",
                   router->service->name,
-                  router->service->dbref->server->unique_name,
+                  router->service->dbref->server->name,
                   connect_retry);
         return;
     }
-    router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
+    router->master->remote = MXS_STRDUP_A(router->service->dbref->server->address);
     router->master->service = router->service;
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",
                router->service->name,
-               router->service->dbref->server->name,
+               router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
@@ -408,7 +408,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
                       "reached %d maximum number of retries. "
                       "Replication is stopped.",
                       router->service->name,
-                      router->service->dbref->server->unique_name,
+                      router->service->dbref->server->name,
                       router->retry_limit);
             return;
         }
@@ -434,7 +434,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
             MXS_ERROR("%s: failed to connect to master server '%s', "
                       "retrying in %d seconds",
                       router->service->name,
-                      router->service->dbref->server->unique_name,
+                      router->service->dbref->server->name,
                       connect_retry);
         }
     }
@@ -1425,7 +1425,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                       "be sent to the master server [%s]:%d",
                                       router->service->name, router->binlog_name,
                                       router->current_pos,
-                                      router->service->dbref->server->name,
+                                      router->service->dbref->server->address,
                                       router->service->dbref->server->port);
 
                             /* Send Semi-Sync ACK packet to master server */
@@ -1993,7 +1993,7 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
             MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
                       "and reconnecting.",
-                      router->service->dbref->server->name,
+                      router->service->dbref->server->address,
                       router->service->dbref->server->port,
                       router->heartbeat,
                       event_desc != NULL ? event_desc : "unknown",
@@ -2818,7 +2818,7 @@ static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
 {
     MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
                router->service->name,
-               router->service->dbref->server->name,
+               router->service->dbref->server->address,
                router->service->dbref->server->port);
 
     // New registration message
@@ -2853,7 +2853,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
             /* not installed */
             MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
                        router->service->name,
-                       router->service->dbref->server->name,
+                       router->service->dbref->server->address,
                        router->service->dbref->server->port);
 
             /* Continue without semisync */
@@ -2869,7 +2869,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
                 MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync"
                            " enabled right now, Request Semi-Sync Replication anyway",
                            router->service->name,
-                           router->service->dbref->server->name,
+                           router->service->dbref->server->address,
                            router->service->dbref->server->port);
             }
             else
@@ -2878,7 +2878,7 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
                 MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled,"
                            " Requesting Semi-Sync Replication",
                            router->service->name,
-                           router->service->dbref->server->name,
+                           router->service->dbref->server->address,
                            router->service->dbref->server->port);
             }
 
@@ -3264,7 +3264,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                        "position %lu from master server [%s]:%d",
                        router->service->name, router->binlog_name,
                        router->current_pos,
-                       router->service->dbref->server->name,
+                       router->service->dbref->server->address,
                        router->service->dbref->server->port);
         }
 

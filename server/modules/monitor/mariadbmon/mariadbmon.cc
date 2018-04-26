@@ -559,14 +559,14 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
                 !(root_master->server->status & SERVER_MAINT))
             {
                 MXS_NOTICE("A Master Server is now available: %s:%i",
-                           root_master->server->name,
+                           root_master->server->address,
                            root_master->server->port);
             }
         }
         else
         {
             MXS_ERROR("No Master can be determined. Last known was %s:%i",
-                      root_master->server->name,
+                      root_master->server->address,
                       root_master->server->port);
         }
         *log_no_master = 1;
@@ -744,7 +744,7 @@ void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
                 database->server->rlag = 0;
 
                 MXS_DEBUG("heartbeat table inserted data for %s:%i",
-                          database->server->name, database->server->port);
+                          database->server->address, database->server->port);
             }
         }
         else
@@ -753,7 +753,7 @@ void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
             database->server->rlag = 0;
 
             MXS_DEBUG("heartbeat table updated for Master %s:%i",
-                      database->server->name, database->server->port);
+                      database->server->address, database->server->port);
         }
     }
 }
@@ -827,7 +827,7 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
             }
 
             MXS_DEBUG("Slave %s:%i has %i seconds lag",
-                      database->server->name,
+                      database->server->address,
                       database->server->port,
                       database->server->rlag);
         }
@@ -848,14 +848,14 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
         {
             MXS_ERROR("error: replication heartbeat: "
                       "master_server_id NOT available for %s:%i",
-                      database->server->name,
+                      database->server->address,
                       database->server->port);
         }
         else
         {
             MXS_ERROR("error: replication heartbeat: "
                       "failed selecting from hearthbeat table of %s:%i : [%s], %s",
-                      database->server->name,
+                      database->server->address,
                       database->server->port,
                       select_heartbeat_query,
                       mysql_error(database->con));

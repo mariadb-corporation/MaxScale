@@ -108,47 +108,51 @@ typedef struct server
 #if defined(SS_DEBUG)
     skygw_chk_t     server_chk_top;
 #endif
-    SPINLOCK       lock;           /**< Common access lock */
-    char           *unique_name;   /**< Unique name for the server */
-    char           name[MAX_SERVER_ADDRESS_LEN]; /**< Server name/IP address*/
-    unsigned short port;           /**< Port to listen on */
-    char           *protocol;      /**< Protocol module to use */
+    // Base settings
+    char           *name;          /**< Server config name */
+    char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
+    unsigned short port;           /**< Server port */
+    char           *protocol;      /**< Backend protocol module name */
     char           *authenticator; /**< Authenticator module name */
-    void           *auth_instance; /**< Authenticator instance */
-    char           *auth_options;  /**< Authenticator options */
-    SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
-    uint64_t       status;         /**< Status flag bitmap for the server */
-    uint64_t       status_pending; /**< Pending status flag bitmap for the server */
-    char           monuser[MAX_SERVER_MONUSER_LEN]; /**< User name to use to monitor the db */
-    char           monpw[MAX_SERVER_MONPW_LEN]; /**< Password to use to monitor the db */
-    SERVER_STATS   stats;          /**< The server statistics */
-    struct  server *next;          /**< Next server */
-    struct  server *nextdb;        /**< Next server in list attached to a service */
-    char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string, i.e. MySQL server version */
-    uint64_t       version;        /**< Server version */
-    server_type_t  server_type;    /**< Server type */
+    // Other settings
+    char           monuser[MAX_SERVER_MONUSER_LEN]; /**< Monitor username, overrides monitor setting */
+    char           monpw[MAX_SERVER_MONPW_LEN]; /**< Monitor password, overrides monitor setting  */
+    long           persistpoolmax; /**< Maximum size of persistent connections pool */
+    long           persistmaxtime; /**< Maximum number of seconds connection can live */
+    bool           proxy_protocol; /**< Send proxy-protocol header to backends when connecting
+                                    *   routing sessions. */
+    SERVER_PARAM   *parameters;    /**< Additional custom parameters which may affect routing decisions. */
+    // Base variables
+    SPINLOCK       lock;           /**< Access lock. Required when modifying server status or settings. */
+    struct  server *next;          /**< Next server in global server list */
+    bool           is_active;      /**< Server is active and has not been "destroyed" */
+    void           *auth_instance; /**< Authenticator instance data */
+    SSL_LISTENER   *server_ssl;    /**< SSL data */
+    DCB            **persistent;   /**< List of unused persistent connections to the server */
+    uint8_t        charset;        /**< Server character set. Read from backend and sent to client. */
+    // Statistics and events
+    SERVER_STATS   stats;          /**< The server statistics, e.g. number of connections */
+    int            persistmax;     /**< Maximum pool size actually achieved since startup */
+    int            last_event;     /**< The last event that occurred on this server */
+    int64_t        triggered_at;   /**< Time when the last event was triggered */
+    bool           active_event;   /**< Was MaxScale active when last event was observed */
+    // Values updated mainly by monitor
+    uint64_t       status;         /**< Current status flag bitmap */
+    uint64_t       status_pending; /**< Temporary status, usually written to current status once ready */
+    char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string as given by backend */
+    uint64_t       version;        /**< Server version numeric representation */
+    server_type_t  server_type;    /**< Server type (MariaDB or MySQL), deduced from version string */
     long           node_id;        /**< Node id, server_id for M/S or local_index for Galera */
-    int            rlag;           /**< Replication Lag for Master / Slave replication */
+    int            rlag;           /**< Replication Lag for Master/Slave replication */
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
-    SERVER_PARAM   *parameters;    /**< Parameters of a server that may be used to weight routing decisions */
     long           master_id;      /**< Master server id of this node */
     int            depth;          /**< Replication level in the tree */
     long           slaves[MAX_NUM_SLAVES]; /**< Slaves of this node */
-    bool           master_err_is_logged; /*< If node failed, this indicates whether it is logged */
-    DCB            **persistent;    /**< List of unused persistent connections to the server */
-    long           persistpoolmax; /**< Maximum size of persistent connections pool */
-    long           persistmaxtime; /**< Maximum number of seconds connection can live */
-    int            persistmax;     /**< Maximum pool size actually achieved since startup */
-    uint8_t        charset;        /**< Default server character set */
-    bool           is_active;      /**< Server is active and has not been "destroyed" */
-    bool           proxy_protocol; /**< Send proxy-protocol header to backend when connecting client sessions. */
-    int            last_event;     /**< The last event that occurred on this server */
-    bool           active_event;   /**< Event observed when MaxScale was active */
-    int64_t        triggered_at;   /**< Time when the last event was triggered */
-    struct
-    {
-        bool ssl_not_enabled; /**< SSL not used for an SSL enabled server */
-    } log_warning; /**< Whether a specific warning was logged */
+    // Misc fields
+    char           *auth_options;  /**< Authenticator options, not used. TODO: Remove. */
+    bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
+                                          *   by rwsplit. TODO: Move to rwsplit */
+    bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif

@@ -3176,7 +3176,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
             if (*endptr != '\0' || persistpoolmax < 0)
             {
                 MXS_ERROR("Invalid value for 'persistpoolmax' for server %s: %s",
-                          server->unique_name, poolmax);
+                          server->name, poolmax);
                 error_count++;
             }
             else
@@ -3192,7 +3192,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
             if (*endptr != '\0' || persistmaxtime < 0)
             {
                 MXS_ERROR("Invalid value for 'persistmaxtime' for server %s: %s",
-                          server->unique_name, persistmax);
+                          server->name, persistmax);
                 error_count++;
             }
             else
@@ -3216,7 +3216,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
             else
             {
                 MXS_ERROR("Invalid value for '%s' for server %s: %s",
-                          CN_PROXY_PROTOCOL, server->unique_name, proxy_protocol);
+                          CN_PROXY_PROTOCOL, server->name, proxy_protocol);
                 error_count++;
             }
         }

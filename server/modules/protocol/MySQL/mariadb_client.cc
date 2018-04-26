@@ -292,5 +292,5 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
 
 LocalClient* LocalClient::create(MXS_SESSION* session, SERVER* server)
 {
-    return create(session, server->name, server->port);
+    return create(session, server->address, server->port);
 }

@@ -27,7 +27,7 @@ Backend::Backend(SERVER_REF *ref):
     m_state(0)
 {
     std::stringstream ss;
-    ss << "[" << server()->name << "]:" << server()->port;
+    ss << "[" << server()->address << "]:" << server()->port;
     m_uri = ss.str();
 }
 

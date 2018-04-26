@@ -48,7 +48,7 @@ bool check_auth_switch_request(DCB *dcb, GWBUF *buffer)
         bool was_ok_packet = copied > MYSQL_HEADER_LEN &&
                              data[MYSQL_HEADER_LEN + 1] == MYSQL_REPLY_OK;
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  dcb->server->unique_name, was_ok_packet ?
+                  dcb->server->name, was_ok_packet ?
                   " Authentication was complete before it even started, "
                   "anonymous users might not be disabled." : "");
         return false;
@@ -121,7 +121,7 @@ bool PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
         if (mxs_mysql_is_ok_packet(buffer))
         {
             MXS_DEBUG("pam_backend_auth_extract received ok packet from '%s'.",
-                      dcb->server->unique_name);
+                      dcb->server->name);
             m_state = PAM_AUTH_OK;
             rval = true;
         }
@@ -135,7 +135,7 @@ bool PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
     if (!rval)
     {
         MXS_DEBUG("pam_backend_auth_extract to backend '%s' failed for user '%s'.",
-                  dcb->server->unique_name, dcb->user);
+                  dcb->server->name, dcb->user);
     }
     return rval;
 }
@@ -147,7 +147,7 @@ int PamBackendSession::authenticate(DCB *dcb)
     if (m_state == PAM_AUTH_INIT)
     {
         MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.",
-                  dcb->server->unique_name);
+                  dcb->server->name);
         if (send_client_password(dcb))
         {
             rval = MXS_AUTH_INCOMPLETE;

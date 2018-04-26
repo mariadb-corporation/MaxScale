@@ -211,26 +211,26 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
         {
         case LEAST_GLOBAL_CONNECTIONS:
             MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
-                     b->server->stats.n_current, b->server->name,
+                     b->server->stats.n_current, b->server->address,
                      b->server->port, STRSRVSTATUS(b->server));
             break;
 
         case LEAST_ROUTER_CONNECTIONS:
             MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
-                     b->connections, b->server->name,
+                     b->connections, b->server->address,
                      b->server->port, STRSRVSTATUS(b->server));
             break;
 
         case LEAST_CURRENT_OPERATIONS:
             MXS_INFO("current operations : %d in \t[%s]:%d %s",
                      b->server->stats.n_current_ops,
-                     b->server->name, b->server->port,
+                     b->server->address, b->server->port,
                      STRSRVSTATUS(b->server));
             break;
 
         case LEAST_BEHIND_MASTER:
             MXS_INFO("replication lag : %d in \t[%s]:%d %s",
-                     b->server->rlag, b->server->name,
+                     b->server->rlag, b->server->address,
                      b->server->port, STRSRVSTATUS(b->server));
             break;
 

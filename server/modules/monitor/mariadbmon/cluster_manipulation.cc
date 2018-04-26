@@ -125,7 +125,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
     bool rval = false;
     if (cluster_can_be_joined())
     {
-        const char* rejoin_serv_name = rejoin_server->unique_name;
+        const char* rejoin_serv_name = rejoin_server->name;
         MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor_base, rejoin_server);
         if (mon_slave_cand)
         {
@@ -222,7 +222,7 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray
 {
     ss_dassert(redirected_slaves != NULL);
     MXS_NOTICE("Redirecting slaves to new master.");
-    string change_cmd = generate_change_master_cmd(new_master->m_server_base->server->name,
+    string change_cmd = generate_change_master_cmd(new_master->m_server_base->server->address,
                                                    new_master->m_server_base->server->port);
     int successes = 0;
     for (auto iter = slaves.begin(); iter != slaves.end(); iter++)
@@ -277,7 +277,7 @@ bool MariaDBMonitor::switchover_start_slave(MariaDBServer* old_master, MariaDBSe
     MYSQL* old_master_con = old_master->m_server_base->con;
     SERVER* new_master_server = new_master->m_server_base->server;
 
-    string change_cmd = generate_change_master_cmd(new_master_server->name, new_master_server->port);
+    string change_cmd = generate_change_master_cmd(new_master_server->address, new_master_server->port);
     if (mxs_mysql_query(old_master_con, change_cmd.c_str()) == 0 &&
         mxs_mysql_query(old_master_con, "START SLAVE;") == 0)
     {
@@ -304,11 +304,11 @@ bool MariaDBMonitor::switchover_start_slave(MariaDBServer* old_master, MariaDBSe
 uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t** output)
 {
     SERVER* master_server = m_master->m_server_base->server;
-    const char* master_name = master_server->unique_name;
+    const char* master_name = master_server->name;
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
-        string change_cmd = generate_change_master_cmd(master_server->name, master_server->port);
+        string change_cmd = generate_change_master_cmd(master_server->address, master_server->port);
         for (auto iter = joinable_servers.begin(); iter != joinable_servers.end(); iter++)
         {
             MariaDBServer* joinable = *iter;
@@ -431,7 +431,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             // or is disconnected but master host or port is wrong.
             else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING &&
                      slave_status->slave_sql_running &&
-                     (slave_status->master_host != m_master->m_server_base->server->name ||
+                     (slave_status->master_host != m_master->m_server_base->server->address ||
                       slave_status->master_port != m_master->m_server_base->server->port))
             {
                 is_suspect = true;
@@ -1216,12 +1216,12 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
     if (!server_is_master)
     {
         PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
-                             suggested_curr_master->server->unique_name);
+                             suggested_curr_master->server->name);
     }
     else if (extra_master)
     {
         PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
-                             extra_master->server->unique_name);
+                             extra_master->server->name);
     }
     return server_is_master && !extra_master;
 }
@@ -1237,7 +1237,7 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
 bool MariaDBMonitor::switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
 {
     SERVER* server = monitored_server->server;
-    const char* name = server->unique_name;
+    const char* name = server->name;
     bool is_master = SERVER_IS_MASTER(server);
     bool is_slave = SERVER_IS_SLAVE(server);
 
@@ -1414,7 +1414,7 @@ bool MariaDBMonitor::failover_not_possible()
         if (info->m_slave_status.size() > 1)
         {
             MXS_ERROR("Server '%s' is configured to replicate from multiple "
-                      "masters, failover is not possible.", s->server->unique_name);
+                      "masters, failover is not possible.", s->server->name);
             rval = true;
         }
     }
@@ -1508,7 +1508,7 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
         if (mon_new_master == NULL)
         {
             new_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, m_monitor_base->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->name, m_monitor_base->name);
         }
         else if (!switchover_check_new(mon_new_master, error_out))
         {
@@ -1526,7 +1526,7 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
         if (mon_curr_master == NULL)
         {
             current_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, m_monitor_base->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->name, m_monitor_base->name);
         }
         else if (!switchover_check_current(mon_curr_master, error_out))
         {

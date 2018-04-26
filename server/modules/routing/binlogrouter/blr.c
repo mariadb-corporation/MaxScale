@@ -1335,10 +1335,10 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
          */
         MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                    "%lu events read,",
-                   router->service->name, router->service->dbref->server->name,
+                   router->service->name, router->service->dbref->server->address,
                    time(0) - router->connect_time, router->stats.n_binlogs_ses);
         MXS_ERROR("Binlog router close session with master server %s",
-                  router->service->dbref->server->unique_name);
+                  router->service->dbref->server->name);
         blr_master_reconnect(router);
         return;
     }
@@ -2360,7 +2360,7 @@ errorReply(MXS_ROUTER *instance,
                           "%s while connecting to master [%s]:%d. Replication is stopped.",
                           router->service->name, router->m_errno, router->m_errmsg,
                           blrm_states[BLRM_TIMESTAMP], msg,
-                          router->service->dbref->server->name,
+                          router->service->dbref->server->address,
                           router->service->dbref->server->port);
             }
         }
@@ -2404,7 +2404,7 @@ errorReply(MXS_ROUTER *instance,
                   "%sattempting reconnect to master [%s]:%d",
                   router->service->name, mysql_errno, errmsg,
                   blrm_states[router->master_state], msg,
-                  router->service->dbref->server->name,
+                  router->service->dbref->server->address,
                   router->service->dbref->server->port);
     }
     else
@@ -2414,7 +2414,7 @@ errorReply(MXS_ROUTER *instance,
                  "%snot retrying a new connection to master [%s]:%d",
                  router->service->name,
                  blrm_states[router->master_state], msg,
-                 router->service->dbref->server->name,
+                 router->service->dbref->server->address,
                  router->service->dbref->server->port);
     }
 
@@ -2440,7 +2440,7 @@ errorReply(MXS_ROUTER *instance,
 
     MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                "%lu events read.",
-               router->service->name, router->service->dbref->server->name,
+               router->service->name, router->service->dbref->server->address,
                time(0) - router->connect_time, router->stats.n_binlogs_ses);
     blr_master_reconnect(router);
 }
@@ -3105,7 +3105,7 @@ destroyInstance(MXS_ROUTER *instance)
     MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master [%s]:%d, "
              "read up to log %s, pos %lu, transaction safe pos %lu",
              inst->service->name,
-             inst->service->dbref->server->name,
+             inst->service->dbref->server->address,
              inst->service->dbref->server->port,
              inst->binlog_name, inst->current_pos, inst->binlog_position);
 

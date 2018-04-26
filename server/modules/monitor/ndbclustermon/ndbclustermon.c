@@ -360,7 +360,7 @@ monitorMain(void *arg)
                 SERVER_IS_DOWN(ptr->server))
             {
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->name,
+                          ptr->server->address,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));
             }

@@ -387,7 +387,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                     if (warn_erange_on_local_index)
                     {
                         MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
-                                    database->server->unique_name, row[1]);
+                                    database->server->name, row[1]);
                         warn_erange_on_local_index = false;
                     }
                     local_index = -1;
@@ -431,7 +431,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                 if (row[1] == NULL || !strlen(row[1]))
                 {
                     MXS_DEBUG("Node %s is not running Galera Cluster",
-                              database->server->unique_name);
+                              database->server->name);
                     info.cluster_uuid = NULL;
                     info.joined = 0;
                 }
@@ -449,11 +449,11 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 
         /* Galera Cluster vars fetch */
         HASHTABLE *table = handle->galera_nodes_info;
-        GALERA_NODE_INFO *node = hashtable_fetch(table, database->server->unique_name);
+        GALERA_NODE_INFO *node = hashtable_fetch(table, database->server->name);
         if (node)
         {
             MXS_DEBUG("Node %s is present in galera_nodes_info, updtating info",
-                      database->server->unique_name);
+                      database->server->name);
 
             MXS_FREE(node->cluster_uuid);
             /* Update node data */
@@ -461,17 +461,17 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
         }
         else
         {
-            if (hashtable_add(table, database->server->unique_name, &info))
+            if (hashtable_add(table, database->server->name, &info))
             {
                 MXS_DEBUG("Added %s to galera_nodes_info",
-                          database->server->unique_name);
+                          database->server->name);
             }
             /* Free the info.cluster_uuid as it's been added to the table */
             MXS_FREE(info.cluster_uuid);
         }
 
         MXS_DEBUG("Server %s: local_state %d, local_index %d, UUID %s, size %d, possible member %d",
-                  database->server->unique_name,
+                  database->server->name,
                   info.local_state,
                   info.local_index,
                   info.cluster_uuid ? info.cluster_uuid : "_none_",
@@ -558,7 +558,7 @@ monitorMain(void *arg)
             if (mon_status_changed(ptr))
             {
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->name,
+                          ptr->server->address,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));
             }
@@ -890,7 +890,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
             while ((row = mysql_fetch_row(result)))
             {
                 MXS_DEBUG("wsrep_node_name name for %s is [%s]",
-                          ptr->server->unique_name,
+                          ptr->server->name,
                           row[1]);
 
                 strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
@@ -924,7 +924,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
         if (mxs_mysql_query(ptr->con, donor_list) == 0)
         {
             MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
-                      ptr->server->unique_name);
+                      ptr->server->name);
         }
         else
         {
@@ -992,20 +992,20 @@ static int compare_node_priority (const void *a, const void *b)
     if (!pri_a && pri_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_a->server->unique_name);
+                  s_a->server->name);
         return -(INT_MAX - 1);
     }
     else if (pri_a && !pri_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_b->server->unique_name);
+                  s_b->server->name);
         return INT_MAX - 1;
     }
     else if (!pri_a && !pri_b)
     {
         MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
-                  s_a->server->unique_name,
-                  s_b->server->unique_name);
+                  s_a->server->name,
+                  s_b->server->name);
         return 0;
     }
 
@@ -1156,7 +1156,7 @@ static void set_galera_cluster(MXS_MONITOR *mon)
                     }
 
                     MXS_DEBUG("Candidate cluster member %s: UUID %s, joined nodes %d",
-                              value->node->unique_name,
+                              value->node->name,
                               value->cluster_uuid,
                               value->cluster_size);
                 }
@@ -1216,7 +1216,7 @@ static void set_cluster_members(MXS_MONITOR *mon)
     while (ptr)
     {
         /* Fetch cluster info for this server, if any */
-        value = hashtable_fetch(handle->galera_nodes_info, ptr->server->unique_name);
+        value = hashtable_fetch(handle->galera_nodes_info, ptr->server->name);
 
         if (value && handle->cluster_info.c_uuid)
         {

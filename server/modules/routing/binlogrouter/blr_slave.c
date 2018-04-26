@@ -1338,8 +1338,8 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     snprintf(column,
              max_column_size,
              "%s",
-             router->service->dbref->server->name ?
-             router->service->dbref->server->name :
+             router->service->dbref->server->address ?
+             router->service->dbref->server->address :
              "");
     col_len = strlen(column);
     *ptr++ = col_len;                          // Length of result string
@@ -3906,7 +3906,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->service->name,
                slave->dcb->user,
                slave->dcb->remote,
-               router->service->dbref->server->name,
+               router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
@@ -4117,7 +4117,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->service->name,
                slave->dcb->user,
                slave->dcb->remote,
-               router->service->dbref->server->name,
+               router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
@@ -4487,7 +4487,7 @@ blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname)
 
         MXS_INFO("%s: New MASTER_HOST is [%s]",
                  router->service->name,
-                 router->service->dbref->server->name);
+                 router->service->dbref->server->address);
 
         return 1;
     }
@@ -4679,7 +4679,7 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
     SSL_LISTENER *server_ssl;
 
     curr_master->port = router->service->dbref->server->port;
-    curr_master->host = MXS_STRDUP_A(router->service->dbref->server->name);
+    curr_master->host = MXS_STRDUP_A(router->service->dbref->server->address);
     curr_master->pos = router->current_pos;
     curr_master->safe_pos = router->binlog_position;
     strcpy(curr_master->logfile, router->binlog_name); // Same size
@@ -9212,7 +9212,7 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                current_master->logfile,
                current_master->pos,
                current_master->user,
-               router->service->dbref->server->name,
+               router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,

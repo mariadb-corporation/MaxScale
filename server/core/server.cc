@@ -111,17 +111,17 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         return NULL;
     }
 
-    if (snprintf(server->name, sizeof(server->name), "%s", address) > (int)sizeof(server->name))
+    if (snprintf(server->address, sizeof(server->address), "%s", address) > (int)sizeof(server->address))
     {
         MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
-                    address, sizeof(server->name));
+                    address, sizeof(server->address));
     }
 
 #if defined(SS_DEBUG)
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    server->unique_name = my_name;
+    server->name = my_name;
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
     server->auth_instance = auth_instance;
@@ -150,7 +150,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->triggered_at = 0;
 
     // Log all warnings once
-    memset(&server->log_warning, 1, sizeof(server->log_warning));
+    server->warn_ssl_not_enabled = true;
 
     spinlock_acquire(&server_spin);
     server->next = allServers;
@@ -194,7 +194,7 @@ server_free(SERVER *tofreeserver)
 
     /* Clean up session and free the memory */
     MXS_FREE(tofreeserver->protocol);
-    MXS_FREE(tofreeserver->unique_name);
+    MXS_FREE(tofreeserver->name);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
@@ -301,7 +301,7 @@ SERVER * server_find_by_unique_name(const char *name)
 
     while (server)
     {
-        if (server->unique_name && strcmp(server->unique_name, name) == 0)
+        if (server->name && strcmp(server->name, name) == 0)
         {
             break;
         }
@@ -369,7 +369,7 @@ server_find(const char *servname, unsigned short port)
 
     while (server)
     {
-        if (strcmp(server->name, servname) == 0 && server->port == port)
+        if (strcmp(server->address, servname) == 0 && server->port == port)
         {
             break;
         }
@@ -390,7 +390,7 @@ void
 printServer(const SERVER *server)
 {
     printf("Server %p\n", server);
-    printf("\tServer:                       %s\n", server->name);
+    printf("\tServer:                       %s\n", server->address);
     printf("\tProtocol:             %s\n", server->protocol);
     printf("\tPort:                 %d\n", server->port);
     printf("\tTotal connections:    %d\n", server->stats.n_connections);
@@ -502,8 +502,8 @@ dprintServer(DCB *dcb, const SERVER *server)
         return;
     }
 
-    dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
-    dcb_printf(dcb, "\tServer:                              %s\n", server->name);
+    dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
+    dcb_printf(dcb, "\tServer:                              %s\n", server->address);
     char* stat = server_status(server);
     dcb_printf(dcb, "\tStatus:                              %s\n", stat);
     MXS_FREE(stat);
@@ -651,7 +651,7 @@ dListServers(DCB *dcb)
     {
         char *stat = server_status(server);
         dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
-                   server->unique_name, server->name,
+                   server->name, server->address,
                    server->port,
                    server->stats.n_current, stat);
         MXS_FREE(stat);
@@ -814,14 +814,14 @@ server_add_mon_user(SERVER *server, const char *user, const char *passwd)
         snprintf(server->monuser, sizeof(server->monuser), "%s", user) > (int)sizeof(server->monuser))
     {
         MXS_WARNING("Truncated monitor user for server '%s', maximum username "
-                    "length is %lu characters.", server->unique_name, sizeof(server->monuser));
+                    "length is %lu characters.", server->name, sizeof(server->monuser));
     }
 
     if (passwd != server->monpw &&
         snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > (int)sizeof(server->monpw))
     {
         MXS_WARNING("Truncated monitor password for server '%s', maximum password "
-                    "length is %lu characters.", server->unique_name, sizeof(server->monpw));
+                    "length is %lu characters.", server->name, sizeof(server->monpw));
     }
 }
 
@@ -976,8 +976,8 @@ serverRowCallback(RESULTSET *set, void *data)
     if (SERVER_IS_ACTIVE(server))
     {
         row = resultset_make_row(set);
-        resultset_row_set(row, 0, server->unique_name);
-        resultset_row_set(row, 1, server->name);
+        resultset_row_set(row, 0, server->name);
+        resultset_row_set(row, 1, server->address);
         sprintf(buf, "%d", server->port);
         resultset_row_set(row, 2, buf);
         sprintf(buf, "%d", server->stats.n_current);
@@ -1033,7 +1033,7 @@ server_update_address(SERVER *server, const char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
-        strcpy(server->name, address);
+        strcpy(server->address, address);
     }
     spinlock_release(&server_spin);
 }
@@ -1161,15 +1161,15 @@ static bool create_server_config(const SERVER *server, const char *filename)
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
-                  filename, server->unique_name, errno, mxs_strerror(errno));
+                  filename, server->name, errno, mxs_strerror(errno));
         return false;
     }
 
     // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", server->unique_name);
+    dprintf(file, "[%s]\n", server->name);
     dprintf(file, "%s=server\n", CN_TYPE);
     dprintf(file, "%s=%s\n", CN_PROTOCOL, server->protocol);
-    dprintf(file, "%s=%s\n", CN_ADDRESS, server->name);
+    dprintf(file, "%s=%s\n", CN_ADDRESS, server->address);
     dprintf(file, "%s=%u\n", CN_PORT, server->port);
     dprintf(file, "%s=%s\n", CN_AUTHENTICATOR, server->authenticator);
 
@@ -1222,7 +1222,7 @@ bool server_serialize(const SERVER *server)
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
-             server->unique_name);
+             server->name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -1261,7 +1261,7 @@ SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
     while (server)
     {
         CHK_SERVER(server);
-        if (strcmp(server->unique_name, name) == 0 &&
+        if (strcmp(server->name, name) == 0 &&
             strcmp(server->protocol, protocol) == 0 &&
             strcmp(server->authenticator, authenticator) == 0)
         {
@@ -1269,7 +1269,7 @@ SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
                 (auth_options && server->auth_options &&
                  strcmp(server->auth_options, auth_options) == 0))
             {
-                snprintf(server->name, sizeof(server->name), "%s", address);
+                snprintf(server->address, sizeof(server->address), "%s", address);
                 server->port = atoi(port);
                 server->is_active = true;
                 break;
@@ -1345,10 +1345,10 @@ bool server_is_mxs_service(const SERVER *server)
     bool rval = false;
 
     /** Do a coarse check for local server pointing to a MaxScale service */
-    if (strcmp(server->name, "127.0.0.1") == 0 ||
-        strcmp(server->name, "::1") == 0 ||
-        strcmp(server->name, "localhost") == 0 ||
-        strcmp(server->name, "localhost.localdomain") == 0)
+    if (strcmp(server->address, "127.0.0.1") == 0 ||
+        strcmp(server->address, "::1") == 0 ||
+        strcmp(server->address, "localhost") == 0 ||
+        strcmp(server->address, "localhost.localdomain") == 0)
     {
         if (service_port_is_used(server->port))
         {
@@ -1367,7 +1367,7 @@ static json_t* server_json_attributes(const SERVER* server)
     /** Store server parameters in attributes */
     json_t* params = json_object();
 
-    json_object_set_new(params, CN_ADDRESS, json_string(server->name));
+    json_object_set_new(params, CN_ADDRESS, json_string(server->address));
     json_object_set_new(params, CN_PORT, json_integer(server->port));
     json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
 
@@ -1470,7 +1470,7 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
     json_t* rval = json_object();
 
     /** Add resource identifiers */
-    json_object_set_new(rval, CN_ID, json_string(server->unique_name));
+    json_object_set_new(rval, CN_ID, json_string(server->name));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVERS));
 
     /** Relationships */
@@ -1491,7 +1491,7 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
     json_object_set_new(rval, CN_ATTRIBUTES, server_json_attributes(server));
-    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->unique_name));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->name));
 
     return rval;
 }
@@ -1499,7 +1499,7 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
 json_t* server_to_json(const SERVER* server, const char* host)
 {
     string self = MXS_JSON_API_SERVERS;
-    self += server->unique_name;
+    self += server->name;
     return mxs_json_resource(host, self.c_str(), server_to_json_data(server, host));
 }
 

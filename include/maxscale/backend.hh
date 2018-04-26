@@ -309,7 +309,7 @@ public:
      */
     inline const char* name() const
     {
-        return m_backend->server->unique_name;
+        return m_backend->server->name;
     }
 
     /**

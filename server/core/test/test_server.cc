@@ -123,8 +123,8 @@ bool test_load_config(const char *input, SERVER *server)
             CONFIG_CONTEXT *obj = ccontext.next;
             MXS_CONFIG_PARAMETER *param = obj->parameters;
 
-            TEST(strcmp(obj->object, server->unique_name) == 0, "Server names differ");
-            TEST(strcmp(server->name, config_get_param(param, "address")->value) == 0, "Server addresses differ");
+            TEST(strcmp(obj->object, server->name) == 0, "Server names differ");
+            TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0, "Server addresses differ");
             TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0, "Server protocols differ");
             TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
                  "Server authenticators differ");

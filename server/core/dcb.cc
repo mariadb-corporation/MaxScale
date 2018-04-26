@@ -460,7 +460,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     if (fd == DCBFD_CLOSED)
     {
         MXS_DEBUG("Failed to connect to server [%s]:%d, from backend dcb %p, client dcp %p fd %d",
-                  server->name, server->port, dcb, session->client_dcb, session->client_dcb->fd);
+                  server->address, server->port, dcb, session->client_dcb, session->client_dcb->fd);
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
@@ -470,7 +470,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     else
     {
         MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p fd %d.",
-                  server->name, server->port, dcb, session->client_dcb, session->client_dcb->fd);
+                  server->address, server->port, dcb, session->client_dcb, session->client_dcb->fd);
     }
     /**
      * Successfully connected to backend. Assign file descriptor to dcb
@@ -1063,7 +1063,7 @@ static void log_illegal_dcb(DCB *dcb)
     switch (dcb->dcb_role)
     {
     case DCB_ROLE_BACKEND_HANDLER:
-        connected_to = dcb->server->unique_name;
+        connected_to = dcb->server->name;
         break;
 
     case DCB_ROLE_CLIENT_HANDLER:
@@ -1470,10 +1470,10 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     }
     if (dcb->server)
     {
-        if (dcb->server->name)
+        if (dcb->server->address)
         {
             dcb_printf(pdcb, "\tServer name/IP:     %s\n",
-                       dcb->server->name);
+                       dcb->server->address);
         }
         if (dcb->server->port)
         {

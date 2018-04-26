@@ -658,7 +658,7 @@ static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database)
             {
                 MXS_WARNING("'replicate_ignore_table' is "
                             "defined on server '%s' and '%s' was found in it. ",
-                            database->server->unique_name, HB_TABLE_NAME);
+                            database->server->name, HB_TABLE_NAME);
                 rval = false;
             }
         }
@@ -669,7 +669,7 @@ static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database)
     {
         MXS_ERROR("Failed to query server %s for "
                   "'replicate_ignore_table': %s",
-                  database->server->unique_name,
+                  database->server->name,
                   mysql_error(database->con));
         rval = false;
     }
@@ -702,7 +702,7 @@ static bool check_replicate_do_table(MXS_MONITORED_SERVER* database)
             {
                 MXS_WARNING("'replicate_do_table' is "
                             "defined on server '%s' and '%s' was not found in it. ",
-                            database->server->unique_name, HB_TABLE_NAME);
+                            database->server->name, HB_TABLE_NAME);
                 rval = false;
             }
         }
@@ -712,7 +712,7 @@ static bool check_replicate_do_table(MXS_MONITORED_SERVER* database)
     {
         MXS_ERROR("Failed to query server %s for "
                   "'replicate_do_table': %s",
-                  database->server->unique_name,
+                  database->server->name,
                   mysql_error(database->con));
         rval = false;
     }
@@ -747,7 +747,7 @@ static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database)
                 {
                     MXS_WARNING("'replicate_wild_do_table' is "
                                 "defined on server '%s' and '%s' does not match it. ",
-                                database->server->unique_name,
+                                database->server->name,
                                 HB_TABLE_NAME);
                     rval = false;
                 }
@@ -759,7 +759,7 @@ static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database)
     {
         MXS_ERROR("Failed to query server %s for "
                   "'replicate_wild_do_table': %s",
-                  database->server->unique_name,
+                  database->server->name,
                   mysql_error(database->con));
         rval = false;
     }
@@ -794,7 +794,7 @@ static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
                 {
                     MXS_WARNING("'replicate_wild_ignore_table' is "
                                 "defined on server '%s' and '%s' matches it. ",
-                                database->server->unique_name,
+                                database->server->name,
                                 HB_TABLE_NAME);
                     rval = false;
                 }
@@ -806,7 +806,7 @@ static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
     {
         MXS_ERROR("Failed to query server %s for "
                   "'replicate_wild_do_table': %s",
-                  database->server->unique_name,
+                  database->server->name,
                   mysql_error(database->con));
         rval = false;
     }
@@ -912,7 +912,7 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
         {
             /** Master failed, can't recover */
             MXS_NOTICE("Server [%s]:%d lost the master status.",
-                       ptr->server->name,
+                       ptr->server->address,
                        ptr->server->port);
         }
     }
@@ -921,12 +921,12 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
     {
 #if defined(SS_DEBUG)
         MXS_INFO("Backend server [%s]:%d state : %s",
-                 ptr->server->name,
+                 ptr->server->address,
                  ptr->server->port,
                  STRSRVSTATUS(ptr->server));
 #else
         MXS_DEBUG("Backend server [%s]:%d state : %s",
-                  ptr->server->name,
+                  ptr->server->address,
                   ptr->server->port,
                   STRSRVSTATUS(ptr->server));
 #endif
@@ -1029,7 +1029,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
          * the stale master as a real master if it is the last running server.
          */
         if (m_detect_stale_master && root_master && !m_detect_multimaster &&
-            (strcmp(ptr->server->name, root_master->server->name) == 0 &&
+            (strcmp(ptr->server->address, root_master->server->address) == 0 &&
              ptr->server->port == root_master->server->port) &&
             (ptr->server->status & SERVER_MASTER) &&
             !(ptr->pending_status & SERVER_MASTER) &&
@@ -1049,7 +1049,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
                 MXS_WARNING("All slave servers under the current master "
                             "server have been lost. Assigning Stale Master"
                             " status to the old master server '%s' (%s:%i).",
-                            ptr->server->unique_name, ptr->server->name,
+                            ptr->server->name, ptr->server->address,
                             ptr->server->port);
             }
         }

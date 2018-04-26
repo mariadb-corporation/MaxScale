@@ -382,7 +382,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
                         MXS_ERROR("\"SHOW SLAVE STATUS\" "
                                   " for versions less than 5.5 does not have master_server_id, "
                                   "replication tree cannot be resolved for server %s."
-                                  " MySQL Version: %s", database->server->unique_name, server_string);
+                                  " MySQL Version: %s", database->server->name, server_string);
                         database->log_version_err = false;
                     }
                 }
@@ -561,7 +561,7 @@ monitorMain(void *arg)
                 mon_print_fail_status(ptr))
             {
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->name,
+                          ptr->server->address,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));
             }
@@ -591,14 +591,14 @@ monitorMain(void *arg)
             {
                 /* If "detect_stale_master" option is On, let's use the previus master */
                 if (detect_stale_master && root_master &&
-                    (!strcmp(ptr->server->name, root_master->server->name) &&
+                    (!strcmp(ptr->server->address, root_master->server->address) &&
                      ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
                     !(ptr->pending_status & SERVER_MASTER))
                 {
                     /* in this case server->status will not be updated from pending_status */
                     MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
                                "use it again even if it could be a stale master, you have "
-                               "been warned!", ptr->server->name, ptr->server->port);
+                               "been warned!", ptr->server->address, ptr->server->port);
                     /* Set the STALE bit for this server in server struct */
                     server_set_status_nolock(ptr->server, SERVER_STALE_STATUS);
                 }

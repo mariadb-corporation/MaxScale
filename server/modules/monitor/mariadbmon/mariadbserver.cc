@@ -395,7 +395,7 @@ bool MariaDBServer::is_down() const
 
 const char* MariaDBServer::name() const
 {
-    return m_server_base->server->unique_name;
+    return m_server_base->server->name;
 }
 
 string MariaDBServer::diagnostics(bool multimaster) const
