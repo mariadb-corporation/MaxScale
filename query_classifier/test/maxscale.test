@@ -103,3 +103,6 @@ SELECT id as engine FROM users WHERE id = 1;
 
 # MXS-1787
 CALL p1((SELECT f1()), ?);
+
+# MXS-1829
+SELECT PREVIOUS VALUE FOR SEQ;
