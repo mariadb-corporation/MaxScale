@@ -45,17 +45,7 @@ typedef bool (*TASKFN)(void *data);
 bool hkinit();
 
 /**
- * Shuts down the housekeeper mechanism.
- *
- * Should be called @b only if @c hkinit() returned successfully.
- *
- * @see hkinit hkfinish
- */
-void hkshutdown();
-
-/**
- * Waits for the housekeeper thread to finish. Should be called only after
- * hkshutdown() has been called.
+ * Waits for the housekeeper thread to finish.
  */
 void hkfinish();
 

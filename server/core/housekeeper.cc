@@ -92,7 +92,6 @@ class Housekeeper
 {
 public:
     Housekeeper();
-    ~Housekeeper();
 
     static bool init();
     void stop();
@@ -128,11 +127,6 @@ static Housekeeper* hk = NULL;
 Housekeeper::Housekeeper():
     m_running(1)
 {
-}
-
-Housekeeper::~Housekeeper()
-{
-    thread_wait(m_thread);
 }
 
 bool Housekeeper::init()
@@ -190,6 +184,7 @@ void Housekeeper::run()
 void Housekeeper::stop()
 {
     atomic_store_uint32(&m_running, 0);
+    thread_wait(m_thread);
 }
 
 void Housekeeper::add(const Task& task)
@@ -293,18 +288,16 @@ bool hkinit()
     return Housekeeper::init();
 }
 
-void hkshutdown()
-{
-    ss_dassert(hk);
-    hk->stop();
-}
-
 void hkfinish()
 {
-    MXS_NOTICE("Waiting for housekeeper to shut down.");
-    delete hk;
-    hk = NULL;
-    MXS_NOTICE("Housekeeper has shut down.");
+    if (hk)
+    {
+        MXS_NOTICE("Waiting for housekeeper to shut down.");
+        hk->stop();
+        delete hk;
+        hk = NULL;
+        MXS_NOTICE("Housekeeper has shut down.");
+    }
 }
 
 void hkshow_tasks(DCB *pDcb)

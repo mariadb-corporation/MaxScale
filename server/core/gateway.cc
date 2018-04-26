@@ -2336,7 +2336,6 @@ int maxscale_shutdown()
     {
         service_shutdown();
         Worker::shutdown_all();
-        hkshutdown();
         log_flush_shutdown();
     }
 
