@@ -186,6 +186,9 @@ class CacheRules
 public:
     typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
 
+    CacheRules(const CacheRules&) = delete;
+    CacheRules& operator = (const CacheRules&) = delete;
+
     ~CacheRules();
 
     /**
@@ -198,7 +201,18 @@ public:
     static std::auto_ptr<CacheRules> create(uint32_t debug);
 
     /**
-     * Loads the caching rules from a file and returns corresponding object.
+     * Parses the caching rules from a string.
+     *
+     * @param zJson  Null-terminate string containing JSON.
+     * @param debug  The debug level.
+     * @param pRules [out] The loaded rules.
+     *
+     * @return True, if the rules could be parsed, false otherwise.
+     */
+    static bool parse(const char* zJson, uint32_t debug, std::vector<SCacheRules>* pRules);
+
+    /**
+     * Loads the caching rules from a file.
      *
      * @param path   The path of the file containing the rules.
      * @param debug  The debug level.
@@ -240,8 +254,9 @@ public:
 private:
     CacheRules(CACHE_RULES* pRules);
 
-    CacheRules(const CacheRules&);
-    CacheRules& operator = (const CacheRules&);
+    static bool create_cache_rules(CACHE_RULES** ppRules,
+                                   int32_t nRules,
+                                   std::vector<SCacheRules>* pRules);
 
 private:
     CACHE_RULES* m_pRules;

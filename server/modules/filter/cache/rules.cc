@@ -430,6 +430,24 @@ std::auto_ptr<CacheRules> CacheRules::create(uint32_t debug)
 }
 
 // static
+bool CacheRules::parse(const char* zJson, uint32_t debug, std::vector<SCacheRules>* pRules)
+{
+    bool rv = false;
+
+    pRules->clear();
+
+    CACHE_RULES** ppRules;
+    int32_t nRules;
+
+    if (cache_rules_parse(zJson, debug, &ppRules, &nRules))
+    {
+        rv = create_cache_rules(ppRules, nRules, pRules);
+    }
+
+    return rv;
+}
+
+// static
 bool CacheRules::load(const char *zPath, uint32_t debug, std::vector<SCacheRules>* pRules)
 {
     bool rv = false;
@@ -441,36 +459,46 @@ bool CacheRules::load(const char *zPath, uint32_t debug, std::vector<SCacheRules
 
     if (cache_rules_load(zPath, debug, &ppRules, &nRules))
     {
-        int j = 0;
-
-        try
-        {
-            std::vector<SCacheRules> rules;
-            rules.reserve(nRules);
-
-            for (int i = 0; i < nRules; ++i)
-            {
-                j = i;
-                CacheRules* pRules = new CacheRules(ppRules[i]);
-                j = i + 1;
-
-                rules.push_back(SCacheRules(pRules));
-            }
-
-            pRules->swap(rules);
-            rv = true;
-        }
-        catch (const std::exception&)
-        {
-            // Free all CACHE_RULES objects that were not pushed into 'rules' above.
-            for (; j < nRules; ++j)
-            {
-                cache_rules_free(ppRules[j]);
-            }
-        }
-
-        MXS_FREE(ppRules);
+        rv = create_cache_rules(ppRules, nRules, pRules);
     }
+
+    return rv;
+}
+
+//static
+bool CacheRules::create_cache_rules(CACHE_RULES** ppRules, int32_t nRules, std::vector<SCacheRules>* pRules)
+{
+    bool rv = false;
+
+    int j = 0;
+
+    try
+    {
+        std::vector<SCacheRules> rules;
+        rules.reserve(nRules);
+
+        for (int i = 0; i < nRules; ++i)
+        {
+            j = i;
+            CacheRules* pRules = new CacheRules(ppRules[i]);
+            j = i + 1;
+
+            rules.push_back(SCacheRules(pRules));
+        }
+
+        pRules->swap(rules);
+        rv = true;
+    }
+    catch (const std::exception&)
+    {
+        // Free all CACHE_RULES objects that were not pushed into 'rules' above.
+        for (; j < nRules; ++j)
+        {
+            cache_rules_free(ppRules[j]);
+        }
+    }
+
+    MXS_FREE(ppRules);
 
     return rv;
 }

@@ -12,13 +12,16 @@
  */
 
 #include "rules.h"
-
+#include <algorithm>
+#include <iostream>
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+
+using namespace std;
 
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
@@ -188,7 +191,7 @@ const struct store_test_case store_test_cases[] =
     STORE_TEST_CASE("column", "=", "a", true,  NULL, "SELECT a, b FROM tbl WHERE a = 5"),
 };
 
-const size_t n_store_test_cases = sizeof(store_test_cases) / sizeof(store_test_cases[0]);
+const int n_store_test_cases = sizeof(store_test_cases) / sizeof(store_test_cases[0]);
 
 int test_store()
 {
@@ -242,12 +245,130 @@ int test_store()
 }
 
 
+static const char ARRAY_RULES[] =
+    "["
+    "  {"
+    "    \"store\": ["
+    "      {"
+    "        \"attribute\": \"column\","
+    "        \"op\":        \"=\","
+    "        \"value\":     \"a\""
+    "      }"
+    "    ]"
+    "  },"
+    "  {"
+    "    \"store\": ["
+    "      {"
+    "        \"attribute\": \"column\","
+    "        \"op\":        \"=\","
+    "        \"value\":     \"b\""
+    "      }"
+    "    ]"
+    "  },"
+    "  {"
+    "    \"store\": ["
+    "      {"
+    "        \"attribute\": \"column\","
+    "        \"op\":        \"=\","
+    "        \"value\":     \"c\""
+    "      }"
+    "    ]"
+    "  }"
+    "]";
+
+struct ARRAY_TEST_CASE
+{
+    const char* zStmt; // Statement
+    int32_t     index; // Index of rule to match, -1 if none.
+} array_test_cases[] =
+{
+    {
+        "select a from tbl",
+        0
+    },
+    {
+        "select b from tbl",
+        1
+    },
+    {
+        "select c from tbl",
+        2
+    },
+    {
+        "select a, b from tbl",
+        0
+    },
+    {
+        "select d from tbl",
+        -1
+    }
+};
+
+const int n_array_test_cases = sizeof(array_test_cases) / sizeof(array_test_cases[0]);
+
+int test_array_store()
+{
+    int errors = 0;
+
+    typedef CacheRules::SCacheRules SCacheRules;
+    std::vector<SCacheRules> rules;
+
+    if (CacheRules::parse(ARRAY_RULES, 0, &rules))
+    {
+        for (int i = 0; i < n_array_test_cases; ++i)
+        {
+            const ARRAY_TEST_CASE& tc = array_test_cases[i];
+
+            cout << tc.zStmt << endl;
+
+            GWBUF* pStmt = create_gwbuf(tc.zStmt);
+            auto it = std::find_if(rules.begin(), rules.end(), [pStmt](SCacheRules sRules)
+                                   {
+                                       return sRules->should_store(NULL, pStmt);
+                                   });
+
+            int index = (it == rules.end()) ? -1 : std::distance(rules.begin(), it);
+
+            if (it != rules.end())
+            {
+                if (tc.index == index)
+                {
+                    cout << "OK: Rule " << tc.index << " matches as expected." << endl;
+                }
+                else
+                {
+                    ++errors;
+                    cout << "ERROR: Rule " << tc.index << " should have matched, but " << index << " did." << endl;
+                }
+            }
+            else
+            {
+                if (tc.index == -1)
+                {
+                    cout << "OK: No rule matched, as expected." << endl;
+                }
+                else
+                {
+                    ++errors;
+                    cout << "ERROR: Rule " << tc.index << " should have matched, but none did." << endl;
+                }
+            }
+
+            cout << endl;
+        }
+    }
+
+    return errors;
+}
+
+
 int test()
 {
     int errors = 0;
 
     errors += test_user();
     errors += test_store();
+    errors += test_array_store();
 
     return errors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
