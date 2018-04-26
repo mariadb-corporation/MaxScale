@@ -45,6 +45,7 @@ extern const char *config_listener_params[];
 extern const char *config_monitor_params[];
 extern const char *config_filter_params[];
 extern const char *config_server_params[];
+extern const char *config_pre_parse_global_params[];
 
 /**
  * Set the defaults for the global configuration options

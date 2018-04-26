@@ -2717,7 +2717,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             }
         }
 
-        if (strcmp(name, "logdir") == 0)
+        if (strcmp(name, CN_LOGDIR) == 0)
         {
             if (strcmp(get_logdir(), default_logdir) == 0)
             {
@@ -2731,7 +2731,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "libdir") == 0)
+        else if (strcmp(name, CN_LIBDIR) == 0)
         {
             if (strcmp(get_libdir(), default_libdir) == 0)
             {
@@ -2745,7 +2745,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "piddir") == 0)
+        else if (strcmp(name, CN_PIDDIR) == 0)
         {
             if (strcmp(get_piddir(), default_piddir) == 0)
             {
@@ -2759,7 +2759,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "datadir") == 0)
+        else if (strcmp(name, CN_DATADIR) == 0)
         {
             if (!datadir_defined)
             {
@@ -2776,7 +2776,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "cachedir") == 0)
+        else if (strcmp(name, CN_CACHEDIR) == 0)
         {
             if (strcmp(get_cachedir(), default_cachedir) == 0)
             {
@@ -2790,7 +2790,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "language") == 0)
+        else if (strcmp(name, CN_LANGUAGE) == 0)
         {
             if (strcmp(get_langdir(), default_langdir) == 0)
             {
@@ -2804,7 +2804,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "execdir") == 0)
+        else if (strcmp(name, CN_EXECDIR) == 0)
         {
             if (strcmp(get_execdir(), default_execdir) == 0)
             {
@@ -2818,7 +2818,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "connector_plugindir") == 0)
+        else if (strcmp(name, CN_CONNECTOR_PLUGINDIR) == 0)
         {
             if (strcmp(get_connector_plugindir(), default_connector_plugindir) == 0)
             {
@@ -2832,7 +2832,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "persistdir") == 0)
+        else if (strcmp(name, CN_PERSISTDIR) == 0)
         {
             if (strcmp(get_config_persistdir(), default_config_persistdir) == 0)
             {
@@ -2846,7 +2846,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "module_configdir") == 0)
+        else if (strcmp(name, CN_MODULE_CONFIGDIR) == 0)
         {
             if (strcmp(get_module_configdir(), default_module_configdir) == 0)
             {
@@ -2860,25 +2860,25 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
-        else if (strcmp(name, "syslog") == 0)
+        else if (strcmp(name, CN_SYSLOG) == 0)
         {
             if (!syslog_configured)
             {
                 cnf->syslog = config_truth_value((char*)value);
             }
         }
-        else if (strcmp(name, "maxlog") == 0)
+        else if (strcmp(name, CN_MAXLOG) == 0)
         {
             if (!maxlog_configured)
             {
                 cnf->maxlog = config_truth_value((char*)value);
             }
         }
-        else if (strcmp(name, "log_augmentation") == 0)
+        else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)
         {
             set_log_augmentation(value);
         }
-        else if (strcmp(name, "log_to_shm") == 0)
+        else if (strcmp(name, CN_LOG_TO_SHM) == 0)
         {
             if (!log_to_shm_configured)
             {

@@ -74,8 +74,7 @@ MXS_BEGIN_DECLS
  * Common configuration parameters names
  *
  * All of the constants resolve to a lowercase version without the CN_ prefix.
- * For example CN_PASSWORD resolves to the static string "password". This means
- * that the sizeof(CN_<name>) returns the actual size of that string.
+ * For example CN_PASSWORD resolves to the static string "password".
  */
 extern const char CN_ACCOUNT[];
 extern const char CN_ADDRESS[];
@@ -176,6 +175,25 @@ extern const char CN_VERSION_STRING[];
 extern const char CN_WEIGHTBY[];
 extern const char CN_WRITEQ_HIGH_WATER[];
 extern const char CN_WRITEQ_LOW_WATER[];
+
+/*
+ * Global configuration items that are read (or pre_parsed) to be available for
+ * subsequent configuration reading. @see config_pre_parse_global_params.
+ */
+extern const char CN_LOGDIR[];
+extern const char CN_LIBDIR[];
+extern const char CN_PIDDIR[];
+extern const char CN_DATADIR[];
+extern const char CN_CACHEDIR[];
+extern const char CN_LANGUAGE[];
+extern const char CN_EXECDIR[];
+extern const char CN_CONNECTOR_PLUGINDIR[];
+extern const char CN_PERSISTDIR[];
+extern const char CN_MODULE_CONFIGDIR[];
+extern const char CN_SYSLOG[];
+extern const char CN_MAXLOG[];
+extern const char CN_LOG_AUGMENTATION[];
+extern const char CN_LOG_TO_SHM[];
 
 /**
  * The config parameter
@@ -515,14 +533,14 @@ json_t* config_maxscale_to_json(const char* host);
 
 /**
  * @brief  Get DCB write queue high water mark
- * 
+ *
  * @return  Number of high water mark in bytes
  */
 uint32_t config_writeq_high_water();
 
 /**
  * @brief  Get DCB write queue low water mark
- * 
+ *
  * @return @return  Number of low water mark in bytes
  */
 uint32_t config_writeq_low_water();

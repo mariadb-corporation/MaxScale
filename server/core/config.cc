@@ -160,6 +160,22 @@ const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
 const char CN_WRITEQ_HIGH_WATER[]             = "writeq_high_water";
 const char CN_WRITEQ_LOW_WATER[]              = "writeq_low_water";
 
+
+extern const char CN_LOGDIR[] = "logdir";
+extern const char CN_LIBDIR[] = "libdir";
+extern const char CN_PIDDIR[] = "piddir";
+extern const char CN_DATADIR[] = "datadir";
+extern const char CN_CACHEDIR[] = "cachedir";
+extern const char CN_LANGUAGE[] = "language";
+extern const char CN_EXECDIR[] = "execdir";
+extern const char CN_CONNECTOR_PLUGINDIR[] = "connector_plugindir";
+extern const char CN_PERSISTDIR[] = "persistdir";
+extern const char CN_MODULE_CONFIGDIR[] = "module_configdir";
+extern const char CN_SYSLOG[] = "syslog";
+extern const char CN_MAXLOG[] = "maxlog";
+extern const char CN_LOG_AUGMENTATION[] = "log_augmentation";
+extern const char CN_LOG_TO_SHM[] = "log_to_shm";
+
 typedef struct duplicate_context
 {
     HASHTABLE        *hash;
@@ -296,6 +312,29 @@ const char *server_params[] =
     CN_SSL_CERT_VERIFY_DEPTH,
     CN_SSL_VERIFY_PEER_CERTIFICATE,
     CN_PROXY_PROTOCOL,
+    NULL
+};
+
+/*
+ * This is currently only used in handle_global_item() to verify that
+ * all global configuration item names are valid.
+ */
+const char *config_pre_parse_global_params[] =
+{
+    CN_LOGDIR,
+    CN_LIBDIR,
+    CN_PIDDIR,
+    CN_DATADIR,
+    CN_CACHEDIR,
+    CN_LANGUAGE,
+    CN_EXECDIR,
+    CN_CONNECTOR_PLUGINDIR,
+    CN_PERSISTDIR,
+    CN_MODULE_CONFIGDIR,
+    CN_SYSLOG,
+    CN_MAXLOG,
+    CN_LOG_AUGMENTATION,
+    CN_LOG_TO_SHM,
     NULL
 };
 
@@ -1548,6 +1587,8 @@ static struct
 static  int
 handle_global_item(const char *name, const char *value)
 {
+    bool processed = true; // assume 'name' is valid
+
     int i;
     if (strcmp(name, CN_THREADS) == 0)
     {
@@ -1921,10 +1962,12 @@ handle_global_item(const char *name, const char *value)
             MXS_WARNING("The 'log_debug' option has no effect in release mode.");
         }
 #endif
+        bool found = false;
         for (i = 0; lognames[i].name; i++)
         {
             if (strcasecmp(name, lognames[i].name) == 0)
             {
+                found = true;
                 if (lognames[i].replacement)
                 {
                     MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
@@ -1935,7 +1978,24 @@ handle_global_item(const char *name, const char *value)
                 mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
             }
         }
+
+
+        if (!found)
+        {
+            for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
+            {
+                found = strcmp(name, config_pre_parse_global_params[i]) == 0;
+            }
+        }
+        processed = found;
     }
+
+    if (!processed)
+    {
+        MXS_WARNING("Config entry '%s' is unknown."
+                    " Please remove it from the configuration file.", name);
+    }
+
     return 1;
 }
 
