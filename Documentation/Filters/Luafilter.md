@@ -1,10 +1,12 @@
 # Lua Filter
 
-The luafilter is a filter that calls a set of functions in a Lua script. The
-filter is currently a part of the experimental module set.
+The luafilter is a filter that calls a set of functions in a Lua script.
 
 Read the [Lua language documentation](https://www.lua.org/docs.html) for
 information on how to write Lua scripts.
+
+*Note:* This module is a part of the experimental module package,
+ `maxscale-experimental`.
 
 ## Filter Parameters
 

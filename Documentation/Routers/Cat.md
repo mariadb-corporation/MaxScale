@@ -1,8 +1,9 @@
 # Cat
 
-The `cat` router is a special router that concatenates result sets. The module
-is still in beta testing phase so usage in production environments is
-not encouraged.
+The `cat` router is a special router that concatenates result sets.
+
+*Note:* This module is a part of the experimental module package,
+ `maxscale-experimental`.
 
 ## Configuration
 
