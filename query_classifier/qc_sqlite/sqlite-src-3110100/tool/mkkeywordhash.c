@@ -383,6 +383,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "PRECEDING",        "TK_PRECEDING",    ALWAYS                 },
   { "PREPARE",          "TK_PREPARE",      ALWAYS                 },
+  { "PREVIOUS",         "TK_PREVIOUS",     ALWAYS                 },
 #endif
   { "PRIMARY",          "TK_PRIMARY",      ALWAYS                 },
 #ifdef MAXSCALE

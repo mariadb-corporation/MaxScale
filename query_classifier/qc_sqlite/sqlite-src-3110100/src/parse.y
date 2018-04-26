@@ -626,6 +626,7 @@ columnid(A) ::= nm(X). {
   NAMES NEXT
   NO
   OF OFFSET OPEN
+  PREVIOUS
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATUS
@@ -1207,7 +1208,10 @@ selcollist(A) ::= sclp(P) nm(X) DOT STAR(Y). {
   A = sqlite3ExprListAppend(pParse,P, pDot);
 }
 %ifdef MAXSCALE
-selcollist(A) ::= sclp(P) NEXT VALUE FOR nm(X) as(Y).     {
+next_or_previous(A) ::= NEXT(X). {A = X;}
+next_or_previous(A) ::= PREVIOUS(X). {A = X;}
+
+selcollist(A) ::= sclp(P) next_or_previous VALUE FOR nm(X) as(Y).     {
   Expr* pSeq = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   ExprList* pArgs = sqlite3ExprListAppend(pParse, NULL, pSeq);
   Token nextval = { "nextval", 7 };
