@@ -18,6 +18,7 @@
 #include <tr1/memory>
 
 #include <maxscale/backend.hh>
+#include <maxscale/modutil.h>
 
 namespace maxscale
 {
@@ -69,24 +70,9 @@ public:
     // For COM_STMT_FETCH processing
     bool consume_fetched_rows(GWBUF* buffer);
 
-    inline void set_large_packet(bool value)
-    {
-        m_large_packet = value;
-    }
-
-    inline bool is_large_packet() const
-    {
-        return m_large_packet;
-    }
-
     inline uint8_t current_command() const
     {
         return m_command;
-    }
-
-    inline bool cursor_is_open() const
-    {
-        return m_open_cursor;
     }
 
     bool reply_is_complete(GWBUF *buffer);
@@ -94,12 +80,20 @@ public:
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
-    bool             m_large_packet; /**< Used to store the state of the EOF packet
-                                      *calculation for result sets when the result
-                                      * contains very large rows */
+    modutil_state    m_modutil_state; /**< @see modutil_count_signal_packets */
     uint8_t          m_command;
-    bool             m_open_cursor; /**< Whether we have an open cursor */
+    bool             m_opening_cursor; /**< Whether we are opening a cursor */
     uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
+
+    inline bool is_opening_cursor() const
+    {
+        return m_opening_cursor;
+    }
+
+    inline void set_cursor_opened()
+    {
+        m_opening_cursor = false;
+    }
 };
 
 }

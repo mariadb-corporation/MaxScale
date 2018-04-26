@@ -693,6 +693,10 @@ add_test_executable(mxs1804_long_ps_hang.cpp mxs1804_long_ps_hang replication LA
 # https://jira.mariadb.org/browse/MXS-1808
 add_test_executable(mxs1808_long_data.cpp mxs1808_long_data replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1824: Debug assertion with two open cursors
+# https://jira.mariadb.org/browse/MXS-1824
+add_test_executable(mxs1824_double_cursor.cpp mxs1824_double_cursor replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
