@@ -523,21 +523,19 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
     return ret;
 }
 
-Row get_row(MYSQL* conn, std::string sql)
+Result get_result(MYSQL* conn, std::string sql)
 {
-    Row rval;
+    Result rval;
     MYSQL_RES* res;
 
     if (mysql_query(conn, sql.c_str()) == 0 && (res = mysql_store_result(conn)))
     {
         MYSQL_ROW row = mysql_fetch_row(res);
 
-        if (row)
+        while (row)
         {
-            for (unsigned int i = 0; i < mysql_num_fields(res); i++)
-            {
-                rval.push_back(row[i]);
-            }
+            rval.emplace_back(&row[0], &row[mysql_num_fields(res)]);
+            row = mysql_fetch_row(res);
         }
         mysql_free_result(res);
     }
@@ -547,6 +545,12 @@ Row get_row(MYSQL* conn, std::string sql)
     }
 
     return rval;
+}
+
+Row get_row(MYSQL* conn, std::string sql)
+{
+    Result res = get_result(conn, sql);
+    return res.empty() ? Row{} : res[0];
 }
 
 int get_int_version(std::string version)
