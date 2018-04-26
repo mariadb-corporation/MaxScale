@@ -630,14 +630,20 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
 
 int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modutil_state* state)
 {
+    enum
+    {
+        SKIP_NEXT    = 0x1,
+        PS_OUT_PARAM = 0x2,
+    };
+
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
-    bool skip_next = state ? state->state : false;
     bool more = false;
     bool only_ok = true;
     uint64_t num_packets = 0;
+    uint8_t internal_state = state ? state->state : 0;
 
     while (offset < len)
     {
@@ -652,12 +658,12 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
         if (payloadlen == GW_MYSQL_MAX_PACKET_LEN)
         {
             only_ok = false;
-            skip_next = true;
+            internal_state |= SKIP_NEXT;
         }
-        else if (skip_next)
+        else if (internal_state & SKIP_NEXT)
         {
             only_ok = false;
-            skip_next = false;
+            internal_state &= ~SKIP_NEXT;
         }
         else
         {
@@ -675,6 +681,28 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
             {
                 eof++;
                 only_ok = false;
+
+                uint8_t status[2]; // Two byte server status
+                gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1 + 2, sizeof(status), status);
+                more = gw_mysql_get_byte2(status) & SERVER_MORE_RESULTS_EXIST;
+
+                /**
+                 * MySQL 5.6 and 5.7 have a "feature" that doesn't set
+                 * the SERVER_MORE_RESULTS_EXIST flag in the last EOF packet of
+                 * a result set if the SERVER_PS_OUT_PARAMS flag was set in
+                 * the first result set. To handle this, we have to store
+                 * the information from the first EOF packet until we process
+                 * the second EOF packet.
+                 */
+                if (gw_mysql_get_byte2(status) & SERVER_PS_OUT_PARAMS)
+                {
+                    internal_state |= PS_OUT_PARAM;
+                }
+                else if (internal_state & PS_OUT_PARAM)
+                {
+                    more = true;
+                    internal_state &= ~PS_OUT_PARAM;
+                }
             }
             else if (command == MYSQL_REPLY_OK && pktlen >= MYSQL_OK_PACKET_MIN_LEN &&
                      (eof + n_found) % 2 == 0)
@@ -696,13 +724,6 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
             }
         }
 
-        if (offset + pktlen >= len || (eof + err + n_found) >= 2)
-        {
-            gwbuf_copy_data(reply, offset, sizeof(header), header);
-            uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
-            more = ((*status) & SERVER_MORE_RESULTS_EXIST);
-        }
-
         offset += pktlen;
 
         if (offset >= GWBUF_LENGTH(reply) && reply->next)
@@ -717,7 +738,7 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
 
     if (state)
     {
-        state->state = skip_next;
+        state->state = internal_state;
     }
 
     *more_out = more;

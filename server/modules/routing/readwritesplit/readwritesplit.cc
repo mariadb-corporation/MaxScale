@@ -523,9 +523,9 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
     if (backend->current_command() == MXS_COM_STMT_FETCH)
     {
         bool more = false;
-        modutil_state state = {backend->is_large_packet()};
+        modutil_state state = backend->get_modutil_state();
         int n_eof = modutil_count_signal_packets(buffer, 0, &more, &state);
-        backend->set_large_packet(state.state);
+        backend->set_modutil_state(state);
 
         // If the server responded with an error, n_eof > 0
         if (n_eof > 0 || backend->consume_fetched_rows(buffer))
@@ -569,10 +569,10 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
     else
     {
         bool more = false;
-        modutil_state state = {backend->is_large_packet()};
+        modutil_state state = backend->get_modutil_state();
         int n_old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
         int n_eof = modutil_count_signal_packets(buffer, n_old_eof, &more, &state);
-        backend->set_large_packet(state.state);
+        backend->set_modutil_state(state);
 
         if (n_eof > 2)
         {

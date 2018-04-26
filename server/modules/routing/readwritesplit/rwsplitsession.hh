@@ -62,14 +62,14 @@ public:
     // For COM_STMT_FETCH processing
     bool consume_fetched_rows(GWBUF* buffer);
 
-    inline void set_large_packet(bool value)
+    inline void set_modutil_state(modutil_state value)
     {
-        m_large_packet = value;
+        m_modutil_state = value;
     }
 
-    inline bool is_large_packet() const
+    inline modutil_state get_modutil_state() const
     {
-        return m_large_packet;
+        return m_modutil_state;
     }
 
     inline uint8_t current_command() const
@@ -90,9 +90,7 @@ public:
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
-    bool             m_large_packet; /**< Used to store the state of the EOF packet
-                                      *calculation for result sets when the result
-                                      * contains very large rows */
+    modutil_state    m_modutil_state; /**< @see modutil_count_signal_packets */
     uint8_t          m_command;
     bool             m_opening_cursor; /**< Whether we are opening a cursor */
     uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
