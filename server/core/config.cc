@@ -29,6 +29,7 @@
 #include <ini.h>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
@@ -2391,6 +2392,27 @@ static void process_path_parameter(MXS_CONFIG_PARAMETER *param)
     }
 }
 
+static bool param_is_deprecated(const MXS_MODULE_PARAM* params, const char* name, const char* modname)
+{
+    bool rval = false;
+
+    for (int i = 0; params[i].name; i++)
+    {
+        if (strcmp(params[i].name, name) == 0)
+        {
+            if (params[i].options & MXS_MODULE_OPT_DEPRECATED)
+            {
+                MXS_WARNING("Parameter '%s' for module '%s' is deprecated and "
+                            "will be ignored.", name, modname);
+                rval = true;
+            }
+            break;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Check that the configuration objects have valid parameters
  *
@@ -2440,6 +2462,8 @@ check_config_objects(CONFIG_CONTEXT *context)
 
         if (param_set != NULL)
         {
+            std::vector<std::string> to_be_removed;
+
             MXS_CONFIG_PARAMETER *params = obj->parameters;
             while (params)
             {
@@ -2471,8 +2495,18 @@ check_config_objects(CONFIG_CONTEXT *context)
                         /** Fix old-style object names */
                         config_fix_param(mod->parameters, params);
                     }
+
+                    if (mod && param_is_deprecated(mod->parameters, params->name, obj->object))
+                    {
+                        to_be_removed.push_back(params->name);
+                    }
                 }
                 params = params->next;
+            }
+
+            for (auto it = to_be_removed.begin(); it != to_be_removed.end(); it++)
+            {
+                config_remove_param(obj, it->c_str());
             }
         }
 
