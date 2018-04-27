@@ -163,7 +163,6 @@ private:
     bool load_config_params(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
-    const MariaDBServer* get_server_info(const MXS_MONITORED_SERVER* db) const;
 
     // Cluster discovery and status assignment methods
     void monitor_one_server(MariaDBServer& server);

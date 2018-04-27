@@ -1406,19 +1406,15 @@ bool MariaDBMonitor::handle_auto_failover()
 bool MariaDBMonitor::failover_not_possible()
 {
     bool rval = false;
-
-    for (MXS_MONITORED_SERVER* s = m_monitor_base->monitored_servers; s; s = s->next)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        MariaDBServer* info = get_server_info(s);
-
-        if (info->m_slave_status.size() > 1)
+        if ((*iter)->m_slave_status.size() > 1)
         {
-            MXS_ERROR("Server '%s' is configured to replicate from multiple "
-                      "masters, failover is not possible.", s->server->name);
+            MXS_ERROR("Server '%s' is configured to replicate from multiple masters, "
+                      "failover is not possible.", (*iter)->name());
             rval = true;
         }
     }
-
     return rval;
 }
 
@@ -1432,14 +1428,14 @@ bool MariaDBMonitor::slave_receiving_events()
     ss_dassert(m_master);
     bool received_event = false;
     int64_t master_id = m_master->m_server_base->server->node_id;
-    for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers; server; server = server->next)
-    {
-        MariaDBServer* info = get_server_info(server);
 
-        if (!info->m_slave_status.empty() &&
-            info->m_slave_status[0].slave_io_running == SlaveStatus::SLAVE_IO_YES &&
-            info->m_slave_status[0].master_server_id == master_id &&
-            difftime(time(NULL), info->m_latest_event) < m_master_failure_timeout)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        if (!server->m_slave_status.empty() &&
+            server->m_slave_status[0].slave_io_running == SlaveStatus::SLAVE_IO_YES &&
+            server->m_slave_status[0].master_server_id == master_id &&
+            difftime(time(NULL), server->m_latest_event) < m_master_failure_timeout)
         {
             /**
              * The slave is still connected to the correct master and has received events. This means that

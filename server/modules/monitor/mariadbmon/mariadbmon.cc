@@ -91,24 +91,16 @@ void MariaDBMonitor::init_server_info()
 }
 
 /**
-     * Get monitor-specific server info for the monitored server.
-     *
-     * @param handle
-     * @param db Server to get info for. Must be a valid server or function crashes.
-     * @return The server info.
-     */
+ * Get monitor-specific server info for the monitored server.
+ *
+ * @param handle
+ * @param db Server to get info for. Must be a valid server or function crashes.
+ * @return The server info.
+ */
 MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 {
     ss_dassert(m_server_info.count(db) == 1); // Should always exist in the map
     return m_server_info[db];
-}
-
-/**
- * Constant version of get_server_info().
- */
-const MariaDBServer* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
-{
-    return const_cast<MariaDBMonitor*>(this)->get_server_info(const_cast<MXS_MONITORED_SERVER*>(db));
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)

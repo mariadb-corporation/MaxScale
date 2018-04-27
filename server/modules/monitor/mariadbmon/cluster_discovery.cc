@@ -351,10 +351,11 @@ void MariaDBMonitor::find_graph_cycles()
     struct graph_node *stack[nservers];
     int nodes = 0;
 
-    for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        graph[nodes].info = get_server_info(db);
-        graph[nodes].db = db;
+        MariaDBServer* server = *iter;
+        graph[nodes].info = server;
+        graph[nodes].db = server->m_server_base;
         graph[nodes].index = graph[nodes].lowest_index = 0;
         graph[nodes].cycle = 0;
         graph[nodes].active = false;
@@ -563,7 +564,7 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
             monitor_set_pending_status(database, SERVER_SLAVE);
         }
 
-        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
+        /** Store master_id of current node. */
         database->server->master_id = !serv_info->m_slave_status.empty() ?
                                        serv_info->m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
@@ -876,7 +877,7 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
     ptr->pending_status = ptr->server->status;
 
     /* monitor current node */
-    monitor_database(get_server_info(ptr));
+    monitor_database(&server);
 
     if (mon_status_changed(ptr))
     {
@@ -986,12 +987,9 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
  */
 void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServer* root_master_server)
 {
-    MXS_MONITORED_SERVER* ptr = db_server.m_server_base;
     MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
-    if (!SERVER_IN_MAINT(ptr->server))
+    if (!SERVER_IN_MAINT(db_server.m_server_base->server))
     {
-        MariaDBServer *serv_info = get_server_info(ptr);
-
         /** If "detect_stale_master" option is On, let's use the previous master.
          *
          * Multi-master mode detects the stale masters in find_graph_cycles().
@@ -1000,12 +998,14 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
          * the master status. An adequate solution would be to promote
          * the stale master as a real master if it is the last running server.
          */
+        MXS_MONITORED_SERVER* ptr = db_server.m_server_base;
         if (m_detect_stale_master && root_master && !m_detect_multimaster &&
+            // This server is still the root master and ...
             (strcmp(ptr->server->address, root_master->server->address) == 0 &&
              ptr->server->port == root_master->server->port) &&
-            (ptr->server->status & SERVER_MASTER) &&
-            !(ptr->pending_status & SERVER_MASTER) &&
-            !serv_info->m_read_only)
+            // had master status but is now losing it.
+            (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER) &&
+            !db_server.m_read_only)
         {
             /**
              * In this case server->status will not be updated from pending_status
@@ -1018,9 +1018,8 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
              * the stale master bit set */
             if ((ptr->mon_prev_status & SERVER_STALE_STATUS) == 0)
             {
-                MXS_WARNING("All slave servers under the current master "
-                            "server have been lost. Assigning Stale Master"
-                            " status to the old master server '%s' (%s:%i).",
+                MXS_WARNING("All slave servers under the current master server have been lost. "
+                            "Assigning Stale Master status to the old master server '%s' (%s:%i).",
                             ptr->server->name, ptr->server->address,
                             ptr->server->port);
             }
@@ -1057,7 +1056,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
-            else if (root_master == NULL && !serv_info->m_slave_status.empty())
+            else if (root_master == NULL && !db_server.m_slave_status.empty())
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
