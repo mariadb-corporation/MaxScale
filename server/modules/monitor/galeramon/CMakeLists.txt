@@ -1,4 +1,4 @@
-add_library(galeramon SHARED galeramon.c)
+add_library(galeramon SHARED galeramon.cc)
 target_link_libraries(galeramon maxscale-common)
 add_dependencies(galeramon pcre2)
 set_target_properties(galeramon PROPERTIES VERSION "2.0.0")

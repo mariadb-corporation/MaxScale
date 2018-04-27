@@ -46,6 +46,8 @@ static void detectStaleMaster(void *, int);
 static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -100,6 +102,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
 /*lint +e14 */
 
 /**
@@ -113,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    MM_MONITOR *handle = mon->handle;
+    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon->handle);
 
     if (handle)
     {
@@ -653,7 +657,7 @@ detectStaleMaster(void *arg, int enable)
 
 static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
 {
-    MM_MONITOR* handle = mon->handle;
+    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon->handle);
     MXS_MONITORED_SERVER *ptr;
 
     ptr = mon->monitored_servers;

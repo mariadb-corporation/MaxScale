@@ -1,4 +1,4 @@
-add_library(mmmon SHARED mmmon.c)
+add_library(mmmon SHARED mmmon.cc)
 target_link_libraries(mmmon maxscale-common)
 add_dependencies(mmmon pcre2)
 set_target_properties(mmmon PROPERTIES VERSION "1.1.1")

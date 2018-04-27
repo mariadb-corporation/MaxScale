@@ -48,6 +48,8 @@ static void set_galera_cluster(MXS_MONITOR *);
 static bool detect_cluster_size(const GALERA_MONITOR *, const int, const char *, const int);
 static void set_cluster_members(MXS_MONITOR *);
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -108,6 +110,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Start the instance of the monitor, returning a handle on the monitor.
  *
@@ -118,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    GALERA_MONITOR *handle = mon->handle;
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
     if (handle != NULL)
     {
         handle->shutdown = 0;
@@ -352,11 +356,12 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     server_string = database->server->version_string;
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
-    char *cluster_member = "SHOW STATUS WHERE Variable_name IN"
-                           " ('wsrep_cluster_state_uuid',"
-                           " 'wsrep_cluster_size',"
-                           " 'wsrep_local_index',"
-                           " 'wsrep_local_state')";
+    const char *cluster_member =
+        "SHOW STATUS WHERE Variable_name IN"
+        " ('wsrep_cluster_state_uuid',"
+        " 'wsrep_cluster_size',"
+        " 'wsrep_local_index',"
+        " 'wsrep_local_state')";
 
     if (mxs_mysql_query(database->con, cluster_member) == 0
         && (result = mysql_store_result(database->con)) != NULL)
@@ -449,7 +454,8 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 
         /* Galera Cluster vars fetch */
         HASHTABLE *table = handle->galera_nodes_info;
-        GALERA_NODE_INFO *node = hashtable_fetch(table, database->server->name);
+        GALERA_NODE_INFO *node =
+            static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, database->server->name));
         if (node)
         {
             MXS_DEBUG("Node %s is present in galera_nodes_info, updtating info",
@@ -683,7 +689,7 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 {
     MXS_MONITORED_SERVER *moitor_servers = mon->monitored_servers;
     MXS_MONITORED_SERVER *candidate_master = NULL;
-    GALERA_MONITOR* handle = mon->handle;
+    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->handle);
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
@@ -807,7 +813,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     MXS_MONITORED_SERVER *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    GALERA_MONITOR *handle = mon->handle;
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
     bool ignore_priority = true;
 
     if (is_cluster == 1)
@@ -820,9 +826,9 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     MXS_MONITORED_SERVER *node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
-    char *donor_list = MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) +
-                                  is_cluster * DONOR_NODE_NAME_MAX_LEN +
-                                  is_cluster + 1);
+    char *donor_list = static_cast<char*>(MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) +
+                                                     is_cluster * DONOR_NODE_NAME_MAX_LEN +
+                                                     is_cluster + 1));
 
     if (donor_list == NULL)
     {
@@ -871,7 +877,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
           sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
-    for (int k = 0; k < found_slaves; k++)
+    for (unsigned int k = 0; k < found_slaves; k++)
     {
         MXS_MONITORED_SERVER *ptr = node_list[k];
 
@@ -917,7 +923,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
               donor_list);
 
     /* Set now rep_sst_donor in each slave node */
-    for (int k = 0; k < found_slaves; k++)
+    for (unsigned int k = 0; k < found_slaves; k++)
     {
         MXS_MONITORED_SERVER *ptr = node_list[k];
         /* Set the Galera SST donor node list */
@@ -1092,7 +1098,7 @@ static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *in)
     rval->node = in->node;
     rval->joined = in->joined;
 
-    return (void *) rval;
+    return rval;
 }
 
 /**
@@ -1119,7 +1125,7 @@ static void nodeval_free(GALERA_NODE_INFO *in)
  */
 static void set_galera_cluster(MXS_MONITOR *mon)
 {
-    GALERA_MONITOR *handle = mon->handle;
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
     int ret = false;
     int n_nodes = 0;
     HASHITERATOR *iterator;
@@ -1133,10 +1139,10 @@ static void set_galera_cluster(MXS_MONITOR *mon)
     if ((iterator = hashtable_iterator(table)) != NULL)
     {
         /* Get the Key */
-        while ((key = hashtable_next(iterator)) != NULL)
+        while ((key = static_cast<char*>(hashtable_next(iterator))) != NULL)
         {
             /* fetch the Value for the Key */
-            value = hashtable_fetch(table, key);
+            value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, key));
             if (value)
             {
                 if (!SERVER_IN_MAINT(value->node) &&
@@ -1206,7 +1212,7 @@ static void set_galera_cluster(MXS_MONITOR *mon)
  */
 static void set_cluster_members(MXS_MONITOR *mon)
 {
-    GALERA_MONITOR *handle = mon->handle;
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
     GALERA_NODE_INFO *value;
     MXS_MONITORED_SERVER *ptr;
     char *c_uuid = handle->cluster_info.c_uuid;
@@ -1216,7 +1222,8 @@ static void set_cluster_members(MXS_MONITOR *mon)
     while (ptr)
     {
         /* Fetch cluster info for this server, if any */
-        value = hashtable_fetch(handle->galera_nodes_info, ptr->server->name);
+        value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(handle->galera_nodes_info,
+                                                               ptr->server->name));
 
         if (value && handle->cluster_info.c_uuid)
         {
@@ -1291,7 +1298,7 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
     }
     else if (n_nodes == 1)
     {
-        char *msg = "Galera cluster with 1 node only";
+        const char *msg = "Galera cluster with 1 node only";
 
         /* If 1 node only:
          * ifc_uuid is not set, return value will be true.

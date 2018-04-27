@@ -48,7 +48,8 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
-        SERVER temp_server = {.status = database->server->status};
+        SERVER temp_server = {};
+        temp_server.status = database->server->status;
         server_clear_status_nolock(&temp_server, SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
         database->mon_prev_status = database->server->status;
 
@@ -148,7 +149,7 @@ monitorMain(void *arg)
         release_monitor_servers(monitor);
 
         /** Sleep until the next monitoring interval */
-        int ms = 0;
+        unsigned int ms = 0;
         while (ms < monitor->interval && !handle->shutdown)
         {
             if (monitor->server_pending_changes)
@@ -188,7 +189,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
 static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    AURORA_MONITOR *handle = mon->handle;
+    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon->handle);
 
     if (handle)
     {
@@ -264,6 +265,8 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     return NULL;
 }
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that must populate the
  * structure that is referred to as the "module object", this is a structure
@@ -313,4 +316,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }

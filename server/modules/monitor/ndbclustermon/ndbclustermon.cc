@@ -38,6 +38,9 @@ bool isNdbEvent(mxs_monitor_event_t event);
 
 
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -91,6 +94,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
 /*lint +e14 */
 
 /**
@@ -103,7 +108,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    NDBC_MONITOR *handle = mon->handle;
+    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon->handle);
     bool have_events = false, script_error = false;
 
     if (handle != NULL)
