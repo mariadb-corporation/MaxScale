@@ -59,9 +59,11 @@ static void write_auth_err(DCB *dcb);
 
 static char* cdc_default_auth()
 {
-    return "CDCPlainAuth";
+    return const_cast<char*>("CDCPlainAuth");
 }
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -109,6 +111,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }
 
 /**

@@ -57,6 +57,8 @@ static int httpd_get_line(int sock, char *buf, int size);
 static void httpd_send_headers(DCB *dcb, int final, bool auth_ok);
 static char *httpd_default_auth();
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -105,6 +107,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
 /*lint +e14 */
 
 static const char* default_auth = "NullAuthAllow";
@@ -139,7 +143,7 @@ static int httpd_read_event(DCB* dcb)
     HTTPD_session *client_data = NULL;
     GWBUF *uri;
 
-    client_data = dcb->data;
+    client_data = static_cast<HTTPD_session*>(dcb->data);
 
     /**
      * get the request line

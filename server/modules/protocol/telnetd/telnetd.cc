@@ -76,6 +76,8 @@ static char *telnetd_default_auth();
 static void telnetd_command(DCB *, unsigned char *cmd);
 static void telnetd_echo(DCB *dcb, int enable);
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -125,6 +127,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
     return &info;
 }
+
+}
 /*lint +e14 */
 
 /**
@@ -134,7 +138,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static char *telnetd_default_auth()
 {
-    return "NullAuthAllow";
+    return const_cast<char*>("NullAuthAllow");
 }
 
 /**
@@ -315,7 +319,7 @@ static int telnetd_accept(DCB *listener)
 
 static int telnetd_close(DCB *dcb)
 {
-    TELNETD *telnetd = dcb->protocol;
+    TELNETD *telnetd = static_cast<TELNETD*>(dcb->protocol);
 
     if (telnetd && telnetd->username)
     {

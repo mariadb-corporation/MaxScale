@@ -157,6 +157,8 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
     return authenticated;
 }
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -207,6 +209,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
 /*lint +e14 */
 
 /**
@@ -216,7 +220,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static char *mxsd_default_auth()
 {
-    return "MaxAdminAuth";
+    return const_cast<char*>("MaxAdminAuth");
 }
 
 /**
@@ -397,7 +401,7 @@ static int maxscaled_accept(DCB *listener)
 
 static int maxscaled_close(DCB *dcb)
 {
-    MAXSCALED *maxscaled = dcb->protocol;
+    MAXSCALED *maxscaled = static_cast<MAXSCALED*>(dcb->protocol);
 
     if (!maxscaled)
     {
@@ -424,7 +428,7 @@ static int maxscaled_close(DCB *dcb)
  */
 static int maxscaled_listen(DCB *listener, char *config)
 {
-    char *socket_path = NULL;
+    const char *socket_path = NULL;
 
     /* check for default UNIX socket */
     if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)

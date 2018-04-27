@@ -1,4 +1,4 @@
-add_library(mariadbbackend SHARED mysql_backend.c)
+add_library(mariadbbackend SHARED mysql_backend.cc)
 # TODO: Refactor mariadbbackend so that COM_CHANGE_USER processing is
 # transparent to the protocol module. After this change, we don't need to
 # link against mysqlauth.
