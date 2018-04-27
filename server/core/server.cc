@@ -516,24 +516,6 @@ dprintServer(DCB *dcb, const SERVER *server)
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
-
-    if (server->slaves)
-    {
-        int i;
-        dcb_printf(dcb, "\tSlave Ids:                           ");
-        for (i = 0; server->slaves[i]; i++)
-        {
-            if (i == 0)
-            {
-                dcb_printf(dcb, "%li", server->slaves[i]);
-            }
-            else
-            {
-                dcb_printf(dcb, ", %li ", server->slaves[i]);
-            }
-        }
-        dcb_printf(dcb, "\n");
-    }
     dcb_printf(dcb, "\tRepl Depth:                          %d\n", server->depth);
     if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
     {
@@ -1467,18 +1449,6 @@ static json_t* server_json_attributes(const SERVER* server)
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     json_object_set_new(attr, "last_event", json_string(event_name));
     json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));
-
-    if (server->slaves)
-    {
-        json_t* slaves = json_array();
-
-        for (int i = 0; server->slaves[i]; i++)
-        {
-            json_array_append_new(slaves, json_integer(server->slaves[i]));
-        }
-
-        json_object_set_new(attr, "slaves", slaves);
-    }
 
     if (server->rlag >= 0)
     {

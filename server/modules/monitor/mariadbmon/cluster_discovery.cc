@@ -16,7 +16,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 
-static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
 static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_do_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database);
@@ -118,8 +117,6 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                 master_cand = getServerByNodeId(current->master_id);
                 if (master_cand && master_cand->server && master_cand->server->node_id > 0)
                 {
-                    add_slave_to_master(master_cand->server->slaves, sizeof(master_cand->server->slaves),
-                                        current->node_id);
                     master_cand->server->depth = current->depth - 1;
 
                     if (m_master && master_cand->server->depth < m_master->m_server_base->server->depth)
@@ -175,28 +172,6 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
     {
         return NULL;
     }
-}
-
-/*******
- * This function add a slave id into the slaves server field
- * of its master server
- *
- * @param slaves_list   The slave list array of the master server
- * @param list_size     The size of the slave list
- * @param node_id       The node_id of the slave to be inserted
- * @return      1 for inserted value and 0 otherwise
- */
-static int add_slave_to_master(long *slaves_list, int list_size, long node_id)
-{
-    for (int i = 0; i < list_size; i++)
-    {
-        if (slaves_list[i] == 0)
-        {
-            slaves_list[i] = node_id;
-            return 1;
-        }
-    }
-    return 0;
 }
 
 /**
@@ -902,9 +877,6 @@ void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
 
     /* monitor current node */
     monitor_database(get_server_info(ptr));
-
-    /* reset the slave list of current node */
-    memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
 
     if (mon_status_changed(ptr))
     {

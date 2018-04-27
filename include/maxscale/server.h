@@ -148,7 +148,6 @@ typedef struct server
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
     long           master_id;      /**< Master server id of this node */
     int            depth;          /**< Replication level in the tree */
-    long           slaves[MAX_NUM_SLAVES]; /**< Slaves of this node */
     // Misc fields
     char           *auth_options;  /**< Authenticator options, not used. TODO: Remove. */
     bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
