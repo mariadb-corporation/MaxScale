@@ -1220,12 +1220,10 @@ bool converter_func(void* data)
     if (binlog_end == AVRO_LAST_FILE)
     {
         router->task_delay = MXS_MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
-        if (conversion_task_ctl(router, true))
-        {
-            MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
-                     " more data is written before continuing. Next check in %d seconds.",
-                     router->binlog_name, router->current_pos, router->task_delay);
-        }
+
+        MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
+            " more data is written before continuing. Next check in %d seconds.",
+                 router->binlog_name, router->current_pos, router->task_delay);
     }
 
     return true;
