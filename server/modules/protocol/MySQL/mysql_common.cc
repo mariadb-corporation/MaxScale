@@ -71,6 +71,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->extra_capabilities = 0;
     p->ignore_replies = 0;
     p->collect_result = false;
+    p->changing_user = false;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;
