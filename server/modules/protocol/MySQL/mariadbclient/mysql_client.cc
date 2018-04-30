@@ -986,7 +986,14 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * the smallest version number. */
     qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
 
-    spec_com_res_t res = process_special_commands(dcb, read_buffer, nbytes_read);
+    spec_com_res_t res = RES_CONTINUE;
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
+
+    if (!proto->changing_user)
+    {
+        res = process_special_commands(dcb, read_buffer, nbytes_read);
+    }
+
     int rval = 1;
     switch (res)
     {
@@ -1450,6 +1457,37 @@ void update_current_command(DCB* dcb, GWBUF* buffer)
 }
 
 /**
+ * Perform re-authentication of the client
+ *
+ * @param session   Client session
+ * @param packetbuf Client's response to the AuthSwitchRequest
+ *
+ * @return True if the user is allowed access
+ */
+static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
+{
+    bool rval = false;
+
+    if (session->client_dcb->authfunc.reauthenticate)
+    {
+        MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
+        MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] = {};
+        uint8_t payload[gwbuf_length(packetbuf) - MYSQL_HEADER_LEN];
+        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, sizeof(payload), payload);
+
+        int rc = session->client_dcb->authfunc.reauthenticate(session->client_dcb, data->user,
+                                                              payload, sizeof(payload),
+                                                              proto->scramble, sizeof(proto->scramble),
+                                                              client_sha1, sizeof(client_sha1));
+
+        rval = rc == MXS_AUTH_SUCCEEDED;
+    }
+
+    return rval;
+}
+
+/**
  * Detect if buffer includes partial mysql packet or multiple packets.
  * Store partial packet to dcb_readqueue. Send complete packets one by one
  * to router.
@@ -1480,11 +1518,15 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         if (packetbuf != NULL)
         {
             CHK_GWBUF(packetbuf);
+            MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
             /**
              * Update the currently command being executed.
              */
-            update_current_command(session->client_dcb, packetbuf);
+            if (!proto->changing_user)
+            {
+                update_current_command(session->client_dcb, packetbuf);
+            }
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
@@ -1559,8 +1601,26 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                 }
             }
 
-            /** Route query */
-            rc = MXS_SESSION_ROUTE_QUERY(session, packetbuf);
+            bool changed_user = false;
+
+            if (!proto->changing_user && proto->current_command == MXS_COM_CHANGE_USER)
+            {
+                changed_user = true;
+                send_auth_switch_request_packet(session->client_dcb);
+            }
+
+            if (proto->changing_user)
+            {
+                rc = reauthenticate_client(session, packetbuf) ? 1 : 0;
+                gwbuf_free(packetbuf);
+            }
+            else
+            {
+                /** Route query */
+                rc = MXS_SESSION_ROUTE_QUERY(session, packetbuf);
+            }
+
+            proto->changing_user = changed_user;
         }
         else
         {
