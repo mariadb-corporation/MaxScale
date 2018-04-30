@@ -965,7 +965,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE &&
-        mxs_mysql_command_will_respond(cmd))
+        !m_qc.large_query() && mxs_mysql_command_will_respond(cmd))
     {
         response = mxs::Backend::EXPECT_RESPONSE;
     }
