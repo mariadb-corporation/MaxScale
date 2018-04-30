@@ -448,6 +448,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 {
     spinlock_acquire(&crt_lock);
     bool valid = false;
+    const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
     if (strcmp(key, CN_USER) == 0)
     {
@@ -522,7 +523,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
             monitorSetScriptTimeout(monitor, ival);
         }
     }
-    else
+    else  if (config_param_is_valid(mod->parameters, key, value, NULL))
     {
         /** We're modifying module specific parameters and we need to stop the monitor */
         monitorStop(monitor);

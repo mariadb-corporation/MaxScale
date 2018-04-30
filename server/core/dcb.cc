@@ -3458,13 +3458,14 @@ int poll_add_dcb(DCB *dcb)
         worker_id = MXS_WORKER_ALL;
     }
     else if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
-             strcasecmp(dcb->service->routerModule, "cli") == 0)
+             (strcasecmp(dcb->service->routerModule, "cli") == 0 ||
+              strcasecmp(dcb->service->routerModule, "maxinfo") == 0))
     {
-        // If the DCB refers to an accepted maxadmin socket, we force it
+        // If the DCB refers to an accepted maxadmin/maxinfo socket, we force it
         // to the main thread. That's done in order to prevent a deadlock
-        // that may happen if there are multiple concurrent maxadmin calls,
+        // that may happen if there are multiple concurrent administrative calls,
         // handled by different worker threads.
-        // See: https://jira.mariadb.org/browse/MXS-1805
+        // See: https://jira.mariadb.org/browse/MXS-1805 and https://jira.mariadb.org/browse/MXS-1833
         new_state = DCB_STATE_POLLING;
         dcb->poll.thread.id = 0;
         worker_id = dcb->poll.thread.id;

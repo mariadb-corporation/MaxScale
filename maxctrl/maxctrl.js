@@ -21,6 +21,11 @@ function print(out) {
     }
 }
 
+function err(out) {
+    print(out)
+    process.exit(1);
+}
+
 // Mangle the arguments if we are being called from the command line
 if (process.argv[0] == process.execPath) {
     process.argv.shift()
@@ -29,4 +34,4 @@ if (process.argv[0] == process.execPath) {
 }
 
 maxctrl.execute(process.argv)
-    .then(print, print)
+    .then(print, err)

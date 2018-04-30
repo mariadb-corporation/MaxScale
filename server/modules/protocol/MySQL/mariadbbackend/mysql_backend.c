@@ -708,6 +708,37 @@ static inline bool not_err_packet(const GWBUF* buffer)
     return GWBUF_DATA(buffer)[4] != MYSQL_REPLY_ERR;
 }
 
+static inline bool auth_change_requested(GWBUF* buf)
+{
+    return mxs_mysql_get_command(buf) == MYSQL_REPLY_AUTHSWITCHREQUEST &&
+           gwbuf_length(buf) > MYSQL_EOF_PACKET_LEN;
+}
+
+static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB* dcb)
+{
+    bool rval = false;
+
+    if (strcmp((char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN) == 0)
+    {
+        /**
+         * The server requested a change of authentication methods.
+         * If we're changing the authentication method to the same one we
+         * are using now, it means that the server is simply generating
+         * a new scramble for the re-authentication process.
+         */
+
+         // Load the new scramble into the protocol...
+        gwbuf_copy_data(reply, 5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
+                        GW_MYSQL_SCRAMBLE_SIZE, proto->scramble);
+
+        /// ... and use it to send the encrypted password to the server
+        rval = send_mysql_native_password_response(dcb);
+
+    }
+
+    return rval;
+}
+
 /**
  * @brief With authentication completed, read new data and write to backend
  *
@@ -829,6 +860,19 @@ gw_read_and_write(DCB *dcb)
         }
     }
 
+    if (proto->changing_user)
+    {
+        if (auth_change_requested(read_buffer) &&
+            handle_auth_change_response(read_buffer, proto, dcb))
+        {
+            return 0;
+        }
+        else
+        {
+            proto->changing_user = false;
+        }
+    }
+
     if (proto->ignore_replies > 0)
     {
         /** The reply to a COM_CHANGE_USER is in packet */
@@ -855,28 +899,16 @@ gw_read_and_write(DCB *dcb)
             MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
             rval = query ? dcb->func.write(dcb, query) : 1;
         }
-        else if (result == MYSQL_REPLY_AUTHSWITCHREQUEST &&
-                 gwbuf_length(reply) > MYSQL_EOF_PACKET_LEN)
+        else if (auth_change_requested(reply))
         {
-            /**
-             * The server requested a change of authentication methods.
-             * If we're changing the authentication method to the same one we
-             * are using now, it means that the server is simply generating
-             * a new scramble for the re-authentication process.
-             */
-            if (strcmp((char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN) == 0)
+            if (handle_auth_change_response(reply, proto, dcb))
             {
-                /** Load the new scramble into the protocol... */
-                gwbuf_copy_data(reply, 5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
-                                GW_MYSQL_SCRAMBLE_SIZE, proto->scramble);
-
-                /** ... and use it to send the encrypted password to the server */
-                rval = send_mysql_native_password_response(dcb);
-
                 /** Store the query until we know the result of the authentication
                  * method switch. */
                 proto->stored_query = query;
                 proto->ignore_replies++;
+
+                gwbuf_free(reply);
                 return rval;
             }
             else
@@ -889,7 +921,6 @@ gw_read_and_write(DCB *dcb)
                 // TODO: Use the authenticators to handle COM_CHANGE_USER responses
                 MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
                           (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
-
             }
         }
         else
@@ -1993,8 +2024,10 @@ gw_send_change_user_to_backend(char          *dbname,
 
     if (rc != 0)
     {
+        conn->changing_user = true;
         rc = 1;
     }
+
     return rc;
 }
 

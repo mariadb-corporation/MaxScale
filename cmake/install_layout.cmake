@@ -98,7 +98,9 @@ function(install_script target component)
   list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
 
   if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}")
+    install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR}
+      PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_READ GROUP_READ WORLD_READ
+      COMPONENT "${component}")
   endif()
 
 endfunction()

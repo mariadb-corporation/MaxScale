@@ -473,7 +473,7 @@ Invalid JSON body:
 Stops a started service.
 
 ```
-PUT /v1/service/:name/stop
+PUT /v1/services/:name/stop
 ```
 
 #### Response
@@ -487,7 +487,7 @@ Service is stopped:
 Starts a stopped service.
 
 ```
-PUT /v1/service/:name/start
+PUT /v1/services/:name/start
 ```
 
 #### Response
