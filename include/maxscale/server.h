@@ -63,6 +63,7 @@ typedef struct
     int n_persistent;     /**< Current persistent pool */
     uint64_t n_new_conn;  /**< Times the current pool was empty */
     uint64_t n_from_pool; /**< Times when a connection was available from the pool */
+    uint64_t packets;     /**< Number of packets routed to this server */
 } SERVER_STATS;
 
 /**

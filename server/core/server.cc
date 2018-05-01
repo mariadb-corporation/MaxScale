@@ -566,6 +566,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
     dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
+    dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
@@ -1459,6 +1460,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
+    json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
 
     json_object_set_new(attr, "statistics", stats);
 

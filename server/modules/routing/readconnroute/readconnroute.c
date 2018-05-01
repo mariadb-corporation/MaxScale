@@ -589,6 +589,9 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
 
     inst->stats.n_queries++;
 
+    // Due to the streaming nature of readconnroute, this is not accurate
+    atomic_add_uint64(&router_cli_ses->backend->server->stats.packets, 1);
+
     /** Dirty read for quick check if router is closed. */
     if (router_cli_ses->rses_closed)
     {
