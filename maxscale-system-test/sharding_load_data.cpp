@@ -39,12 +39,9 @@ int main(int argc, char** argv)
     long total = execute_query_count_rows(test.maxscales->conn_rwsplit[0], "SELECT * FROM db1.t1");
     test.add_result(total != 100, "Expected 100 rows, got %ld", total);
 
-    test.tprintf("Dropping tables and databases");
-
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE db1.t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP DATABASE db1");
-
     test.maxscales->close_maxscale_connections(0);
+
+    test.repl->execute_query_all_nodes("DROP DATABASE db1");
 
     // Remove the test data
     unlink("data.csv");
