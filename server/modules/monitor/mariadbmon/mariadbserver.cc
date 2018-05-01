@@ -215,7 +215,6 @@ bool MariaDBServer::update_gtids()
         auto current_str = result->get_string(i_current_pos);
         auto binlog_str = result->get_string(i_binlog_pos);
         bool current_ok = false;
-        bool binlog_ok = false;
         if (current_str.empty())
         {
             m_gtid_current_pos = GtidList();
@@ -233,10 +232,9 @@ bool MariaDBServer::update_gtids()
         else
         {
             m_gtid_binlog_pos = GtidList::from_string(binlog_str);
-            binlog_ok = !m_gtid_binlog_pos.empty();
         }
 
-        rval = (current_ok && binlog_ok);
+        rval = current_ok;
     }
     return rval;
 }
