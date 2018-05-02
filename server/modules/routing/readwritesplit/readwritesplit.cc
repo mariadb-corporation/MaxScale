@@ -393,39 +393,6 @@ json_t* RWSplit::diagnostics_json() const
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "use_sql_variables_in",
-                        json_string(mxs_target_to_str(config().use_sql_variables_in)));
-    json_object_set_new(rval, "slave_selection_criteria",
-                        json_string(select_criteria_to_str(config().slave_selection_criteria)));
-    json_object_set_new(rval, "master_failure_mode",
-                        json_string(failure_mode_to_str(config().master_failure_mode)));
-    json_object_set_new(rval, "max_slave_replication_lag",
-                        json_integer(config().max_slave_replication_lag));
-    json_object_set_new(rval, "retry_failed_reads",
-                        json_boolean(config().retry_failed_reads));
-    json_object_set_new(rval, "strict_multi_stmt",
-                        json_boolean(config().strict_multi_stmt));
-    json_object_set_new(rval, "strict_sp_calls",
-                        json_boolean(config().strict_sp_calls));
-    json_object_set_new(rval, "disable_sescmd_history",
-                        json_boolean(config().disable_sescmd_history));
-    json_object_set_new(rval, "max_sescmd_history",
-                        json_integer(config().max_sescmd_history));
-    json_object_set_new(rval, "master_accept_reads",
-                        json_boolean(config().master_accept_reads));
-    json_object_set_new(rval, "connection_keepalive",
-                        json_integer(config().master_accept_reads));
-    json_object_set_new(rval, "enable_causal_read",
-                        json_boolean(config().enable_causal_read));
-    json_object_set_new(rval, "causal_read_timeout",
-                        json_string(config().causal_read_timeout.c_str()));
-    json_object_set_new(rval, "master_reconnection",
-                        json_boolean(config().master_reconnection));
-    json_object_set_new(rval, "delayed_retry",
-                        json_boolean(config().delayed_retry));
-    json_object_set_new(rval, "delayed_retry_timeout",
-                        json_integer(config().delayed_retry_timeout));
-
     json_object_set_new(rval, "connections", json_integer(stats().n_sessions));
     json_object_set_new(rval, "current_connections", json_integer(service()->stats.n_current));
     json_object_set_new(rval, "queries", json_integer(stats().n_queries));
