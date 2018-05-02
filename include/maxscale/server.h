@@ -312,6 +312,15 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
 bool server_remove_parameter(SERVER *server, const char *name);
 
 /**
+ * @brief Update server parameter
+ *
+ * @param server Server to update
+ * @param name   Parameter to update
+ * @param value  New value of parameter
+ */
+void server_update_parameter(SERVER *server, const char *name, const char *value);
+
+/**
  * @brief Check if a server points to a local MaxScale service
  *
  * @param server Server to check
