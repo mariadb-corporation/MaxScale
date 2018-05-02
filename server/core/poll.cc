@@ -329,7 +329,7 @@ namespace
 struct EVENT_TIMES_CB_DATA
 {
     int rowno;
-    Worker::STATISTICS* stats;
+    Worker::STATISTICS stats;
 };
 
 }
@@ -372,10 +372,10 @@ eventTimesRowCallback(RESULTSET *set, void *v)
         resultset_row_set(row, 0, buf);
     }
 
-    snprintf(buf, 39, "%u", data->stats->qtimes[data->rowno]);
+    snprintf(buf, 39, "%u", data->stats.qtimes[data->rowno]);
     buf[39] = '\0';
     resultset_row_set(row, 1, buf);
-    snprintf(buf, 39, "%u", data->stats->exectimes[data->rowno]);
+    snprintf(buf, 39, "%u", data->stats.exectimes[data->rowno]);
     buf[39] = '\0';
     resultset_row_set(row, 2, buf);
     data->rowno++;
@@ -398,10 +398,8 @@ eventTimesGetList()
         return NULL;
     }
 
-    Worker::STATISTICS s = Worker::get_statistics();
-
     data->rowno = 0;
-    data->stats = &s;
+    data->stats = Worker::get_statistics();
 
     if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
     {
