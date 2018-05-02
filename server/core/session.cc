@@ -816,6 +816,10 @@ sessionRowCallback(RESULTSET *set, void *data)
         row = cbdata->row;
         cbdata->row = NULL;
     }
+    else
+    {
+        MXS_FREE(cbdata);
+    }
 
     return row;
 }
