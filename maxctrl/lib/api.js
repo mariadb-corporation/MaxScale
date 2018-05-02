@@ -17,6 +17,13 @@ exports.desc = 'Raw REST API access'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
+        .group(['sum'], 'API options:')
+        .option('sum', {
+            describe: 'Calculate sum of API result. Only works for arrays of numbers ' +
+                'e.g. `api get --sum servers data[].attributes.statistics.connections`.',
+            type: 'boolean',
+            default: false
+        })
         .command('get <resource> [path]', 'Get raw JSON', function(yargs) {
             return yargs.epilog('Perform a raw REST API call. ' +
                                 'The path definition uses JavaScript syntax to extract values. ' +
@@ -27,7 +34,11 @@ exports.builder = function(yargs) {
             maxctrl(argv, function(host) {
                 return doRequest(host, argv.resource, (res) => {
                     if (argv.path) {
-                        res = _.getPath(res, argv.path, '')
+                        res = _.getPath(res, argv.path)
+                    }
+
+                    if (argv.sum && Array.isArray(res) && typeof(res[0]) == 'number') {
+                        res = res.reduce((sum, value) => value ? sum + value : sum)
                     }
 
                     return JSON.stringify(res)
