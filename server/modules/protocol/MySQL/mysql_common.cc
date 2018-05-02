@@ -73,6 +73,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->collect_result = false;
     p->changing_user = false;
     p->num_eof_packets = 0;
+    p->large_query = false;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;

@@ -409,7 +409,19 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
          */
         if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
         {
-            proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+            uint8_t* data = GWBUF_DATA(buffer);
+
+            if (!proto->large_query)
+            {
+                proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(data);
+            }
+
+            /**
+             * If the buffer contains a large query, we have to skip the command
+             * byte extraction for the next packet. This way current_command always
+             * contains the latest command executed on this backend.
+             */
+            proto->large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
         }
         else if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
         {

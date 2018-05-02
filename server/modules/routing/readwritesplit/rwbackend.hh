@@ -64,6 +64,7 @@ public:
     uint32_t get_ps_handle(uint32_t id) const;
 
     bool execute_session_command();
+    bool continue_session_command(GWBUF* buffer);
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
     void close(close_type type = CLOSE_NORMAL);
 

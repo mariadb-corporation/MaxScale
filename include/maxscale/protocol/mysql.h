@@ -355,6 +355,7 @@ typedef struct
     bool                   collect_result;               /*< Collect the next result set as one buffer */
     bool                   changing_user;
     uint32_t               num_eof_packets;              /*< Encountered eof packet number, used for check packet type */
+    bool                   large_query;                  /*< Whether to ignore the command byte of the next packet*/
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif

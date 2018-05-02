@@ -35,6 +35,11 @@ bool RWBackend::execute_session_command()
     return rval;
 }
 
+bool RWBackend::continue_session_command(GWBUF* buffer)
+{
+    return Backend::write(buffer, NO_RESPONSE);
+}
+
 void RWBackend::add_ps_handle(uint32_t id, uint32_t handle)
 {
     m_ps_handles[id] = handle;

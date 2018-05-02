@@ -151,6 +151,7 @@ private:
     void purge_history(mxs::SSessionCommand& sescmd);
 
     bool route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type);
+    void continue_large_session_write(GWBUF *querybuf, uint32_t type);
     bool route_single_stmt(GWBUF *querybuf);
     bool route_stored_query();
 
@@ -216,6 +217,18 @@ private:
     inline bool can_recover_servers() const
     {
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
+    }
+
+    inline bool is_large_query(GWBUF* buf)
+    {
+        uint32_t buflen = gwbuf_length(buf);
+
+        // The buffer should contain at most (2^24 - 1) + 4 bytes ...
+        ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+        // ... and the payload should be buflen - 4 bytes
+        ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+
+        return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
     }
 };
 

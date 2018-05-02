@@ -83,6 +83,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
                                           int packet_type, uint32_t qtype)
 {
     bool result = false;
+    bool is_large = is_large_query(querybuf);
 
     if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
     {
@@ -111,12 +112,22 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
         MXS_FREE(query_str);
         MXS_FREE(qtype_str);
     }
+    else if (m_qc.large_query())
+    {
+        // TODO: Append to the already stored session command instead of disabling history
+        MXS_INFO("Large session write, have to disable session command history");
+        m_config.disable_sescmd_history = true;
+
+        continue_large_session_write(querybuf, qtype);
+        result = true;
+    }
     else if (route_session_write(gwbuf_clone(querybuf), packet_type, qtype))
     {
-
         result = true;
         atomic_add_uint64(&m_router->stats().n_all, 1);
     }
+
+    m_qc.set_large_query(is_large);
 
     return result;
 }

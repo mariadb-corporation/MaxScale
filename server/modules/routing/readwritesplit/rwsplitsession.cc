@@ -141,7 +141,10 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
             current_target = QueryClassifier::CURRENT_TARGET_SLAVE;
         }
 
-        m_qc.update_route_info(current_target, querybuf);
+        if (!m_qc.large_query())
+        {
+            m_qc.update_route_info(current_target, querybuf);
+        }
 
         /** No active or pending queries */
         if (route_single_stmt(querybuf))

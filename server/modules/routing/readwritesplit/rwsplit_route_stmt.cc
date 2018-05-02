@@ -159,7 +159,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
 
     if (TARGET_IS_ALL(route_target))
     {
-        // TODO: Handle payloads larger than (2^24 - 1) bytes that are routed to all servers
         succp = handle_target_is_all(route_target, querybuf, command, qtype);
     }
     else
@@ -263,18 +262,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
     return succp;
 }
 
-static inline bool is_large_query(GWBUF* buf)
-{
-    uint32_t buflen = gwbuf_length(buf);
-
-    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-    ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
-    // ... and the payload should be buflen - 4 bytes
-    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
-
-    return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
-}
-
 /**
  * Purge session command history
  *
@@ -322,6 +309,19 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
     }
 }
 
+void RWSplitSession::continue_large_session_write(GWBUF *querybuf, uint32_t type)
+{
+    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    {
+        SRWBackend& backend = *it;
+
+        if (backend->in_use())
+        {
+            backend->continue_session_command(gwbuf_clone(querybuf));
+        }
+    }
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -343,13 +343,6 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
  */
 bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type)
 {
-    if (is_large_query(querybuf))
-    {
-        MXS_ERROR("Session command is too large, session cannot continue. "
-                  "Large session commands are not supported in 2.2.");
-        return false;
-    }
-
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = m_sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
