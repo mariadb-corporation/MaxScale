@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
+    test.maxscales->ssh_node_f(0, true, "maxadmin enable log-priority info");
     test.maxscales->connect();
 
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
