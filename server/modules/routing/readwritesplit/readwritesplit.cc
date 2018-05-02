@@ -358,18 +358,20 @@ void RWSplit::diagnostics(DCB *dcb)
         all_pct = ((double)stats().n_all / (double)stats().n_queries) * 100.0;
     }
 
-    dcb_printf(dcb, "\tNumber of router sessions:           	%" PRIu64 "\n",
+    dcb_printf(dcb, "\tNumber of router sessions:              %" PRIu64 "\n",
                stats().n_sessions);
-    dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n",
+    dcb_printf(dcb, "\tCurrent no. of router sessions:         %d\n",
                service()->stats.n_current);
-    dcb_printf(dcb, "\tNumber of queries forwarded:          	%" PRIu64 "\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded:            %" PRIu64 "\n",
                stats().n_queries);
-    dcb_printf(dcb, "\tNumber of queries forwarded to master:	%" PRIu64 " (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to master:  %" PRIu64 " (%.2f%%)\n",
                stats().n_master, master_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%" PRIu64 " (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to slave:   %" PRIu64 " (%.2f%%)\n",
                stats().n_slave, slave_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to all:     %" PRIu64 " (%.2f%%)\n",
                stats().n_all, all_pct);
+    dcb_printf(dcb, "\tNumber of replayed transactions:        %" PRIu64 "\n",
+               stats().n_trx_replay);
 
     if (*weightby)
     {
@@ -399,6 +401,7 @@ json_t* RWSplit::diagnostics_json() const
     json_object_set_new(rval, "route_master", json_integer(stats().n_master));
     json_object_set_new(rval, "route_slave", json_integer(stats().n_slave));
     json_object_set_new(rval, "route_all", json_integer(stats().n_all));
+    json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
 
     const char *weightby = serviceGetWeightingParameter(service());
 

@@ -211,7 +211,8 @@ public:
         n_queries(0),
         n_master(0),
         n_slave(0),
-        n_all(0)
+        n_all(0),
+        n_trx_replay(0)
     {
     }
 
@@ -220,6 +221,7 @@ public:
     uint64_t n_master;          /**< Number of stmts sent to master */
     uint64_t n_slave;           /**< Number of stmts sent to slave */
     uint64_t n_all;             /**< Number of stmts sent to all */
+    uint64_t n_trx_replay;      /**< Number of replayed transactions */
 };
 
 class RWSplitSession;

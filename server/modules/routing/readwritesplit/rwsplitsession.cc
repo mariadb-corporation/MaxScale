@@ -380,6 +380,7 @@ void RWSplitSession::handle_trx_replay()
     {
         // No more statements to execute
         m_is_replay_active = false;
+        atomic_add_uint64(&m_router->stats().n_trx_replay, 1);
 
         // Check that the checksums match.
         SHA1Checksum chksum = m_trx.checksum();
