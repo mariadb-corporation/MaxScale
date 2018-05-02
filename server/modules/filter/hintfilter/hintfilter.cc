@@ -36,6 +36,9 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
 static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -83,6 +86,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -98,7 +103,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     HINT_INSTANCE *my_instance;
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(HINT_INSTANCE))) != NULL)
+    if ((my_instance = static_cast<HINT_INSTANCE*>(MXS_CALLOC(1, sizeof(HINT_INSTANCE)))) != NULL)
     {
         my_instance->sessions = 0;
     }
@@ -118,7 +123,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     HINT_INSTANCE *my_instance = (HINT_INSTANCE *)instance;
     HINT_SESSION *my_session;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(HINT_SESSION))) != NULL)
+    if ((my_session = static_cast<HINT_SESSION*>(MXS_CALLOC(1, sizeof(HINT_SESSION)))) != NULL)
     {
         my_session->query_len = 0;
         my_session->request = NULL;

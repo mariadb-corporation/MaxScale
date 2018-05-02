@@ -126,6 +126,9 @@ static const MXS_ENUM_VALUE option_values[] =
     {NULL}
 };
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -185,6 +188,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -276,7 +282,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     int i;
     const char *remote, *user;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(TOPN_SESSION))) != NULL)
+    if ((my_session = static_cast<TOPN_SESSION*>(MXS_CALLOC(1, sizeof(TOPN_SESSION)))) != NULL)
     {
         if ((my_session->filename =
                  (char *) MXS_MALLOC(strlen(my_instance->filebase) + 20))

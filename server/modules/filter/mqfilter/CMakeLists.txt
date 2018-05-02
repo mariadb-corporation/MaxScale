@@ -1,7 +1,7 @@
 find_package(RabbitMQ)
 if(RABBITMQ_FOUND)
   include_directories(${RABBITMQ_HEADERS})
-  add_library(mqfilter SHARED mqfilter.c)
+  add_library(mqfilter SHARED mqfilter.cc)
   target_link_libraries(mqfilter maxscale-common ${RABBITMQ_LIBRARIES})
   add_dependencies(mqfilter pcre2)
   set_target_properties(mqfilter PROPERTIES VERSION "1.0.2")

@@ -82,7 +82,7 @@ typedef struct
     int active; /* Is filter active */
 } REGEX_SESSION;
 
-void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new);
+void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql);
 void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
 
 static const MXS_ENUM_VALUE option_values[] =
@@ -91,6 +91,9 @@ static const MXS_ENUM_VALUE option_values[] =
     {"case",       0},
     {NULL}
 };
+
+extern "C"
+{
 
 /**
  * The module entry point routine. It is this routine that
@@ -146,6 +149,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Free a regexfilter instance.
  * @param instance instance to free
@@ -185,7 +190,7 @@ void free_instance(REGEX_INSTANCE *instance)
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    REGEX_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(REGEX_INSTANCE));
+    REGEX_INSTANCE *my_instance = static_cast<REGEX_INSTANCE*>(MXS_CALLOC(1, sizeof(REGEX_INSTANCE)));
 
     if (my_instance)
     {
@@ -256,7 +261,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     REGEX_SESSION *my_session;
     const char *remote, *user;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(REGEX_SESSION))) != NULL)
+    if ((my_session = static_cast<REGEX_SESSION*>(MXS_CALLOC(1, sizeof(REGEX_SESSION)))) != NULL)
     {
         my_session->no_change = 0;
         my_session->replacements = 0;
@@ -467,7 +472,7 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
     if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL) > 0)
     {
         result_size = strlen(sql) + strlen(replace);
-        result = MXS_MALLOC(result_size);
+        result = static_cast<char*>(MXS_MALLOC(result_size));
 
         size_t result_size_tmp = result_size;
         while (result &&
@@ -478,7 +483,7 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
         {
             result_size_tmp = 1.5 * result_size;
             char *tmp;
-            if ((tmp = MXS_REALLOC(result, result_size_tmp)) == NULL)
+            if ((tmp = static_cast<char*>(MXS_REALLOC(result, result_size_tmp))) == NULL)
             {
                 MXS_FREE(result);
                 result = NULL;
@@ -498,16 +503,16 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
  * @param old Old SQL statement
  * @param new New SQL statement
  */
-void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new)
+void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql)
 {
     if (inst->logfile)
     {
-        fprintf(inst->logfile, "Matched %s: [%s] -> [%s]\n", re, old, new);
+        fprintf(inst->logfile, "Matched %s: [%s] -> [%s]\n", re, old, newsql);
         fflush(inst->logfile);
     }
     if (inst->log_trace)
     {
-        MXS_INFO("Match %s: [%s] -> [%s]", re, old, new);
+        MXS_INFO("Match %s: [%s] -> [%s]", re, old, newsql);
     }
 }
 

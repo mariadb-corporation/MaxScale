@@ -67,6 +67,9 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
 static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -114,6 +117,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }
 
 static int id_pool = 0;

@@ -249,6 +249,9 @@ static const MXS_ENUM_VALUE trigger_values[] =
     {NULL}
 };
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -313,6 +316,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }
 
 /**
@@ -495,7 +500,7 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
         size++;
     }
 
-    char **arr = MXS_MALLOC(sizeof(char*) * size);
+    char **arr = static_cast<char**>(MXS_MALLOC(sizeof(char*) * size));
     MXS_ABORT_IF_NULL(arr);
 
     *szstore = size;
@@ -523,7 +528,7 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    MQ_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(MQ_INSTANCE));
+    MQ_INSTANCE *my_instance = static_cast<MQ_INSTANCE*>(MXS_CALLOC(1, sizeof(MQ_INSTANCE)));
 
     if (my_instance)
     {
@@ -543,7 +548,8 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->rconn_intv = 1;
 
         my_instance->port = config_get_integer(params, "port");
-        my_instance->trgtype = config_get_enum(params, "logging_trigger", trigger_values);
+        my_instance->trgtype =
+            static_cast<log_trigger_t>(config_get_enum(params, "logging_trigger", trigger_values));
         my_instance->log_all = config_get_bool(params, "logging_log_all");
         my_instance->strict_logging = config_get_bool(params, "logging_strict");
         my_instance->hostname = MXS_STRDUP_A(config_get_string(params, "hostname"));
@@ -773,7 +779,7 @@ bool sendMessage(void* data)
 void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg)
 {
 
-    mqmessage* newmsg = MXS_CALLOC(1, sizeof(mqmessage));
+    mqmessage* newmsg = static_cast<mqmessage*>(MXS_CALLOC(1, sizeof(mqmessage)));
     if (newmsg)
     {
         newmsg->msg = msg;
@@ -823,7 +829,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 
     MQ_SESSION *my_session;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(MQ_SESSION))) != NULL)
+    if ((my_session = static_cast<MQ_SESSION*>(MXS_CALLOC(1, sizeof(MQ_SESSION)))) != NULL)
     {
         my_session->was_query = false;
         my_session->uid = NULL;
@@ -945,16 +951,16 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     amqp_basic_properties_t *prop;
 
     /**The user is changing databases*/
-    if (*((char*) (queue->start + 4)) == 0x02)
+    if (*(static_cast<char*>(queue->start) + 4) == 0x02)
     {
         if (my_session->db)
         {
             MXS_FREE(my_session->db);
         }
         plen = pktlen(queue->start);
-        my_session->db = MXS_CALLOC(plen, sizeof(char));
+        my_session->db = static_cast<char*>(MXS_CALLOC(plen, sizeof(char)));
         MXS_ABORT_IF_NULL(my_session->db);
-        memcpy(my_session->db, queue->start + 5, plen - 1);
+        memcpy(my_session->db, static_cast<char*>(queue->start) + 5, plen - 1);
     }
 
     if (modutil_is_SQL(queue))
@@ -1167,7 +1173,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             if (my_session->uid == NULL)
             {
 
-                my_session->uid = MXS_CALLOC(33, sizeof(char));
+                my_session->uid = static_cast<char*>(MXS_CALLOC(33, sizeof(char)));
 
                 if (my_session->uid)
                 {
@@ -1179,8 +1185,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             {
 
                 my_session->was_query = true;
-
-                if ((prop = MXS_MALLOC(sizeof(amqp_basic_properties_t))))
+                prop = static_cast<amqp_basic_properties_t*>(MXS_MALLOC(sizeof(amqp_basic_properties_t)));
+                if (prop)
                 {
                     prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
                                    AMQP_BASIC_DELIVERY_MODE_FLAG |
@@ -1207,7 +1213,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 sprintf(t_buf, "%lu|", (unsigned long) time(NULL));
 
                 int qlen = strnlen(canon_q, length) + strnlen(t_buf, 128);
-                combined = MXS_MALLOC((qlen + 1) * sizeof(char));
+                combined = static_cast<char*>(MXS_MALLOC((qlen + 1) * sizeof(char)));
                 MXS_ABORT_IF_NULL(combined);
                 strcpy(combined, t_buf);
                 strncat(combined, canon_q, length);
@@ -1303,7 +1309,7 @@ unsigned int consume_leitoi(unsigned char** c)
 char* consume_lestr(unsigned char** c)
 {
     unsigned int slen = consume_leitoi(c);
-    char *str = MXS_CALLOC((slen + 1), sizeof(char));
+    char *str = static_cast<char*>(MXS_CALLOC((slen + 1), sizeof(char)));
     if (str)
     {
         memcpy(str, *c, slen);
@@ -1354,7 +1360,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
 
         if (pkt_len > 0)
         {
-            if ((prop = MXS_MALLOC(sizeof(amqp_basic_properties_t))))
+            if ((prop = static_cast<amqp_basic_properties_t*>(MXS_MALLOC(sizeof(amqp_basic_properties_t)))))
             {
                 prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
                                AMQP_BASIC_DELIVERY_MODE_FLAG |
@@ -1366,7 +1372,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
                 prop->message_id = amqp_cstring_bytes("reply");
             }
 
-            combined = MXS_CALLOC(GWBUF_LENGTH(reply) + 256, sizeof(char));
+            combined = static_cast<char*>(MXS_CALLOC(GWBUF_LENGTH(reply) + 256, sizeof(char)));
             MXS_ABORT_IF_NULL(combined);
 
             memset(t_buf, 0, 128);
@@ -1412,7 +1418,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
             {
                 /**ERR packet*/
                 sprintf(combined + offset, "ERROR - message: %.*s",
-                        (int) (reply->end - ((void*) (reply->sbuf->data + 13))),
+                        (int) (static_cast<unsigned char*>(reply->end) - (reply->sbuf->data + 13)),
                         (char *) reply->sbuf->data + 13);
                 packet_ok = 1;
                 was_last = 1;
@@ -1435,7 +1441,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
                 char *tmp;
                 unsigned int col_cnt = consume_leitoi(&rset);
 
-                tmp = MXS_CALLOC(256, sizeof(char));
+                tmp = static_cast<char*>(MXS_CALLOC(256, sizeof(char)));
                 MXS_ABORT_IF_NULL(tmp);
                 sprintf(tmp, "Columns: %d", col_cnt);
                 memcpy(combined + offset, tmp, strnlen(tmp, 256));

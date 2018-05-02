@@ -78,6 +78,9 @@ typedef struct
     char target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1]; /**< Current target table */
 } DS_SESSION;
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -128,6 +131,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Free a insertstream instance.
  * @param instance instance to free
@@ -162,7 +167,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     DS_INSTANCE *my_instance;
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(DS_INSTANCE))) != NULL)
+    if ((my_instance = static_cast<DS_INSTANCE*>(MXS_CALLOC(1, sizeof(DS_INSTANCE)))) != NULL)
     {
         my_instance->source = config_copy_string(params, "source");
         my_instance->user = config_copy_string(params, "user");
@@ -184,7 +189,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     DS_INSTANCE *my_instance = (DS_INSTANCE *) instance;
     DS_SESSION *my_session;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(DS_SESSION))) != NULL)
+    if ((my_session = static_cast<DS_SESSION*>(MXS_CALLOC(1, sizeof(DS_SESSION)))) != NULL)
     {
         my_session->target[0] = '\0';
         my_session->state = DS_STREAM_CLOSED;
@@ -354,7 +359,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
 
         if (send_empty)
         {
-            char empty_packet[] = {0, 0, 0, packet_num};
+            char empty_packet[] = {0, 0, 0, static_cast<char>(packet_num)};
             queue = gwbuf_alloc_and_load(sizeof(empty_packet), &empty_packet[0]);
         }
     }
@@ -418,7 +423,7 @@ static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
     buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
     char* header_start = (char*)GWBUF_DATA(buffer);
     char* store_end = dataptr = header_start + MYSQL_HEADER_LEN;
-    char* end = buffer->end;
+    char* end = static_cast<char*>(buffer->end);
     char* value;
     uint32_t valuesize;
 
@@ -622,7 +627,7 @@ static bool extract_insert_target(GWBUF *buffer, char* target, int len)
 
         if (tables)
         {
-            for (int i = 0; i < (size_t)n_tables; ++i)
+            for (int i = 0; i < n_tables; ++i)
             {
                 MXS_FREE(tables[i]);
             }

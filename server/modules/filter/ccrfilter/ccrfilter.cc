@@ -119,6 +119,9 @@ typedef enum ccr_hint_value_t
 
 static CCR_HINT_VALUE search_ccr_hint(GWBUF* buffer);
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -177,6 +180,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -190,7 +195,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    CCR_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE));
+    CCR_INSTANCE *my_instance = static_cast<CCR_INSTANCE*>(MXS_CALLOC(1, sizeof(CCR_INSTANCE)));
 
     if (my_instance)
     {
@@ -237,7 +242,7 @@ static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
-    CCR_SESSION  *my_session = MXS_MALLOC(sizeof(CCR_SESSION));
+    CCR_SESSION  *my_session = static_cast<CCR_SESSION*>(MXS_MALLOC(sizeof(CCR_SESSION)));
 
     if (my_session)
     {
@@ -490,14 +495,14 @@ static CCR_HINT_VALUE search_ccr_hint(GWBUF* buffer)
 
     while (hint && !found_ccr)
     {
-        if (hint->type == HINT_PARAMETER && strcasecmp(hint->data, CCR) == 0)
+        if (hint->type == HINT_PARAMETER && strcasecmp(static_cast<char*>(hint->data), CCR) == 0)
         {
             found_ccr = true;
-            if (strcasecmp(hint->value, "match") == 0)
+            if (strcasecmp(static_cast<char*>(hint->value), "match") == 0)
             {
                 rval = CCR_HINT_MATCH;
             }
-            else if (strcasecmp(hint->value, "ignore") == 0)
+            else if (strcasecmp(static_cast<char*>(hint->value), "ignore") == 0)
             {
                 rval = CCR_HINT_IGNORE;
             }

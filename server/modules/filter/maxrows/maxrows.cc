@@ -82,6 +82,9 @@ static const MXS_ENUM_VALUE return_option_values[] =
 
 /* Global symbols of the Module */
 
+extern "C"
+{
+
 /**
  * The module entry point function, called when the module is loaded.
  *
@@ -147,6 +150,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 };
+
+}
 
 /* Implementation */
 
@@ -233,7 +238,7 @@ static MXS_FILTER *createInstance(const char *name,
                                   char **options,
                                   MXS_CONFIG_PARAMETER *params)
 {
-    MAXROWS_INSTANCE *cinstance = MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE));
+    MAXROWS_INSTANCE *cinstance = static_cast<MAXROWS_INSTANCE*>(MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE)));
 
     if (cinstance)
     {
@@ -242,9 +247,10 @@ static MXS_FILTER *createInstance(const char *name,
                                                                   "max_resultset_rows");
         cinstance->config.max_resultset_size = config_get_size(params,
                                                                "max_resultset_size");
-        cinstance->config.m_return = config_get_enum(params,
-                                                     "max_resultset_return",
-                                                     return_option_values);
+        cinstance->config.m_return =
+            static_cast<maxrows_return_mode>(config_get_enum(params,
+                                                             "max_resultset_return",
+                                                             return_option_values));
         cinstance->config.debug = config_get_integer(params, "debug");
     }
 
@@ -873,6 +879,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
 
             // We have at least one complete packet and we can process the command byte.
             int command = (int)MYSQL_GET_COMMAND(header);
+            int flags = 0;
 
             switch (command)
             {
@@ -933,7 +940,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
                     break;
                 }
 
-                int flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
+                flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
 
                 // Check whether the EOF terminates the resultset or indicates MORE_RESULTS
                 if (!(flags & SERVER_MORE_RESULTS_EXIST))
@@ -1093,7 +1100,7 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
     size_t offset = gwbuf_length(csdata->res.column_defs);
 
     /* Data to send + added EOF */
-    uint8_t *new_result = MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN);
+    uint8_t *new_result = static_cast<uint8_t*>(MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN));
 
     if (new_result)
     {
@@ -1197,7 +1204,7 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
     GWBUF *err_pkt;
     uint8_t hdr_err[MYSQL_ERR_PACKET_MIN_LEN];
     unsigned long bytes_copied;
-    char *err_msg_prefix = "Row limit/size exceeded for query: ";
+    const char *err_msg_prefix = "Row limit/size exceeded for query: ";
     int err_prefix_len = strlen(err_msg_prefix);
     unsigned long pkt_len = MYSQL_ERR_PACKET_MIN_LEN + err_prefix_len;
     unsigned long sql_len = gwbuf_length(csdata->input_sql) -

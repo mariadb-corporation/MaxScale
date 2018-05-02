@@ -33,7 +33,7 @@
  */
 struct
 {
-    char *keyword;
+    const char *keyword;
     TOKEN_VALUE token;
 } keywords[] =
 {
@@ -49,7 +49,7 @@ struct
     { "master", TOK_MASTER},
     { "slave", TOK_SLAVE},
     { "server", TOK_SERVER},
-    { NULL, 0}
+    { NULL, static_cast<TOKEN_VALUE>(0)}
 };
 /**
 HINT_TOKEN kwords[] = {
@@ -600,7 +600,7 @@ hint_next_token(GWBUF **buf, char **ptr)
         if (*ptr > (char *)((*buf)->end) && (*buf)->next)
         {
             *buf = (*buf)->next;
-            *ptr = (*buf)->start;
+            *ptr = static_cast<char*>((*buf)->start);
         }
 
         if (dest - word > 98)

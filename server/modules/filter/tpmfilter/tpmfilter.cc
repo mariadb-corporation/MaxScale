@@ -67,7 +67,7 @@
 /* The maximum size for query statements in a transaction (64MB) */
 static size_t sql_size_limit = 64 * 1024 * 1024;
 /* The size of the buffer for recording latency of individual statements */
-static size_t latency_buf_size = 64 * 1024;
+static int latency_buf_size = 64 * 1024;
 static const int default_sql_size = 4 * 1024;
 
 #define DEFAULT_QUERY_DELIMITER "@@@"
@@ -140,6 +140,9 @@ typedef struct
     size_t      max_sql_size;
 } TPM_SESSION;
 
+extern "C"
+{
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -193,6 +196,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -205,7 +210,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    TPM_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TPM_INSTANCE));
+    TPM_INSTANCE *my_instance = static_cast<TPM_INSTANCE*>(MXS_CALLOC(1, sizeof(TPM_INSTANCE)));
 
     if (my_instance)
     {
@@ -310,7 +315,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     int     i;
     const char *remote, *user;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(TPM_SESSION))) != NULL)
+    if ((my_session = static_cast<TPM_SESSION*>(MXS_CALLOC(1, sizeof(TPM_SESSION)))) != NULL)
     {
         atomic_add(&my_instance->sessions, 1);
 
