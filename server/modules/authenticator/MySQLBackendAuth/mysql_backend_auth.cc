@@ -50,7 +50,7 @@ typedef struct mysql_backend_auth
  */
 void* auth_backend_create(void *instance)
 {
-    mysql_backend_auth_t* mba = MXS_MALLOC(sizeof(*mba));
+    mysql_backend_auth_t* mba = static_cast<mysql_backend_auth_t*>(MXS_MALLOC(sizeof(*mba)));
 
     if (mba)
     {
@@ -143,6 +143,8 @@ static bool auth_backend_ssl(DCB *dcb)
     return dcb->server->server_ssl != NULL;
 }
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -189,3 +191,4 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 /*lint +e14 */
+}

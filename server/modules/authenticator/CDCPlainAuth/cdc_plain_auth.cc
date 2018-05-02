@@ -107,7 +107,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
 
         if (fd != -1)
         {
-            if (write(fd, final_data, sizeof(final_data)) == sizeof(final_data))
+            if (write(fd, final_data, sizeof(final_data)) == static_cast<int>(sizeof(final_data)))
             {
                 MXS_NOTICE("Added user '%s' to service '%s'", user, service->name);
                 rval = true;
@@ -137,6 +137,8 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
     return rval;
 }
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -190,6 +192,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }
 
 /**

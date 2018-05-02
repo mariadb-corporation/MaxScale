@@ -47,6 +47,8 @@ typedef struct http_auth
     char* pw;
 } HTTP_AUTH;
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -91,6 +93,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 /*lint +e14 */
+}
 
 /**
  * @brief Authentication of a user/password combination.
@@ -153,7 +156,7 @@ http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
         if (pw_start)
         {
             *pw_start++ = '\0';
-            HTTP_AUTH *ses = MXS_MALLOC(sizeof(*ses));
+            HTTP_AUTH *ses = static_cast<HTTP_AUTH*>(MXS_MALLOC(sizeof(*ses)));
             char* user = MXS_STRDUP(outbuf);
             char* pw = MXS_STRDUP(pw_start);
 

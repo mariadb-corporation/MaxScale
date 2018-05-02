@@ -106,7 +106,7 @@ typedef struct gssapi_instance
  */
 void* gssapi_auth_init(char **options)
 {
-    GSSAPI_INSTANCE *instance = MXS_MALLOC(sizeof(GSSAPI_INSTANCE));
+    GSSAPI_INSTANCE *instance = static_cast<GSSAPI_INSTANCE*>(MXS_MALLOC(sizeof(GSSAPI_INSTANCE)));
 
     if (instance)
     {
@@ -162,7 +162,7 @@ void* gssapi_auth_init(char **options)
 
 void* gssapi_auth_alloc(void *instance)
 {
-    gssapi_auth_t* rval = MXS_MALLOC(sizeof(gssapi_auth_t));
+    gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
 
     if (rval)
     {
@@ -250,7 +250,7 @@ bool store_client_token(DCB *dcb, GWBUF *buffer)
         size_t plen = gw_mysql_get_byte3(hdr);
         MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
-        if ((ses->auth_token = MXS_MALLOC(plen)))
+        if ((ses->auth_token = static_cast<uint8_t*>(MXS_MALLOC(plen))))
         {
             gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token);
             ses->auth_token_len = plen;
@@ -384,7 +384,7 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
             return false;
         }
 
-        char *princ_name = MXS_MALLOC(client_name.length + 1);
+        char *princ_name = static_cast<char*>(MXS_MALLOC(client_name.length + 1));
 
         if (!princ_name)
         {
@@ -515,7 +515,7 @@ void gssapi_auth_free_data(DCB *dcb)
 {
     if (dcb->data)
     {
-        MYSQL_session *ses = dcb->data;
+        MYSQL_session *ses = static_cast<MYSQL_session*>(dcb->data);
         MXS_FREE(ses->auth_token);
         MXS_FREE(ses);
         dcb->data = NULL;
@@ -667,6 +667,8 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
     return rval;
 }
 
+extern "C"
+{
 /**
  * Module handle entry point
  */
@@ -704,4 +706,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }

@@ -41,6 +41,8 @@ static bool max_admin_auth_is_client_ssl_capable(DCB *dcb);
 static int max_admin_auth_authenticate(DCB *dcb);
 static void max_admin_auth_free_client_data(DCB *dcb);
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -85,6 +87,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 /*lint +e14 */
+}
 
 /**
  * @brief Authentication of a user/password combination.

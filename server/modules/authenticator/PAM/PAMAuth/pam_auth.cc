@@ -152,7 +152,8 @@ static json_t* pam_auth_diagnostic_json(const SERV_LISTENER *listener)
     return inst->diagnostic_json();
 }
 
-MXS_BEGIN_DECLS
+extern "C"
+{
 /**
  * Module handle entry point
  */
@@ -191,4 +192,5 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-MXS_END_DECLS
+
+}

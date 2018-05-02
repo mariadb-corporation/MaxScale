@@ -66,6 +66,9 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
                               uint8_t *scramble, size_t scramble_len,
                               uint8_t *output_token, size_t output_token_len);
+
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -108,6 +111,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }
 
 static bool open_instance_database(const char *path, sqlite3 **handle)
@@ -170,9 +175,10 @@ static bool should_check_permissions(MYSQL_AUTH* instance)
  */
 static void* mysql_auth_init(char **options)
 {
-    MYSQL_AUTH *instance = MXS_MALLOC(sizeof(*instance));
+    MYSQL_AUTH *instance = static_cast<MYSQL_AUTH*>(MXS_MALLOC(sizeof(*instance)));
 
-    if (instance && (instance->handles = MXS_CALLOC(config_threadcount(), sizeof(sqlite3*))))
+    if (instance &&
+        (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
     {
         bool error = false;
         instance->cache_dir = NULL;
@@ -404,7 +410,7 @@ mysql_auth_set_client_data(
     MySQLProtocol *protocol,
     GWBUF         *buffer)
 {
-    size_t client_auth_packet_size = gwbuf_length(buffer);
+    int client_auth_packet_size = gwbuf_length(buffer);
     uint8_t client_auth_packet[client_auth_packet_size];
     gwbuf_copy_data(buffer, 0, client_auth_packet_size, client_auth_packet);
 

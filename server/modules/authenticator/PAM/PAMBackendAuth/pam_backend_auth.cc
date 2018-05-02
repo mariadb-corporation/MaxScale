@@ -71,7 +71,8 @@ static int pam_backend_auth_authenticate(DCB *dcb)
     return pses->authenticate(dcb);
 }
 
-MXS_BEGIN_DECLS
+extern "C"
+{
 /**
  * Module handle entry point
  */
@@ -110,4 +111,5 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-MXS_END_DECLS
+
+}

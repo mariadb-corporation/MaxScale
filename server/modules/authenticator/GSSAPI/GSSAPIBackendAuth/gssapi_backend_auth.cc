@@ -28,7 +28,7 @@
 
 void* gssapi_backend_auth_alloc(void *instance)
 {
-    gssapi_auth_t* rval = MXS_MALLOC(sizeof(gssapi_auth_t));
+    gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
 
     if (rval)
     {
@@ -176,7 +176,7 @@ bool extract_principal_name(DCB *dcb, GWBUF *buffer)
 
     if (buflen > 0)
     {
-        uint8_t *principal = MXS_MALLOC(buflen + 1);
+        uint8_t *principal = static_cast<uint8_t*>(MXS_MALLOC(buflen + 1));
 
         if (principal)
         {
@@ -264,6 +264,8 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
     return rval;
 }
 
+extern "C"
+{
 /**
  * Module handle entry point
  */
@@ -301,4 +303,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
+}
+
 }

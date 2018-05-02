@@ -62,7 +62,7 @@ static char* get_new_users_query(const char *server_version, bool include_root)
     const char *with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
-    char *rval = MXS_MALLOC(n_bytes + 1);
+    char *rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
 
     if (rval)
     {
@@ -536,12 +536,12 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         mxs_mysql_set_server_version(mysql, server);
     }
 
-    const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
+    const char* format = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
     const char* query_pw = strstr(server->version_string, "5.7.") ?
                            MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    char query[strlen(template) + strlen(query_pw) + 1];
+    char query[strlen(format) + strlen(query_pw) + 1];
     bool rval = true;
-    sprintf(query, template, query_pw);
+    sprintf(query, format, query_pw);
 
     if (mxs_mysql_query(mysql, query) != 0)
     {

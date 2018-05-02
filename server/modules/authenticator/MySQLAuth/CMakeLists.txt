@@ -1,7 +1,7 @@
 if(SQLITE_VERSION VERSION_LESS 3.3)
   message(FATAL_ERROR "SQLite version 3.3 or higher is required")
 else()
-  add_library(mysqlauth SHARED mysql_auth.c dbusers.c)
+  add_library(mysqlauth SHARED mysql_auth.cc dbusers.cc)
   target_link_libraries(mysqlauth maxscale-common mysqlcommon)
   set_target_properties(mysqlauth PROPERTIES VERSION "1.0.0")
   install_module(mysqlauth core)

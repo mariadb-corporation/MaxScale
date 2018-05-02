@@ -12,22 +12,22 @@
  */
 
 /**
- * @file null_auth_deny.c
+ * @file null_auth_allow.c
  *
  * Null Authentication module for handling the checking of clients credentials
  * for protocols that do not have authentication, either temporarily or
- * permanently. Always fails the authentication.
+ * permanently
  *
  * @verbatim
  * Revision History
  * Date         Who                     Description
  * 14/03/2016   Martin Brampton         Initial version
- * 17/05/2016   Martin Brampton         Version to fail, instead of succeed.
+ * 17/05/2016   Martin Brampton         Renamed
  *
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "NullAuthDeny"
+#define MXS_MODULE_NAME "NullAuthAllow"
 
 #include <maxscale/authenticator.h>
 #include <maxscale/modinfo.h>
@@ -35,11 +35,16 @@
 #include <maxscale/buffer.h>
 #include <maxscale/users.h>
 
+/** MXS-1026: Without MySQL protocol data structures, the NullAuth authenticator will crash. */
+#include <maxscale/protocol/mysql.h>
+
 static bool null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool null_auth_is_client_ssl_capable(DCB *dcb);
 static int null_auth_authenticate(DCB *dcb);
 static void null_auth_free_client_data(DCB *dcb);
 
+extern "C"
+{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -86,6 +91,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 /*lint +e14 */
+}
 
 /**
  * @brief Null authentication of a user.
@@ -93,12 +99,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * Always returns success
  *
  * @param dcb Request handler DCB connected to the client
- * @return Authentication status - always 1 to denote failure
+ * @return Authentication status - always 0 to denote success
  */
 static int
 null_auth_authenticate(DCB *dcb)
 {
-    return 1;
+    return 0;
 }
 
 /**
@@ -113,6 +119,10 @@ null_auth_authenticate(DCB *dcb)
 static bool
 null_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
+    /** MXS-1026: This will just prevent a crash when the NullAuth authenticator
+     * is used. This does not provide a way to use MaxScale with no authentication. */
+    dcb->data = calloc(1, sizeof(MYSQL_session));
+    dcb->protocol = mysql_protocol_init(dcb, dcb->fd);
     return true;
 }
 
@@ -139,4 +149,8 @@ null_auth_is_client_ssl_capable(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  */
 static void
-null_auth_free_client_data(DCB *dcb) {}
+null_auth_free_client_data(DCB *dcb)
+{
+    free(dcb->data);
+    dcb->data = NULL;
+}
