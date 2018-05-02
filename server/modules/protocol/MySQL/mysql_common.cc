@@ -314,7 +314,7 @@ mysql_create_standard_error(int packet_number,
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
-    mysql_packet_header[3] = 0;
+    mysql_packet_header[3] = packet_number;
     memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
 
     // current buffer pointer
