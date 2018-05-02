@@ -705,6 +705,10 @@ add_test_executable(mxs1808_long_data.cpp mxs1808_long_data replication LABELS r
 # https://jira.mariadb.org/browse/MXS-1824
 add_test_executable(mxs1824_double_cursor.cpp mxs1824_double_cursor replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1828: Multiple LOAD DATA LOCAL INFILE commands in one query cause a hang
+# https://jira.mariadb.org/browse/MXS-1828
+add_test_executable(mxs1828_double_local_infile.cpp mxs1828_double_local_infile replication LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1831: No error on invalid monitor parameter alteration
 # https://jira.mariadb.org/browse/MXS-1831
 add_test_executable(mxs1831_unknown_param.cpp mxs1831_unknown_param replication LABELS REPL_BACKEND)
