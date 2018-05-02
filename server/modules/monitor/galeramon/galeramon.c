@@ -687,7 +687,6 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
-    const char* value;
     /* set min_id to the lowest value of moitor_servers->server->node_id */
     while (moitor_servers)
     {
@@ -695,11 +694,11 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
         {
 
             moitor_servers->server->depth = 0;
-
-            if (handle->use_priority && (value = server_get_parameter(moitor_servers->server, "priority")) != NULL)
+            char buf[50]; // Enough to hold most numbers
+            if (handle->use_priority && server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf)))
             {
                 /** The server has a priority  */
-                if ((currval = atoi(value)) > 0)
+                if ((currval = atoi(buf)) > 0)
                 {
                     /** The priority is valid */
                     if (currval < minval && currval > 0)
@@ -712,7 +711,8 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
             else if (moitor_servers->server->node_id >= 0 &&
                      (!handle->use_priority || /** Server priority disabled*/
                       candidate_master == NULL || /** No candidate chosen */
-                      server_get_parameter(candidate_master->server, "priority") == NULL)) /** Candidate has no priority */
+                       /** Candidate has no priority */
+                      !server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf))))
             {
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {
@@ -846,8 +846,9 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
              * If no server has "priority" set, then
              * the server list will be order by default method.
              */
+
             if (handle->use_priority &&
-                server_get_parameter(ptr->server, "priority"))
+                server_get_parameter(ptr->server, "priority", NULL, 0))
             {
                 ignore_priority = false;
             }
@@ -980,28 +981,29 @@ static int compare_node_priority (const void *a, const void *b)
 {
     const MXS_MONITORED_SERVER *s_a = *(MXS_MONITORED_SERVER * const *)a;
     const MXS_MONITORED_SERVER *s_b = *(MXS_MONITORED_SERVER * const *)b;
-
-    const char *pri_a = server_get_parameter(s_a->server, "priority");
-    const char *pri_b = server_get_parameter(s_b->server, "priority");
+    char pri_a[50];
+    char pri_b[50];
+    bool have_a = server_get_parameter(s_a->server, "priority", pri_a, sizeof(pri_a));
+    bool have_b = server_get_parameter(s_b->server, "priority", pri_b, sizeof(pri_b));
 
     /**
      * Check priority parameter:
      *
      * Return a - b in case of issues
      */
-    if (!pri_a && pri_b)
+    if (!have_a && have_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
                   s_a->server->unique_name);
         return -(INT_MAX - 1);
     }
-    else if (pri_a && !pri_b)
+    else if (have_a && !have_b)
     {
         MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
                   s_b->server->unique_name);
         return INT_MAX - 1;
     }
-    else if (!pri_a && !pri_b)
+    else if (!have_a && !have_b)
     {
         MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
                   s_a->server->unique_name,

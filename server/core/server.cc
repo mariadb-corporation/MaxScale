@@ -924,24 +924,35 @@ static void server_parameter_free(SERVER_PARAM *tofree)
 /**
  * Retrieve a parameter value from a server
  *
- * @param server        The server we are looking for a parameter of
- * @param name          The name of the parameter we require
- * @return      The parameter value or NULL if not found
+ * @param server The server we are looking for a parameter of
+ * @param name   The name of the parameter we require
+ * @param out    Buffer where value is stored, use NULL to check if the parameter exists
+ * @param size   Size of @c out, ignored if @c out is NULL
+ *
+ * @return True if parameter was found
  */
-const char *
-server_get_parameter(const SERVER *server, const char *name)
+bool server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
 {
+    bool found = false;
     SERVER_PARAM *param = server->parameters;
+    spinlock_acquire(&server->lock);
 
     while (param)
     {
         if (strcmp(param->name, name) == 0 && param->active)
         {
-            return param->value;
+            if (out)
+            {
+                snprintf(out, size, "%s", param->value);
+            }
+            found = true;
+            break;
         }
         param = param->next;
     }
-    return NULL;
+
+    spinlock_release(&server->lock);
+    return found;
 }
 
 /**

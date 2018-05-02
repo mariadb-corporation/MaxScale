@@ -2253,6 +2253,7 @@ static void service_calculate_weights(SERVICE *service)
 
     if (*weightby && service->dbref)
     {
+        char buf[50]; // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
         int total = 0;
 
@@ -2260,10 +2261,10 @@ static void service_calculate_weights(SERVICE *service)
         for (SERVER_REF *server = service->dbref; server; server = server->next)
         {
             server->weight = SERVICE_BASE_SERVER_WEIGHT;
-            const char *param = server_get_parameter(server->server, weightby);
-            if (param)
+
+            if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
             {
-                total += atoi(param);
+                total += atoi(buf);
             }
         }
 
@@ -2284,10 +2285,9 @@ static void service_calculate_weights(SERVICE *service)
             /** Calculate the relative weight of the servers */
             for (SERVER_REF *server = service->dbref; server; server = server->next)
             {
-                const char *param = server_get_parameter(server->server, weightby);
-                if (param)
+                if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
                 {
-                    int wght = atoi(param);
+                    int wght = atoi(buf);
                     int perc = (wght * SERVICE_BASE_SERVER_WEIGHT) / total;
 
                     if (perc == 0)
