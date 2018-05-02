@@ -621,6 +621,10 @@ add_test_executable(mxs1507_trx_replay.cpp mxs1507_trx_replay mxs1507_trx_replay
 # https://jira.mariadb.org/browse/MXS-1507
 add_test_executable(mxs1507_inconsistent_trx.cpp mxs1507_inconsistent_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1507: Transaction migration
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)
