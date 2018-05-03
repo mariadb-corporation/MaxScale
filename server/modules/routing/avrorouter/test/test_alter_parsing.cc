@@ -1,4 +1,4 @@
-#include "../avro_schema.c"
+#include "../avro_schema.cc"
 
 static struct
 {

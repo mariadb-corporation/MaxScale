@@ -642,9 +642,9 @@ int count_columns(const char* ptr)
 static int process_column_definition(const char *nameptr, char*** dest, char*** dest_types, int** dest_lens)
 {
     int n = count_columns(nameptr);
-    *dest = MXS_MALLOC(sizeof(char*) * n);
-    *dest_types = MXS_MALLOC(sizeof(char*) * n);
-    *dest_lens = MXS_MALLOC(sizeof(int) * n);
+    *dest = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
+    *dest_types = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
+    *dest_lens = static_cast<int*>(MXS_MALLOC(sizeof(int) * n));
 
     char **names = *dest;
     char **types = *dest_types;
@@ -727,7 +727,7 @@ int resolve_table_version(const char* db, const char* table)
  *
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len)
+TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
@@ -753,7 +753,7 @@ TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len)
     TABLE_CREATE *rval = NULL;
     if (n_columns > 0)
     {
-        if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
+        if ((rval = static_cast<TABLE_CREATE*>(MXS_MALLOC(sizeof(TABLE_CREATE)))))
         {
             rval->version = resolve_table_version(database, table);
             rval->was_used = false;
@@ -990,15 +990,15 @@ TABLE_CREATE* table_create_copy(AVRO_INSTANCE *router, const char* sql, size_t l
 
         strcat(table_ident, source);
 
-        TABLE_CREATE *old = hashtable_fetch(router->created_tables, table_ident);
+        TABLE_CREATE *old = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
 
         if (old)
         {
             int n = old->columns;
-            char** names = MXS_MALLOC(sizeof(char*) * n);
-            char** types = MXS_MALLOC(sizeof(char*) * n);
-            int* lengths = MXS_MALLOC(sizeof(int) * n);
-            rval = MXS_MALLOC(sizeof(TABLE_CREATE));
+            char** names = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
+            char** types = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
+            int* lengths = static_cast<int*>(MXS_MALLOC(sizeof(int) * n));
+            rval = static_cast<TABLE_CREATE*>(MXS_MALLOC(sizeof(TABLE_CREATE)));
 
             MXS_ABORT_IF_FALSE(names && types && lengths && rval);
 
@@ -1402,7 +1402,7 @@ int get_column_index(TABLE_CREATE *create, const char *tok, int len)
 
     fix_reserved_word(safe_tok);
 
-    for (int x = 0; x < create->columns; x++)
+    for (size_t x = 0; x < create->columns; x++)
     {
         if (strcasecmp(create->column_names[x], safe_tok) == 0)
         {
@@ -1496,9 +1496,15 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
                     if (is_new)
                     {
-                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
-                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
-                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
+                        create->column_names =
+                            static_cast<char**>(MXS_REALLOC(create->column_names,
+                                                            sizeof(char*) * (create->columns + 1)));
+                        create->column_types =
+                            static_cast<char**>(MXS_REALLOC(create->column_types,
+                                                            sizeof(char*) * (create->columns + 1)));
+                        create->column_lengths =
+                            static_cast<int*>(MXS_REALLOC(create->column_lengths,
+                                                          sizeof(int) * (create->columns + 1)));
 
                         char field_type[200] = ""; // Enough to hold all types
                         int field_length = extract_type_length(tok + len, field_type);
@@ -1526,9 +1532,15 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                             create->column_lengths[i] = create->column_lengths[i + 1];
                         }
 
-                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns - 1));
-                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns - 1));
-                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns - 1));
+                        create->column_names =
+                            static_cast<char**>(MXS_REALLOC(create->column_names,
+                                                            sizeof(char*) * (create->columns - 1)));
+                        create->column_types =
+                            static_cast<char**>(MXS_REALLOC(create->column_types,
+                                                            sizeof(char*) * (create->columns - 1)));
+                        create->column_lengths =
+                            static_cast<int*>(MXS_REALLOC(create->column_lengths,
+                                                          sizeof(int) * (create->columns - 1)));
                         create->columns--;
                         updates++;
                     }
@@ -1657,7 +1669,7 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     uint8_t* metadata = (uint8_t*)mxs_lestr_consume(&ptr, &metadata_size);
     uint8_t *nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
-    TABLE_MAP *map = MXS_MALLOC(sizeof(TABLE_MAP));
+    TABLE_MAP *map = static_cast<TABLE_MAP*>(MXS_MALLOC(sizeof(TABLE_MAP)));
 
     if (map)
     {
@@ -1665,11 +1677,11 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
         map->version = create->version;
         map->flags = flags;
         map->columns = column_count;
-        map->column_types = MXS_MALLOC(column_count);
+        map->column_types = static_cast<uint8_t*>(MXS_MALLOC(column_count));
         /** Allocate at least one byte for the metadata */
-        map->column_metadata = MXS_CALLOC(1, metadata_size + 1);
+        map->column_metadata = static_cast<uint8_t*>(MXS_CALLOC(1, metadata_size + 1));
         map->column_metadata_size = metadata_size;
-        map->null_bitmap = MXS_MALLOC(nullmap_size);
+        map->null_bitmap = static_cast<uint8_t*>(MXS_MALLOC(nullmap_size));
         map->database = MXS_STRDUP(schema_name);
         map->table = MXS_STRDUP(table_name);
         map->table_create = create;

@@ -474,6 +474,23 @@ r == BLR_THREAD_ROLE_MASTER_NOTRX ? "master (no trx)" : \
 r == BLR_THREAD_ROLE_MASTER_TRX ? "master (trx)" : "slave"
 
 /**
+ * Binlog encryption context of slave binlog file
+ */
+
+typedef struct slave_encryption_ctx
+{
+    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
+    uint32_t binlog_key_version;     /**< Encryption key version */
+    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
+                                      *   These bytes + the binlog event current pos
+                                      *   form the encrryption IV for the event */
+    char     *log_file;              /**< The log file the client has requested */
+    uint32_t first_enc_event_pos;    /**< The position of first encrypted event
+                                      *   It's the first event afte Start_encryption_event
+                                      *   which is after FDE */
+} SLAVE_ENCRYPTION_CTX;
+
+/**
  * The client session structure used within this router. This represents
  * the slaves that are replicating binlogs from MaxScale.
  */
@@ -525,7 +542,7 @@ typedef struct router_slave
     /*< Which binlog file */
     uint32_t          lsi_binlog_pos;
     /*< What position */
-    void              *encryption_ctx;
+    SLAVE_ENCRYPTION_CTX *encryption_ctx;
     /*< Encryption context */
     bool              gtid_strict_mode;
     /*< MariaDB 10 Slave sets gtid_strict_mode */
@@ -632,6 +649,20 @@ typedef struct pending_transaction
 } PENDING_TRANSACTION;
 
 /**
+ * Binlog encryption context of binlog file
+ */
+
+typedef struct binlog_encryption_ctx
+{
+    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
+    uint32_t binlog_key_version;     /**< Encryption key version */
+    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
+                                      *   These bytes + the binlog event current pos
+                                      *   form the encrryption IV for the event */
+    char     *binlog_file;           /**< Current binlog file being encrypted */
+} BINLOG_ENCRYPTION_CTX;
+
+/**
  * The per instance data for the router.
  */
 typedef struct router_instance
@@ -718,7 +749,7 @@ typedef struct router_instance
     bool              request_semi_sync;    /*< Request Semi-Sync replication to master */
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
-    void              *encryption_ctx;      /*< Encryption context */
+    BINLOG_ENCRYPTION_CTX *encryption_ctx;      /*< Encryption context */
     char              last_mariadb_gtid[GTID_MAX_LEN  + 1];
     /*< Last seen MariaDB 10 GTID */
     bool              mariadb10_gtid;       /*< Save received MariaDB GTIDs into repo.
@@ -734,37 +765,6 @@ typedef struct router_instance
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
-
-/**
- * Binlog encryption context of slave binlog file
- */
-
-typedef struct slave_encryption_ctx
-{
-    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
-    uint32_t binlog_key_version;     /**< Encryption key version */
-    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
-                                      *   These bytes + the binlog event current pos
-                                      *   form the encrryption IV for the event */
-    char     *log_file;              /**< The log file the client has requested */
-    uint32_t first_enc_event_pos;    /**< The position of first encrypted event
-                                      *   It's the first event afte Start_encryption_event
-                                      *   which is after FDE */
-} SLAVE_ENCRYPTION_CTX;
-
-/**
- * Binlog encryption context of binlog file
- */
-
-typedef struct binlog_encryption_ctx
-{
-    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
-    uint32_t binlog_key_version;     /**< Encryption key version */
-    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
-                                      *   These bytes + the binlog event current pos
-                                      *   form the encrryption IV for the event */
-    char     *binlog_file;           /**< Current binlog file being encrypted */
-} BINLOG_ENCRYPTION_CTX;
 
 /**
  * Holds information about:
@@ -848,7 +848,7 @@ typedef struct binlog_pos_fix
 
 #define BLRM_MAXSTATE                 0x0023
 
-static char *blrm_states[] =
+static const char *blrm_states[] =
 {
     "Unconfigured",
     "Unconnected",
@@ -896,7 +896,7 @@ static char *blrm_states[] =
 
 #define BLRS_MAXSTATE           0x0004
 
-static char *blrs_states[] =
+static const char *blrs_states[] =
 {
     "Created",
     "Unregistered",
@@ -987,7 +987,7 @@ extern int blr_send_custom_error(DCB *,
                                  int,
                                  int,
                                  const char *,
-                                 char *,
+                                 const char *,
                                  unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *,
                                 ROUTER_SLAVE *,
@@ -996,10 +996,10 @@ uint32_t extract_field(uint8_t *src, int bits);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *, BINLOG_FILE_FIX *, int);
 int blr_save_dbusers(const ROUTER_INSTANCE *router);
-char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
+const char *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
-char * blr_last_event_description(ROUTER_INSTANCE *router);
+const char *blr_last_event_description(ROUTER_INSTANCE *router);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 
 extern bool blr_send_event(blr_thread_role_t role,

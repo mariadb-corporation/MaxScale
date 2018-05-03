@@ -130,7 +130,7 @@ static const char blr_encryption_algorithm_list_names[] = "aes_cbc";
 #endif
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
-static void blr_log_header(int priority, char *msg, uint8_t *ptr);
+static void blr_log_header(int priority, const char *msg, uint8_t *ptr);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
@@ -737,7 +737,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router,
     }
 
     /* Check write operation result*/
-    if (n != size)
+    if (n != static_cast<int>(size))
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
@@ -1275,7 +1275,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                    &data[BINLOG_EVENT_HDR_LEN],
                    hdr->event_size - BINLOG_EVENT_HDR_LEN,
                    pos + BINLOG_EVENT_HDR_LEN))
-        != hdr->event_size - BINLOG_EVENT_HDR_LEN)  // Read the balance
+        != static_cast<ssize_t>(hdr->event_size - BINLOG_EVENT_HDR_LEN))  // Read the balance
     {
         if (n ==  0)
         {
@@ -1447,7 +1447,7 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
  * @param   ptr  The event header raw data
  */
 static void
-blr_log_header(int priority, char *msg, uint8_t *ptr)
+blr_log_header(int priority, const char *msg, uint8_t *ptr)
 {
     char buf[400], *bufp;
     int i;
@@ -1551,7 +1551,7 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
  * @return A pointer to a GWBUF structure
  */
 GWBUF *
-blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
+blr_cache_read_response(ROUTER_INSTANCE *router, const char *response)
 {
     static const char CACHE[] = "/cache";
     size_t len = strlen(router->binlogdir) +
@@ -2127,10 +2127,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         memcpy(data, hdbuf, BINLOG_EVENT_HDR_LEN);// Copy the header in
 
         /* Read event data */
-        if ((n = pread(router->binlog_fd,
-                       &data[BINLOG_EVENT_HDR_LEN],
-                       hdr.event_size - BINLOG_EVENT_HDR_LEN,
-                       pos + BINLOG_EVENT_HDR_LEN)) != hdr.event_size - BINLOG_EVENT_HDR_LEN)
+        n = pread(router->binlog_fd,
+                  &data[BINLOG_EVENT_HDR_LEN],
+                  hdr.event_size - BINLOG_EVENT_HDR_LEN,
+                  pos + BINLOG_EVENT_HDR_LEN);
+        if (n != static_cast<ssize_t>(hdr.event_size - BINLOG_EVENT_HDR_LEN))
         {
             if (n == -1)
             {
@@ -2359,7 +2360,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
         if ((debug & BLR_REPORT_REP_HEADER))
         {
-            char *event_desc = blr_get_event_description(router, hdr.event_type);
+            const char *event_desc = blr_get_event_description(router, hdr.event_type);
             MXS_DEBUG("%8s==== Event Header ====\n%39sEvent Pos %lu\n%39sEvent time %lu\n%39s"
                       "Event size %lu\n%39sEvent Type %u (%s)\n%39s"
                       "Server Id %lu\n%39sNextPos %lu\n%39sFlags %u",
@@ -2392,7 +2393,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         {
             char nonce_hex[AES_BLOCK_SIZE * 2 + 1] = "";
             START_ENCRYPTION_EVENT ste_event = {};
-            BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+            void *mem = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+            BINLOG_ENCRYPTION_CTX *new_encryption_ctx =
+                static_cast<BINLOG_ENCRYPTION_CTX*>(mem);
 
             if (new_encryption_ctx == NULL)
             {
@@ -2516,7 +2519,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             action->pos > 4 &&
             (pos == action->pos || replace_trx_events))
         {
-            char *event_desc = blr_get_event_description(router, hdr.event_type);
+            const char *event_desc = blr_get_event_description(router, hdr.event_type);
 
             if (action->replace_trx && !replace_trx_events)
             {
@@ -2742,7 +2745,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 BINLOG_EVENT_HDR_LEN -
                 (4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
 
-            statement_sql = MXS_CALLOC(1, statement_len + 1);
+            statement_sql = static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
             if (statement_sql)
             {
                 memcpy(statement_sql,
@@ -3114,7 +3117,7 @@ blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
 int
 blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 {
-    char *section = "binlog_configuration";
+    const char *section = "binlog_configuration";
     FILE *config_file;
     int rc;
     static const char MASTER_INI[] = "master.ini";
@@ -3233,7 +3236,7 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 {
     char buf_t[40];
     struct tm tm_t;
-    char *event_desc;
+    const char *event_desc;
 
     /* First Event */
     localtime_r(&first_event.event_time, &tm_t);
@@ -3291,7 +3294,7 @@ blr_create_ignorable_event(uint32_t event_size,
     }
 
     // Allocate space for event: size might contain the 4 crc32
-    new_event = MXS_CALLOC(1, event_size);
+    new_event = static_cast<uint8_t*>(MXS_CALLOC(1, event_size));
     if (new_event == NULL)
     {
         return NULL;
@@ -3343,7 +3346,7 @@ blr_write_special_event(ROUTER_INSTANCE *router,
 {
     int n;
     uint8_t *new_event;
-    char *new_event_desc;
+    const char *new_event_desc;
 
     switch (type)
     {
@@ -3417,7 +3420,7 @@ blr_write_special_event(ROUTER_INSTANCE *router,
     if ((n = pwrite(router->binlog_fd,
                     new_event,
                     event_size,
-                    router->last_written)) != event_size)
+                    router->last_written)) != static_cast<ssize_t>(event_size))
     {
         MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
@@ -3476,7 +3479,8 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router,
 {
     uint8_t *new_event;
     uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
-    BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+    BINLOG_ENCRYPTION_CTX *new_encryption_ctx =
+        static_cast<BINLOG_ENCRYPTION_CTX*>(MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX)));
 
     if (new_encryption_ctx == NULL)
     {
@@ -3489,7 +3493,7 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router,
         event_size += BINLOG_EVENT_CRC_SIZE;
     }
 
-    new_event = MXS_CALLOC(1, event_size);
+    new_event = static_cast<uint8_t*>(MXS_CALLOC(1, event_size));
     if (new_event == NULL)
     {
         return NULL;
@@ -3891,7 +3895,7 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
      *
      * Note: this also works for decryption
      */
-    for (int i = 0; i < in_size; i++)
+    for (uint32_t i = 0; i < in_size; i++)
     {
         output[i] = input[i] ^ mask[i];
     }
@@ -4253,7 +4257,7 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
 unsigned int
 blr_file_get_next_seqno(const char *filename)
 {
-    char *sptr;
+    const char *sptr;
     int filenum;
 
     if ((sptr = strrchr(filename, '.')) == NULL)
@@ -4486,7 +4490,7 @@ bool blr_compare_binlogs(const ROUTER_INSTANCE *router,
     {
         // domain_id, server_id and strcmp()
         return ((router->mariadb10_gtid_domain == info->domain_id) &&
-                (router->orig_masterid == info->server_id) &&
+                (router->orig_masterid == static_cast<int>(info->server_id)) &&
                 strcmp(r_file, s_file) == 0);
     }
 }

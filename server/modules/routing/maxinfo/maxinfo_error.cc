@@ -51,7 +51,7 @@
 void
 maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
 {
-    char *desc = "";
+    const char *desc = "";
     char *msg;
     int len;
 
@@ -86,7 +86,7 @@ maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
  * @param msg       The slave server instance
  */
 void
-maxinfo_send_error(DCB *dcb, int errcode, char  *msg)
+maxinfo_send_error(DCB *dcb, int errcode, const char *msg)
 {
     GWBUF *pkt;
     unsigned char *data;

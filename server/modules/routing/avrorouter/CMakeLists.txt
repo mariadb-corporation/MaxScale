@@ -1,7 +1,7 @@
 if(AVRO_FOUND AND JANSSON_FOUND)
   include_directories(${AVRO_INCLUDE_DIR})
   include_directories(${JANSSON_INCLUDE_DIR})
-  add_library(avrorouter SHARED avro.c ../binlogrouter/binlog_common.c avro_client.c avro_schema.c avro_rbr.c avro_file.c avro_index.c)
+  add_library(avrorouter SHARED avro.cc ../binlogrouter/binlog_common.cc avro_client.cc avro_schema.cc avro_rbr.cc avro_file.cc avro_index.cc)
   set_target_properties(avrorouter PROPERTIES VERSION "1.0.0")
   set_target_properties(avrorouter PROPERTIES LINK_FLAGS -Wl,-z,defs)
   target_link_libraries(avrorouter maxscale-common ${JANSSON_LIBRARIES} ${AVRO_LIBRARIES} maxavro lzma)

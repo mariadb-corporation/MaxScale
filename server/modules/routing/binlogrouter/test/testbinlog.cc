@@ -132,7 +132,8 @@ int main(int argc, char **argv)
         serviceAddBackend(service, server);
     }
 
-    if ((inst = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
+    if (inst == NULL)
     {
         mxs_log_flush_sync();
         mxs_log_finish();

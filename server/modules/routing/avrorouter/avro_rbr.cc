@@ -100,12 +100,12 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
     int ev_len = router->event_type_hdr_lens[hdr->event_type];
 
     read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
-    TABLE_CREATE* create = hashtable_fetch(router->created_tables, table_ident);
+    TABLE_CREATE* create = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
 
     if (create)
     {
         ss_dassert(create->columns > 0);
-        TABLE_MAP *old = hashtable_fetch(router->table_maps, table_ident);
+        TABLE_MAP *old = static_cast<TABLE_MAP*>(hashtable_fetch(router->table_maps, table_ident));
         TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
         MXS_ABORT_IF_NULL(map); // Fatal error at this point
 
@@ -292,7 +292,7 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     {
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
-        AVRO_TABLE* table = hashtable_fetch(router->open_tables, table_ident);
+        AVRO_TABLE* table = static_cast<AVRO_TABLE*>(hashtable_fetch(router->open_tables, table_ident));
         TABLE_CREATE* create = map->table_create;
         ss_dassert(hashtable_fetch(router->created_tables, table_ident) == create);
 

@@ -135,7 +135,7 @@ static const MXS_ENUM_VALUE binlog_storage_values[] =
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise binlog router module.");
     spinlock_init(&instlock);
@@ -810,7 +810,8 @@ createInstance(SERVICE *service, char **options)
         }
 
         /* Allocate SSL struct for backend connection */
-        if ((ssl_cfg = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
+        if ((ssl_cfg =
+             static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
         {
             MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
                       inst->service->name);
@@ -1236,7 +1237,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     CHK_CLIENT_RSES(slave);
 
-    return (void *)slave;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(slave);
 }
 
 /**
@@ -1417,7 +1418,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
     return blr_slave_request(router, slave, queue);
 }
 
-static char *event_names[] =
+static const char *event_names[] =
 {
     "Invalid", "Start Event V3", "Query Event", "Stop Event", "Rotate Event",
     "Integer Session Variable", "Load Event", "Slave Event", "Create File Event",
@@ -1433,7 +1434,7 @@ static char *event_names[] =
 };
 
 /* New MariaDB event numbers starts from 0xa0 */
-static char *event_names_mariadb10[] =
+static const char *event_names_mariadb10[] =
 {
     "Annotate Rows Event",
     /* New MariaDB 10.x event numbers */
@@ -1641,7 +1642,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
         }
         else
         {
-            char *ptr = NULL;
+            const char *ptr = NULL;
             if (router_inst->lastEventReceived <= MAX_EVENT_TYPE)
             {
                 ptr = event_names[router_inst->lastEventReceived];
@@ -2061,7 +2062,7 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
         }
         else
         {
-            char *ptr = NULL;
+            const char *ptr = NULL;
             if (router_inst->lastEventReceived <= MAX_EVENT_TYPE)
             {
                 ptr = event_names[router_inst->lastEventReceived];
@@ -2623,7 +2624,7 @@ blr_send_custom_error(DCB *dcb,
                       int packet_number,
                       int affected_rows,
                       const char *msg,
-                      char *statemsg,
+                      const char *statemsg,
                       unsigned int errcode)
 {
     uint8_t *outbuf = NULL;
@@ -2967,10 +2968,10 @@ static int blr_check_binlog(ROUTER_INSTANCE *router)
  * @param router    The router instance
  * @return      The event description or NULL
  */
-char *
+const char *
 blr_last_event_description(ROUTER_INSTANCE *router)
 {
-    char *event_desc = NULL;
+    const char *event_desc = NULL;
 
     if (!router->mariadb10_compat)
     {
@@ -3006,10 +3007,10 @@ blr_last_event_description(ROUTER_INSTANCE *router)
  * @param event     The current event
  * @return      The event description or NULL
  */
-char *
+const char *
 blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event)
 {
-    char *event_desc = NULL;
+    const char *event_desc = NULL;
 
     if (!router->mariadb10_compat)
     {

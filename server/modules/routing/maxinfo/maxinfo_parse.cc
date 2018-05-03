@@ -305,7 +305,7 @@ maxinfo_free_tree(MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *text;
+    const char *text;
     int token;
 } keywords[] =
 {

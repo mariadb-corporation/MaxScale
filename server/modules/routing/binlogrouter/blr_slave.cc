@@ -69,27 +69,27 @@
 
 #include "blr.h"
 
+#include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
-#include <maxscale/maxscale.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/atomic.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/housekeeper.h>
 #include <sys/stat.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/version.h>
 #include <zlib.h>
 #include <maxscale/alloc.h>
-#include <inttypes.h>
-#include <maxscale/utils.h>
+#include <maxscale/atomic.h>
 #include <maxscale/clock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/poll.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
 
 /**
  * This struct is used by sqlite3_exec callback routine
@@ -118,7 +118,6 @@ typedef enum
     SLAVE_EOF_ERROR
 } slave_eof_action_t;
 
-extern void poll_fake_write_event(DCB *dcb);
 static char* get_next_token(char *str, const char* delim, char **saveptr);
 extern int load_mysql_users(SERV_LISTENER *listener);
 extern void blr_master_close(ROUTER_INSTANCE* router);
@@ -137,7 +136,7 @@ static int blr_slave_replay(ROUTER_INSTANCE *router,
                             GWBUF *master);
 static void blr_slave_send_error(ROUTER_INSTANCE *router,
                                  ROUTER_SLAVE *slave,
-                                 char *msg);
+                                 const char *msg);
 static int blr_slave_send_timestamp(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave);
 static int blr_slave_register(ROUTER_INSTANCE *router,
@@ -199,9 +198,9 @@ static int blr_stop_slave(ROUTER_INSTANCE* router,
 static int blr_start_slave(ROUTER_INSTANCE* router,
                            ROUTER_SLAVE* slave);
 static void blr_slave_send_error_packet(ROUTER_SLAVE *slave,
-                                        char *msg,
+                                        const char *msg,
                                         unsigned int err_num,
-                                        char *status);
+                                        const char *status);
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *command,
                                     char *error);
@@ -237,17 +236,17 @@ static int blr_handle_change_master_token(char *input,
 static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 static int blr_slave_send_var_value(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave,
-                                    char *variable,
-                                    char *value,
+                                    const char *variable,
+                                    const char *value,
                                     int column_type);
 static int blr_slave_send_variable(ROUTER_INSTANCE *router,
                                    ROUTER_SLAVE *slave,
-                                   char *variable,
-                                   char *value,
+                                   const char *variable,
+                                   const char *value,
                                    int column_type);
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router,
                                                      ROUTER_SLAVE *slave,
-                                                     char *name,
+                                                     const char *name,
                                                      int type,
                                                      int len,
                                                      uint8_t seqno);
@@ -262,20 +261,20 @@ static int blr_slave_handle_variables(ROUTER_INSTANCE *router,
                                       char *stmt);
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router,
                                           ROUTER_SLAVE* slave,
-                                          char *message);
+                                          const char *message);
 static int blr_slave_show_warnings(ROUTER_INSTANCE* router,
                                    ROUTER_SLAVE* slave);
 static int blr_slave_send_status_variable(ROUTER_INSTANCE *router,
                                           ROUTER_SLAVE *slave,
-                                          char *variable,
-                                          char *value,
+                                          const char *variable,
+                                          const char *value,
                                           int column_type);
 static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router,
                                              ROUTER_SLAVE *slave,
                                              char *stmt);
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router,
                                                        ROUTER_SLAVE *slave,
-                                                       char *name,
+                                                       const char *name,
                                                        int type,
                                                        int len,
                                                        uint8_t seqno);
@@ -610,11 +609,10 @@ static int
 blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
     char *qtext, *query_text;
-    char *sep = " 	,=";
+    const char *sep = " 	,=";
     char *word, *brkb;
     int query_len;
     char *ptr;
-    extern char *strcasestr();
     bool unexpected = true;
 
     qtext = (char*)GWBUF_DATA(queue);
@@ -816,7 +814,7 @@ blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master)
  * @param msg       The error message to send
  */
 static void
-blr_slave_send_error(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char  *msg)
+blr_slave_send_error(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, const char *msg)
 {
     GWBUF *pkt;
     unsigned char *data;
@@ -2480,8 +2478,9 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             {
                 /* read it, set slave & file context */
                 uint8_t *record_ptr = GWBUF_DATA(record);
+                void *mem = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
                 SLAVE_ENCRYPTION_CTX *encryption_ctx;
-                encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+                encryption_ctx = static_cast<SLAVE_ENCRYPTION_CTX*>(mem);
 
                 MXS_ABORT_IF_NULL(encryption_ctx);
                 record_ptr += BINLOG_EVENT_HDR_LEN;
@@ -3209,7 +3208,7 @@ blr_slave_fake_rotate(ROUTER_INSTANCE *router,
                       BLFILE** filep,
                       const char *new_file)
 {
-    char *sptr;
+    const char *sptr;
     int filenum;
     GWBUF *r_event;
     MARIADB_GTID_INFO *f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
@@ -4139,15 +4138,15 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
  */
 static void
 blr_slave_send_error_packet(ROUTER_SLAVE *slave,
-                            char *msg,
+                            const char *msg,
                             unsigned int err_num,
-                            char *status)
+                            const char *status)
 {
     GWBUF *pkt;
     unsigned char *data;
     int len;
     unsigned int mysql_errno = 0;
-    char *mysql_state;
+    const char *mysql_state;
 
     if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
     {
@@ -5060,7 +5059,7 @@ blr_parse_change_master_command(char *input,
                                 char *error_string,
                                 CHANGE_MASTER_OPTIONS *config)
 {
-    char *sep = ",";
+    const char *sep = ",";
     char *word, *brkb;
 
     if ((word = get_next_token(input, sep, &brkb)) == NULL)
@@ -5111,7 +5110,7 @@ blr_handle_change_master_token(char *input,
                                CHANGE_MASTER_OPTIONS *config)
 {
     /* space+TAB+= */
-    char *sep = " \t=";
+    const char *sep = " \t=";
     char *word, *brkb;
     char *value = NULL;
     char **option_field = NULL;
@@ -5172,7 +5171,7 @@ blr_get_parsed_command_value(char *input)
         strcpy(value, input);
 
         /* space+TAB+= */
-        char *sep = " \t=";
+        const char *sep = " \t=";
         char *word;
 
         if ((word = get_next_token(NULL, sep, &input)) != NULL)
@@ -5330,8 +5329,8 @@ blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
 static int
 blr_slave_send_var_value(ROUTER_INSTANCE *router,
                          ROUTER_SLAVE *slave,
-                         char *variable,
-                         char *value,
+                         const char *variable,
+                         const char *value,
                          int column_type)
 {
     GWBUF   *pkt;
@@ -5384,8 +5383,8 @@ blr_slave_send_var_value(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_variable(ROUTER_INSTANCE *router,
                         ROUTER_SLAVE *slave,
-                        char *variable,
-                        char *value,
+                        const char *variable,
+                        const char *value,
                         int column_type)
 {
     GWBUF *pkt;
@@ -5475,7 +5474,7 @@ blr_slave_send_variable(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router,
                                           ROUTER_SLAVE *slave,
-                                          char *name,
+                                          const char *name,
                                           int type,
                                           int len,
                                           uint8_t seqno)
@@ -5616,7 +5615,7 @@ blr_slave_handle_variables(ROUTER_INSTANCE *router,
     char *brkb;
     char *word;
     /* SPACE,TAB,= */
-    char *sep = " 	,=";
+    const char *sep = " 	,=";
 
     if ((word = strtok_r(stmt, sep, &brkb)) == NULL)
     {
@@ -5696,7 +5695,7 @@ blr_slave_handle_variables(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_warning_message(ROUTER_INSTANCE* router,
                                ROUTER_SLAVE* slave,
-                               char *message)
+                               const char *message)
 {
     GWBUF *pkt;
     uint8_t *ptr;
@@ -5764,7 +5763,7 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     /* check whether a warning message is available */
     if (slave->warning_msg)
     {
-        char *level = "Warning";
+        const char *level = "Warning";
         char *msg_ptr;
         char err_code[16 + 1] = "";
         msg_ptr = strchr(slave->warning_msg, ':');
@@ -5855,7 +5854,7 @@ blr_slave_handle_status_variables(ROUTER_INSTANCE *router,
     char *brkb = NULL;
     char *word = NULL;
     /* SPACE,TAB,= */
-    char *sep = " 	,=";
+    const char *sep = " 	,=";
 
     if ((word = strtok_r(stmt, sep, &brkb)) == NULL)
     {
@@ -5913,8 +5912,8 @@ blr_slave_handle_status_variables(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_status_variable(ROUTER_INSTANCE *router,
                                ROUTER_SLAVE *slave,
-                               char *variable,
-                               char *value,
+                               const char *variable,
+                               const char *value,
                                int column_type)
 {
     GWBUF *pkt;
@@ -6009,7 +6008,7 @@ blr_slave_send_status_variable(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router,
                                             ROUTER_SLAVE *slave,
-                                            char *name,
+                                            const char *name,
                                             int type,
                                             int len,
                                             uint8_t seqno)
@@ -6022,7 +6021,7 @@ blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router,
     int column_name_len = strlen(name);
     int orig_column_name_len = strlen("VARIABLE_NAME");
     int packet_data_len = 0;
-    char    *ptr_name_start = name;
+    const char *ptr_name_start = name;
 
     if (strcasecmp(ptr_name_start, "value") == 0)
     {
@@ -6308,7 +6307,8 @@ blr_set_master_ssl(ROUTER_INSTANCE *router,
         else
         {
             /* Allocate SSL struct for backend connection */
-            if ((server_ssl = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
+            server_ssl = static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)));
+            if (server_ssl == NULL)
             {
                 router->ssl_enabled = false;
 
@@ -6481,8 +6481,9 @@ blr_slave_read_ste(ROUTER_INSTANCE *router,
     if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
     {
         uint8_t *record_ptr = GWBUF_DATA(record);
-        SLAVE_ENCRYPTION_CTX *new_encryption_ctx;
-        new_encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+        void *mem = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+        SLAVE_ENCRYPTION_CTX *new_encryption_ctx =
+            static_cast<SLAVE_ENCRYPTION_CTX*>(mem);
 
         if (!new_encryption_ctx)
         {
@@ -6545,7 +6546,7 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
 {
     char *word;
     char *brkb;
-    char *sep = " \t,=";
+    const char *sep = " \t,=";
 
     if ((word = strtok_r(select_stmt, sep, &brkb)) == NULL)
     {
@@ -7456,7 +7457,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
 {
     char *word;
     char *brkb;
-    char *sep = " \t,=";
+    const char *sep = " \t,=";
     if ((word = strtok_r(show_stmt, sep, &brkb)) == NULL)
     {
         MXS_ERROR("%s: Incomplete show query.", router->service->name);
@@ -7475,8 +7476,9 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
         }
         else
         {
-            char *errmsg = "SHOW [FULL] BINARY LOGS needs the"
-                           " 'mariadb10_slave_gtid' option to be set.";
+            const char *errmsg =
+                "SHOW [FULL] BINARY LOGS needs the"
+                " 'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
                       router->service->name);
@@ -7678,7 +7680,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
 {
     char *word;
     char *brkb;
-    char *sep = " \t,=";
+    const char *sep = " \t,=";
 
     if ((word = strtok_r(set_stmt, sep, &brkb)) == NULL)
     {
@@ -7976,7 +7978,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 {
     char *word;
     char *brkb;
-    char *sep = " \t,=";
+    const char *sep = " \t,=";
 
     if (admin_opts == NULL || !admin_opts[0])
     {
@@ -8004,8 +8006,9 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
         }
         else
         {
-            char *errmsg = "PURGE BINARY LOGS needs the "
-                           "'mariadb10_slave_gtid' option to be set.";
+            const char *errmsg =
+                "PURGE BINARY LOGS needs the "
+                "'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
                       router->service->name);
@@ -9194,9 +9197,10 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
     }
 
     /* Prepare GTID msg */
-    char *gtid_msg = change_master->use_mariadb10_gtid ?
-                     ", MASTER_USE_GTID=Slave_pos" :
-                     "";
+    const char *gtid_msg =
+        change_master->use_mariadb10_gtid ?
+        ", MASTER_USE_GTID=Slave_pos" :
+        "";
 
     /* Log previous state and new changes */
     MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
@@ -9244,10 +9248,10 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
                                        enum blr_slave_check check)
 {
     int rv = true;
-    char *err_msg = NULL;
-    char *err_status = "HY000";
+    const char *err_msg = NULL;
+    const char *err_status = "HY000";
     int err_code = BINLOG_FATAL_ERROR_READING;
-    char *msg_detail = "";
+    const char *msg_detail = "";
 
     switch (check)
     {
@@ -9657,7 +9661,8 @@ static bool blr_apply_changes(ROUTER_INSTANCE *router,
         }
         else
         {
-            if (master_log_pos != NULL && pos != router->current_pos)
+            if (master_log_pos != NULL &&
+                pos != static_cast<long long>(router->current_pos))
             {
                 snprintf(error,
                          BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "

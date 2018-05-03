@@ -84,15 +84,45 @@
  *
  * These are the options that may be passed to a command
  */
+typedef void (*FN  )(DCB*);
+typedef void (*FN1 )(DCB*, unsigned long);
+typedef void (*FN2 )(DCB*, unsigned long, unsigned long);
+typedef void (*FN3 )(DCB*, unsigned long, unsigned long, unsigned long);
+typedef void (*FN4 )(DCB*, unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (*FN5 )(DCB*, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (*FN6 )(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long);
+typedef void (*FN7 )(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long);
+typedef void (*FN8 )(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long);
+typedef void (*FN9 )(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (*FN10)(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (*FN11)(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long);
+typedef void (*FN12)(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long);
+
 struct subcommand
 {
-    char    *arg1;
-    int     argc_min;
-    int     argc_max;
-    void    (*fn)();
-    char    *help;
-    char    *devhelp;
-    int     arg_types[MAXARGS];
+    const char *arg1;
+    int         argc_min;
+    int         argc_max;
+    void      (*fn)(DCB*);
+    const char *help;
+    const char *devhelp;
+    int         arg_types[MAXARGS];
 };
 
 #define EMPTY_OPTION
@@ -112,26 +142,26 @@ struct subcommand showoptions[] =
 {
 #if defined(BUFFER_TRACE)
     {
-        "buffers",    0, dprintAllBuffers,
+        "buffers",    0, (FN)dprintAllBuffers,
         "Show all buffers with backtrace",
         "Show all buffers with backtrace",
         {0}
     },
 #endif
     {
-        "dcbs", 0, 0, dprintAllDCBs,
+        "dcbs", 0, 0, (FN)dprintAllDCBs,
         "Show all DCBs",
         "Usage: show dcbs",
         {0}
     },
     {
-        "dbusers", 1, 1, service_print_users,
+        "dbusers", 1, 1, (FN)service_print_users,
         "[deprecated] Show user statistics",
         "See `show authenticators`",
         {ARG_TYPE_SERVICE}
     },
     {
-        "authenticators", 1, 1, service_print_users,
+        "authenticators", 1, 1, (FN)service_print_users,
         "Show authenticator diagnostics for a service",
         "Usage: show authenticators SERVICE\n"
         "\n"
@@ -142,19 +172,19 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVICE}
     },
     {
-        "epoll", 0, 0, dprintPollStats,
+        "epoll", 0, 0, (FN)dprintPollStats,
         "Show the polling system statistics",
         "Usage: show epoll",
         {0}
     },
     {
-        "eventstats", 0, 0, dShowEventStats,
+        "eventstats", 0, 0, (FN)dShowEventStats,
         "Show event queue statistics",
         "Usage: show eventstats",
         {0}
     },
     {
-        "filter", 1, 1, dprintFilter,
+        "filter", 1, 1, (FN)dprintFilter,
         "Show filter details",
         "Usage: show filter FILTER\n"
         "\n"
@@ -165,25 +195,25 @@ struct subcommand showoptions[] =
         {ARG_TYPE_FILTER}
     },
     {
-        "filters", 0, 0, dprintAllFilters,
+        "filters", 0, 0, (FN)dprintAllFilters,
         "Show all filters",
         "Usage: show filters",
         {0}
     },
     {
-        "log_throttling", 0, 0, show_log_throttling,
+        "log_throttling", 0, 0, (FN)show_log_throttling,
         "Show the current log throttling setting (count, window (ms), suppression (ms))",
         "Usage: show log_throttling",
         {0}
     },
     {
-        "modules", 0, 0, dprintAllModules,
+        "modules", 0, 0, (FN)dprintAllModules,
         "Show all currently loaded modules",
         "Usage: show modules",
         {0}
     },
     {
-        "monitor", 1, 1, monitorShow,
+        "monitor", 1, 1, (FN)monitorShow,
         "Show monitor details",
         "Usage: show monitor MONITOR\n"
         "\n"
@@ -194,13 +224,13 @@ struct subcommand showoptions[] =
         {ARG_TYPE_MONITOR}
     },
     {
-        "monitors", 0, 0, monitorShowAll,
+        "monitors", 0, 0, (FN)monitorShowAll,
         "Show all monitors",
         "Usage: show monitors",
         {0}
     },
     {
-        "persistent", 1, 1, dprintPersistentDCBs,
+        "persistent", 1, 1, (FN)dprintPersistentDCBs,
         "Show the persistent connection pool of a server",
         "Usage: show persistent SERVER\n"
         "\n"
@@ -211,7 +241,7 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVER}
     },
     {
-        "server", 1, 1, dprintServer,
+        "server", 1, 1, (FN)dprintServer,
         "Show server details",
         "Usage: show server SERVER\n"
         "\n"
@@ -222,25 +252,25 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVER}
     },
     {
-        "servers", 0, 0, dprintAllServers,
+        "servers", 0, 0, (FN)dprintAllServers,
         "Show all servers",
         "Usage: show servers",
         {0}
     },
     {
-        "serversjson", 0, 0, dprintAllServersJson,
+        "serversjson", 0, 0, (FN)dprintAllServersJson,
         "Show all servers in JSON",
         "Usage: show serversjson",
         {0}
     },
     {
-        "services", 0, 0, dprintAllServices,
+        "services", 0, 0, (FN)dprintAllServices,
         "Show all configured services in MaxScale",
         "Usage: show services",
         {0}
     },
     {
-        "service", 1, 1, dprintService,
+        "service", 1, 1, (FN)dprintService,
         "Show a single service in MaxScale",
         "Usage: show service SERVICE\n"
         "\n"
@@ -251,7 +281,7 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SERVICE}
     },
     {
-        "session", 1, 1, dprintSession,
+        "session", 1, 1, (FN)dprintSession,
         "Show session details",
         "Usage: show session SESSION\n"
         "\n"
@@ -262,31 +292,31 @@ struct subcommand showoptions[] =
         {ARG_TYPE_SESSION}
     },
     {
-        "sessions", 0, 0, dprintAllSessions,
+        "sessions", 0, 0, (FN)dprintAllSessions,
         "Show all active sessions in MaxScale",
         "Usage: show sessions",
         {0}
     },
     {
-        "tasks", 0, 0, hkshow_tasks,
+        "tasks", 0, 0, (FN)hkshow_tasks,
         "Show all active housekeeper tasks in MaxScale",
         "Usage: show tasks",
         {0}
     },
     {
-        "threads", 0, 0, dShowThreads,
+        "threads", 0, 0, (FN)dShowThreads,
         "Show the status of the worker threads in MaxScale",
         "Usage: show threads",
         {0}
     },
     {
-        "users", 0, 0, telnetdShowUsers,
+        "users", 0, 0, (FN)telnetdShowUsers,
         "Show enabled Linux accounts",
         "Usage: show users",
         {0}
     },
     {
-        "version", 0, 0, showVersion,
+        "version", 0, 0, (FN)showVersion,
         "Show the MaxScale version number",
         "Usage: show version",
         {0}
@@ -336,67 +366,67 @@ void dListCommands(DCB *dcb, const char *domain, const char *ident)
 struct subcommand listoptions[] =
 {
     {
-        "clients", 0, 0, dListClients,
+        "clients", 0, 0, (FN)dListClients,
         "List all the client connections to MaxScale",
         "Usage: list clients",
         {0}
     },
     {
-        "dcbs", 0, 0, dListDCBs,
+        "dcbs", 0, 0, (FN)dListDCBs,
         "List all active connections within MaxScale",
         "Usage: list dcbs",
         {0}
     },
     {
-        "filters", 0, 0, dListFilters,
+        "filters", 0, 0, (FN)dListFilters,
         "List all filters",
         "Usage: list filters",
         {0}
     },
     {
-        "listeners", 0, 0, dListListeners,
+        "listeners", 0, 0, (FN)dListListeners,
         "List all listeners",
         "Usage: list listeners",
         {0}
     },
     {
-        "modules", 0, 0, dprintAllModules,
+        "modules", 0, 0, (FN)dprintAllModules,
         "List all currently loaded modules",
         "Usage: list modules",
         {0}
     },
     {
-        "monitors", 0, 0, monitorList,
+        "monitors", 0, 0, (FN)monitorList,
         "List all monitors",
         "Usage: list monitors",
         {0}
     },
     {
-        "services", 0, 0, dListServices,
+        "services", 0, 0, (FN)dListServices,
         "List all services",
         "Usage: list services",
         {0}
     },
     {
-        "servers", 0, 0, dListServers,
+        "servers", 0, 0, (FN)dListServers,
         "List all servers",
         "Usage: list servers",
         {0}
     },
     {
-        "sessions", 0, 0, dListSessions,
+        "sessions", 0, 0, (FN)dListSessions,
         "List all the active sessions within MaxScale",
         "Usage: list sessions",
         {0}
     },
     {
-        "threads", 0, 0, dShowThreads,
+        "threads", 0, 0, (FN)dShowThreads,
         "List the status of the polling threads in MaxScale",
         "Usage: list threads",
         {0}
     },
     {
-        "commands", 0, 2, dListCommands,
+        "commands", 0, 2, (FN)dListCommands,
         "List registered commands",
         "Usage: list commands [MODULE] [COMMAND]\n"
         "\n"
@@ -439,7 +469,7 @@ struct subcommand shutdownoptions[] =
     {
         "maxscale",
         0, 0,
-        shutdown_server,
+        (FN)shutdown_server,
         "Initiate a controlled shutdown of MaxScale",
         "Usage: shutdown maxscale",
         {0}
@@ -447,7 +477,7 @@ struct subcommand shutdownoptions[] =
     {
         "monitor",
         1, 1,
-        shutdown_monitor,
+        (FN)shutdown_monitor,
         "Stop a monitor",
         "Usage: shutdown monitor MONITOR\n"
         "\n"
@@ -460,7 +490,7 @@ struct subcommand shutdownoptions[] =
     {
         "service",
         1, 1,
-        shutdown_service,
+        (FN)shutdown_service,
         "Stop a service",
         "Usage: shutdown service SERVICE\n"
         "\n"
@@ -473,7 +503,7 @@ struct subcommand shutdownoptions[] =
     {
         "listener",
         2, 2,
-        shutdown_listener,
+        (FN)shutdown_listener,
         "Stop a listener",
         "Usage: shutdown listener SERVICE LISTENER\n"
         "\n"
@@ -507,7 +537,7 @@ struct subcommand syncoptions[] =
     {
         "logs",
         0, 0,
-        sync_logs,
+        (FN)sync_logs,
         "Flush log files to disk",
         "Usage: flush logs",
         {0}
@@ -539,7 +569,7 @@ restart_listener(DCB *dcb, SERVICE *service, const char *name)
 struct subcommand restartoptions[] =
 {
     {
-        "monitor", 1, 1, restart_monitor,
+        "monitor", 1, 1, (FN)restart_monitor,
         "Restart a monitor",
         "Usage: restart monitor NAME\n"
         "\n"
@@ -550,7 +580,7 @@ struct subcommand restartoptions[] =
         {ARG_TYPE_MONITOR}
     },
     {
-        "service", 1, 1, restart_service,
+        "service", 1, 1, (FN)restart_service,
         "Restart a service",
         "Usage: restart service NAME\n"
         "\n"
@@ -561,7 +591,7 @@ struct subcommand restartoptions[] =
         {ARG_TYPE_SERVICE}
     },
     {
-        "listener", 2, 2, restart_listener,
+        "listener", 2, 2, (FN)restart_listener,
         "Restart a listener",
         "Usage: restart listener NAME\n"
         "\n"
@@ -584,7 +614,7 @@ static void set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_
 struct subcommand setoptions[] =
 {
     {
-        "server", 2, 2, set_server,
+        "server", 2, 2, (FN)set_server,
         "Set the status of a server",
         "Usage: set server NAME STATUS\n"
         "\n"
@@ -596,19 +626,19 @@ struct subcommand setoptions[] =
         {ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME}
     },
     {
-        "pollsleep", 1, 1, set_pollsleep,
+        "pollsleep", 1, 1, (FN)set_pollsleep,
         "Set poll sleep period",
         "Deprecated in 2.3",
         {ARG_TYPE_NUMERIC}
     },
     {
-        "nbpolls", 1, 1, set_nbpoll,
+        "nbpolls", 1, 1, (FN)set_nbpoll,
         "Set non-blocking polls",
         "Deprecated in 2.3",
         {ARG_TYPE_NUMERIC}
     },
     {
-        "log_throttling", 3, 3, set_log_throttling,
+        "log_throttling", 3, 3, (FN)set_log_throttling,
         "Set the log throttling configuration",
         "Usage: set log_throttling COUNT WINDOW SUPPRESS\n"
         "\n"
@@ -630,7 +660,7 @@ static void clear_server(DCB *dcb, SERVER *server, char *bit);
 struct subcommand clearoptions[] =
 {
     {
-        "server", 2, 2, clear_server,
+        "server", 2, 2, (FN)clear_server,
         "Clear server status",
         "Usage: clear server NAME STATUS\n"
         "\n"
@@ -653,13 +683,13 @@ static void reload_config(DCB *dcb);
 struct subcommand reloadoptions[] =
 {
     {
-        "config", 0, 0, reload_config,
+        "config", 0, 0, (FN)reload_config,
         "[Deprecated] Reload the configuration",
         "Usage: reload config",
         {0}
     },
     {
-        "dbusers", 1, 1, reload_dbusers,
+        "dbusers", 1, 1, (FN)reload_dbusers,
         "Reload the database users for a service",
         "Usage: reload dbusers SERVICE\n"
         "\n"
@@ -694,7 +724,7 @@ struct subcommand enableoptions[] =
     {
         "log-priority",
         1, 1,
-        enable_log_priority,
+        (FN)enable_log_priority,
         "Enable a logging priority",
         "Usage: enable log-priority PRIORITY\n"
         "\n"
@@ -707,7 +737,7 @@ struct subcommand enableoptions[] =
     {
         "sessionlog-priority",
         2, 2,
-        enable_sess_log_priority,
+        (FN)enable_sess_log_priority,
         "[Deprecated] Enable a logging priority for a session",
         "This command is deprecated",
         {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
@@ -715,7 +745,7 @@ struct subcommand enableoptions[] =
     {
         "root",
         1, 1,
-        enable_service_root,
+        (FN)enable_service_root,
         "Enable root user access to a service",
         "Usage: enable root SERVICE\n"
         "\n"
@@ -728,7 +758,7 @@ struct subcommand enableoptions[] =
     {
         "syslog",
         0, 0,
-        enable_syslog,
+        (FN)enable_syslog,
         "Enable syslog logging",
         "Usage: enable syslog",
         {0}
@@ -736,7 +766,7 @@ struct subcommand enableoptions[] =
     {
         "maxlog",
         0, 0,
-        enable_maxlog,
+        (FN)enable_maxlog,
         "Enable MaxScale logging",
         "Usage: enable maxlog",
         {0}
@@ -744,7 +774,7 @@ struct subcommand enableoptions[] =
     {
         "account",
         1, 1,
-        enable_admin_account,
+        (FN)enable_admin_account,
         "Activate a Linux user account for administrative MaxAdmin use",
         "Usage: enable account USER\n"
         "\n"
@@ -757,7 +787,7 @@ struct subcommand enableoptions[] =
     {
         "readonly-account",
         1, 1,
-        enable_account,
+        (FN)enable_account,
         "Activate a Linux user account for read-only MaxAdmin use",
         "Usage: enable account USER\n"
         "\n"
@@ -782,7 +812,7 @@ struct subcommand disableoptions[] =
     {
         "log-priority",
         1, 1,
-        disable_log_priority,
+        (FN)disable_log_priority,
         "Disable a logging priority",
         "Usage: disable log-priority PRIORITY\n"
         "\n"
@@ -795,7 +825,7 @@ struct subcommand disableoptions[] =
     {
         "sessionlog-priority",
         2, 2,
-        disable_sess_log_priority,
+        (FN)disable_sess_log_priority,
         "[Deprecated] Disable a logging priority for a particular session",
         "This command is deprecated",
         {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
@@ -803,7 +833,7 @@ struct subcommand disableoptions[] =
     {
         "root",
         1, 1,
-        disable_service_root,
+        (FN)disable_service_root,
         "Disable root access",
         "Usage: disable root SERVICE\n"
         "\n"
@@ -816,7 +846,7 @@ struct subcommand disableoptions[] =
     {
         "syslog",
         0, 0,
-        disable_syslog,
+        (FN)disable_syslog,
         "Disable syslog logging",
         "Usage: disable syslog",
         {0}
@@ -824,7 +854,7 @@ struct subcommand disableoptions[] =
     {
         "maxlog",
         0, 0,
-        disable_maxlog,
+        (FN)disable_maxlog,
         "Disable MaxScale logging",
         "Usage: disable maxlog",
         {0}
@@ -832,7 +862,7 @@ struct subcommand disableoptions[] =
     {
         "account",
         1, 1,
-        disable_account,
+        (FN)disable_account,
         "Disable Linux user",
         "Usage: disable account USER\n"
         "\n"
@@ -884,7 +914,7 @@ void ping_workers(DCB* dcb)
 struct subcommand pingoptions[] =
 {
     {
-        "workers", 0, 0, ping_workers,
+        "workers", 0, 0, (FN)ping_workers,
         "Ping Workers",
         "Ping Workers",
         {ARG_TYPE_NONE}
@@ -898,7 +928,7 @@ struct subcommand pingoptions[] =
 struct subcommand addoptions[] =
 {
     {
-        "user", 2, 2, inet_add_admin_user,
+        "user", 2, 2, (FN)inet_add_admin_user,
         "Add an administrative account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
@@ -910,7 +940,7 @@ struct subcommand addoptions[] =
         {ARG_TYPE_OBJECT_NAME, ARG_TYPE_STRING}
     },
     {
-        "readonly-user", 2, 2, inet_add_user,
+        "readonly-user", 2, 2, (FN)inet_add_user,
         "Add a read-only account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
@@ -922,7 +952,7 @@ struct subcommand addoptions[] =
         {ARG_TYPE_OBJECT_NAME, ARG_TYPE_STRING}
     },
     {
-        "server", 2, 12, cmd_AddServer,
+        "server", 2, 12, (FN)cmd_AddServer,
         "Add a new server to a service",
         "Usage: add server SERVER TARGET...\n"
         "\n"
@@ -973,7 +1003,7 @@ struct subcommand removeoptions[] =
     {
         "user",
         1, 1,
-        telnetdRemoveUser,
+        (FN)telnetdRemoveUser,
         "Remove account for using maxadmin over the network",
         "Usage: remove user USER\n"
         "\n"
@@ -984,7 +1014,7 @@ struct subcommand removeoptions[] =
         {ARG_TYPE_STRING}
     },
     {
-        "server", 2, 12, cmd_RemoveServer,
+        "server", 2, 12, (FN)cmd_RemoveServer,
         "Remove a server from a service or a monitor",
         "Usage: remove server SERVER TARGET...\n"
         "\n"
@@ -1080,7 +1110,7 @@ struct subcommand flushoptions[] =
     {
         "log",
         1, 1,
-        flushlog,
+        (FN)flushlog,
         "Flush the content of a log file and reopen it",
         "Usage: flush log",
         {ARG_TYPE_STRING}
@@ -1088,7 +1118,7 @@ struct subcommand flushoptions[] =
     {
         "logs",
         0, 0,
-        flushlogs,
+        (FN)flushlogs,
         "Flush the content of a log file and reopen it",
         "Usage: flush logs",
         {0}
@@ -1172,7 +1202,7 @@ static void createMonitor(DCB *dcb, const char *name, const char *module)
 struct subcommand createoptions[] =
 {
     {
-        "server", 2, 6, createServer,
+        "server", 2, 6, (FN)createServer,
         "Create a new server",
         "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "\n"
@@ -1193,7 +1223,7 @@ struct subcommand createoptions[] =
         }
     },
     {
-        "listener", 2, 12, createListener,
+        "listener", 2, 12, (FN)createListener,
         "Create a new listener for a service",
         "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n"
@@ -1225,7 +1255,7 @@ struct subcommand createoptions[] =
         }
     },
     {
-        "monitor", 2, 2, createMonitor,
+        "monitor", 2, 2, (FN)createMonitor,
         "Create a new monitor",
         "Usage: create monitor NAME MODULE\n"
         "\n"
@@ -1292,7 +1322,7 @@ static void destroyMonitor(DCB *dcb, MXS_MONITOR *monitor)
 struct subcommand destroyoptions[] =
 {
     {
-        "server", 1, 1, destroyServer,
+        "server", 1, 1, (FN)destroyServer,
         "Destroy a server",
         "Usage: destroy server NAME\n"
         "\n"
@@ -1303,7 +1333,7 @@ struct subcommand destroyoptions[] =
         {ARG_TYPE_SERVER}
     },
     {
-        "listener", 2, 2, destroyListener,
+        "listener", 2, 2, (FN)destroyListener,
         "Destroy a listener",
         "Usage: destroy listener SERVICE NAME\n"
         "\n"
@@ -1316,7 +1346,7 @@ struct subcommand destroyoptions[] =
         {ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME}
     },
     {
-        "monitor", 1, 1, destroyMonitor,
+        "monitor", 1, 1, (FN)destroyMonitor,
         "Destroy a monitor",
         "Usage: destroy monitor NAME\n"
         "\n"
@@ -1510,7 +1540,7 @@ static void alterMaxScale(DCB *dcb, char *v1, char *v2, char *v3,
 struct subcommand alteroptions[] =
 {
     {
-        "server", 2, 12, alterServer,
+        "server", 2, 12, (FN)alterServer,
         "Alter server parameters",
         "Usage: alter server NAME KEY=VALUE ...\n"
         "\n"
@@ -1544,7 +1574,7 @@ struct subcommand alteroptions[] =
         }
     },
     {
-        "monitor", 2, 12, alterMonitor,
+        "monitor", 2, 12, (FN)alterMonitor,
         "Alter monitor parameters",
         "Usage: alter monitor NAME KEY=VALUE ...\n"
         "\n"
@@ -1574,7 +1604,7 @@ struct subcommand alteroptions[] =
         }
     },
     {
-        "service", 2, 12, alterService,
+        "service", 2, 12, (FN)alterService,
         "Alter service parameters",
         "Usage: alter service NAME KEY=VALUE ...\n"
         "\n"
@@ -1605,7 +1635,7 @@ struct subcommand alteroptions[] =
         }
     },
     {
-        "maxscale", 1, 11, alterMaxScale,
+        "maxscale", 1, 11, (FN)alterMaxScale,
         "Alter maxscale parameters",
         "Usage: alter maxscale KEY=VALUE ...\n"
         "\n"
@@ -1694,7 +1724,7 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 struct subcommand calloptions[] =
 {
     {
-        "command", 2, 12, callModuleCommand,
+        "command", 2, 12, (FN)callModuleCommand,
         "Call module command",
         "Usage: call command MODULE COMMAND ARGS...\n"
         "\n"
@@ -1722,7 +1752,7 @@ struct subcommand calloptions[] =
  */
 static struct
 {
-    char               *cmd;
+    const char         *cmd;
     struct  subcommand *options;
 } cmds[] =
 {
@@ -1825,7 +1855,7 @@ static void free_arg(int arg_type, void *value)
     switch (arg_type)
     {
     case ARG_TYPE_SESSION:
-        session_put_ref(value);
+        session_put_ref(static_cast<MXS_SESSION*>(value));
         break;
 
     default:
@@ -2067,58 +2097,58 @@ execute_cmd(CLI_SESSION *cli)
                                     cmds[i].options[j].fn(dcb);
                                     break;
                                 case 1:
-                                    cmds[i].options[j].fn(dcb, arg_list[0]);
+                                    ((FN1)cmds[i].options[j].fn)(dcb, arg_list[0]);
                                     break;
                                 case 2:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
+                                    ((FN2)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1]);
                                     break;
                                 case 3:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
+                                    ((FN3)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2]);
                                     break;
                                 case 4:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3]);
+                                    ((FN4)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                 arg_list[3]);
                                     break;
                                 case 5:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4]);
-                                    break;
+                                    ((FN5)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                 arg_list[3], arg_list[4]);
+                                     break;
                                 case 6:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5]);
-                                    break;
+                                     ((FN6)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5]);
+                                     break;
                                 case 7:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6]);
+                                     ((FN7)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5],
+                                                                  arg_list[6]);
                                     break;
                                 case 8:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7]);
+                                     ((FN8)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5],
+                                                                  arg_list[6], arg_list[7]);
                                     break;
                                 case 9:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8]);
+                                     ((FN9)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5],
+                                                                  arg_list[6], arg_list[7], arg_list[8]);
                                     break;
                                 case 10:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9]);
+                                     ((FN10)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                   arg_list[3], arg_list[4], arg_list[5],
+                                                                   arg_list[6], arg_list[7], arg_list[8],
+                                                                   arg_list[9]);
                                     break;
                                 case 11:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9], arg_list[10]);
+                                     ((FN11)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                   arg_list[3], arg_list[4], arg_list[5],
+                                                                   arg_list[6], arg_list[7], arg_list[8],
+                                                                   arg_list[9], arg_list[10]);
                                     break;
                                 case 12:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9], arg_list[10], arg_list[11]);
+                                     ((FN12)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                   arg_list[3], arg_list[4], arg_list[5],
+                                                                   arg_list[6], arg_list[7], arg_list[8],
+                                                                   arg_list[9], arg_list[10], arg_list[11]);
                                     break;
                                 default:
                                     dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
@@ -2453,11 +2483,13 @@ static int string_to_priority(const char* name)
     const size_t N_LOG_PRIORITY_ENTRIES = sizeof(LOG_PRIORITY_ENTRIES) / sizeof(LOG_PRIORITY_ENTRIES[0]);
 
     struct log_priority_entry key = { name, -1 };
-    struct log_priority_entry* result = bsearch(&key,
-                                                LOG_PRIORITY_ENTRIES,
-                                                N_LOG_PRIORITY_ENTRIES,
-                                                sizeof(struct log_priority_entry),
-                                                compare_log_priority_entries);
+    void* value = bsearch(&key,
+                                 LOG_PRIORITY_ENTRIES,
+                                 N_LOG_PRIORITY_ENTRIES,
+                                 sizeof(struct log_priority_entry),
+                                 compare_log_priority_entries);
+
+    struct log_priority_entry* result = static_cast<struct log_priority_entry*>(value);
 
     return result ? result->priority : -1;
 }
@@ -2561,7 +2593,9 @@ set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms)
 {
     if ((count >= 0) || (window_ms >= 0) || (suppress_ms >= 0))
     {
-        MXS_LOG_THROTTLING t = { count, window_ms, suppress_ms };
+        MXS_LOG_THROTTLING t = { static_cast<size_t>(count),
+                                 static_cast<size_t>(window_ms),
+                                 static_cast<size_t>(suppress_ms) };
 
         mxs_log_set_throttling(&t);
     }

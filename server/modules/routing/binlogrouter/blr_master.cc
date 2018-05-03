@@ -58,12 +58,13 @@ static GWBUF *blr_make_binlog_dump(ROUTER_INSTANCE *router);
 void encode_value(unsigned char *data, unsigned int value, int len);
 void blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt);
 static int blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *hdr);
-static void *CreateMySQLAuthData(char *username, char *password, char *database);
+static void *CreateMySQLAuthData(const char *username,
+                                 const char *password,
+                                 const char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-static void blr_log_packet(int priority, char *msg, uint8_t *ptr, int len);
+static void blr_log_packet(int priority, const char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
-void poll_fake_write_event(DCB *dcb);
 static bool blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
@@ -354,7 +355,7 @@ static void worker_cb_close_master(int worker_id, void* data)
     // This is itended to be called only in the main worker.
     ss_dassert(worker_id == 0);
 
-    blr_master_close(data);
+    blr_master_close(static_cast<ROUTER_INSTANCE*>(data));
 }
 
 /**
@@ -629,7 +630,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         {
             MXS_FREE(router->m_errmsg);
         }
-        router->m_errmsg = msg_err ? msg_err : "(memory failure)";
+        router->m_errmsg = msg_err ? msg_err : MXS_STRDUP("(memory failure)");
 
         router->active_logs = 0;
         if (router->reconnect_pending)
@@ -927,7 +928,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
         if (len < BINLOG_EVENT_HDR_LEN && router->master_event_state != BLR_EVENT_ONGOING)
         {
-            char *event_msg = "unknown";
+            const char *event_msg = "unknown";
 
             /* Packet is too small to be a binlog event */
             if (ptr[4] == 0xfe) /* EOF Packet */
@@ -1242,7 +1243,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
                                                + var_block_len + 1 + db_name_len);
-                        statement_sql = MXS_CALLOC(1, statement_len + 1);
+                        statement_sql =
+                            static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
                         MXS_ABORT_IF_NULL(statement_sql);
                         memcpy(statement_sql,
                                (char *)ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
@@ -1694,7 +1696,7 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
  * This doesn't really belong here and should be moved at some stage.
  */
 static void *
-CreateMySQLAuthData(char *username, char *password, char *database)
+CreateMySQLAuthData(const char *username, const char *password, const char *database)
 {
     MYSQL_session *auth_info;
 
@@ -1718,7 +1720,8 @@ CreateMySQLAuthData(char *username, char *password, char *database)
         return NULL;
     }
 
-    if ((auth_info = MXS_CALLOC(1, sizeof(MYSQL_session))) == NULL)
+    if ((auth_info =
+         static_cast<MYSQL_session*>(MXS_CALLOC(1, sizeof(MYSQL_session)))) == NULL)
     {
         return NULL;
     }
@@ -1747,7 +1750,7 @@ typedef enum
  * @param len      Length of message packet
  */
 static void
-blr_log_packet(int priority, char *msg, uint8_t *ptr, int len)
+blr_log_packet(int priority, const char *msg, uint8_t *ptr, int len)
 {
     char buf[400] = "";
     char *bufp;
@@ -1851,7 +1854,7 @@ blr_extract_column(GWBUF *buf, int col)
         ptr += collen;
     }
     collen = *ptr++;
-    if ((rval = MXS_MALLOC(collen + 1)) == NULL)
+    if ((rval = static_cast<char*>(MXS_MALLOC(collen + 1))) == NULL)
     {
         return NULL;
     }
@@ -1976,7 +1979,7 @@ int
 blr_check_heartbeat(ROUTER_INSTANCE *router)
 {
     time_t t_now = time(0);
-    char *event_desc = NULL;
+    const char *event_desc = NULL;
 
     if (router->master_state != BLRM_BINLOGDUMP)
     {
@@ -1988,7 +1991,8 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
     if (router->master_state == BLRM_BINLOGDUMP &&
         router->lastEventReceived > 0)
     {
-        if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
+        if (static_cast<unsigned long>(t_now - router->stats.lastReply) >
+            (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
         {
             MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
@@ -2097,7 +2101,7 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
     int n;
 
     if ((n = pwrite(router->binlog_fd, buf, data_len,
-                    router->last_written)) != data_len)
+                    router->last_written)) != static_cast<int64_t>(data_len))
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",

@@ -112,7 +112,7 @@ static SERVER_REF *get_root_master(SERVER_REF *servers);
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise readconnroute router module.");
 
@@ -176,7 +176,7 @@ createInstance(SERVICE *service, char **options)
     SERVER_REF *sref;
     int i, n;
 
-    if ((inst = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)))) == NULL)
     {
         return NULL;
     }
@@ -433,7 +433,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     MXS_INFO("New session for server %s. Connections : %d",
              candidate->server->name, candidate->connections);
 
-    return (void *) client_rses;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(client_rses);
 }
 
 /**
@@ -613,6 +613,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
     }
 
     bool valid;
+    char* trc = NULL;
 
     if (rses_is_closed || backend_dcb == NULL ||
         (valid = !connection_is_valid(inst, router_cli_ses)))
@@ -622,8 +623,6 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
         goto return_rc;
 
     }
-
-    char* trc = NULL;
 
     switch (mysql_command)
     {

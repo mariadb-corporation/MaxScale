@@ -43,7 +43,7 @@
  */
 int blr_file_get_next_binlogname(const char *binlog_name)
 {
-    char *sptr;
+    const char *sptr;
     int filenum;
 
     if ((sptr = strrchr(binlog_name, '.')) == NULL)
@@ -72,7 +72,7 @@ bool binlog_next_file_exists(const char* binlogdir, const char* binlog)
 
     if (filenum)
     {
-        char *sptr = strrchr(binlog, '.');
+        const char *sptr = strrchr(binlog, '.');
 
         if (sptr)
         {

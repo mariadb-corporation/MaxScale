@@ -135,9 +135,8 @@ typedef enum
 extern MAXINFO_TREE *maxinfo_parse(char *, PARSE_ERROR *);
 extern void     maxinfo_free_tree(MAXINFO_TREE *);
 extern void     maxinfo_execute(DCB *, MAXINFO_TREE *);
-extern void         maxinfo_send_error(DCB *, int, char  *);
+extern void         maxinfo_send_error(DCB *, int, const char  *);
 extern void         maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
-extern void     maxinfo_send_error(DCB *, int, char  *);
 extern RESULTSET    *maxinfo_variables();
 extern RESULTSET    *maxinfo_status();
 

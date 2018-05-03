@@ -156,7 +156,7 @@ avro_client_do_registration(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *d
             *sep_ptr = '\0';
         }
 
-        if (strlen(uuid) < uuid_len)
+        if (strlen(uuid) < static_cast<size_t>(uuid_len))
         {
             data_len -= (uuid_len - strlen(uuid));
         }
@@ -288,7 +288,7 @@ int gtid_query_cb_plain(void* data, int ncolumns, char** values, char** names)
 void add_used_tables(sqlite3 *handle, json_t* obj, gtid_pos_t* gtid)
 {
     char sql[AVRO_SQL_BUFFER_SIZE];
-    snprintf(sql, sizeof(sql), "SELECT table_name FROM "USED_TABLES_TABLE_NAME
+    snprintf(sql, sizeof(sql), "SELECT table_name FROM " USED_TABLES_TABLE_NAME
              " WHERE domain = %lu AND server_id = %lu AND sequence = %lu",
              gtid->domain, gtid->server_id, gtid->seq);
 
@@ -320,7 +320,7 @@ void avro_get_used_tables(AVRO_INSTANCE *router, DCB* dcb)
 {
     sqlite3 *handle = router->sqlite_handle;
     char sql[AVRO_SQL_BUFFER_SIZE];
-    snprintf(sql, sizeof(sql), "SELECT table_name FROM "USED_TABLES_TABLE_NAME
+    snprintf(sql, sizeof(sql), "SELECT table_name FROM " USED_TABLES_TABLE_NAME
              " WHERE domain = %lu AND server_id = %lu AND sequence = %lu",
              router->gtid.domain, router->gtid.server_id, router->gtid.seq);
 
@@ -366,7 +366,7 @@ int timestamp_query_cb(void* data, int ncolumns, char** values, char** names)
 void add_timestamp(sqlite3 *handle, json_t* obj, gtid_pos_t* gtid)
 {
     char sql[AVRO_SQL_BUFFER_SIZE];
-    snprintf(sql, sizeof(sql), "SELECT DISTINCT binlog_timestamp FROM "USED_TABLES_TABLE_NAME
+    snprintf(sql, sizeof(sql), "SELECT DISTINCT binlog_timestamp FROM " USED_TABLES_TABLE_NAME
              " WHERE domain = %lu AND server_id = %lu AND sequence = %lu",
              gtid->domain, gtid->server_id, gtid->seq);
 

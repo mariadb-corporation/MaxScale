@@ -1,5 +1,4 @@
-#ifndef _MAXAVRO_H
-#define _MAXAVRO_H
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -19,6 +18,8 @@
 #include <stdbool.h>
 #include <jansson.h>
 #include <maxscale/buffer.h>
+
+MXS_BEGIN_DECLS
 
 /** File magic and sync marker sizes block sizes */
 #define AVRO_MAGIC_SIZE 4
@@ -154,4 +155,4 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file);
 enum maxavro_error maxavro_get_error(MAXAVRO_FILE *file);
 const char* maxavro_get_error_string(MAXAVRO_FILE *file);
 
-#endif
+MXS_END_DECLS

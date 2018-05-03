@@ -76,7 +76,7 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 
     if (file)
     {
-        char *name = strrchr(filename, '/');
+        const char *name = strrchr(filename, '/');
         ss_dassert(name);
 
         if (name)
@@ -86,7 +86,7 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
             long pos = -1;
             name++;
 
-            snprintf(sql, sizeof(sql), "SELECT position FROM "INDEX_TABLE_NAME
+            snprintf(sql, sizeof(sql), "SELECT position FROM " INDEX_TABLE_NAME
                      " WHERE filename=\"%s\";", name);
 
             if (sqlite3_exec(router->sqlite_handle, sql, index_query_cb, &pos, &errmsg) != SQLITE_OK)
@@ -155,7 +155,7 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
             }
             sqlite3_free(errmsg);
 
-            snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO "INDEX_TABLE_NAME
+            snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO " INDEX_TABLE_NAME
                      " values (%lu, \"%s\");", file->block_start_pos, name);
             if (sqlite3_exec(router->sqlite_handle, sql, NULL, NULL,
                              &errmsg) != SQLITE_OK)
@@ -194,7 +194,7 @@ void avro_update_index(AVRO_INSTANCE* router)
 
     if (glob(path, 0, NULL, &files) != GLOB_NOMATCH)
     {
-        for (int i = 0; i < files.gl_pathc; i++)
+        for (size_t i = 0; i < files.gl_pathc; i++)
         {
             avro_index_file(router, files.gl_pathv[i]);
         }
@@ -204,7 +204,7 @@ void avro_update_index(AVRO_INSTANCE* router)
 }
 
 /** The SQL for the in-memory used_tables table */
-static const char *insert_sql = "INSERT OR IGNORE INTO "MEMORY_TABLE_NAME
+static const char *insert_sql = "INSERT OR IGNORE INTO " MEMORY_TABLE_NAME
                                 "(domain, server_id, sequence, binlog_timestamp, table_name)"
                                 " VALUES (%lu, %lu, %lu, %u, \"%s\")";
 
@@ -217,7 +217,7 @@ static const char *insert_sql = "INSERT OR IGNORE INTO "MEMORY_TABLE_NAME
  * @param router Avro router instance
  * @param table Table to add
  */
-void add_used_table(AVRO_INSTANCE* router, char* table)
+void add_used_table(AVRO_INSTANCE* router, const char* table)
 {
     char sql[AVRO_SQL_BUFFER_SIZE], *errmsg;
     snprintf(sql, sizeof(sql), insert_sql, router->gtid.domain, router->gtid.server_id,
@@ -244,14 +244,14 @@ void update_used_tables(AVRO_INSTANCE* router)
 {
     char *errmsg;
 
-    if (sqlite3_exec(router->sqlite_handle, "INSERT INTO "USED_TABLES_TABLE_NAME
-                     " SELECT * FROM "MEMORY_TABLE_NAME, NULL, NULL, &errmsg) != SQLITE_OK)
+    if (sqlite3_exec(router->sqlite_handle, "INSERT INTO " USED_TABLES_TABLE_NAME
+                     " SELECT * FROM " MEMORY_TABLE_NAME, NULL, NULL, &errmsg) != SQLITE_OK)
     {
         MXS_ERROR("Failed to transfer used table data from memory to disk: %s", errmsg);
     }
     sqlite3_free(errmsg);
 
-    if (sqlite3_exec(router->sqlite_handle, "DELETE FROM "MEMORY_TABLE_NAME,
+    if (sqlite3_exec(router->sqlite_handle, "DELETE FROM " MEMORY_TABLE_NAME,
                      NULL, NULL, &errmsg) != SQLITE_OK)
     {
         MXS_ERROR("Failed to transfer used table data from memory to disk: %s", errmsg);

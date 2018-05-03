@@ -103,7 +103,7 @@ void avro_close_binlog(int fd)
 AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
                              size_t block_size)
 {
-    AVRO_TABLE *table = MXS_CALLOC(1, sizeof(AVRO_TABLE));
+    AVRO_TABLE *table = static_cast<AVRO_TABLE*>(MXS_CALLOC(1, sizeof(AVRO_TABLE)));
     if (table)
     {
         if (avro_schema_from_json_length(json_schema, strlen(json_schema),
@@ -163,7 +163,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
     FILE *config_file;
     char filename[PATH_MAX + 1];
 
-    snprintf(filename, sizeof(filename), "%s/"AVRO_PROGRESS_FILE".tmp", router->avrodir);
+    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE ".tmp", router->avrodir);
 
     /* open file for writing */
     config_file = fopen(filename, "wb");
@@ -184,7 +184,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
 
     /* rename tmp file to right filename */
     char newname[PATH_MAX + 1];
-    snprintf(newname, sizeof(newname), "%s/"AVRO_PROGRESS_FILE, router->avrodir);
+    snprintf(newname, sizeof(newname), "%s/" AVRO_PROGRESS_FILE, router->avrodir);
     int rc = rename(filename, newname);
 
     if (rc == -1)
@@ -266,7 +266,7 @@ bool avro_load_conversion_state(AVRO_INSTANCE *router)
     char filename[PATH_MAX + 1];
     bool rval = false;
 
-    snprintf(filename, sizeof(filename), "%s/"AVRO_PROGRESS_FILE, router->avrodir);
+    snprintf(filename, sizeof(filename), "%s/" AVRO_PROGRESS_FILE, router->avrodir);
 
     /** No stored state, this is the first time the router is started */
     if (access(filename, F_OK) == -1)
@@ -340,7 +340,7 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(AVRO_INSTANCE* router, ui
         char next_binlog[BINLOG_FNAMELEN + 1];
         if (snprintf(next_binlog, sizeof(next_binlog),
                      BINLOG_NAMEFMT, router->fileroot,
-                     blr_file_get_next_binlogname(router->binlog_name)) >= sizeof(next_binlog))
+                     blr_file_get_next_binlogname(router->binlog_name)) >=  (int)sizeof(next_binlog))
         {
             MXS_ERROR("Next binlog name did not fit into the allocated buffer "
                       "but was truncated, aborting: %s", next_binlog);
@@ -416,7 +416,7 @@ static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t p
         /** NULL-terminate for QUERY_EVENT processing */
         data[hdr->event_size - BINLOG_EVENT_HDR_LEN] = '\0';
 
-        if (n != hdr->event_size - BINLOG_EVENT_HDR_LEN)
+        if (n != static_cast<int>(hdr->event_size - BINLOG_EVENT_HDR_LEN))
         {
             if (n == -1)
             {
@@ -824,7 +824,8 @@ void avro_load_metadata_from_schemas(AVRO_INSTANCE *router)
             if (versionend == suffix)
             {
                 snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-                TABLE_CREATE *old = hashtable_fetch(router->created_tables, table_ident);
+                TABLE_CREATE *old =
+                    static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
 
                 if (old == NULL || version > old->version)
                 {
@@ -860,7 +861,7 @@ void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
         char *key;
         while ((key = (char*)hashtable_next(iter)))
         {
-            AVRO_TABLE *table = hashtable_fetch(router->open_tables, key);
+            AVRO_TABLE *table = static_cast<AVRO_TABLE*>(hashtable_fetch(router->open_tables, key));
 
             if (table)
             {
@@ -974,18 +975,18 @@ bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
     snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database, created->table);
 
     spinlock_acquire(&router->lock); // Is this necessary?
-    TABLE_CREATE *old = hashtable_fetch(router->created_tables, table_ident);
+    TABLE_CREATE *old = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
 
     if (old)
     {
         HASHITERATOR *iter = hashtable_iterator(router->table_maps);
 
         char *key;
-        while ((key = hashtable_next(iter)))
+        while ((key = static_cast<char*>(hashtable_next(iter))))
         {
             if (strcmp(key, table_ident) == 0)
             {
-                TABLE_MAP* map = hashtable_fetch(router->table_maps, key);
+                TABLE_MAP* map = static_cast<TABLE_MAP*>(hashtable_fetch(router->table_maps, key));
                 router->active_maps[map->id % MAX_MAPPED_TABLES] = NULL;
                 hashtable_delete(router->table_maps, key);
             }
@@ -1066,7 +1067,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     db[dblen] = 0;
 
     size_t sqlsz = len, tmpsz = len;
-    char *tmp = MXS_MALLOC(len + 1);
+    char *tmp = static_cast<char*>(MXS_MALLOC(len + 1));
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
@@ -1126,7 +1127,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     }
     else if (is_alter_table_statement(router, sql, len))
     {
-        TABLE_CREATE *created = hashtable_fetch(router->created_tables, ident);
+        TABLE_CREATE *created = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, ident));
 
         if (created)
         {

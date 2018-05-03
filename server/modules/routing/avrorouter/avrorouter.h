@@ -73,8 +73,8 @@ MXS_BEGIN_DECLS
 #define AVRO_MAX_FILENAME_LEN 255
 #endif
 
-static char *avro_client_states[]      = { "Unregistered", "Registered", "Processing", "Errored" };
-static char *avro_client_client_mode[] = { "Catch-up", "Busy", "Wait_for_data" };
+static const char *avro_client_states[]      = { "Unregistered", "Registered", "Processing", "Errored" };
+static const char *avro_client_client_mode[] = { "Catch-up", "Busy", "Wait_for_data" };
 
 static const char *avro_domain       = "domain";
 static const char *avro_server_id    = "server_id";
@@ -82,7 +82,7 @@ static const char *avro_sequence     = "sequence";
 static const char *avro_event_number = "event_number";
 static const char *avro_event_type   = "event_type";
 static const char *avro_timestamp    = "timestamp";
-static char *avro_client_ouput[]     = { "Undefined", "JSON", "Avro" };
+static const char *avro_client_ouput[]     = { "Undefined", "JSON", "Avro" };
 
 static inline bool is_reserved_word(const char* word)
 {
@@ -310,7 +310,7 @@ extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *tab
                             char* dest, size_t len);
 extern TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create);
 extern void table_map_free(TABLE_MAP *map);
-extern TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len);
+extern TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len);
 extern TABLE_CREATE* table_create_copy(AVRO_INSTANCE *router, const char* sql, size_t len, const char* db);
 extern void table_create_free(TABLE_CREATE* value);
 extern bool table_create_save(TABLE_CREATE *create, const char *filename);

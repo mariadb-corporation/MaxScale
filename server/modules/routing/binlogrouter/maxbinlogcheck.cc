@@ -72,7 +72,7 @@ static struct option long_options[] =
     {0, 0, 0, 0}
 };
 #endif
-char *binlog_check_version = "2.2.1";
+const char *binlog_check_version = "2.2.1";
 
 int
 maxscale_uptime()

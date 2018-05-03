@@ -369,8 +369,6 @@ uint64_t SchemaRouter::getCapabilities()
 
 }
 
-MXS_BEGIN_DECLS
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -379,7 +377,7 @@ MXS_BEGIN_DECLS
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
@@ -409,5 +407,3 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-
-MXS_END_DECLS

@@ -55,7 +55,7 @@ static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_show_variables(DCB *dcb, MAXINFO_TREE *filter);
 static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter);
-static int maxinfo_pattern_match(char *pattern, char *str);
+static int maxinfo_pattern_match(const char *pattern, const char *str);
 static void exec_flush(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_set(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_clear(DCB *dcb, MAXINFO_TREE *tree);
@@ -272,7 +272,7 @@ exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } show_commands[] =
 {
@@ -334,7 +334,7 @@ void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } flush_commands[] =
 {
@@ -421,7 +421,7 @@ void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } set_commands[] =
 {
@@ -502,7 +502,7 @@ void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } clear_commands[] =
 {
@@ -621,7 +621,7 @@ void exec_shutdown_service(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } shutdown_commands[] =
 {
@@ -731,7 +731,7 @@ void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char *name;
+    const char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } restart_commands[] =
 {
@@ -777,10 +777,10 @@ exec_restart(DCB *dcb, MAXINFO_TREE *tree)
 static char *
 getVersion()
 {
-    return MAXSCALE_VERSION;
+    return const_cast<char*>(MAXSCALE_VERSION);
 }
 
-static char *versionComment = "MariaDB MaxScale";
+static const char *versionComment = "MariaDB MaxScale";
 /**
  * Return the current MaxScale version
  *
@@ -789,7 +789,7 @@ static char *versionComment = "MariaDB MaxScale";
 static char *
 getVersionComment()
 {
-    return versionComment;
+    return const_cast<char*>(versionComment);
 }
 
 /**
@@ -813,7 +813,7 @@ typedef void *(*STATSFUNC)();
  */
 static struct
 {
-    char *name;
+    const char *name;
     int  type;
     STATSFUNC   func;
 } variables[] =
@@ -833,7 +833,7 @@ static struct
 typedef struct
 {
     int  index;
-    char *like;
+    const char *like;
 } VARCONTEXT;
 /**
  * Callback function to populate rows of the show variable
@@ -894,7 +894,7 @@ exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
     RESULTSET *result;
     VARCONTEXT *context;
 
-    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
     {
         return;
     }
@@ -931,7 +931,7 @@ maxinfo_variables()
 {
     RESULTSET *result;
     VARCONTEXT *context;
-    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
     {
         return NULL;
     }
@@ -1079,9 +1079,9 @@ maxinfo_max_event_exec_time()
  */
 static struct
 {
-    char      *name;
-    int       type;
-    STATSFUNC func;
+    const char *name;
+    int         type;
+    STATSFUNC   func;
 } status[] =
 {
     { "Uptime", VT_INT, (STATSFUNC)maxscale_uptime },
@@ -1166,7 +1166,7 @@ exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
     RESULTSET *result;
     VARCONTEXT *context;
 
-    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
     {
         return;
     }
@@ -1203,7 +1203,7 @@ maxinfo_status()
 {
     RESULTSET   *result;
     VARCONTEXT   *context;
-    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
     {
         return NULL;
     }
@@ -1242,10 +1242,10 @@ exec_select(DCB *dcb, MAXINFO_TREE *tree)
  * @return      Zero on match
  */
 static int
-maxinfo_pattern_match(char *pattern, char *str)
+maxinfo_pattern_match(const char *pattern, const char *str)
 {
     int anchor = 0, len, trailing;
-    char *fixed;
+    const char *fixed;
 
     if (*pattern != '%')
     {
@@ -1275,7 +1275,7 @@ maxinfo_pattern_match(char *pattern, char *str)
     }
     else
     {
-        char *portion = MXS_MALLOC(len + 1);
+        char *portion = static_cast<char*>(MXS_MALLOC(len + 1));
         MXS_ABORT_IF_NULL(portion);
         int rval;
         strncpy(portion, fixed, len - trailing);

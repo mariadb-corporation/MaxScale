@@ -419,14 +419,12 @@ uint64_t RWSplit::getCapabilities()
            RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING;
 }
 
-MXS_BEGIN_DECLS
-
 /**
  * The module entry point routine. It is this routine that must return
  * the structure that is referred to as the "module object". This is a
  * structure with the set of external entry points for this module.
  */
-MXS_MODULE *MXS_CREATE_MODULE()
+extern "C" MXS_MODULE *MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
@@ -485,5 +483,3 @@ MXS_MODULE *MXS_CREATE_MODULE()
     MXS_NOTICE("Initializing statement-based read/write split router module.");
     return &info;
 }
-
-MXS_END_DECLS

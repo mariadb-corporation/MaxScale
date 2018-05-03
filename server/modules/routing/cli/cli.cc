@@ -65,7 +65,7 @@ static CLI_INSTANCE *instances;
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise CLI router module");
     spinlock_init(&instlock);
@@ -122,7 +122,7 @@ createInstance(SERVICE *service, char **options)
     CLI_INSTANCE    *inst;
     int     i;
 
-    if ((inst = MXS_MALLOC(sizeof(CLI_INSTANCE))) == NULL)
+    if ((inst = static_cast<CLI_INSTANCE*>(MXS_MALLOC(sizeof(CLI_INSTANCE)))) == NULL)
     {
         return NULL;
     }
@@ -180,7 +180,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     session->state = SESSION_STATE_READY;
 
-    return (void *)client;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }
 
 /**

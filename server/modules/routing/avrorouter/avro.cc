@@ -195,7 +195,7 @@ static bool avro_handle_purge(const MODULECMD_ARG *args, json_t** output)
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     spinlock_init(&instlock);
     instances = NULL;
@@ -297,7 +297,7 @@ bool create_tables(sqlite3* handle)
                           NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to create GTID index table '"GTID_TABLE_NAME"': %s",
+        MXS_ERROR("Failed to create GTID index table '" GTID_TABLE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
@@ -310,7 +310,7 @@ bool create_tables(sqlite3* handle)
                       NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to create used tables table '"USED_TABLES_TABLE_NAME"': %s",
+        MXS_ERROR("Failed to create used tables table '" USED_TABLES_TABLE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
@@ -321,17 +321,17 @@ bool create_tables(sqlite3* handle)
                       NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to create indexing progress table '"INDEX_TABLE_NAME"': %s",
+        MXS_ERROR("Failed to create indexing progress table '" INDEX_TABLE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
     }
 
-    rc = sqlite3_exec(handle, "ATTACH DATABASE ':memory:' AS "MEMORY_DATABASE_NAME,
+    rc = sqlite3_exec(handle, "ATTACH DATABASE ':memory:' AS " MEMORY_DATABASE_NAME,
                       NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to attach in-memory database '"MEMORY_DATABASE_NAME"': %s",
+        MXS_ERROR("Failed to attach in-memory database '" MEMORY_DATABASE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
@@ -344,8 +344,8 @@ bool create_tables(sqlite3* handle)
                       NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to create in-memory used tables table '"MEMORY_DATABASE_NAME
-                  "."MEMORY_TABLE_NAME"': %s",
+        MXS_ERROR("Failed to create in-memory used tables table '" MEMORY_DATABASE_NAME
+                  "." MEMORY_TABLE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
@@ -479,7 +479,7 @@ createInstance(SERVICE *service, char **options)
     AVRO_INSTANCE *inst;
     int i;
 
-    if ((inst = MXS_CALLOC(1, sizeof(AVRO_INSTANCE))) == NULL)
+    if ((inst = static_cast<AVRO_INSTANCE*>(MXS_CALLOC(1, sizeof(AVRO_INSTANCE)))) == NULL)
     {
         return NULL;
     }
@@ -506,7 +506,7 @@ createInstance(SERVICE *service, char **options)
     inst->fileroot = MXS_STRDUP_A(config_get_string(params, "filestem"));
     inst->row_target = config_get_integer(params, "group_rows");
     inst->trx_target = config_get_integer(params, "group_trx");
-    inst->codec = config_get_enum(params, "codec", codec_values);
+    inst->codec = static_cast<mxs_avro_codec_type>(config_get_enum(params, "codec", codec_values));
     int first_file = config_get_integer(params, "start_index");
     inst->block_size = config_get_size(params, "block_size");
 
@@ -798,7 +798,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     CHK_CLIENT_RSES(client);
 
-    return (void *) client;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }
 
 /**

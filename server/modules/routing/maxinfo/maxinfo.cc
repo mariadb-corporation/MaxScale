@@ -92,7 +92,7 @@ static INFO_INSTANCE    *instances;
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise MaxInfo router module.");
     spinlock_init(&instlock);
@@ -149,7 +149,7 @@ createInstance(SERVICE *service, char **options)
     INFO_INSTANCE *inst;
     int i;
 
-    if ((inst = MXS_MALLOC(sizeof(INFO_INSTANCE))) == NULL)
+    if ((inst = static_cast<INFO_INSTANCE*>(MXS_MALLOC(sizeof(INFO_INSTANCE)))) == NULL)
     {
         return NULL;
     }
@@ -207,7 +207,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     session->state = SESSION_STATE_READY;
 
-    return (void *)client;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }
 
 /**
@@ -329,7 +329,7 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
     }
     data = (uint8_t *)GWBUF_DATA(queue);
     length = data[0] + (data[1] << 8) + (data[2] << 16);
-    if (length + 4 > GWBUF_LENGTH(queue))
+    if (length + 4 > static_cast<int>(GWBUF_LENGTH(queue)))
     {
         // Incomplete packet, must be buffered
         session->queue = queue;
@@ -684,7 +684,7 @@ typedef RESULTSET *(*RESULTSETFUNC)();
  */
 static struct uri_table
 {
-    char        *uri;
+    const char     *uri;
     RESULTSETFUNC   func;
 } supported_uri[] =
 {
