@@ -105,7 +105,8 @@ program
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, function(argv) {
         maxctrl(argv, function() {
-            return error('Unknown command ' + JSON.stringify(argv._) + '. See output of `help` for a list of commands.')
+            msg = argv._.length == 0 ? 'No command given' : 'Unknown command ' + JSON.stringify(argv._)
+            return error(msg + '. See output of `help` for a list of commands.')
         })
     })
 
