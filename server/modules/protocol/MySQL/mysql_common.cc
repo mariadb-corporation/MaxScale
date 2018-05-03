@@ -316,7 +316,7 @@ mysql_create_standard_error(int packet_number,
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
-    mysql_packet_header[3] = 0;
+    mysql_packet_header[3] = packet_number;
     memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
 
     // current buffer pointer
@@ -1408,6 +1408,23 @@ int send_mysql_native_password_response(DCB* dcb)
     calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb_write(dcb, buffer);
+}
+
+bool send_auth_switch_request_packet(DCB* dcb)
+{
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol;
+    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+    uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
+    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
+
+    uint8_t* data = GWBUF_DATA(buffer);
+    gw_mysql_set_byte3(data, len);
+    data[3] = 1; // First response to the COM_CHANGE_USER
+    data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
+    memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
+    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+    return dcb_write(dcb, buffer) != 0;
 }
 
 /**

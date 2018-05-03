@@ -566,6 +566,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
     dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
+    dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
@@ -847,6 +848,27 @@ server_update_credentials(SERVER *server, const char *user, const char *passwd)
     }
 }
 
+static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
+{
+    char *my_name = MXS_STRDUP(name);
+    char *my_value = MXS_STRDUP(value);
+
+    SERVER_PARAM *param = (SERVER_PARAM *)MXS_MALLOC(sizeof(SERVER_PARAM));
+
+    if (!my_name || !my_value || !param)
+    {
+        MXS_FREE(my_name);
+        MXS_FREE(my_value);
+        MXS_FREE(param);
+        return NULL;
+    }
+
+    param->active = true;
+    param->name = my_name;
+    param->value = my_value;
+
+    return param;
+}
 
 /**
  * Add a server parameter to a server.
@@ -860,27 +882,15 @@ server_update_credentials(SERVER *server, const char *user, const char *passwd)
  */
 void server_add_parameter(SERVER *server, const char *name, const char *value)
 {
-    char *my_name = MXS_STRDUP(name);
-    char *my_value = MXS_STRDUP(value);
+    SERVER_PARAM* param = allocate_parameter(name, value);
 
-    SERVER_PARAM *param = (SERVER_PARAM *)MXS_MALLOC(sizeof(SERVER_PARAM));
-
-    if (!my_name || !my_value || !param)
+    if (param)
     {
-        MXS_FREE(my_name);
-        MXS_FREE(my_value);
-        MXS_FREE(param);
-        return;
+        spinlock_acquire(&server->lock);
+        param->next = server->parameters;
+        server->parameters = param;
+        spinlock_release(&server->lock);
     }
-
-    param->active = true;
-    param->name = my_name;
-    param->value = my_value;
-
-    spinlock_acquire(&server->lock);
-    param->next = server->parameters;
-    server->parameters = param;
-    spinlock_release(&server->lock);
 }
 
 bool server_remove_parameter(SERVER *server, const char *name)
@@ -900,6 +910,32 @@ bool server_remove_parameter(SERVER *server, const char *name)
 
     spinlock_release(&server->lock);
     return rval;
+}
+
+void server_update_parameter(SERVER *server, const char *name, const char *value)
+{
+    SERVER_PARAM* param = allocate_parameter(name, value);
+
+    if (param)
+    {
+        spinlock_acquire(&server->lock);
+
+        // Insert new value
+        param->next = server->parameters;
+        server->parameters = param;
+
+        // Mark old value, if found, as inactive
+        for (SERVER_PARAM *p = server->parameters->next; p; p = p->next)
+        {
+            if (strcmp(p->name, name) == 0 && p->active)
+            {
+                p->active = false;
+                break;
+            }
+        }
+
+        spinlock_release(&server->lock);
+    }
 }
 
 /**
@@ -923,24 +959,35 @@ static void server_parameter_free(SERVER_PARAM *tofree)
 /**
  * Retrieve a parameter value from a server
  *
- * @param server        The server we are looking for a parameter of
- * @param name          The name of the parameter we require
- * @return      The parameter value or NULL if not found
+ * @param server The server we are looking for a parameter of
+ * @param name   The name of the parameter we require
+ * @param out    Buffer where value is stored, use NULL to check if the parameter exists
+ * @param size   Size of @c out, ignored if @c out is NULL
+ *
+ * @return True if parameter was found
  */
-const char *
-server_get_parameter(const SERVER *server, const char *name)
+bool server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
 {
+    bool found = false;
     SERVER_PARAM *param = server->parameters;
+    spinlock_acquire(&server->lock);
 
     while (param)
     {
         if (strcmp(param->name, name) == 0 && param->active)
         {
-            return param->value;
+            if (out)
+            {
+                snprintf(out, size, "%s", param->value);
+            }
+            found = true;
+            break;
         }
         param = param->next;
     }
-    return NULL;
+
+    spinlock_release(&server->lock);
+    return found;
 }
 
 /**
@@ -1459,6 +1506,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
+    json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
 
     json_object_set_new(attr, "statistics", stats);
 

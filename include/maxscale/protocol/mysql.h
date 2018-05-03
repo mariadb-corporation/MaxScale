@@ -532,6 +532,9 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb);
 /** Sends a response for an AuthSwitchRequest to the default auth plugin */
 int send_mysql_native_password_response(DCB* dcb);
 
+/** Sends an AuthSwitchRequest packet with the default auth plugin to the DCB */
+bool send_auth_switch_request_packet(DCB* dcb);
+
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char* message);
 

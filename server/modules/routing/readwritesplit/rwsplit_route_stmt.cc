@@ -377,6 +377,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
             if (backend->execute_session_command())
             {
                 nsucc += 1;
+                atomic_add_uint64(&backend->server()->stats.packets, 1);
 
                 if (expecting_response)
                 {
@@ -973,6 +974,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         }
 
         atomic_add_uint64(&m_router->stats().n_queries, 1);
+        atomic_add_uint64(&target->server()->stats.packets, 1);
 
         if (!large_query && response == mxs::Backend::EXPECT_RESPONSE)
         {

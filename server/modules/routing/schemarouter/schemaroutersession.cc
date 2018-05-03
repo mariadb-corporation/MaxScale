@@ -443,6 +443,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         {
             /** Add one query response waiter to backend reference */
             atomic_add(&m_router->m_stats.n_queries, 1);
+            atomic_add_uint64(&bref->server()->stats.packets, 1);
             ret = 1;
         }
         else
@@ -743,6 +744,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                 if ((*it)->execute_session_command())
                 {
                     succp = true;
+                    atomic_add_uint64(&(*it)->server()->stats.packets, 1);
                 }
                 else
                 {

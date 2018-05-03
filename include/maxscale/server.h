@@ -63,6 +63,7 @@ typedef struct
     int n_persistent;     /**< Current persistent pool */
     uint64_t n_new_conn;  /**< Times the current pool was empty */
     uint64_t n_from_pool; /**< Times when a connection was available from the pool */
+    uint64_t packets;     /**< Number of packets routed to this server */
 } SERVER_STATS;
 
 /**
@@ -322,6 +323,15 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
 bool server_remove_parameter(SERVER *server, const char *name);
 
 /**
+ * @brief Update server parameter
+ *
+ * @param server Server to update
+ * @param name   Parameter to update
+ * @param value  New value of parameter
+ */
+void server_update_parameter(SERVER *server, const char *name, const char *value);
+
+/**
  * @brief Check if a server points to a local MaxScale service
  *
  * @param server Server to check
@@ -358,7 +368,7 @@ extern void server_set_status_nolock(SERVER *server, uint64_t bit);
 extern void server_clear_status_nolock(SERVER *server, uint64_t bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
-extern const char *server_get_parameter(const SERVER *server, const char *name);
+extern bool server_get_parameter(const SERVER *server, const char *name, char* out, size_t size);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
 extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);
