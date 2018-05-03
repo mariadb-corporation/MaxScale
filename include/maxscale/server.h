@@ -357,7 +357,7 @@ extern void server_set_status_nolock(SERVER *server, uint64_t bit);
 extern void server_clear_status_nolock(SERVER *server, uint64_t bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
-extern bool server_get_parameter(const SERVER *server, const char *name, char* out, size_t size);
+extern size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
 extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);
