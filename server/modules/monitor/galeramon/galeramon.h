@@ -41,8 +41,6 @@
 #include <maxscale/config.h>
 #include <maxscale/hashtable.h>
 
-MXS_BEGIN_DECLS
-
 /**
  *  Galera Variables and server reference for each
  *  monitored node that could be part of cluster.
@@ -76,7 +74,7 @@ typedef struct galera_cluster_info
 /**
  * The handle for an instance of a Galera Monitor module
  */
-typedef struct
+struct GALERA_MONITOR : public MXS_SPECIFIC_MONITOR
 {
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
@@ -96,8 +94,6 @@ typedef struct
     HASHTABLE *galera_nodes_info; /**< Contains Galera Cluster variables of all nodes */
     GALERA_CLUSTER_INFO cluster_info; /**< Contains Galera cluster info */
     MXS_MONITOR* monitor;
-} GALERA_MONITOR;
-
-MXS_END_DECLS
+};
 
 #endif

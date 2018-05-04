@@ -30,7 +30,8 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
+static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
+                                          const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static json_t* diagnostics_json(const MXS_MONITOR *);
@@ -105,7 +106,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return A handle to use when interacting with the monitor
  */
-static void *
+static MXS_SPECIFIC_MONITOR *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon->handle);

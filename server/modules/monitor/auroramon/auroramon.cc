@@ -25,14 +25,14 @@
 #include <maxscale/debug.h>
 #include <maxscale/mysql_utils.h>
 
-typedef struct aurora_monitor
+struct AURORA_MONITOR : public MXS_SPECIFIC_MONITOR
 {
     bool   shutdown;            /**< True if the monitor is stopped */
     THREAD thread;              /**< Monitor thread */
     char*  script;              /**< Launchable script */
     uint64_t   events;          /**< Enabled monitor events */
     MXS_MONITOR* monitor;
-} AURORA_MONITOR;
+};
 
 /**
  * @brief Update the status of a server
@@ -186,7 +186,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
  * @param opt The configuration parameters for this monitor
  * @return Monitor handle
  */
-static void *
+static MXS_SPECIFIC_MONITOR *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon->handle);

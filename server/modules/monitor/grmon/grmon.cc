@@ -30,7 +30,7 @@
 /**
  * The instance of a Group Replication Monitor
  */
-struct GRMon
+struct GRMon : public MXS_SPECIFIC_MONITOR
 {
     GRMon(const GRMon&);
     GRMon& operator&(const GRMon&);
@@ -99,7 +99,7 @@ void GRMon::stop()
  *
  * @return A handle to use when interacting with the monitor
  */
-static void *
+static MXS_SPECIFIC_MONITOR *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     return GRMon::create(mon, params);

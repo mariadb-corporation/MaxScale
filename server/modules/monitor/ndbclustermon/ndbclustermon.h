@@ -18,7 +18,7 @@
 #include <maxscale/thread.h>
 
 // The handle for an instance of a NDB Cluster Monitor module
-typedef struct
+struct NDBC_MONITOR : public MXS_SPECIFIC_MONITOR
 {
     THREAD thread; /**< Monitor thread */
     SPINLOCK lock; /**< The monitor spinlock */
@@ -29,4 +29,4 @@ typedef struct
     MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     MXS_MONITOR* monitor;
-} NDBC_MONITOR;
+};

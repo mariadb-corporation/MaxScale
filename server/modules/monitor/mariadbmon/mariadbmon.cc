@@ -912,7 +912,8 @@ bool MariaDBMonitor::check_sql_files()
  * @param params Configuration parameters
  * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
  */
-static void* startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+static MXS_SPECIFIC_MONITOR* startMonitor(MXS_MONITOR *monitor,
+                                          const MXS_CONFIG_PARAMETER* params)
 {
     return MariaDBMonitor::start(monitor, params);
 }

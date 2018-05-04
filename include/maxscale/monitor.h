@@ -32,6 +32,14 @@ struct mxs_monitor;
 typedef struct mxs_monitor MXS_MONITOR;
 
 /**
+ * An opaque type from which types specific for a particular
+ * monitor can be derived.
+ */
+typedef struct mxs_specific_monitor
+{
+} MXS_SPECIFIC_MONITOR;
+
+/**
  * @verbatim
  * The "module object" structure for a backend monitor module
  *
@@ -68,7 +76,8 @@ typedef struct mxs_monitor_object
      *
      * @return Pointer to the monitor specific data, stored in @c monitor->handle
      */
-    void *(*startMonitor)(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER *params);
+    MXS_SPECIFIC_MONITOR *(*startMonitor)(MXS_MONITOR *monitor,
+                                          const MXS_CONFIG_PARAMETER *params);
 
     /**
      * @brief Stop the monitor
@@ -95,7 +104,7 @@ typedef struct mxs_monitor_object
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
  */
-#define MXS_MONITOR_VERSION {3, 1, 0}
+#define MXS_MONITOR_VERSION {4, 0, 0}
 
 /**
  * Specifies capabilities specific for monitor.
@@ -211,7 +220,7 @@ struct mxs_monitor
                                    */
     MXS_MONITOR_OBJECT *module;   /**< The "monitor object" */
     char *module_name;            /**< Name of the monitor module */
-    void *handle;                 /**< Handle returned from startMonitor */
+    MXS_SPECIFIC_MONITOR *handle; /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
     volatile bool server_pending_changes;
     /**< Are there any pending changes to a server?

@@ -33,12 +33,10 @@
  * @file mmmon.h - The Multi-Master monitor
  */
 
-MXS_BEGIN_DECLS
-
 /**
  * The handle for an instance of a Multi-Master Monitor module
  */
-typedef struct
+struct MM_MONITOR : public MXS_SPECIFIC_MONITOR
 {
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
@@ -49,8 +47,6 @@ typedef struct
     char* script; /*< Script to call when state changes occur on servers */
     uint64_t events; /*< enabled events */
     MXS_MONITOR* monitor;
-} MM_MONITOR;
-
-MXS_END_DECLS
+};
 
 #endif
