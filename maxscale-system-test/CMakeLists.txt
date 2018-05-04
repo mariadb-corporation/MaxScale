@@ -768,6 +768,10 @@ add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS re
 # test effect of local_address in configuration file
 add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
 
+# test how Galera monitor can find a new master
+add_test_executable(MXS-1737_galeramon_test.cpp MXS-1737_galeramon_test galera LABELS GALERA_BACKEND)
+
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
