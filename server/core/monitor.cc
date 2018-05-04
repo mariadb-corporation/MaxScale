@@ -158,7 +158,7 @@ monitor_free(MXS_MONITOR *mon)
 {
     MXS_MONITOR *ptr;
 
-    mon->module->stopMonitor(mon);
+    mon->module->stopMonitor(mon->handle);
     mon->state = MONITOR_STATE_FREED;
     spinlock_acquire(&monLock);
     if (allMonitors == mon)
@@ -253,7 +253,7 @@ monitorStop(MXS_MONITOR *monitor)
         if (monitor->state == MONITOR_STATE_RUNNING)
         {
             monitor->state = MONITOR_STATE_STOPPING;
-            monitor->module->stopMonitor(monitor);
+            monitor->module->stopMonitor(monitor->handle);
             monitor->state = MONITOR_STATE_STOPPED;
 
             MXS_MONITORED_SERVER* db = monitor->monitored_servers;
@@ -539,7 +539,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
     {
         if (monitor->module->diagnostics)
         {
-            monitor->module->diagnostics(dcb, monitor);
+            monitor->module->diagnostics(monitor->handle, dcb);
         }
         else
         {
@@ -1854,7 +1854,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 
     if (monitor->handle && monitor->module->diagnostics_json)
     {
-        json_t* diag = monitor->module->diagnostics_json(monitor);
+        json_t* diag = monitor->module->diagnostics_json(monitor->handle);
 
         if (diag)
         {

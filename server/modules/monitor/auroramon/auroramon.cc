@@ -235,9 +235,9 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_MONITOR *mon)
+stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    AURORA_MONITOR *handle = (AURORA_MONITOR *) mon->handle;
+    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
 
     handle->shutdown = true;
     thread_wait(handle->thread);
@@ -250,7 +250,7 @@ stopMonitor(MXS_MONITOR *mon)
  * @param mon   The monitor
  */
 static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
 }
 
@@ -260,7 +260,7 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
     return NULL;
 }

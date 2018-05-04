@@ -32,9 +32,9 @@ static bool warn_erange_on_local_index = true;
 
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
-static json_t* diagnostics_json(const MXS_MONITOR *);
+static void stopMonitor(MXS_SPECIFIC_MONITOR *);
+static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
 static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR*);
 static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONITORED_SERVER *, int);
 static void disableMasterFailback(void *, int);
@@ -200,9 +200,9 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_MONITOR *mon)
+stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
@@ -215,9 +215,9 @@ stopMonitor(MXS_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
-    const GALERA_MONITOR *handle = (const GALERA_MONITOR *) mon->handle;
+    const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
 
     dcb_printf(dcb, "Master Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
     dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
@@ -240,10 +240,10 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
     json_t* rval = json_object();
-    const GALERA_MONITOR *handle = (const GALERA_MONITOR *)mon->handle;
+    const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
 
     json_object_set_new(rval, "disable_master_failback", json_boolean(handle->disableMasterFailback));
     json_object_set_new(rval, "disable_master_role_setting", json_boolean(handle->disableMasterRoleSetting));

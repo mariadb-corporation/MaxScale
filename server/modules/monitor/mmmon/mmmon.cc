@@ -39,9 +39,9 @@ MXS_MODULE info =
 /*lint +e14 */
 
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
-static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
-static json_t* diagnostics_json(const MXS_MONITOR *);
+static void stopMonitor(MXS_SPECIFIC_MONITOR *);
+static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
 static void detectStaleMaster(void *, int);
 static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
@@ -165,9 +165,9 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_MONITOR *mon)
+stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
+    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
@@ -179,9 +179,9 @@ stopMonitor(MXS_MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
-    const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
+    const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
 
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
 }
@@ -191,9 +191,9 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
-    const MM_MONITOR *handle = (const MM_MONITOR *)mon->handle;
+    const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
 
     json_t* rval = json_object();
     json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));

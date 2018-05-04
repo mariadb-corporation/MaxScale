@@ -32,9 +32,9 @@ static void monitorMain(void *);
 
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
-static json_t* diagnostics_json(const MXS_MONITOR *);
+static void stopMonitor(MXS_SPECIFIC_MONITOR *);
+static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
 bool isNdbEvent(mxs_monitor_event_t event);
 
 
@@ -158,9 +158,9 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_MONITOR *mon)
+stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    NDBC_MONITOR *handle = (NDBC_MONITOR *) mon->handle;
+    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
@@ -173,7 +173,7 @@ stopMonitor(MXS_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
 }
 
@@ -183,7 +183,7 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  * @param dcb   DCB to send output
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
     return NULL;
 }

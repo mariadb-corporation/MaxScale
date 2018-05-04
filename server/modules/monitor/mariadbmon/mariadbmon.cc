@@ -923,9 +923,9 @@ static MXS_SPECIFIC_MONITOR* startMonitor(MXS_MONITOR *monitor,
  *
  * @param mon  The monitor that should be stopped.
  */
-static void stopMonitor(MXS_MONITOR *mon)
+static void stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+    auto handle = static_cast<MariaDBMonitor*>(mon);
     handle->stop();
 }
 
@@ -935,9 +935,9 @@ static void stopMonitor(MXS_MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
-    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon->handle);
+    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon);
     handle->diagnostics(dcb);
 }
 
@@ -946,9 +946,9 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
+    const MariaDBMonitor *handle = static_cast<const MariaDBMonitor*>(mon);
     return handle->diagnostics_json();
 }
 

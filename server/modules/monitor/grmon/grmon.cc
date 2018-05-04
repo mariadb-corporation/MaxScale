@@ -111,12 +111,11 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_MONITOR *mon)
+stopMonitor(MXS_SPECIFIC_MONITOR *mon)
 {
-    GRMon *handle = (GRMon *) mon->handle;
+    GRMon *handle = static_cast<GRMon*>(mon);
     handle->stop();
     delete handle;
-    mon->handle = NULL;
 }
 
 /**
@@ -126,7 +125,7 @@ stopMonitor(MXS_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
 {
 }
 
@@ -135,7 +134,7 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
 {
     return NULL;
 }
