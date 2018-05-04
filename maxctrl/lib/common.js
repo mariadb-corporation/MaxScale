@@ -19,6 +19,26 @@ var os = require('os')
 var fs = require('fs')
 var readlineSync = require('readline-sync')
 
+function normalizeWhitespace(table) {
+    table.forEach((v) => {
+        if (Array.isArray(v)) {
+            // `table` is an array of arrays
+            v.forEach((k) => {
+                if (typeof(v[k]) == 'string') {
+                    v[k] = v[k].replace( /\s+/g, ' ')
+                }
+            })
+        } else if (!Array.isArray(v) && v instanceof Object) {
+            // `table` is an array of objects
+            Object.keys(v).forEach((k) => {
+                if (typeof(v[k]) == 'string') {
+                    v[k] = v[k].replace( /\s+/g, ' ')
+                }
+            })
+        }
+    })
+}
+
 module.exports = function() {
 
     this._ = require('lodash-getpath')
@@ -101,7 +121,15 @@ module.exports = function() {
     }
 
     this.tableToString = function(table) {
+
+        if (this.argv.tsv)
+        {
+            // Convert whitespace into spaces to prevent breaking the TSV format
+            normalizeWhitespace(table)
+        }
+
         str = table.toString()
+
         if (this.argv.tsv) {
             // Based on the regex found in: https://github.com/jonschlinkert/strip-color
             str = str.replace( /\x1B\[[(?);]{0,2}(;?\d)*./g, '')
