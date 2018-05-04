@@ -38,6 +38,8 @@ MXS_MODULE info =
 };
 /*lint +e14 */
 
+static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static void finishMonitor(MXS_SPECIFIC_MONITOR *);
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_SPECIFIC_MONITOR *);
 static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
@@ -62,6 +64,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
+        initMonitor,
+        finishMonitor,
         startMonitor,
         stopMonitor,
         diagnostics,
@@ -105,6 +109,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 /*lint +e14 */
+
+static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *mon,
+                                         const MXS_CONFIG_PARAMETER *params)
+{
+    ss_dassert(!true);
+    return NULL;
+}
+
+static void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
+{
+    ss_dassert(!true);
+}
 
 /**
  * Start the instance of the monitor, returning a handle on the monitor.

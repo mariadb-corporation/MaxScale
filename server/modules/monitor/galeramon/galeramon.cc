@@ -30,6 +30,9 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
+static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *mon,
+                                         const MXS_CONFIG_PARAMETER *params);
+static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor);
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_SPECIFIC_MONITOR *);
@@ -65,6 +68,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
+        initMonitor,
+        finishMonitor,
         startMonitor,
         stopMonitor,
         diagnostics,
@@ -111,6 +116,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+}
+
+static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *mon,
+                                         const MXS_CONFIG_PARAMETER *params)
+{
+    ss_dassert(!true);
+    return NULL;
+}
+
+static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor)
+{
+    ss_dassert(!true);
 }
 
 /**

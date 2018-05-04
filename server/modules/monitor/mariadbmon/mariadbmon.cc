@@ -904,6 +904,18 @@ bool MariaDBMonitor::check_sql_files()
     return rval;
 }
 
+static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *monitor,
+                                         const MXS_CONFIG_PARAMETER* params)
+{
+    ss_dassert(!true);
+    return NULL;
+}
+
+static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor)
+{
+    ss_dassert(!true);
+}
+
 /**
  * Start the monitor instance and return the instance data. This function creates a thread to
  * execute the monitoring. Use stopMonitor() to stop the thread.
@@ -1121,6 +1133,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
+        initMonitor,
+        finishMonitor,
         startMonitor,
         stopMonitor,
         diagnostics,

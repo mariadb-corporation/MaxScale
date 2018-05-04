@@ -177,6 +177,18 @@ static void auroramon_free(AURORA_MONITOR *handle)
     }
 }
 
+static
+MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
+{
+    ss_dassert(!true);
+    return NULL;
+}
+
+static void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
+{
+    ss_dassert(!true);
+}
+
 /**
  * @brief Start the monitor
  *
@@ -278,6 +290,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MONITOR_OBJECT MyObject =
     {
+        initMonitor,
+        finishMonitor,
         startMonitor,
         stopMonitor,
         diagnostics,
