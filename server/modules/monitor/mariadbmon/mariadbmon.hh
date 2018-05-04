@@ -63,6 +63,15 @@ public:
     void main_loop();
 
     /**
+     * Create the monitor instance and return the instance data.
+     *
+     * @param monitor General monitor data
+     * @param params Configuration parameters
+     * @return A pointer to MariaDBMonitor specific data.
+     */
+    static MariaDBMonitor* create(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+
+    /**
      * Start the monitor instance and return the instance data, creating it if starting for the first time.
      * This function creates a thread to execute the monitoring.
      *
@@ -70,7 +79,14 @@ public:
      * @param params Configuration parameters
      * @return A pointer to MariaDBMonitor specific data.
      */
-    static MariaDBMonitor* start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+    static MariaDBMonitor* create_and_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Destroyes aka deletes the instance.
+     *
+     * @param monitor The instance to be finished.
+     */
+    static void destroy(MariaDBMonitor* monitor);
 
     /**
      * Stop the monitor. Waits until monitor has stopped.
@@ -149,6 +165,7 @@ private:
     std::string m_script;            /**< Script to call when state changes occur on servers */
     uint64_t m_events;               /**< enabled events */
     bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
+    bool m_checked;                  /**< Whether access to servers has been checked */
 
     enum slave_down_setting_t
     {

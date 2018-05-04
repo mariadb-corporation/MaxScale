@@ -76,24 +76,25 @@ typedef struct galera_cluster_info
  */
 struct GALERA_MONITOR : public MXS_SPECIFIC_MONITOR
 {
-    THREAD thread; /**< Monitor thread */
-    int shutdown; /**< Flag to shutdown the monitor thread */
-    int status; /**< Monitor status */
-    unsigned long id; /**< Monitor ID */
-    int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
-    int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
-    bool disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
-    MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
-    char* script;
-    bool root_node_as_master; /**< Whether we require that the Master should
-                                    * have a wsrep_local_index of 0 */
-    bool use_priority; /*< Use server priorities */
-    uint64_t events; /*< enabled events */
-    bool set_donor_nodes; /**< set the wrep_sst_donor variable with an
-                           * ordered list of nodes */
-    HASHTABLE *galera_nodes_info; /**< Contains Galera Cluster variables of all nodes */
+    THREAD thread;                    /**< Monitor thread */
+    int shutdown;                     /**< Flag to shutdown the monitor thread */
+    int status;                       /**< Monitor status */
+    unsigned long id;                 /**< Monitor ID */
+    int disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
+    int availableWhenDonor;           /**< Monitor flag for Galera Cluster Donor availability */
+    bool disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
+    MXS_MONITORED_SERVER *master;     /**< Master server for MySQL Master/Slave replication */
+    char* script;                     /**< Launchable script */
+    bool root_node_as_master;         /**< Whether we require that the Master should
+                                       * have a wsrep_local_index of 0 */
+    bool use_priority;                /**< Use server priorities */
+    uint64_t events;                  /**< Enabled monitor events */
+    bool set_donor_nodes;             /**< set the wrep_sst_donor variable with an
+                                       * ordered list of nodes */
+    HASHTABLE *galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
     GALERA_CLUSTER_INFO cluster_info; /**< Contains Galera cluster info */
-    MXS_MONITOR* monitor;
+    MXS_MONITOR* monitor;             /**< Pointer to generic monitor structure */
+    bool         checked;             /**< Whether server access has been checked */
 };
 
 #endif

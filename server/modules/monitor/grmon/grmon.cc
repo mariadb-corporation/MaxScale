@@ -36,6 +36,8 @@ struct GRMon : public MXS_SPECIFIC_MONITOR
     GRMon& operator&(const GRMon&);
 public:
     static GRMon* create(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
+    static GRMon* create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
+    void start();
     void stop();
     ~GRMon();
 
@@ -70,11 +72,20 @@ GRMon* GRMon::create(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 {
     GRMon* mon;
     MXS_EXCEPTION_GUARD(mon = new GRMon(monitor, params));
+    return mon;
+}
 
-    if (mon && thread_start(&mon->m_thread, GRMon::main, mon, 0) == NULL)
+GRMon* GRMon::create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
+{
+    GRMon* mon = create(monitor, params);
+
+    if (mon)
     {
-        delete mon;
-        mon = NULL;
+        if (thread_start(&mon->m_thread, GRMon::main, mon, 0) == NULL)
+        {
+            delete mon;
+            mon = NULL;
+        }
     }
 
     return mon;
@@ -92,6 +103,18 @@ void GRMon::stop()
     thread_wait(m_thread);
 }
 
+static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+                                            const MXS_CONFIG_PARAMETER *params)
+{
+    return GRMon::create(mon, params);
+}
+
+static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
+{
+    GRMon* handle = static_cast<GRMon*>(mon);
+    delete handle;
+}
+
 /**
  * Start the instance of the monitor, returning a handle on the monitor.
  *
@@ -102,7 +125,7 @@ void GRMon::stop()
 static MXS_SPECIFIC_MONITOR *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    return GRMon::create(mon, params);
+    return GRMon::create_and_start(mon, params);
 }
 
 /**
@@ -116,18 +139,6 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
     GRMon *handle = static_cast<GRMon*>(mon);
     handle->stop();
     delete handle;
-}
-
-static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *mon,
-                                         const MXS_CONFIG_PARAMETER *params)
-{
-    ss_dassert(!true);
-    return NULL;
-}
-
-static void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
-{
-    ss_dassert(!true);
 }
 
 /**
@@ -333,8 +344,8 @@ extern "C"
     {
         static MXS_MONITOR_OBJECT MyObject =
         {
-            initMonitor,
-            finishMonitor,
+            createInstance,
+            destroyInstance,
             startMonitor,
             stopMonitor,
             diagnostics,

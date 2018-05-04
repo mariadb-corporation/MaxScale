@@ -59,6 +59,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     , m_master_gtid_domain(-1)
     , m_external_master_port(PORT_UNKNOWN)
     , m_warn_set_standalone_master(true)
+    , m_checked(false)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -128,7 +129,25 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     return rval;
 }
 
-MariaDBMonitor* MariaDBMonitor::start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+{
+    MariaDBMonitor *handle = new MariaDBMonitor(monitor);
+
+    if (check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
+    {
+        handle->m_checked = true;
+    }
+    else
+    {
+        handle->m_checked = false;
+        MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
+                  "unless problem was temporary or is addressed");
+    }
+
+    return handle;
+}
+
+MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
     MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(monitor->handle);
@@ -169,6 +188,11 @@ MariaDBMonitor* MariaDBMonitor::start(MXS_MONITOR *monitor, const MXS_CONFIG_PAR
         handle = NULL;
     }
     return handle;
+}
+
+void MariaDBMonitor::destroy(MariaDBMonitor* monitor)
+{
+    delete monitor;
 }
 
 /**
@@ -904,16 +928,15 @@ bool MariaDBMonitor::check_sql_files()
     return rval;
 }
 
-static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *monitor,
-                                         const MXS_CONFIG_PARAMETER* params)
+static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *monitor,
+                                            const MXS_CONFIG_PARAMETER* params)
 {
-    ss_dassert(!true);
-    return NULL;
+    return MariaDBMonitor::create(monitor, params);
 }
 
-static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor)
+static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
 {
-    ss_dassert(!true);
+    MariaDBMonitor::destroy(static_cast<MariaDBMonitor*>(monitor));
 }
 
 /**
@@ -927,7 +950,7 @@ static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor)
 static MXS_SPECIFIC_MONITOR* startMonitor(MXS_MONITOR *monitor,
                                           const MXS_CONFIG_PARAMETER* params)
 {
-    return MariaDBMonitor::start(monitor, params);
+    return MariaDBMonitor::create_and_start(monitor, params);
 }
 
 /**
@@ -1133,8 +1156,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
-        initMonitor,
-        finishMonitor,
+        createInstance,
+        destroyInstance,
         startMonitor,
         stopMonitor,
         diagnostics,

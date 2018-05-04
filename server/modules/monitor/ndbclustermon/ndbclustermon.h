@@ -20,13 +20,14 @@
 // The handle for an instance of a NDB Cluster Monitor module
 struct NDBC_MONITOR : public MXS_SPECIFIC_MONITOR
 {
-    THREAD thread; /**< Monitor thread */
-    SPINLOCK lock; /**< The monitor spinlock */
-    unsigned long id; /**< Monitor ID */
-    uint64_t events; /*< enabled events */
-    int shutdown; /**< Flag to shutdown the monitor thread */
-    int status; /**< Monitor status */
+    THREAD thread;                /**< Monitor thread */
+    SPINLOCK lock;                /**< The monitor spinlock */
+    unsigned long id;             /**< Monitor ID */
+    uint64_t events;              /**< enabled events */
+    int shutdown;                 /**< Flag to shutdown the monitor thread */
+    int status;                   /**< Monitor status */
     MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
-    char* script; /*< Script to call when state changes occur on servers */
-    MXS_MONITOR* monitor;
+    char* script;                 /**< Script to call when state changes occur on servers */
+    MXS_MONITOR* monitor;         /**< Pointer to generic monitor structure */
+    bool checked;                 /**< Whether server access has been checked */
 };

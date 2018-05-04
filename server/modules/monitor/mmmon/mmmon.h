@@ -38,15 +38,16 @@
  */
 struct MM_MONITOR : public MXS_SPECIFIC_MONITOR
 {
-    THREAD thread; /**< Monitor thread */
-    int shutdown; /**< Flag to shutdown the monitor thread */
-    int status; /**< Monitor status */
-    unsigned long id; /**< Monitor ID */
-    int detectStaleMaster; /**< Monitor flag for Stale Master detection */
+    THREAD thread;                /**< Monitor thread */
+    int shutdown;                 /**< Flag to shutdown the monitor thread */
+    int status;                   /**< Monitor status */
+    unsigned long id;             /**< Monitor ID */
+    int detectStaleMaster;        /**< Monitor flag for Stale Master detection */
     MXS_MONITORED_SERVER *master; /**< Master server for Master/Slave replication */
-    char* script; /*< Script to call when state changes occur on servers */
-    uint64_t events; /*< enabled events */
-    MXS_MONITOR* monitor;
+    char* script;                 /**< Script to call when state changes occur on servers */
+    uint64_t events;              /**< enabled events */
+    MXS_MONITOR* monitor;         /**< Pointer to generic monitor structure */
+    bool checked;                 /**< Whether server access has been checked */
 };
 
 #endif

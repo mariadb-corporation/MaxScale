@@ -65,10 +65,10 @@ typedef struct mxs_specific_monitor
 typedef struct mxs_monitor_object
 {
     /**
-     * @brief Initialize the monitor.
+     * @brief Create the monitor.
      *
      * This entry point is called once when MaxScale is started, for
-     * initializing the monitor.
+     * creating the monitor.
      *
      * If the function fails, MaxScale will not start. That is, it
      * should fail only for fatal reasons such as not being able to
@@ -82,11 +82,11 @@ typedef struct mxs_monitor_object
      * @return Pointer to the monitor specific data. Will be stored
      *         in @c monitor->handle.
      */
-    MXS_SPECIFIC_MONITOR *(*initMonitor)(MXS_MONITOR *monitor,
-                                         const MXS_CONFIG_PARAMETER *params);
+    MXS_SPECIFIC_MONITOR *(*createInstance)(MXS_MONITOR *monitor,
+                                            const MXS_CONFIG_PARAMETER *params);
 
     /**
-     * @brief Finish the monitor.
+     * @brief Destroy the monitor.
      *
      * This entry point is called once when MaxScale is shutting down, iff
      * the earlier call to @c initMonitor returned on object. The monitor should
@@ -94,7 +94,7 @@ typedef struct mxs_monitor_object
      *
      * @param monitor  The monitor object.
      */
-    void (*finishMonitor)(MXS_SPECIFIC_MONITOR *monitor);
+    void (*destroyInstance)(MXS_SPECIFIC_MONITOR *monitor);
 
     /**
      * @brief Start the monitor

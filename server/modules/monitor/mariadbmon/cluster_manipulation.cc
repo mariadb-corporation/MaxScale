@@ -71,7 +71,7 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
 
     if (stopped)
     {
-        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+        MariaDBMonitor::create_and_start(m_monitor_base, m_monitor_base->parameters);
     }
     return rval;
 }
@@ -105,7 +105,7 @@ bool MariaDBMonitor::manual_failover(json_t** output)
 
     if (stopped)
     {
-        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+        MariaDBMonitor::create_and_start(m_monitor_base, m_monitor_base->parameters);
     }
     return rv;
 }
@@ -178,7 +178,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
 
     if (stopped)
     {
-        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+        MariaDBMonitor::create_and_start(m_monitor_base, m_monitor_base->parameters);
     }
     return rval;
 }

@@ -30,9 +30,9 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *mon,
-                                         const MXS_CONFIG_PARAMETER *params);
-static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor);
+static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *mon,
+                                            const MXS_CONFIG_PARAMETER *params);
+static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor);
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_SPECIFIC_MONITOR *);
@@ -68,8 +68,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
-        initMonitor,
-        finishMonitor,
+        createInstance,
+        destroyInstance,
         startMonitor,
         stopMonitor,
         diagnostics,
@@ -118,16 +118,59 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 
-static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *mon,
-                                         const MXS_CONFIG_PARAMETER *params)
+static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *mon,
+                                            const MXS_CONFIG_PARAMETER *params)
 {
-    ss_dassert(!true);
-    return NULL;
+    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(MXS_CALLOC(1, sizeof(GALERA_MONITOR)));
+    HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
+                                            hashtable_item_strhash,
+                                            hashtable_item_strcmp);
+
+    if (handle && nodes_info)
+    {
+        hashtable_memory_fns(nodes_info,
+                             hashtable_item_strdup,
+                             (HASHCOPYFN)nodeval_dup,
+                             hashtable_item_free,
+                             (HASHFREEFN)nodeval_free);
+
+        handle->shutdown = 0;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
+        handle->master = NULL;
+
+        /* Initialise cluster nodes hash and Cluster info */
+        handle->galera_nodes_info = nodes_info;
+        handle->cluster_info.c_size = 0;
+        handle->cluster_info.c_uuid = NULL;
+        handle->monitor = mon;
+
+        if (check_monitor_permissions(mon, "SHOW STATUS LIKE 'wsrep_local_state'"))
+        {
+            handle->checked = true;
+        }
+        else
+        {
+            handle->checked = false;
+            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
+                      "unless problem was temporary or is addressed");
+        }
+    }
+    else
+    {
+        hashtable_free(nodes_info);
+        MXS_FREE(handle);
+    }
+
+    return handle;
 }
 
-static void finishMonitor(MXS_SPECIFIC_MONITOR* monitor)
+static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
 {
-    ss_dassert(!true);
+    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(monitor);
+
+    hashtable_free(handle->galera_nodes_info);
+    MXS_FREE(handle->script);
+    MXS_FREE(handle);
 }
 
 /**
@@ -198,6 +241,8 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         MXS_FREE(handle);
         return NULL;
     }
+
+    handle->checked = true;
 
     if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {

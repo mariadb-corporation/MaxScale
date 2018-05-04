@@ -27,11 +27,12 @@
 
 struct AURORA_MONITOR : public MXS_SPECIFIC_MONITOR
 {
-    bool   shutdown;            /**< True if the monitor is stopped */
-    THREAD thread;              /**< Monitor thread */
-    char*  script;              /**< Launchable script */
-    uint64_t   events;          /**< Enabled monitor events */
-    MXS_MONITOR* monitor;
+    bool         shutdown;      /**< True if the monitor is stopped */
+    THREAD       thread;        /**< Monitor thread */
+    char*        script;        /**< Launchable script */
+    uint64_t     events;        /**< Enabled monitor events */
+    MXS_MONITOR* monitor;       /**< Pointer to generic monitor structure */
+    bool         checked;       /**< Whether server access has been checked */
 };
 
 /**
@@ -178,15 +179,41 @@ static void auroramon_free(AURORA_MONITOR *handle)
 }
 
 static
-MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
+MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
 {
-    ss_dassert(!true);
-    return NULL;
+    AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(MXS_CALLOC(1, sizeof(AURORA_MONITOR)));
+
+    if (handle)
+    {
+        handle->shutdown = false;
+        handle->thread = 0;
+        handle->script = NULL;
+        handle->events = 0;
+        handle->monitor = mon;
+
+        if (check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
+                                      "information_schema.replica_host_status "
+                                      "WHERE session_id = 'MASTER_SESSION_ID'"))
+        {
+            handle->checked = true;
+        }
+        else
+        {
+            handle->checked = false;
+            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
+                      "unless problem was temporary or is addressed");
+        }
+    }
+
+    return handle;
 }
 
-static void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
+static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
 {
-    ss_dassert(!true);
+    AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(mon);
+
+    MXS_FREE(handle->script);
+    MXS_FREE(handle);
 }
 
 /**
@@ -217,6 +244,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 
         handle->shutdown = false;
         handle->monitor = mon;
+        handle->checked = false;
 
         if (!check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
                                        "information_schema.replica_host_status "
@@ -226,6 +254,8 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
             auroramon_free(handle);
             return NULL;
         }
+
+        handle->checked = true;
     }
 
     handle->script = config_copy_string(params, "script");
@@ -290,8 +320,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MONITOR_OBJECT MyObject =
     {
-        initMonitor,
-        finishMonitor,
+        createInstance,
+        destroyInstance,
         startMonitor,
         stopMonitor,
         diagnostics,

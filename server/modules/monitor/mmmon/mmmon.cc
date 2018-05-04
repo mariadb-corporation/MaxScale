@@ -38,8 +38,8 @@ MXS_MODULE info =
 };
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
-static void finishMonitor(MXS_SPECIFIC_MONITOR *);
+static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static void destroyInstance(MXS_SPECIFIC_MONITOR *);
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_SPECIFIC_MONITOR *);
 static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
@@ -64,8 +64,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
-        initMonitor,
-        finishMonitor,
+        createInstance,
+        destroyInstance,
         startMonitor,
         stopMonitor,
         diagnostics,
@@ -110,16 +110,42 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *mon,
-                                         const MXS_CONFIG_PARAMETER *params)
+static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+                                            const MXS_CONFIG_PARAMETER *params)
 {
-    ss_dassert(!true);
-    return NULL;
+    MM_MONITOR* handle = static_cast<MM_MONITOR*>(MXS_CALLOC(1, sizeof(MM_MONITOR)));
+
+    if (handle)
+    {
+        handle->shutdown = 0;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
+        handle->master = NULL;
+        handle->monitor = mon;
+        handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+        if (check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
+        {
+            handle->checked = true;
+        }
+        else
+        {
+            handle->checked = false;
+            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
+                      "unless problem was temporary or is addressed");
+        }
+    }
+
+    return handle;
 }
 
-static void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
+static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
 {
-    ss_dassert(!true);
+    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon);
+
+    MXS_FREE(handle->script);
+    MXS_FREE(handle);
 }
 
 /**
@@ -163,6 +189,8 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         MXS_FREE(handle);
         return NULL;
     }
+
+    handle->checked = true;
 
     if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {

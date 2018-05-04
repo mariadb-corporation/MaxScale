@@ -30,9 +30,9 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR *initMonitor(MXS_MONITOR *,
-                                         const MXS_CONFIG_PARAMETER *params);
-static void finishMonitor(MXS_SPECIFIC_MONITOR*);
+static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *,
+                                            const MXS_CONFIG_PARAMETER *params);
+static void destroyInstance(MXS_SPECIFIC_MONITOR*);
 static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_SPECIFIC_MONITOR *);
@@ -59,8 +59,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MONITOR_OBJECT MyObject =
     {
-        initMonitor,
-        finishMonitor,
+        createInstance,
+        destroyInstance,
         startMonitor,
         stopMonitor,
         diagnostics,
@@ -104,16 +104,42 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR* initMonitor(MXS_MONITOR *mon,
-                                         const MXS_CONFIG_PARAMETER *params)
+static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+                                            const MXS_CONFIG_PARAMETER *params)
 {
-    ss_dassert(!true);
-    return NULL;
+    NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(MXS_CALLOC(1, sizeof(NDBC_MONITOR)));
+
+    if (handle)
+    {
+        handle->shutdown = 0;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
+        handle->master = NULL;
+        handle->monitor = mon;
+
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+        if (check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+        {
+            handle->checked = true;
+        }
+        else
+        {
+            handle->checked = false;
+            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
+                      "unless problem was temporary or is addressed");
+        }
+    }
+
+    return handle;
 }
 
-void finishMonitor(MXS_SPECIFIC_MONITOR* mon)
+void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
 {
-    ss_dassert(!true);
+    NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(mon);
+
+    MXS_FREE(handle->script);
+    MXS_FREE(handle);
 }
 
 /**
@@ -157,6 +183,8 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         MXS_FREE(handle);
         return NULL;
     }
+
+    handle->checked = true;
 
     if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {
