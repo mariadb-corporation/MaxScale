@@ -964,11 +964,11 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  * @param out    Buffer where value is stored, use NULL to check if the parameter exists
  * @param size   Size of @c out, ignored if @c out is NULL
  *
- * @return True if parameter was found
+ * @return Length of the parameter value or 0 if parameter was not found
  */
-bool server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
+size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
 {
-    bool found = false;
+    int len = 0;
     SERVER_PARAM *param = server->parameters;
     spinlock_acquire(&server->lock);
 
@@ -976,18 +976,14 @@ bool server_get_parameter(const SERVER *server, const char *name, char* out, siz
     {
         if (strcmp(param->name, name) == 0 && param->active)
         {
-            if (out)
-            {
-                snprintf(out, size, "%s", param->value);
-            }
-            found = true;
+            len = snprintf(out, out ? size : 0, "%s", param->value);
             break;
         }
         param = param->next;
     }
 
     spinlock_release(&server->lock);
-    return found;
+    return len;
 }
 
 /**
