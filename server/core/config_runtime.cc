@@ -992,7 +992,7 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
         {
             monitorRemoveServer(monitor, monitor->monitored_servers->server);
         }
-        monitorDestroy(monitor);
+        monitor_deactivate(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
     }
 

@@ -270,7 +270,7 @@ monitorStop(MXS_MONITOR *monitor)
     }
 }
 
-void monitorDestroy(MXS_MONITOR* monitor)
+void monitor_deactivate(MXS_MONITOR* monitor)
 {
     spinlock_acquire(&monLock);
     monitor->active = false;

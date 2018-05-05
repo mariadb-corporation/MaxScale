@@ -52,7 +52,17 @@ void monitor_free(MXS_MONITOR *);
 
 void monitorStart(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 void monitorStop(MXS_MONITOR *);
-void monitorDestroy(MXS_MONITOR* monitor);
+
+/**
+ * @brief Mark monitor as deactivated
+ *
+ * A deactivated monitor appears not to exist, as if it had been
+ * destroyed.
+ *
+ * @param monitor
+ */
+void monitor_deactivate(MXS_MONITOR* monitor);
+
 void monitorStopAll();
 void monitorStartAll();
 
