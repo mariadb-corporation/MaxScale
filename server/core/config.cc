@@ -3503,7 +3503,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         if (mod)
         {
             config_add_defaults(obj, mod->parameters);
-            monitorAddParameters(monitor, obj->parameters);
+            monitor_add_parameters(monitor, obj->parameters);
         }
         else
         {
@@ -3519,7 +3519,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                 Perhaps a greater minimum value should be added? */
             if (*endptr == '\0' && interval > 0)
             {
-                monitorSetInterval(monitor, (unsigned long)interval);
+                monitor_set_interval(monitor, (unsigned long)interval);
             }
             else
             {
@@ -3543,7 +3543,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
             if (*endptr == '\0' && interval > 0)
             {
-                monitorSetJournalMaxAge(monitor, (time_t)interval);
+                monitor_set_journal_max_age(monitor, (time_t)interval);
             }
             else
             {
@@ -3567,7 +3567,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
             if (*endptr == '\0' && interval > 0)
             {
-                monitorSetScriptTimeout(monitor, (uint32_t)interval);
+                monitor_set_script_timeout(monitor, (uint32_t)interval);
             }
             else
             {
@@ -3586,7 +3586,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);
         if (connect_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT,
+            if (!monitor_set_network_timeout(monitor, MONITOR_CONNECT_TIMEOUT,
                                           atoi(connect_timeout), CN_BACKEND_CONNECT_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_TIMEOUT);
@@ -3597,7 +3597,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *read_timeout = config_get_value(obj->parameters, CN_BACKEND_READ_TIMEOUT);
         if (read_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT,
+            if (!monitor_set_network_timeout(monitor, MONITOR_READ_TIMEOUT,
                                           atoi(read_timeout), CN_BACKEND_READ_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_READ_TIMEOUT);
@@ -3608,7 +3608,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *write_timeout = config_get_value(obj->parameters, CN_BACKEND_WRITE_TIMEOUT);
         if (write_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT,
+            if (!monitor_set_network_timeout(monitor, MONITOR_WRITE_TIMEOUT,
                                           atoi(write_timeout), CN_BACKEND_WRITE_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_WRITE_TIMEOUT);
@@ -3619,7 +3619,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_attempts = config_get_value(obj->parameters, CN_BACKEND_CONNECT_ATTEMPTS);
         if (connect_attempts)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS,
+            if (!monitor_set_network_timeout(monitor, MONITOR_CONNECT_ATTEMPTS,
                                           atoi(connect_attempts), CN_BACKEND_CONNECT_ATTEMPTS))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_ATTEMPTS);
@@ -3647,7 +3647,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                                         "This will cause undefined behavior.",
                                         obj1->object);
                         }
-                        monitorAddServer(monitor, (SERVER*)obj1->element);
+                        monitor_add_server(monitor, (SERVER*)obj1->element);
                     }
                     obj1 = obj1->next;
                 }
@@ -3666,7 +3666,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *passwd = config_get_password(obj->parameters);
         if (user && passwd)
         {
-            monitorAddUser(monitor, user, passwd);
+            monitor_add_user(monitor, user, passwd);
         }
         else if (user)
         {

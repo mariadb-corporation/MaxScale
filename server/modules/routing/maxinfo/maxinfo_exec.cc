@@ -238,7 +238,7 @@ exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 {
     RESULTSET *set;
 
-    if ((set = monitorGetList()) == NULL)
+    if ((set = monitor_get_list()) == NULL)
     {
         return;
     }
@@ -563,7 +563,7 @@ void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
         MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            monitorStop(monitor);
+            monitor_stop(monitor);
             maxinfo_send_ok(dcb);
         }
         else
@@ -673,7 +673,7 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
         MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            monitorStart(monitor, monitor->parameters);
+            monitor_start(monitor, monitor->parameters);
             maxinfo_send_ok(dcb);
         }
         else

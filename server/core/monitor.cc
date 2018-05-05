@@ -192,7 +192,7 @@ monitor_free(MXS_MONITOR *mon)
  * @param monitor The Monitor that should be started
  */
 void
-monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+monitor_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     if (monitor)
     {
@@ -220,7 +220,7 @@ monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 /**
  * Start all monitors
  */
-void monitorStartAll()
+void monitor_start_all()
 {
     MXS_MONITOR *ptr;
 
@@ -230,7 +230,7 @@ void monitorStartAll()
     {
         if (ptr->active)
         {
-            monitorStart(ptr, ptr->parameters);
+            monitor_start(ptr, ptr->parameters);
         }
         ptr = ptr->next;
     }
@@ -243,7 +243,7 @@ void monitorStartAll()
  * @param monitor       The monitor to stop
  */
 void
-monitorStop(MXS_MONITOR *monitor)
+monitor_stop(MXS_MONITOR *monitor)
 {
     if (monitor)
     {
@@ -281,7 +281,7 @@ void monitor_deactivate(MXS_MONITOR* monitor)
  * Shutdown all running monitors
  */
 void
-monitorStopAll()
+monitor_stop_all()
 {
     MXS_MONITOR *ptr;
 
@@ -291,7 +291,7 @@ monitorStopAll()
     {
         if (ptr->active)
         {
-            monitorStop(ptr);
+            monitor_stop(ptr);
         }
         ptr = ptr->next;
     }
@@ -305,7 +305,7 @@ monitorStopAll()
  * @param mon           The Monitor instance
  * @param server        The Server to add to the monitoring
  */
-bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
+bool monitor_add_server(MXS_MONITOR *mon, SERVER *server)
 {
     bool rval = false;
 
@@ -335,7 +335,7 @@ bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            monitorStop(mon);
+            monitor_stop(mon);
         }
 
         spinlock_acquire(&mon->lock);
@@ -357,7 +357,7 @@ bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
 
         if (old_state == MONITOR_STATE_RUNNING)
         {
-            monitorStart(mon, mon->parameters);
+            monitor_start(mon, mon->parameters);
         }
     }
 
@@ -396,13 +396,13 @@ static void monitor_server_free_all(MXS_MONITORED_SERVER *servers)
  * @param mon           The Monitor instance
  * @param server        The Server to remove
  */
-void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
+void monitor_remove_server(MXS_MONITOR *mon, SERVER *server)
 {
     monitor_state_t old_state = mon->state;
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        monitorStop(mon);
+        monitor_stop(mon);
     }
 
     spinlock_acquire(&mon->lock);
@@ -437,7 +437,7 @@ void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
 
     if (old_state == MONITOR_STATE_RUNNING)
     {
-        monitorStart(mon, mon->parameters);
+        monitor_start(mon, mon->parameters);
     }
 }
 
@@ -450,7 +450,7 @@ void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
  * @param passwd        The default password associated to the default user.
  */
 void
-monitorAddUser(MXS_MONITOR *mon, const char *user, const char *passwd)
+monitor_add_user(MXS_MONITOR *mon, const char *user, const char *passwd)
 {
     if (user != mon->user)
     {
@@ -469,7 +469,7 @@ monitorAddUser(MXS_MONITOR *mon, const char *user, const char *passwd)
  * @param dcb   DCB for printing output
  */
 void
-monitorShowAll(DCB *dcb)
+monitor_show_all(DCB *dcb)
 {
     MXS_MONITOR *ptr;
 
@@ -479,7 +479,7 @@ monitorShowAll(DCB *dcb)
     {
         if (ptr->active)
         {
-            monitorShow(dcb, ptr);
+            monitor_show(dcb, ptr);
         }
         ptr = ptr->next;
     }
@@ -492,7 +492,7 @@ monitorShowAll(DCB *dcb)
  * @param dcb   DCB for printing output
  */
 void
-monitorShow(DCB *dcb, MXS_MONITOR *monitor)
+monitor_show(DCB *dcb, MXS_MONITOR *monitor)
 {
     const char *state;
 
@@ -559,7 +559,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
  * @param dcb   DCB for printing output
  */
 void
-monitorList(DCB *dcb)
+monitor_list(DCB *dcb)
 {
     MXS_MONITOR *ptr;
 
@@ -640,7 +640,7 @@ MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
  * @param interval      The sampling interval in milliseconds
  */
 void
-monitorSetInterval(MXS_MONITOR *mon, unsigned long interval)
+monitor_set_interval(MXS_MONITOR *mon, unsigned long interval)
 {
     mon->interval = interval;
 }
@@ -651,12 +651,12 @@ monitorSetInterval(MXS_MONITOR *mon, unsigned long interval)
  * @param mon           The monitor instance
  * @param interval      The journal age in seconds
  */
-void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value)
+void monitor_set_journal_max_age(MXS_MONITOR *mon, time_t value)
 {
     mon->journal_max_age = value;
 }
 
-void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
+void monitor_set_script_timeout(MXS_MONITOR *mon, uint32_t value)
 {
     mon->script_timeout = value;
 }
@@ -668,7 +668,7 @@ void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
  * @param type          The timeout handling type
  * @param value         The timeout to set
  */
-bool monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value, const char* key)
+bool monitor_set_network_timeout(MXS_MONITOR *mon, int type, int value, const char* key)
 {
     bool rval = true;
 
@@ -751,7 +751,7 @@ monitorRowCallback(RESULTSET *set, void *data)
  * @return A Result set
  */
 RESULTSET *
-monitorGetList()
+monitor_get_list()
 {
     RESULTSET *set;
     int *data;
@@ -856,7 +856,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
+void monitor_add_parameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -882,7 +882,7 @@ void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
     spinlock_release(&monitor->lock);
 }
 
-bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
+bool monitor_remove_parameter(MXS_MONITOR *monitor, const char *key)
 {
     MXS_CONFIG_PARAMETER *prev = NULL;
     bool rval = false;

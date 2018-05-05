@@ -25,7 +25,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
-// TODO: For monitorAddParameters
+// TODO: For monitor_add_parameters
 #include "../../../core/internal/monitor.h"
 
 using std::string;
@@ -890,7 +890,7 @@ void MariaDBMonitor::disable_setting(const char* setting)
     MXS_CONFIG_PARAMETER p = {};
     p.name = const_cast<char*>(setting);
     p.value = const_cast<char*>("false");
-    monitorAddParameters(m_monitor_base, &p);
+    monitor_add_parameters(m_monitor_base, &p);
 }
 
 /**

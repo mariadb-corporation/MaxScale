@@ -213,7 +213,7 @@ struct subcommand showoptions[] =
         {0}
     },
     {
-        "monitor", 1, 1, (FN)monitorShow,
+        "monitor", 1, 1, (FN)monitor_show,
         "Show monitor details",
         "Usage: show monitor MONITOR\n"
         "\n"
@@ -224,7 +224,7 @@ struct subcommand showoptions[] =
         {ARG_TYPE_MONITOR}
     },
     {
-        "monitors", 0, 0, (FN)monitorShowAll,
+        "monitors", 0, 0, (FN)monitor_show_all,
         "Show all monitors",
         "Usage: show monitors",
         {0}
@@ -396,7 +396,7 @@ struct subcommand listoptions[] =
         {0}
     },
     {
-        "monitors", 0, 0, (FN)monitorList,
+        "monitors", 0, 0, (FN)monitor_list,
         "List all monitors",
         "Usage: list monitors",
         {0}
@@ -2409,7 +2409,7 @@ show_log_throttling(DCB *dcb)
 static void
 shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor)
 {
-    monitorStop(monitor);
+    monitor_stop(monitor);
 }
 
 /**
@@ -2421,7 +2421,7 @@ shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor)
 static void
 restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
 {
-    monitorStart(monitor, monitor->parameters);
+    monitor_start(monitor, monitor->parameters);
 }
 
 /**

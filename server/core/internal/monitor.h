@@ -50,8 +50,8 @@ typedef enum
 MXS_MONITOR *monitor_alloc(const char *, const char *);
 void monitor_free(MXS_MONITOR *);
 
-void monitorStart(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
-void monitorStop(MXS_MONITOR *);
+void monitor_start(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
+void monitor_stop(MXS_MONITOR *);
 
 /**
  * @brief Mark monitor as deactivated
@@ -63,28 +63,28 @@ void monitorStop(MXS_MONITOR *);
  */
 void monitor_deactivate(MXS_MONITOR* monitor);
 
-void monitorStopAll();
-void monitorStartAll();
+void monitor_stop_all();
+void monitor_start_all();
 
 MXS_MONITOR *monitor_find(const char *);
 MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module);
 
-void monitorShow(DCB *, MXS_MONITOR *);
-void monitorShowAll(DCB *);
+void monitor_show(DCB *, MXS_MONITOR *);
+void monitor_show_all(DCB *);
 
-void monitorList(DCB *);
-RESULTSET *monitorGetList();
+void monitor_list(DCB *);
+RESULTSET *monitor_get_list();
 
-bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
-void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
-void monitorAddUser(MXS_MONITOR *, const char *, const char *);
-void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
-bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
+bool monitor_add_server(MXS_MONITOR *mon, SERVER *server);
+void monitor_remove_server(MXS_MONITOR *mon, SERVER *server);
+void monitor_add_user(MXS_MONITOR *, const char *, const char *);
+void monitor_add_parameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
+bool monitor_remove_parameter(MXS_MONITOR *monitor, const char *key);
 
-void monitorSetInterval (MXS_MONITOR *, unsigned long);
-bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int, const char*);
-void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
-void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value);
+void monitor_set_interval (MXS_MONITOR *, unsigned long);
+bool monitor_set_network_timeout(MXS_MONITOR *, int, int, const char*);
+void monitor_set_journal_max_age(MXS_MONITOR *mon, time_t value);
+void monitor_set_script_timeout(MXS_MONITOR *mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file

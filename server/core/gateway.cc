@@ -2152,7 +2152,7 @@ int main(int argc, char **argv)
     }
 
     /** Start all monitors */
-    monitorStartAll();
+    monitor_start_all();
 
     /** Start the services that were created above */
     n_services = service_launch_all();
@@ -2241,13 +2241,13 @@ int main(int argc, char **argv)
     worker->run();
 
     /*< Stop all the monitors */
-    monitorStopAll();
+    monitor_stop_all();
 
     /** Stop administrative interface */
     mxs_admin_shutdown();
 
     /*< Stop all the monitors */
-    monitorStopAll();
+    monitor_stop_all();
 
     /*<
      * Wait for the housekeeper to finish.

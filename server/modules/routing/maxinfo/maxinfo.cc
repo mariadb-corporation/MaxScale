@@ -691,7 +691,7 @@ static struct uri_table
     { "/services", serviceGetList },
     { "/listeners", serviceGetListenerList },
     { "/modules", moduleGetList },
-    { "/monitors", monitorGetList },
+    { "/monitors", monitor_get_list },
     { "/sessions", maxinfoSessionsAll },
     { "/clients", maxinfoClientSessions },
     { "/servers", serverGetList },

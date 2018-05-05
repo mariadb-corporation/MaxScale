@@ -84,7 +84,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     }
     else if (monitor)
     {
-        if (monitorAddServer(monitor, server))
+        if (monitor_add_server(monitor, server))
         {
             monitor_serialize(monitor);
             rval = true;
@@ -124,7 +124,7 @@ bool runtime_unlink_server(SERVER *server, const char *target)
         }
         else if (monitor)
         {
-            monitorRemoveServer(monitor, server);
+            monitor_remove_server(monitor, server);
             monitor_serialize(monitor);
         }
 
@@ -434,7 +434,7 @@ static void add_monitor_defaults(MXS_MONITOR *monitor)
     if (mod)
     {
         config_add_defaults(&ctx, mod->parameters);
-        monitorAddParameters(monitor, ctx.parameters);
+        monitor_add_parameters(monitor, ctx.parameters);
         config_parameter_free(ctx.parameters);
     }
     else
@@ -453,12 +453,12 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     if (strcmp(key, CN_USER) == 0)
     {
         valid = true;
-        monitorAddUser(monitor, value, monitor->password);
+        monitor_add_user(monitor, value, monitor->password);
     }
     else if (strcmp(key, CN_PASSWORD) == 0)
     {
         valid = true;
-        monitorAddUser(monitor, monitor->user, value);
+        monitor_add_user(monitor, monitor->user, value);
     }
     else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
     {
@@ -466,7 +466,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetInterval(monitor, ival);
+            monitor_set_interval(monitor, ival);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)
@@ -475,7 +475,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
@@ -484,7 +484,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
@@ -493,7 +493,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
@@ -502,7 +502,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
+            monitor_set_network_timeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
         }
     }
     else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)
@@ -511,7 +511,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetJournalMaxAge(monitor, ival);
+            monitor_set_journal_max_age(monitor, ival);
         }
     }
     else if (strcmp(key, CN_SCRIPT_TIMEOUT) == 0)
@@ -520,15 +520,15 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetScriptTimeout(monitor, ival);
+            monitor_set_script_timeout(monitor, ival);
         }
     }
     else  if (config_param_is_valid(mod->parameters, key, value, NULL))
     {
         /** We're modifying module specific parameters and we need to stop the monitor */
-        monitorStop(monitor);
+        monitor_stop(monitor);
 
-        if (monitorRemoveParameter(monitor, key) || value[0])
+        if (monitor_remove_parameter(monitor, key) || value[0])
         {
             /** Either we're removing an existing parameter or adding a new one */
             valid = true;
@@ -538,11 +538,11 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
                 MXS_CONFIG_PARAMETER p = {};
                 p.name = const_cast<char*>(key);
                 p.value = const_cast<char*>(value);
-                monitorAddParameters(monitor, &p);
+                monitor_add_parameters(monitor, &p);
             }
         }
 
-        monitorStart(monitor, monitor->parameters);
+        monitor_start(monitor, monitor->parameters);
     }
 
     if (valid)
@@ -986,11 +986,11 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
 
     if (rval)
     {
-        monitorStop(monitor);
+        monitor_stop(monitor);
 
         while (monitor->monitored_servers)
         {
-            monitorRemoveServer(monitor, monitor->monitored_servers->server);
+            monitor_remove_server(monitor, monitor->monitored_servers->server);
         }
         monitor_deactivate(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
@@ -1679,8 +1679,8 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
         if (changed)
         {
             /** A configuration change was made, restart the monitor */
-            monitorStop(monitor);
-            monitorStart(monitor, monitor->parameters);
+            monitor_stop(monitor);
+            monitor_start(monitor, monitor->parameters);
         }
     }
 
