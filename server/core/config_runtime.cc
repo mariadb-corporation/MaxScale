@@ -937,7 +937,7 @@ bool runtime_create_monitor(const char *name, const char *module)
         {
             MXS_DEBUG("Repurposed monitor '%s'", name);
         }
-        else if ((monitor = monitor_alloc(name, module)) == NULL)
+        else if ((monitor = monitor_create(name, module)) == NULL)
         {
             runtime_error("Could not create monitor '%s' with module '%s'", name, module);
         }

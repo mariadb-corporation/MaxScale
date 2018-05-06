@@ -406,7 +406,7 @@ int test_domain_matching(const char* actual_module,
     /** Create a monitor */
     char *libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
     set_libdir(libdir);
-    monitor_alloc(name, actual_module);
+    monitor_create(name, actual_module);
 
     const MODULECMD *cmd;
 

@@ -3480,7 +3480,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     char *module = config_get_value(obj->parameters, CN_MODULE);
     if (module)
     {
-        if ((obj->element = monitor_alloc(obj->object, module)) == NULL)
+        if ((obj->element = monitor_create(obj->object, module)) == NULL)
         {
             MXS_ERROR("Failed to create monitor '%s'.", obj->object);
             error_count++;

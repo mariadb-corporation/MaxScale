@@ -92,14 +92,14 @@ static unsigned int all_server_bits = SERVER_RUNNING |  SERVER_MAINT |
                                       SERVER_JOINED | SERVER_NDB;
 
 /**
- * Allocate a new monitor, load the associated module for the monitor
+ * Create a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
  *
  * @param name          The name of the monitor module to load
  * @param module        The module to load
  * @return      The newly created monitor
  */
-MXS_MONITOR* monitor_alloc(const char *name, const char *module)
+MXS_MONITOR* monitor_create(const char *name, const char *module)
 {
     char* my_name = MXS_STRDUP(name);
     char *my_module = MXS_STRDUP(module);
