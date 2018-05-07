@@ -169,8 +169,6 @@ monitor_destroy(MXS_MONITOR *mon)
 {
     MXS_MONITOR *ptr;
 
-    mon->api->stopMonitor(mon->instance);
-    mon->state = MONITOR_STATE_FREED;
     spinlock_acquire(&monLock);
     if (allMonitors == mon)
     {
@@ -189,6 +187,8 @@ monitor_destroy(MXS_MONITOR *mon)
         }
     }
     spinlock_release(&monLock);
+    mon->api->destroyInstance(mon->instance);
+    mon->state = MONITOR_STATE_FREED;
     config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->monitored_servers);
     MXS_FREE(mon->name);
@@ -196,6 +196,18 @@ monitor_destroy(MXS_MONITOR *mon)
     MXS_FREE(mon);
 }
 
+void monitor_destroy_all()
+{
+    // monitor_destroy() grabs 'monLock', so it cannot be grabbed here
+    // without additional changes. But this function should only be
+    // called at system shutdown in single-thread context.
+
+    while (allMonitors)
+    {
+        MXS_MONITOR *monitor = allMonitors;
+        monitor_destroy(monitor);
+    }
+}
 
 /**
  * Start an individual monitor that has previously been stopped.
@@ -294,18 +306,18 @@ void monitor_deactivate(MXS_MONITOR* monitor)
 void
 monitor_stop_all()
 {
-    MXS_MONITOR *ptr;
-
     spinlock_acquire(&monLock);
-    ptr = allMonitors;
-    while (ptr)
+
+    MXS_MONITOR* monitor = allMonitors;
+    while (monitor)
     {
-        if (ptr->active)
+        if (monitor->active)
         {
-            monitor_stop(ptr);
+            monitor_stop(monitor);
         }
-        ptr = ptr->next;
+        monitor = monitor->next;
     }
+
     spinlock_release(&monLock);
 }
 

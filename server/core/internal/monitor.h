@@ -66,6 +66,14 @@ void monitor_deactivate(MXS_MONITOR* monitor);
 void monitor_stop_all();
 void monitor_start_all();
 
+/**
+ * @brief Destroys all monitors. At this point all monitors should
+ *        have been stopped.
+ *
+ * @attn Must only be called in single-thread context at system shutdown.
+ */
+void monitor_destroy_all();
+
 MXS_MONITOR *monitor_find(const char *);
 MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module);
 

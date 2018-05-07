@@ -2240,14 +2240,14 @@ int main(int argc, char **argv)
     ss_dassert(worker);
     worker->run();
 
-    /*< Stop all the monitors */
-    monitor_stop_all();
-
     /** Stop administrative interface */
     mxs_admin_shutdown();
 
-    /*< Stop all the monitors */
+    /*< Stop all monitors */
     monitor_stop_all();
+
+    /*< Destroy all monitors */
+    monitor_destroy_all();
 
     /*<
      * Wait for the housekeeper to finish.
