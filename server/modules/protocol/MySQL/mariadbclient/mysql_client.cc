@@ -1537,7 +1537,14 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
                                                               proto->scramble, sizeof(proto->scramble),
                                                               client_sha1, sizeof(client_sha1));
 
-        rval = rc == MXS_AUTH_SUCCEEDED;
+        if (!(rval = rc == MXS_AUTH_SUCCEEDED))
+        {
+            /**
+             * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
+             * third is the response and the fourth is the following error.
+             */
+            mysql_client_auth_error_handling(session->client_dcb, rc, 3);
+        }
     }
 
     return rval;
