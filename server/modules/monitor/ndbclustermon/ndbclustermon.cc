@@ -30,8 +30,7 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *,
-                                            const MXS_CONFIG_PARAMETER *params);
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
 static void destroyInstance(MXS_MONITOR_INSTANCE*);
 static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
@@ -104,8 +103,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
-                                            const MXS_CONFIG_PARAMETER *params)
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
 {
     NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(MXS_CALLOC(1, sizeof(NDBC_MONITOR)));
 
@@ -116,19 +114,9 @@ static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
         handle->master = NULL;
         handle->monitor = mon;
 
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-
-        if (check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
-        {
-            handle->checked = true;
-        }
-        else
-        {
-            handle->checked = false;
-            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
-                      "unless problem was temporary or is addressed");
-        }
+        handle->script = NULL;
+        handle->events = 0;
+        handle->checked = false;
     }
 
     return handle;

@@ -72,18 +72,14 @@ typedef struct mxs_monitor_api
      *
      * If the function fails, MaxScale will not start. That is, it
      * should fail only for fatal reasons such as not being able to
-     * create vital resources. The function may contact servers and
-     * log errors if that does not succeed, but a failure to contact
-     * some server must not be treated as a fatal error.
+     * create vital resources.
      *
      * @param monitor  The monitor object.
-     * @param params   Parameters for this monitor
      *
      * @return Pointer to the monitor specific data. Will be stored
      *         in @c monitor->handle.
      */
-    MXS_MONITOR_INSTANCE *(*createInstance)(MXS_MONITOR *monitor,
-                                            const MXS_CONFIG_PARAMETER *params);
+    MXS_MONITOR_INSTANCE *(*createInstance)(MXS_MONITOR *monitor);
 
     /**
      * @brief Destroy the monitor.

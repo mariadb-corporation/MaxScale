@@ -30,8 +30,7 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon,
-                                            const MXS_CONFIG_PARAMETER *params);
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon);
 static void destroyInstance(MXS_MONITOR_INSTANCE* monitor);
 static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
@@ -118,8 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon,
-                                            const MXS_CONFIG_PARAMETER *params)
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon)
 {
     GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(MXS_CALLOC(1, sizeof(GALERA_MONITOR)));
     HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
@@ -143,17 +141,7 @@ static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon,
         handle->cluster_info.c_size = 0;
         handle->cluster_info.c_uuid = NULL;
         handle->monitor = mon;
-
-        if (check_monitor_permissions(mon, "SHOW STATUS LIKE 'wsrep_local_state'"))
-        {
-            handle->checked = true;
-        }
-        else
-        {
-            handle->checked = false;
-            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
-                      "unless problem was temporary or is addressed");
-        }
+        handle->checked = false;
     }
     else
     {

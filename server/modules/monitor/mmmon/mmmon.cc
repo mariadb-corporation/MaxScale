@@ -38,7 +38,7 @@ MXS_MODULE info =
 };
 /*lint +e14 */
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
 static void destroyInstance(MXS_MONITOR_INSTANCE *);
 static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_MONITOR_INSTANCE *);
@@ -110,8 +110,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
-                                            const MXS_CONFIG_PARAMETER *params)
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
 {
     MM_MONITOR* handle = static_cast<MM_MONITOR*>(MXS_CALLOC(1, sizeof(MM_MONITOR)));
 
@@ -121,20 +120,10 @@ static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
         handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
         handle->monitor = mon;
-        handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-
-        if (check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
-        {
-            handle->checked = true;
-        }
-        else
-        {
-            handle->checked = false;
-            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
-                      "unless problem was temporary or is addressed");
-        }
+        handle->detectStaleMaster = false;
+        handle->script = NULL;
+        handle->events = 0;
+        handle->checked = false;
     }
 
     return handle;

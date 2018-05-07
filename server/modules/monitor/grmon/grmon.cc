@@ -35,9 +35,9 @@ struct GRMon : public MXS_MONITOR_INSTANCE
     GRMon(const GRMon&);
     GRMon& operator&(const GRMon&);
 public:
-    static GRMon* create(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
+    static GRMon* create(MXS_MONITOR* monitor);
     static GRMon* create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
-    void start();
+    bool start(const MXS_CONFIG_PARAMETER* params);
     void stop();
     ~GRMon();
 
@@ -49,17 +49,17 @@ private:
     uint64_t              m_events;   /**< Enabled events */
     MXS_MONITOR*          m_monitor;
 
-    GRMon(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER *params);
+    GRMon(MXS_MONITOR* monitor);
 
     void main();
     static void main(void* data);
 };
 
-GRMon::GRMon(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params):
+GRMon::GRMon(MXS_MONITOR* monitor):
     m_shutdown(0),
     m_master(NULL),
-    m_script(config_get_string(params, "script")),
-    m_events(config_get_enum(params, "events", mxs_monitor_event_enum_values)),
+    m_script(NULL),
+    m_events(0),
     m_monitor(monitor)
 {
 }
@@ -68,27 +68,50 @@ GRMon::~GRMon()
 {
 }
 
-GRMon* GRMon::create(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
+GRMon* GRMon::create(MXS_MONITOR* monitor)
 {
     GRMon* mon;
-    MXS_EXCEPTION_GUARD(mon = new GRMon(monitor, params));
+    MXS_EXCEPTION_GUARD(mon = new GRMon(monitor));
     return mon;
 }
 
 GRMon* GRMon::create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    GRMon* mon = create(monitor, params);
+    GRMon* instance = static_cast<GRMon*>(monitor->instance);
 
-    if (mon)
+    if (!instance)
     {
-        if (thread_start(&mon->m_thread, GRMon::main, mon, 0) == NULL)
+        instance = create(monitor);
+    }
+
+    if (instance)
+    {
+        if (!instance->start(params))
         {
-            delete mon;
-            mon = NULL;
+            delete instance;
+            instance = NULL;
         }
     }
 
-    return mon;
+    return instance;
+}
+
+bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
+{
+    bool started = false;
+
+    m_shutdown = 0;
+    m_master = NULL;
+    m_script = config_get_string(params, "script");
+    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+    m_thread = 0;
+
+    if (thread_start(&m_thread, GRMon::main, this, 0) != NULL)
+    {
+        started = true;
+    }
+
+    return started;
 }
 
 void GRMon::main(void* data)
@@ -103,10 +126,9 @@ void GRMon::stop()
     thread_wait(m_thread);
 }
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
-                                            const MXS_CONFIG_PARAMETER *params)
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
 {
-    return GRMon::create(mon, params);
+    return GRMon::create(mon);
 }
 
 static void destroyInstance(MXS_MONITOR_INSTANCE* mon)

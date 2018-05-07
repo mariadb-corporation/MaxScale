@@ -66,10 +66,9 @@ public:
      * Create the monitor instance and return the instance data.
      *
      * @param monitor General monitor data
-     * @param params Configuration parameters
      * @return A pointer to MariaDBMonitor specific data.
      */
-    static MariaDBMonitor* create(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+    static MariaDBMonitor* create(MXS_MONITOR *monitor);
 
     /**
      * Start the monitor instance and return the instance data, creating it if starting for the first time.

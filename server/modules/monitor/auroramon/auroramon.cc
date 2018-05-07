@@ -179,7 +179,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
 }
 
 static
-MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
+MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon)
 {
     AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(MXS_CALLOC(1, sizeof(AURORA_MONITOR)));
 
@@ -190,19 +190,7 @@ MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETE
         handle->script = NULL;
         handle->events = 0;
         handle->monitor = mon;
-
-        if (check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
-                                      "information_schema.replica_host_status "
-                                      "WHERE session_id = 'MASTER_SESSION_ID'"))
-        {
-            handle->checked = true;
-        }
-        else
-        {
-            handle->checked = false;
-            MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
-                      "unless problem was temporary or is addressed");
-        }
+        handle->checked = false;
     }
 
     return handle;

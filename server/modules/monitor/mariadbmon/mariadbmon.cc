@@ -129,22 +129,9 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     return rval;
 }
 
-MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor)
 {
-    MariaDBMonitor *handle = new MariaDBMonitor(monitor);
-
-    if (check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
-    {
-        handle->m_checked = true;
-    }
-    else
-    {
-        handle->m_checked = false;
-        MXS_ERROR("Monitor cannot access servers. Starting the monitor will fail "
-                  "unless problem was temporary or is addressed");
-    }
-
-    return handle;
+    return new MariaDBMonitor(monitor);
 }
 
 MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
@@ -170,6 +157,10 @@ MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {
         error = true;
+    }
+    else
+    {
+        handle->m_checked = true;
     }
 
     if (!error)
@@ -928,10 +919,9 @@ bool MariaDBMonitor::check_sql_files()
     return rval;
 }
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *monitor,
-                                            const MXS_CONFIG_PARAMETER* params)
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *monitor)
 {
-    return MariaDBMonitor::create(monitor, params);
+    return MariaDBMonitor::create(monitor);
 }
 
 static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
