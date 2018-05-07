@@ -105,10 +105,10 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     char *my_module = MXS_STRDUP(module);
     MXS_MONITOR *mon = (MXS_MONITOR *)MXS_MALLOC(sizeof(MXS_MONITOR));
 
-    if (!my_name || !mon || !my_module)
+    if (!mon || !my_module || !my_name)
     {
-        MXS_FREE(my_name);
         MXS_FREE(mon);
+        MXS_FREE(my_name);
         MXS_FREE(my_module);
         return NULL;
     }
@@ -116,8 +116,9 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     if ((mon->api = (MXS_MONITOR_API*)load_module(module, MODULE_MONITOR)) == NULL)
     {
         MXS_ERROR("Unable to load monitor module '%s'.", my_name);
-        MXS_FREE(my_name);
         MXS_FREE(mon);
+        MXS_FREE(my_module);
+        MXS_FREE(my_name);
         return NULL;
     }
     mon->active = true;
@@ -139,6 +140,16 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     mon->server_pending_changes = false;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     spinlock_init(&mon->lock);
+
+    if ((mon->instance = mon->api->createInstance(mon)) == NULL)
+    {
+        MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
+                  name, module);
+        MXS_FREE(mon);
+        MXS_FREE(my_module);
+        MXS_FREE(my_name);
+    }
+
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
     allMonitors = mon;
@@ -204,7 +215,7 @@ monitor_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
             remove_server_journal(monitor);
         }
 
-        if ((monitor->instance = (*monitor->api->startMonitor)(monitor, params)))
+        if ((*monitor->api->startMonitor)(monitor->instance, params))
         {
             monitor->state = MONITOR_STATE_RUNNING;
         }

@@ -32,8 +32,8 @@ static bool warn_erange_on_local_index = true;
 
 static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon);
 static void destroyInstance(MXS_MONITOR_INSTANCE* monitor);
-static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
-                                          const MXS_CONFIG_PARAMETER *params);
+static bool startMonitor(MXS_MONITOR_INSTANCE *,
+                         const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR_INSTANCE *);
 static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
 static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
@@ -168,80 +168,53 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_MONITOR_INSTANCE *
-startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
-    if (handle != NULL)
-    {
-        handle->shutdown = 0;
-        MXS_FREE(handle->script);
-    }
-    else
-    {
-        handle = (GALERA_MONITOR *) MXS_MALLOC(sizeof(GALERA_MONITOR));
-        HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES, hashtable_item_strhash, hashtable_item_strcmp);
+    bool started = false;
 
-        if (!handle || !nodes_info)
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
+
+    ss_dassert(!handle->shutdown);
+    ss_dassert(!handle->thread);
+    ss_dassert(!handle->script);
+
+    if (!handle->checked)
+    {
+        if (!check_monitor_permissions(handle->monitor, "SHOW STATUS LIKE 'wsrep_local_state'"))
         {
-            hashtable_free(nodes_info);
-            MXS_FREE(handle);
-            return NULL;
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
-
-        /* Set copy / free routines for hashtable */
-        hashtable_memory_fns(nodes_info,
-                             hashtable_item_strdup,
-                             (HASHCOPYFN)nodeval_dup,
-                             hashtable_item_free,
-                             (HASHFREEFN)nodeval_free);
-
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-
-        /* Initialise cluster nodes hash and Cluster info */
-        handle->galera_nodes_info = nodes_info;
-        handle->cluster_info.c_size = 0;
-        handle->cluster_info.c_uuid = NULL;
-        handle->monitor = mon;
+        else
+        {
+            handle->checked = true;
+        }
     }
 
-    handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
-    handle->availableWhenDonor = config_get_bool(params, "available_when_donor");
-    handle->disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
-    handle->root_node_as_master = config_get_bool(params, "root_node_as_master");
-    handle->use_priority = config_get_bool(params, "use_priority");
-    handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-    handle->set_donor_nodes = config_get_bool(params, "set_donor_nodes");
-
-    /* Reset all data in the hashtable */
-    reset_cluster_info(handle);
-
-
-    /** SHOW STATUS doesn't require any special permissions */
-    if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'wsrep_local_state'"))
+    if (handle->checked)
     {
-        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        hashtable_free(handle->galera_nodes_info);
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
+        handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
+        handle->availableWhenDonor = config_get_bool(params, "available_when_donor");
+        handle->disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
+        handle->root_node_as_master = config_get_bool(params, "root_node_as_master");
+        handle->use_priority = config_get_bool(params, "use_priority");
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        handle->set_donor_nodes = config_get_bool(params, "set_donor_nodes");
+
+        /* Reset all data in the hashtable */
+        reset_cluster_info(handle);
+
+        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
+        }
+        else
+        {
+            started = true;
+        }
     }
 
-    handle->checked = true;
-
-    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
-    {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
-        hashtable_free(handle->galera_nodes_info);
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
-    }
-
-    return handle;
+    return started;
 }
 
 /**
@@ -253,9 +226,15 @@ static void
 stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
+    ss_dassert(handle->thread);
 
-    handle->shutdown = 1;
+    handle->shutdown = true;
     thread_wait(handle->thread);
+    handle->thread = 0;
+    handle->shutdown = false;
+
+    MXS_FREE(handle->script);
+    handle->script = NULL;
 }
 
 /**

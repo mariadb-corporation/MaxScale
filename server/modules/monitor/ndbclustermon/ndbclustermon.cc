@@ -32,8 +32,7 @@ static void monitorMain(void *);
 
 static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
 static void destroyInstance(MXS_MONITOR_INSTANCE*);
-static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
-                                          const MXS_CONFIG_PARAMETER *params);
+static bool startMonitor(MXS_MONITOR_INSTANCE *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR_INSTANCE *);
 static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
 static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
@@ -125,8 +124,9 @@ static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
 void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(mon);
+    ss_dassert(!handle->thread);
+    ss_dassert(!handle->script);
 
-    MXS_FREE(handle->script);
     MXS_FREE(handle);
 }
 
@@ -137,52 +137,42 @@ void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_MONITOR_INSTANCE *
-startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon->instance);
-    bool have_events = false, script_error = false;
+    bool started = false;
 
-    if (handle != NULL)
+    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
+
+    if (!handle->checked)
     {
-        handle->shutdown = 0;
-        MXS_FREE(handle->script);
-    }
-    else
-    {
-        if ((handle = (NDBC_MONITOR *) MXS_MALLOC(sizeof(NDBC_MONITOR))) == NULL)
+        if (!check_monitor_permissions(handle->monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
         {
-            return NULL;
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-        handle->monitor = mon;
+        else
+        {
+            handle->checked = true;
+        }
     }
 
-    handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-
-    /** SHOW STATUS doesn't require any special permissions */
-    if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+    if (handle->checked)
     {
-        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
+            MXS_FREE(handle->script);
+            handle->script = NULL;
+        }
+        else
+        {
+            started = true;
+        }
     }
 
-    handle->checked = true;
-
-    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
-    {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
-    }
-
-    return handle;
+    return started;
 }
 
 /**
@@ -194,9 +184,15 @@ static void
 stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
+    ss_dassert(handle->thread);
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
+    handle->thread = 0;
+    handle->shutdown = 0;
+
+    MXS_FREE(handle->script);
+    handle->script = NULL;
 }
 
 /**

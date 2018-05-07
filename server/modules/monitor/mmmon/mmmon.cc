@@ -40,7 +40,7 @@ MXS_MODULE info =
 
 static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
 static void destroyInstance(MXS_MONITOR_INSTANCE *);
-static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static bool startMonitor(MXS_MONITOR_INSTANCE *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_MONITOR_INSTANCE *);
 static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
 static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
@@ -132,8 +132,9 @@ static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
 static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon);
+    ss_dassert(!handle->thread);
+    ss_dassert(!handle->script);
 
-    MXS_FREE(handle->script);
     MXS_FREE(handle);
 }
 
@@ -145,51 +146,44 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  * @param arg   The current handle - NULL if first start
  * @return A handle to use when interacting with the monitor
  */
-static MXS_MONITOR_INSTANCE *
-startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon->instance);
+    bool started = false;
 
-    if (handle)
+    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
+    ss_dassert(handle);
+
+    if (!handle->checked)
     {
-        handle->shutdown = 0;
-        MXS_FREE(handle->script);
-    }
-    else
-    {
-        if ((handle = (MM_MONITOR *) MXS_MALLOC(sizeof(MM_MONITOR))) == NULL)
+        if (!check_monitor_permissions(handle->monitor, "SHOW SLAVE STATUS"))
         {
-            return NULL;
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-        handle->monitor = mon;
+        else
+        {
+            handle->checked = true;
+        }
     }
 
-    handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-    handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-
-    if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
+    if (handle->checked)
     {
-        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
+        handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
+            MXS_FREE(handle->script);
+            handle->script = NULL;
+        }
+        else
+        {
+            started = true;
+        }
     }
 
-    handle->checked = true;
-
-    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
-    {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
-    }
-
-    return handle;
+    return started;
 }
 
 /**
@@ -201,9 +195,15 @@ static void
 stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
+    ss_dassert(handle->thread);
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
+    handle->thread = 0;
+    handle->shutdown = 0;
+
+    MXS_FREE(handle->script);
+    handle->script = NULL;
 }
 
 /**

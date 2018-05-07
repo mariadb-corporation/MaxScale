@@ -199,8 +199,9 @@ MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon)
 static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(mon);
+    ss_dassert(!handle->thread);
+    ss_dassert(!handle->script);
 
-    MXS_FREE(handle->script);
     MXS_FREE(handle);
 }
 
@@ -213,50 +214,45 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  * @param opt The configuration parameters for this monitor
  * @return Monitor handle
  */
-static MXS_MONITOR_INSTANCE *
-startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon->instance);
+    bool started = false;
 
-    if (handle)
+    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
+    ss_dassert(handle);
+
+    if (!handle->checked)
     {
-        handle->shutdown = false;
-        MXS_FREE(handle->script);
-    }
-    else
-    {
-        if ((handle = (AURORA_MONITOR *) MXS_MALLOC(sizeof(AURORA_MONITOR))) == NULL)
-        {
-            return NULL;
-        }
-
-        handle->shutdown = false;
-        handle->monitor = mon;
-        handle->checked = false;
-
-        if (!check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
+        if (!check_monitor_permissions(handle->monitor, "SELECT @@aurora_server_id, server_id FROM "
                                        "information_schema.replica_host_status "
                                        "WHERE session_id = 'MASTER_SESSION_ID'"))
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-            auroramon_free(handle);
-            return NULL;
         }
-
-        handle->checked = true;
+        else
+        {
+            handle->checked = true;
+        }
     }
 
-    handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-
-    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+    if (handle->checked)
     {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
-        auroramon_free(handle);
-        return NULL;
+        handle->script = config_copy_string(params, "script");
+        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
+            MXS_FREE(handle->script);
+            handle->script = NULL;
+        }
+        else
+        {
+            started = true;
+        }
     }
 
-    return handle;
+    return started;
 }
 
 /**
@@ -268,9 +264,15 @@ static void
 stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
+    ss_dassert(handle->thread);
 
     handle->shutdown = true;
     thread_wait(handle->thread);
+    handle->thread = 0;
+    handle->shutdown = false;
+
+    MXS_FREE(handle->script);
+    handle->script = NULL;
 }
 
 /**

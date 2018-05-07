@@ -75,27 +75,6 @@ GRMon* GRMon::create(MXS_MONITOR* monitor)
     return mon;
 }
 
-GRMon* GRMon::create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
-{
-    GRMon* instance = static_cast<GRMon*>(monitor->instance);
-
-    if (!instance)
-    {
-        instance = create(monitor);
-    }
-
-    if (instance)
-    {
-        if (!instance->start(params))
-        {
-            delete instance;
-            instance = NULL;
-        }
-    }
-
-    return instance;
-}
-
 bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool started = false;
@@ -122,8 +101,12 @@ void GRMon::main(void* data)
 
 void GRMon::stop()
 {
+    ss_dassert(m_thread);
+
     atomic_store_int32(&m_shutdown, 1);
     thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = 0;
 }
 
 static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
@@ -144,10 +127,9 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_MONITOR_INSTANCE *
-startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    return GRMon::create_and_start(mon, params);
+    return static_cast<GRMon*>(mon)->start(params);
 }
 
 /**
@@ -158,9 +140,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 static void
 stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
-    GRMon *handle = static_cast<GRMon*>(mon);
-    handle->stop();
-    delete handle;
+    static_cast<GRMon*>(mon)->stop();
 }
 
 /**

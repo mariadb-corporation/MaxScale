@@ -102,11 +102,10 @@ typedef struct mxs_monitor_api
      * @param monitor The monitor object
      * @param params  Parameters for this monitor
      *
-     * @return Pointer to the monitor specific data. Will be stored
-     *         in @c monitor->handle.
+     * @return True, if the monitor could be started, false otherwise.
      */
-    MXS_MONITOR_INSTANCE *(*startMonitor)(MXS_MONITOR *monitor,
-                                          const MXS_CONFIG_PARAMETER *params);
+    bool (*startMonitor)(MXS_MONITOR_INSTANCE *monitor,
+                         const MXS_CONFIG_PARAMETER *params);
 
     /**
      * @brief Stop the monitor

@@ -134,40 +134,38 @@ MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor)
     return new MariaDBMonitor(monitor);
 }
 
-MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(monitor->instance);
-    if (handle == NULL)
-    {
-        handle = new MariaDBMonitor(monitor);
-    }
 
     /* Always reset these values. The server dependent values must be reset as servers could have been
      * added and removed. */
-    handle->m_keep_running = true;
-    handle->m_master = NULL;
-    handle->init_server_info();
+    m_keep_running = true;
+    m_master = NULL;
+    init_server_info();
 
-    if (!handle->load_config_params(params))
+    if (!load_config_params(params))
     {
         error = true;
     }
 
-    if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
+    if (!error && !m_checked)
     {
-        error = true;
-    }
-    else
-    {
-        handle->m_checked = true;
+        if (!check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS"))
+        {
+            error = true;
+        }
+        else
+        {
+            m_checked = true;
+        }
     }
 
     if (!error)
     {
-        if (thread_start(&handle->m_thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&m_thread, monitorMain, this, 0) == NULL)
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor_base->name);
             error = true;
         }
     }
@@ -175,10 +173,9 @@ MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS
     if (error)
     {
         MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        delete handle;
-        handle = NULL;
     }
-    return handle;
+
+    return !error;
 }
 
 void MariaDBMonitor::destroy(MariaDBMonitor* monitor)
@@ -935,12 +932,11 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
  *
  * @param monitor General monitor data
  * @param params Configuration parameters
- * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
+ * @return True, if the monitor could be started, false otherwise.
  */
-static MXS_MONITOR_INSTANCE* startMonitor(MXS_MONITOR *monitor,
-                                          const MXS_CONFIG_PARAMETER* params)
+static bool startMonitor(MXS_MONITOR_INSTANCE *monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    return MariaDBMonitor::create_and_start(monitor, params);
+    return static_cast<MariaDBMonitor*>(monitor)->start(params);
 }
 
 /**
