@@ -299,7 +299,6 @@ const char *server_params[] =
     CN_PORT,
     CN_ADDRESS,
     CN_AUTHENTICATOR,
-    CN_AUTHENTICATOR_OPTIONS,
     CN_MONITORUSER,
     CN_MONITORPW,
     CN_PERSISTPOOLMAX,
@@ -335,6 +334,12 @@ const char *config_pre_parse_global_params[] =
     CN_MAXLOG,
     CN_LOG_AUGMENTATION,
     CN_LOG_TO_SHM,
+    NULL
+};
+
+const char *deprecated_server_params[] =
+{
+    CN_AUTHENTICATOR_OPTIONS,
     NULL
 };
 
@@ -3243,6 +3248,15 @@ bool is_normal_server_parameter(const char *param)
             return true;
         }
     }
+    // Check if parameter is deprecated
+    for (int i = 0; deprecated_server_params[i]; i++)
+    {
+        if (strcmp(param, deprecated_server_params[i]) == 0)
+        {
+            MXS_WARNING("Server parameter '%s' is deprecated and will be ignored.", param);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -3260,11 +3274,10 @@ int create_new_server(CONFIG_CONTEXT *obj)
     char *monuser = config_get_value(obj->parameters, CN_MONITORUSER);
     char *monpw = config_get_value(obj->parameters, CN_MONITORPW);
     char *auth = config_get_value(obj->parameters, CN_AUTHENTICATOR);
-    char *auth_opts = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
 
     if (address && port && protocol)
     {
-        if ((obj->element = server_alloc(obj->object, address, atoi(port), protocol, auth, auth_opts)) == NULL)
+        if ((obj->element = server_alloc(obj->object, address, atoi(port), protocol, auth)) == NULL)
         {
             MXS_ERROR("Failed to create a new server, memory allocation failed.");
             error_count++;

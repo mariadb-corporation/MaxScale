@@ -38,12 +38,11 @@ MXS_BEGIN_DECLS
  * @param port          Network port
  * @param protocol      Protocol module name
  * @param authenticator Authenticator module name
- * @param options       Options for the authenticator module
  * @return True on success, false if an error occurred
  */
 bool runtime_create_server(const char *name, const char *address,
                            const char *port, const char *protocol,
-                           const char *authenticator, const char *options);
+                           const char *authenticator);
 
 /**
  * @brief Destroy a server

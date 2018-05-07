@@ -137,8 +137,7 @@ bool runtime_unlink_server(SERVER *server, const char *target)
 }
 
 bool runtime_create_server(const char *name, const char *address, const char *port,
-                           const char *protocol, const char *authenticator,
-                           const char *authenticator_options)
+                           const char *protocol, const char *authenticator)
 {
     spinlock_acquire(&crt_lock);
     bool rval = false;
@@ -163,9 +162,7 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         }
 
         /** First check if this service has been created before */
-        SERVER *server = server_repurpose_destroyed(name, protocol, authenticator,
-                                                    authenticator_options,
-                                                    address, port);
+        SERVER *server = server_repurpose_destroyed(name, protocol, authenticator, address, port);
 
         if (server)
         {
@@ -174,8 +171,7 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         else
         {
             MXS_DEBUG("Creating server '%s'", name);
-            server = server_alloc(name, address, atoi(port), protocol,
-                                  authenticator, authenticator_options);
+            server = server_alloc(name, address, atoi(port), protocol, authenticator);
         }
 
         if (server && server_serialize(server))
@@ -1316,14 +1312,13 @@ SERVER* runtime_create_server_from_json(json_t* json)
         /** Optional parameters */
         const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
         const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
 
         StringSet relations;
 
         if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVICES, server_relation_is_valid) &&
             extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_MONITORS, server_relation_is_valid))
         {
-            if (runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
+            if (runtime_create_server(name, address, port.c_str(), protocol, authenticator))
             {
                 rval = server_find_by_unique_name(name);
                 ss_dassert(rval);

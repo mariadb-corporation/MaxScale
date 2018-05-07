@@ -1265,9 +1265,8 @@ from the configuration.
 
 #### `authenticator_options`
 
-Option string given to the authenticator module. The value of this parameter
-should be a comma-separated list of key-value pairs. See authenticator specific
-documentation for more details.
+Removed feature. Only client authenticator modules have options, in the listener
+definition. Server authenticator options in the config file are ignored.
 
 ### Listener
 

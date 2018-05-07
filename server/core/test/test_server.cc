@@ -56,7 +56,7 @@ test1()
     /* Server tests */
     ss_dfprintf(stderr, "testserver : creating server called MyServer");
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/NullAuthAllow/"));
-    server = server_alloc("uniquename", "127.0.0.1", 9876, "HTTPD", "NullAuthAllow", NULL);
+    server = server_alloc("uniquename", "127.0.0.1", 9876, "HTTPD", "NullAuthAllow");
     ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
 
@@ -129,8 +129,6 @@ bool test_load_config(const char *input, SERVER *server)
             TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0, "Server protocols differ");
             TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
                  "Server authenticators differ");
-            TEST(strcmp(server->auth_options, config_get_param(param, "authenticator_options")->value) == 0,
-                 "Server authenticator options differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
             TEST(create_new_server(obj) == 0, "Failed to create server from loaded config");
         }
@@ -146,7 +144,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char *persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    SERVER *server = server_alloc(name, "127.0.0.1", 9876, "HTTPD", "NullAuthAllow", "fake=option");
+    SERVER *server = server_alloc(name, "127.0.0.1", 9876, "HTTPD", "NullAuthAllow");
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */

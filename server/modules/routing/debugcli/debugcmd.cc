@@ -1140,16 +1140,15 @@ static SPINLOCK server_mod_lock = SPINLOCK_INIT;
  * @param port Server port
  * @param protocol Protocol, NULL for default (MySQLBackend)
  * @param authenticator Authenticator module, NULL for default (MySQLBackendAuth)
- * @param authenticator_options Authenticator options, NULL for no options
  */
 static void createServer(DCB *dcb, char *name, char *address, char *port,
-                         char *protocol, char *authenticator, char *authenticator_options)
+                         char *protocol, char *authenticator)
 {
     spinlock_acquire(&server_mod_lock);
 
     if (server_find_by_unique_name(name) == NULL)
     {
-        if (runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
+        if (runtime_create_server(name, address, port, protocol, authenticator))
         {
             dcb_printf(dcb, "Created server '%s'\n", name);
         }
@@ -1202,9 +1201,9 @@ static void createMonitor(DCB *dcb, const char *name, const char *module)
 struct subcommand createoptions[] =
 {
     {
-        "server", 2, 6, (FN)createServer,
+        "server", 2, 5, (FN)createServer,
         "Create a new server",
-        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR]\n"
         "\n"
         "Parameters:\n"
         "NAME          Server name\n"
@@ -1212,14 +1211,13 @@ struct subcommand createoptions[] =
         "PORT          Server port (default 3306)\n"
         "PROTOCOL      Server protocol (default MySQLBackend)\n"
         "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"
-        "OPTIONS       Comma separated list of options for the authenticator\n"
         "\n"
         "The first two parameters are required, the others are optional.\n"
         "\n"
         "Example: create server my-db-1 192.168.0.102 3306",
         {
             ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
-            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
+            ARG_TYPE_OBJECT_NAME
         }
     },
     {

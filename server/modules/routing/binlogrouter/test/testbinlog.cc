@@ -122,7 +122,7 @@ int main(int argc, char **argv)
             s = strtok_r(NULL, ",", &lasts);
         }
         server = server_alloc("binlog_router_master_host", "_none_", 3306,
-                              "MySQLBackend", "MySQLBackendAuth", NULL);
+                              "MySQLBackend", "MySQLBackendAuth");
         if (server == NULL)
         {
             printf("Failed to allocate 'server' object\n");

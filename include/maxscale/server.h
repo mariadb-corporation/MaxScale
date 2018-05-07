@@ -149,7 +149,6 @@ typedef struct server
     long           master_id;      /**< Master server id of this node */
     int            depth;          /**< Replication level in the tree */
     // Misc fields
-    char           *auth_options;  /**< Authenticator options, not used. TODO: Remove. */
     bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
                                           *   by rwsplit. TODO: Move to rwsplit */
     bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
@@ -265,12 +264,10 @@ enum
  * @param port          The port to connect to
  * @param protocol      The protocol to use to connect to the server
  * @param authenticator The server authenticator module
- * @param auth_options  Options for the authenticator module
  * @return              The newly created server or NULL if an error occurred
  */
 extern SERVER* server_alloc(const char *name, const char *address, unsigned short port,
-                            const char *protocol, const char *authenticator,
-                            const char *auth_options);
+                            const char *protocol, const char *authenticator);
 
 /**
  * @brief Find a server that can be reused
@@ -280,7 +277,6 @@ extern SERVER* server_alloc(const char *name, const char *address, unsigned shor
  * @param name          Name of the server
  * @param protocol      Protocol used by the server
  * @param authenticator The authenticator module of the server
- * @param auth_options  Options for the authenticator
  * @param address       The network address of the new server
  * @param port          The port of the new server
  *
@@ -288,8 +284,7 @@ extern SERVER* server_alloc(const char *name, const char *address, unsigned shor
  * found
  * @see runtime_create_server
  */
-SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
-                                   const char *authenticator, const char *auth_options,
+SERVER* server_repurpose_destroyed(const char *name, const char *protocol, const char *authenticator,
                                    const char *address, const char *port);
 /**
  * @brief Serialize a server to a file

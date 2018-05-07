@@ -797,8 +797,7 @@ createInstance(SERVICE *service, char **options)
         server = server_alloc("binlog_router_master_host",
                               "_none_", 3306,
                               "MySQLBackend",
-                              "MySQLBackendAuth",
-                              NULL);
+                              "MySQLBackendAuth");
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",

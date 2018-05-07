@@ -69,7 +69,7 @@ static void server_parameter_free(SERVER_PARAM *tofree);
 
 
 SERVER* server_alloc(const char *name, const char *address, unsigned short port,
-                     const char *protocol, const char *authenticator, const char *auth_options)
+                     const char *protocol, const char *authenticator)
 {
     if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
     {
@@ -79,18 +79,11 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     }
 
     void *auth_instance = NULL;
-
-    if (!authenticator_init(&auth_instance, authenticator, auth_options))
+    // Backend authenticators do not have options.
+    if (!authenticator_init(&auth_instance, authenticator, NULL))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
                   authenticator, name);
-        return NULL;
-    }
-
-    char *my_auth_options = NULL;
-
-    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
-    {
         return NULL;
     }
 
@@ -125,7 +118,6 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
     server->auth_instance = auth_instance;
-    server->auth_options = my_auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->status_pending = SERVER_RUNNING;
@@ -1198,11 +1190,6 @@ static bool create_server_config(const SERVER *server, const char *filename)
     dprintf(file, "%s=%u\n", CN_PORT, server->port);
     dprintf(file, "%s=%s\n", CN_AUTHENTICATOR, server->authenticator);
 
-    if (server->auth_options)
-    {
-        dprintf(file, "%s=%s\n", CN_AUTHENTICATOR_OPTIONS, server->auth_options);
-    }
-
     if (*server->monpw && *server->monuser)
     {
         dprintf(file, "%s=%s\n", CN_MONITORUSER, server->monuser);
@@ -1277,8 +1264,7 @@ bool server_serialize(const SERVER *server)
     return rval;
 }
 
-SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
-                                   const char *authenticator, const char *auth_options,
+SERVER* server_repurpose_destroyed(const char *name, const char *protocol, const char *authenticator,
                                    const char *address, const char *port)
 {
     spinlock_acquire(&server_spin);
@@ -1290,15 +1276,10 @@ SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
             strcmp(server->protocol, protocol) == 0 &&
             strcmp(server->authenticator, authenticator) == 0)
         {
-            if ((auth_options == NULL && server->auth_options == NULL) ||
-                (auth_options && server->auth_options &&
-                 strcmp(server->auth_options, auth_options) == 0))
-            {
-                snprintf(server->address, sizeof(server->address), "%s", address);
-                server->port = atoi(port);
-                server->is_active = true;
-                break;
-            }
+            snprintf(server->address, sizeof(server->address), "%s", address);
+            server->port = atoi(port);
+            server->is_active = true;
+            break;
         }
         server = server->next;
     }
@@ -1399,11 +1380,6 @@ static json_t* server_json_attributes(const SERVER* server)
     if (server->authenticator)
     {
         json_object_set_new(params, CN_AUTHENTICATOR, json_string(server->authenticator));
-    }
-
-    if (server->auth_options)
-    {
-        json_object_set_new(params, CN_AUTHENTICATOR_OPTIONS, json_string(server->auth_options));
     }
 
     if (*server->monuser)
