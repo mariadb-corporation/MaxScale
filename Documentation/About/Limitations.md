@@ -88,13 +88,18 @@ different backend authentication module is not supported.
 
 ### Limitations in the MySQL authenticator (MySQLAuth)
 
-* MySQL old style passwords are not supported. MySQL versions 4.1 and newer use a
-new authentication protocol which does not support pre-4.1 style passwords.
+* MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
+a new authentication protocol which does not support pre-4.1 style passwords.
 
 * When users have different passwords based on the host from which they connect
 MariaDB MaxScale is unable to determine which password it should use to connect
 to the backend database. This results in failed connections and unusable
 usernames in MariaDB MaxScale.
+
+* Only a subset of netmasks are supported for the *Host*-column in the
+*mysql.user*-table (and related tables). Specifically, if the *Host* is of the
+form `base_ip/netmask`, then the netmask must only contain the numbers 0 or 255.
+For example, a netmask of 255.255.255.0 is fine while 255.255.255.192 is not.
 
 ## Filter limitations
 
