@@ -22,7 +22,7 @@
 #include <new>
 #include <string>
 
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/thread.h>
 #include <maxscale/protocol/mysql.h>
 #include <mysqld_error.h>
@@ -36,10 +36,11 @@ struct GRMon : public MXS_MONITOR_INSTANCE
     GRMon& operator&(const GRMon&);
 public:
     static GRMon* create(MXS_MONITOR* monitor);
-    static GRMon* create_and_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params);
+    static void destroy(GRMon* monitor);
     bool start(const MXS_CONFIG_PARAMETER* params);
     void stop();
-    ~GRMon();
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
 
 private:
     THREAD                m_thread;   /**< Monitor thread */
@@ -50,6 +51,7 @@ private:
     MXS_MONITOR*          m_monitor;
 
     GRMon(MXS_MONITOR* monitor);
+    ~GRMon();
 
     void main();
     static void main(void* data);
@@ -70,9 +72,7 @@ GRMon::~GRMon()
 
 GRMon* GRMon::create(MXS_MONITOR* monitor)
 {
-    GRMon* mon;
-    MXS_EXCEPTION_GUARD(mon = new GRMon(monitor));
-    return mon;
+    return new GRMon(monitor));
 }
 
 bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
@@ -109,57 +109,11 @@ void GRMon::stop()
     m_shutdown = 0;
 }
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
-{
-    return GRMon::create(mon);
-}
-
-static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
-{
-    GRMon* handle = static_cast<GRMon*>(mon);
-    delete handle;
-}
-
-/**
- * Start the instance of the monitor, returning a handle on the monitor.
- *
- * This function creates a thread to execute the actual monitoring.
- *
- * @return A handle to use when interacting with the monitor
- */
-static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
-{
-    return static_cast<GRMon*>(mon)->start(params);
-}
-
-/**
- * Stop a running monitor
- *
- * @param arg   Handle on thr running monior
- */
-static void
-stopMonitor(MXS_MONITOR_INSTANCE *mon)
-{
-    static_cast<GRMon*>(mon)->stop();
-}
-
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param arg   The monitor handle
- */
-static void
-diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
+void GRMon::diagnostics(DCB* dcb) const
 {
 }
 
-/**
- * Diagnostic interface
- *
- * @param arg   The monitor handle
- */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
+json_t* GRMon::diagnostics_json() const
 {
     return NULL;
 }
@@ -332,29 +286,17 @@ void GRMon::main()
     mysql_thread_end();
 }
 
-extern "C"
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    /**
-     * The module entry point routine. It is this routine that
-     * must populate the structure that is referred to as the
-     * "module object", this is a structure with the set of
-     * external entry points for this module.
-     *
-     * @return The module object
-     */
-    MXS_MODULE* MXS_CREATE_MODULE()
-    {
-        static MXS_MONITOR_API MyObject =
-        {
-            createInstance,
-            destroyInstance,
-            startMonitor,
-            stopMonitor,
-            diagnostics,
-            diagnostics_json
-        };
-
-        static MXS_MODULE info =
+    static MXS_MODULE info =
         {
             MXS_MODULE_API_MONITOR,
             MXS_MODULE_GA,
@@ -362,7 +304,7 @@ extern "C"
             "A Group Replication cluster monitor",
             "V1.0.0",
             MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
+            &maxscale::MonitorApi<GRMon>::s_api,
             NULL, /* Process init. */
             NULL, /* Process finish. */
             NULL, /* Thread init. */
@@ -385,7 +327,5 @@ extern "C"
             }
         };
 
-        return &info;
-    }
-
+    return &info;
 }
