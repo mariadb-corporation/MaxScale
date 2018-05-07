@@ -4835,7 +4835,6 @@ static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd)
     /* Server does not have slave connections. This operation can fail, or the resulting
      * replication may end up broken. */
     bool success = false;
-    string error_msg;
     const char* query = "SET GLOBAL read_only=1;";
     if (mxs_mysql_query(server->con, query) == 0)
     {
@@ -4849,23 +4848,12 @@ static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd)
                 MXS_NOTICE("Standalone server '%s' starting replication.", server->server->unique_name);
             }
         }
-
-        if (!success)
-        {
-            // A step after "SET GLOBAL read_only=1" failed, try to undo. First, backup error message.
-            error_msg = mysql_error(server->con);
-            mxs_mysql_query(server->con, "SET GLOBAL read_only=0;");
-        }
     }
 
     if (!success)
     {
-        if (error_msg.empty())
-        {
-            error_msg = mysql_error(server->con);
-        }
-        MXS_WARNING("Standalone server '%s' failed to start replication: '%s'. Query: '%s'.",
-                    server->server->unique_name, error_msg.c_str(), query);
+        const char ERROR_MSG[] = "Standalone server '%s' failed to start replication: '%s'. Query: '%s'.";
+        MXS_WARNING(ERROR_MSG, server->server->unique_name, mysql_error(server->con), query);
     }
     return success;
 }
