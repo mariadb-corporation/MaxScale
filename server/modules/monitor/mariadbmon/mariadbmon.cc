@@ -150,7 +150,7 @@ MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor, const MXS_CONFIG_PA
 MariaDBMonitor* MariaDBMonitor::create_and_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(monitor->handle);
+    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(monitor->instance);
     if (handle == NULL)
     {
         handle = new MariaDBMonitor(monitor);
@@ -928,13 +928,13 @@ bool MariaDBMonitor::check_sql_files()
     return rval;
 }
 
-static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *monitor,
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *monitor,
                                             const MXS_CONFIG_PARAMETER* params)
 {
     return MariaDBMonitor::create(monitor, params);
 }
 
-static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
+static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
 {
     MariaDBMonitor::destroy(static_cast<MariaDBMonitor*>(monitor));
 }
@@ -947,7 +947,7 @@ static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
  * @param params Configuration parameters
  * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
  */
-static MXS_SPECIFIC_MONITOR* startMonitor(MXS_MONITOR *monitor,
+static MXS_MONITOR_INSTANCE* startMonitor(MXS_MONITOR *monitor,
                                           const MXS_CONFIG_PARAMETER* params)
 {
     return MariaDBMonitor::create_and_start(monitor, params);
@@ -958,7 +958,7 @@ static MXS_SPECIFIC_MONITOR* startMonitor(MXS_MONITOR *monitor,
  *
  * @param mon  The monitor that should be stopped.
  */
-static void stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+static void stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     auto handle = static_cast<MariaDBMonitor*>(mon);
     handle->stop();
@@ -970,7 +970,7 @@ static void stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+static void diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
     const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon);
     handle->diagnostics(dcb);
@@ -981,7 +981,7 @@ static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     const MariaDBMonitor *handle = static_cast<const MariaDBMonitor*>(mon);
     return handle->diagnostics_json();
@@ -1011,7 +1011,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     else
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
         SERVER* new_master = (args->argc >= 2) ? args->argv[1].value.server : NULL;
         SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
         rval = handle->manual_switchover(new_master, current_master, error_out);
@@ -1039,7 +1039,7 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
     else
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
         rv = handle->manual_failover(output);
     }
     return rv;
@@ -1067,7 +1067,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
         rv = handle->manual_rejoin(server, output);
     }
     return rv;
@@ -1154,7 +1154,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
                                handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
                                rejoin_argv, "Rejoin server to a cluster");
 
-    static MXS_MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_API MyObject =
     {
         createInstance,
         destroyInstance,

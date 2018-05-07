@@ -35,7 +35,7 @@ typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInf
 typedef std::vector<MariaDBServer*> ServerArray;
 
 // MariaDB Monitor instance data
-class MariaDBMonitor : public MXS_SPECIFIC_MONITOR
+class MariaDBMonitor : public MXS_MONITOR_INSTANCE
 {
 private:
     MariaDBMonitor(const MariaDBMonitor&);

@@ -30,14 +30,14 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *,
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *,
                                             const MXS_CONFIG_PARAMETER *params);
-static void destroyInstance(MXS_SPECIFIC_MONITOR*);
-static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
+static void destroyInstance(MXS_MONITOR_INSTANCE*);
+static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_SPECIFIC_MONITOR *);
-static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
+static void stopMonitor(MXS_MONITOR_INSTANCE *);
+static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
 bool isNdbEvent(mxs_monitor_event_t event);
 
 
@@ -57,7 +57,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
 
-    static MXS_MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_API MyObject =
     {
         createInstance,
         destroyInstance,
@@ -104,7 +104,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
                                             const MXS_CONFIG_PARAMETER *params)
 {
     NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(MXS_CALLOC(1, sizeof(NDBC_MONITOR)));
@@ -134,7 +134,7 @@ static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
     return handle;
 }
 
-void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
+void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(mon);
 
@@ -149,10 +149,10 @@ void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_SPECIFIC_MONITOR *
+static MXS_MONITOR_INSTANCE *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon->handle);
+    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon->instance);
     bool have_events = false, script_error = false;
 
     if (handle != NULL)
@@ -203,7 +203,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
 
@@ -218,7 +218,7 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
 }
 
@@ -228,7 +228,7 @@ diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  * @param dcb   DCB to send output
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     return NULL;
 }

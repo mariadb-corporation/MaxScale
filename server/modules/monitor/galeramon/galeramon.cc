@@ -30,14 +30,14 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *mon,
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon,
                                             const MXS_CONFIG_PARAMETER *params);
-static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor);
-static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *,
+static void destroyInstance(MXS_MONITOR_INSTANCE* monitor);
+static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *,
                                           const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_SPECIFIC_MONITOR *);
-static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
+static void stopMonitor(MXS_MONITOR_INSTANCE *);
+static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
 static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR*);
 static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONITORED_SERVER *, int);
 static void disableMasterFailback(void *, int);
@@ -66,7 +66,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
 
-    static MXS_MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_API MyObject =
     {
         createInstance,
         destroyInstance,
@@ -118,7 +118,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 
-static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *mon,
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon,
                                             const MXS_CONFIG_PARAMETER *params)
 {
     GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(MXS_CALLOC(1, sizeof(GALERA_MONITOR)));
@@ -164,7 +164,7 @@ static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *mon,
     return handle;
 }
 
-static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
+static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
 {
     GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(monitor);
 
@@ -180,10 +180,10 @@ static void destroyInstance(MXS_SPECIFIC_MONITOR* monitor)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_SPECIFIC_MONITOR *
+static MXS_MONITOR_INSTANCE *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     if (handle != NULL)
     {
         handle->shutdown = 0;
@@ -262,7 +262,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
 
@@ -277,7 +277,7 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
     const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
 
@@ -302,7 +302,7 @@ diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     json_t* rval = json_object();
     const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
@@ -373,7 +373,7 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
 static void
 monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 {
-    GALERA_MONITOR* handle = (GALERA_MONITOR*) mon->handle;
+    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->instance);
     MYSQL_ROW row;
     MYSQL_RES *result;
     char *server_string;
@@ -752,7 +752,7 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 {
     MXS_MONITORED_SERVER *moitor_servers = mon->monitored_servers;
     MXS_MONITORED_SERVER *candidate_master = NULL;
-    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->handle);
+    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->instance);
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
@@ -876,7 +876,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     MXS_MONITORED_SERVER *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     bool ignore_priority = true;
 
     if (is_cluster == 1)
@@ -1190,7 +1190,7 @@ static void nodeval_free(GALERA_NODE_INFO *in)
  */
 static void set_galera_cluster(MXS_MONITOR *mon)
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     int ret = false;
     int n_nodes = 0;
     HASHITERATOR *iterator;
@@ -1277,7 +1277,7 @@ static void set_galera_cluster(MXS_MONITOR *mon)
  */
 static void set_cluster_members(MXS_MONITOR *mon)
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->handle);
+    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     GALERA_NODE_INFO *value;
     MXS_MONITORED_SERVER *ptr;
     char *c_uuid = handle->cluster_info.c_uuid;

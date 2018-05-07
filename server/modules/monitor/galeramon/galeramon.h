@@ -74,7 +74,7 @@ typedef struct galera_cluster_info
 /**
  * The handle for an instance of a Galera Monitor module
  */
-struct GALERA_MONITOR : public MXS_SPECIFIC_MONITOR
+struct GALERA_MONITOR : public MXS_MONITOR_INSTANCE
 {
     THREAD thread;                    /**< Monitor thread */
     int shutdown;                     /**< Flag to shutdown the monitor thread */

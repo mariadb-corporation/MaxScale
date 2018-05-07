@@ -113,7 +113,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
         return NULL;
     }
 
-    if ((mon->module = (MXS_MONITOR_OBJECT*)load_module(module, MODULE_MONITOR)) == NULL)
+    if ((mon->api = (MXS_MONITOR_API*)load_module(module, MODULE_MONITOR)) == NULL)
     {
         MXS_ERROR("Unable to load monitor module '%s'.", my_name);
         MXS_FREE(my_name);
@@ -124,7 +124,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     mon->state = MONITOR_STATE_ALLOC;
     mon->name = my_name;
     mon->module_name = my_module;
-    mon->handle = NULL;
+    mon->instance = NULL;
     mon->monitored_servers = NULL;
     *mon->password = '\0';
     *mon->user = '\0';
@@ -154,11 +154,11 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
  * @param mon   The monitor to free
  */
 void
-monitor_free(MXS_MONITOR *mon)
+monitor_destroy(MXS_MONITOR *mon)
 {
     MXS_MONITOR *ptr;
 
-    mon->module->stopMonitor(mon->handle);
+    mon->api->stopMonitor(mon->instance);
     mon->state = MONITOR_STATE_FREED;
     spinlock_acquire(&monLock);
     if (allMonitors == mon)
@@ -204,7 +204,7 @@ monitor_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
             remove_server_journal(monitor);
         }
 
-        if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+        if ((monitor->instance = (*monitor->api->startMonitor)(monitor, params)))
         {
             monitor->state = MONITOR_STATE_RUNNING;
         }
@@ -253,7 +253,7 @@ monitor_stop(MXS_MONITOR *monitor)
         if (monitor->state == MONITOR_STATE_RUNNING)
         {
             monitor->state = MONITOR_STATE_STOPPING;
-            monitor->module->stopMonitor(monitor->handle);
+            monitor->api->stopMonitor(monitor->instance);
             monitor->state = MONITOR_STATE_STOPPED;
 
             MXS_MONITORED_SERVER* db = monitor->monitored_servers;
@@ -535,11 +535,11 @@ monitor_show(DCB *dcb, MXS_MONITOR *monitor)
 
     dcb_printf(dcb, "\n");
 
-    if (monitor->handle)
+    if (monitor->instance)
     {
-        if (monitor->module->diagnostics)
+        if (monitor->api->diagnostics)
         {
-            monitor->module->diagnostics(monitor->handle, dcb);
+            monitor->api->diagnostics(monitor->instance, dcb);
         }
         else
         {
@@ -1852,9 +1852,9 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-    if (monitor->handle && monitor->module->diagnostics_json)
+    if (monitor->instance && monitor->api->diagnostics_json)
     {
-        json_t* diag = monitor->module->diagnostics_json(monitor->handle);
+        json_t* diag = monitor->api->diagnostics_json(monitor->instance);
 
         if (diag)
         {

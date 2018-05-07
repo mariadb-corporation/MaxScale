@@ -36,7 +36,7 @@
 /**
  * The handle for an instance of a Multi-Master Monitor module
  */
-struct MM_MONITOR : public MXS_SPECIFIC_MONITOR
+struct MM_MONITOR : public MXS_MONITOR_INSTANCE
 {
     THREAD thread;                /**< Monitor thread */
     int shutdown;                 /**< Flag to shutdown the monitor thread */

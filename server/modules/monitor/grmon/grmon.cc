@@ -30,7 +30,7 @@
 /**
  * The instance of a Group Replication Monitor
  */
-struct GRMon : public MXS_SPECIFIC_MONITOR
+struct GRMon : public MXS_MONITOR_INSTANCE
 {
     GRMon(const GRMon&);
     GRMon& operator&(const GRMon&);
@@ -103,13 +103,13 @@ void GRMon::stop()
     thread_wait(m_thread);
 }
 
-static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
                                             const MXS_CONFIG_PARAMETER *params)
 {
     return GRMon::create(mon, params);
 }
 
-static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
+static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     GRMon* handle = static_cast<GRMon*>(mon);
     delete handle;
@@ -122,7 +122,7 @@ static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
  *
  * @return A handle to use when interacting with the monitor
  */
-static MXS_SPECIFIC_MONITOR *
+static MXS_MONITOR_INSTANCE *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     return GRMon::create_and_start(mon, params);
@@ -134,7 +134,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     GRMon *handle = static_cast<GRMon*>(mon);
     handle->stop();
@@ -148,7 +148,7 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
 }
 
@@ -157,7 +157,7 @@ diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     return NULL;
 }
@@ -342,7 +342,7 @@ extern "C"
      */
     MXS_MODULE* MXS_CREATE_MODULE()
     {
-        static MXS_MONITOR_OBJECT MyObject =
+        static MXS_MONITOR_API MyObject =
         {
             createInstance,
             destroyInstance,

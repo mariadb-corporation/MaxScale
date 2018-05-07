@@ -18,7 +18,7 @@
 #include <maxscale/thread.h>
 
 // The handle for an instance of a NDB Cluster Monitor module
-struct NDBC_MONITOR : public MXS_SPECIFIC_MONITOR
+struct NDBC_MONITOR : public MXS_MONITOR_INSTANCE
 {
     THREAD thread;                /**< Monitor thread */
     SPINLOCK lock;                /**< The monitor spinlock */

@@ -25,7 +25,7 @@
 #include <maxscale/debug.h>
 #include <maxscale/mysql_utils.h>
 
-struct AURORA_MONITOR : public MXS_SPECIFIC_MONITOR
+struct AURORA_MONITOR : public MXS_MONITOR_INSTANCE
 {
     bool         shutdown;      /**< True if the monitor is stopped */
     THREAD       thread;        /**< Monitor thread */
@@ -179,7 +179,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
 }
 
 static
-MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
+MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETER* params)
 {
     AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(MXS_CALLOC(1, sizeof(AURORA_MONITOR)));
 
@@ -208,7 +208,7 @@ MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR* mon, const MXS_CONFIG_PARAMETE
     return handle;
 }
 
-static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
+static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(mon);
 
@@ -225,10 +225,10 @@ static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
  * @param opt The configuration parameters for this monitor
  * @return Monitor handle
  */
-static MXS_SPECIFIC_MONITOR *
+static MXS_MONITOR_INSTANCE *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon->handle);
+    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon->instance);
 
     if (handle)
     {
@@ -277,7 +277,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
 
@@ -292,7 +292,7 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param mon   The monitor
  */
 static void
-diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
 }
 
@@ -302,7 +302,7 @@ diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     return NULL;
 }
@@ -318,7 +318,7 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_API MyObject =
     {
         createInstance,
         destroyInstance,

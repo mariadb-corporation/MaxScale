@@ -38,12 +38,12 @@ MXS_MODULE info =
 };
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR *createInstance(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
-static void destroyInstance(MXS_SPECIFIC_MONITOR *);
-static MXS_SPECIFIC_MONITOR *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
-static void stopMonitor(MXS_SPECIFIC_MONITOR *);
-static void diagnostics(const MXS_SPECIFIC_MONITOR *, DCB *);
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *);
+static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static void destroyInstance(MXS_MONITOR_INSTANCE *);
+static MXS_MONITOR_INSTANCE *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static void stopMonitor(MXS_MONITOR_INSTANCE *);
+static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
 static void detectStaleMaster(void *, int);
 static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
@@ -62,7 +62,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 
-    static MXS_MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_API MyObject =
     {
         createInstance,
         destroyInstance,
@@ -110,7 +110,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 /*lint +e14 */
 
-static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
+static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon,
                                             const MXS_CONFIG_PARAMETER *params)
 {
     MM_MONITOR* handle = static_cast<MM_MONITOR*>(MXS_CALLOC(1, sizeof(MM_MONITOR)));
@@ -140,7 +140,7 @@ static MXS_SPECIFIC_MONITOR* createInstance(MXS_MONITOR *mon,
     return handle;
 }
 
-static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
+static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
 {
     MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon);
 
@@ -156,10 +156,10 @@ static void destroyInstance(MXS_SPECIFIC_MONITOR* mon)
  * @param arg   The current handle - NULL if first start
  * @return A handle to use when interacting with the monitor
  */
-static MXS_SPECIFIC_MONITOR *
+static MXS_MONITOR_INSTANCE *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon->handle);
+    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon->instance);
 
     if (handle)
     {
@@ -209,7 +209,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MXS_SPECIFIC_MONITOR *mon)
+stopMonitor(MXS_MONITOR_INSTANCE *mon)
 {
     MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
 
@@ -223,7 +223,7 @@ stopMonitor(MXS_SPECIFIC_MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
+static void diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
 {
     const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
 
@@ -235,7 +235,7 @@ static void diagnostics(const MXS_SPECIFIC_MONITOR *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_SPECIFIC_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
 {
     const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
 
@@ -701,7 +701,7 @@ detectStaleMaster(void *arg, int enable)
 
 static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
 {
-    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon->handle);
+    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon->instance);
     MXS_MONITORED_SERVER *ptr;
 
     ptr = mon->monitored_servers;

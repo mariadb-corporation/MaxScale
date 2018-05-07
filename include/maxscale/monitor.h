@@ -35,9 +35,9 @@ typedef struct mxs_monitor MXS_MONITOR;
  * An opaque type from which types specific for a particular
  * monitor can be derived.
  */
-typedef struct mxs_specific_monitor
+typedef struct mxs_monitor_instance
 {
-} MXS_SPECIFIC_MONITOR;
+} MXS_MONITOR_INSTANCE;
 
 /**
  * @verbatim
@@ -62,7 +62,7 @@ typedef struct mxs_specific_monitor
  *
  * @see load_module
  */
-typedef struct mxs_monitor_object
+typedef struct mxs_monitor_api
 {
     /**
      * @brief Create the monitor.
@@ -82,7 +82,7 @@ typedef struct mxs_monitor_object
      * @return Pointer to the monitor specific data. Will be stored
      *         in @c monitor->handle.
      */
-    MXS_SPECIFIC_MONITOR *(*createInstance)(MXS_MONITOR *monitor,
+    MXS_MONITOR_INSTANCE *(*createInstance)(MXS_MONITOR *monitor,
                                             const MXS_CONFIG_PARAMETER *params);
 
     /**
@@ -94,7 +94,7 @@ typedef struct mxs_monitor_object
      *
      * @param monitor  The monitor object.
      */
-    void (*destroyInstance)(MXS_SPECIFIC_MONITOR *monitor);
+    void (*destroyInstance)(MXS_MONITOR_INSTANCE *monitor);
 
     /**
      * @brief Start the monitor
@@ -109,7 +109,7 @@ typedef struct mxs_monitor_object
      * @return Pointer to the monitor specific data. Will be stored
      *         in @c monitor->handle.
      */
-    MXS_SPECIFIC_MONITOR *(*startMonitor)(MXS_MONITOR *monitor,
+    MXS_MONITOR_INSTANCE *(*startMonitor)(MXS_MONITOR *monitor,
                                           const MXS_CONFIG_PARAMETER *params);
 
     /**
@@ -120,7 +120,7 @@ typedef struct mxs_monitor_object
      *
      * @param monitor The monitor object
      */
-    void (*stopMonitor)(MXS_SPECIFIC_MONITOR *monitor);
+    void (*stopMonitor)(MXS_MONITOR_INSTANCE *monitor);
 
     /**
      * @brief Write diagnostic information to a DCB.
@@ -128,7 +128,7 @@ typedef struct mxs_monitor_object
      * @param monitor  The monitor object.
      * @param dcb      The dcb to write to.
      */
-    void (*diagnostics)(const MXS_SPECIFIC_MONITOR* monitor, DCB* dcb);
+    void (*diagnostics)(const MXS_MONITOR_INSTANCE* monitor, DCB* dcb);
 
     /**
      * @brief Return diagnostic information about the monitor
@@ -139,8 +139,8 @@ typedef struct mxs_monitor_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics_json)(const MXS_SPECIFIC_MONITOR *monitor);
-} MXS_MONITOR_OBJECT;
+    json_t* (*diagnostics_json)(const MXS_MONITOR_INSTANCE *monitor);
+} MXS_MONITOR_API;
 
 /**
  * The monitor API version number. Any change to the monitor module API
@@ -260,9 +260,9 @@ struct mxs_monitor
                                    * There are retries and the total effective timeout value is
                                    * two times the option value.
                                    */
-    MXS_MONITOR_OBJECT *module;   /**< The "monitor object" */
+    MXS_MONITOR_API *api;         /**< The monitor api */
     char *module_name;            /**< Name of the monitor module */
-    MXS_SPECIFIC_MONITOR *handle; /**< Handle returned from startMonitor */
+    MXS_MONITOR_INSTANCE *instance; /**< Instance returned from startMonitor */
     size_t interval;              /**< The monitor interval */
     volatile bool server_pending_changes;
     /**< Are there any pending changes to a server?
