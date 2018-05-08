@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/messagequeue.hh"
+#include <maxscale/messagequeue.hh>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>

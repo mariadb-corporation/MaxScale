@@ -19,11 +19,9 @@
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
+#include <maxscale/worker.h>
 #include "messagequeue.hh"
-#include "poll.h"
-#include "worker.h"
-#include "workertask.hh"
-#include "session.hh"
+#include <maxscale/workertask.hh>
 
 namespace maxscale
 {

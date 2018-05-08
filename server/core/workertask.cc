@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/workertask.hh"
+#include <maxscale/workertask.hh>
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
 

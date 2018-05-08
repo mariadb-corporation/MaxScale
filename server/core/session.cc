@@ -44,7 +44,6 @@
 #include "internal/filter.h"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
-#include "internal/workertask.hh"
 
 using std::string;
 using std::stringstream;

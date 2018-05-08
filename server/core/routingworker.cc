@@ -36,7 +36,6 @@
 #include "internal/poll.h"
 #include "internal/service.h"
 #include "internal/statistics.h"
-#include "internal/workertask.hh"
 
 #define WORKER_ABSENT_ID -1
 

@@ -23,6 +23,31 @@
 
 MXS_BEGIN_DECLS
 
+/**
+ * A statistic identifier that can be returned by poll_get_stat
+ */
+typedef enum
+{
+    POLL_STAT_READ,
+    POLL_STAT_WRITE,
+    POLL_STAT_ERROR,
+    POLL_STAT_HANGUP,
+    POLL_STAT_ACCEPT,
+    POLL_STAT_EVQ_LEN,
+    POLL_STAT_EVQ_MAX,
+    POLL_STAT_MAX_QTIME,
+    POLL_STAT_MAX_EXECTIME
+} POLL_STAT;
+
+/*
+ * Return a particular statistics value.
+ *
+ * @param stat  What to return.
+ *
+ * @return The value.
+ */
+int64_t poll_get_stat(POLL_STAT stat);
+
 /*
  * Insert a fake hangup event for a DCB into the polling queue.
  *

@@ -55,11 +55,11 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/semaphore.hh>
+#include <maxscale/workertask.hh>
 
 #include "internal/modules.h"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
-#include "internal/workertask.hh"
 
 using maxscale::RoutingWorker;
 using maxscale::Worker;

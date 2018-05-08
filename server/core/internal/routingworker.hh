@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/routingworker.h>
-#include "worker.hh"
+#include <maxscale/worker.hh>
 #include "session.hh"
 
 namespace maxscale

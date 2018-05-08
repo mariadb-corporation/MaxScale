@@ -36,8 +36,8 @@
 
 #include <maxscale/config.h>
 #include <maxscale/listener.h>
+#include <maxscale/messagequeue.hh>
 
-#include "../internal/messagequeue.hh"
 #include "../internal/routingworker.hh"
 #include "../dcb.cc"
 #include "test_utils.h"

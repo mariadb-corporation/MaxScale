@@ -26,22 +26,6 @@ struct mxs_worker;
 
 #define MAX_EVENTS 1000
 
-/**
- * A statistic identifier that can be returned by poll_get_stat
- */
-typedef enum
-{
-    POLL_STAT_READ,
-    POLL_STAT_WRITE,
-    POLL_STAT_ERROR,
-    POLL_STAT_HANGUP,
-    POLL_STAT_ACCEPT,
-    POLL_STAT_EVQ_LEN,
-    POLL_STAT_EVQ_MAX,
-    POLL_STAT_MAX_QTIME,
-    POLL_STAT_MAX_EXECTIME
-} POLL_STAT;
-
 enum poll_message
 {
     POLL_MSG_CLEAN_PERSISTENT = 0x01
@@ -58,7 +42,6 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-int64_t         poll_get_stat(POLL_STAT stat);
 RESULTSET       *eventTimesGetList();
 
 MXS_END_DECLS

@@ -43,6 +43,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/messagequeue.hh>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
@@ -56,7 +57,6 @@
 #include "internal/admin.hh"
 #include "internal/config.h"
 #include "internal/maxscale.h"
-#include "internal/messagequeue.hh"
 #include "internal/modules.h"
 #include "internal/monitor.h"
 #include "internal/poll.h"

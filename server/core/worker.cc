@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/worker.hh"
+#include <maxscale/worker.hh>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -38,7 +38,6 @@
 #include "internal/poll.h"
 #include "internal/service.h"
 #include "internal/statistics.h"
-#include "internal/workertask.hh"
 
 #define WORKER_ABSENT_ID -1
 

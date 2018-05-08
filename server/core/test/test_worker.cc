@@ -12,7 +12,8 @@
  */
 
 #include <iostream>
-#include "../internal/worker.hh"
+#include <maxscale/worker.hh>
+#include "../internal/poll.h"
 
 using namespace std;
 
