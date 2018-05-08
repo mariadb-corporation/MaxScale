@@ -59,7 +59,6 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     , m_master_gtid_domain(-1)
     , m_external_master_port(PORT_UNKNOWN)
     , m_warn_set_standalone_master(true)
-    , m_checked(false)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -149,16 +148,9 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
         error = true;
     }
 
-    if (!error && !m_checked)
+    if (!error && !check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS"))
     {
-        if (!check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS"))
-        {
-            error = true;
-        }
-        else
-        {
-            m_checked = true;
-        }
+        error = true;
     }
 
     if (!error)

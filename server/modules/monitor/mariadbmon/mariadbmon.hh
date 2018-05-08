@@ -163,7 +163,6 @@ private:
     std::string m_script;            /**< Script to call when state changes occur on servers */
     uint64_t m_events;               /**< enabled events */
     bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
-    bool m_checked;                  /**< Whether access to servers has been checked */
 
     enum slave_down_setting_t
     {
