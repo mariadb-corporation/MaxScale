@@ -148,6 +148,9 @@ int conversation_func(int num_msg, const struct pam_message **msg,
  */
 bool validate_pam_password(const string& user, const string& password, const string& service, DCB* client)
 {
+    const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication for user '%s': '%s'.";
+    const char PAM_AUTH_ERR_MSG[] = "Pam authentication for user '%s' failed: '%s'.";
+    const char PAM_ACC_ERR_MSG[] = "Pam account check for user '%s' failed: '%s'.";
     ConversationData appdata(client, 0, password);
     pam_conv conv_struct = {conversation_func, &appdata};
     bool authenticated = false;
@@ -163,23 +166,35 @@ bool validate_pam_password(const string& user, const string& password, const str
             authenticated = true;
             MXS_DEBUG("pam_authenticate returned success.");
             break;
+        case PAM_USER_UNKNOWN:
         case PAM_AUTH_ERR:
-            MXS_DEBUG("pam_authenticate returned authentication failure (wrong password).");
-            // Normal failure
+            // Normal failure, username or password was wrong.
+            MXS_WARNING(PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
             break;
         default:
-            MXS_ERROR("pam_authenticate returned error '%d'.", pam_status);
+            // More exotic error, log as error.
+            MXS_ERROR(PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
             break;
         }
     }
     else
     {
-        MXS_ERROR("Failed to start PAM authentication for user '%s'.", user.c_str());
+        MXS_ERROR(PAM_START_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
     }
+
     if (authenticated)
     {
         pam_status = pam_acct_mgmt(pam_handle, 0);
-        account_ok = (pam_status == PAM_SUCCESS);
+        switch (pam_status)
+        {
+        case PAM_SUCCESS:
+            account_ok = true;
+            break;
+        default:
+            // Credentials have already been checked to be ok, so this is again a bit of an exotic error.
+            MXS_ERROR(PAM_ACC_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
+            break;
+        }
     }
     pam_end(pam_handle, pam_status);
     return account_ok;
