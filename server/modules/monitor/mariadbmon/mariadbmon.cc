@@ -454,18 +454,17 @@ void MariaDBMonitor::main_loop()
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_end);
         int64_t time_elapsed_ms = (loop_end.tv_sec - loop_start.tv_sec) * 1000 +
                                   (loop_end.tv_nsec - loop_start.tv_nsec) / 1000000;
-
+        int64_t sleep_time_remaining = m_monitor_base->interval - time_elapsed_ms;
+        // Sleep at least one full interval.
+        sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
         /* Sleep in small increments to react faster to some events. This should ideally use some type of
          * notification mechanism. */
-        int sleep_cycles = ((m_monitor_base->interval - time_elapsed_ms) / MXS_MON_BASE_INTERVAL_MS);
-        sleep_cycles = MXS_MAX(1, sleep_cycles); // Sleep at least once.
-        for (int i = 0; i < sleep_cycles; i++)
+        while (sleep_time_remaining > 0 && m_keep_running && !m_monitor_base->server_pending_changes)
         {
-            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
-            if (!m_keep_running || m_monitor_base->server_pending_changes)
-            {
-                break;
-            }
+            int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
+                MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
+            thread_millisleep(small_sleep_ms);
+            sleep_time_remaining -= small_sleep_ms;
         }
     }
 
