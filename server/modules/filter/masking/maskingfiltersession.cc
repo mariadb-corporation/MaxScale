@@ -131,7 +131,21 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
-    // We'll end up here also in the case of a multi-result.
+        {
+            ComOK ok(response);
+
+            if (ok.status() & SERVER_MORE_RESULTS_EXIST)
+            {
+                m_res.reset_multi();
+                m_state = EXPECTING_RESPONSE;
+            }
+            else
+            {
+                m_state = EXPECTING_NOTHING;
+            }
+        }
+        break;
+
     case ComResponse::LOCAL_INFILE_PACKET: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
