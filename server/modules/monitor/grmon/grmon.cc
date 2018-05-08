@@ -72,7 +72,7 @@ GRMon::~GRMon()
 
 GRMon* GRMon::create(MXS_MONITOR* monitor)
 {
-    return new GRMon(monitor));
+    return new GRMon(monitor);
 }
 
 bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
