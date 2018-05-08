@@ -44,6 +44,13 @@ void run(TestConnections& test)
     {
         // One multi-statement with two UPDATEs.
         test.try_query(pMysql, "UPDATE MXS_1719 SET a=1; UPDATE MXS_1719 SET a=1;");
+
+        // Sleep a while, so that the log is flushed.
+        sleep(5);
+        // This is actually related to MXS-1861 "masking filter logs warnings with
+        // multistatements" but it seems excessive to create a specific test for that.
+        test.log_excludes(0, "Received data, although expected nothing");
+
         // This will hang immediately, so we can shorten the timeout.
         test.set_timeout(5);
         test.try_query(pMysql, "SELECT * FROM MXS_1719");
