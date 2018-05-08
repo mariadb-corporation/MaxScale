@@ -15,7 +15,9 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
-       uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config
+       uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
+       libedit-dev
+
   ## separatelibgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
