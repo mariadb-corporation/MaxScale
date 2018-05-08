@@ -350,6 +350,13 @@ Worker::~Worker()
     delete m_pTimer;
     delete m_pQueue;
     close(m_epoll_fd);
+
+    // When going down, we need to cancel all pending calls.
+    for (auto i = m_calls.begin(); i != m_calls.end(); ++i)
+    {
+        i->second->call(Call::CANCEL);
+        delete i->second;
+    }
 }
 
 // static

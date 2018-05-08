@@ -80,27 +80,32 @@ public:
 
     bool tick(mxs::Worker::Call::action_t action)
     {
-        ss_dassert(action == mxs::Worker::Call::EXECUTE);
+        bool rv = false;
 
-        int64_t now = get_monotonic_time_ms();
-        int64_t diff = abs(now - m_at);
-
-        cout << m_id << ": " << diff << endl;
-
-        if (diff > 50)
+        if (action == mxs::Worker::Call::EXECUTE)
         {
-            cout << "Error: Difference between expected and happened > 50: " << diff << endl;
-            m_rv = EXIT_FAILURE;
+            int64_t now = get_monotonic_time_ms();
+            int64_t diff = abs(now - m_at);
+
+            cout << m_id << ": " << diff << endl;
+
+            if (diff > 50)
+            {
+                cout << "Error: Difference between expected and happened > 50: " << diff << endl;
+                m_rv = EXIT_FAILURE;
+            }
+
+            m_at += m_delay;
+
+            if (--s_ticks < 0)
+            {
+                maxscale::Worker::shutdown_all();
+            }
+
+            rv = true;
         }
 
-        m_at += m_delay;
-
-        if (--s_ticks < 0)
-        {
-            maxscale::Worker::shutdown_all();
-        }
-
-        return true;
+        return rv;
     }
 
 private:
