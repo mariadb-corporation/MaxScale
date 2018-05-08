@@ -1513,19 +1513,36 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     if (session->client_dcb->authfunc.reauthenticate)
     {
         MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-        MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
         uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] = {};
         uint8_t payload[gwbuf_length(packetbuf) - MYSQL_HEADER_LEN];
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, sizeof(payload), payload);
+
+        // Will contains extra data but the username is null-terminated
+        char user[gwbuf_length(proto->stored_query) - MYSQL_HEADER_LEN - 1];
+        gwbuf_copy_data(proto->stored_query, MYSQL_HEADER_LEN + 1,
+                        sizeof(user), (uint8_t*)user);
+
+        // Copy the new username to the session data
+        MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+        strcpy(data->user, user);
 
         int rc = session->client_dcb->authfunc.reauthenticate(session->client_dcb, data->user,
                                                               payload, sizeof(payload),
                                                               proto->scramble, sizeof(proto->scramble),
                                                               client_sha1, sizeof(client_sha1));
 
-        if (!(rval = rc == MXS_AUTH_SUCCEEDED))
+        if (rc == MXS_AUTH_SUCCEEDED)
+        {
+            // Re-authentication successful, route the original COM_CHANGE_USER
+            rval = true;
+        }
+        else
         {
             /**
+             * Authentication failed. To prevent the COM_CHANGE_USER from reaching
+             * the backend servers (and possibly causing problems) the client
+             * connection will be closed.
+             *
              * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
              * third is the response and the fourth is the following error.
              */
@@ -1656,14 +1673,34 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             {
                 changed_user = true;
                 send_auth_switch_request_packet(session->client_dcb);
+
+                // Store the original COM_CHANGE_USER for later
+                proto->stored_query = packetbuf;
+                packetbuf = NULL;
+            }
+            else if (proto->changing_user)
+            {
+                proto->changing_user = false;
+                bool ok = reauthenticate_client(session, packetbuf);
+                gwbuf_free(packetbuf);
+                packetbuf = proto->stored_query;
+                proto->stored_query = NULL;
+
+                if (ok)
+                {
+                    // Authentication was successful, route the original COM_CHANGE_USER
+                    rc = 1;
+                }
+                else
+                {
+                    // Authentication failed, close the connection
+                    rc = 0;
+                    gwbuf_free(packetbuf);
+                    packetbuf = NULL;
+                }
             }
 
-            if (proto->changing_user)
-            {
-                rc = reauthenticate_client(session, packetbuf) ? 1 : 0;
-                gwbuf_free(packetbuf);
-            }
-            else
+            if (packetbuf)
             {
                 /** Route query */
                 rc = MXS_SESSION_ROUTE_QUERY(session, packetbuf);

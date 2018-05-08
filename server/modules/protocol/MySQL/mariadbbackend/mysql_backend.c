@@ -859,6 +859,14 @@ gw_read_and_write(DCB *dcb)
         }
         else
         {
+            /**
+             * The client protocol always requests an authentication method
+             * switch to the same plugin to be compatible with most connectors.
+             *
+             * To prevent packet sequence number mismatch, always return a sequence
+             * of 3 for the final response to a COM_CHANGE_USER.
+             */
+            GWBUF_DATA(read_buffer)[3] = 0x3;
             proto->changing_user = false;
         }
     }
