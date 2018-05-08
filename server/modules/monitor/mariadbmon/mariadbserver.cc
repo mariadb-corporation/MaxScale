@@ -25,6 +25,7 @@ namespace
 {
     // Used for Slave_IO_Running
     const char YES[] = "Yes";
+    const char PREPARING[] = "Preparing";
     const char CONNECTING[] = "Connecting";
     const char NO[] = "No";
 }
@@ -659,7 +660,9 @@ SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::str
     {
         rval = SLAVE_IO_YES;
     }
-    else if (str == CONNECTING)
+    // Interpret "Preparing" as "Connecting". It's not quite clear if the master server id has been read
+    // or if server versions between master and slave have been checked, so better be on the safe side.
+    else if (str == CONNECTING || str == PREPARING)
     {
         rval = SLAVE_IO_CONNECTING;
     }
