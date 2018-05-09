@@ -656,50 +656,21 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 
 void MariaDBServer::update_server(MXS_MONITOR* base_monitor)
 {
-    MXS_MONITORED_SERVER* ptr = m_server_base;
-    ptr->mon_prev_status = ptr->server->status;
-    /* copy server status into monitor pending_status */
-    ptr->pending_status = ptr->server->status;
+    /* Backup current status so that it can be compared to the new status. Also, we should be careful when
+     * modifying 'server->status' as routers can read it at any moment. It's best to write to
+     * 'mon_server->pending_status' until the status is final and then write it to 'server->status'. */
+    auto current_status = m_server_base->server->status;
+    m_server_base->mon_prev_status = current_status;
+    m_server_base->pending_status = current_status;
 
-    /* monitor current node */
-    monitor_server(base_monitor);
-
-    if (mon_status_changed(ptr))
+    /* Monitor current node if not in maintenance. */
+    if (!SERVER_IN_MAINT(m_server_base->server))
     {
-        if (SRV_MASTER_STATUS(ptr->mon_prev_status))
-        {
-            /** Master failed, can't recover */
-            MXS_NOTICE("Server [%s]:%d lost the master status.",
-                       ptr->server->address,
-                       ptr->server->port);
-        }
+        monitor_server(base_monitor);
     }
 
-    if (mon_status_changed(ptr))
-    {
-#if defined(SS_DEBUG)
-        MXS_INFO("Backend server [%s]:%d state : %s",
-                 ptr->server->address,
-                 ptr->server->port,
-                 STRSRVSTATUS(ptr->server));
-#else
-        MXS_DEBUG("Backend server [%s]:%d state : %s",
-                  ptr->server->address,
-                  ptr->server->port,
-                  STRSRVSTATUS(ptr->server));
-#endif
-    }
-
-    if (SERVER_IS_DOWN(ptr->server))
-    {
-        /** Increase this server'e error count */
-        ptr->mon_err_count += 1;
-    }
-    else
-    {
-        /** Reset this server's error count */
-        ptr->mon_err_count = 0;
-    }
+    /** Increase or reset the error count of the server. */
+    m_server_base->mon_err_count = (is_down()) ? m_server_base->mon_err_count + 1 : 0;
 }
 
 /**
@@ -709,55 +680,47 @@ void MariaDBServer::update_server(MXS_MONITOR* base_monitor)
  */
 void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
 {
-    MXS_MONITORED_SERVER* database = m_server_base;
-    /* Don't probe servers in maintenance mode */
-    if (SERVER_IN_MAINT(database->server))
-    {
-        return;
-    }
+    MXS_MONITORED_SERVER* mon_srv = m_server_base;
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(base_monitor, mon_srv);
 
-    /** Store previous status */
-    database->mon_prev_status = database->server->status;
-
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(base_monitor, database);
+    SERVER* srv = mon_srv->server;
+    MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
     if (rval == MONITOR_CONN_OK)
     {
-        server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
-        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
+        server_clear_status_nolock(srv, SERVER_AUTH_ERROR);
+        monitor_clear_pending_status(mon_srv, SERVER_AUTH_ERROR);
     }
     else
     {
-        /**
-         * The current server is not running. Clear all but the stale master bit
-         * as it is used to detect masters that went down but came up.
-         */
+        /* The current server is not running. Clear all but the stale master bit as it is used to detect
+         * masters that went down but came up. */
         unsigned int all_bits = ~SERVER_STALE_STATUS;
-        server_clear_status_nolock(database->server, all_bits);
-        monitor_clear_pending_status(database, all_bits);
+        server_clear_status_nolock(srv, all_bits);
+        monitor_clear_pending_status(mon_srv, all_bits);
 
-        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        if (mysql_errno(conn) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
-            monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+            server_set_status_nolock(srv, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(mon_srv, SERVER_AUTH_ERROR);
         }
 
         /* Log connect failure only once */
-        if (mon_status_changed(database) && mon_print_fail_status(database))
+        if (mon_status_changed(mon_srv) && mon_print_fail_status(mon_srv))
         {
-            mon_log_connect_error(database, rval);
+            mon_log_connect_error(mon_srv, rval);
         }
 
         return;
     }
 
     /* Store current status in both server and monitor server pending struct */
-    server_set_status_nolock(database->server, SERVER_RUNNING);
-    monitor_set_pending_status(database, SERVER_RUNNING);
+    server_set_status_nolock(srv, SERVER_RUNNING);
+    monitor_set_pending_status(mon_srv, SERVER_RUNNING);
 
     /* Check whether current server is MaxScale Binlog Server */
     MYSQL_RES *result;
-    if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
-        (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0 &&
+        (result = mysql_store_result(conn)) != NULL)
     {
         m_binlog_relay = true;
         mysql_free_result(result);
@@ -768,9 +731,9 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
     }
 
     /* Get server version string, also get/set numeric representation. */
-    mxs_mysql_set_server_version(database->con, database->server);
+    mxs_mysql_set_server_version(conn, srv);
     /* Set monitor version enum. */
-    uint64_t version_num = server_get_version(database->server);
+    uint64_t version_num = server_get_version(srv);
     if (version_num >= 100000)
     {
         m_version = MariaDBServer::MARIADB_VERSION_100;
