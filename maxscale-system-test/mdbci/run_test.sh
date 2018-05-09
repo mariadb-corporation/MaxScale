@@ -65,7 +65,8 @@ ulimit -c unlimited
 if [ $res == 0 ] ; then
     . ${script_dir}/set_env.sh $name
     cd ${script_dir}/..
-    cmake . -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
+    mkdir build && cd build
+    cmake .. -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
     make
 
     if [ ! -z "${named_test}" ] ; then

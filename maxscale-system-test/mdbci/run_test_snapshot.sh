@@ -73,7 +73,9 @@ checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
 
 cd ${script_dir}/..
 
-cmake . -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target
+rm -rf build
+mkdir build && cd build
+cmake .. -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target
 make
 
 ./check_backend --restart-galera

@@ -19,7 +19,7 @@ function(add_test_executable source name template)
   add_template(${name} ${template})
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
-  add_test(NAME ${name} COMMAND ${name} ${name} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   list(REMOVE_AT ARGV 0 1 2 3)
 
@@ -37,13 +37,27 @@ function(add_test_executable_notest source name template)
   target_link_libraries(${name} testcore)
 endfunction()
 
+# Add a test which uses another test as the executable
+function(add_test_derived name executable template)
+  file(APPEND templates "${name} ${template}\n")
+  add_template(${name} ${template})
+  add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+  list(REMOVE_AT ARGV 0 1 2)
+
+  foreach (label IN LISTS ARGV)
+    get_property(prev_labels TEST ${name} PROPERTY LABELS)
+    set_property(TEST ${name} PROPERTY LABELS ${label} ${prev_labels})
+  endforeach()
+endfunction()
+
 # This function adds a script as a test with the specified name and template.
 # The naming of the templates follow the same principles as add_test_executable.
 # also suitable for symlinks
 function(add_test_script name script template labels)
   file(APPEND templates "${name} ${template}\n")
   add_template(${name} ${template})
-  add_test(NAME ${name} COMMAND ${script} ${name} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  add_test(NAME ${name} COMMAND ${CMAKE_SOURCE_DIR}/${script} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   list(REMOVE_AT ARGV 0 1 2)
 

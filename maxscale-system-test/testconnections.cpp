@@ -88,7 +88,6 @@ TestConnections::TestConnections(int argc, char *argv[]):
 #ifdef SIGBUS
     signal_set(SIGBUS, sigfatal_handler);
 #endif
-    chdir(test_dir);
     gettimeofday(&start_time, NULL);
 
     read_env();

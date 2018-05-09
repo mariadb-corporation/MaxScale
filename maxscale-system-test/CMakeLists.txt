@@ -14,7 +14,6 @@
 
 project(maxscale_system_test)
 cmake_minimum_required(VERSION 2.8)
-include_directories("/usr/include/mysql/")
 set(CTEST_BUILD_NAME "${BUILDNAME}")
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of
@@ -31,21 +30,8 @@ enable_testing()
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
 
-# Is this needed?
-configure_file(${CMAKE_SOURCE_DIR}/cnf/maxscale.cnf.template.setup_binlog.in ${CMAKE_BINARY_DIR}/cnf/maxscale.cnf.template.setup_binlog @ONLY)
-
-# Enable Java
-find_package(Java)
-if(EXISTS ${Java_JAVA_EXECUTABLE} ${JAVA_JAVAC_EXECUTABLE} ${JAVA_JAR_EXECUTABLE})
-  include(UseJava)
-  if(Java_FOUND)
-    add_subdirectory(maxscale/java/)
-  endif()
-else()
-  message(WARNING "Java not found, Java based tests are not run.")
-endif()
-
 # The core library
+include_directories(${CMAKE_BINARY_DIR})
 add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxscales.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
@@ -151,9 +137,9 @@ add_test_executable(bug572.cpp bug572 replication LABELS readwritesplit REPL_BAC
 
 # Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
 # (different filter sequence and configuration, but the same test, see .cnf for details)
-add_test_script(bug585 bug587 bug585 LABELS regexfilter REPL_BACKEND)
+add_test_derived(bug585 bug587 bug585 LABELS regexfilter REPL_BACKEND)
 add_test_executable(bug587.cpp bug587 bug587 LABELS regexfilter hintfilter REPL_BACKEND)
-add_test_script(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BACKEND)
+add_test_derived(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BACKEND)
 
 # Tries to connect Maxscale when all slaves stopped
 add_test_executable(bug592.cpp bug592 replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
@@ -342,16 +328,16 @@ add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit
 add_test_executable(load_balancing_galera.cpp load_balancing_galera load_galera LABELS readwritesplit GALERA_BACKEND)
 
 # Check load balancing parameters with Galera backend and 1 persistent connection
-add_test_script(load_balancing_galera_pers1 load_balancing_galera load_galera_pers1 LABELS readwritesplit HEAVY GALERA_BACKEND)
+add_test_derived(load_balancing_galera_pers1 load_balancing_galera load_galera_pers1 LABELS readwritesplit HEAVY GALERA_BACKEND)
 
 # Check load balancing parameters with Galera backend and 10 persistent connections
-add_test_script(load_balancing_galera_pers10 load_balancing_galera load_galera_pers10 LABELS readwritesplit HEAVY GALERA_BACKEND)
+add_test_derived(load_balancing_galera_pers10 load_balancing_galera load_galera_pers10 LABELS readwritesplit HEAVY GALERA_BACKEND)
 
 # Check load balancing parameters with 1 persistent connection
-add_test_script(load_balancing_pers1 load_balancing load_pers1 LABELS readwritesplit HEAVY REPL_BACKEND)
+add_test_derived(load_balancing_pers1 load_balancing load_pers1 LABELS readwritesplit HEAVY REPL_BACKEND)
 
 # Check load balancing parameters with 10 persistent connections
-add_test_script(load_balancing_pers10 load_balancing load_pers10 LABELS readwritesplit HEAVY REPL_BACKEND)
+add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwritesplit HEAVY REPL_BACKEND)
 
 # Test with extremely big blob inserting
 add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
@@ -422,7 +408,7 @@ add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS rea
 add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale REPL_BACKEND)
 
 # Crash with Galera and backend restart when persistant cfonnections are in use
-add_test_script(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
+add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale GALERA_BACKEND)
 
 # Load huge file with 'LOAD DATA LOCAL INFILE'
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
@@ -431,7 +417,7 @@ add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BAC
 add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication LABELS MySQLAuth LIGHT REPL_BACKEND)
 
 # Connect to Maxscale with user with only 'SELECT' priveledge (Galera backend)
-add_test_script(mxs37_table_privilege_galera mxs37_table_privilege galera LABELS MySQLAuth GALERA_BACKEND)
+add_test_derived(mxs37_table_privilege_galera mxs37_table_privilege galera LABELS MySQLAuth GALERA_BACKEND)
 
 # Connect repeatedly to Schema router and execute simple query, check if auth is ok
 add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
@@ -468,7 +454,7 @@ add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replicatio
 add_test_executable(mxs682_cyrillic.cpp mxs682_cyrillic replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # put cyrillic letters to the table and check from backend (Galera backend)
-add_test_script(mxs682_cyrillic_galera mxs682_cyrillic galera LABELS maxscale GALERA_BACKEND)
+add_test_derived(mxs682_cyrillic_galera mxs682_cyrillic galera LABELS maxscale GALERA_BACKEND)
 
 # Connect using different default database using user with database and table level grants
 add_test_executable(mxs716.cpp mxs716 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
@@ -761,7 +747,7 @@ add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS sc
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop, client ssl is ON
-add_test_script(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute REPL_BACKEND)
+add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute REPL_BACKEND)
 
 # Regression case for crash if maxadmin 'show monitors' command is issued, but no monitor is not running
 add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale)
@@ -773,13 +759,13 @@ add_test_executable(slave_failover.cpp slave_failover replication.one_slave LABE
 add_test_executable(sql_queries.cpp sql_queries replication LABELS readwritesplit REPL_BACKEND)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, one persistant connection configured
-add_test_script(sql_queries_pers1 sql_queries sql_queries_pers1 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
+add_test_derived(sql_queries_pers1 sql_queries sql_queries_pers1 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, 10 persistant connections configured
-add_test_script(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
+add_test_derived(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, client ssl is ON
-add_test_script(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
+add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
 
 
 # Check load balancing, client ssl is ON
@@ -828,13 +814,13 @@ add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binl
 add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync LABELS binlogrouter HEAVY BREAKS_REPL)
 
 # configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=0
-add_test_script(binlog_semisync_txs0_ss0 binlog_semisync setup_binlog_semisync_txs0_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
+add_test_derived(binlog_semisync_txs0_ss0 binlog_semisync setup_binlog_semisync_txs0_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
 
 # configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=0,transaction_safety=1
-add_test_script(binlog_semisync_txs0_ss1 binlog_semisync setup_binlog_semisync_txs0_ss1 LABELS binlogrouter HEAVY BREAKS_REPL)
+add_test_derived(binlog_semisync_txs0_ss1 binlog_semisync setup_binlog_semisync_txs0_ss1 LABELS binlogrouter HEAVY BREAKS_REPL)
 
 # configure binlog router setup, execute queries and transactions, check data; install semysync plugin, router options semisync=1,transaction_safety=0
-add_test_script(binlog_semisync_txs1_ss0 binlog_semisync setup_binlog_semisync_txs1_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
+add_test_derived(binlog_semisync_txs1_ss0 binlog_semisync setup_binlog_semisync_txs1_ss0 LABELS binlogrouter HEAVY BREAKS_REPL)
 
 set_tests_properties(binlog_semisync PROPERTIES TIMEOUT 3600)
 set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
