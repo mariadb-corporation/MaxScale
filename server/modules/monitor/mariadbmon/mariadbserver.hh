@@ -86,6 +86,7 @@ public:
     MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
+    bool            m_report_version_error; /**< Report version error for this server. */
     mariadb_version m_version;              /**< Server version */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int             m_group;                /**< Multi-master group where this server belongs,
@@ -282,6 +283,18 @@ public:
      * @return True if file was read and all commands were completed successfully
      */
     bool run_sql_from_file(const std::string& path, json_t** error_out);
+
+    /**
+     * Query and update information of this server. Sets some values for status bits,
+     * but these may be added or overridden by later methods.
+     *
+     * @param base_monitor The base monitor object monitoring this server. Required for connection settings.
+     */
+    void update_server(MXS_MONITOR* base_monitor);
+
+private:
+    void monitor_server(MXS_MONITOR* base_monitor);
+    void update_slave_status();
 };
 
 /**

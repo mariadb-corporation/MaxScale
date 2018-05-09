@@ -179,9 +179,6 @@ private:
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
 
     // Cluster discovery and status assignment methods
-    void monitor_one_server(MariaDBServer& server);
-    void monitor_database(MariaDBServer* param_db);
-    void monitor_mysql_db(MariaDBServer *serv_info);
     MariaDBServer* find_root_master();
     MXS_MONITORED_SERVER* get_replication_tree();
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();

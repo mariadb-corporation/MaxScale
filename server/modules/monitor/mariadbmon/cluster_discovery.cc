@@ -22,7 +22,6 @@ static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 
 static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
-static bool report_version_err = true;
 
 /**
  * This function computes the replication tree from a set of monitored servers and returns the root server
@@ -441,136 +440,6 @@ void MariaDBMonitor::find_graph_cycles()
 }
 
 /**
- * Monitor an individual server. TODO: this will likely end up as method of MariaDBServer class.
- *
- * @param database  The database to probe
- */
-void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
-{
-    MXS_MONITORED_SERVER* database = serv_info->m_server_base;
-    /* Don't probe servers in maintenance mode */
-    if (SERVER_IN_MAINT(database->server))
-    {
-        return;
-    }
-
-    /** Store previous status */
-    database->mon_prev_status = database->server->status;
-
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor_base, database);
-    if (rval == MONITOR_CONN_OK)
-    {
-        server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
-        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
-    }
-    else
-    {
-        /**
-         * The current server is not running. Clear all but the stale master bit
-         * as it is used to detect masters that went down but came up.
-         */
-        unsigned int all_bits = ~SERVER_STALE_STATUS;
-        server_clear_status_nolock(database->server, all_bits);
-        monitor_clear_pending_status(database, all_bits);
-
-        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
-        {
-            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
-            monitor_set_pending_status(database, SERVER_AUTH_ERROR);
-        }
-
-        /* Log connect failure only once */
-        if (mon_status_changed(database) && mon_print_fail_status(database))
-        {
-            mon_log_connect_error(database, rval);
-        }
-
-        return;
-    }
-
-    /* Store current status in both server and monitor server pending struct */
-    server_set_status_nolock(database->server, SERVER_RUNNING);
-    monitor_set_pending_status(database, SERVER_RUNNING);
-
-    /* Check whether current server is MaxScale Binlog Server */
-    MYSQL_RES *result;
-    if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
-        (result = mysql_store_result(database->con)) != NULL)
-    {
-        serv_info->m_binlog_relay = true;
-        mysql_free_result(result);
-    }
-    else
-    {
-        serv_info->m_binlog_relay = false;
-    }
-
-    /* Get server version string, also get/set numeric representation. */
-    mxs_mysql_set_server_version(database->con, database->server);
-    /* Set monitor version enum. */
-    uint64_t version_num = server_get_version(database->server);
-    if (version_num >= 100000)
-    {
-        serv_info->m_version = MariaDBServer::MARIADB_VERSION_100;
-    }
-    else if (version_num >= 5 * 10000 + 5 * 100)
-    {
-        serv_info->m_version = MariaDBServer::MARIADB_VERSION_55;
-    }
-    else
-    {
-        serv_info->m_version = MariaDBServer::MARIADB_VERSION_UNKNOWN;
-    }
-    /* Query a few settings. */
-    serv_info->read_server_variables();
-    /* If gtid domain exists and server is 10.0, update gtid:s */
-    if (m_master_gtid_domain >= 0 && serv_info->m_version == MariaDBServer::MARIADB_VERSION_100)
-    {
-        serv_info->update_gtids();
-    }
-
-    /* Check for valid server version */
-    if (serv_info->m_version == MariaDBServer::MARIADB_VERSION_100 ||
-        serv_info->m_version == MariaDBServer::MARIADB_VERSION_55)
-    {
-        monitor_mysql_db(serv_info);
-    }
-    else if (report_version_err)
-    {
-        MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                  "The server is ignored by the monitor.", serv_info->name());
-        report_version_err = false;
-    }
-}
-
-/**
- * Monitor a database with given server info.
- *
- * @param serv_info Server info for database
- */
-void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
-{
-    MXS_MONITORED_SERVER* database = serv_info->m_server_base;
-    /** Clear old states */
-    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
-                                 SERVER_SLAVE_OF_EXTERNAL_MASTER);
-
-    if (serv_info->do_show_slave_status())
-    {
-        /* If all configured slaves are running set this node as slave */
-        if (serv_info->m_n_slaves_running > 0 &&
-            serv_info->m_n_slaves_running == serv_info->m_slave_status.size())
-        {
-            monitor_set_pending_status(database, SERVER_SLAVE);
-        }
-
-        /** Store master_id of current node. */
-        database->server->master_id = !serv_info->m_slave_status.empty() ?
-                                       serv_info->m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
-    }
-}
-
-/**
  * Check if the maxscale_schema.replication_heartbeat table is replicated on all
  * servers and log a warning if problems were found.
  *
@@ -861,60 +730,6 @@ bool MariaDBMonitor::set_standalone_master()
     }
 
     return rval;
-}
-
-/**
- * Monitor a server. Should be moved to the server class later on.
- *
- * @param server The server
- */
-void MariaDBMonitor::monitor_one_server(MariaDBServer& server)
-{
-    MXS_MONITORED_SERVER* ptr = server.m_server_base;
-
-    ptr->mon_prev_status = ptr->server->status;
-    /* copy server status into monitor pending_status */
-    ptr->pending_status = ptr->server->status;
-
-    /* monitor current node */
-    monitor_database(&server);
-
-    if (mon_status_changed(ptr))
-    {
-        if (SRV_MASTER_STATUS(ptr->mon_prev_status))
-        {
-            /** Master failed, can't recover */
-            MXS_NOTICE("Server [%s]:%d lost the master status.",
-                       ptr->server->address,
-                       ptr->server->port);
-        }
-    }
-
-    if (mon_status_changed(ptr))
-    {
-#if defined(SS_DEBUG)
-        MXS_INFO("Backend server [%s]:%d state : %s",
-                 ptr->server->address,
-                 ptr->server->port,
-                 STRSRVSTATUS(ptr->server));
-#else
-        MXS_DEBUG("Backend server [%s]:%d state : %s",
-                  ptr->server->address,
-                  ptr->server->port,
-                  STRSRVSTATUS(ptr->server));
-#endif
-    }
-
-    if (SERVER_IS_DOWN(ptr->server))
-    {
-        /** Increase this server'e error count */
-        ptr->mon_err_count += 1;
-    }
-    else
-    {
-        /** Reset this server's error count */
-        ptr->mon_err_count = 0;
-    }
 }
 
 /**

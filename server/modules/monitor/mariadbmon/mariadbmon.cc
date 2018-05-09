@@ -339,7 +339,8 @@ void MariaDBMonitor::main_loop()
         // Query all servers for their status.
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            monitor_one_server(**iter);
+            MariaDBServer* server = *iter;
+            server->update_server(m_monitor_base);
         }
 
         // Use the information to find the so far best master server.
