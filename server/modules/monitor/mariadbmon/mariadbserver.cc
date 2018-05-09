@@ -49,7 +49,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     , m_n_slave_heartbeats(0)
     , m_heartbeat_period(0)
     , m_latest_event(0)
-    , m_gtid_domain_id(-1)
+    , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
 {
     ss_dassert(monitored_server);
 }

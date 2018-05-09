@@ -15,3 +15,5 @@
 
 /** Server id default value */
 const int64_t SERVER_ID_UNKNOWN = -1;
+/** Default gtid domain */
+const int64_t GTID_DOMAIN_UNKNOWN = -1;

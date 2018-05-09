@@ -354,7 +354,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
  */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (m_master != NULL && m_master->is_master() && m_master_gtid_domain >= 0);
+    return (m_master != NULL && m_master->is_master() && m_master_gtid_domain != GTID_DOMAIN_UNKNOWN);
 }
 
 /**
@@ -503,7 +503,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
         demotion_target = *current_master;
     }
 
-    if (m_master_gtid_domain < 0)
+    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
         return false;
@@ -657,7 +657,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
 bool MariaDBMonitor::do_failover(json_t** err_out)
 {
     // Topology has already been tested to be simple.
-    if (m_master_gtid_domain < 0)
+    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
         return false;

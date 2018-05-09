@@ -173,7 +173,8 @@ private:
     // Base methods
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     ~MariaDBMonitor();
-    void init_server_info();
+    void reset_server_info();
+    void clear_server_info();
     bool load_config_params(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);

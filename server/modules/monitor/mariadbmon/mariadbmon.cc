@@ -56,31 +56,29 @@ const int PORT_UNKNOWN = 0;
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     : m_monitor_base(monitor_base)
     , m_id(config_get_global_options()->id)
-    , m_master_gtid_domain(-1)
+    , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_warn_set_standalone_master(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
-{}
+{
+    clear_server_info();
+}
 
 /**
- * Initialize the server info hashtable.
+ * Reset and initialize server arrays and related data.
  */
-void MariaDBMonitor::init_server_info()
+void MariaDBMonitor::reset_server_info()
 {
     // If this monitor is being restarted, the server data needs to be freed.
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        delete *iter;
-    }
-    m_servers.clear();
+    clear_server_info();
+
+    // Next, initialize the data.
     for (auto mon_server = m_monitor_base->monitored_servers; mon_server; mon_server = mon_server->next)
     {
         m_servers.push_back(new MariaDBServer(mon_server));
     }
-
-    m_server_info.clear();
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         auto mon_server = (*iter)->m_server_base;
@@ -88,6 +86,22 @@ void MariaDBMonitor::init_server_info()
         ServerInfoMap::value_type new_val(mon_server, *iter);
         m_server_info.insert(new_val);
     }
+}
+
+void MariaDBMonitor::clear_server_info()
+{
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        delete *iter;
+    }
+    // All MariaDBServer*:s are now invalid, as well as any dependant data.
+    m_servers.clear();
+    m_server_info.clear();
+    m_excluded_servers.clear();
+    m_master = NULL;
+    m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
+    m_external_master_host.clear();
+    m_external_master_port = PORT_UNKNOWN;
 }
 
 /**
@@ -136,12 +150,10 @@ MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor)
 bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-
-    /* Always reset these values. The server dependent values must be reset as servers could have been
-     * added and removed. */
     m_keep_running = true;
-    m_master = NULL;
-    init_server_info();
+    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
+     * added, removed and modified. */
+    reset_server_info();
 
     if (!load_config_params(params))
     {
@@ -477,7 +489,7 @@ void MariaDBMonitor::main_loop()
 void MariaDBMonitor::update_gtid_domain()
 {
     int64_t domain = m_master->m_gtid_domain_id;
-    if (m_master_gtid_domain >= 0 && domain != m_master_gtid_domain)
+    if (m_master_gtid_domain != GTID_DOMAIN_UNKNOWN && domain != m_master_gtid_domain)
     {
         MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
                    m_master_gtid_domain, domain);

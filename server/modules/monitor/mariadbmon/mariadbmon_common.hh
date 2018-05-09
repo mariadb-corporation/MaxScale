@@ -33,3 +33,4 @@
     } while (false)
 
 extern const int64_t SERVER_ID_UNKNOWN;
+extern const int64_t GTID_DOMAIN_UNKNOWN;
