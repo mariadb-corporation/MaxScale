@@ -17,7 +17,7 @@
 #include <tr1/unordered_map>
 #include <vector>
 
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/thread.h>
 
 #include "mariadbserver.hh"

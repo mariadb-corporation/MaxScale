@@ -908,63 +908,6 @@ bool MariaDBMonitor::check_sql_files()
     return rval;
 }
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *monitor)
-{
-    return MariaDBMonitor::create(monitor);
-}
-
-static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
-{
-    MariaDBMonitor::destroy(static_cast<MariaDBMonitor*>(monitor));
-}
-
-/**
- * Start the monitor instance and return the instance data. This function creates a thread to
- * execute the monitoring. Use stopMonitor() to stop the thread.
- *
- * @param monitor General monitor data
- * @param params Configuration parameters
- * @return True, if the monitor could be started, false otherwise.
- */
-static bool startMonitor(MXS_MONITOR_INSTANCE *monitor, const MXS_CONFIG_PARAMETER* params)
-{
-    return static_cast<MariaDBMonitor*>(monitor)->start(params);
-}
-
-/**
- * Stop a running monitor
- *
- * @param mon  The monitor that should be stopped.
- */
-static void stopMonitor(MXS_MONITOR_INSTANCE *mon)
-{
-    auto handle = static_cast<MariaDBMonitor*>(mon);
-    handle->stop();
-}
-
-/**
- * Daignostic interface
- *
- * @param dcb   DCB to print diagnostics
- * @param arg   The monitor handle
- */
-static void diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
-{
-    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon);
-    handle->diagnostics(dcb);
-}
-
-/**
- * Diagnostic interface
- *
- * @param arg   The monitor handle
- */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
-{
-    const MariaDBMonitor *handle = static_cast<const MariaDBMonitor*>(mon);
-    return handle->diagnostics_json();
-}
-
 /**
  * Command handler for 'switchover'
  *
@@ -1083,13 +1026,12 @@ string get_connection_errors(const ServerArray& servers)
     return rval;
 }
 
-MXS_BEGIN_DECLS
 /**
  * The module entry point routine. This routine populates the module object structure.
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MariaDB Monitor module.");
     static const char ARG_MONITOR_DESC[] = "Monitor name (from configuration file)";
@@ -1132,16 +1074,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
                                handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
                                rejoin_argv, "Rejoin server to a cluster");
 
-    static MXS_MONITOR_API MyObject =
-    {
-        createInstance,
-        destroyInstance,
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_MONITOR,
@@ -1150,7 +1082,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A MariaDB Master/Slave replication monitor",
         "V1.5.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &maxscale::MonitorApi<MariaDBMonitor>::s_api,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -1194,5 +1126,3 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
     return &info;
 }
-
-MXS_END_DECLS
