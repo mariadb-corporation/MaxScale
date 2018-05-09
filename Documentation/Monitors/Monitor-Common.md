@@ -63,6 +63,55 @@ successful, the backend is considered to be unreachable and down.
 backend_connect_attempts=3
 ```
 
+### `disk_space_threshold`
+
+With this parameter it can be specified how full a disk, referred to by
+a particular path, may be, before MaxScale starts logging warnings or takes
+other action (e.g. performs a switchover). This functionality will only work
+with MariaDB server versions 10.1.32, 10.2.14 and 10.3.6 onwards, if the
+`DISKS` _information schema plugin_ has been installed.
+
+A limit is specified as a path followed by a colon and a percentage specifying
+how full the corresponding disk may be, before action is taken.
+E.g. an entry like
+```
+/data:80
+```
+specifies that the disk that has been mounted on `/data` may be used until 80%
+of the total space has been consumed. Multiple entries can be specified by
+separating them by a comma. If the path is specified using `*`, then the limit
+applies to all disks.
+
+Note that if a particular disk has been mounted on several paths, only one path
+need to be specified. If several are specified, then the one with the smallest
+percentage will be applied.
+
+Examples:
+```
+disk_space_threshold=*:80
+disk_space_threshold=/data:80
+disk_space_threshold=/data1:80,/data2:70,/data3:30
+```
+
+There is no default value, but this parameter must explicitly be specified
+if the disk space situation should be monitored.
+
+### `disk_space_check_interval`
+
+With this positive integer parameter it can be specified in milliseconds
+the minimum amount of time between disk space checks. The default value
+is `20000`, which means that the disk space situation will be checked
+once every 20 seconds.
+
+Note that as the checking is made as part of the regular monitor interval
+cycle, the disk space check interval is affected by the value of
+`monitor_interval`. In particular, even if the value of
+`disk_space_check_interval` is smaller than that of `monitor_interval`,
+the checking will still take place at `monitor_interval` intervals.
+```
+disk_space_check_interval=10000
+```
+
 ### `script`
 
 This command will be executed when a server changes its state. The parameter should be an absolute path to a command or the command should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
