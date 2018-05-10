@@ -5,7 +5,7 @@
 ## run a set of queries in the loop (see setmix.sql) using Perl client
 
 rp=`realpath $0`
-export test_dir=`dirname $rp`
+export test_dir=`pwd`
 export test_name=`basename $rp`
 
 $test_dir/non_native_setup $test_name

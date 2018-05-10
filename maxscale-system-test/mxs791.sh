@@ -5,7 +5,7 @@
 ## - connects to Maxscale, checks that defined in cmd line DB is selected
 
 rp=`realpath $0`
-export test_dir=`dirname $rp`
+export test_dir=`pwd`
 export test_name="mxs791.sh"
 echo test name is $test_name
 

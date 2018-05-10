@@ -1,7 +1,7 @@
 #!/bin/bash
 
 rp=`realpath $0`
-export test_dir=`dirname $rp`
+export test_dir=`pwd`
 export test_name=`basename $rp`
 $test_dir/non_native_setup $test_name
 export ssl_options="--ssl-cert=$test_dir/ssl-cert/client-cert.pem --ssl-key=$test_dir/ssl-cert/client-key.pem"
