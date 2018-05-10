@@ -231,8 +231,8 @@ The `match` value must be a valid pcre2 regular expression.
 ```
 
             "replace": {
-                "column": "ssn"
-                "match": "(123)",
+                "column": "ssn",
+                "match": "(123)"
             },
             "with": {
                 "fill": "X#"
