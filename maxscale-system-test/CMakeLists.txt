@@ -50,8 +50,8 @@ add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp cdc_connector.cpp)
-target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt jansson)
+  blob_test.cpp cdc_connector.cpp tcp_connection.cpp)
+target_link_libraries(testcore ${MYSQL_CLIENT} z crypt m pthread ssl crypto dl rt jansson)
 install(TARGETS testcore DESTINATION system-test)
 add_dependencies(testcore connector-c)
 
@@ -767,6 +767,10 @@ add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS re
 
 # test effect of local_address in configuration file
 add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
+
+# MXS-1628: Security scanner says MaxScale is vulnerable to ancient MySQL vulnerability
+# https://jira.mariadb.org/browse/MXS-1628
+add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication LABELS REPL_BACKEND)
 
 configure_file(templates.h.in templates.h @ONLY)
 
