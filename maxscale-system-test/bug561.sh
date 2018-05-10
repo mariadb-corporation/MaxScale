@@ -8,6 +8,7 @@
 
 
 rp=`realpath $0`
+export src_dir=`dirname $rp`
 export test_dir=`pwd`
 export test_name=`basename $rp`
 
@@ -17,7 +18,7 @@ if [ $? -ne 0 ] ; then
         echo "configuring maxscale failed"
         exit 1
 fi
-export ssl_options="--ssl-cert=$test_dir/ssl-cert/client-cert.pem --ssl-key=$test_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 #echo "Waiting for 15 seconds"
 #sleep 15
@@ -69,5 +70,5 @@ else
         echo "Messages are same"
 fi
 
-$test_dir/copy_logs.sh bug561
+$src_dir/copy_logs.sh bug561
 exit $res

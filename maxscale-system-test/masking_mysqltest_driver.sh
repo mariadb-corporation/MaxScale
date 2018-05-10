@@ -19,7 +19,8 @@ then
     exit 1
 fi
 
-source=masking/$1/masking_rules.json
+src_dir=$(dirname $(realpath $0))
+source=$src_dir/masking/$1/masking_rules.json
 target=$maxscale_access_user@$maxscale_IP:/home/$maxscale_access_user/masking_rules.json
 
 if [ $maxscale_IP != "127.0.0.1" ] ; then
@@ -55,4 +56,4 @@ fi
 # [Read Connection Listener Master] in cnf/maxscale.maxscale.cnf.template.$1
 port=4008
 
-./mysqltest_driver.sh $1 ./masking/$1 $port $user $password
+$src_dir/mysqltest_driver.sh $1 $src_dir/masking/$1 $port $user $password

@@ -68,8 +68,10 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
 
     TestConnections test(argc, argv);
+    std::string src = test_dir;
+    src += "/mxs1719.json";
 
-    if (test.maxscales->copy_to_node(0, "./mxs1719.json", "/home/vagrant/mxs1719.json") == 0)
+    if (test.maxscales->copy_to_node(0, src.c_str(), "/home/vagrant/mxs1719.json") == 0)
     {
         if (test.maxscales->start() == 0)
         {
