@@ -1132,6 +1132,10 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
         break;
 
+    case MXS_AUTH_BAD_HANDSHAKE:
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
+        break;
+
     default:
         MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
                   "state unrecognized.", pthread_self(), dcb->fd);

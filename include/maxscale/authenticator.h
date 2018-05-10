@@ -99,6 +99,7 @@ typedef struct mxs_authenticator
 #define MXS_AUTH_INCOMPLETE 4 /**< Authentication is not yet complete */
 #define MXS_AUTH_SSL_INCOMPLETE 5 /**< SSL connection is not yet complete */
 #define MXS_AUTH_NO_SESSION 6
+#define MXS_AUTH_BAD_HANDSHAKE 7 /**< Malformed client packet */
 
 /** Return values for the loadusers entry point */
 #define MXS_AUTH_LOADUSERS_OK    0 /**< Users loaded successfully */

@@ -475,11 +475,21 @@ mysql_auth_set_client_data(
     if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /* Should have a username */
-        char *first_letter_of_username = (char *)(client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE);
-        int user_length = strlen(first_letter_of_username);
+        uint8_t* name = client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE;
+        uint8_t* end = client_auth_packet + sizeof(client_auth_packet);
+        int user_length = 0;
 
-        ss_dassert(client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length)
-                   && user_length <= MYSQL_USER_MAXLEN);
+        while (name < end && *name)
+        {
+            name++;
+            user_length++;
+        }
+
+        if (name == end)
+        {
+            // The name is not null terminated
+            return MXS_AUTH_BAD_HANDSHAKE;
+        }
 
         if (client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1))
         {
@@ -487,14 +497,14 @@ mysql_auth_set_client_data(
             packet_length_used = MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1;
             /* We should find an authentication token next */
             /* One byte of packet is the length of authentication token */
-            memcpy(&client_data->auth_token_len,
-                   client_auth_packet + packet_length_used, 1);
+            client_data->auth_token_len = client_auth_packet[packet_length_used];
 
             if (client_auth_packet_size >
                 (packet_length_used + client_data->auth_token_len))
             {
-                /* Packet is large enough for authentication token */
-                if (NULL != (client_data->auth_token = (uint8_t *)MXS_MALLOC(client_data->auth_token_len)))
+                client_data->auth_token = (uint8_t*)MXS_MALLOC(client_data->auth_token_len);
+
+                if (client_data->auth_token)
                 {
                     /* The extra 1 is for the token length byte, just extracted*/
                     memcpy(client_data->auth_token,
@@ -510,8 +520,12 @@ mysql_auth_set_client_data(
             else
             {
                 /* Packet was too small to contain authentication token */
-                return MXS_AUTH_FAILED;
+                return MXS_AUTH_BAD_HANDSHAKE;
             }
+        }
+        else
+        {
+            return MXS_AUTH_BAD_HANDSHAKE;
         }
     }
     return MXS_AUTH_SUCCEEDED;
