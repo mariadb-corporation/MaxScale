@@ -645,6 +645,11 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
     MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
+    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service) == 0)
+    {
+        rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
+    }
+
     if (rc == MXS_AUTH_SUCCEEDED)
     {
         memcpy(output_token, temp.client_sha1, output_token_len);
