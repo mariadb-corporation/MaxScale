@@ -453,7 +453,7 @@ void MariaDBMonitor::check_maxscale_schema_replication()
     while (database)
     {
         mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor_base, database);
-        if (rval == MONITOR_CONN_OK)
+        if (mon_connection_is_ok(rval))
         {
             if (!check_replicate_ignore_table(database) ||
                 !check_replicate_do_table(database) ||

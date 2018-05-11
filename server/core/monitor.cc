@@ -817,7 +817,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 
     for (MXS_MONITORED_SERVER *mondb = monitor->monitored_servers; mondb; mondb = mondb->next)
     {
-        if (mon_ping_or_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
+        if (!mon_connection_is_ok(mon_ping_or_connect_to_db(monitor, mondb)))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
@@ -1449,29 +1449,28 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
 }
 
 /**
- * Ping or, if connection does not exist or ping fails, connect to a database. This
- * will always leave a valid database handle in the database->con pointer, allowing
- * the user to call MySQL C API functions to find out the reason of the failure.
+ * Ping or connect to a database. If connection does not exist or ping fails, a new connection is created.
+ * This will always leave a valid database handle in the database->con pointer, allowing the user to call
+ * MySQL C API functions to find out the reason of the failure.
  *
  * @param mon Monitor
  * @param database Monitored database
- * @return MONITOR_CONN_OK if the connection is OK, else the reason for the failure
+ * @return Connection status.
  */
-mxs_connect_result_t
-mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
+mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
 {
-    /** Return if the connection is OK */
-    if (database->con && mysql_ping(database->con) == 0)
-    {
-        return MONITOR_CONN_OK;
-    }
-
     if (database->con)
     {
+        /** Return if the connection is OK */
+        if (mysql_ping(database->con) == 0)
+        {
+            return MONITOR_CONN_EXISTING_OK;
+        }
+        /** Otherwise close the handle. */
         mysql_close(database->con);
     }
 
-    mxs_connect_result_t rval = MONITOR_CONN_REFUSED;
+    mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
     if ((database->con = mysql_init(NULL)))
     {
         char *uname = mon->user;
@@ -1500,36 +1499,46 @@ mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
 
             if (result)
             {
-                rval = MONITOR_CONN_OK;
+                conn_result = MONITOR_CONN_NEWCONN_OK;
                 break;
             }
         }
 
-        if (rval == MONITOR_CONN_REFUSED &&
-            (int)difftime(end, start) >= mon->connect_timeout)
+        if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon->connect_timeout)
         {
-            rval = MONITOR_CONN_TIMEOUT;
+            conn_result = MONITOR_CONN_TIMEOUT;
         }
         MXS_FREE(dpwd);
     }
 
-    return rval;
+    return conn_result;
 }
 
 /**
- * Log an error about the failure to connect to a backend server
- * and why it happened.
- * @param database Backend database
- * @param rval Return value of mon_connect_to_db
+ * Is the return value one of the 'OK' values.
+ *
+ * @param connect_result Return value of mon_ping_or_connect_to_db
+ * @return True of connection is ok
  */
-void
-mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval)
+bool mon_connection_is_ok(mxs_connect_result_t connect_result)
 {
-    MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-              "Monitor timed out when connecting to server [%s]:%d : \"%s\"" :
-              "Monitor was unable to connect to server [%s]:%d : \"%s\"",
-              database->server->address, database->server->port,
-              mysql_error(database->con));
+    return (connect_result == MONITOR_CONN_EXISTING_OK || connect_result == MONITOR_CONN_NEWCONN_OK);
+}
+
+/**
+ * Log an error about the failure to connect to a backend server and why it happened.
+ *
+ * @param database Backend database
+ * @param rval Return value of mon_ping_or_connect_to_db
+ */
+void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval)
+{
+    ss_dassert(!mon_connection_is_ok(rval) && database);
+    const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
+    const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
+    auto srv = database->server;
+    MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ? TIMED_OUT : REFUSED,
+              srv->name, srv->address, srv->port, mysql_error(database->con));
 }
 
 static void mon_log_state_change(MXS_MONITORED_SERVER *ptr)

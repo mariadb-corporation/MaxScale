@@ -180,14 +180,14 @@ typedef enum
     MONITOR_STATE_FREED     = 0x08
 } monitor_state_t;
 
-/*
- * Results of attempt at database connection for monitoring
- */
+/* Return type of mon_ping_or_connect_to_db(). */
 typedef enum
 {
-    MONITOR_CONN_OK,
-    MONITOR_CONN_REFUSED,
-    MONITOR_CONN_TIMEOUT
+    MONITOR_CONN_EXISTING_OK,   /* Existing connection was ok and server replied to ping. */
+    MONITOR_CONN_NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
+                                 * successfully. */
+    MONITOR_CONN_REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
+    MONITOR_CONN_TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
 } mxs_connect_result_t;
 
 /** Monitor events */
@@ -326,6 +326,7 @@ bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
 bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
 
 mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database);
+bool mon_connection_is_ok(mxs_connect_result_t connect_result);
 void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
 const char* mon_get_event_name(mxs_monitor_event_t event);
 

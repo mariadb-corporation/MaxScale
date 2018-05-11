@@ -57,7 +57,7 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
         /** Try to connect to or ping the database */
         mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
 
-        if (rval == MONITOR_CONN_OK)
+        if (mon_connection_is_ok(rval))
         {
             server_set_status_nolock(&temp_server, SERVER_RUNNING);
             MYSQL_RES *result;

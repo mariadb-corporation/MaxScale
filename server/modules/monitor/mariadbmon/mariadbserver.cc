@@ -685,10 +685,18 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
 
     SERVER* srv = mon_srv->server;
     MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
-    if (rval == MONITOR_CONN_OK)
+    if (mon_connection_is_ok(rval))
     {
         server_clear_status_nolock(srv, SERVER_AUTH_ERROR);
         monitor_clear_pending_status(mon_srv, SERVER_AUTH_ERROR);
+        /* Store current status in both server and monitor server pending struct */
+        server_set_status_nolock(srv, SERVER_RUNNING);
+        monitor_set_pending_status(mon_srv, SERVER_RUNNING);
+
+        if (rval == MONITOR_CONN_NEWCONN_OK)
+        {
+            update_server_info();
+        }
     }
     else
     {
@@ -713,39 +721,6 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
         return;
     }
 
-    /* Store current status in both server and monitor server pending struct */
-    server_set_status_nolock(srv, SERVER_RUNNING);
-    monitor_set_pending_status(mon_srv, SERVER_RUNNING);
-
-    /* Check whether current server is MaxScale Binlog Server */
-    MYSQL_RES *result;
-    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0 &&
-        (result = mysql_store_result(conn)) != NULL)
-    {
-        m_binlog_relay = true;
-        mysql_free_result(result);
-    }
-    else
-    {
-        m_binlog_relay = false;
-    }
-
-    /* Get server version string, also get/set numeric representation. */
-    mxs_mysql_set_server_version(conn, srv);
-    /* Set monitor version enum. */
-    uint64_t version_num = server_get_version(srv);
-    if (version_num >= 100000)
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_100;
-    }
-    else if (version_num >= 5 * 10000 + 5 * 100)
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_55;
-    }
-    else
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_UNKNOWN;
-    }
     /* Query a few settings. */
     read_server_variables();
     /* If gtid domain exists and server is 10.0, update gtid:s */
@@ -787,6 +762,45 @@ void MariaDBServer::update_slave_status()
         /** Store master_id of current node. */
         m_server_base->server->master_id = !m_slave_status.empty() ?
             m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
+    }
+}
+
+/**
+ * Update information which changes rarely. This method should be called after (re)connecting to a backend.
+ * Calling this every monitoring loop is overkill.
+ */
+void MariaDBServer::update_server_info()
+{
+    auto conn = m_server_base->con;
+    // Check whether this server is a MaxScale Binlog Server.
+    MYSQL_RES *result;
+    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0 &&
+        (result = mysql_store_result(conn)) != NULL)
+    {
+        m_binlog_relay = true;
+        mysql_free_result(result);
+    }
+    else
+    {
+        m_binlog_relay = false;
+    }
+
+    /* Get server version string, also get/set numeric representation. These functions do not actually
+     * query the server, since the data was obtained when connecting. */
+    mxs_mysql_set_server_version(conn, m_server_base->server);
+    /* Set monitor version enum. */
+    uint64_t version_num = server_get_version(m_server_base->server);
+    if (version_num >= 100000)
+    {
+        m_version = MariaDBServer::MARIADB_VERSION_100;
+    }
+    else if (version_num >= 5 * 10000 + 5 * 100)
+    {
+        m_version = MariaDBServer::MARIADB_VERSION_55;
+    }
+    else
+    {
+        m_version = MariaDBServer::MARIADB_VERSION_UNKNOWN;
     }
 }
 

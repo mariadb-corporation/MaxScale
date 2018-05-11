@@ -295,6 +295,7 @@ public:
 private:
     void monitor_server(MXS_MONITOR* base_monitor);
     void update_slave_status();
+    void update_server_info();
 };
 
 /**

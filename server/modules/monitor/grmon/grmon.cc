@@ -193,7 +193,7 @@ static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* ser
 
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, server);
 
-    if (rval != MONITOR_CONN_OK)
+    if (!mon_connection_is_ok(rval))
     {
         if (mysql_errno(server->con) == ER_ACCESS_DENIED_ERROR)
         {
