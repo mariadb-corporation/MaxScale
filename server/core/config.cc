@@ -3356,7 +3356,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         {
             MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
                        "using default value of %d milliseconds.",
-                       CN_MONITOR_INTERVAL, obj->object, DEFAULT_MONITOR_INTERVAL);
+                       obj->object, CN_MONITOR_INTERVAL, DEFAULT_MONITOR_INTERVAL);
         }
 
         char *journal_age = config_get_value(obj->parameters, CN_JOURNAL_MAX_AGE);
