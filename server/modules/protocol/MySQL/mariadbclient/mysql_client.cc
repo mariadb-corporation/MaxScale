@@ -1513,7 +1513,6 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     if (session->client_dcb->authfunc.reauthenticate)
     {
         MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] = {};
         uint8_t payload[gwbuf_length(packetbuf) - MYSQL_HEADER_LEN];
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, sizeof(payload), payload);
 
@@ -1529,7 +1528,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         int rc = session->client_dcb->authfunc.reauthenticate(session->client_dcb, data->user,
                                                               payload, sizeof(payload),
                                                               proto->scramble, sizeof(proto->scramble),
-                                                              client_sha1, sizeof(client_sha1));
+                                                              data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
         {
