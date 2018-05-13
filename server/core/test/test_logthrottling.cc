@@ -35,7 +35,8 @@ using std::string;
 namespace
 {
 
-const char LOGNAME[] = "/tmp/maxscale.log";
+const char LOGNAME[] = "maxscale.log";
+static string logfile;
 const size_t N_THREADS = 4;
 
 sem_t u_semstart;
@@ -110,7 +111,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     mxs_log_set_throttling(&throttling); // Causes message to be logged.
     mxs_log_flush_sync();
 
-    ifstream in(LOGNAME);
+    ifstream in(logfile);
     in.seekg(0, ios_base::end);
 
     THREAD_ARG args[N_THREADS];
@@ -167,9 +168,13 @@ int main(int argc, char* argv[])
     rc = sem_init(&u_semfinish, 0, 0);
     ensure(rc == 0);
 
-    unlink(LOGNAME);
 
-    if (mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS))
+    char tmpbuf[] = "/tmp/maxscale_test_logthrottling_XXXXXX";
+    char* logdir = mkdtemp(tmpbuf);
+    ensure(logdir);
+    logfile.assign(string{logdir} + '/' + LOGNAME);
+
+    if (mxs_log_init(NULL, logdir, MXS_LOG_TARGET_FS))
     {
         MXS_LOG_THROTTLING t;
 
@@ -265,6 +270,11 @@ int main(int argc, char* argv[])
     {
         rc = EXIT_FAILURE;
     }
+
+    // A crude method to remove all files but it works
+    string cmd = "rm -r ";
+    cmd += logdir;
+    system(cmd.c_str());
 
     return rc;
 }
