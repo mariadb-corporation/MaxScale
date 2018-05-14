@@ -371,7 +371,7 @@ void MariaDBMonitor::main_loop()
             assign_relay_master(**iter);
 
             /* Remove SLAVE status if this server is a Binlog Server relay */
-            if ((*iter)->m_binlog_relay)
+            if ((*iter)->m_version == MariaDBServer::version::BINLOG_ROUTER)
             {
                 monitor_clear_pending_status((*iter)->m_server_base, SERVER_SLAVE);
             }
@@ -546,7 +546,8 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
         {
             if (ptr->server->node_id != mon_root_master->server->node_id &&
                 (server->is_slave() || SERVER_IS_RELAY_SERVER(ptr->server)) &&
-                !server->m_binlog_relay)  // No select lag for Binlog Server
+                (server->m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
+                 server->m_version == MariaDBServer::version::MARIADB_100)) // No select lag for Binlog Server
             {
                 set_slave_heartbeat(server);
             }

@@ -76,23 +76,25 @@ class MariaDBServer
 {
 public:
     typedef std::vector<SlaveStatus> SlaveStatusArray;
-    enum mariadb_version
+    enum class version
     {
-        MARIADB_VERSION_UNKNOWN, // Anything older than 5.5. These are no longer supported by the monitor.
-        MARIADB_VERSION_55, // 5.5, oldest still supported release. Not all monitor features work.
-        MARIADB_VERSION_100 // 10.0 and greater. In practice though, 10.0.2 or greater is assumed.
+        UNKNOWN,            /* Anything older than 5.5. These are no longer supported by the monitor. */
+        MARIADB_MYSQL_55,   /* MariaDB 5.5 series or MySQL 5.5 and later. Does not have gtid (on MariaDB) so
+                             * all gtid-related features (failover etc.) are disabled. */
+        MARIADB_100,        /* MariaDB 10.0 and greater. In practice though, 10.0.2 or greater is assumed.
+                             * All monitor features are on. */
+        BINLOG_ROUTER       /* MaxScale binlog server. Requires special handling. */
     };
 
     MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
     bool            m_report_version_error; /**< Report version error for this server. */
-    mariadb_version m_version;              /**< Server version */
+    version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int             m_group;                /**< Multi-master group where this server belongs,
                                               *  0 for servers not in groups */
     bool            m_read_only;            /**< Value of @@read_only */
-    bool            m_binlog_relay;         /** Server is a Binlog Relay */
     size_t          m_n_slaves_running;     /**< Number of running slave connections */
     int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
     double          m_heartbeat_period;     /**< The time interval between heartbeats */

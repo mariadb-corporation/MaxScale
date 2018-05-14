@@ -40,11 +40,10 @@ SlaveStatus::SlaveStatus()
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     : m_server_base(monitored_server)
     , m_report_version_error(true)
-    , m_version(MARIADB_VERSION_UNKNOWN)
+    , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_group(0)
     , m_read_only(false)
-    , m_binlog_relay(false)
     , m_n_slaves_running(0)
     , m_n_slave_heartbeats(0)
     , m_heartbeat_period(0)
@@ -85,13 +84,16 @@ bool MariaDBServer::do_show_slave_status()
 {
     unsigned int columns = 0;
     string query;
+    bool all_slaves_status = false;
     switch (m_version)
     {
-        case MARIADB_VERSION_100:
+        case version::MARIADB_100:
+        case version::BINLOG_ROUTER:
             columns = 42;
+            all_slaves_status = true;
             query = "SHOW ALL SLAVES STATUS";
             break;
-        case MARIADB_VERSION_55:
+        case version::MARIADB_MYSQL_55:
             columns = 40;
             query = "SHOW SLAVE STATUS";
             break;
@@ -133,7 +135,7 @@ bool MariaDBServer::do_show_slave_status()
 
     int64_t i_connection_name = -1, i_slave_rec_hbs = -1, i_slave_hb_period = -1;
     int64_t i_using_gtid = -1, i_gtid_io_pos = -1;
-    if (m_version == MARIADB_VERSION_100)
+    if (all_slaves_status)
     {
         i_connection_name = result->get_col_index("Connection_name");
         i_slave_rec_hbs = result->get_col_index("Slave_received_heartbeats");
@@ -173,7 +175,7 @@ bool MariaDBServer::do_show_slave_status()
             }
         }
 
-        if (m_version == MARIADB_VERSION_100)
+        if (all_slaves_status)
         {
             sstatus.name = result->get_string(i_connection_name);
             auto heartbeats = result->get_uint(i_slave_rec_hbs);
@@ -261,7 +263,7 @@ void MariaDBServer::read_server_variables()
     MXS_MONITORED_SERVER* database = m_server_base;
     string query = "SELECT @@global.server_id, @@read_only;";
     int columns = 2;
-    if (m_version ==  MARIADB_VERSION_100)
+    if (m_version ==  version::MARIADB_100)
     {
         query.erase(query.end() - 1);
         query += ", @@global.gtid_domain_id;";
@@ -721,24 +723,30 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
         return;
     }
 
-    /* Query a few settings. */
-    read_server_variables();
-    /* If gtid domain exists and server is 10.0, update gtid:s */
-    if (m_version == MariaDBServer::MARIADB_VERSION_100)
+    /* Query different things depending on server version/type. */
+    switch (m_version)
     {
-        update_gtids();
-    }
-
-    /* Check for valid server version */
-    if (m_version == MariaDBServer::MARIADB_VERSION_100 || m_version == MariaDBServer::MARIADB_VERSION_55)
-    {
-        update_slave_status();
-    }
-    else if (m_report_version_error)
-    {
-        MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                  "The server is ignored by the monitor.", name());
-        m_report_version_error = false;
+        case version::MARIADB_MYSQL_55:
+            read_server_variables();
+            update_slave_status();
+            break;
+        case version::MARIADB_100:
+            read_server_variables();
+            update_gtids();
+            update_slave_status();
+            break;
+        case version::BINLOG_ROUTER:
+            // TODO: Add special version of server variable query.
+            update_slave_status();
+            break;
+        default:
+            if (m_report_version_error)
+            {
+                MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
+                          "The server is ignored by the monitor.", name());
+                m_report_version_error = false;
+            }
+            break;
     }
 }
 
@@ -771,36 +779,34 @@ void MariaDBServer::update_slave_status()
  */
 void MariaDBServer::update_server_info()
 {
+    m_version = version::UNKNOWN;
     auto conn = m_server_base->con;
+    auto srv = m_server_base->server;
+
+    /* Get server version string, also get/set numeric representation. This function does not query the
+     * server, since the data was obtained when connecting. */
+    mxs_mysql_set_server_version(conn, srv);
+
     // Check whether this server is a MaxScale Binlog Server.
     MYSQL_RES *result;
     if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0 &&
         (result = mysql_store_result(conn)) != NULL)
     {
-        m_binlog_relay = true;
+        m_version = version::BINLOG_ROUTER;
         mysql_free_result(result);
     }
     else
     {
-        m_binlog_relay = false;
-    }
-
-    /* Get server version string, also get/set numeric representation. These functions do not actually
-     * query the server, since the data was obtained when connecting. */
-    mxs_mysql_set_server_version(conn, m_server_base->server);
-    /* Set monitor version enum. */
-    uint64_t version_num = server_get_version(m_server_base->server);
-    if (version_num >= 100000)
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_100;
-    }
-    else if (version_num >= 5 * 10000 + 5 * 100)
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_55;
-    }
-    else
-    {
-        m_version = MariaDBServer::MARIADB_VERSION_UNKNOWN;
+        /* Not a binlog server, check version number. */
+        uint64_t version_num = server_get_version(srv);
+        if (version_num >= 100000 && srv->server_type == SERVER_TYPE_MARIADB)
+        {
+            m_version = version::MARIADB_100;
+        }
+        else if (version_num >= 5 * 10000 + 5 * 100)
+        {
+            m_version = version::MARIADB_MYSQL_55;
+        }
     }
 }
 
