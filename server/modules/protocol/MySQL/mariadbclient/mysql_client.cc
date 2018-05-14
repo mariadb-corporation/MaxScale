@@ -530,6 +530,34 @@ int gw_read_client_event(DCB* dcb)
 }
 
 /**
+ * Get length of a null-terminated string
+ *
+ * @param str String to measure
+ * @param len Maximum length to read
+ *
+ * @return Length of @c str or -1 if the string is not null-terminated
+ */
+static int get_zstr_len(const char* str, int len)
+{
+    const char* end = str + len;
+    int slen = 0;
+
+    while (str < end && *str)
+    {
+        str++;
+        slen++;
+    }
+
+    if (str == end)
+    {
+        // The string is not null terminated
+        slen = -1;
+    }
+
+    return slen;
+}
+
+/**
  * @brief Store client connection information into the DCB
  * @param dcb Client DCB
  * @param buffer Buffer containing the handshake response packet
@@ -557,22 +585,28 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 
     if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
-        strcpy(ses->user, (char*)data + MYSQL_AUTH_PACKET_BASE_SIZE);
+        const char* username = (const char*)data + MYSQL_AUTH_PACKET_BASE_SIZE;
+        int userlen = get_zstr_len(username, len - MYSQL_AUTH_PACKET_BASE_SIZE);
+
+        if (userlen != -1 && (int)sizeof(ses->user) > userlen)
+        {
+            strcpy(ses->user, username);
+        }
 
         if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
         {
-            /** Client supports default database on connect */
-            size_t userlen = strlen(ses->user) + 1;
-
-            /** Skip the authentication token, it is handled by the authenticators */
+            /** Client is connecting with a default database */
             uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
-
             size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
 
-            if (data[dboffset])
+            if (dboffset < len)
             {
-                /** Client is connecting with a default database */
-                strcpy(ses->db, (char*)data + dboffset);
+                int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
+
+                if (dblen != -1 && (int)sizeof(ses->db) < dblen)
+                {
+                    strcpy(ses->db, (const char*)data + dboffset);
+                }
             }
         }
     }
@@ -660,6 +694,10 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     if (dcb->authfunc.extract(dcb, read_buffer))
     {
         auth_val = dcb->authfunc.authenticate(dcb);
+    }
+    else
+    {
+        auth_val = MXS_AUTH_BAD_HANDSHAKE;
     }
 
     MySQLProtocol *protocol = (MySQLProtocol *)dcb->protocol;
@@ -1164,6 +1202,10 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
                                         session->auth_token_len > 0,
                                         session->db, auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+        break;
+
+    case MXS_AUTH_BAD_HANDSHAKE:
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
         break;
 
     default:
