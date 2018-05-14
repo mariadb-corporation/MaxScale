@@ -3,7 +3,7 @@
 Release 2.1.17 is a GA release.
 
 This document describes the changes in release 2.1.17, when compared
-to release [2.1.16](MaxScale-2.1.15-Release-Notes.md).
+to release [2.1.16](MaxScale-2.1.16-Release-Notes.md).
 
 For any problems you encounter, please consider submitting a bug report at
 [Jira](https://jira.mariadb.org).
@@ -23,6 +23,7 @@ For any problems you encounter, please consider submitting a bug report at
 * [MXS-1772](https://jira.mariadb.org/browse/MXS-1772) Netmask limitations are not documented
 * [MXS-1767](https://jira.mariadb.org/browse/MXS-1767) Server capabilities are not correct
 * [MXS-1762](https://jira.mariadb.org/browse/MXS-1762) The client IP should be considered when choosing a persistent connection
+* [MXS-1628](https://jira.mariadb.org/browse/MXS-1628) Security scanner says MaxScale is vulnerable to ancient MySQL vulnerability
 * [MXS-1618](https://jira.mariadb.org/browse/MXS-1618) Maxadmin Binary Hangs on a Big endian Platform
 * [MXS-1419](https://jira.mariadb.org/browse/MXS-1419) maxadmin history is missing
 
