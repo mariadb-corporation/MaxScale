@@ -29,6 +29,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb_client.hh>
+#include <maxscale/poll.h>
 
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
@@ -1706,7 +1707,17 @@ static bool kill_func(DCB *dcb, void *data)
         dcb->session->ses_id == info->target_id)
     {
         MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
-        info->targets.push_back(std::make_pair(dcb->server, proto->thread_id));
+
+        if (proto->thread_id)
+        {
+            // DCB is connected and we know the thread ID so we can kill it
+            info->targets.push_back(std::make_pair(dcb->server, proto->thread_id));
+        }
+        else
+        {
+            // DCB is not yet connected, send a hangup to forcibly close it
+            poll_fake_hangup_event(dcb);
+        }
     }
 
     return true;

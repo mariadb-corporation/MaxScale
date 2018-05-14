@@ -658,6 +658,65 @@ private:
     uint16_t m_status;
 };
 
+class ComOK : public ComResponse
+{
+public:
+    ComOK(GWBUF* pPacket)
+        : ComResponse(pPacket)
+    {
+        ss_dassert(m_type == OK_PACKET);
+
+        extract_payload();
+    }
+
+    ComOK(const ComResponse& response)
+        : ComResponse(response)
+    {
+        ss_dassert(m_type == OK_PACKET);
+
+        extract_payload();
+    }
+
+    uint64_t affected_rows() const
+    {
+        return m_affected_rows;
+    }
+
+    uint64_t last_insert_id() const
+    {
+        return m_last_insert_id;
+    }
+
+    uint16_t warnings() const
+    {
+        return m_warnings;
+    }
+
+    uint16_t status() const
+    {
+        return m_status;
+    }
+
+private:
+    void extract_payload()
+    {
+        m_affected_rows = LEncInt(&m_pData).value();
+        m_last_insert_id = LEncInt(&m_pData).value();
+
+        m_status = *m_pData++;
+        m_status += (*m_pData++ << 8);
+
+        m_warnings = *m_pData++;
+        m_warnings += (*m_pData++ << 8);
+    }
+
+private:
+    uint64_t m_affected_rows;
+    uint64_t m_last_insert_id;
+    uint16_t m_status;
+    uint16_t m_warnings;
+};
+
 /**
  * @class ComRequest
  *

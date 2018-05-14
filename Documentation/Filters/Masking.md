@@ -231,8 +231,8 @@ The `match` value must be a valid pcre2 regular expression.
 ```
 
             "replace": {
-                "column": "ssn"
-                "match": "(123)",
+                "column": "ssn",
+                "match": "(123)"
             },
             "with": {
                 "fill": "X#"
@@ -319,7 +319,7 @@ of the mask value to get the lengths to match.
                 "column": "creditcard"
             },
             "with": {
-                "value": "1234123412341234"
+                "value": "1234123412341234",
                 "fill": "0"
             },
             "applies_to": [ ... ],
