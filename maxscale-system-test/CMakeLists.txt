@@ -911,6 +911,9 @@ add_test_executable(local_address.cpp local_address local_address LABELS REPL_BA
 # https://jira.mariadb.org/browse/MXS-1628
 add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication LABELS REPL_BACKEND)
 
+# MXS-1836: MaxInfo "show eventTimes" returns garbage.
+add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_show_eventTimes LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
