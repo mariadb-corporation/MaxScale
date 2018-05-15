@@ -25,34 +25,17 @@
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR "SET GLOBAL wsrep_sst_donor = \""
 
-static void monitorMain(void *);
-
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon);
-static void destroyInstance(MXS_MONITOR_INSTANCE* monitor);
-static bool startMonitor(MXS_MONITOR_INSTANCE *,
-                         const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_MONITOR_INSTANCE *);
-static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
-static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR*);
 static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONITORED_SERVER *, int);
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(mxs_monitor_event_t event);
-static void update_sst_donor_nodes(MXS_MONITOR*, int);
 static int compare_node_index(const void*, const void*);
 static int compare_node_priority(const void*, const void*);
-static void reset_cluster_info(GALERA_MONITOR *);
 static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *);
 static void nodeval_free(GALERA_NODE_INFO *);
-static void set_galera_cluster(MXS_MONITOR *);
-static bool detect_cluster_size(const GALERA_MONITOR *, const int, const char *, const int);
-static void set_cluster_members(MXS_MONITOR *);
 
-extern "C"
-{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -61,19 +44,9 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
-
-    static MXS_MONITOR_API MyObject =
-    {
-        createInstance,
-        destroyInstance,
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
 
     static MXS_MODULE info =
     {
@@ -83,7 +56,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Galera cluster monitor",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &maxscale::MonitorApi<GaleraMonitor>::s_api,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -115,50 +88,60 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-}
 
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *mon)
+GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
+    : m_thread(0)
+    , m_shutdown(0)
+    , m_status(0)
+    , m_id(MXS_MONITOR_DEFAULT_ID)
+    , m_disableMasterFailback(0)
+    , m_availableWhenDonor(0)
+    , m_disableMasterRoleSetting(0)
+    , m_master(NULL)
+    , m_script(NULL)
+    , m_root_node_as_master(false)
+    , m_use_priority(false)
+    , m_events(0)
+    , m_set_donor_nodes(false)
+    , m_galera_nodes_info(NULL)
+    , m_monitor(mon)
+    , m_checked(false)
 {
-    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(MXS_CALLOC(1, sizeof(GALERA_MONITOR)));
     HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
                                             hashtable_item_strhash,
                                             hashtable_item_strcmp);
-
-    if (handle && nodes_info)
+    ss_dassert(nodes_info);
+    if (!nodes_info)
     {
-        hashtable_memory_fns(nodes_info,
-                             hashtable_item_strdup,
-                             (HASHCOPYFN)nodeval_dup,
-                             hashtable_item_free,
-                             (HASHFREEFN)nodeval_free);
-
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-
-        /* Initialise cluster nodes hash and Cluster info */
-        handle->galera_nodes_info = nodes_info;
-        handle->cluster_info.c_size = 0;
-        handle->cluster_info.c_uuid = NULL;
-        handle->monitor = mon;
-        handle->checked = false;
-    }
-    else
-    {
-        hashtable_free(nodes_info);
-        MXS_FREE(handle);
+        throw std::bad_alloc();
     }
 
-    return handle;
+    hashtable_memory_fns(nodes_info,
+                         hashtable_item_strdup,
+                         (HASHCOPYFN)nodeval_dup,
+                         hashtable_item_free,
+                         (HASHFREEFN)nodeval_free);
+
+    m_galera_nodes_info = nodes_info;
+    m_cluster_info.c_size = 0;
+    m_cluster_info.c_uuid = NULL;
 }
 
-static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
+GaleraMonitor::~GaleraMonitor()
 {
-    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(monitor);
+    hashtable_free(m_galera_nodes_info);
+    MXS_FREE(m_script);
+}
 
-    hashtable_free(handle->galera_nodes_info);
-    MXS_FREE(handle->script);
-    MXS_FREE(handle);
+// static
+GaleraMonitor* GaleraMonitor::create(MXS_MONITOR* monitor)
+{
+    return new GaleraMonitor(monitor);
+}
+
+void GaleraMonitor::destroy()
+{
+    delete this;
 }
 
 /**
@@ -168,45 +151,43 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* monitor)
  *
  * @return A handle to use when interacting with the monitor
  */
-static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
+bool GaleraMonitor::start(const MXS_CONFIG_PARAMETER *params)
 {
     bool started = false;
 
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
+    ss_dassert(!m_shutdown);
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
 
-    ss_dassert(!handle->shutdown);
-    ss_dassert(!handle->thread);
-    ss_dassert(!handle->script);
-
-    if (!handle->checked)
+    if (!m_checked)
     {
-        if (!check_monitor_permissions(handle->monitor, "SHOW STATUS LIKE 'wsrep_local_state'"))
+        if (!check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'"))
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
         else
         {
-            handle->checked = true;
+            m_checked = true;
         }
     }
 
-    if (handle->checked)
+    if (m_checked)
     {
-        handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
-        handle->availableWhenDonor = config_get_bool(params, "available_when_donor");
-        handle->disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
-        handle->root_node_as_master = config_get_bool(params, "root_node_as_master");
-        handle->use_priority = config_get_bool(params, "use_priority");
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-        handle->set_donor_nodes = config_get_bool(params, "set_donor_nodes");
+        m_disableMasterFailback = config_get_bool(params, "disable_master_failback");
+        m_availableWhenDonor = config_get_bool(params, "available_when_donor");
+        m_disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
+        m_root_node_as_master = config_get_bool(params, "root_node_as_master");
+        m_use_priority = config_get_bool(params, "use_priority");
+        m_script = config_copy_string(params, "script");
+        m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
 
         /* Reset all data in the hashtable */
-        reset_cluster_info(handle);
+        reset_cluster_info();
 
-        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&m_thread, &GaleraMonitor::main, this, 0) == NULL)
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
         }
         else
         {
@@ -222,19 +203,17 @@ static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *
  *
  * @param arg   Handle on thr running monior
  */
-static void
-stopMonitor(MXS_MONITOR_INSTANCE *mon)
+void GaleraMonitor::stop()
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon);
-    ss_dassert(handle->thread);
+    ss_dassert(m_thread);
 
-    handle->shutdown = true;
-    thread_wait(handle->thread);
-    handle->thread = 0;
-    handle->shutdown = false;
+    m_shutdown = true;
+    thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = false;
 
-    MXS_FREE(handle->script);
-    handle->script = NULL;
+    MXS_FREE(m_script);
+    m_script = NULL;
 }
 
 /**
@@ -243,20 +222,17 @@ stopMonitor(MXS_MONITOR_INSTANCE *mon)
  * @param dcb   DCB to send output
  * @param arg   The monitor handle
  */
-static void
-diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
+void GaleraMonitor::diagnostics(DCB *dcb) const
 {
-    const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
-
-    dcb_printf(dcb, "Master Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
-    dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
+    dcb_printf(dcb, "Master Failback:\t%s\n", (m_disableMasterFailback == 1) ? "off" : "on");
+    dcb_printf(dcb, "Available when Donor:\t%s\n", (m_availableWhenDonor == 1) ? "on" : "off");
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
-               handle->disableMasterRoleSetting ? "on" : "off");
-    dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (handle->set_donor_nodes == 1) ? "on" : "off");
-    if (handle->cluster_info.c_uuid)
+               m_disableMasterRoleSetting ? "on" : "off");
+    dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (m_set_donor_nodes == 1) ? "on" : "off");
+    if (m_cluster_info.c_uuid)
     {
-        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", handle->cluster_info.c_uuid);
-        dcb_printf(dcb, "Galera Cluster size:\t%d\n", handle->cluster_info.c_size);
+        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", m_cluster_info.c_uuid);
+        dcb_printf(dcb, "Galera Cluster size:\t%d\n", m_cluster_info.c_size);
     }
     else
     {
@@ -269,26 +245,24 @@ diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
+json_t* GaleraMonitor::diagnostics_json() const
 {
     json_t* rval = json_object();
-    const GALERA_MONITOR *handle = static_cast<const GALERA_MONITOR*>(mon);
+    json_object_set_new(rval, "disable_master_failback", json_boolean(m_disableMasterFailback));
+    json_object_set_new(rval, "disable_master_role_setting", json_boolean(m_disableMasterRoleSetting));
+    json_object_set_new(rval, "root_node_as_master", json_boolean(m_root_node_as_master));
+    json_object_set_new(rval, "use_priority", json_boolean(m_use_priority));
+    json_object_set_new(rval, "set_donor_nodes", json_boolean(m_set_donor_nodes));
 
-    json_object_set_new(rval, "disable_master_failback", json_boolean(handle->disableMasterFailback));
-    json_object_set_new(rval, "disable_master_role_setting", json_boolean(handle->disableMasterRoleSetting));
-    json_object_set_new(rval, "root_node_as_master", json_boolean(handle->root_node_as_master));
-    json_object_set_new(rval, "use_priority", json_boolean(handle->use_priority));
-    json_object_set_new(rval, "set_donor_nodes", json_boolean(handle->set_donor_nodes));
-
-    if (handle->script)
+    if (m_script)
     {
-        json_object_set_new(rval, "script", json_string(handle->script));
+        json_object_set_new(rval, "script", json_string(m_script));
     }
 
-    if (handle->cluster_info.c_uuid)
+    if (m_cluster_info.c_uuid)
     {
-        json_object_set_new(rval, "cluster_uuid", json_string(handle->cluster_info.c_uuid));
-        json_object_set_new(rval, "cluster_size", json_integer(handle->cluster_info.c_size));
+        json_object_set_new(rval, "cluster_uuid", json_string(m_cluster_info.c_uuid));
+        json_object_set_new(rval, "cluster_size", json_integer(m_cluster_info.c_size));
     }
 
     return rval;
@@ -337,10 +311,8 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
  * @param handle        The MySQL Monitor object
  * @param database      The database to probe
  */
-static void
-monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
+void GaleraMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
 {
-    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->instance);
     MYSQL_ROW row;
     MYSQL_RES *result;
     char *server_string;
@@ -354,7 +326,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     /** Store previous status */
     database->mon_prev_status = database->server->status;
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
     if (!mon_connection_is_ok(rval))
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
@@ -442,7 +414,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                     info.joined = 1;
                 }
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
-                else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1 &&
+                else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1 &&
                          using_xtrabackup(database, server_string))
                 {
                     info.joined = 1;
@@ -483,7 +455,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
         info.node = database->server;
 
         /* Galera Cluster vars fetch */
-        HASHTABLE *table = handle->galera_nodes_info;
+        HASHTABLE *table = m_galera_nodes_info;
         GALERA_NODE_INFO *node =
             static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, database->server->name));
         if (node)
@@ -527,11 +499,14 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
  *
  * @param arg   The handle of the monitor
  */
-static void
-monitorMain(void *arg)
+//static
+void GaleraMonitor::main(void* arg)
 {
-    GALERA_MONITOR *handle = (GALERA_MONITOR*)arg;
-    MXS_MONITOR* mon = handle->monitor;
+    return static_cast<GaleraMonitor*>(arg)->main();
+}
+
+void GaleraMonitor::main()
+{
     MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
     MXS_MONITORED_SERVER *candidate_master = NULL;
@@ -539,22 +514,22 @@ monitorMain(void *arg)
     int is_cluster = 0;
     int log_no_members = 1;
 
-    master_stickiness = handle->disableMasterFailback;
+    master_stickiness = m_disableMasterFailback;
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
-    handle->status = MXS_MONITOR_RUNNING;
-    load_server_journal(mon, NULL);
+    m_status = MXS_MONITOR_RUNNING;
+    load_server_journal(m_monitor, NULL);
 
     while (1)
     {
-        if (handle->shutdown)
+        if (m_shutdown)
         {
-            handle->status = MXS_MONITOR_STOPPING;
+            m_status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MXS_MONITOR_STOPPED;
+            m_status = MXS_MONITOR_STOPPED;
             return;
         }
 
@@ -568,8 +543,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % m_monitor->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!m_monitor->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -580,15 +555,15 @@ monitorMain(void *arg)
         /* reset cluster members counter */
         is_cluster = 0;
 
-        lock_monitor_servers(mon);
-        servers_status_pending_to_current(mon);
+        lock_monitor_servers(m_monitor);
+        servers_status_pending_to_current(m_monitor);
 
-        ptr = mon->monitored_servers;
+        ptr = m_monitor->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
 
-            monitorDatabase(mon, ptr);
+            monitorDatabase(ptr);
 
             /* Log server status change */
             if (mon_status_changed(ptr))
@@ -618,7 +593,7 @@ monitorMain(void *arg)
          * UUID and cluster_size each node reports:
          * no multiple clusters UUID are allowed.
          */
-        set_galera_cluster(mon);
+        set_galera_cluster();
 
         /*
          * Let's select a master server:
@@ -628,18 +603,18 @@ monitorMain(void *arg)
          */
 
         /* get the candidate master, following MXS_MIN(node_id) rule */
-        candidate_master = get_candidate_master(mon);
+        candidate_master = get_candidate_master();
 
-        handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
+        m_master = set_cluster_master(m_master, candidate_master, master_stickiness);
 
-        ptr = mon->monitored_servers;
+        ptr = m_monitor->monitored_servers;
 
         while (ptr)
         {
             const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
-            if (SERVER_IS_JOINED(ptr->server) && !handle->disableMasterRoleSetting)
+            if (SERVER_IS_JOINED(ptr->server) && !m_disableMasterRoleSetting)
             {
-                if (ptr != handle->master)
+                if (ptr != m_master)
                 {
                     /* set the Slave role and clear master stickiness */
                     server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
@@ -647,7 +622,7 @@ monitorMain(void *arg)
                 else
                 {
                     if (candidate_master &&
-                        handle->master->server->node_id != candidate_master->server->node_id)
+                        m_master->server->node_id != candidate_master->server->node_id)
                     {
                         /* set master role and master stickiness */
                         server_clear_set_status(ptr->server, repl_bits,
@@ -687,22 +662,22 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, handle->script, handle->events);
+        mon_process_state_changes(m_monitor, m_script, m_events);
 
-        mon_hangup_failed_servers(mon);
+        mon_hangup_failed_servers(m_monitor);
 
-        servers_status_current_to_pending(mon);
+        servers_status_current_to_pending(m_monitor);
 
         /* Set the global var "wsrep_sst_donor"
          * with a sorted list of "wsrep_node_name" for slave nodes
          */
-        if (handle->set_donor_nodes)
+        if (m_set_donor_nodes)
         {
-            update_sst_donor_nodes(mon, is_cluster);
+            update_sst_donor_nodes(is_cluster);
         }
 
-        store_server_journal(mon, NULL);
-        release_monitor_servers(mon);
+        store_server_journal(m_monitor, NULL);
+        release_monitor_servers(m_monitor);
     }
 }
 
@@ -715,11 +690,10 @@ monitorMain(void *arg)
  * @param   servers The monitored servers list
  * @return  The candidate master on success, NULL on failure
  */
-static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
+MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
 {
-    MXS_MONITORED_SERVER *moitor_servers = mon->monitored_servers;
+    MXS_MONITORED_SERVER *moitor_servers = m_monitor->monitored_servers;
     MXS_MONITORED_SERVER *candidate_master = NULL;
-    GALERA_MONITOR* handle = static_cast<GALERA_MONITOR*>(mon->instance);
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
@@ -731,7 +705,7 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 
             moitor_servers->server->depth = 0;
             char buf[50]; // Enough to hold most numbers
-            if (handle->use_priority && server_get_parameter_nolock(moitor_servers->server, "priority", buf, sizeof(buf)))
+            if (m_use_priority && server_get_parameter_nolock(moitor_servers->server, "priority", buf, sizeof(buf)))
             {
                 /** The server has a priority  */
                 if ((currval = atoi(buf)) > 0)
@@ -758,8 +732,8 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
         moitor_servers = moitor_servers->next;
     }
 
-    if (!handle->use_priority && !handle->disableMasterFailback  &&
-        handle->root_node_as_master && min_id > 0)
+    if (!m_use_priority && !m_disableMasterFailback  &&
+        m_root_node_as_master && min_id > 0)
     {
         /** The monitor couldn't find the node with wsrep_local_index of 0.
          * This means that we can't connect to the root node of the cluster.
@@ -836,12 +810,11 @@ static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *current_ma
  * @param   mon        The monitor handler
  * @param   is_cluster The number of joined nodes
  */
-static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
+void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 {
     MXS_MONITORED_SERVER *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     bool ignore_priority = true;
 
     if (is_cluster == 1)
@@ -866,7 +839,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
-    ptr = mon->monitored_servers;
+    ptr = m_monitor->monitored_servers;
 
     /* Create an array of slave nodes */
     while (ptr)
@@ -881,7 +854,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
              * the server list will be order by default method.
              */
 
-            if (handle->use_priority &&
+            if (m_use_priority &&
                 server_get_parameter_nolock(ptr->server, "priority", NULL, 0))
             {
                 ignore_priority = false;
@@ -890,14 +863,14 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
         ptr = ptr->next;
     }
 
-    if (ignore_priority && handle->use_priority)
+    if (ignore_priority && m_use_priority)
     {
         MXS_DEBUG("Use priority is set but no server has priority parameter. "
                   "Donor server list will be ordered by 'wsrep_local_index'");
     }
 
     /* Set order type */
-    bool sort_order = (!ignore_priority) && (int)handle->use_priority;
+    bool sort_order = (!ignore_priority) && (int)m_use_priority;
 
     /* Sort the array */
     qsort(node_list,
@@ -1072,11 +1045,11 @@ static int compare_node_priority (const void *a, const void *b)
  *
  * @param handle    The Galera specific data
  */
-static void reset_cluster_info(GALERA_MONITOR *handle)
+void GaleraMonitor::reset_cluster_info()
 {
     int n_nodes = 0;
     HASHITERATOR *iterator;
-    HASHTABLE *table = handle->galera_nodes_info;
+    HASHTABLE *table = m_galera_nodes_info;
     void *key;
 
     /* Delete all entries in the hashtable */
@@ -1153,13 +1126,12 @@ static void nodeval_free(GALERA_NODE_INFO *in)
  *
  * @param mon The Monitor Instance
  */
-static void set_galera_cluster(MXS_MONITOR *mon)
+void GaleraMonitor::set_galera_cluster()
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     int ret = false;
     int n_nodes = 0;
     HASHITERATOR *iterator;
-    HASHTABLE *table = handle->galera_nodes_info;
+    HASHTABLE *table = m_galera_nodes_info;
     char *key;
     GALERA_NODE_INFO *value;
     int cluster_size = 0;
@@ -1209,8 +1181,7 @@ static void set_galera_cluster(MXS_MONITOR *mon)
      * Special cases for n_nodes = 0 or 1.
      * If cluster_size > 1 there is rule
      */
-    ret = detect_cluster_size(handle,
-                              n_nodes,
+    ret = detect_cluster_size(n_nodes,
                               cluster_uuid,
                               cluster_size);
     /**
@@ -1220,15 +1191,15 @@ static void set_galera_cluster(MXS_MONITOR *mon)
     if (ret || (!ret && n_nodes != 1))
     {
         /* Set the new cluster_uuid */
-        MXS_FREE(handle->cluster_info.c_uuid);
-        handle->cluster_info.c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
-        handle->cluster_info.c_size = cluster_size;
+        MXS_FREE(m_cluster_info.c_uuid);
+        m_cluster_info.c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
+        m_cluster_info.c_size = cluster_size;
     }
 
     /**
      * Set the JOINED status in cluster members only, if any.
      */
-    set_cluster_members(mon);
+    set_cluster_members();
 }
 
 /**
@@ -1240,22 +1211,21 @@ static void set_galera_cluster(MXS_MONITOR *mon)
  *
  * @param mon   The Monitor Instance
  */
-static void set_cluster_members(MXS_MONITOR *mon)
+void GaleraMonitor::set_cluster_members()
 {
-    GALERA_MONITOR *handle = static_cast<GALERA_MONITOR*>(mon->instance);
     GALERA_NODE_INFO *value;
     MXS_MONITORED_SERVER *ptr;
-    char *c_uuid = handle->cluster_info.c_uuid;
-    int c_size = handle->cluster_info.c_size;
+    char *c_uuid = m_cluster_info.c_uuid;
+    int c_size = m_cluster_info.c_size;
 
-    ptr = mon->monitored_servers;
+    ptr = m_monitor->monitored_servers;
     while (ptr)
     {
         /* Fetch cluster info for this server, if any */
-        value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(handle->galera_nodes_info,
+        value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(m_galera_nodes_info,
                                                                ptr->server->name));
 
-        if (value && handle->cluster_info.c_uuid)
+        if (value && m_cluster_info.c_uuid)
         {
             /* Check whether this server is a candidate member */
             if (!SERVER_IN_MAINT(ptr->server) &&
@@ -1306,14 +1276,13 @@ static void set_cluster_members(MXS_MONITOR *mon)
  * @param cluster_size    Possible cluster_size in nodes
  * @return                True is a cluster can be set
  */
-static bool detect_cluster_size(const GALERA_MONITOR *handle,
-                                const int n_nodes,
-                                const char *candidate_uuid,
-                                const int candidate_size)
+bool GaleraMonitor::detect_cluster_size(const int n_nodes,
+                                        const char *candidate_uuid,
+                                        const int candidate_size)
 {
     bool ret = false;
-    char *c_uuid = handle->cluster_info.c_uuid;
-    int c_size = handle->cluster_info.c_size;
+    char *c_uuid = m_cluster_info.c_uuid;
+    int c_size = m_cluster_info.c_size;
 
     /**
      * Decide whether we have a cluster

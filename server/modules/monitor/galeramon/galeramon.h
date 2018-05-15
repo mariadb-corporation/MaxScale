@@ -25,11 +25,11 @@
  * @endverbatim
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
 #include <mysql.h>
@@ -74,27 +74,55 @@ typedef struct galera_cluster_info
 /**
  * The handle for an instance of a Galera Monitor module
  */
-struct GALERA_MONITOR : public MXS_MONITOR_INSTANCE
+class GaleraMonitor : public MXS_MONITOR_INSTANCE
 {
-    THREAD thread;                    /**< Monitor thread */
-    int shutdown;                     /**< Flag to shutdown the monitor thread */
-    int status;                       /**< Monitor status */
-    unsigned long id;                 /**< Monitor ID */
-    int disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
-    int availableWhenDonor;           /**< Monitor flag for Galera Cluster Donor availability */
-    bool disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
-    MXS_MONITORED_SERVER *master;     /**< Master server for MySQL Master/Slave replication */
-    char* script;                     /**< Launchable script */
-    bool root_node_as_master;         /**< Whether we require that the Master should
+public:
+    GaleraMonitor(const GaleraMonitor&) = delete;
+    GaleraMonitor& operator = (const GaleraMonitor&) = delete;
+
+    static GaleraMonitor* create(MXS_MONITOR* monitor);
+    void destroy();
+    bool start(const MXS_CONFIG_PARAMETER* param);
+    void stop();
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
+
+private:
+    THREAD m_thread;                    /**< Monitor thread */
+    int m_shutdown;                     /**< Flag to shutdown the monitor thread */
+    int m_status;                       /**< Monitor status */
+    unsigned long m_id;                 /**< Monitor ID */
+    int m_disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
+    int m_availableWhenDonor;           /**< Monitor flag for Galera Cluster Donor availability */
+    bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
+    MXS_MONITORED_SERVER *m_master;     /**< Master server for MySQL Master/Slave replication */
+    char* m_script;                     /**< Launchable script */
+    bool m_root_node_as_master;         /**< Whether we require that the Master should
                                        * have a wsrep_local_index of 0 */
-    bool use_priority;                /**< Use server priorities */
-    uint64_t events;                  /**< Enabled monitor events */
-    bool set_donor_nodes;             /**< set the wrep_sst_donor variable with an
+    bool m_use_priority;                /**< Use server priorities */
+    uint64_t m_events;                  /**< Enabled monitor events */
+    bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
                                        * ordered list of nodes */
-    HASHTABLE *galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
-    GALERA_CLUSTER_INFO cluster_info; /**< Contains Galera cluster info */
-    MXS_MONITOR* monitor;             /**< Pointer to generic monitor structure */
-    bool         checked;             /**< Whether server access has been checked */
+    HASHTABLE *m_galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
+    GALERA_CLUSTER_INFO m_cluster_info; /**< Contains Galera cluster info */
+    MXS_MONITOR* m_monitor;             /**< Pointer to generic monitor structure */
+    bool         m_checked;             /**< Whether server access has been checked */
+
+    GaleraMonitor(MXS_MONITOR* monitor);
+    ~GaleraMonitor();
+
+    bool detect_cluster_size(const int n_nodes,
+                             const char *candidate_uuid,
+                             const int candidate_size);
+    MXS_MONITORED_SERVER *get_candidate_master();
+    void monitorDatabase(MXS_MONITORED_SERVER *database);
+    void reset_cluster_info();
+    void set_cluster_members();
+    void set_galera_cluster();
+    void update_sst_donor_nodes(int is_cluster);
+
+    void main();
+    static void main(void* data);
 };
 
 #endif
