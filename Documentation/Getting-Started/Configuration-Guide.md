@@ -1550,7 +1550,7 @@ Passwords stored in the maxscale.cnf file may optionally be encrypted for added 
 This is done by creation of an encryption key on installation of MariaDB MaxScale.
 Encryption keys may be created manually by executing the maxkeys utility with the argument
 of the filename to store the key. The default location MariaDB MaxScale stores
-the keys is `/var/lib/maxscale`.
+the keys is `/var/lib/maxscale`. The passwords are encrypted using 256-bit AES CBC encryption.
 
 ```
  # Usage: maxkeys [PATH]
