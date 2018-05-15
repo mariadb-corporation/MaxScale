@@ -618,6 +618,10 @@ add_test_executable(mxs1743_rconn_bitmask.cpp mxs1743_rconn_bitmask mxs1743_rcon
 # https://jira.mariadb.org/browse/MXS-1751
 add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_when_donor_crash mxs1751_available_when_donor_crash LABELS GALERA_BACKEND)
 
+# MXS-1760: With use_sql_variables_in=master, unknown PS errors are logged
+# https://jira.mariadb.org/browse/MXS-1760
+add_test_executable(mxs1760_use_sql_variables_in.cpp mxs1760_use_sql_variables_in mxs1760_use_sql_variables_in LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1773: Failing LOAD DATA LOCAL INFILE confuses readwritesplit
 # https://jira.mariadb.org/browse/MXS-1773
 add_test_executable(mxs1773_failing_ldli.cpp mxs1773_failing_ldli replication LABELS readwritesplit REPL_BACKEND)
