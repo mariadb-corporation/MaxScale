@@ -39,12 +39,12 @@
 
 #include <execinfo.h>
 #include <ftw.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <time.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include <ini.h>
 #include <openssl/opensslconf.h>

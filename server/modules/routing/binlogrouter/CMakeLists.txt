@@ -9,6 +9,8 @@ target_link_libraries(maxbinlogcheck maxscale-common ${PCRE_LINK_FLAGS} uuid)
 
 install_executable(maxbinlogcheck core)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-overflow -Wno-format-truncation")
+
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()

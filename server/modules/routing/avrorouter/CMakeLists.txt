@@ -6,6 +6,7 @@ if(AVRO_FOUND AND JANSSON_FOUND)
   set_target_properties(avrorouter PROPERTIES LINK_FLAGS -Wl,-z,defs)
   target_link_libraries(avrorouter maxscale-common ${JANSSON_LIBRARIES} ${AVRO_LIBRARIES} maxavro sqlite3 lzma)
   install_module(avrorouter core)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-overflow -Wno-format-truncation")
 
   if (BUILD_TESTS)
     add_subdirectory(test)
