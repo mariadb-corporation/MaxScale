@@ -601,24 +601,30 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
         const char* username = (const char*)data + MYSQL_AUTH_PACKET_BASE_SIZE;
         int userlen = get_zstr_len(username, len - MYSQL_AUTH_PACKET_BASE_SIZE);
 
-        if (userlen != -1 && (int)sizeof(ses->user) > userlen)
+        if (userlen != -1)
         {
-            strcpy(ses->user, username);
-        }
-
-        if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
-        {
-            /** Client is connecting with a default database */
-            uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
-            size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
-
-            if (dboffset < len)
+            if ((int)sizeof(ses->user) > userlen)
             {
-                int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
+                strcpy(ses->user, username);
+            }
 
-                if (dblen != -1 && (int)sizeof(ses->db) < dblen)
+            // Include the null terminator in the user length
+            userlen++;
+
+            if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+            {
+                /** Client is connecting with a default database */
+                uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
+                size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
+
+                if (dboffset < len)
                 {
-                    strcpy(ses->db, (const char*)data + dboffset);
+                    int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
+
+                    if (dblen != -1 && (int)sizeof(ses->db) > dblen)
+                    {
+                        strcpy(ses->db, (const char*)data + dboffset);
+                    }
                 }
             }
         }
