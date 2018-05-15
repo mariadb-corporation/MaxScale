@@ -21,27 +21,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/mysql_utils.h>
 
-static void monitorMain(void *);
-
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-
-/*lint +e14 */
-
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
-static void destroyInstance(MXS_MONITOR_INSTANCE*);
-static bool startMonitor(MXS_MONITOR_INSTANCE *, const MXS_CONFIG_PARAMETER *params);
-static void stopMonitor(MXS_MONITOR_INSTANCE *);
-static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
 bool isNdbEvent(mxs_monitor_event_t event);
-
-
-
-extern "C"
-{
 
 /**
  * The module entry point routine. It is this routine that
@@ -51,19 +31,9 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
-
-    static MXS_MONITOR_API MyObject =
-    {
-        createInstance,
-        destroyInstance,
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
 
     static MXS_MODULE info =
     {
@@ -73,7 +43,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A MySQL cluster SQL node monitor",
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &maxscale::MonitorApi<NDBCMonitor>::s_api,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -99,35 +69,35 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-}
-/*lint +e14 */
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
+NDBCMonitor::NDBCMonitor(MXS_MONITOR *monitor)
+    : m_thread(0)
+    , m_id(MXS_MONITOR_DEFAULT_ID)
+    , m_events(0)
+    , m_shutdown(0)
+    , m_status(0)
+    , m_master(NULL)
+    , m_script(NULL)
+    , m_monitor(NULL)
+    , m_checked(false)
 {
-    NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(MXS_CALLOC(1, sizeof(NDBC_MONITOR)));
-
-    if (handle)
-    {
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-        handle->monitor = mon;
-
-        handle->script = NULL;
-        handle->events = 0;
-        handle->checked = false;
-    }
-
-    return handle;
 }
 
-void destroyInstance(MXS_MONITOR_INSTANCE* mon)
+NDBCMonitor::~NDBCMonitor()
 {
-    NDBC_MONITOR* handle = static_cast<NDBC_MONITOR*>(mon);
-    ss_dassert(!handle->thread);
-    ss_dassert(!handle->script);
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+}
 
-    MXS_FREE(handle);
+// static
+NDBCMonitor* NDBCMonitor::create(MXS_MONITOR* monitor)
+{
+    return new NDBCMonitor(monitor);
+}
+
+void NDBCMonitor::destroy()
+{
+    delete this;
 }
 
 /**
@@ -137,34 +107,32 @@ void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  *
  * @return A handle to use when interacting with the monitor
  */
-static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
+bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
 {
     bool started = false;
 
-    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
-
-    if (!handle->checked)
+    if (!m_checked)
     {
-        if (!check_monitor_permissions(handle->monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+        if (!check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
         else
         {
-            handle->checked = true;
+            m_checked = true;
         }
     }
 
-    if (handle->checked)
+    if (m_checked)
     {
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        m_script = config_copy_string(params, "script");
+        m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&m_thread, &NDBCMonitor::main, this, 0) == NULL)
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
-            MXS_FREE(handle->script);
-            handle->script = NULL;
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+            MXS_FREE(m_script);
+            m_script = NULL;
         }
         else
         {
@@ -180,19 +148,17 @@ static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *
  *
  * @param arg   Handle on thr running monior
  */
-static void
-stopMonitor(MXS_MONITOR_INSTANCE *mon)
+void NDBCMonitor::stop()
 {
-    NDBC_MONITOR *handle = static_cast<NDBC_MONITOR*>(mon);
-    ss_dassert(handle->thread);
+    ss_dassert(m_thread);
 
-    handle->shutdown = 1;
-    thread_wait(handle->thread);
-    handle->thread = 0;
-    handle->shutdown = 0;
+    m_shutdown = 1;
+    thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = 0;
 
-    MXS_FREE(handle->script);
-    handle->script = NULL;
+    MXS_FREE(m_script);
+    m_script = NULL;
 }
 
 /**
@@ -338,11 +304,14 @@ monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *default
  *
  * @param arg   The handle of the monitor
  */
-static void
-monitorMain(void *arg)
+//static
+void NDBCMonitor::main(void* arg)
 {
-    NDBC_MONITOR *handle = (NDBC_MONITOR*)arg;
-    MXS_MONITOR* mon = handle->monitor;
+    static_cast<NDBCMonitor*>(arg)->main();
+}
+
+void NDBCMonitor::main()
+{
     MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
 
@@ -352,16 +321,16 @@ monitorMain(void *arg)
         return;
     }
 
-    handle->status = MXS_MONITOR_RUNNING;
-    load_server_journal(mon, NULL);
+    m_status = MXS_MONITOR_RUNNING;
+    load_server_journal(m_monitor, NULL);
 
     while (1)
     {
-        if (handle->shutdown)
+        if (m_shutdown)
         {
-            handle->status = MXS_MONITOR_STOPPING;
+            m_status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MXS_MONITOR_STOPPED;
+            m_status = MXS_MONITOR_STOPPED;
             return;
         }
 
@@ -374,7 +343,7 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            ((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+            ((nrounds * MXS_MON_BASE_INTERVAL_MS) % m_monitor->interval) >=
             MXS_MON_BASE_INTERVAL_MS)
         {
             nrounds += 1;
@@ -382,14 +351,14 @@ monitorMain(void *arg)
         }
         nrounds += 1;
 
-        lock_monitor_servers(mon);
-        servers_status_pending_to_current(mon);
+        lock_monitor_servers(m_monitor);
+        servers_status_pending_to_current(m_monitor);
 
-        ptr = mon->monitored_servers;
+        ptr = m_monitor->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
-            monitorDatabase(ptr, mon->user, mon->password, mon);
+            monitorDatabase(ptr, m_monitor->user, m_monitor->password, m_monitor);
 
             if (ptr->server->status != ptr->mon_prev_status ||
                 SERVER_IS_DOWN(ptr->server))
@@ -407,11 +376,11 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, handle->script, handle->events);
+        mon_process_state_changes(m_monitor, m_script, m_events);
 
-        mon_hangup_failed_servers(mon);
-        servers_status_current_to_pending(mon);
-        store_server_journal(mon, NULL);
-        release_monitor_servers(mon);
+        mon_hangup_failed_servers(m_monitor);
+        servers_status_current_to_pending(m_monitor);
+        store_server_journal(m_monitor, NULL);
+        release_monitor_servers(m_monitor);
     }
 }

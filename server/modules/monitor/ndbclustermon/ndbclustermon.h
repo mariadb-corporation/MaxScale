@@ -13,21 +13,38 @@
  * Public License.
  */
 
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
 
 // The handle for an instance of a NDB Cluster Monitor module
-struct NDBC_MONITOR : public MXS_MONITOR_INSTANCE
+class NDBCMonitor : public MXS_MONITOR_INSTANCE
 {
-    THREAD thread;                /**< Monitor thread */
-    SPINLOCK lock;                /**< The monitor spinlock */
-    unsigned long id;             /**< Monitor ID */
-    uint64_t events;              /**< enabled events */
-    int shutdown;                 /**< Flag to shutdown the monitor thread */
-    int status;                   /**< Monitor status */
-    MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
-    char* script;                 /**< Script to call when state changes occur on servers */
-    MXS_MONITOR* monitor;         /**< Pointer to generic monitor structure */
-    bool checked;                 /**< Whether server access has been checked */
+public:
+    NDBCMonitor(const NDBCMonitor&) = delete;
+    NDBCMonitor& operator = (const NDBCMonitor&) = delete;
+
+    static NDBCMonitor* create(MXS_MONITOR* monitor);
+    void destroy();
+    bool start(const MXS_CONFIG_PARAMETER* param);
+    void stop();
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
+
+private:
+    THREAD m_thread;                /**< Monitor thread */
+    unsigned long m_id;             /**< Monitor ID */
+    uint64_t m_events;              /**< enabled events */
+    int m_shutdown;                 /**< Flag to shutdown the monitor thread */
+    int m_status;                   /**< Monitor status */
+    MXS_MONITORED_SERVER *m_master; /**< Master server for MySQL Master/Slave replication */
+    char* m_script;                 /**< Script to call when state changes occur on servers */
+    MXS_MONITOR* m_monitor;         /**< Pointer to generic monitor structure */
+    bool m_checked;                 /**< Whether server access has been checked */
+
+    NDBCMonitor(MXS_MONITOR* monitor);
+    ~NDBCMonitor();
+
+    void main();
+    static void main(void* data);
 };
