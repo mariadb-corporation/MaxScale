@@ -32,14 +32,14 @@ namespace
 
 SlaveStatus::SlaveStatus()
     : master_server_id(SERVER_ID_UNKNOWN)
-    , master_port(0)
+    , master_port(PORT_UNKNOWN)
     , slave_io_running(SLAVE_IO_NO)
     , slave_sql_running(false)
 {}
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     : m_server_base(monitored_server)
-    , m_report_version_error(true)
+    , m_print_update_errormsg(true)
     , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_group(0)
@@ -64,7 +64,7 @@ int64_t MariaDBServer::relay_log_events()
                                                             GtidList::MISSING_DOMAIN_LHS_ADD) : 0;
 }
 
-std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
+std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
 {
     auto conn = m_server_base->con;
     std::auto_ptr<QueryResult> rval;
@@ -73,14 +73,14 @@ std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
     {
         rval = std::auto_ptr<QueryResult>(new QueryResult(result));
     }
-    else
+    else if (errmsg_out)
     {
-        mon_report_query_error(m_server_base);
+        *errmsg_out = string("Query '") + query + "' failed: '" + mysql_error(conn) + "'.";
     }
     return rval;
 }
 
-bool MariaDBServer::do_show_slave_status()
+bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 {
     unsigned int columns = 0;
     string query;
@@ -102,10 +102,9 @@ bool MariaDBServer::do_show_slave_status()
             return false;
     }
 
-    auto result = execute_query(query);
+    auto result = execute_query(query, errmsg_out);
     if (result.get() == NULL)
     {
-        MXS_ERROR("'%s' did not return data.", query.c_str());
         return false;
     }
     else if(result->get_column_count() < columns)
@@ -206,14 +205,14 @@ bool MariaDBServer::do_show_slave_status()
     return true;
 }
 
-bool MariaDBServer::update_gtids()
+bool MariaDBServer::update_gtids(string* errmsg_out)
 {
     static const string query = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
     const int i_current_pos = 0;
     const int i_binlog_pos = 1;
 
     bool rval = false;
-    auto result = execute_query(query);
+    auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL && result->next_row())
     {
         auto current_str = result->get_string(i_current_pos);
@@ -258,7 +257,7 @@ bool MariaDBServer::update_replication_settings()
     return rval;
 }
 
-void MariaDBServer::read_server_variables()
+bool MariaDBServer::read_server_variables(string* errmsg_out)
 {
     MXS_MONITORED_SERVER* database = m_server_base;
     string query = "SELECT @@global.server_id, @@read_only;";
@@ -273,22 +272,36 @@ void MariaDBServer::read_server_variables()
     int i_id = 0;
     int i_ro = 1;
     int i_domain = 2;
-    auto result = execute_query(query);
+    bool rval = false;
+    auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL && result->next_row())
     {
+        rval = true;
         int64_t server_id_parsed = result->get_uint(i_id);
-        if (server_id_parsed < 0)
+        if (server_id_parsed < 0) // This is very unlikely, requiring an error in server or connector.
         {
             server_id_parsed = SERVER_ID_UNKNOWN;
+            rval = false;
         }
         database->server->node_id = server_id_parsed;
         m_server_id = server_id_parsed;
         m_read_only = result->get_bool(i_ro);
         if (columns == 3)
         {
-            m_gtid_domain_id = result->get_uint(i_domain);
+            int64_t domain_id_parsed = result->get_uint(i_domain);
+            if (domain_id_parsed < 0) // Same here.
+            {
+                domain_id_parsed = GTID_DOMAIN_UNKNOWN;
+                rval = false;
+            }
+            m_gtid_domain_id = domain_id_parsed;
+        }
+        else
+        {
+            m_gtid_domain_id = GTID_DOMAIN_UNKNOWN;
         }
     }
+    return rval;
 }
 
 bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings)
@@ -723,44 +736,59 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
         return;
     }
 
+    string errmsg;
+    bool query_ok = false;
     /* Query different things depending on server version/type. */
     switch (m_version)
     {
         case version::MARIADB_MYSQL_55:
-            read_server_variables();
-            update_slave_status();
+            query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
             break;
         case version::MARIADB_100:
-            read_server_variables();
-            update_gtids();
-            update_slave_status();
+            query_ok = read_server_variables(&errmsg) && update_gtids(&errmsg) &&
+                       update_slave_status(&errmsg);
             break;
         case version::BINLOG_ROUTER:
             // TODO: Add special version of server variable query.
-            update_slave_status();
+            query_ok = update_slave_status(&errmsg);
             break;
         default:
-            if (m_report_version_error)
-            {
-                MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                          "The server is ignored by the monitor.", name());
-                m_report_version_error = false;
-            }
+            // Do not update unknown versions.
+            query_ok = true;
             break;
     }
+
+    if (query_ok)
+    {
+        m_print_update_errormsg = true;
+    }
+    /* If one of the queries ran to an error, print the error message, assuming it hasn't already been
+     * printed. Some really unlikely errors won't produce an error message, but these are visible in other
+     * ways. */
+    else if (!errmsg.empty() && m_print_update_errormsg)
+    {
+        MXS_WARNING("Error during monitor update of server '%s'. %s.", name(), errmsg.c_str());
+        m_print_update_errormsg = false;
+    }
+    return;
 }
 
 /**
  * Update slave status of the server.
+ *
+ * @param errmsg_out Where to store an error message if query fails. Can be null.
+ * @return True on success
  */
-void MariaDBServer::update_slave_status()
+bool MariaDBServer::update_slave_status(string* errmsg_out)
 {
     /** Clear old states */
     monitor_clear_pending_status(m_server_base, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
-    if (do_show_slave_status())
+    bool rval = false;
+    if (do_show_slave_status(errmsg_out))
     {
+        rval = true;
         /* If all configured slaves are running set this node as slave */
         if (m_n_slaves_running > 0 && m_n_slaves_running == m_slave_status.size())
         {
@@ -771,6 +799,7 @@ void MariaDBServer::update_slave_status()
         m_server_base->server->master_id = !m_slave_status.empty() ?
             m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
+    return rval;
 }
 
 /**
@@ -806,6 +835,12 @@ void MariaDBServer::update_server_info()
         else if (version_num >= 5 * 10000 + 5 * 100)
         {
             m_version = version::MARIADB_MYSQL_55;
+        }
+        else
+        {
+            MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
+                      "The server is ignored by the monitor. Server version: '%s'.", name(),
+                      srv->version_string);
         }
     }
 }

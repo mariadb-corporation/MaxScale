@@ -44,8 +44,6 @@ public:
     int master_port;                /**< Master server port. */
     slave_io_running_t slave_io_running; /**< Slave I/O thread running state: "Yes", "Connecting" or "No" */
     bool slave_sql_running;         /**< Slave SQL thread running state, true if "Yes" */
-    std::string master_log_file;    /**< Name of the master binary log file that the I/O thread is currently
-                                     *   reading from. */
     GtidList gtid_io_pos;           /**< Gtid I/O position of the slave thread. */
     std::string last_error;         /**< Last IO or SQL error encountered. */
 
@@ -89,7 +87,7 @@ public:
     MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
-    bool            m_report_version_error; /**< Report version error for this server. */
+    bool            m_print_update_errormsg;/**< Should an update error be printed. */
     version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int             m_group;                /**< Multi-master group where this server belongs,
@@ -120,25 +118,28 @@ public:
      * object.
      *
      * @param query The query
+     * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return Pointer to query results, or an empty auto-ptr on failure. Currently, the column names of the
      * results are assumed unique.
      */
-    std::auto_ptr<QueryResult> execute_query(const std::string& query);
+    std::auto_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
 
     /**
      * Update server slave connection information.
      *
      * @param gtid_domain Which gtid domain should be parsed.
+     * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return True on success
      */
-    bool do_show_slave_status();
+    bool do_show_slave_status(std::string* errmsg_out = NULL);
 
     /**
      * Query gtid_current_pos and gtid_binlog_pos and save the values to the server.
      *
+     * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return True if successful
      */
-    bool update_gtids();
+    bool update_gtids(std::string* errmsg_out = NULL);
 
     /**
      * Query a few miscellaneous replication settings.
@@ -149,8 +150,11 @@ public:
 
     /**
      * Query and save server_id, read_only and (if 10.X) gtid_domain_id.
+     *
+     * @param errmsg_out Where to store an error message if query fails. Can be null.
+     * @return True on success.
      */
-    void read_server_variables();
+    bool read_server_variables(std::string* errmsg_out = NULL);
 
     /**
      * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
@@ -296,7 +300,7 @@ public:
 
 private:
     void monitor_server(MXS_MONITOR* base_monitor);
-    void update_slave_status();
+    bool update_slave_status(std::string* errmsg_out = NULL);
     void update_server_info();
 };
 

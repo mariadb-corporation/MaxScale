@@ -50,9 +50,6 @@ static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
-/** Default port */
-const int PORT_UNKNOWN = 0;
-
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     : m_monitor_base(monitor_base)
     , m_id(config_get_global_options()->id)

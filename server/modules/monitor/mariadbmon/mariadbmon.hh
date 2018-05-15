@@ -22,7 +22,6 @@
 
 #include "mariadbserver.hh"
 
-extern const int PORT_UNKNOWN;
 extern const char * const CN_AUTO_FAILOVER;
 extern const char * const CN_PROMOTION_SQL_FILE;
 extern const char * const CN_DEMOTION_SQL_FILE;
