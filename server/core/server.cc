@@ -963,7 +963,7 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  */
 size_t server_get_parameter_nolock(const SERVER *server, const char *name, char* out, size_t size)
 {
-    ss_dassert(SPINLOCK_IS_LOCKED(server->lock));
+    ss_dassert(SPINLOCK_IS_LOCKED(&server->lock));
     size_t len = 0;
     SERVER_PARAM *param = server->parameters;
 
