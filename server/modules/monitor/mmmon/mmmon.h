@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MMMON_H
-#define _MMMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,12 +12,11 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/monitor.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -36,18 +33,36 @@
 /**
  * The handle for an instance of a Multi-Master Monitor module
  */
-struct MM_MONITOR : public MXS_MONITOR_INSTANCE
+class MMMonitor : public MXS_MONITOR_INSTANCE
 {
-    THREAD thread;                /**< Monitor thread */
-    int shutdown;                 /**< Flag to shutdown the monitor thread */
-    int status;                   /**< Monitor status */
-    unsigned long id;             /**< Monitor ID */
-    int detectStaleMaster;        /**< Monitor flag for Stale Master detection */
-    MXS_MONITORED_SERVER *master; /**< Master server for Master/Slave replication */
-    char* script;                 /**< Script to call when state changes occur on servers */
-    uint64_t events;              /**< enabled events */
-    MXS_MONITOR* monitor;         /**< Pointer to generic monitor structure */
-    bool checked;                 /**< Whether server access has been checked */
-};
+public:
+    MMMonitor(const MMMonitor&) = delete;
+    MMMonitor& operator = (const MMMonitor&) = delete;
 
-#endif
+    static MMMonitor* create(MXS_MONITOR* monitor);
+    void destroy();
+    bool start(const MXS_CONFIG_PARAMETER* param);
+    void stop();
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
+
+private:
+    THREAD m_thread;                /**< Monitor thread */
+    int m_shutdown;                 /**< Flag to shutdown the monitor thread */
+    int m_status;                   /**< Monitor status */
+    unsigned long m_id;             /**< Monitor ID */
+    int m_detectStaleMaster;        /**< Monitor flag for Stale Master detection */
+    MXS_MONITORED_SERVER *m_master; /**< Master server for Master/Slave replication */
+    char* m_script;                 /**< Script to call when state changes occur on servers */
+    uint64_t m_events;              /**< enabled events */
+    MXS_MONITOR* m_monitor;         /**< Pointer to generic monitor structure */
+    bool m_checked;                 /**< Whether server access has been checked */
+
+    MMMonitor(MXS_MONITOR* monitor);
+    ~MMMonitor();
+
+    MXS_MONITORED_SERVER *get_current_master();
+
+    void main();
+    static void main(void* data);
+};

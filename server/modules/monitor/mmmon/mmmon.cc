@@ -22,34 +22,9 @@
 #include <maxscale/alloc.h>
 #include <maxscale/mysql_utils.h>
 
-static void monitorMain(void *);
-
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MXS_MODULE info =
-{
-    MXS_MODULE_API_MONITOR,
-    MXS_MODULE_BETA_RELEASE,
-    MXS_MONITOR_VERSION,
-    "A Multi-Master Multi Master monitor",
-    "V1.1.1"
-};
-/*lint +e14 */
-
-static MXS_MONITOR_INSTANCE *createInstance(MXS_MONITOR *);
-static void destroyInstance(MXS_MONITOR_INSTANCE *);
-static bool startMonitor(MXS_MONITOR_INSTANCE *, const MXS_CONFIG_PARAMETER *);
-static void stopMonitor(MXS_MONITOR_INSTANCE *);
-static void diagnostics(const MXS_MONITOR_INSTANCE *, DCB *);
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *);
 static void detectStaleMaster(void *, int);
-static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
-extern "C"
-{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -58,19 +33,9 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
-
-    static MXS_MONITOR_API MyObject =
-    {
-        createInstance,
-        destroyInstance,
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
 
     static MXS_MODULE info =
     {
@@ -80,7 +45,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &maxscale::MonitorApi<MMMonitor>::s_api,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -107,35 +72,37 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-}
 /*lint +e14 */
 
-static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR *mon)
+MMMonitor::MMMonitor(MXS_MONITOR *monitor)
+    : m_thread(0)
+    , m_shutdown(0)
+    , m_status(0)
+    , m_id(MXS_MONITOR_DEFAULT_ID)
+    , m_detectStaleMaster(false)
+    , m_master(NULL)
+    , m_script(NULL)
+    , m_events(0)
+    , m_monitor(monitor)
+    , m_checked(false)
 {
-    MM_MONITOR* handle = static_cast<MM_MONITOR*>(MXS_CALLOC(1, sizeof(MM_MONITOR)));
-
-    if (handle)
-    {
-        handle->shutdown = 0;
-        handle->id = MXS_MONITOR_DEFAULT_ID;
-        handle->master = NULL;
-        handle->monitor = mon;
-        handle->detectStaleMaster = false;
-        handle->script = NULL;
-        handle->events = 0;
-        handle->checked = false;
-    }
-
-    return handle;
 }
 
-static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
+MMMonitor::~MMMonitor()
 {
-    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon);
-    ss_dassert(!handle->thread);
-    ss_dassert(!handle->script);
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+}
 
-    MXS_FREE(handle);
+// static
+MMMonitor* MMMonitor::create(MXS_MONITOR* monitor)
+{
+    return new MMMonitor(monitor);
+}
+
+void MMMonitor::destroy()
+{
+    delete this;
 }
 
 /**
@@ -146,36 +113,33 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  * @param arg   The current handle - NULL if first start
  * @return A handle to use when interacting with the monitor
  */
-static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
+bool MMMonitor::start(const MXS_CONFIG_PARAMETER *params)
 {
     bool started = false;
 
-    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
-    ss_dassert(handle);
-
-    if (!handle->checked)
+    if (!m_checked)
     {
-        if (!check_monitor_permissions(handle->monitor, "SHOW SLAVE STATUS"))
+        if (!check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS"))
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
         else
         {
-            handle->checked = true;
+            m_checked = true;
         }
     }
 
-    if (handle->checked)
+    if (m_checked)
     {
-        handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        m_detectStaleMaster = config_get_bool(params, "detect_stale_master");
+        m_script = config_copy_string(params, "script");
+        m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&m_thread, MMMonitor::main, this, 0) == NULL)
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
-            MXS_FREE(handle->script);
-            handle->script = NULL;
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+            MXS_FREE(m_script);
+            m_script = NULL;
         }
         else
         {
@@ -191,19 +155,15 @@ static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *
  *
  * @param arg   Handle on thr running monior
  */
-static void
-stopMonitor(MXS_MONITOR_INSTANCE *mon)
+void MMMonitor::stop()
 {
-    MM_MONITOR *handle = static_cast<MM_MONITOR*>(mon);
-    ss_dassert(handle->thread);
+    m_shutdown = 1;
+    thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = 0;
 
-    handle->shutdown = 1;
-    thread_wait(handle->thread);
-    handle->thread = 0;
-    handle->shutdown = 0;
-
-    MXS_FREE(handle->script);
-    handle->script = NULL;
+    MXS_FREE(m_script);
+    m_script = NULL;
 }
 
 /**
@@ -212,11 +172,9 @@ stopMonitor(MXS_MONITOR_INSTANCE *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
+void MMMonitor::diagnostics(DCB *dcb) const
 {
-    const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
-
-    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (m_detectStaleMaster == 1) ? "enabled" : "disabled");
 }
 
 /**
@@ -224,12 +182,10 @@ static void diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
+json_t* MMMonitor::diagnostics_json() const
 {
-    const MM_MONITOR *handle = static_cast<const MM_MONITOR*>(mon);
-
     json_t* rval = json_object();
-    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
+    json_object_set_new(rval, "detect_stale_master", json_boolean(m_detectStaleMaster));
     return rval;
 }
 
@@ -532,17 +488,20 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
  *
  * @param arg   The handle of the monitor
  */
-static void
-monitorMain(void *arg)
+void MMMonitor::main(void* arg)
 {
-    MM_MONITOR *handle = (MM_MONITOR *)arg;
-    MXS_MONITOR* mon = handle->monitor;
+    static_cast<MMMonitor*>(arg)->main();
+}
+
+void MMMonitor::main()
+{
+    MXS_MONITOR* mon = m_monitor;
     MXS_MONITORED_SERVER *ptr;
     int detect_stale_master = false;
     MXS_MONITORED_SERVER *root_master = NULL;
     size_t nrounds = 0;
 
-    detect_stale_master = handle->detectStaleMaster;
+    detect_stale_master = m_detectStaleMaster;
 
     if (mysql_thread_init())
     {
@@ -550,16 +509,16 @@ monitorMain(void *arg)
         return;
     }
 
-    handle->status = MXS_MONITOR_RUNNING;
-    load_server_journal(mon, &handle->master);
+    m_status = MXS_MONITOR_RUNNING;
+    load_server_journal(mon, &m_master);
 
     while (1)
     {
-        if (handle->shutdown)
+        if (m_shutdown)
         {
-            handle->status = MXS_MONITOR_STOPPING;
+            m_status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MXS_MONITOR_STOPPED;
+            m_status = MXS_MONITOR_STOPPED;
             return;
         }
 
@@ -617,7 +576,7 @@ monitorMain(void *arg)
         }
 
         /* Get Master server pointer */
-        root_master = get_current_master(mon);
+        root_master = get_current_master();
 
         /* Update server status from monitor pending status on that server*/
 
@@ -651,11 +610,11 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, handle->script, handle->events);
+        mon_process_state_changes(mon, m_script, m_events);
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
-        store_server_journal(mon, handle->master);
+        store_server_journal(mon, m_master);
         release_monitor_servers(mon);
     }
 }
@@ -688,9 +647,9 @@ detectStaleMaster(void *arg, int enable)
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
+MXS_MONITORED_SERVER *MMMonitor::get_current_master()
 {
-    MM_MONITOR* handle = static_cast<MM_MONITOR*>(mon->instance);
+    MXS_MONITOR* mon = m_monitor;
     MXS_MONITORED_SERVER *ptr;
 
     ptr = mon->monitored_servers;
@@ -709,7 +668,7 @@ static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
 
         if (ptr->server->depth == 0)
         {
-            handle->master = ptr;
+            m_master = ptr;
         }
 
         ptr = ptr->next;
@@ -720,16 +679,16 @@ static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
      * Return the root master
      */
 
-    if (handle->master != NULL)
+    if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (SERVER_IN_MAINT(handle->master->server))
+        if (SERVER_IN_MAINT(m_master->server))
         {
             return NULL;
         }
         else
         {
-            return handle->master;
+            return m_master;
         }
     }
     else
