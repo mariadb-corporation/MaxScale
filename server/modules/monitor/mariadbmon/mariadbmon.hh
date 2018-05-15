@@ -80,10 +80,8 @@ public:
 
     /**
      * Destroyes aka deletes the instance.
-     *
-     * @param monitor The instance to be finished.
      */
-    static void destroy(MariaDBMonitor* monitor);
+    void destroy();
 
     /**
      * Stop the monitor. Waits until monitor has stopped.

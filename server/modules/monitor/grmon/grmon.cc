@@ -36,7 +36,7 @@ struct GRMon : public MXS_MONITOR_INSTANCE
     GRMon& operator&(const GRMon&);
 public:
     static GRMon* create(MXS_MONITOR* monitor);
-    static void destroy(GRMon* monitor);
+    void destroy();
     bool start(const MXS_CONFIG_PARAMETER* params);
     void stop();
     void diagnostics(DCB* dcb) const;
@@ -73,6 +73,11 @@ GRMon::~GRMon()
 GRMon* GRMon::create(MXS_MONITOR* monitor)
 {
     return new GRMon(monitor);
+}
+
+void GRMon::destroy()
+{
+    delete this;
 }
 
 bool GRMon::start(const MXS_CONFIG_PARAMETER* params)

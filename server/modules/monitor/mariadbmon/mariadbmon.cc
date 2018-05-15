@@ -171,9 +171,9 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
     return !error;
 }
 
-void MariaDBMonitor::destroy(MariaDBMonitor* monitor)
+void MariaDBMonitor::destroy()
 {
-    delete monitor;
+    delete this;
 }
 
 /**
