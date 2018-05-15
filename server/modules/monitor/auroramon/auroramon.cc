@@ -17,23 +17,70 @@
 
 #define MXS_MODULE_NAME "auroramon"
 
-#include <maxscale/modinfo.h>
-#include <maxscale/thread.h>
-#include <maxscale/monitor.h>
+#include <maxscale/cppdefs.hh>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/monitor.hh>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/thread.h>
 
-struct AURORA_MONITOR : public MXS_MONITOR_INSTANCE
+class AuroraMonitor : public MXS_MONITOR_INSTANCE
 {
-    bool         shutdown;      /**< True if the monitor is stopped */
-    THREAD       thread;        /**< Monitor thread */
-    char*        script;        /**< Launchable script */
-    uint64_t     events;        /**< Enabled monitor events */
-    MXS_MONITOR* monitor;       /**< Pointer to generic monitor structure */
-    bool         checked;       /**< Whether server access has been checked */
+public:
+    AuroraMonitor(const AuroraMonitor&) = delete;
+    AuroraMonitor& operator = (const AuroraMonitor&) = delete;
+
+    static AuroraMonitor* create(MXS_MONITOR* monitor);
+    void destroy();
+    bool start(const MXS_CONFIG_PARAMETER* param);
+    void stop();
+    void diagnostics(DCB* dcb) const;
+    json_t* diagnostics_json() const;
+
+private:
+    bool         m_shutdown;      /**< True if the monitor is stopped */
+    THREAD       m_thread;        /**< Monitor thread */
+    char*        m_script;        /**< Launchable script */
+    uint64_t     m_events;        /**< Enabled monitor events */
+    MXS_MONITOR* m_monitor;       /**< Pointer to generic monitor structure */
+    bool         m_checked;       /**< Whether server access has been checked */
+
+    AuroraMonitor(MXS_MONITOR* monitor);
+    ~AuroraMonitor();
+
+    void main();
+    static void main(void* data);
 };
+
+
+AuroraMonitor::AuroraMonitor(MXS_MONITOR* monitor)
+    : m_shutdown(false)
+    , m_thread(0)
+    , m_script(NULL)
+    , m_events(0)
+    , m_monitor(monitor)
+    , m_checked(false)
+{
+}
+
+AuroraMonitor::~AuroraMonitor()
+{
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+}
+
+//static
+AuroraMonitor* AuroraMonitor::create(MXS_MONITOR* monitor)
+{
+    return new AuroraMonitor(monitor);
+}
+
+void AuroraMonitor::destroy()
+{
+    delete this;
+}
 
 /**
  * @brief Update the status of a server
@@ -109,28 +156,30 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
  *
  * @param arg The MONITOR object for this monitor
  */
-static void
-monitorMain(void *arg)
+//static
+void AuroraMonitor::main(void* data)
 {
-    AURORA_MONITOR *handle = (AURORA_MONITOR*)arg;
-    MXS_MONITOR *monitor = handle->monitor;
+    static_cast<AuroraMonitor*>(data)->main();
+}
 
+void AuroraMonitor::main()
+{
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in Aurora monitor. Exiting.");
         return;
     }
 
-    load_server_journal(monitor, NULL);
+    load_server_journal(m_monitor, NULL);
 
-    while (!handle->shutdown)
+    while (!m_shutdown)
     {
-        lock_monitor_servers(monitor);
-        servers_status_pending_to_current(monitor);
+        lock_monitor_servers(m_monitor);
+        servers_status_pending_to_current(m_monitor);
 
-        for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
         {
-            update_server_status(monitor, ptr);
+            update_server_status(m_monitor, ptr);
 
             if (SERVER_IS_DOWN(ptr->server))
             {
@@ -143,17 +192,17 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(monitor, handle->script, handle->events);
+        mon_process_state_changes(m_monitor, m_script, m_events);
 
-        servers_status_current_to_pending(monitor);
-        store_server_journal(monitor, NULL);
-        release_monitor_servers(monitor);
+        servers_status_current_to_pending(m_monitor);
+        store_server_journal(m_monitor, NULL);
+        release_monitor_servers(m_monitor);
 
         /** Sleep until the next monitoring interval */
         unsigned int ms = 0;
-        while (ms < monitor->interval && !handle->shutdown)
+        while (ms < m_monitor->interval && !m_shutdown)
         {
-            if (monitor->server_pending_changes)
+            if (m_monitor->server_pending_changes)
             {
                 // Admin has changed something, skip sleep
                 break;
@@ -167,45 +216,6 @@ monitorMain(void *arg)
 }
 
 /**
- * Helper function to free the monitor handle
- */
-static void auroramon_free(AURORA_MONITOR *handle)
-{
-    if (handle)
-    {
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-    }
-}
-
-static
-MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* mon)
-{
-    AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(MXS_CALLOC(1, sizeof(AURORA_MONITOR)));
-
-    if (handle)
-    {
-        handle->shutdown = false;
-        handle->thread = 0;
-        handle->script = NULL;
-        handle->events = 0;
-        handle->monitor = mon;
-        handle->checked = false;
-    }
-
-    return handle;
-}
-
-static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
-{
-    AURORA_MONITOR* handle = static_cast<AURORA_MONITOR*>(mon);
-    ss_dassert(!handle->thread);
-    ss_dassert(!handle->script);
-
-    MXS_FREE(handle);
-}
-
-/**
  * @brief Start the monitor
  *
  * This function initializes the monitor and starts the monitoring thread.
@@ -214,16 +224,13 @@ static void destroyInstance(MXS_MONITOR_INSTANCE* mon)
  * @param opt The configuration parameters for this monitor
  * @return Monitor handle
  */
-static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *params)
+bool AuroraMonitor::start(const MXS_CONFIG_PARAMETER *params)
 {
     bool started = false;
 
-    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
-    ss_dassert(handle);
-
-    if (!handle->checked)
+    if (!m_checked)
     {
-        if (!check_monitor_permissions(handle->monitor, "SELECT @@aurora_server_id, server_id FROM "
+        if (!check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
                                        "information_schema.replica_host_status "
                                        "WHERE session_id = 'MASTER_SESSION_ID'"))
         {
@@ -231,20 +238,20 @@ static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *
         }
         else
         {
-            handle->checked = true;
+            m_checked = true;
         }
     }
 
-    if (handle->checked)
+    if (m_checked)
     {
-        handle->script = config_copy_string(params, "script");
-        handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        m_script = config_copy_string(params, "script");
+        m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&m_thread, &AuroraMonitor::main, this, 0) == NULL)
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", handle->monitor->name);
-            MXS_FREE(handle->script);
-            handle->script = NULL;
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+            MXS_FREE(m_script);
+            m_script = NULL;
         }
         else
         {
@@ -260,19 +267,17 @@ static bool startMonitor(MXS_MONITOR_INSTANCE *mon, const MXS_CONFIG_PARAMETER *
  *
  * @param arg   Handle on thr running monior
  */
-static void
-stopMonitor(MXS_MONITOR_INSTANCE *mon)
+void AuroraMonitor::stop()
 {
-    AURORA_MONITOR *handle = static_cast<AURORA_MONITOR*>(mon);
-    ss_dassert(handle->thread);
+    ss_dassert(m_thread);
 
-    handle->shutdown = true;
-    thread_wait(handle->thread);
-    handle->thread = 0;
-    handle->shutdown = false;
+    m_shutdown = true;
+    thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = false;
 
-    MXS_FREE(handle->script);
-    handle->script = NULL;
+    MXS_FREE(m_script);
+    m_script = NULL;
 }
 
 /**
@@ -281,8 +286,7 @@ stopMonitor(MXS_MONITOR_INSTANCE *mon)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static void
-diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
+void AuroraMonitor::diagnostics(DCB *dcb) const
 {
 }
 
@@ -292,13 +296,11 @@ diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
+json_t* AuroraMonitor::diagnostics_json() const
 {
     return NULL;
 }
 
-extern "C"
-{
 /**
  * The module entry point routine. It is this routine that must populate the
  * structure that is referred to as the "module object", this is a structure
@@ -306,18 +308,8 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MONITOR_API MyObject =
-    {
-        createInstance,
-        destroyInstance,
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_MONITOR,
@@ -326,7 +318,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Aurora monitor",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &maxscale::MonitorApi<AuroraMonitor>::s_api,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -350,6 +342,4 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
-}
-
 }
