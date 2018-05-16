@@ -20,7 +20,7 @@
  * @file auroramon.hh - The Aurora monitor
  */
 
-class AuroraMonitor : public MXS_MONITOR_INSTANCE
+class AuroraMonitor : public maxscale::MonitorInstance
 {
 public:
     AuroraMonitor(const AuroraMonitor&) = delete;
@@ -34,13 +34,6 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    bool         m_shutdown;      /**< True if the monitor is stopped */
-    THREAD       m_thread;        /**< Monitor thread */
-    char*        m_script;        /**< Launchable script */
-    uint64_t     m_events;        /**< Enabled monitor events */
-    MXS_MONITOR* m_monitor;       /**< Pointer to generic monitor structure */
-    bool         m_checked;       /**< Whether server access has been checked */
-
     AuroraMonitor(MXS_MONITOR* monitor);
     ~AuroraMonitor();
 

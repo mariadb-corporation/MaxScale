@@ -20,7 +20,7 @@
  * @file grmon.hh A MySQL Group Replication cluster monitor
  */
 
-class GRMon : public MXS_MONITOR_INSTANCE
+class GRMon : public maxscale::MonitorInstance
 {
 public:
     GRMon(const GRMon&) = delete;
@@ -34,12 +34,8 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    THREAD                m_thread;   /**< Monitor thread */
-    int                   m_shutdown; /**< Flag to shutdown the monitor thread */
     MXS_MONITORED_SERVER* m_master;   /**< The master server */
     std::string           m_script;
-    uint64_t              m_events;   /**< Enabled events */
-    MXS_MONITOR*          m_monitor;
 
     GRMon(MXS_MONITOR* monitor);
     ~GRMon();

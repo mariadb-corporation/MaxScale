@@ -52,7 +52,7 @@ typedef struct galera_cluster_info
 } GALERA_CLUSTER_INFO;
 
 
-class GaleraMonitor : public MXS_MONITOR_INSTANCE
+class GaleraMonitor : public maxscale::MonitorInstance
 {
 public:
     GaleraMonitor(const GaleraMonitor&) = delete;
@@ -66,25 +66,18 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    THREAD m_thread;                    /**< Monitor thread */
-    int m_shutdown;                     /**< Flag to shutdown the monitor thread */
-    int m_status;                       /**< Monitor status */
     unsigned long m_id;                 /**< Monitor ID */
     int m_disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
     int m_availableWhenDonor;           /**< Monitor flag for Galera Cluster Donor availability */
     bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
     MXS_MONITORED_SERVER *m_master;     /**< Master server for MySQL Master/Slave replication */
-    char* m_script;                     /**< Launchable script */
     bool m_root_node_as_master;         /**< Whether we require that the Master should
                                        * have a wsrep_local_index of 0 */
     bool m_use_priority;                /**< Use server priorities */
-    uint64_t m_events;                  /**< Enabled monitor events */
     bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
                                        * ordered list of nodes */
     HASHTABLE *m_galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
     GALERA_CLUSTER_INFO m_cluster_info; /**< Contains Galera cluster info */
-    MXS_MONITOR* m_monitor;             /**< Pointer to generic monitor structure */
-    bool         m_checked;             /**< Whether server access has been checked */
 
     GaleraMonitor(MXS_MONITOR* monitor);
     ~GaleraMonitor();

@@ -20,7 +20,7 @@
  * @file mmmon.hh - The Multi-Master monitor
  */
 
-class MMMonitor : public MXS_MONITOR_INSTANCE
+class MMMonitor : public maxscale::MonitorInstance
 {
 public:
     MMMonitor(const MMMonitor&) = delete;
@@ -34,16 +34,9 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    THREAD m_thread;                /**< Monitor thread */
-    int m_shutdown;                 /**< Flag to shutdown the monitor thread */
-    int m_status;                   /**< Monitor status */
     unsigned long m_id;             /**< Monitor ID */
     int m_detectStaleMaster;        /**< Monitor flag for Stale Master detection */
     MXS_MONITORED_SERVER *m_master; /**< Master server for Master/Slave replication */
-    char* m_script;                 /**< Script to call when state changes occur on servers */
-    uint64_t m_events;              /**< enabled events */
-    MXS_MONITOR* m_monitor;         /**< Pointer to generic monitor structure */
-    bool m_checked;                 /**< Whether server access has been checked */
 
     MMMonitor(MXS_MONITOR* monitor);
     ~MMMonitor();

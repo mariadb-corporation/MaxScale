@@ -14,9 +14,30 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/monitor.h>
+#include <maxscale/thread.h>
 
 namespace maxscale
 {
+
+class MonitorInstance : public  MXS_MONITOR_INSTANCE
+{
+public:
+    MonitorInstance(const MonitorInstance&) = delete;
+    MonitorInstance& operator = (const MonitorInstance&) = delete;
+
+    virtual ~MonitorInstance();
+
+protected:
+    MonitorInstance(MXS_MONITOR* pMonitor);
+
+    int          m_status;   /**< The current status of the monitor. */
+    THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
+    MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */
+    int32_t      m_shutdown; /**< Non-zero if the monitor should shut down. */
+    char*        m_script;   /**< Launchable script. */
+    uint64_t     m_events;   /**< Enabled monitor events. */
+    bool         m_checked;  /**< Whether server access has been checked. */
+};
 
 /**
  * The purpose of the template MonitorApi is to provide an implementation

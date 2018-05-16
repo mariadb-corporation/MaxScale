@@ -85,16 +85,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 /*lint +e14 */
 
 MMMonitor::MMMonitor(MXS_MONITOR *monitor)
-    : m_thread(0)
-    , m_shutdown(0)
-    , m_status(0)
+    : maxscale::MonitorInstance(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_detectStaleMaster(false)
     , m_master(NULL)
-    , m_script(NULL)
-    , m_events(0)
-    , m_monitor(monitor)
-    , m_checked(false)
 {
 }
 

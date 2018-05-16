@@ -26,19 +26,12 @@
 
 
 AuroraMonitor::AuroraMonitor(MXS_MONITOR* monitor)
-    : m_shutdown(false)
-    , m_thread(0)
-    , m_script(NULL)
-    , m_events(0)
-    , m_monitor(monitor)
-    , m_checked(false)
+    : maxscale::MonitorInstance(monitor)
 {
 }
 
 AuroraMonitor::~AuroraMonitor()
 {
-    ss_dassert(!m_thread);
-    ss_dassert(!m_script);
 }
 
 //static

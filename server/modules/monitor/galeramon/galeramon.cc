@@ -100,22 +100,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 
 GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
-    : m_thread(0)
-    , m_shutdown(0)
-    , m_status(0)
+    : maxscale::MonitorInstance(mon)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_disableMasterFailback(0)
     , m_availableWhenDonor(0)
     , m_disableMasterRoleSetting(0)
     , m_master(NULL)
-    , m_script(NULL)
     , m_root_node_as_master(false)
     , m_use_priority(false)
-    , m_events(0)
     , m_set_donor_nodes(false)
     , m_galera_nodes_info(NULL)
-    , m_monitor(mon)
-    , m_checked(false)
 {
     HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
                                             hashtable_item_strhash,

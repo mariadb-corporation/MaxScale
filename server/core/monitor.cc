@@ -14,7 +14,7 @@
 /**
  * @file monitor.c  - The monitor module management routines
  */
-#include <maxscale/monitor.h>
+#include <maxscale/monitor.hh>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -2501,4 +2501,25 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
         *monitored_servers_out = monitored_array;
     }
     return found;
+}
+
+namespace maxscale
+{
+
+MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
+    : m_status(0)
+    , m_thread(0)
+    , m_monitor(pMonitor)
+    , m_shutdown(0)
+    , m_script(NULL)
+    , m_events(0)
+{
+}
+
+MonitorInstance::~MonitorInstance()
+{
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+}
+
 }

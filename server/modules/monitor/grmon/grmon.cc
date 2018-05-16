@@ -26,12 +26,10 @@
 #include <mysqld_error.h>
 
 
-GRMon::GRMon(MXS_MONITOR* monitor):
-    m_shutdown(0),
-    m_master(NULL),
-    m_script(NULL),
-    m_events(0),
-    m_monitor(monitor)
+GRMon::GRMon(MXS_MONITOR* monitor)
+    : MonitorInstance(monitor)
+    , m_master(NULL)
+    , m_script(NULL)
 {
 }
 

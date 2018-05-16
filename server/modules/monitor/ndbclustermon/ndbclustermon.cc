@@ -71,15 +71,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 
 NDBCMonitor::NDBCMonitor(MXS_MONITOR *monitor)
-    : m_thread(0)
+    : maxscale::MonitorInstance(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
-    , m_events(0)
-    , m_shutdown(0)
-    , m_status(0)
     , m_master(NULL)
-    , m_script(NULL)
-    , m_monitor(NULL)
-    , m_checked(false)
 {
 }
 

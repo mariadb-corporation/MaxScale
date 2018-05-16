@@ -20,7 +20,7 @@
  * @file ndbcclustermon.hh A NDBC cluster monitor
  */
 
-class NDBCMonitor : public MXS_MONITOR_INSTANCE
+class NDBCMonitor : public maxscale::MonitorInstance
 {
 public:
     NDBCMonitor(const NDBCMonitor&) = delete;
@@ -34,15 +34,8 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    THREAD m_thread;                /**< Monitor thread */
     unsigned long m_id;             /**< Monitor ID */
-    uint64_t m_events;              /**< enabled events */
-    int m_shutdown;                 /**< Flag to shutdown the monitor thread */
-    int m_status;                   /**< Monitor status */
     MXS_MONITORED_SERVER *m_master; /**< Master server for MySQL Master/Slave replication */
-    char* m_script;                 /**< Script to call when state changes occur on servers */
-    MXS_MONITOR* m_monitor;         /**< Pointer to generic monitor structure */
-    bool m_checked;                 /**< Whether server access has been checked */
 
     NDBCMonitor(MXS_MONITOR* monitor);
     ~NDBCMonitor();
