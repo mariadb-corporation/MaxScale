@@ -149,7 +149,7 @@ void AuroraMonitor::main()
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(m_monitor, m_script, m_events);
+        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
         servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, NULL);

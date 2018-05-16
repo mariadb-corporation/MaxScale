@@ -33,7 +33,6 @@ public:
 
 private:
     MXS_MONITORED_SERVER* m_master;   /**< The master server */
-    std::string           m_script;
 
     GRMon(MXS_MONITOR* monitor);
     ~GRMon();

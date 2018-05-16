@@ -43,7 +43,7 @@ protected:
     int          m_status;   /**< The current status of the monitor. */
     MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */
     int32_t      m_shutdown; /**< Non-zero if the monitor should shut down. */
-    char*        m_script;   /**< Launchable script. */
+    std::string  m_script;   /**< Launchable script. */
     uint64_t     m_events;   /**< Enabled monitor events. */
     bool         m_checked;  /**< Whether server access has been checked. */
 

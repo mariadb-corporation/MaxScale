@@ -310,7 +310,7 @@ void NDBCMonitor::main()
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(m_monitor, m_script, m_events);
+        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
         mon_hangup_failed_servers(m_monitor);
         servers_status_current_to_pending(m_monitor);

@@ -29,7 +29,6 @@
 GRMon::GRMon(MXS_MONITOR* monitor)
     : MonitorInstance(monitor)
     , m_master(NULL)
-    , m_script(NULL)
 {
 }
 
@@ -54,8 +53,6 @@ bool GRMon::has_sufficient_permissions() const
 
 void GRMon::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    // TODO: Turn MonitorInstance::m_script into a std::string and remove GRMon::m_script
-    m_script = config_get_string(params, "script");
     m_master = NULL;
 }
 

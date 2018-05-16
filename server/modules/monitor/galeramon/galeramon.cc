@@ -134,7 +134,6 @@ GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
 GaleraMonitor::~GaleraMonitor()
 {
     hashtable_free(m_galera_nodes_info);
-    MXS_FREE(m_script);
 }
 
 // static
@@ -204,9 +203,9 @@ json_t* GaleraMonitor::diagnostics_json() const
     json_object_set_new(rval, "use_priority", json_boolean(m_use_priority));
     json_object_set_new(rval, "set_donor_nodes", json_boolean(m_set_donor_nodes));
 
-    if (m_script)
+    if (!m_script.empty())
     {
-        json_object_set_new(rval, "script", json_string(m_script));
+        json_object_set_new(rval, "script", json_string(m_script.c_str()));
     }
 
     if (m_cluster_info.c_uuid)
@@ -606,7 +605,7 @@ void GaleraMonitor::main()
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(m_monitor, m_script, m_events);
+        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
         mon_hangup_failed_servers(m_monitor);
 

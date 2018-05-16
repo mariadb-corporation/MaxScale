@@ -2510,7 +2510,6 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_status(0)
     , m_monitor(pMonitor)
     , m_shutdown(0)
-    , m_script(NULL)
     , m_events(0)
     , m_thread(0)
 {
@@ -2519,7 +2518,6 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
 MonitorInstance::~MonitorInstance()
 {
     ss_dassert(!m_thread);
-    ss_dassert(!m_script);
 }
 
 void MonitorInstance::stop()
@@ -2530,9 +2528,6 @@ void MonitorInstance::stop()
     thread_wait(m_thread);
     m_thread = 0;
     m_shutdown = 0;
-
-    MXS_FREE(m_script);
-    m_script = NULL;
 }
 
 bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
@@ -2541,7 +2536,6 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
     ss_dassert(!m_shutdown);
     ss_dassert(!m_thread);
-    ss_dassert(!m_script);
 
     if (!m_checked)
     {
@@ -2557,7 +2551,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
     if (m_checked)
     {
-        m_script = config_copy_string(pParams, "script");
+        m_script = config_get_string(pParams, "script");
         m_events = config_get_enum(pParams, "events", mxs_monitor_event_enum_values);
 
         configure(pParams);
@@ -2565,8 +2559,6 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
         if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-            MXS_FREE(m_script);
-            m_script = NULL;
         }
         else
         {
