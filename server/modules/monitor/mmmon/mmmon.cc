@@ -139,7 +139,7 @@ bool MMMonitor::start(const MXS_CONFIG_PARAMETER *params)
         m_script = config_copy_string(params, "script");
         m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-        if (thread_start(&m_thread, MMMonitor::main, this, 0) == NULL)
+        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
             MXS_FREE(m_script);
@@ -492,11 +492,6 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
  *
  * @param arg   The handle of the monitor
  */
-void MMMonitor::main(void* arg)
-{
-    static_cast<MMMonitor*>(arg)->main();
-}
-
 void MMMonitor::main()
 {
     MXS_MONITOR* mon = m_monitor;

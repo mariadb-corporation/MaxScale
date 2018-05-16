@@ -41,5 +41,4 @@ private:
     ~NDBCMonitor();
 
     void main();
-    static void main(void* data);
 };

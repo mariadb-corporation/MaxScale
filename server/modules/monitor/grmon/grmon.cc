@@ -57,18 +57,12 @@ bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
     m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_thread = 0;
 
-    if (thread_start(&m_thread, GRMon::main, this, 0) != NULL)
+    if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) != NULL)
     {
         started = true;
     }
 
     return started;
-}
-
-void GRMon::main(void* data)
-{
-    GRMon* mon = (GRMon*)data;
-    mon->main();
 }
 
 void GRMon::stop()

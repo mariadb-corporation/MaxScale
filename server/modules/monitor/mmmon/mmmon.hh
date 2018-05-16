@@ -44,5 +44,4 @@ private:
     MXS_MONITORED_SERVER *get_current_master();
 
     void main();
-    static void main(void* data);
 };

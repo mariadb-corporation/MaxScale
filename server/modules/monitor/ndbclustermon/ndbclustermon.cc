@@ -122,7 +122,7 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
         m_script = config_copy_string(params, "script");
         m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-        if (thread_start(&m_thread, &NDBCMonitor::main, this, 0) == NULL)
+        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
             MXS_FREE(m_script);
@@ -298,12 +298,6 @@ monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *default
  *
  * @param arg   The handle of the monitor
  */
-//static
-void NDBCMonitor::main(void* arg)
-{
-    static_cast<NDBCMonitor*>(arg)->main();
-}
-
 void NDBCMonitor::main()
 {
     MXS_MONITORED_SERVER *ptr;

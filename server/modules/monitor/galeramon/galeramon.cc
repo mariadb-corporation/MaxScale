@@ -189,7 +189,7 @@ bool GaleraMonitor::start(const MXS_CONFIG_PARAMETER *params)
         /* Reset all data in the hashtable */
         reset_cluster_info();
 
-        if (thread_start(&m_thread, &GaleraMonitor::main, this, 0) == NULL)
+        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
         }
@@ -503,12 +503,6 @@ void GaleraMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
  *
  * @param arg   The handle of the monitor
  */
-//static
-void GaleraMonitor::main(void* arg)
-{
-    return static_cast<GaleraMonitor*>(arg)->main();
-}
-
 void GaleraMonitor::main()
 {
     MXS_MONITORED_SERVER *ptr;

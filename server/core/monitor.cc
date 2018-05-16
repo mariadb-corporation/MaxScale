@@ -2522,4 +2522,10 @@ MonitorInstance::~MonitorInstance()
     ss_dassert(!m_script);
 }
 
+//static
+void MonitorInstance::main(void* pArg)
+{
+    static_cast<MonitorInstance*>(pArg)->main();
+}
+
 }

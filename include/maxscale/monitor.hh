@@ -30,6 +30,10 @@ public:
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
+    virtual void main() = 0;
+
+    static void main(void* pArg);
+
     int          m_status;   /**< The current status of the monitor. */
     THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
     MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */

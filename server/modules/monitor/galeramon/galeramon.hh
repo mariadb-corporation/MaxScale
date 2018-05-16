@@ -93,5 +93,4 @@ private:
     void update_sst_donor_nodes(int is_cluster);
 
     void main();
-    static void main(void* data);
 };
