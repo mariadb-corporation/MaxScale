@@ -731,7 +731,7 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 
             moitor_servers->server->depth = 0;
             char buf[50]; // Enough to hold most numbers
-            if (handle->use_priority && server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf)))
+            if (handle->use_priority && server_get_parameter_nolock(moitor_servers->server, "priority", buf, sizeof(buf)))
             {
                 /** The server has a priority  */
                 if ((currval = atoi(buf)) > 0)
@@ -745,11 +745,9 @@ static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
                 }
             }
             else if (moitor_servers->server->node_id >= 0 &&
-                     (!handle->use_priority || /** Server priority disabled*/
-                      candidate_master == NULL || /** No candidate chosen */
-                       /** Candidate has no priority */
-                      !server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf))))
+                     (!handle->use_priority || candidate_master == NULL))
             {
+                // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {
                     min_id = moitor_servers->server->node_id;
@@ -884,7 +882,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
              */
 
             if (handle->use_priority &&
-                server_get_parameter(ptr->server, "priority", NULL, 0))
+                server_get_parameter_nolock(ptr->server, "priority", NULL, 0))
             {
                 ignore_priority = false;
             }
@@ -1019,8 +1017,8 @@ static int compare_node_priority (const void *a, const void *b)
     const MXS_MONITORED_SERVER *s_b = *(MXS_MONITORED_SERVER * const *)b;
     char pri_a[50];
     char pri_b[50];
-    bool have_a = server_get_parameter(s_a->server, "priority", pri_a, sizeof(pri_a));
-    bool have_b = server_get_parameter(s_b->server, "priority", pri_b, sizeof(pri_b));
+    bool have_a = server_get_parameter_nolock(s_a->server, "priority", pri_a, sizeof(pri_a));
+    bool have_b = server_get_parameter_nolock(s_b->server, "priority", pri_b, sizeof(pri_b));
 
     /**
      * Check priority parameter:

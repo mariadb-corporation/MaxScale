@@ -1,5 +1,8 @@
 #!/bin/bash
 
+rp=`realpath $0`
+export src_dir=`dirname $rp`
+
 user=skysql
 password=skysql
 
@@ -15,18 +18,20 @@ function run_test
     local test_name=$1
 
     echo $test_name
+    logdir=log_$test_name
+    mkdir -p $logdir
 
     mysqltest --host=$maxscale_IP --port=$port \
               --user=$user --password=$password \
-              --logdir=log \
-              --test-file=t/$test_name.test \
-              --result-file=r/$test_name.result \
+              --logdir=$logdir \
+              --test-file=$dir/t/$test_name.test \
+              --result-file=$dir/r/$test_name.result \
               --silent
 
     if [ $? -eq 0 ]
     then
         echo " OK"
-	rc=0
+	    rc=0
     else
         echo " FAILED"
         rc=1
@@ -57,7 +62,9 @@ then
     echo "warning: Expected test name to be $expected_name_basic, was $1."
 fi
 
-source=cache/$1/cache_rules.json
+export dir="$src_dir/cache/$expected_name"
+
+source=$src_dir/cache/$1/cache_rules.json
 target=vagrant@$maxscale_IP:/home/$maxscale_access_user/cache_rules.json
 
 if [ $maxscale_IP != "127.0.0.1" ] ; then
@@ -77,11 +84,6 @@ echo $source copied to $target
 test_dir=`pwd`
 
 $test_dir/non_native_setup $1
-
-cd cache/$expected_name
-
-[ -d log ] && rm -r log
-mkdir log || exit 1
 
 echo
 

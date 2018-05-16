@@ -930,20 +930,15 @@ static void server_parameter_free(SERVER_PARAM *tofree)
 }
 
 /**
- * Retrieve a parameter value from a server
+ * Same as server_get_parameter but doesn't lock the server
  *
- * @param server The server we are looking for a parameter of
- * @param name   The name of the parameter we require
- * @param out    Buffer where value is stored, use NULL to check if the parameter exists
- * @param size   Size of @c out, ignored if @c out is NULL
- *
- * @return Length of the parameter value or 0 if parameter was not found
+ * @note Should only be called when the server is already locked
  */
-size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
+size_t server_get_parameter_nolock(const SERVER *server, const char *name, char* out, size_t size)
 {
-    int len = 0;
+    ss_dassert(SPINLOCK_IS_LOCKED(&server->lock));
+    size_t len = 0;
     SERVER_PARAM *param = server->parameters;
-    spinlock_acquire(&server->lock);
 
     while (param)
     {
@@ -955,6 +950,23 @@ size_t server_get_parameter(const SERVER *server, const char *name, char* out, s
         param = param->next;
     }
 
+    return len;
+}
+
+/**
+ * Retrieve a parameter value from a server
+ *
+ * @param server The server we are looking for a parameter of
+ * @param name   The name of the parameter we require
+ * @param out    Buffer where value is stored, use NULL to check if the parameter exists
+ * @param size   Size of @c out, ignored if @c out is NULL
+ *
+ * @return Length of the parameter value or 0 if parameter was not found
+ */
+size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
+{
+    spinlock_acquire(&server->lock);
+    size_t len = server_get_parameter_nolock(server, name, out, size);
     spinlock_release(&server->lock);
     return len;
 }

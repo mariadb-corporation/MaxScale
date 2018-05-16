@@ -17,7 +17,9 @@ then
     exit 1
 fi
 
-source=masking/$1/masking_rules.json
+src_dir=$(dirname $(realpath $0))
+echo "src_dir: $src_dir"
+source=$src_dir/masking/$1/masking_rules.json
 target=vagrant@$maxscale_IP:/home/$maxscale_access_user/masking_rules.json
 
 if [ $maxscale_IP != "127.0.0.1" ] ; then
@@ -37,22 +39,23 @@ echo $source copied to $target
 test_dir=`pwd`
 
 $test_dir/non_native_setup $1
-
-cd masking/$1
-[ -d log ] && rm -r log
-mkdir log || exit 1
+logdir=log_$1
+[ -d $logdir ] && rm -r $logdir
+mkdir $logdir || exit 1
 
 # [Read Connection Listener Master] in cnf/maxscale.maxscale.cnf.template.$1
 port=4008
 password=skysql
 
+dir="$src_dir/masking/$1"
+
 user=skysql
 test_name=masking_user
 mysqltest --host=$maxscale_IP --port=$port \
           --user=$user --password=$password \
-          --logdir=log \
-          --test-file=t/$test_name.test \
-          --result-file=r/"$test_name"_"$user".result \
+          --logdir=$logdir \
+          --test-file=$dir/t/$test_name.test \
+          --result-file=$dir/r/"$test_name"_"$user".result \
           --silent
 if [ $? -eq 0 ]
 then
@@ -66,9 +69,9 @@ user=maxskysql
 test_name=masking_user
 mysqltest --host=$maxscale_IP --port=$port \
           --user=$user --password=$password \
-          --logdir=log \
-          --test-file=t/$test_name.test \
-          --result-file=r/"$test_name"_"$user".result \
+          --logdir=$logdir \
+          --test-file=$dir/t/$test_name.test \
+          --result-file=$dir/r/"$test_name"_"$user".result \
           --silent
 if [ $? -eq 0 ]
 then
@@ -81,6 +84,6 @@ fi
 echo
 
 # Copy logs from the VM
-$test_dir/copy_logs.sh $1
+$src_dir/copy_logs.sh $1
 
 exit $res

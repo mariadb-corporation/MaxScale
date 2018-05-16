@@ -5,7 +5,8 @@
 ## run a set of queries in the loop (see setmix.sql) using Perl client
 
 rp=`realpath $0`
-export test_dir=`dirname $rp`
+export src_dir=`dirname $rp`
+export test_dir=`pwd`
 export test_name=`basename $rp`
 
 $test_dir/non_native_setup $test_name
@@ -15,7 +16,7 @@ then
     echo "configuring maxscale failed"
     exit 1
 fi
-export ssl_options="--ssl-cert=$test_dir/ssl-cert/client-cert.pem --ssl-key=$test_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$node_user -p$node_password -h$maxscale_IP -P 4006 $ssl_options test
 
@@ -27,8 +28,8 @@ fi
 
 res=0
 
-$test_dir/session_hang/run_setmix.sh &
-perl $test_dir/session_hang/simpletest.pl
+$src_dir/session_hang/run_setmix.sh &
+perl $src_dir/session_hang/simpletest.pl
 if [ $? -ne 0 ]
 then
 	res=1
@@ -52,6 +53,6 @@ else
     echo "Test PASSED"
 fi
 
-$test_dir/copy_logs.sh run_session_hang
+$src_dir/copy_logs.sh run_session_hang
 
 exit $res

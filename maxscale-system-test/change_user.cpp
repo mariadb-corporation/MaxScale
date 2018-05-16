@@ -31,6 +31,10 @@ int main(int argc, char *argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t1");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE TABLE t1 (x1 int, fl int)");
 
+    Test->maxscales->restart_maxscale();
+    sleep(2);
+    Test->maxscales->connect_maxscale(0);
+
     Test->tprintf("Changing user... \n");
     Test->add_result(mysql_change_user(Test->maxscales->conn_rwsplit[0], (char *) "user", (char *) "pass2", (char *) "test") ,
                      "changing user failed \n");
@@ -60,9 +64,9 @@ int main(int argc, char *argv[])
         Test->add_result(1, "There is no proper error message\n");
     }
 
-    Test->tprintf("Trying INSERT again (expecting success - use change should fail)... \n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "INSERT INTO t1 VALUES (77, 13);");
-
+    Test->tprintf("Trying INSERT again (expecting failure - change user should have failed)...");
+    Test->add_result(!execute_query(Test->maxscales->conn_rwsplit[0], (char *) "INSERT INTO t1 VALUES (77, 13);"),
+                     "Query should fail, MaxScale should disconnect on auth failure");
 
     Test->tprintf("Changing user with wrong password using ReadConn \n");
     if (mysql_change_user(Test->maxscales->conn_slave[0], (char *) "user", (char *) "wrong_pass2", (char *) "test") == 0)
@@ -79,6 +83,7 @@ int main(int argc, char *argv[])
     Test->add_result(mysql_change_user(Test->maxscales->conn_slave[0], (char *) "user", (char *) "pass2", (char *) "test") ,
                      "changing user failed \n");
 
+    Test->maxscales->connect_maxscale(0);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%';");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 

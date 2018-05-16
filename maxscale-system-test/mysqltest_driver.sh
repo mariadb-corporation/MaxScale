@@ -36,26 +36,24 @@ fi
 test_dir=`pwd`
 port=$3
 
-cd $2 || exit 1
-
 res=0
 
 # Create a directory for the mysqltest logs
-[ -d log ] && rm -r log
-mkdir log || exit 1
+[ -d log_$1 ] && rm -r log_$1
+mkdir log_$1
 
 echo
 
 # Run the test
-for t in `cd t; ls *.test`
+for t in `$2/t/*.test|xargs -L 1 basename`
 do
     printf "$t:"
     test_name=${t%%.test}
     mysqltest --host=$maxscale_IP --port=$port \
               --user=$user --password=$password \
-              --logdir=log \
-              --test-file=t/$test_name.test \
-              --result-file=r/$test_name.result \
+              --logdir=log_$1 \
+              --test-file=$2/t/$test_name.test \
+              --result-file=$2/r/$test_name.result \
               --silent
 
     if [ $? -eq 0 ]
@@ -70,6 +68,6 @@ done
 echo
 
 # Copy logs from the VM
-$test_dir/copy_logs.sh $1
+$src_dir/copy_logs.sh $1
 
 exit $res

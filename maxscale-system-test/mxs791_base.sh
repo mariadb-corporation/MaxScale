@@ -1,11 +1,14 @@
 #!/bin/bash
-$test_dir/non_native_setup $test_name
+
+rp=`realpath $0`
+export src_dir=`dirname $rp`
+$PWD/non_native_setup $test_name
 
 if [ $? -ne 0 ] ; then
         echo "configuring maxscale failed"
         exit 1
 fi
-export ssl_options="--ssl-cert=$test_dir/ssl-cert/client-cert.pem --ssl-key=$test_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
 
 res=0
 echo "Trying RWSplit"

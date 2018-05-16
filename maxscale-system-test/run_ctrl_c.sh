@@ -5,7 +5,8 @@
 ## check that Maxscale is reacting correctly on ctrc+c signal and termination does not take ages
 
 rp=`realpath $0`
-export test_dir=`dirname $rp`
+export src_dir=`dirname $rp`
+export test_dir=`pwd`
 export test_name=`basename $rp`
 
 if [ $maxscale_IP == "127.0.0.1" ] ; then
@@ -20,12 +21,12 @@ if [ $? -ne 0 ] ; then
         exit 1
 fi
 
-scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r $test_dir/test_ctrl_c/* $maxscale_access_user@$maxscale_IP:./
+scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r $src_dir/test_ctrl_c/* $maxscale_access_user@$maxscale_IP:./
 ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $maxscale_access_user@$maxscale_IP "export maxscale_access_sudo=$maxscale_access_sudo; ./test_ctrl_c.sh"
 
 res=$?
 
 ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $maxscale_access_user@$maxscale_IP "sudo rm -f /tmp/maxadmin.sock"
 
-$test_dir/copy_logs.sh run_ctrl_c
+$src_dir/copy_logs.sh run_ctrl_c
 exit $res
