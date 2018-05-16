@@ -48,6 +48,7 @@ public:
     std::string last_error;         /**< Last IO or SQL error encountered. */
 
     SlaveStatus();
+    std::string to_string() const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string slave_io_to_string(slave_io_running_t slave_io);
 };

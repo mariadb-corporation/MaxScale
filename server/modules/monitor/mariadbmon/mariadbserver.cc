@@ -15,6 +15,7 @@
 
 #include <fstream>
 #include <inttypes.h>
+#include <iomanip>
 #include <sstream>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/thread.h>
@@ -418,14 +419,12 @@ string MariaDBServer::diagnostics(bool multimaster) const
     std::stringstream ss;
     ss << "Server:                 " << name() << "\n";
     ss << "Server ID:              " << m_server_id << "\n";
-    ss << "Read only:              " << (m_read_only ? "YES" : "NO") << "\n";
-    ss << "Slave configured:       " << (!m_slave_status.empty() ? "YES" : "NO") << "\n";
-    if (!m_slave_status.empty())
+    ss << "Read only:              " << (m_read_only ? "Yes" : "No") << "\n";
+    ss << (m_slave_status.empty() ? "No slave connections \n" : "Slave connections: \n");
+
+    for (auto iter = m_slave_status.begin(); iter != m_slave_status.end(); iter++)
     {
-        ss << "Slave IO running:       " <<
-            SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running) << "\n";
-        ss << "Slave SQL running:      " << (m_slave_status[0].slave_sql_running ? "YES" : "NO") << "\n";
-        ss << "Master ID:              " << m_slave_status[0].master_server_id << "\n";
+        ss << iter->to_string();
     }
     if (!m_gtid_current_pos.empty())
     {
@@ -434,10 +433,6 @@ string MariaDBServer::diagnostics(bool multimaster) const
     if (!m_gtid_binlog_pos.empty())
     {
         ss << "Gtid binlog position:   " << m_gtid_binlog_pos.to_string() << "\n";
-    }
-    if (!m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty())
-    {
-        ss << "Gtid slave IO position: " << m_slave_status[0].gtid_io_pos.to_string() << "\n";
     }
     if (multimaster)
     {
@@ -843,6 +838,22 @@ void MariaDBServer::update_server_info()
                       srv->version_string);
         }
     }
+}
+
+string SlaveStatus::to_string() const
+{
+    using std::setw;
+    // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
+    // not quite array-like since usually there is just one row. May be changed later.
+    std::stringstream result;
+    std::stringstream helper;
+    helper << "[" << master_host << "]:" << master_port;
+    result << "  Host: " << setw(22) << helper.str() << ", "; // small intendation
+    string host_port = slave_io_to_string(slave_io_running) + "/" + (slave_sql_running ? "Yes" : "No");
+    result << "IO/SQL running: " << setw(7) << host_port << ", ";
+    result << "Master ID: " << setw(4) << master_server_id << ", ";
+    result << "Gtid_IO_Pos: " << gtid_io_pos.to_string() << "\n";
+    return result.str();
 }
 
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)
