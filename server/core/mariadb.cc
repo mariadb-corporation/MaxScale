@@ -44,7 +44,7 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
 
             while ((row = mysql_fetch_row(pResult)) != NULL)
             {
-                ss_debug(char* pEnd);
+                char* pEnd;
 
                 int64_t total = strtoll(row[2], &pEnd, 0);
                 ss_dassert(*pEnd == 0);
