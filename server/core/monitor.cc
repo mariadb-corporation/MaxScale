@@ -2522,6 +2522,19 @@ MonitorInstance::~MonitorInstance()
     ss_dassert(!m_script);
 }
 
+void MonitorInstance::stop()
+{
+    ss_dassert(m_thread);
+
+    atomic_store_int32(&m_shutdown, 1);
+    thread_wait(m_thread);
+    m_thread = 0;
+    m_shutdown = 0;
+
+    MXS_FREE(m_script);
+    m_script = NULL;
+}
+
 //static
 void MonitorInstance::main(void* pArg)
 {

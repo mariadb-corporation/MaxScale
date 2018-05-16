@@ -27,6 +27,8 @@ public:
 
     virtual ~MonitorInstance();
 
+    void stop();
+
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 

@@ -65,16 +65,6 @@ bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
     return started;
 }
 
-void GRMon::stop()
-{
-    ss_dassert(m_thread);
-
-    atomic_store_int32(&m_shutdown, 1);
-    thread_wait(m_thread);
-    m_thread = 0;
-    m_shutdown = 0;
-}
-
 void GRMon::diagnostics(DCB* dcb) const
 {
 }

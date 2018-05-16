@@ -29,7 +29,6 @@ public:
     static GRMon* create(MXS_MONITOR* monitor);
     void destroy();
     bool start(const MXS_CONFIG_PARAMETER* params);
-    void stop();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 

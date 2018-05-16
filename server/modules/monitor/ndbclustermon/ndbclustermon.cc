@@ -138,24 +138,6 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
 }
 
 /**
- * Stop a running monitor
- *
- * @param arg   Handle on thr running monior
- */
-void NDBCMonitor::stop()
-{
-    ss_dassert(m_thread);
-
-    m_shutdown = 1;
-    thread_wait(m_thread);
-    m_thread = 0;
-    m_shutdown = 0;
-
-    MXS_FREE(m_script);
-    m_script = NULL;
-}
-
-/**
  * Diagnostic interface
  *
  * @param dcb   DCB to send output
