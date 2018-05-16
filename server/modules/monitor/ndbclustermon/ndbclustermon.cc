@@ -255,16 +255,13 @@ void NDBCMonitor::main()
         return;
     }
 
-    m_status = MXS_MONITOR_RUNNING;
     load_server_journal(m_monitor, NULL);
 
     while (1)
     {
         if (m_shutdown)
         {
-            m_status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            m_status = MXS_MONITOR_STOPPED;
             return;
         }
 

@@ -40,7 +40,6 @@ protected:
 
     static void main(void* pArg);
 
-    int          m_status;   /**< The current status of the monitor. */
     MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */
     int32_t      m_shutdown; /**< Non-zero if the monitor should shut down. */
     std::string  m_script;   /**< Launchable script. */
@@ -48,6 +47,7 @@ protected:
     bool         m_checked;  /**< Whether server access has been checked. */
 
 private:
+    int32_t      m_status;   /**< The current status of the monitor. */
     THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
 };
 

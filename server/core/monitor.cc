@@ -2507,10 +2507,10 @@ namespace maxscale
 {
 
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
-    : m_status(0)
-    , m_monitor(pMonitor)
+    : m_monitor(pMonitor)
     , m_shutdown(0)
     , m_events(0)
+    , m_status(MXS_MONITOR_STOPPED)
     , m_thread(0)
 {
 }
@@ -2522,10 +2522,14 @@ MonitorInstance::~MonitorInstance()
 
 void MonitorInstance::stop()
 {
+    // This is always called in single-thread context.
     ss_dassert(m_thread);
+    ss_dassert(m_status == MXS_MONITOR_RUNNING);
 
+    atomic_store_int32(&m_status, MXS_MONITOR_STOPPING);
     atomic_store_int32(&m_shutdown, 1);
     thread_wait(m_thread);
+
     m_thread = 0;
     m_shutdown = 0;
 }
@@ -2581,7 +2585,11 @@ void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 //static
 void MonitorInstance::main(void* pArg)
 {
+    MonitorInstance* pThis = static_cast<MonitorInstance*>(pArg);
+
+    atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
     static_cast<MonitorInstance*>(pArg)->main();
+    atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
 }
 
 }
