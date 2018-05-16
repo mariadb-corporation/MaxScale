@@ -441,23 +441,12 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
  */
 void MMMonitor::main()
 {
-    MXS_MONITOR* mon = m_monitor;
-    MXS_MONITORED_SERVER *ptr;
-    int detect_stale_master = false;
-    MXS_MONITORED_SERVER *root_master = NULL;
     size_t nrounds = 0;
 
-    detect_stale_master = m_detectStaleMaster;
+    load_server_journal(m_monitor, &m_master);
 
-    load_server_journal(mon, &m_master);
-
-    while (1)
+    while (!m_shutdown)
     {
-        if (m_shutdown)
-        {
-            return;
-        }
-
         /** Wait base interval */
         thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
         /**
@@ -467,19 +456,19 @@ void MMMonitor::main()
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % m_monitor->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!m_monitor->server_pending_changes))
         {
             nrounds += 1;
             continue;
         }
         nrounds += 1;
 
-        lock_monitor_servers(mon);
-        servers_status_pending_to_current(mon);
+        lock_monitor_servers(m_monitor);
+        servers_status_pending_to_current(m_monitor);
 
         /* start from the first server in the list */
-        ptr = mon->monitored_servers;
+        MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
 
         while (ptr)
         {
@@ -487,7 +476,7 @@ void MMMonitor::main()
             ptr->pending_status = ptr->server->status;
 
             /* monitor current node */
-            monitorDatabase(mon, ptr);
+            monitorDatabase(m_monitor, ptr);
 
             if (mon_status_changed(ptr) ||
                 mon_print_fail_status(ptr))
@@ -512,17 +501,17 @@ void MMMonitor::main()
         }
 
         /* Get Master server pointer */
-        root_master = get_current_master();
+        MXS_MONITORED_SERVER *root_master = get_current_master();
 
         /* Update server status from monitor pending status on that server*/
 
-        ptr = mon->monitored_servers;
+        ptr = m_monitor->monitored_servers;
         while (ptr)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
                 /* If "detect_stale_master" option is On, let's use the previus master */
-                if (detect_stale_master && root_master &&
+                if (m_detectStaleMaster && root_master &&
                     (!strcmp(ptr->server->address, root_master->server->address) &&
                      ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
                     !(ptr->pending_status & SERVER_MASTER))
@@ -546,12 +535,12 @@ void MMMonitor::main()
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, m_script.empty() ? NULL : m_script.c_str(), m_events);
+        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
-        mon_hangup_failed_servers(mon);
-        servers_status_current_to_pending(mon);
-        store_server_journal(mon, m_master);
-        release_monitor_servers(mon);
+        mon_hangup_failed_servers(m_monitor);
+        servers_status_current_to_pending(m_monitor);
+        store_server_journal(m_monitor, m_master);
+        release_monitor_servers(m_monitor);
     }
 }
 

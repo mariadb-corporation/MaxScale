@@ -70,12 +70,13 @@ private:
     bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
     MXS_MONITORED_SERVER *m_master;     /**< Master server for MySQL Master/Slave replication */
     bool m_root_node_as_master;         /**< Whether we require that the Master should
-                                       * have a wsrep_local_index of 0 */
+                                         * have a wsrep_local_index of 0 */
     bool m_use_priority;                /**< Use server priorities */
     bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
-                                       * ordered list of nodes */
+                                         * ordered list of nodes */
     HASHTABLE *m_galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
     GALERA_CLUSTER_INFO m_cluster_info; /**< Contains Galera cluster info */
+    bool m_log_no_members;              /**< Should we log if no member are found. */
 
     GaleraMonitor(MXS_MONITOR* monitor);
     ~GaleraMonitor();

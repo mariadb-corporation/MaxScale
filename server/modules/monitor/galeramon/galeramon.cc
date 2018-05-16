@@ -110,6 +110,7 @@ GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
     , m_use_priority(false)
     , m_set_donor_nodes(false)
     , m_galera_nodes_info(NULL)
+    , m_log_no_members(false)
 {
     HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
                                             hashtable_item_strhash,
@@ -160,6 +161,7 @@ void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_root_node_as_master = config_get_bool(params, "root_node_as_master");
     m_use_priority = config_get_bool(params, "use_priority");
     m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
+    m_log_no_members = true;
 
     /* Reset all data in the hashtable */
     reset_cluster_info();
@@ -450,24 +452,12 @@ void GaleraMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
  */
 void GaleraMonitor::main()
 {
-    MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
-    MXS_MONITORED_SERVER *candidate_master = NULL;
-    int master_stickiness;
-    int is_cluster = 0;
-    int log_no_members = 1;
-
-    master_stickiness = m_disableMasterFailback;
 
     load_server_journal(m_monitor, NULL);
 
-    while (1)
+    while (!m_shutdown)
     {
-        if (m_shutdown)
-        {
-            return;
-        }
-
         /** Wait base interval */
         thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
 
@@ -487,13 +477,12 @@ void GaleraMonitor::main()
 
         nrounds += 1;
 
-        /* reset cluster members counter */
-        is_cluster = 0;
+        int is_cluster = 0;
 
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        ptr = m_monitor->monitored_servers;
+        MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
@@ -538,9 +527,9 @@ void GaleraMonitor::main()
          */
 
         /* get the candidate master, following MXS_MIN(node_id) rule */
-        candidate_master = get_candidate_master();
+        MXS_MONITORED_SERVER *candidate_master = get_candidate_master();
 
-        m_master = set_cluster_master(m_master, candidate_master, master_stickiness);
+        m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
 
         ptr = m_monitor->monitored_servers;
 
@@ -579,17 +568,17 @@ void GaleraMonitor::main()
             ptr = ptr->next;
         }
 
-        if (is_cluster == 0 && log_no_members)
+        if (is_cluster == 0 && m_log_no_members)
         {
             MXS_ERROR("There are no cluster members");
-            log_no_members = 0;
+            m_log_no_members = false;
         }
         else
         {
-            if (is_cluster > 0 && log_no_members == 0)
+            if (is_cluster > 0 && m_log_no_members == 0)
             {
                 MXS_NOTICE("Found cluster members");
-                log_no_members = 1;
+                m_log_no_members = true;
             }
         }
 

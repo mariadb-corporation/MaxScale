@@ -246,18 +246,12 @@ monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *default
  */
 void NDBCMonitor::main()
 {
-    MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
 
     load_server_journal(m_monitor, NULL);
 
-    while (1)
+    while (!m_shutdown)
     {
-        if (m_shutdown)
-        {
-            return;
-        }
-
         /** Wait base interval */
         thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
         /**
@@ -278,7 +272,7 @@ void NDBCMonitor::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        ptr = m_monitor->monitored_servers;
+        MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
