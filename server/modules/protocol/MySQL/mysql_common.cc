@@ -1582,6 +1582,13 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
     return rval;
 }
 
+bool mxs_mysql_is_local_infile(GWBUF *buffer)
+{
+    uint8_t cmd = 0xff; // Default should differ from the OK packet
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    return cmd == MYSQL_REPLY_LOCAL_INFILE;
+}
+
 bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer)
 {
     bool rval = false;

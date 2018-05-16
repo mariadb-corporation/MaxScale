@@ -564,6 +564,15 @@ bool mxs_mysql_is_err_packet(GWBUF *buffer);
 bool mxs_mysql_is_result_set(GWBUF *buffer);
 
 /**
+ * @brief Check if the buffer contains a LOCAL INFILE request
+ *
+ * @param buffer Buffer containing a complete MySQL packet
+ *
+ * @return True if the buffer contains a LOCAL INFILE request
+ */
+bool mxs_mysql_is_local_infile(GWBUF *buffer);
+
+/**
  * @brief Check if the buffer contains a prepared statement OK packet
  *
  * @param buffer Buffer to check
@@ -641,6 +650,23 @@ static inline uint8_t mxs_mysql_get_command(GWBUF* buffer)
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
         return command;
     }
+}
+
+/**
+ * @brief Get the total size of the first packet
+ *
+ * The size includes the payload and the header
+ *
+ * @param buffer Buffer to inspect
+ *
+ * @return The total packet size in bytes
+ */
+static inline uint32_t mxs_mysql_get_packet_len(GWBUF* buffer)
+{
+    // The first three bytes of the packet header contain its length
+    uint8_t buf[3];
+    gwbuf_copy_data(buffer, 0, 3, buf);
+    return gw_mysql_get_byte3(buf) + MYSQL_HEADER_LEN;
 }
 
 /**

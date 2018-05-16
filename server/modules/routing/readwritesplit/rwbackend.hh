@@ -76,6 +76,11 @@ public:
         return m_command;
     }
 
+    bool local_infile_requested() const
+    {
+        return m_local_infile_requested;
+    }
+
     bool reply_is_complete(GWBUF *buffer);
 
 private:
@@ -85,6 +90,7 @@ private:
     uint8_t          m_command;
     bool             m_opening_cursor; /**< Whether we are opening a cursor */
     uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
+    bool             m_local_infile_requested; /**< Whether a LOCAL INFILE was requested */
 
     inline bool is_opening_cursor() const
     {

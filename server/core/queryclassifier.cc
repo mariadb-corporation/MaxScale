@@ -817,15 +817,6 @@ QueryClassifier::handle_multi_temp_and_load(QueryClassifier::current_target_t cu
     {
         append_load_data_sent(querybuf);
     }
-    else if (is_packet_a_query(packet_type))
-    {
-        qc_query_op_t queryop = qc_get_operation(querybuf);
-        if (queryop == QUERY_OP_LOAD)
-        {
-            set_load_data_state(QueryClassifier::LOAD_DATA_START);
-            reset_load_data_sent();
-        }
-    }
 
     return rv;
 }

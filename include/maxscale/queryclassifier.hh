@@ -156,7 +156,6 @@ public:
     enum load_data_state_t
     {
         LOAD_DATA_INACTIVE,         /**< Not active */
-        LOAD_DATA_START,            /**< Current query starts a load */
         LOAD_DATA_ACTIVE,           /**< Load is active */
         LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
     };
@@ -200,6 +199,12 @@ public:
 
     void set_load_data_state(load_data_state_t state)
     {
+        if (state == LOAD_DATA_ACTIVE)
+        {
+            ss_dassert(m_load_data_state == LOAD_DATA_INACTIVE);
+            reset_load_data_sent();
+        }
+
         m_load_data_state = state;
     }
 

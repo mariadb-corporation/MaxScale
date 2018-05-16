@@ -983,13 +983,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             target->set_reply_state(REPLY_STATE_START);
             m_expected_responses++;
 
-            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_START)
-            {
-                /** The first packet contains the actual query and the server
-                 * will respond to it */
-                m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
-            }
-            else if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
+            if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_END)
             {
                 /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
                  * to which the server responds with an OK or an ERR packet */

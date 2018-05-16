@@ -13,7 +13,8 @@ RWBackend::RWBackend(SERVER_REF* ref):
     m_modutil_state({}),
     m_command(0),
     m_opening_cursor(false),
-    m_expected_rows(0)
+    m_expected_rows(0),
+    m_local_infile_requested(false)
 {
 }
 
@@ -146,6 +147,8 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
     else if (get_reply_state() == REPLY_STATE_START &&
         (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
+        m_local_infile_requested = false;
+
         if (GWBUF_IS_COLLECTED_RESULT(buffer) ||
             current_command() == MXS_COM_STMT_PREPARE ||
             !mxs_mysql_is_ok_packet(buffer) ||
@@ -153,6 +156,11 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         {
             /** Not a result set, we have the complete response */
             set_reply_state(REPLY_STATE_DONE);
+
+            if (mxs_mysql_is_local_infile(buffer))
+            {
+                m_local_infile_requested = true;
+            }
         }
         else
         {
@@ -162,8 +170,12 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
 
             if (have_next_packet(buffer))
             {
-                set_reply_state(REPLY_STATE_RSET_COLDEF);
-                return reply_is_complete(buffer);
+                // TODO: Don't clone the buffer
+                GWBUF* tmp = gwbuf_clone(buffer);
+                tmp = gwbuf_consume(tmp, mxs_mysql_get_packet_len(tmp));
+                bool rval = reply_is_complete(tmp);
+                gwbuf_free(tmp);
+                return rval;
             }
         }
     }

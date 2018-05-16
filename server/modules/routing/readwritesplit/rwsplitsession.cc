@@ -420,13 +420,6 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
 
-    if (m_qc.load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE &&
-        mxs_mysql_is_err_packet(writebuf))
-    {
-        // Server responded with an error to the LOAD DATA LOCAL INFILE
-        m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
-    }
-
     if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
     {
         return; // Nothing to route, return
@@ -475,6 +468,12 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         ss_dassert(m_expected_responses >= 0);
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
+
+        if (backend->local_infile_requested())
+        {
+            // Server requested a local file, go into data streaming mode
+            m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+        }
     }
     else
     {
