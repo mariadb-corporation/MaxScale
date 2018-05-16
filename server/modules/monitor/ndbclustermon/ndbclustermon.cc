@@ -246,29 +246,10 @@ monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *default
  */
 void NDBCMonitor::main()
 {
-    size_t nrounds = 0;
-
     load_server_journal(m_monitor, NULL);
 
     while (!m_shutdown)
     {
-        /** Wait base interval */
-        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
-        /**
-         * Calculate how far away the monitor interval is from its full
-         * cycle and if monitor interval time further than the base
-         * interval, then skip monitoring checks. Excluding the first
-         * round.
-         */
-        if (nrounds != 0 &&
-            ((nrounds * MXS_MON_BASE_INTERVAL_MS) % m_monitor->interval) >=
-            MXS_MON_BASE_INTERVAL_MS)
-        {
-            nrounds += 1;
-            continue;
-        }
-        nrounds += 1;
-
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
@@ -284,6 +265,19 @@ void NDBCMonitor::main()
         servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, NULL);
         release_monitor_servers(m_monitor);
+
+        /** Sleep until the next monitoring interval */
+        unsigned int ms = 0;
+        while (ms < m_monitor->interval && !m_shutdown)
+        {
+            if (m_monitor->server_pending_changes)
+            {
+                // Admin has changed something, skip sleep
+                break;
+            }
+            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+            ms += MXS_MON_BASE_INTERVAL_MS;
+        }
     }
 }
 
