@@ -28,7 +28,6 @@ public:
 
     static AuroraMonitor* create(MXS_MONITOR* monitor);
     void destroy();
-    bool start(const MXS_CONFIG_PARAMETER* param);
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 

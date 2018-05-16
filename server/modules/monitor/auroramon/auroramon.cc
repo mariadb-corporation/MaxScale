@@ -172,54 +172,6 @@ void AuroraMonitor::main()
     mysql_thread_end();
 }
 
-/**
- * @brief Start the monitor
- *
- * This function initializes the monitor and starts the monitoring thread.
- *
- * @param arg The MONITOR structure for this monitor
- * @param opt The configuration parameters for this monitor
- * @return Monitor handle
- */
-bool AuroraMonitor::start(const MXS_CONFIG_PARAMETER *params)
-{
-    bool started = false;
-
-    ss_dassert(!m_shutdown);
-    ss_dassert(!m_thread);
-    ss_dassert(!m_script);
-
-    if (!m_checked)
-    {
-        if (!has_sufficient_permissions())
-        {
-            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        }
-        else
-        {
-            m_checked = true;
-        }
-    }
-
-    if (m_checked)
-    {
-        configure(params);
-
-        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
-        {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-            MXS_FREE(m_script);
-            m_script = NULL;
-        }
-        else
-        {
-            started = true;
-        }
-    }
-
-    return started;
-}
-
 bool AuroraMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
@@ -229,8 +181,6 @@ bool AuroraMonitor::has_sufficient_permissions() const
 
 void AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_script = config_copy_string(params, "script");
-    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 }
 
 /**

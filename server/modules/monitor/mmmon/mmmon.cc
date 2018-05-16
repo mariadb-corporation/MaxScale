@@ -94,8 +94,6 @@ MMMonitor::MMMonitor(MXS_MONITOR *monitor)
 
 MMMonitor::~MMMonitor()
 {
-    ss_dassert(!m_thread);
-    ss_dassert(!m_script);
 }
 
 // static
@@ -109,53 +107,6 @@ void MMMonitor::destroy()
     delete this;
 }
 
-/**
- * Start the instance of the monitor, returning a handle on the monitor.
- *
- * This function creates a thread to execute the actual monitoring.
- *
- * @param arg   The current handle - NULL if first start
- * @return A handle to use when interacting with the monitor
- */
-bool MMMonitor::start(const MXS_CONFIG_PARAMETER *params)
-{
-    bool started = false;
-
-    ss_dassert(!m_shutdown);
-    ss_dassert(!m_thread);
-    ss_dassert(!m_script);
-
-    if (!m_checked)
-    {
-        if (!has_sufficient_permissions())
-        {
-            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        }
-        else
-        {
-            m_checked = true;
-        }
-    }
-
-    if (m_checked)
-    {
-        configure(params);
-
-        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
-        {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-            MXS_FREE(m_script);
-            m_script = NULL;
-        }
-        else
-        {
-            started = true;
-        }
-    }
-
-    return started;
-}
-
 bool MMMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
@@ -163,8 +114,6 @@ bool MMMonitor::has_sufficient_permissions() const
 
 void MMMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_script = config_copy_string(params, "script");
-    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_detectStaleMaster = config_get_bool(params, "detect_stale_master");
 }
 

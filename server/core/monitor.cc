@@ -2508,11 +2508,11 @@ namespace maxscale
 
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_status(0)
-    , m_thread(0)
     , m_monitor(pMonitor)
     , m_shutdown(0)
     , m_script(NULL)
     , m_events(0)
+    , m_thread(0)
 {
 }
 
@@ -2533,6 +2533,48 @@ void MonitorInstance::stop()
 
     MXS_FREE(m_script);
     m_script = NULL;
+}
+
+bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
+{
+    bool started = false;
+
+    ss_dassert(!m_shutdown);
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+
+    if (!m_checked)
+    {
+        if (!has_sufficient_permissions())
+        {
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        }
+        else
+        {
+            m_checked = true;
+        }
+    }
+
+    if (m_checked)
+    {
+        m_script = config_copy_string(pParams, "script");
+        m_events = config_get_enum(pParams, "events", mxs_monitor_event_enum_values);
+
+        configure(pParams);
+
+        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+            MXS_FREE(m_script);
+            m_script = NULL;
+        }
+        else
+        {
+            started = true;
+        }
+    }
+
+    return started;
 }
 
 bool MonitorInstance::has_sufficient_permissions() const

@@ -148,52 +148,6 @@ void GaleraMonitor::destroy()
     delete this;
 }
 
-/**
- * Start the instance of the monitor, returning a handle on the monitor.
- *
- * This function creates a thread to execute the actual monitoring.
- *
- * @return A handle to use when interacting with the monitor
- */
-bool GaleraMonitor::start(const MXS_CONFIG_PARAMETER *params)
-{
-    bool started = false;
-
-    ss_dassert(!m_shutdown);
-    ss_dassert(!m_thread);
-    ss_dassert(!m_script);
-
-    if (!m_checked)
-    {
-        if (!has_sufficient_permissions())
-        {
-            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        }
-        else
-        {
-            m_checked = true;
-        }
-    }
-
-    if (m_checked)
-    {
-        configure(params);
-
-        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
-        {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-            MXS_FREE(m_script);
-            m_script = NULL;
-        }
-        else
-        {
-            started = true;
-        }
-    }
-
-    return started;
-}
-
 bool GaleraMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'");
@@ -206,8 +160,6 @@ void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
     m_root_node_as_master = config_get_bool(params, "root_node_as_master");
     m_use_priority = config_get_bool(params, "use_priority");
-    m_script = config_copy_string(params, "script");
-    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
 
     /* Reset all data in the hashtable */

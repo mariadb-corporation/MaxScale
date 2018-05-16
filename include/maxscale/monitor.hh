@@ -27,6 +27,7 @@ public:
 
     virtual ~MonitorInstance();
 
+    bool start(const MXS_CONFIG_PARAMETER* param);
     void stop();
 
 protected:
@@ -40,12 +41,14 @@ protected:
     static void main(void* pArg);
 
     int          m_status;   /**< The current status of the monitor. */
-    THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
     MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */
     int32_t      m_shutdown; /**< Non-zero if the monitor should shut down. */
     char*        m_script;   /**< Launchable script. */
     uint64_t     m_events;   /**< Enabled monitor events. */
     bool         m_checked;  /**< Whether server access has been checked. */
+
+private:
+    THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
 };
 
 /**
