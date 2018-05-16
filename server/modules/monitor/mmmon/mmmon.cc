@@ -449,19 +449,12 @@ void MMMonitor::main()
 
     detect_stale_master = m_detectStaleMaster;
 
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
-        return;
-    }
-
     load_server_journal(mon, &m_master);
 
     while (1)
     {
         if (m_shutdown)
         {
-            mysql_thread_end();
             return;
         }
 

@@ -2587,9 +2587,22 @@ void MonitorInstance::main(void* pArg)
 {
     MonitorInstance* pThis = static_cast<MonitorInstance*>(pArg);
 
-    atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
-    static_cast<MonitorInstance*>(pArg)->main();
-    atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
+    if (mysql_thread_init() == 0)
+    {
+        atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
+        static_cast<MonitorInstance*>(pArg)->main();
+        atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
+
+        mysql_thread_end();
+    }
+    else
+    {
+        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.",
+                  pThis->m_monitor->name);
+
+        // TODO: MaxScale now thinks the monitor is running, as startMonitor()
+        // TODO: already returned true.
+    }
 }
 
 }

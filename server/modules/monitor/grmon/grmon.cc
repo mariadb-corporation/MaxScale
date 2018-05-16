@@ -185,12 +185,6 @@ static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* ser
 
 void GRMon::main()
 {
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("mysql_thread_init failed. Exiting.");
-        return;
-    }
-
     load_server_journal(m_monitor, NULL);
 
     while (!m_shutdown)
@@ -229,8 +223,6 @@ void GRMon::main()
             ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
-
-    mysql_thread_end();
 }
 
 /**

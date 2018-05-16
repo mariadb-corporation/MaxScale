@@ -121,12 +121,6 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
  */
 void AuroraMonitor::main()
 {
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("mysql_thread_init failed in Aurora monitor. Exiting.");
-        return;
-    }
-
     load_server_journal(m_monitor, NULL);
 
     while (!m_shutdown)
@@ -168,8 +162,6 @@ void AuroraMonitor::main()
             ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
-
-    mysql_thread_end();
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const

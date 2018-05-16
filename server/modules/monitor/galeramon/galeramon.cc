@@ -458,11 +458,6 @@ void GaleraMonitor::main()
     int log_no_members = 1;
 
     master_stickiness = m_disableMasterFailback;
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
-        return;
-    }
 
     load_server_journal(m_monitor, NULL);
 
@@ -470,7 +465,6 @@ void GaleraMonitor::main()
     {
         if (m_shutdown)
         {
-            mysql_thread_end();
             return;
         }
 

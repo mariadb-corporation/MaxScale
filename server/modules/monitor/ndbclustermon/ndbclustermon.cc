@@ -249,19 +249,12 @@ void NDBCMonitor::main()
     MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
 
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
-        return;
-    }
-
     load_server_journal(m_monitor, NULL);
 
     while (1)
     {
         if (m_shutdown)
         {
-            mysql_thread_end();
             return;
         }
 
