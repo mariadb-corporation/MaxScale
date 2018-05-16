@@ -17,45 +17,14 @@
 
 #define MXS_MODULE_NAME "grmon"
 
-#include <maxscale/cppdefs.hh>
+#include "grmon.hh"
 
 #include <new>
 #include <string>
 
-#include <maxscale/monitor.hh>
-#include <maxscale/thread.h>
 #include <maxscale/protocol/mysql.h>
 #include <mysqld_error.h>
 
-/**
- * The instance of a Group Replication Monitor
- */
-struct GRMon : public MXS_MONITOR_INSTANCE
-{
-    GRMon(const GRMon&);
-    GRMon& operator&(const GRMon&);
-public:
-    static GRMon* create(MXS_MONITOR* monitor);
-    void destroy();
-    bool start(const MXS_CONFIG_PARAMETER* params);
-    void stop();
-    void diagnostics(DCB* dcb) const;
-    json_t* diagnostics_json() const;
-
-private:
-    THREAD                m_thread;   /**< Monitor thread */
-    int                   m_shutdown; /**< Flag to shutdown the monitor thread */
-    MXS_MONITORED_SERVER* m_master;   /**< The master server */
-    std::string           m_script;
-    uint64_t              m_events;   /**< Enabled events */
-    MXS_MONITOR*          m_monitor;
-
-    GRMon(MXS_MONITOR* monitor);
-    ~GRMon();
-
-    void main();
-    static void main(void* data);
-};
 
 GRMon::GRMon(MXS_MONITOR* monitor):
     m_shutdown(0),

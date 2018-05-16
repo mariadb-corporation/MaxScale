@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _GALERAMON_H
-#define _GALERAMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,31 +13,13 @@
  */
 
 /**
- * @file galeramon.h - The Galera cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date      Who             Description
- * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
- * @endverbatim
+ * @file galeramon.hh - The Galera cluster monitor
  */
 
 #include <maxscale/cppdefs.hh>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <maxscale/monitor.hh>
-#include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/config.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/monitor.hh>
+#include <maxscale/thread.h>
 
 /**
  *  Galera Variables and server reference for each
@@ -71,9 +51,7 @@ typedef struct galera_cluster_info
     char *c_uuid; /**< The Cluster UUID */
 } GALERA_CLUSTER_INFO;
 
-/**
- * The handle for an instance of a Galera Monitor module
- */
+
 class GaleraMonitor : public MXS_MONITOR_INSTANCE
 {
 public:
@@ -124,5 +102,3 @@ private:
     void main();
     static void main(void* data);
 };
-
-#endif

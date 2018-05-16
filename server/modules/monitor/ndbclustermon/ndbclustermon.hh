@@ -1,5 +1,4 @@
 #pragma once
-
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,11 +12,14 @@
  * Public License.
  */
 
+#include <maxscale/cppdefs.hh>
 #include <maxscale/monitor.hh>
-#include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
 
-// The handle for an instance of a NDB Cluster Monitor module
+/**
+ * @file ndbcclustermon.hh A NDBC cluster monitor
+ */
+
 class NDBCMonitor : public MXS_MONITOR_INSTANCE
 {
 public:

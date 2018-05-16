@@ -17,42 +17,12 @@
 
 #define MXS_MODULE_NAME "auroramon"
 
-#include <maxscale/cppdefs.hh>
+#include "auroramon.hh"
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/monitor.hh>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/thread.h>
-
-class AuroraMonitor : public MXS_MONITOR_INSTANCE
-{
-public:
-    AuroraMonitor(const AuroraMonitor&) = delete;
-    AuroraMonitor& operator = (const AuroraMonitor&) = delete;
-
-    static AuroraMonitor* create(MXS_MONITOR* monitor);
-    void destroy();
-    bool start(const MXS_CONFIG_PARAMETER* param);
-    void stop();
-    void diagnostics(DCB* dcb) const;
-    json_t* diagnostics_json() const;
-
-private:
-    bool         m_shutdown;      /**< True if the monitor is stopped */
-    THREAD       m_thread;        /**< Monitor thread */
-    char*        m_script;        /**< Launchable script */
-    uint64_t     m_events;        /**< Enabled monitor events */
-    MXS_MONITOR* m_monitor;       /**< Pointer to generic monitor structure */
-    bool         m_checked;       /**< Whether server access has been checked */
-
-    AuroraMonitor(MXS_MONITOR* monitor);
-    ~AuroraMonitor();
-
-    void main();
-    static void main(void* data);
-};
 
 
 AuroraMonitor::AuroraMonitor(MXS_MONITOR* monitor)

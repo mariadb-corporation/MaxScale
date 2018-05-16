@@ -17,7 +17,7 @@
 
 #define MXS_MODULE_NAME "ndbclustermon"
 
-#include "ndbclustermon.h"
+#include "ndbclustermon.hh"
 #include <maxscale/alloc.h>
 #include <maxscale/mysql_utils.h>
 

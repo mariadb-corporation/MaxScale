@@ -17,10 +17,20 @@
 
 #define MXS_MODULE_NAME "galeramon"
 
-#include "galeramon.h"
+#include "galeramon.hh"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mysql.h>
+#include <mysqld_error.h>
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
 #include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/secrets.h>
+#include <maxscale/spinlock.h>
 
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR "SET GLOBAL wsrep_sst_donor = \""

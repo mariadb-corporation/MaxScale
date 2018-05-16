@@ -17,10 +17,20 @@
 
 #define MXS_MODULE_NAME "mmmon"
 
-#include "mmmon.h"
-#include <maxscale/dcb.h>
+#include "mmmon.hh"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mysql.h>
+#include <mysqld_error.h>
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/secrets.h>
 
 static void detectStaleMaster(void *, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);

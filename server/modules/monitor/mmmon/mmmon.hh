@@ -13,26 +13,13 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <maxscale/monitor.hh>
 #include <maxscale/thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/config.h>
 
 /**
- * @file mmmon.h - The Multi-Master monitor
+ * @file mmmon.hh - The Multi-Master monitor
  */
 
-/**
- * The handle for an instance of a Multi-Master Monitor module
- */
 class MMMonitor : public MXS_MONITOR_INSTANCE
 {
 public:
