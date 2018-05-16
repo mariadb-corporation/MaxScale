@@ -160,18 +160,10 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
         error = true;
     }
 
-    if (!error && !check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS"))
+    if (!error && (thread_start(&m_thread, monitorMain, this, 0) == NULL))
     {
+        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor_base->name);
         error = true;
-    }
-
-    if (!error)
-    {
-        if (thread_start(&m_thread, monitorMain, this, 0) == NULL)
-        {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor_base->name);
-            error = true;
-        }
     }
 
     if (error)
@@ -337,6 +329,16 @@ void MariaDBMonitor::main_loop()
     if (m_detect_replication_lag)
     {
         check_maxscale_schema_replication();
+    }
+
+    /* Check monitor permissions. Failure won't cause the monitor to stop. Afterwards, close connections so
+     * that update_server() reconnects and checks server version. TODO: check permissions when checking
+     * server version. */
+    check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS");
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        mysql_close((*iter)->m_server_base->con);
+        (*iter)->m_server_base->con = NULL;
     }
 
     while (m_keep_running)
