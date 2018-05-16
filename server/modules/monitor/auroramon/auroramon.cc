@@ -128,16 +128,7 @@ void AuroraMonitor::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
-        {
-            update_server_status(m_monitor, ptr);
-
-            if (SERVER_IS_DOWN(ptr->server))
-            {
-                /** Hang up all DCBs connected to the failed server */
-                dcb_hangup_foreach(ptr->server);
-            }
-        }
+        tick();
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -160,6 +151,20 @@ void AuroraMonitor::main()
             }
             thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
             ms += MXS_MON_BASE_INTERVAL_MS;
+        }
+    }
+}
+
+void AuroraMonitor::tick()
+{
+    for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
+    {
+        update_server_status(m_monitor, ptr);
+
+        if (SERVER_IS_DOWN(ptr->server))
+        {
+            /** Hang up all DCBs connected to the failed server */
+            dcb_hangup_foreach(ptr->server);
         }
     }
 }

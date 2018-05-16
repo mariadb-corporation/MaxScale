@@ -272,23 +272,7 @@ void NDBCMonitor::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
-        while (ptr)
-        {
-            ptr->mon_prev_status = ptr->server->status;
-            monitorDatabase(ptr, m_monitor->user, m_monitor->password, m_monitor);
-
-            if (ptr->server->status != ptr->mon_prev_status ||
-                SERVER_IS_DOWN(ptr->server))
-            {
-                MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->address,
-                          ptr->server->port,
-                          STRSRVSTATUS(ptr->server));
-            }
-
-            ptr = ptr->next;
-        }
+        tick();
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -300,5 +284,26 @@ void NDBCMonitor::main()
         servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, NULL);
         release_monitor_servers(m_monitor);
+    }
+}
+
+void NDBCMonitor::tick()
+{
+    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
+    while (ptr)
+    {
+        ptr->mon_prev_status = ptr->server->status;
+        monitorDatabase(ptr, m_monitor->user, m_monitor->password, m_monitor);
+
+        if (ptr->server->status != ptr->mon_prev_status ||
+            SERVER_IS_DOWN(ptr->server))
+        {
+            MXS_DEBUG("Backend server [%s]:%d state : %s",
+                      ptr->server->address,
+                      ptr->server->port,
+                      STRSRVSTATUS(ptr->server));
+        }
+
+        ptr = ptr->next;
     }
 }

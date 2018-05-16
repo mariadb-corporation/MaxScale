@@ -467,69 +467,7 @@ void MMMonitor::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        /* start from the first server in the list */
-        MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
-
-        while (ptr)
-        {
-            /* copy server status into monitor pending_status */
-            ptr->pending_status = ptr->server->status;
-
-            /* monitor current node */
-            monitorDatabase(m_monitor, ptr);
-
-            if (mon_status_changed(ptr) ||
-                mon_print_fail_status(ptr))
-            {
-                MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->address,
-                          ptr->server->port,
-                          STRSRVSTATUS(ptr->server));
-            }
-            if (SERVER_IS_DOWN(ptr->server))
-            {
-                /** Increase this server'e error count */
-                ptr->mon_err_count += 1;
-            }
-            else
-            {
-                /** Reset this server's error count */
-                ptr->mon_err_count = 0;
-            }
-
-            ptr = ptr->next;
-        }
-
-        /* Get Master server pointer */
-        MXS_MONITORED_SERVER *root_master = get_current_master();
-
-        /* Update server status from monitor pending status on that server*/
-
-        ptr = m_monitor->monitored_servers;
-        while (ptr)
-        {
-            if (!SERVER_IN_MAINT(ptr->server))
-            {
-                /* If "detect_stale_master" option is On, let's use the previus master */
-                if (m_detectStaleMaster && root_master &&
-                    (!strcmp(ptr->server->address, root_master->server->address) &&
-                     ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
-                    !(ptr->pending_status & SERVER_MASTER))
-                {
-                    /* in this case server->status will not be updated from pending_status */
-                    MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
-                               "use it again even if it could be a stale master, you have "
-                               "been warned!", ptr->server->address, ptr->server->port);
-                    /* Set the STALE bit for this server in server struct */
-                    server_set_status_nolock(ptr->server, SERVER_STALE_STATUS);
-                }
-                else
-                {
-                    ptr->server->status = ptr->pending_status;
-                }
-            }
-            ptr = ptr->next;
-        }
+        tick();
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -541,6 +479,73 @@ void MMMonitor::main()
         servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, m_master);
         release_monitor_servers(m_monitor);
+    }
+}
+
+void MMMonitor::tick()
+{
+    /* start from the first server in the list */
+    MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
+
+    while (ptr)
+    {
+        /* copy server status into monitor pending_status */
+        ptr->pending_status = ptr->server->status;
+
+        /* monitor current node */
+        monitorDatabase(m_monitor, ptr);
+
+        if (mon_status_changed(ptr) ||
+            mon_print_fail_status(ptr))
+        {
+            MXS_DEBUG("Backend server [%s]:%d state : %s",
+                      ptr->server->address,
+                      ptr->server->port,
+                      STRSRVSTATUS(ptr->server));
+        }
+        if (SERVER_IS_DOWN(ptr->server))
+        {
+            /** Increase this server'e error count */
+            ptr->mon_err_count += 1;
+        }
+        else
+        {
+            /** Reset this server's error count */
+            ptr->mon_err_count = 0;
+        }
+
+        ptr = ptr->next;
+    }
+
+    /* Get Master server pointer */
+    MXS_MONITORED_SERVER *root_master = get_current_master();
+
+    /* Update server status from monitor pending status on that server*/
+
+    ptr = m_monitor->monitored_servers;
+    while (ptr)
+    {
+        if (!SERVER_IN_MAINT(ptr->server))
+        {
+            /* If "detect_stale_master" option is On, let's use the previus master */
+            if (m_detectStaleMaster && root_master &&
+                (!strcmp(ptr->server->address, root_master->server->address) &&
+                 ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
+                !(ptr->pending_status & SERVER_MASTER))
+            {
+                /* in this case server->status will not be updated from pending_status */
+                MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
+                           "use it again even if it could be a stale master, you have "
+                           "been warned!", ptr->server->address, ptr->server->port);
+                /* Set the STALE bit for this server in server struct */
+                server_set_status_nolock(ptr->server, SERVER_STALE_STATUS);
+            }
+            else
+            {
+                ptr->server->status = ptr->pending_status;
+            }
+        }
+        ptr = ptr->next;
     }
 }
 

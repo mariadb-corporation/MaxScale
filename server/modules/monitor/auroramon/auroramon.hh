@@ -37,6 +37,7 @@ private:
 
     bool has_sufficient_permissions() const;
     void configure(const MXS_CONFIG_PARAMETER* params);
+    void tick();
 
     void main();
 };

@@ -477,110 +477,10 @@ void GaleraMonitor::main()
 
         nrounds += 1;
 
-        int is_cluster = 0;
-
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
-        while (ptr)
-        {
-            ptr->mon_prev_status = ptr->server->status;
-
-            monitorDatabase(ptr);
-
-            /* Log server status change */
-            if (mon_status_changed(ptr))
-            {
-                MXS_DEBUG("Backend server [%s]:%d state : %s",
-                          ptr->server->address,
-                          ptr->server->port,
-                          STRSRVSTATUS(ptr->server));
-            }
-
-            if (SERVER_IS_DOWN(ptr->server))
-            {
-                /** Increase this server'e error count */
-                ptr->mon_err_count += 1;
-
-            }
-            else
-            {
-                /** Reset this server's error count */
-                ptr->mon_err_count = 0;
-            }
-
-            ptr = ptr->next;
-        }
-
-        /* Try to set a Galera cluster based on
-         * UUID and cluster_size each node reports:
-         * no multiple clusters UUID are allowed.
-         */
-        set_galera_cluster();
-
-        /*
-         * Let's select a master server:
-         * it could be the candidate master following MXS_MIN(node_id) rule or
-         * the server that was master in the previous monitor polling cycle
-         * Decision depends on master_stickiness value set in configuration
-         */
-
-        /* get the candidate master, following MXS_MIN(node_id) rule */
-        MXS_MONITORED_SERVER *candidate_master = get_candidate_master();
-
-        m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
-
-        ptr = m_monitor->monitored_servers;
-
-        while (ptr)
-        {
-            const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
-            if (SERVER_IS_JOINED(ptr->server) && !m_disableMasterRoleSetting)
-            {
-                if (ptr != m_master)
-                {
-                    /* set the Slave role and clear master stickiness */
-                    server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
-                }
-                else
-                {
-                    if (candidate_master &&
-                        m_master->server->node_id != candidate_master->server->node_id)
-                    {
-                        /* set master role and master stickiness */
-                        server_clear_set_status(ptr->server, repl_bits,
-                                                (SERVER_MASTER | SERVER_MASTER_STICKINESS));
-                    }
-                    else
-                    {
-                        /* set master role and clear master stickiness */
-                        server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
-                    }
-                }
-
-                is_cluster++;
-            }
-            else
-            {
-                server_clear_set_status(ptr->server, repl_bits, 0);
-            }
-            ptr = ptr->next;
-        }
-
-        if (is_cluster == 0 && m_log_no_members)
-        {
-            MXS_ERROR("There are no cluster members");
-            m_log_no_members = false;
-        }
-        else
-        {
-            if (is_cluster > 0 && m_log_no_members == 0)
-            {
-                MXS_NOTICE("Found cluster members");
-                m_log_no_members = true;
-            }
-        }
+        tick();
 
         /**
          * After updating the status of all servers, check if monitor events
@@ -592,16 +492,121 @@ void GaleraMonitor::main()
 
         servers_status_current_to_pending(m_monitor);
 
-        /* Set the global var "wsrep_sst_donor"
-         * with a sorted list of "wsrep_node_name" for slave nodes
-         */
-        if (m_set_donor_nodes)
-        {
-            update_sst_donor_nodes(is_cluster);
-        }
-
         store_server_journal(m_monitor, NULL);
         release_monitor_servers(m_monitor);
+    }
+}
+
+void GaleraMonitor::tick()
+{
+    int is_cluster = 0;
+
+    MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
+    while (ptr)
+    {
+        ptr->mon_prev_status = ptr->server->status;
+
+        monitorDatabase(ptr);
+
+        /* Log server status change */
+        if (mon_status_changed(ptr))
+        {
+            MXS_DEBUG("Backend server [%s]:%d state : %s",
+                      ptr->server->address,
+                      ptr->server->port,
+                      STRSRVSTATUS(ptr->server));
+        }
+
+        if (SERVER_IS_DOWN(ptr->server))
+        {
+            /** Increase this server'e error count */
+            ptr->mon_err_count += 1;
+
+        }
+        else
+        {
+            /** Reset this server's error count */
+            ptr->mon_err_count = 0;
+        }
+
+        ptr = ptr->next;
+    }
+
+    /* Try to set a Galera cluster based on
+     * UUID and cluster_size each node reports:
+     * no multiple clusters UUID are allowed.
+     */
+    set_galera_cluster();
+
+    /*
+     * Let's select a master server:
+     * it could be the candidate master following MXS_MIN(node_id) rule or
+     * the server that was master in the previous monitor polling cycle
+     * Decision depends on master_stickiness value set in configuration
+     */
+
+    /* get the candidate master, following MXS_MIN(node_id) rule */
+    MXS_MONITORED_SERVER *candidate_master = get_candidate_master();
+
+    m_master = set_cluster_master(m_master, candidate_master, m_disableMasterFailback);
+
+    ptr = m_monitor->monitored_servers;
+
+    while (ptr)
+    {
+        const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
+        if (SERVER_IS_JOINED(ptr->server) && !m_disableMasterRoleSetting)
+        {
+            if (ptr != m_master)
+            {
+                /* set the Slave role and clear master stickiness */
+                server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
+            }
+            else
+            {
+                if (candidate_master &&
+                    m_master->server->node_id != candidate_master->server->node_id)
+                {
+                    /* set master role and master stickiness */
+                    server_clear_set_status(ptr->server, repl_bits,
+                                            (SERVER_MASTER | SERVER_MASTER_STICKINESS));
+                }
+                else
+                {
+                    /* set master role and clear master stickiness */
+                    server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
+                }
+            }
+
+            is_cluster++;
+        }
+        else
+        {
+            server_clear_set_status(ptr->server, repl_bits, 0);
+        }
+        ptr = ptr->next;
+    }
+
+    if (is_cluster == 0 && m_log_no_members)
+    {
+        MXS_ERROR("There are no cluster members");
+        m_log_no_members = false;
+    }
+    else
+    {
+        if (is_cluster > 0 && m_log_no_members == 0)
+        {
+            MXS_NOTICE("Found cluster members");
+            m_log_no_members = true;
+        }
+    }
+
+    /* Set the global var "wsrep_sst_donor"
+     * with a sorted list of "wsrep_node_name" for slave nodes
+     */
+    if (m_set_donor_nodes)
+    {
+        update_sst_donor_nodes(is_cluster);
     }
 }
 
