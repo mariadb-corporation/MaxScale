@@ -133,6 +133,7 @@ static int64_t scan_server_id(const char* id_string);
 static string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port);
 static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, json_t** error_out);
 static bool check_sql_files(MYSQL_MONITOR* mon);
+static void enforce_read_only_on_slaves(MYSQL_MONITOR* mon);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -142,6 +143,7 @@ static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 static const char CN_FAILCOUNT[]          = "failcount";
+static const char CN_ENFORCE_READONLY[]   = "enforce_read_only_slaves";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_PROMOTION_SQL_FILE[] = "promotion_sql_file";
 static const char CN_DEMOTION_SQL_FILE[]  = "demotion_sql_file";
@@ -919,6 +921,7 @@ extern "C"
                 {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
                 {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
                 {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
+                {CN_ENFORCE_READONLY, MXS_MODULE_PARAM_BOOL, "false"},
                 {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
                 {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
                 {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
@@ -1102,6 +1105,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
     handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
+    handle->enforce_read_only_slaves = config_get_bool(params, CN_ENFORCE_READONLY);
     handle->promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
     handle->demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
 
@@ -1230,6 +1234,8 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Failover timeout:       %u\n", handle->failover_timeout);
     dcb_printf(dcb, "Switchover timeout:     %u\n", handle->switchover_timeout);
     dcb_printf(dcb, "Automatic rejoin:       %s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Enforce read-only:      %s\n", handle->enforce_read_only_slaves ?
+               "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", handle->id);
     dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat == 1) ?
                "Enabled" : "Disabled");
@@ -1305,6 +1311,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
     json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(handle->auto_rejoin));
+    json_object_set_new(rval, CN_ENFORCE_READONLY, json_boolean(handle->enforce_read_only_slaves));
 
     if (handle->script)
     {
@@ -2501,7 +2508,7 @@ monitorMain(void *arg)
          * need to be launched.
          */
         mon_process_state_changes(mon, handle->script, handle->events);
-        bool failover_performed = false; // Has an automatic failover been performed this loop?
+        bool cluster_modified = false; // Has an automatic failover/rejoin been performed this loop?
 
         if (handle->auto_failover)
         {
@@ -2523,7 +2530,7 @@ monitorMain(void *arg)
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
-            else if (!mon_process_failover(handle, handle->failover_timeout, &failover_performed))
+            else if (!mon_process_failover(handle, handle->failover_timeout, &cluster_modified))
             {
                 const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
                 MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, mon->name);
@@ -2594,7 +2601,7 @@ monitorMain(void *arg)
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
         if (!config_get_global_options()->passive && handle->auto_rejoin &&
-            !failover_performed && cluster_can_be_joined(handle))
+            !cluster_modified && cluster_can_be_joined(handle))
         {
             // Check if any servers should be autojoined to the cluster
             ServerVector joinable_servers;
@@ -2604,6 +2611,7 @@ monitorMain(void *arg)
                 if (joins > 0)
                 {
                     MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+                    cluster_modified = true;
                 }
                 if (joins < joinable_servers.size())
                 {
@@ -2619,6 +2627,14 @@ monitorMain(void *arg)
                 MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.",
                           handle->master->server->unique_name);
             }
+        }
+
+        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+         * perform this if cluster has been modified this loop since it may not be clear which server
+         * should be a slave. */
+        if (!config_get_global_options()->passive && handle->enforce_read_only_slaves && !cluster_modified)
+        {
+            enforce_read_only_on_slaves(handle);
         }
 
         mon_hangup_failed_servers(mon);
@@ -4992,4 +5008,25 @@ static bool check_sql_files(MYSQL_MONITOR* mon)
         MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, demote_file, mxs_strerror(errno));
     }
     return rval;
+}
+
+static void enforce_read_only_on_slaves(MYSQL_MONITOR* mon)
+{
+    const char QUERY[] = "SET GLOBAL read_only=1;";
+    for (MXS_MONITORED_SERVER* mon_srv = mon->monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+    {
+        MySqlServerInfo* serv_info = get_server_info(mon, mon_srv);
+        if (SERVER_IS_SLAVE(mon_srv->server) && !serv_info->read_only && !serv_info->binlog_relay)
+        {
+            const char* name = mon_srv->server->unique_name;
+            if (mxs_mysql_query(mon_srv->con, QUERY) == 0)
+            {
+                MXS_NOTICE("read_only set to ON on server '%s'.", name);
+            }
+            else
+            {
+                MXS_ERROR("Setting read_only on server '%s' failed: '%s.", name, mysql_error(mon_srv->con));
+            }
+        }
+    }
 }

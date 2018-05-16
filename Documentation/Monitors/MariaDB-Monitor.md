@@ -233,6 +233,16 @@ external agent that automatically reintegrates failed servers into the
 cluster. One of these agents is the _replication-manager_ which automatically
 configures the failed servers as new slaves of the current master.
 
+### `enforce_read_only_slaves`
+
+This feature is disabled by default. If set to ON, the monitor attempts to set
+the server `read_only` flag to ON on any slave server with `read_only` OFF. The
+flag is checked at every monitor iteration. The monitor user requires the
+SUPER-privilege for this feature to work. While the `read_only`-flag is ON, only
+users with the SUPER-privilege can write to the backend server. If temporary
+write access is required, this feature should be disabled before attempting to
+disable `read_only`. Otherwise the monitor would quickly re-enable it.
+
 ## Failover, switchover and auto-rejoin
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster

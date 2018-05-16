@@ -75,6 +75,7 @@ typedef struct
     int external_master_port;      /**< External master port */
     bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                         replicating from the wrong master. */
+    bool enforce_read_only_slaves; /**< Should the monitor set read-only=1 on any slave servers. */
     int n_excluded;                /**< Number of excluded servers */
     MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
     const char* promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
