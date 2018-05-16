@@ -51,18 +51,36 @@ bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool started = false;
 
-    m_shutdown = 0;
-    m_master = NULL;
-    m_script = config_get_string(params, "script");
-    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-    m_thread = 0;
+    ss_dassert(!m_shutdown);
+    ss_dassert(!m_thread);
 
-    if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) != NULL)
+    if (!m_checked)
     {
-        started = true;
+        m_checked = true;
+    }
+
+    if (m_checked)
+    {
+        configure(params);
+
+        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
+        {
+            ;
+        }
+        else
+        {
+            started = true;
+        }
     }
 
     return started;
+}
+
+void GRMon::configure(const MXS_CONFIG_PARAMETER* params)
+{
+    m_script = config_get_string(params, "script");
+    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+    m_master = NULL;
 }
 
 void GRMon::diagnostics(DCB* dcb) const

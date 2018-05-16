@@ -32,6 +32,8 @@ public:
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
+    virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
+
     virtual void main() = 0;
 
     static void main(void* pArg);

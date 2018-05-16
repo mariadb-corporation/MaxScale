@@ -36,5 +36,7 @@ private:
     AuroraMonitor(MXS_MONITOR* monitor);
     ~AuroraMonitor();
 
+    void configure(const MXS_CONFIG_PARAMETER* params);
+
     void main();
 };

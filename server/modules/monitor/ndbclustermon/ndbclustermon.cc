@@ -105,6 +105,10 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
 {
     bool started = false;
 
+    ss_dassert(!m_shutdown);
+    ss_dassert(!m_thread);
+    ss_dassert(!m_script);
+
     if (!m_checked)
     {
         if (!check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
@@ -119,8 +123,7 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
 
     if (m_checked)
     {
-        m_script = config_copy_string(params, "script");
-        m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+        configure(params);
 
         if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
         {
@@ -135,6 +138,12 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
     }
 
     return started;
+}
+
+void NDBCMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+{
+    m_script = config_copy_string(params, "script");
+    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 }
 
 /**

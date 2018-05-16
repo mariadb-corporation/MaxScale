@@ -39,5 +39,7 @@ private:
     NDBCMonitor(MXS_MONITOR* monitor);
     ~NDBCMonitor();
 
+    void configure(const MXS_CONFIG_PARAMETER* params);
+
     void main();
 };

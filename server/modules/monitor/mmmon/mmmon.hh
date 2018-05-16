@@ -42,5 +42,7 @@ private:
 
     MXS_MONITORED_SERVER *get_current_master();
 
+    void configure(const MXS_CONFIG_PARAMETER* params);
+
     void main();
 };

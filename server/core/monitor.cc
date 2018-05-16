@@ -2535,6 +2535,10 @@ void MonitorInstance::stop()
     m_script = NULL;
 }
 
+void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
+{
+}
+
 //static
 void MonitorInstance::main(void* pArg)
 {

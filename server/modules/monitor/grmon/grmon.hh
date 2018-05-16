@@ -39,5 +39,7 @@ private:
     GRMon(MXS_MONITOR* monitor);
     ~GRMon();
 
+    void configure(const MXS_CONFIG_PARAMETER* params);
+
     void main();
 };

@@ -81,6 +81,8 @@ private:
     GaleraMonitor(MXS_MONITOR* monitor);
     ~GaleraMonitor();
 
+    void configure(const MXS_CONFIG_PARAMETER* param);
+
     bool detect_cluster_size(const int n_nodes,
                              const char *candidate_uuid,
                              const int candidate_size);
