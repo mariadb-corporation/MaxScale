@@ -1458,6 +1458,7 @@ static json_t* server_json_attributes(const SERVER* server)
 
     json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
+    json_object_set_new(stats, "persistent_connections", json_integer(server->stats.n_persistent));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
     json_object_set_new(stats, "routed_packets", json_integer(server->stats.packets));
 
