@@ -191,9 +191,7 @@ bool AuroraMonitor::start(const MXS_CONFIG_PARAMETER *params)
 
     if (!m_checked)
     {
-        if (!check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
-                                       "information_schema.replica_host_status "
-                                       "WHERE session_id = 'MASTER_SESSION_ID'"))
+        if (!has_sufficient_permissions())
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
@@ -220,6 +218,13 @@ bool AuroraMonitor::start(const MXS_CONFIG_PARAMETER *params)
     }
 
     return started;
+}
+
+bool AuroraMonitor::has_sufficient_permissions() const
+{
+    return check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
+                                     "information_schema.replica_host_status "
+                                     "WHERE session_id = 'MASTER_SESSION_ID'");
 }
 
 void AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)

@@ -56,7 +56,14 @@ bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
 
     if (!m_checked)
     {
-        m_checked = true;
+        if (!has_sufficient_permissions())
+        {
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        }
+        else
+        {
+            m_checked = true;
+        }
     }
 
     if (m_checked)
@@ -74,6 +81,11 @@ bool GRMon::start(const MXS_CONFIG_PARAMETER* params)
     }
 
     return started;
+}
+
+bool GRMon::has_sufficient_permissions() const
+{
+    return true;
 }
 
 void GRMon::configure(const MXS_CONFIG_PARAMETER* params)

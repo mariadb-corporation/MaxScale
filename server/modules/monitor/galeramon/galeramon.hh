@@ -81,8 +81,6 @@ private:
     GaleraMonitor(MXS_MONITOR* monitor);
     ~GaleraMonitor();
 
-    void configure(const MXS_CONFIG_PARAMETER* param);
-
     bool detect_cluster_size(const int n_nodes,
                              const char *candidate_uuid,
                              const int candidate_size);
@@ -92,6 +90,9 @@ private:
     void set_cluster_members();
     void set_galera_cluster();
     void update_sst_donor_nodes(int is_cluster);
+
+    bool has_sufficient_permissions() const;
+    void configure(const MXS_CONFIG_PARAMETER* param);
 
     void main();
 };

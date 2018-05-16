@@ -42,6 +42,7 @@ private:
 
     MXS_MONITORED_SERVER *get_current_master();
 
+    bool has_sufficient_permissions() const;
     void configure(const MXS_CONFIG_PARAMETER* params);
 
     void main();

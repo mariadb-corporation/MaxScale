@@ -36,6 +36,7 @@ private:
     AuroraMonitor(MXS_MONITOR* monitor);
     ~AuroraMonitor();
 
+    bool has_sufficient_permissions() const;
     void configure(const MXS_CONFIG_PARAMETER* params);
 
     void main();

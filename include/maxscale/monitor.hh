@@ -32,6 +32,7 @@ public:
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
+    virtual bool has_sufficient_permissions() const;
     virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
 
     virtual void main() = 0;

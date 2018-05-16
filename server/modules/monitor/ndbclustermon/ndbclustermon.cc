@@ -111,7 +111,7 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
 
     if (!m_checked)
     {
-        if (!check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+        if (!has_sufficient_permissions())
         {
             MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
@@ -138,6 +138,11 @@ bool NDBCMonitor::start(const MXS_CONFIG_PARAMETER *params)
     }
 
     return started;
+}
+
+bool NDBCMonitor::has_sufficient_permissions() const
+{
+    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
 }
 
 void NDBCMonitor::configure(const MXS_CONFIG_PARAMETER* params)

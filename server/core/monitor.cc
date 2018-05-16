@@ -2535,6 +2535,11 @@ void MonitorInstance::stop()
     m_script = NULL;
 }
 
+bool MonitorInstance::has_sufficient_permissions() const
+{
+    return true;
+}
+
 void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
 }
