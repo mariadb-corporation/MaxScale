@@ -34,6 +34,7 @@ do{ \
 static inline bool is_ps_command(uint8_t cmd)
 {
     return cmd == MXS_COM_STMT_EXECUTE ||
+           cmd == MXS_COM_STMT_BULK_EXECUTE ||
            cmd == MXS_COM_STMT_SEND_LONG_DATA ||
            cmd == MXS_COM_STMT_CLOSE ||
            cmd == MXS_COM_STMT_FETCH ||
