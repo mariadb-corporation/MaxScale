@@ -40,11 +40,12 @@ protected:
 
     static void main(void* pArg);
 
-    MXS_MONITOR* m_monitor;  /**< The generic monitor structure. */
-    int32_t      m_shutdown; /**< Non-zero if the monitor should shut down. */
-    std::string  m_script;   /**< Launchable script. */
-    uint64_t     m_events;   /**< Enabled monitor events. */
-    bool         m_checked;  /**< Whether server access has been checked. */
+    MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
+    int32_t               m_shutdown; /**< Non-zero if the monitor should shut down. */
+    std::string           m_script;   /**< Launchable script. */
+    uint64_t              m_events;   /**< Enabled monitor events. */
+    bool                  m_checked;  /**< Whether server access has been checked. */
+    MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
     int32_t      m_status;   /**< The current status of the monitor. */

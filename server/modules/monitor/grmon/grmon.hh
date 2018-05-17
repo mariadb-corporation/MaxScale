@@ -32,8 +32,6 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    MXS_MONITORED_SERVER* m_master;   /**< The master server */
-
     GRMon(MXS_MONITOR* monitor);
     ~GRMon();
 

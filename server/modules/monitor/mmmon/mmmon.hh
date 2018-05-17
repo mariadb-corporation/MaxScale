@@ -32,9 +32,8 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    unsigned long m_id;             /**< Monitor ID */
-    int m_detectStaleMaster;        /**< Monitor flag for Stale Master detection */
-    MXS_MONITORED_SERVER *m_master; /**< Master server for Master/Slave replication */
+    unsigned long m_id;      /**< Monitor ID */
+    int m_detectStaleMaster; /**< Monitor flag for Stale Master detection */
 
     MMMonitor(MXS_MONITOR* monitor);
     ~MMMonitor();

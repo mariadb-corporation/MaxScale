@@ -32,8 +32,7 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    unsigned long m_id;             /**< Monitor ID */
-    MXS_MONITORED_SERVER *m_master; /**< Master server for MySQL Master/Slave replication */
+    unsigned long m_id; /**< Monitor ID */
 
     NDBCMonitor(MXS_MONITOR* monitor);
     ~NDBCMonitor();

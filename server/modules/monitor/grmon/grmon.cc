@@ -28,7 +28,6 @@
 
 GRMon::GRMon(MXS_MONITOR* monitor)
     : MonitorInstance(monitor)
-    , m_master(NULL)
 {
 }
 
@@ -53,7 +52,6 @@ bool GRMon::has_sufficient_permissions() const
 
 void GRMon::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    m_master = NULL;
 }
 
 void GRMon::diagnostics(DCB* dcb) const

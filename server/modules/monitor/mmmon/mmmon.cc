@@ -88,7 +88,6 @@ MMMonitor::MMMonitor(MXS_MONITOR *monitor)
     : maxscale::MonitorInstance(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_detectStaleMaster(false)
-    , m_master(NULL)
 {
 }
 

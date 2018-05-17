@@ -68,7 +68,6 @@ private:
     int m_disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
     int m_availableWhenDonor;           /**< Monitor flag for Galera Cluster Donor availability */
     bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
-    MXS_MONITORED_SERVER *m_master;     /**< Master server for MySQL Master/Slave replication */
     bool m_root_node_as_master;         /**< Whether we require that the Master should
                                          * have a wsrep_local_index of 0 */
     bool m_use_priority;                /**< Use server priorities */

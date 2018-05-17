@@ -2510,6 +2510,7 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_monitor(pMonitor)
     , m_shutdown(0)
     , m_events(0)
+    , m_master(NULL)
     , m_status(MXS_MONITOR_STOPPED)
     , m_thread(0)
 {
@@ -2557,6 +2558,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     {
         m_script = config_get_string(pParams, "script");
         m_events = config_get_enum(pParams, "events", mxs_monitor_event_enum_values);
+        m_master = NULL;
 
         configure(pParams);
 
