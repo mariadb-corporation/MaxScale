@@ -33,23 +33,27 @@ public:
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
+    const std::string& script() const { return m_script; }
+    uint64_t           events() const { return m_events; }
+
     virtual bool has_sufficient_permissions() const;
     virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
-
-    virtual void main() = 0;
-
-    static void main(void* pArg);
+    virtual void tick() = 0;
 
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
-    int32_t               m_shutdown; /**< Non-zero if the monitor should shut down. */
-    std::string           m_script;   /**< Launchable script. */
-    uint64_t              m_events;   /**< Enabled monitor events. */
-    bool                  m_checked;  /**< Whether server access has been checked. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
-    int32_t      m_status;   /**< The current status of the monitor. */
-    THREAD       m_thread;   /**< The thread handle of the monitoring thread. */
+    int32_t     m_status;   /**< The current status of the monitor. */
+    THREAD      m_thread;   /**< The thread handle of the monitoring thread. */
+    int32_t     m_shutdown; /**< Non-zero if the monitor should shut down. */
+    bool        m_checked;  /**< Whether server access has been checked. */
+    std::string m_script;   /**< Launchable script. */
+    uint64_t    m_events;   /**< Enabled monitor events. */
+
+    void main();
+
+    static void main(void* pArg);
 };
 
 /**

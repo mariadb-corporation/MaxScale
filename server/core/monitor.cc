@@ -2508,11 +2508,12 @@ namespace maxscale
 
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_monitor(pMonitor)
-    , m_shutdown(0)
-    , m_events(0)
     , m_master(NULL)
     , m_status(MXS_MONITOR_STOPPED)
     , m_thread(0)
+    , m_shutdown(0)
+    , m_checked(false)
+    , m_events(0)
 {
 }
 
@@ -2584,6 +2585,47 @@ void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
 }
 
+void MonitorInstance::main()
+{
+    atomic_store_int32(&m_status, MXS_MONITOR_RUNNING);
+
+    load_server_journal(m_monitor, &m_master);
+
+    while (!m_shutdown)
+    {
+        lock_monitor_servers(m_monitor);
+        servers_status_pending_to_current(m_monitor);
+
+        tick();
+
+        /**
+         * After updating the status of all servers, check if monitor events
+         * need to be launched.
+         */
+        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
+
+        mon_hangup_failed_servers(m_monitor);
+        servers_status_current_to_pending(m_monitor);
+        store_server_journal(m_monitor, m_master);
+        release_monitor_servers(m_monitor);
+
+        /** Sleep until the next monitoring interval */
+        unsigned int ms = 0;
+        while (ms < m_monitor->interval && !m_shutdown)
+        {
+            if (m_monitor->server_pending_changes)
+            {
+                // Admin has changed something, skip sleep
+                break;
+            }
+            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+            ms += MXS_MON_BASE_INTERVAL_MS;
+        }
+    }
+
+    atomic_store_int32(&m_status, MXS_MONITOR_STOPPED);
+}
+
 //static
 void MonitorInstance::main(void* pArg)
 {
@@ -2591,9 +2633,7 @@ void MonitorInstance::main(void* pArg)
 
     if (mysql_thread_init() == 0)
     {
-        atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
-        static_cast<MonitorInstance*>(pArg)->main();
-        atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
+        pThis->main();
 
         mysql_thread_end();
     }

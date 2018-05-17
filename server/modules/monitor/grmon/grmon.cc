@@ -181,45 +181,6 @@ static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* ser
     }
 }
 
-void GRMon::main()
-{
-    load_server_journal(m_monitor, NULL);
-
-    while (!m_shutdown)
-    {
-        lock_monitor_servers(m_monitor);
-        servers_status_pending_to_current(m_monitor);
-
-        tick();
-
-        /**
-         * After updating the status of all servers, check if monitor events
-         * need to be launched.
-         */
-        mon_process_state_changes(m_monitor,
-                                  m_script.empty() ? NULL : m_script.c_str(),
-                                  m_events);
-
-        mon_hangup_failed_servers(m_monitor);
-        servers_status_current_to_pending(m_monitor);
-        store_server_journal(m_monitor, NULL);
-        release_monitor_servers(m_monitor);
-
-        /** Sleep until the next monitoring interval */
-        size_t ms = 0;
-        while (ms < m_monitor->interval && !m_shutdown)
-        {
-            if (m_monitor->server_pending_changes)
-            {
-                // Admin has changed something, skip sleep
-                break;
-            }
-            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
-            ms += MXS_MON_BASE_INTERVAL_MS;
-        }
-    }
-}
-
 void GRMon::tick()
 {
     for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)

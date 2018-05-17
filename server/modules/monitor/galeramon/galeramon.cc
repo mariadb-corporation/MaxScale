@@ -204,9 +204,9 @@ json_t* GaleraMonitor::diagnostics_json() const
     json_object_set_new(rval, "use_priority", json_boolean(m_use_priority));
     json_object_set_new(rval, "set_donor_nodes", json_boolean(m_set_donor_nodes));
 
-    if (!m_script.empty())
+    if (!script().empty())
     {
-        json_object_set_new(rval, "script", json_string(m_script.c_str()));
+        json_object_set_new(rval, "script", json_string(script().c_str()));
     }
 
     if (m_cluster_info.c_uuid)
@@ -441,50 +441,6 @@ void GaleraMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
     else
     {
         mon_report_query_error(database);
-    }
-}
-
-/**
- * The entry point for the monitoring module thread
- *
- * @param arg   The handle of the monitor
- */
-void GaleraMonitor::main()
-{
-    load_server_journal(m_monitor, NULL);
-
-    while (!m_shutdown)
-    {
-        lock_monitor_servers(m_monitor);
-        servers_status_pending_to_current(m_monitor);
-
-        tick();
-
-        /**
-         * After updating the status of all servers, check if monitor events
-         * need to be launched.
-         */
-        mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
-
-        mon_hangup_failed_servers(m_monitor);
-
-        servers_status_current_to_pending(m_monitor);
-
-        store_server_journal(m_monitor, NULL);
-        release_monitor_servers(m_monitor);
-
-        /** Sleep until the next monitoring interval */
-        unsigned int ms = 0;
-        while (ms < m_monitor->interval && !m_shutdown)
-        {
-            if (m_monitor->server_pending_changes)
-            {
-                // Admin has changed something, skip sleep
-                break;
-            }
-            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
-            ms += MXS_MON_BASE_INTERVAL_MS;
-        }
     }
 }
 
