@@ -17,17 +17,21 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     int chunk_size = 2500000;
     int chunk_num = 5;
+    std::string src_dir = test_dir;
+    std::string masking_rules = src_dir + "/masking/masking_user/masking_rules.json";
+    std::string cache_rules = src_dir + "/cache/cache_basic/cache_rules.json";
+    std::string fw_rules = src_dir + "/fw";
 
-    Test->maxscales->copy_to_node_legacy("./masking/masking_user/masking_rules.json", "~/", 0);
+    Test->maxscales->copy_to_node_legacy(masking_rules.c_str(), "~/", 0);
 
-    Test->maxscales->copy_to_node_legacy("./cache/cache_basic/cache_rules.json", "~/", 0);
+    Test->maxscales->copy_to_node_legacy(cache_rules.c_str(), "~/", 0);
 
     Test->maxscales->ssh_node_f(0, true, "cd %s;"
                        "rm -rf rules;"
                        "mkdir rules;"
                        "chown vagrant:vagrant rules",
                        Test->maxscales->access_homedir[0]);
-    copy_rules(Test, (char *) "rules2", "./fw/");
+    copy_rules(Test, "rules2", fw_rules.c_str());
 
     Test->maxscales->start_maxscale(0);
 

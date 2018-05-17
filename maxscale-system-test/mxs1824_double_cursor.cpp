@@ -18,7 +18,7 @@ void double_cursor(TestConnections& test, MYSQL* conn)
     MYSQL_STMT* stmt1 = mysql_stmt_init(conn);
     const char* query = "SELECT id FROM test.t1";
     int rc = mysql_stmt_prepare(stmt1, query, strlen(query));
-    test.assert(rc == 0, "Prepare should work: %s %s", mysql_stmt_error(stmt1), mysql_error(conn));
+    test.assert(rc == 0, "First prepare should work: %s %s", mysql_stmt_error(stmt1), mysql_error(conn));
     int type = CURSOR_TYPE_READ_ONLY;
     mysql_stmt_attr_set(stmt1, STMT_ATTR_CURSOR_TYPE, &type);
 
@@ -35,7 +35,7 @@ void double_cursor(TestConnections& test, MYSQL* conn)
 
     MYSQL_STMT* stmt2 = mysql_stmt_init(conn);
     rc = mysql_stmt_prepare(stmt2, query, strlen(query));
-    test.assert(rc == 0, "Prepare should work: %s %s", mysql_stmt_error(stmt2), mysql_error(conn));
+    test.assert(rc == 0, "Second prepare should work: %s %s", mysql_stmt_error(stmt2), mysql_error(conn));
     mysql_stmt_attr_set(stmt2, STMT_ATTR_CURSOR_TYPE, &type);
     mysql_stmt_bind_result(stmt2, bind);
 
