@@ -22,7 +22,7 @@ namespace
 // Specified in the configuration file.
 char USER[]   = "maxinfo_user";
 char PASSWD[] = "maxinfo_passwd";
-int  PORT     = 9003;
+int  PORT     = 4006;
 
 void run(TestConnections& test, MYSQL* pMysql)
 {
@@ -58,7 +58,7 @@ void run(TestConnections& test, MYSQL* pMysql)
     }
     else
     {
-        test.assert(false, "Executing 'show eventTimes' failed.");
+        test.assert(false, "Executing 'show eventTimes' failed: %s", mysql_error(pMysql));
     }
 }
 

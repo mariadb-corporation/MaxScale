@@ -21,4 +21,4 @@ passwd=maxinfo_passwd
 type=listener
 service=MaxInfo
 protocol=MySQLClient
-port=9003
+port=4006
