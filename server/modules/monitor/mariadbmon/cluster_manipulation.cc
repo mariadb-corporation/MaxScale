@@ -1203,7 +1203,7 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
          mon_serv != NULL && extra_master == NULL;
          mon_serv = mon_serv->next)
     {
-        if (SERVER_IS_MASTER(mon_serv->server))
+        if (SRV_MASTER_STATUS(mon_serv->pending_status))
         {
             if (mon_serv == suggested_curr_master)
             {
@@ -1237,22 +1237,20 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
  *
  * @return True, if suggested new master is a viable promotion candidate.
  */
-bool MariaDBMonitor::switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
+bool MariaDBMonitor::switchover_check_new(const MariaDBServer* new_master_cand, json_t** error)
 {
-    SERVER* server = monitored_server->server;
-    const char* name = server->name;
-    bool is_master = SERVER_IS_MASTER(server);
-    bool is_slave = SERVER_IS_SLAVE(server);
+    bool is_master = new_master_cand->is_master();
+    bool is_slave = new_master_cand->is_slave();
 
     if (is_master)
     {
         const char IS_MASTER[] = "Specified new master '%s' is already the current master.";
-        PRINT_MXS_JSON_ERROR(error, IS_MASTER, name);
+        PRINT_MXS_JSON_ERROR(error, IS_MASTER, new_master_cand->name());
     }
     else if (!is_slave)
     {
         const char NOT_SLAVE[] = "Specified new master '%s' is not a slave.";
-        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, name);
+        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, new_master_cand->name());
     }
 
     return !is_master && is_slave;
@@ -1274,7 +1272,7 @@ bool MariaDBMonitor::failover_check(json_t** error_out)
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        uint64_t status_bits = server->m_server_base->server->status;
+        uint64_t status_bits = server->m_server_base->pending_status;
         uint64_t master_up = (SERVER_MASTER | SERVER_RUNNING);
         if ((status_bits & master_up) == master_up)
         {
@@ -1509,13 +1507,17 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
             new_master_ok = false;
             PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->name, m_monitor_base->name);
         }
-        else if (!switchover_check_new(mon_new_master, error_out))
-        {
-            new_master_ok = false;
-        }
         else
         {
-            *new_master_out = get_server_info(mon_new_master);
+            MariaDBServer* found_new_master = get_server_info(mon_new_master);
+            if (switchover_check_new(found_new_master, error_out))
+            {
+                *new_master_out = found_new_master;
+            }
+            else
+            {
+                new_master_ok = false;
+            }
         }
     }
 

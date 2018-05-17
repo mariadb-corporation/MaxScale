@@ -48,7 +48,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
          * that means SERVER_IS_RUNNING returns 0
          * Let's check only for SERVER_IS_DOWN: server is not running
          */
-        if (SERVER_IS_DOWN(ptr->server))
+        if (get_server_info(ptr)->is_down())
         {
             ptr = ptr->next;
             continue;
@@ -127,8 +127,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                     }
 
                     MariaDBServer* info = get_server_info(master_cand);
-
-                    if (SERVER_IS_RUNNING(master_cand->server))
+                    if (info->is_running())
                     {
                         /** Only set the Master status if read_only is disabled */
                         monitor_set_pending_status(master_cand,
@@ -158,7 +157,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
     if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (SERVER_IN_MAINT(m_master->m_server_base->server))
+        if (m_master->is_in_maintenance())
         {
             return NULL;
         }
@@ -210,7 +209,8 @@ MXS_MONITORED_SERVER* MariaDBMonitor::getSlaveOfNodeId(long node_id, slave_down_
     while (ptr)
     {
         current = ptr->server;
-        if (current->master_id == node_id && (slave_down_setting == ACCEPT_DOWN || !SERVER_IS_DOWN(current)))
+        if (current->master_id == node_id &&
+            (slave_down_setting == ACCEPT_DOWN || !get_server_info(ptr)->is_down()))
         {
             return ptr;
         }
@@ -411,7 +411,7 @@ void MariaDBMonitor::find_graph_cycles()
             }
         }
         else if (m_detect_stale_master && cycle == 0 &&
-                 graph[i].db->server->status & SERVER_MASTER &&
+                 graph[i].db->mon_prev_status & SERVER_MASTER &&
                  (graph[i].db->pending_status & SERVER_MASTER) == 0)
         {
             /**
@@ -716,7 +716,6 @@ bool MariaDBMonitor::set_standalone_master()
                 m_warn_set_standalone_master = false;
             }
 
-            server_clear_set_status(mon_server->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_set_pending_status(mon_server, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(mon_server, SERVER_SLAVE);
             m_master = server;
@@ -724,8 +723,7 @@ bool MariaDBMonitor::set_standalone_master()
         }
         else if (!m_allow_cluster_recovery)
         {
-            server_set_status_nolock(mon_server->server, SERVER_MAINT);
-            monitor_set_pending_status(mon_server, SERVER_MAINT);
+            server->set_status(SERVER_MAINT);
         }
     }
 
@@ -745,7 +743,7 @@ MariaDBServer* MariaDBMonitor::find_root_master()
     if (num_servers == 1)
     {
         auto mon_server = m_servers[0]->m_server_base;
-        if (SERVER_IS_RUNNING(mon_server->server))
+        if (m_servers[0]->is_running())
         {
             mon_server->server->depth = 0;
             /* status cleanup */
@@ -803,7 +801,7 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
 void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServer* root_master_server)
 {
     MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
-    if (!SERVER_IN_MAINT(db_server.m_server_base->server))
+    if (!db_server.is_in_maintenance())
     {
         /** If "detect_stale_master" option is On, let's use the previous master.
          *
@@ -819,15 +817,10 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             (strcmp(ptr->server->address, root_master->server->address) == 0 &&
              ptr->server->port == root_master->server->port) &&
             // had master status but is now losing it.
-            (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER) &&
+            (ptr->mon_prev_status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER) &&
             !db_server.m_read_only)
         {
-            /**
-             * In this case server->status will not be updated from pending_status
-             * Set the STALE bit for this server in server struct
-             */
-            server_set_status_nolock(ptr->server, SERVER_STALE_STATUS | SERVER_MASTER);
-            monitor_set_pending_status(ptr, SERVER_STALE_STATUS | SERVER_MASTER);
+            db_server.set_status(SERVER_STALE_STATUS | SERVER_MASTER);
 
             /** Log the message only if the master server didn't have
              * the stale master bit set */
@@ -845,7 +838,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             unsigned int bits = SERVER_SLAVE | SERVER_RUNNING;
 
             if ((ptr->mon_prev_status & bits) == bits &&
-                root_master && SERVER_IS_MASTER(root_master->server))
+                root_master && SRV_MASTER_STATUS(root_master->pending_status))
             {
                 /** Slave with a running master, assign stale slave candidacy */
                 if ((ptr->pending_status & bits) == bits)
@@ -864,9 +857,9 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             else if (ptr->mon_prev_status & SERVER_STALE_SLAVE &&
                      ptr->pending_status & SERVER_RUNNING &&
                      // Master is down
-                     (!root_master || !SERVER_IS_MASTER(root_master->server) ||
+                     (!root_master || !SRV_MASTER_STATUS(root_master->pending_status) ||
                       // Master just came up
-                      (SERVER_IS_MASTER(root_master->server) &&
+                      (SRV_MASTER_STATUS(root_master->pending_status) &&
                        (root_master->mon_prev_status & SERVER_MASTER) == 0)))
             {
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
@@ -876,7 +869,5 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
                 monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
         }
-
-        ptr->server->status = ptr->pending_status;
     }
 }

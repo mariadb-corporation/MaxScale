@@ -351,7 +351,22 @@ void MariaDBMonitor::main_loop()
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);
 
         lock_monitor_servers(m_monitor_base);
-        servers_status_pending_to_current(m_monitor_base);
+        /* Read any admin status changes from SERVER->status_pending. */
+        if (m_monitor_base->server_pending_changes)
+        {
+            servers_status_pending_to_current(m_monitor_base);
+        }
+        /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
+         * Also, backup current status so that it can be compared to any deduced state. */
+        for (auto mon_srv = m_monitor_base->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+        {
+            auto status = mon_srv->server->status;
+            mon_srv->pending_status = status;
+            mon_srv->mon_prev_status = status;
+        }
+        /* Avoid reading/writing SERVER->status while servers are not locked. Routers read the state
+         * all the time. */
+        release_monitor_servers(m_monitor_base);
 
         // Query all servers for their status.
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
@@ -409,10 +424,8 @@ void MariaDBMonitor::main_loop()
 
         if (root_master && root_master->is_master())
         {
-            SERVER* root_master_server = root_master->m_server_base->server;
             // Clear slave and stale slave status bits from current master
-            server_clear_status_nolock(root_master_server, SERVER_SLAVE | SERVER_STALE_SLAVE);
-            monitor_clear_pending_status(root_master->m_server_base, SERVER_SLAVE | SERVER_STALE_SLAVE);
+            root_master->clear_status(SERVER_SLAVE | SERVER_STALE_SLAVE);
 
             /**
              * Clear external slave status from master if configured to do so.
@@ -421,59 +434,83 @@ void MariaDBMonitor::main_loop()
              */
             if (m_ignore_external_masters)
             {
-                monitor_clear_pending_status(root_master->m_server_base, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-                server_clear_status_nolock(root_master_server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                root_master->clear_status(SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
         ss_dassert(root_master == NULL || root_master == m_master);
         ss_dassert(root_master == NULL ||
-                   ((root_master->m_server_base->server->status & (SERVER_SLAVE | SERVER_MASTER)) !=
+                   ((root_master->m_server_base->pending_status & (SERVER_SLAVE | SERVER_MASTER)) !=
                     (SERVER_SLAVE | SERVER_MASTER)));
-
-        /**
-         * After updating the status of all servers, check if monitor events
-         * need to be launched.
-         */
-        mon_process_state_changes(m_monitor_base, m_script.c_str(), m_events);
-        m_cluster_modified = false;
-
-        if (m_auto_failover)
-        {
-            m_cluster_modified = handle_auto_failover();
-        }
-
-        /* log master detection failure of first master becomes available after failure */
-        log_master_changes(root_master, &log_no_master);
 
         /* Generate the replication heartbeat event by performing an update */
         if (m_detect_replication_lag && root_master &&
-            (root_master->is_master() || SERVER_IS_RELAY_SERVER(root_master->m_server_base->server)))
+            (root_master->is_master() || root_master->is_relay_server()))
         {
             measure_replication_lag(root_master);
         }
 
-        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-        // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (!config_get_global_options()->passive && m_auto_rejoin &&
-            !m_cluster_modified && cluster_can_be_joined())
+        /* Servers have been queried and states deduced. Lock servers for a short while again while we update
+         * the shared server states and make the changes visible. There is a problem though: the admin could
+         * have changed the shared state while the queries were running. In this rare case, the deduced
+         * server states no longer apply and may be inconsistent. The most straightforward solution to this
+         * is to discard the results of the latest monitor loop and start another immediately. Cluster
+         * modifications are not performed until the next loop. The discarding of results is not perfect as
+         * some data has already been written. But this data is only used by the monitor itself and will be
+         * rewritten next loop. TODO: make versions of log_master_changes() and mon_process_state_changes()
+         * which read from MXS_MONITORED_SERVER->pending_status instead of SERVER->status. Then this locking
+         * and releasing can be moved after failover etc and the user changes can be applied gracefully. */
+        lock_monitor_servers(m_monitor_base);
+        if (m_monitor_base->server_pending_changes)
         {
-            // Check if any servers should be autojoined to the cluster and try to join them.
-            handle_auto_rejoin();
+            MXS_WARNING("MaxAdmin or REST API modified the state of a server monitored by '%s' during a "
+                        "monitor iteration. Discarding the monitor results and retrying.",
+                        m_monitor_base->name);
+            release_monitor_servers(m_monitor_base);
         }
-
-        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-         * perform this if cluster has been modified this loop since it may not be clear which server
-         * should be a slave. */
-        if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+        else
         {
-            enforce_read_only_on_slaves();
-        }
+            // Update shared status.
+            for (auto mon_srv = m_monitor_base->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+            {
+                auto new_status = mon_srv->pending_status;
+                auto srv = mon_srv->server;
+                srv->status = new_status;
+                srv->status_pending = new_status;
+            }
 
-        mon_hangup_failed_servers(m_monitor_base);
-        servers_status_current_to_pending(m_monitor_base);
-        store_server_journal(m_monitor_base, m_master ? m_master->m_server_base : NULL);
-        release_monitor_servers(m_monitor_base);
+            /* Check if monitor events need to be launched. */
+            mon_process_state_changes(m_monitor_base, m_script.c_str(), m_events);
+            m_cluster_modified = false;
+            if (m_auto_failover)
+            {
+                m_cluster_modified = handle_auto_failover();
+            }
+
+             /* log master detection failure of first master becomes available after failure */
+            log_master_changes(root_master, &log_no_master);
+
+            // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+            // has been performed, as server states have not been updated yet. It will happen next iteration.
+            if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
+                cluster_can_be_joined())
+            {
+                // Check if any servers should be autojoined to the cluster and try to join them.
+                handle_auto_rejoin();
+            }
+
+            /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+             * perform this if cluster has been modified this loop since it may not be clear which server
+             * should be a slave. */
+            if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+            {
+                enforce_read_only_on_slaves();
+            }
+
+            mon_hangup_failed_servers(m_monitor_base);
+            store_server_journal(m_monitor_base, m_master ? m_master->m_server_base : NULL);
+            release_monitor_servers(m_monitor_base);
+        }
 
         // Check how much the monitor should sleep to get one full monitor interval.
         timespec loop_end;
@@ -555,10 +592,10 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
     {
         MariaDBServer* server = *iter;
         MXS_MONITORED_SERVER* ptr = server->m_server_base;
-        if ((!SERVER_IN_MAINT(ptr->server)) && server->is_running())
+        if ((!server->is_in_maintenance()) && server->is_running())
         {
             if (ptr->server->node_id != mon_root_master->server->node_id &&
-                (server->is_slave() || SERVER_IS_RELAY_SERVER(ptr->server)) &&
+                (server->is_slave() || server->is_relay_server()) &&
                 (server->m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
                  server->m_version == MariaDBServer::version::MARIADB_100)) // No select lag for Binlog Server
             {
@@ -571,14 +608,13 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
 void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* log_no_master)
 {
     MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
-    if (root_master &&
-        mon_status_changed(root_master) &&
-        !(root_master->server->status & SERVER_STALE_STATUS))
+    if (root_master && mon_status_changed(root_master) &&
+        !(root_master->pending_status & SERVER_STALE_STATUS))
     {
-        if (root_master->pending_status & (SERVER_MASTER) && SERVER_IS_RUNNING(root_master->server))
+        if ((root_master->pending_status & SERVER_MASTER) && root_master_server->is_running())
         {
             if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) &&
-                !(root_master->server->status & SERVER_MAINT))
+                !(root_master->pending_status & SERVER_MAINT))
             {
                 MXS_NOTICE("A Master Server is now available: %s:%i",
                            root_master->server->address,

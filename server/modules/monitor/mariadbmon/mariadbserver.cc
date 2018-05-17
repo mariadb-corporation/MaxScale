@@ -391,22 +391,38 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
 
 bool MariaDBServer::is_master() const
 {
-    return SERVER_IS_MASTER(m_server_base->server);
+    // Similar to macro SERVER_IS_MASTER
+    return SRV_MASTER_STATUS(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_slave() const
 {
-    return SERVER_IS_SLAVE(m_server_base->server);
+    // Similar to macro SERVER_IS_SLAVE
+    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
+           (SERVER_RUNNING | SERVER_SLAVE);
 }
 
 bool MariaDBServer::is_running() const
 {
-    return SERVER_IS_RUNNING(m_server_base->server);
+    // Similar to macro SERVER_IS_RUNNING
+    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
 }
 
 bool MariaDBServer::is_down() const
 {
-    return SERVER_IS_DOWN(m_server_base->server);
+    // Similar to macro SERVER_IS_DOWN
+    return (m_server_base->pending_status & SERVER_RUNNING) == 0;
+}
+
+bool MariaDBServer::is_in_maintenance() const
+{
+    return m_server_base->pending_status & SERVER_MAINT;
+}
+
+bool MariaDBServer::is_relay_server() const
+{
+    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) ==
+           (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
 }
 
 const char* MariaDBServer::name() const
@@ -666,21 +682,15 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 
 void MariaDBServer::update_server(MXS_MONITOR* base_monitor)
 {
-    /* Backup current status so that it can be compared to the new status. Also, we should be careful when
-     * modifying 'server->status' as routers can read it at any moment. It's best to write to
-     * 'mon_server->pending_status' until the status is final and then write it to 'server->status'. */
-    auto current_status = m_server_base->server->status;
-    m_server_base->mon_prev_status = current_status;
-    m_server_base->pending_status = current_status;
-
     /* Monitor current node if not in maintenance. */
-    if (!SERVER_IN_MAINT(m_server_base->server))
+    bool in_maintenance = m_server_base->pending_status & SERVER_MAINT;
+    if (!in_maintenance)
     {
         monitor_server(base_monitor);
     }
-
     /** Increase or reset the error count of the server. */
-    m_server_base->mon_err_count = (is_down()) ? m_server_base->mon_err_count + 1 : 0;
+    bool is_running = m_server_base->pending_status & SERVER_RUNNING;
+    m_server_base->mon_err_count = (is_running || in_maintenance) ? 0 : m_server_base->mon_err_count + 1;
 }
 
 /**
@@ -693,15 +703,11 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
     MXS_MONITORED_SERVER* mon_srv = m_server_base;
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(base_monitor, mon_srv);
 
-    SERVER* srv = mon_srv->server;
     MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
     if (mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(srv, SERVER_AUTH_ERROR);
-        monitor_clear_pending_status(mon_srv, SERVER_AUTH_ERROR);
-        /* Store current status in both server and monitor server pending struct */
-        server_set_status_nolock(srv, SERVER_RUNNING);
-        monitor_set_pending_status(mon_srv, SERVER_RUNNING);
+        clear_status(SERVER_AUTH_ERROR);
+        set_status(SERVER_RUNNING);
 
         if (rval == MONITOR_CONN_NEWCONN_OK)
         {
@@ -712,22 +718,19 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
     {
         /* The current server is not running. Clear all but the stale master bit as it is used to detect
          * masters that went down but came up. */
-        unsigned int all_bits = ~SERVER_STALE_STATUS;
-        server_clear_status_nolock(srv, all_bits);
-        monitor_clear_pending_status(mon_srv, all_bits);
-
-        if (mysql_errno(conn) == ER_ACCESS_DENIED_ERROR)
+        clear_status(~SERVER_STALE_STATUS);
+        auto conn_errno = mysql_errno(conn);
+        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
-            server_set_status_nolock(srv, SERVER_AUTH_ERROR);
-            monitor_set_pending_status(mon_srv, SERVER_AUTH_ERROR);
+            set_status(SERVER_AUTH_ERROR);
         }
 
-        /* Log connect failure only once */
-        if (mon_status_changed(mon_srv) && mon_print_fail_status(mon_srv))
+        /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
+         * iteration. */
+        if (m_server_base->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
         {
             mon_log_connect_error(mon_srv, rval);
         }
-
         return;
     }
 
@@ -777,8 +780,7 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
 bool MariaDBServer::update_slave_status(string* errmsg_out)
 {
     /** Clear old states */
-    monitor_clear_pending_status(m_server_base, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
-                                 SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
     bool rval = false;
     if (do_show_slave_status(errmsg_out))
@@ -787,7 +789,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
         /* If all configured slaves are running set this node as slave */
         if (m_n_slaves_running > 0 && m_n_slaves_running == m_slave_status.size())
         {
-            monitor_set_pending_status(m_server_base, SERVER_SLAVE);
+            set_status(SERVER_SLAVE);
         }
 
         /** Store master_id of current node. */
@@ -838,6 +840,16 @@ void MariaDBServer::update_server_info()
                       srv->version_string);
         }
     }
+}
+
+void MariaDBServer::clear_status(uint64_t bits)
+{
+    monitor_clear_pending_status(m_server_base, bits);
+}
+
+void MariaDBServer::set_status(uint64_t bits)
+{
+    monitor_set_pending_status(m_server_base, bits);
 }
 
 string SlaveStatus::to_string() const

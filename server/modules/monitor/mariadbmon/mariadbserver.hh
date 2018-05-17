@@ -206,6 +206,16 @@ public:
     bool is_down() const;
 
     /**
+     * Convenience method for SERVER_IN_MAINT
+     */
+    bool is_in_maintenance() const;
+
+    /**
+     * Convenience method for SERVER_IS_RELAY_SERVER
+     */
+    bool is_relay_server() const;
+
+    /**
      * Returns the server name.
      *
      * @return Server unique name
@@ -298,6 +308,20 @@ public:
      * @param base_monitor The base monitor object monitoring this server. Required for connection settings.
      */
     void update_server(MXS_MONITOR* base_monitor);
+
+    /**
+     * Clear server pending status flags.
+     *
+     * @param bits Which flags to clear
+     */
+    void clear_status(uint64_t bits);
+
+    /**
+     * Set server pending status flags.
+     *
+     * @param bits Which flags to set
+     */
+    void set_status(uint64_t bits);
 
 private:
     void monitor_server(MXS_MONITOR* base_monitor);
