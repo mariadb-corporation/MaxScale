@@ -135,7 +135,7 @@ uint64_t WorkerLoad::get_time()
 
     timespec t;
 
-    ss_debug(int rv=)clock_gettime(CLOCK_MONOTONIC, &t);
+    ss_debug(int rv = )clock_gettime(CLOCK_MONOTONIC, &t);
     ss_dassert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
@@ -233,7 +233,7 @@ WorkerTimer::~WorkerTimer()
 
 void WorkerTimer::start(int32_t interval)
 {
-    ss_dassert(interval > 0);
+    ss_dassert(interval >= 0);
 
     // TODO: Add possibility to set initial delay and interval.
     time_t initial_sec = interval / 1000;
@@ -1126,7 +1126,7 @@ namespace
 int64_t get_current_time_ms()
 {
     struct timespec ts;
-    ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+    ss_debug(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
     ss_dassert(rv == 0);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;

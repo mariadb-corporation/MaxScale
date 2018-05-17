@@ -22,10 +22,10 @@
 namespace
 {
 const char* const MAX_QPS_CFG = "max_qps";
-const char* const TRIGGER_DURATION_CFG = "trigger_duration";
-const char* const THROTTLE_DURATION_CFG = "throttle_duration";
+const char* const SAMPLING_DURATION_CFG = "sampling_duration";
+const char* const THROTTLE_DURATION_CFG = "throttling_duration";
+const char* const CONTINUOUS_DURATION_CFG = "continuous_duration";
 }
-
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
@@ -44,8 +44,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             {MAX_QPS_CFG,             MXS_MODULE_PARAM_INT},
-            {TRIGGER_DURATION_CFG,    MXS_MODULE_PARAM_INT},
+            {SAMPLING_DURATION_CFG,   MXS_MODULE_PARAM_INT, "250"},
             {THROTTLE_DURATION_CFG,   MXS_MODULE_PARAM_INT},
+            {CONTINUOUS_DURATION_CFG,  MXS_MODULE_PARAM_INT, "2000"},
             { MXS_END_MODULE_PARAMS }
         }
     };
@@ -62,10 +63,11 @@ ThrottleFilter::ThrottleFilter(const ThrottleConfig &config) : m_config(config)
 
 ThrottleFilter * ThrottleFilter::create(const char* zName, char * * pzOptions, MXS_CONFIG_PARAMETER * pParams)
 {
-    int max_qps         = config_get_integer(pParams, MAX_QPS_CFG);
-    int trigger_secs    = config_get_integer(pParams, TRIGGER_DURATION_CFG);
-    int throttle_secs   = config_get_integer(pParams, THROTTLE_DURATION_CFG);
-    bool config_ok = true;
+    int max_qps        = config_get_integer(pParams, MAX_QPS_CFG);
+    int sample_msecs   = config_get_integer(pParams, SAMPLING_DURATION_CFG);
+    int throttle_msecs = config_get_integer(pParams, THROTTLE_DURATION_CFG);
+    int cont_msecs     = config_get_integer(pParams, CONTINUOUS_DURATION_CFG);
+    bool config_ok     = true;
 
     if (max_qps < 2)
     {
@@ -73,29 +75,34 @@ ThrottleFilter * ThrottleFilter::create(const char* zName, char * * pzOptions, M
         config_ok = false;
     }
 
-    if (trigger_secs < 1)
+    if (sample_msecs < 0)
     {
-        MXS_ERROR("Config value %s must be > 0", TRIGGER_DURATION_CFG);
+        MXS_ERROR("Config value %s must be >= 0", SAMPLING_DURATION_CFG);
         config_ok = false;
     }
 
-    if (throttle_secs < 0)
+    if (throttle_msecs <= 0)
     {
-        MXS_ERROR("Config value %s must be >= 0", THROTTLE_DURATION_CFG);
+        MXS_ERROR("Config value %s must be > 0", THROTTLE_DURATION_CFG);
         config_ok = false;
     }
 
-    Duration trigger_duration {std::chrono::seconds(trigger_secs)};
-    Duration throttle_duration {std::chrono::seconds(throttle_secs)};
+    if (cont_msecs < 0)
+    {
+        MXS_ERROR("Config value %s must be >= 0", CONTINUOUS_DURATION_CFG);
+        config_ok = false;
+    }
 
     ThrottleFilter* filter {NULL};
     if (config_ok)
     {
-        ThrottleConfig config = {max_qps, trigger_duration, throttle_duration};
+        Duration sampling_duration {std::chrono::milliseconds(sample_msecs)};
+        Duration throttling_duration {std::chrono::milliseconds(throttle_msecs)};
+        Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
 
-        std::ostringstream os1, os2;
-        os1 << config.trigger_duration;
-        os2 << config.throttle_duration;
+        ThrottleConfig config = {max_qps, sampling_duration,
+                                 throttling_duration, continuous_duration
+                                };
 
         filter = new ThrottleFilter(config);
     }

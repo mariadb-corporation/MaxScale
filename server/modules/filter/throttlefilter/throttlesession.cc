@@ -23,57 +23,102 @@
 #include <string>
 #include <algorithm>
 #include <sstream>
+#include <cmath>
 
 namespace throttle
 {
 ThrottleSession::ThrottleSession(MXS_SESSION* mxsSession, ThrottleFilter &filter)
     : maxscale::FilterSession(mxsSession),
       m_filter(filter),
-      m_query_count("num-queries", filter.config().trigger_duration),
+      m_query_count("num-queries", filter.config().sampling_duration),
+      m_delayed_call_id(0),
       m_state(State::MEASURING)
 {
 }
 
-int ThrottleSession::routeQuery(GWBUF *buffer)
+ThrottleSession::~ThrottleSession()
 {
-    // TODO: count everything, or filter something out?
+    if (m_delayed_call_id)
+    {
+        maxscale::Worker* worker = maxscale::Worker::get_current();
+        ss_dassert(worker);
+        worker->cancel_delayed_call(m_delayed_call_id);
+    }
+}
+
+int ThrottleSession::real_routeQuery(GWBUF *buffer, bool is_delayed)
+{
     using namespace std::chrono;
 
-    m_query_count.increment();
-    int count = m_query_count.count();
-    int secs = duration_cast<seconds>(m_filter.config().trigger_duration).count();
-    float qps = count / secs;  // not instantaneous, but over so many seconds
+    int count  = m_query_count.count();
+    // not in g++ 4.4: duration<float>(x).count(), so
+    long micro = duration_cast<microseconds>(m_filter.config().sampling_duration).count();
+    float secs = micro / 1000000.0;
+    float qps  = count / secs;  // not instantaneous, but over so many seconds
 
-    if (qps >= m_filter.config().max_qps) // trigger
+    if (!is_delayed && qps >= m_filter.config().max_qps) // trigger
     {
-        // sleep a few cycles, keeping qps near max.
-        usleep(4 * 1000000 / qps); // to be replaced with delayed calls
-
+        // delay the current routeQuery for at least one cycle at stated max speed.
+        int32_t delay = 1 + std::ceil(1000.0 / m_filter.config().max_qps);
+        maxscale::Worker* worker = maxscale::Worker::get_current();
+        ss_dassert(worker);
+        m_delayed_call_id = worker->delayed_call(delay, &ThrottleSession::delayed_routeQuery,
+                                                 this, buffer);
         if (m_state == State::MEASURING)
         {
             MXS_INFO("Query throttling STARTED session %ld user %s",
                      m_pSession->ses_id, m_pSession->client_dcb->user);
             m_state = State::THROTTLING;
-            m_first_trigger.restart();
+            m_first_sample.restart();
         }
-        m_last_trigger.restart();
+
+        m_last_sample.restart();
+
+        // Filter pipeline ok thus far, will continue after the delay
+        // from this point in the pipeline.
+        return true;
     }
     else if (m_state == State::THROTTLING)
     {
-        if (m_last_trigger.lap() > Duration(std::chrono::seconds(2))) // TODO, might be ok though.
+        if (m_last_sample.lap() > m_filter.config().continuous_duration)
         {
             m_state = State::MEASURING;
             MXS_INFO("Query throttling stopped session %ld user %s",
                      m_pSession->ses_id, m_pSession->client_dcb->user);
         }
-        else if (m_first_trigger.lap() > m_filter.config().throttle_duration)
+        else if (m_first_sample.lap() > m_filter.config().throttling_duration)
         {
-            MXS_NOTICE("Session %ld user %s, qps throttling limit reached. Disconnect.",
+            MXS_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
                        m_pSession->ses_id, m_pSession->client_dcb->user);
             return false; // disconnect
         }
     }
 
+    m_query_count.increment();
+
     return mxs::FilterSession::routeQuery(buffer);
 }
+
+bool ThrottleSession::delayed_routeQuery(maxscale::Worker::Call::action_t action, GWBUF *buffer)
+{
+    m_delayed_call_id = 0;
+    switch (action)
+    {
+    case maxscale::Worker::Call::EXECUTE:
+        real_routeQuery(buffer, true);
+        break;
+
+    case maxscale::Worker::Call::CANCEL:
+        gwbuf_free(buffer);
+        break;
+    }
+
+    return false;
+}
+
+int ThrottleSession::routeQuery(GWBUF *buffer)
+{
+    return real_routeQuery(buffer, false);
+}
+
 } // throttle

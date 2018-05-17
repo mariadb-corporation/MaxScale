@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/filter.hh>
+#include <maxscale/worker.hh>
 #include "eventcount.hh"
 
 namespace throttle
@@ -26,14 +27,18 @@ public:
     ThrottleSession(MXS_SESSION* pSession, ThrottleFilter& filter);
     ThrottleSession(const ThrottleSession&) = delete;
     ThrottleSession& operator = (const ThrottleSession&)  = delete;
+    ~ThrottleSession();
 
     int routeQuery(GWBUF* buffer);
 private:
+    bool delayed_routeQuery(maxscale::Worker::Call::action_t action,
+                            GWBUF* buffer);
+    int real_routeQuery(GWBUF* buffer, bool is_delayed);
     ThrottleFilter& m_filter;
     EventCount      m_query_count;
-    StopWatch       m_first_trigger;
-    StopWatch       m_last_trigger;
-    StopWatch       remove_me;
+    StopWatch       m_first_sample;
+    StopWatch       m_last_sample;
+    uint32_t        m_delayed_call_id; // there can be only one in flight
 
     enum class State {MEASURING, THROTTLING};
     State m_state;

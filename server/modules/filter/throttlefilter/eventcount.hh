@@ -33,7 +33,7 @@ class EventCount
 {
 public:
     explicit EventCount(const std::string& event_id, Duration time_window,
-                        Duration granularity = Duration(std::chrono::milliseconds(100)));
+                        Duration granularity = Duration(std::chrono::milliseconds(10)));
     EventCount(const EventCount&) = delete;
     EventCount& operator=(const EventCount&) = delete;
     EventCount(EventCount&&);  // can't be defaulted in gcc 4.4
@@ -74,7 +74,7 @@ class SessionCount
 {
 public:
     SessionCount(const std::string& sess_id, Duration time_window,
-                 Duration granularity = Duration(std::chrono::seconds(1)));
+                 Duration granularity = Duration(std::chrono::milliseconds(10)));
     SessionCount(const SessionCount&) = delete;
     SessionCount& operator=(const SessionCount&) = delete;
     SessionCount(SessionCount &&);  // can't be defaulted in gcc 4.4
