@@ -641,7 +641,7 @@ void TestConnections::init_maxscale(int m)
                           "chmod 664 %s/certs/*.pem;"
                           "chmod a+x %s;"
                           "%s"
-                          "iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;"
+                          "iptables -F INPUT;"
                           "rm -f %s/maxscale.log;"
                           "rm -f %s/maxscale1.log;"
                           "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
