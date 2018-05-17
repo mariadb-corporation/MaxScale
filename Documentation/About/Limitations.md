@@ -179,21 +179,16 @@ Readwritesplit does not support pipelining of JDBC batched statements. This is
 caused by the fact that readwritesplit executes the statements one at a time to
 track the state of the response.
 
-#### Prepared Statement Limitations
-
-Readwritesplit does not support the parallel execution of binary protocol
-prepared statements that use cursors. In practice this means that only one
-open cursor is allowed when readwritesplit is used.
-
-Opening more than one cursor will cause the execution of the prepared
-statements to stall.
-
 #### Limitations in multi-statement handling
 
 When a multi-statement query is executed through the readwritesplit router, it
 will always be routed to the master. See
 [`strict_multi_stmt`](../Routers/ReadWriteSplit.md#strict_multi_stmt) for more
 details.
+
+Execution of LOAD DATA LOCAL INFILE statements inside a multi-statement query is
+not supported. If one is executed MaxScale will most likely hang (see
+[MXS-1828](https://jira.mariadb.org/browse/MXS-1828)).
 
 #### Limitations in client session handling
 
