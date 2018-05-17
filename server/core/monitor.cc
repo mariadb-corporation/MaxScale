@@ -2542,6 +2542,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
     ss_dassert(!m_shutdown);
     ss_dassert(!m_thread);
+    ss_dassert(m_status == MXS_MONITOR_STOPPED);
 
     if (!m_checked)
     {
@@ -2569,7 +2570,19 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
         }
         else
         {
-            started = true;
+            // Ok, so the thread started. Let's wait until we can be certain the
+            // state has been updated.
+            m_semaphore.wait();
+
+            started = (atomic_load_int32(&m_status) == MXS_MONITOR_RUNNING);
+
+            if (!started)
+            {
+                // Ok, so the initialization failed and the thread will exit.
+                // We need to wait on it so that the thread resources will not leak.
+                thread_wait(m_thread);
+                m_thread = 0;
+            }
         }
     }
 
@@ -2587,8 +2600,6 @@ void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 
 void MonitorInstance::main()
 {
-    atomic_store_int32(&m_status, MXS_MONITOR_RUNNING);
-
     load_server_journal(m_monitor, &m_master);
 
     while (!m_shutdown)
@@ -2622,8 +2633,6 @@ void MonitorInstance::main()
             ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
-
-    atomic_store_int32(&m_status, MXS_MONITOR_STOPPED);
 }
 
 //static
@@ -2633,7 +2642,12 @@ void MonitorInstance::main(void* pArg)
 
     if (mysql_thread_init() == 0)
     {
+        atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
+        pThis->m_semaphore.post();
+
         pThis->main();
+
+        atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
 
         mysql_thread_end();
     }
@@ -2641,9 +2655,7 @@ void MonitorInstance::main(void* pArg)
     {
         MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.",
                   pThis->m_monitor->name);
-
-        // TODO: MaxScale now thinks the monitor is running, as startMonitor()
-        // TODO: already returned true.
+        pThis->m_semaphore.post();
     }
 }
 

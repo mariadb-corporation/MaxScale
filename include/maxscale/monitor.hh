@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/monitor.h>
+#include <maxscale/semaphore.hh>
 #include <maxscale/thread.h>
 
 namespace maxscale
@@ -44,12 +45,13 @@ protected:
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
-    int32_t     m_status;   /**< The current status of the monitor. */
-    THREAD      m_thread;   /**< The thread handle of the monitoring thread. */
-    int32_t     m_shutdown; /**< Non-zero if the monitor should shut down. */
-    bool        m_checked;  /**< Whether server access has been checked. */
-    std::string m_script;   /**< Launchable script. */
-    uint64_t    m_events;   /**< Enabled monitor events. */
+    int32_t     m_status;    /**< The current status of the monitor. */
+    THREAD      m_thread;    /**< The thread handle of the monitoring thread. */
+    int32_t     m_shutdown;  /**< Non-zero if the monitor should shut down. */
+    bool        m_checked;   /**< Whether server access has been checked. */
+    std::string m_script;    /**< Launchable script. */
+    uint64_t    m_events;    /**< Enabled monitor events. */
+    Semaphore   m_semaphore; /**< Semaphore for synchronizing with monitor thread. */
 
     void main();
 
