@@ -136,6 +136,7 @@ void AuroraMonitor::main()
          */
         mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
+        mon_hangup_failed_servers(m_monitor);
         servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, NULL);
         release_monitor_servers(m_monitor);
@@ -160,12 +161,6 @@ void AuroraMonitor::tick()
     for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         update_server_status(m_monitor, ptr);
-
-        if (SERVER_IS_DOWN(ptr->server))
-        {
-            /** Hang up all DCBs connected to the failed server */
-            dcb_hangup_foreach(ptr->server);
-        }
     }
 }
 
