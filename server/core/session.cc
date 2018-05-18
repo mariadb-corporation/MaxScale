@@ -106,17 +106,19 @@ MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t i
 {
     MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
     SessionVarsByName *session_variables = new (std::nothrow) SessionVarsByName;
+    DCBSet* dcb_set = new (std::nothrow) DCBSet;
 
-    if ((session == NULL) || (session_variables == NULL))
+    if ((session == NULL) || (session_variables == NULL) || (dcb_set == NULL))
     {
         MXS_FREE(session);
         delete session_variables;
-
+        delete dcb_set;
         return NULL;
     }
 
     session_initialize(session);
     session->variables = session_variables;
+    session->dcb_set = dcb_set;
     session->ses_id = id;
     return session_alloc_body(service, client_dcb, session);
 }
@@ -279,6 +281,13 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
     dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->poll.thread.id = session->client_dcb->poll.thread.id;
+    session->dcb_set->insert(dcb);
+}
+
+void session_unlink_backend_dcb(MXS_SESSION *session, DCB *dcb)
+{
+    session->dcb_set->erase(dcb);
+    session_put_ref(session);
 }
 
 /**
@@ -396,6 +405,7 @@ session_final_free(MXS_SESSION *session)
 
     delete session->variables;
     delete session->last_statements;
+    delete session->dcb_set;
     MXS_FREE(session);
 }
 

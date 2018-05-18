@@ -245,7 +245,7 @@ dcb_final_free(DCB *dcb)
                                   DCB_ROLE_SERVICE_LISTENER == dcb->dcb_role ||
                                   DCB_ROLE_INTERNAL == dcb->dcb_role);
 
-            session_put_ref(local_session);
+            session_unlink_backend_dcb(local_session, dcb);
 
             if (is_client_dcb)
             {
@@ -464,7 +464,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         MXS_DEBUG("Failed to connect to server [%s]:%d, from backend dcb %p, client dcp %p fd %d",
                   server->address, server->port, dcb, session->client_dcb, session->client_dcb->fd);
         // Remove the inc ref that was done in session_link_backend_dcb().
-        session_put_ref(dcb->session);
+        session_unlink_backend_dcb(dcb->session, dcb);
         dcb->session = NULL;
         dcb_free_all_memory(dcb);
         return NULL;
@@ -501,7 +501,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         close(dcb->fd);
         dcb->fd = DCBFD_CLOSED;
         // Remove the inc ref that was done in session_link_backend_dcb().
-        session_put_ref(dcb->session);
+        session_unlink_backend_dcb(dcb->session, dcb);
         dcb->session = NULL;
         dcb_free_all_memory(dcb);
         return NULL;
@@ -517,7 +517,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         close(dcb->fd);
         dcb->fd = DCBFD_CLOSED;
         // Remove the inc ref that was done in session_link_backend_dcb().
-        session_put_ref(dcb->session);
+        session_unlink_backend_dcb(dcb->session, dcb);
         dcb->session = NULL;
         dcb_free_all_memory(dcb);
         return NULL;
@@ -1326,7 +1326,7 @@ dcb_maybe_add_persistent(DCB *dcb)
             CHK_SESSION(local_session);
             if (SESSION_STATE_DUMMY != local_session->state)
             {
-                session_put_ref(local_session);
+                session_unlink_backend_dcb(local_session, dcb);
             }
         }
 

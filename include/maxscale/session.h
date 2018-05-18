@@ -29,12 +29,15 @@
 
 #ifdef __cplusplus
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 #include <string>
 #include <deque>
 #include <vector>
 typedef std::deque<std::vector<uint8_t> > SessionStmtQueue;
+typedef std::tr1::unordered_set<DCB*> DCBSet;
 #else
 typedef void SessionStmtQueue;
+typedef void DCBSet;
 #endif
 
 MXS_BEGIN_DECLS
@@ -211,6 +214,7 @@ typedef struct session
         GWBUF* buffer;   /*< Buffer to deliver to up. */
     } response;                               /*< Shortcircuited response */
     SessionStmtQueue*      last_statements;   /*< The N last statements by the client */
+    DCBSet*                dcb_set;           /*< Set of associated backend DCBs */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 

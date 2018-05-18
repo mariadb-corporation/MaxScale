@@ -45,6 +45,8 @@ Session::Session(Client* pClient)
 Session::~Session()
 {
     delete variables;
+    delete last_statements;
+    delete dcb_set;
 }
 
 Client& Session::client() const
