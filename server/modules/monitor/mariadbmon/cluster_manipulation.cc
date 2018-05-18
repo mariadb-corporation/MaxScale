@@ -1549,3 +1549,25 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
 
     return new_master_ok && current_master_ok && gtid_ok;
 }
+
+void MariaDBMonitor::enforce_read_only_on_slaves()
+{
+    const char QUERY[] = "SET GLOBAL read_only=1;";
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        if (server->is_slave() && !server->m_read_only &&
+            !(server->m_version != MariaDBServer::version::BINLOG_ROUTER))
+        {
+            MYSQL* conn = server->m_server_base->con;
+            if (mxs_mysql_query(conn, QUERY) == 0)
+            {
+                MXS_NOTICE("read_only set to ON on server '%s'.", server->name());
+            }
+            else
+            {
+                MXS_ERROR("Setting read_only on server '%s' failed: '%s.", server->name(), mysql_error(conn));
+            }
+        }
+    }
+}

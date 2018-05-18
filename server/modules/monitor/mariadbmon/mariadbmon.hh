@@ -132,6 +132,7 @@ private:
     int64_t m_master_gtid_domain;    /**< gtid_domain_id most recently seen on the master  */
     std::string m_external_master_host; /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
+    bool m_cluster_modified;         /**< Has an automatic failover/rejoin been performed this loop? */
 
     // Replication topology detection settings
     bool m_allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
@@ -157,6 +158,7 @@ private:
                                       *   autoselect switchover. */
     std::string m_promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
     std::string m_demote_sql_file;   /**< File with sql commands which are ran to a server being demoted. */
+    bool m_enforce_read_only_slaves; /**< Should the monitor set read-only=1 on any slave servers. */
 
     // Other settings
     std::string m_script;            /**< Script to call when state changes occur on servers */
@@ -238,9 +240,12 @@ private:
     bool start_external_replication(MariaDBServer* new_master, json_t** err_out);
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                     int seconds_remaining);
+
+    // Other methods
     void disable_setting(const char* setting);
     void load_journal();
     bool check_sql_files();
+    void enforce_read_only_on_slaves();
 };
 
 /**
