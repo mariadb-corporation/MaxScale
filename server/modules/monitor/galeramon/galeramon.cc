@@ -595,7 +595,7 @@ MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
                 }
             }
             else if (moitor_servers->server->node_id >= 0 &&
-                     (!handle->use_priority || candidate_master == NULL))
+                     (!m_use_priority || candidate_master == NULL))
             {
                 // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
