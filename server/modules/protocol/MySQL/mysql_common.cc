@@ -1709,26 +1709,32 @@ struct KillInfo
 
 static bool kill_func(DCB *dcb, void *data)
 {
+    bool rval = true;
     KillInfo* info = (KillInfo*)data;
 
-    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
-        dcb->session->ses_id == info->target_id)
+    if (dcb->session->ses_id == info->target_id)
     {
-        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+        for (auto it = dcb->session->dcb_set->begin(); it != dcb->session->dcb_set->end(); it++)
+        {
+            MySQLProtocol* proto = (MySQLProtocol*)(*it)->protocol;
 
-        if (proto->thread_id)
-        {
-            // DCB is connected and we know the thread ID so we can kill it
-            info->targets.push_back(std::make_pair(dcb->server, proto->thread_id));
+            if (proto->thread_id)
+            {
+                // DCB is connected and we know the thread ID so we can kill it
+                info->targets.push_back(std::make_pair((*it)->server, proto->thread_id));
+            }
+            else
+            {
+                // DCB is not yet connected, send a hangup to forcibly close it
+                poll_fake_hangup_event(*it);
+            }
         }
-        else
-        {
-            // DCB is not yet connected, send a hangup to forcibly close it
-            poll_fake_hangup_event(dcb);
-        }
+
+        // Found the session, stop iterating over DCBs
+        rval = false;
     }
 
-    return true;
+    return rval;
 }
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
