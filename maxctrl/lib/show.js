@@ -56,7 +56,9 @@ const session_fields = [
     {'User': 'attributes.user'},
     {'Host': 'attributes.remote'},
     {'Connected': 'attributes.connected'},
-    {'Idle': 'attributes.idle'}
+    {'Idle': 'attributes.idle'},
+    {'Connections': 'attributes.connections[].server'},
+    {'Connection IDs': 'attributes.connections[].protocol_diagnostics.connection_id'}
 ]
 
 const filter_fields = [
@@ -142,7 +144,10 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a single session. ' +
                                 'The list of sessions can be retrieved with the ' +
                                 '`list sessions` command. The <session> is the session ' +
-                                'ID of a particular session.')
+                                'ID of a particular session.\n\n' +
+                                'The `Connections` field lists the servers to which ' +
+                                'the session is connected and the `Connection IDs` ' +
+                                'field lists the IDs for those connections.')
                 .usage('Usage: show session <session>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -150,7 +155,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('sessions', 'Show all sessions', function(yargs) {
-            return yargs.epilog('Show detailed information about all sessions.')
+            return yargs.epilog('Show detailed information about all sessions. ' +
+                                'See `help show session` for more details.')
                 .usage('Usage: show sessions')
         }, function(argv) {
             maxctrl(argv, function(host) {
