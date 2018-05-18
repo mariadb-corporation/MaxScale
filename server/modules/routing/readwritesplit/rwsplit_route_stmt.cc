@@ -337,11 +337,11 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
+    gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
 
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
         qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
     {
-        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
         rses->ps_manager.store(querybuf, id);
     }
 

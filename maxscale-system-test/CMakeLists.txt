@@ -654,6 +654,10 @@ add_test_executable(mxs1824_double_cursor.cpp mxs1824_double_cursor replication 
 # https://jira.mariadb.org/browse/MXS-1831
 add_test_executable(mxs1831_unknown_param.cpp mxs1831_unknown_param replication LABELS REPL_BACKEND)
 
+# MXS-1873: Large session commands cause errors
+# https://jira.mariadb.org/browse/MXS-1873
+add_test_executable(mxs1873_large_sescmd.cpp mxs1873_large_sescmd replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
