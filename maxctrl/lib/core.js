@@ -88,6 +88,7 @@ program
     .command(require('./show.js'))
     .command(require('./set.js'))
     .command(require('./clear.js'))
+    .command(require('./drain.js'))
     .command(require('./enable.js'))
     .command(require('./disable.js'))
     .command(require('./create.js'))
