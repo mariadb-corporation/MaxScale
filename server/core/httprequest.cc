@@ -27,40 +27,6 @@ using std::deque;
 const std::string HttpRequest::HTTP_PREFIX = "http://";
 const std::string HttpRequest::HTTPS_PREFIX = "https://";
 
-/** TODO: Move this to a C++ string utility header */
-namespace maxscale
-{
-static inline string& trim(string& str)
-{
-    if (str.length())
-    {
-        if (isspace(*str.begin()))
-        {
-            string::iterator it = str.begin();
-
-            while (it != str.end() && isspace(*it))
-            {
-                it++;
-            }
-            str.erase(str.begin(), it);
-        }
-
-        if (isspace(*str.rbegin()))
-        {
-            string::reverse_iterator it = str.rbegin();
-            while (it != str.rend() && isspace(*it))
-            {
-                it++;
-            }
-
-            str.erase(it.base(), str.end());
-        }
-    }
-
-    return str;
-}
-}
-
 static void process_uri(string& uri, std::deque<string>& uri_parts)
 {
     /** Clean up trailing slashes in requested resource */

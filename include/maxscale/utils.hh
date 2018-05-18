@@ -18,6 +18,7 @@
 #include <openssl/sha.h>
 #include <zlib.h>
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <iterator>
@@ -25,9 +26,43 @@
 #include <tr1/unordered_map>
 
 #include <maxscale/buffer.h>
+#include <maxscale/utils.h>
 
 namespace maxscale
 {
+
+/**
+ * @brief Left trim a string.
+ *
+ * @param s  The string to be trimmed.
+ */
+inline void ltrim(std::string &s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+                                    std::not1(std::ptr_fun<int, int>(std::isspace))));
+}
+
+/**
+ * @brief Right trim a string.
+ *
+ * @param s  The string to be trimmed.
+ */
+inline void rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+}
+
+/**
+ * @brief Trim a string.
+ *
+ * @param s  The string to be trimmed.
+ */
+inline void trim(std::string &s)
+{
+    ltrim(s);
+    rtrim(s);
+}
 
 /**
  * @class CloserTraits utils.hh <maxscale/utils.hh>
