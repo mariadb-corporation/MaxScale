@@ -39,6 +39,7 @@ const char * const CN_DEMOTION_SQL_FILE   = "demotion_sql_file";
 
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 static const char CN_FAILCOUNT[]          = "failcount";
+static const char CN_ENFORCE_READONLY[]   = "enforce_read_only_slaves";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
@@ -55,6 +56,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     , m_id(config_get_global_options()->id)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
+    , m_cluster_modified(true)
     , m_warn_set_standalone_master(true)
 {}
 
@@ -198,6 +200,7 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
     m_switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
     m_auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
     m_auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
+    m_enforce_read_only_slaves = config_get_bool(params, CN_ENFORCE_READONLY);
     m_verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     m_master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
     m_promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
@@ -251,6 +254,8 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "Failover timeout:       %u\n", m_failover_timeout);
     dcb_printf(dcb, "Switchover timeout:     %u\n", m_switchover_timeout);
     dcb_printf(dcb, "Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Enforce read-only:      %s\n", m_enforce_read_only_slaves ?
+               "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", m_id);
     dcb_printf(dcb, "Detect replication lag: %s\n", (m_detect_replication_lag) ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Detect stale master:    %s\n", (m_detect_stale_master == 1) ?
@@ -284,6 +289,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(m_failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(m_switchover_timeout));
     json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(m_auto_rejoin));
+    json_object_set_new(rval, CN_ENFORCE_READONLY, json_boolean(m_enforce_read_only_slaves));
 
     if (!m_script.empty())
     {
@@ -430,11 +436,11 @@ void MariaDBMonitor::main_loop()
          * need to be launched.
          */
         mon_process_state_changes(m_monitor_base, m_script.c_str(), m_events);
-        bool failover_performed = false; // Has an automatic failover been performed (or attempted) this loop?
+        m_cluster_modified = false;
 
         if (m_auto_failover)
         {
-            failover_performed = handle_auto_failover();
+            m_cluster_modified = handle_auto_failover();
         }
 
         /* log master detection failure of first master becomes available after failure */
@@ -450,10 +456,18 @@ void MariaDBMonitor::main_loop()
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
         if (!config_get_global_options()->passive && m_auto_rejoin &&
-            !failover_performed && cluster_can_be_joined())
+            !m_cluster_modified && cluster_can_be_joined())
         {
             // Check if any servers should be autojoined to the cluster and try to join them.
             handle_auto_rejoin();
+        }
+
+        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+         * perform this if cluster has been modified this loop since it may not be clear which server
+         * should be a slave. */
+        if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+        {
+            enforce_read_only_on_slaves();
         }
 
         mon_hangup_failed_servers(m_monitor_base);
@@ -598,6 +612,7 @@ void MariaDBMonitor::handle_auto_rejoin()
         if (joins > 0)
         {
             MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+            m_cluster_modified = true;
         }
         if (joins < joinable_servers.size())
         {
@@ -1130,6 +1145,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
             {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, "10"},
             {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_ENFORCE_READONLY, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
             {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
             {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
