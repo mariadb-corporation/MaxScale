@@ -183,7 +183,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         maxscaled_close,                /**< Close                         */
         maxscaled_listen,               /**< Create a listener             */
         NULL,                           /**< Authentication                */
-        NULL,                           /**< Session                       */
         mxsd_default_auth,              /**< Default authenticator         */
         NULL,                           /**< Connection limit reached      */
         NULL

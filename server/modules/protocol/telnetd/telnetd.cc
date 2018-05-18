@@ -102,7 +102,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         telnetd_close,                  /**< Close                         */
         telnetd_listen,                 /**< Create a listener             */
         NULL,                           /**< Authentication                */
-        NULL,                           /**< Session                       */
         telnetd_default_auth,           /**< Default authenticator         */
         NULL,                           /**< Connection limit reached      */
         NULL

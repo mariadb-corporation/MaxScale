@@ -105,9 +105,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         test_close,       /**< Close                         */
         test_listen,      /**< Create a listener             */
         test_auth,        /**< Authentication                */
-        test_session,     /**< Session                       */
-        test_default_auth, /**< Default authenticator         */
-        test_connection_limit   /**< Connection limit        */
+        test_default_auth, /**< Default authenticator        */
+        test_connection_limit, /**< Connection limit         */
+        NULL
     };
 
     static MXS_MODULE info =

@@ -82,7 +82,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_backend_close,           /* Close                         */
         NULL,                       /* Listen                        */
         gw_change_user,             /* Authentication                */
-        NULL,                       /* Session                       */
         gw_backend_default_auth,    /* Default authenticator         */
         NULL,                       /* Connection limit reached      */
         gw_connection_established

@@ -81,7 +81,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         httpd_close,        /**< Close                         */
         httpd_listen,       /**< Create a listener             */
         NULL,               /**< Authentication                */
-        NULL,               /**< Session                       */
         httpd_default_auth, /**< Default authenticator         */
         NULL,               /**< Connection limit reached      */
         NULL
