@@ -714,7 +714,7 @@ static bool multi_source_replication(MYSQL *conn, int node)
     MYSQL_RES *res;
 
     if (mysql_query(conn, "SHOW ALL SLAVES STATUS") == 0 &&
-            (res = mysql_store_result(conn)))
+        (res = mysql_store_result(conn)))
     {
         if (mysql_num_rows(res) == 1)
         {
@@ -1294,7 +1294,7 @@ void Mariadb_nodes::close_active_connections()
     }
 
     const char *sql =
-            "select id from information_schema.processlist where id != @@pseudo_thread_id and user not in ('system user', 'repl')";
+        "select id from information_schema.processlist where id != @@pseudo_thread_id and user not in ('system user', 'repl')";
 
     for (int i = 0; i < N; i++)
     {
@@ -1327,7 +1327,7 @@ void Mariadb_nodes::stash_server_settings(int node)
 
 void Mariadb_nodes::restore_server_settings(int node)
 {
-     ssh_node(node, "sudo mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/", true);
+    ssh_node(node, "sudo mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/", true);
 }
 
 void Mariadb_nodes::disable_server_setting(int node, const char* setting)
@@ -1337,8 +1337,8 @@ void Mariadb_nodes::disable_server_setting(int node, const char* setting)
 
 void Mariadb_nodes::add_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server.cnf", setting);
-    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server.cnf", setting);
+    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server*.cnf", setting);
+    ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server*.cnf", setting);
 }
 
 void Mariadb_nodes::reset_server_settings(int node)
@@ -1397,7 +1397,9 @@ int Mariadb_nodes::prepare_server(int i)
     ssh_node_f(i, true, "%s", stop_db_command[i]);
     sleep(5);
     ssh_node(i, "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf", true);
-    ssh_node(i, "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart", true);
+    ssh_node(i,
+             "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart",
+             true);
     version = ssh_node_output(i, "/usr/sbin/mysqld --version", false, &ec);
     if (ec == 0)
     {
@@ -1414,7 +1416,8 @@ int Mariadb_nodes::prepare_server(int i)
             // password in the log and reseting passord to empty string
             ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
             ssh_node(i, start_db_command[i], true);
-            tmp_pass = ssh_node_output(i, "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'", true, &ec);
+            tmp_pass = ssh_node_output(i,
+                                       "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'", true, &ec);
             ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
             ssh_node_f(i, false, "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", tmp_pass);
             ssh_node(i, stop_db_command[i], true);
@@ -1466,13 +1469,13 @@ void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
 {
     std::stringstream change_master;
     change_master << "CHANGE MASTER TO MASTER_HOST = '" << IP[master]
-        << "', MASTER_PORT = " << port[master] << ", MASTER_USE_GTID = " << type << ", "
-        "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+                  << "', MASTER_PORT = " << port[master] << ", MASTER_USE_GTID = " << type << ", "
+                  "MASTER_USER='repl', MASTER_PASSWORD='repl';";
 
     if (verbose)
     {
         std::cout << "Server " << slave + 1 << " starting to replicate from server " << master + 1 << std::endl;
-       std::cout << "Query is '" << change_master.str() << "'" << std::endl;
+        std::cout << "Query is '" << change_master.str() << "'" << std::endl;
     }
 
     execute_query(nodes[slave], "STOP SLAVE;");
