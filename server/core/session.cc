@@ -1042,6 +1042,15 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
         json_object_set_new(attr, "idle", json_real(idle));
     }
 
+    json_t* dcb_arr = json_array();
+
+    for (auto it = session->dcb_set->begin(); it != session->dcb_set->end(); it++)
+    {
+        json_array_append_new(dcb_arr, dcb_to_json(*it));
+    }
+
+    json_object_set_new(attr, "connections", dcb_arr);
+
     json_object_set_new(data, CN_ATTRIBUTES, attr);
     json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
 

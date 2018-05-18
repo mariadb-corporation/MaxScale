@@ -3749,3 +3749,15 @@ static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userd
 
     return 0;
 }
+
+json_t* dcb_to_json(DCB* dcb)
+{
+    json_t* obj = json_object();
+
+    char buf[25];
+    snprintf(buf, sizeof(buf), "%p", dcb);
+    json_object_set_new(obj, "id", json_string(buf));
+    json_object_set_new(obj, "server", json_string(dcb->server->name));
+
+    return obj;
+}

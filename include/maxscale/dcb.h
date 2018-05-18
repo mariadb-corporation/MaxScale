@@ -401,6 +401,15 @@ int dcb_get_port(const DCB *dcb);
 DCB* dcb_get_current();
 
 /**
+ * Get JSON representation of the DCB
+ *
+ * @param dcb DCB to convert to JSON
+ *
+ * @return The JSON representation
+ */
+json_t* dcb_to_json(DCB* dcb);
+
+/**
  * DCB flags values
  */
 #define DCBF_HUNG               0x0002  /*< Hangup has been dispatched */
