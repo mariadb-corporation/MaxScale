@@ -3,6 +3,7 @@
   {
         "hostname" : "maxscale",
         "box" : "$box",
+        "memory_size" : "4096",
         "product" : {
                 "name": "maxscale"
         }

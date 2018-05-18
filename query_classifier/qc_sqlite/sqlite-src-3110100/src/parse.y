@@ -629,7 +629,7 @@ columnid(A) ::= nm(X). {
   PREVIOUS
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
-  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATUS
+  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATEMENT STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
@@ -3155,6 +3155,14 @@ transaction_characteristics ::= transaction_characteristics COMMA transaction_ch
 
 cmd ::= SET set_scope(X) TRANSACTION transaction_characteristics. {
   maxscaleSet(pParse, X, MXS_SET_TRANSACTION, 0);
+}
+
+cmd ::= SET STATEMENT variable_assignments(X) FOR cmd. {
+  // The parsing of cmd will cause the relevant maxscale-callback to
+  // be called, so we neither need to call it here, nor free cmd (as
+  // it will be freed by that callback). The variable definitions we
+  // just throw away, as they are of no interest.
+  sqlite3ExprListDelete(pParse->db, X);
 }
 
 //////////////////////// The USE statement ////////////////////////////////////

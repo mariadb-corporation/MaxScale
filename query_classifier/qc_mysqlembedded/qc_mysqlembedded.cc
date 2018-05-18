@@ -1793,6 +1793,7 @@ static void parsing_info_done(void* ptr)
                 free(field.table);
                 free(field.column);
             }
+            free(fi.fields);
         }
         free(pi->function_infos);
 
