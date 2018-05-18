@@ -349,11 +349,11 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
     bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
+    gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
 
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
         qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
     {
-        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
         m_qc.ps_store(querybuf, id);
     }
 

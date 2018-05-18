@@ -38,6 +38,7 @@ const char* qc_mysql_get_current_db(MXS_SESSION* session)
 bool qc_mysql_is_ps_command(uint8_t cmd)
 {
     return cmd == MXS_COM_STMT_EXECUTE ||
+           cmd == MXS_COM_STMT_BULK_EXECUTE ||
            cmd == MXS_COM_STMT_SEND_LONG_DATA ||
            cmd == MXS_COM_STMT_CLOSE ||
            cmd == MXS_COM_STMT_FETCH ||
