@@ -107,6 +107,7 @@ extern "C"
             NULL,                                   /* Authentication                */
             gw_default_auth,                        /* Default authenticator         */
             gw_connection_limit,                    /* Send error connection limit   */
+            NULL,
             NULL
         };
 

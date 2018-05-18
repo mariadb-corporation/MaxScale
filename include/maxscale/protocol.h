@@ -20,6 +20,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -168,6 +169,15 @@ typedef struct mxs_protocol
      * @return True if the connection is fully established and can be pooled
      */
     bool (*established)(struct dcb* );
+
+    /**
+     * Provide JSON formatted diagnostics about a DCB
+     *
+     * @param dcb DCB to diagnose
+     *
+     * @return JSON representation of the DCB
+     */
+    json_t* (*diagnostics_json)(struct dcb* dcb);
 
 } MXS_PROTOCOL;
 

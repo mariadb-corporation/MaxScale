@@ -3759,5 +3759,12 @@ json_t* dcb_to_json(DCB* dcb)
     json_object_set_new(obj, "id", json_string(buf));
     json_object_set_new(obj, "server", json_string(dcb->server->name));
 
+    if (dcb->func.diagnostics_json)
+    {
+        json_t* json = dcb->func.diagnostics_json(dcb);
+        ss_dassert(json);
+        json_object_set_new(obj, "protocol_diagnostics", json);
+    }
+
     return obj;
 }

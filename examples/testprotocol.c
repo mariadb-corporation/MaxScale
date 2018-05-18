@@ -107,6 +107,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         test_auth,        /**< Authentication                */
         test_default_auth, /**< Default authenticator        */
         test_connection_limit, /**< Connection limit         */
+        NULL,
         NULL
     };
 

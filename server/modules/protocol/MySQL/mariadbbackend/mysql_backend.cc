@@ -57,6 +57,7 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
                                    in_port_t *port_out);
 static bool gw_connection_established(DCB* dcb);
+json_t* gw_json_diagnostics(DCB* dcb);
 
 extern "C"
 {
@@ -84,7 +85,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_change_user,             /* Authentication                */
         gw_backend_default_auth,    /* Default authenticator         */
         NULL,                       /* Connection limit reached      */
-        gw_connection_established
+        gw_connection_established,
+        gw_json_diagnostics,
     };
 
     static MXS_MODULE info =
@@ -2198,4 +2200,12 @@ static bool gw_connection_established(DCB* dcb)
         proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE &&
         (proto->ignore_replies == 0)
         && !proto->stored_query;
+}
+
+json_t* gw_json_diagnostics(DCB* dcb)
+{
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol);
+    json_t* obj = json_object();
+    json_object_set_new(obj, "connection_id", json_integer(proto->thread_id));
+    return obj;
 }

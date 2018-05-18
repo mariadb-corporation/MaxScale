@@ -89,6 +89,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_default_auth, /* default authentication */
         NULL,
         NULL,
+        NULL,
     };
 
     static MXS_MODULE info =
