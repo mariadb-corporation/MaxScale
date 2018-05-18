@@ -442,6 +442,7 @@ static Keyword aKeywordTable[] = {
   { "SET",              "TK_SET",          ALWAYS                 },
 #ifdef MAXSCALE
   { "START",            "TK_START",        ALWAYS                 },
+  { "STATEMENT",        "TK_STATEMENT",    ALWAYS                 },
   { "STATUS",           "TK_STATUS",       ALWAYS                 },
   { "STRAIGHT_JOIN",    "TK_STRAIGHT_JOIN",ALWAYS                 },
 #endif
