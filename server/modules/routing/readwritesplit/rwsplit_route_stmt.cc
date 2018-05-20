@@ -892,7 +892,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
     GWBUF* rval = origin;
     const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
                             MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
-    const char *gtid_wait_timeout = m_router->config().causal_read_timeout.c_str();
+    const char *gtid_wait_timeout = m_router->config().causal_reads_timeout.c_str();
     const char *gtid_position = m_gtid_pos.c_str();
 
     /* Create a new buffer to store prefix sql */
@@ -952,7 +952,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF *send_buf = gwbuf_clone(querybuf);
 
-    if (cmd == COM_QUERY && m_router->config().enable_causal_read && !m_gtid_pos .empty())
+    if (cmd == COM_QUERY && m_router->config().causal_reads && !m_gtid_pos .empty())
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;

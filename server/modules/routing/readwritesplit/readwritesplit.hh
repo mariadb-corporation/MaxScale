@@ -159,15 +159,15 @@ struct Config
         max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
         rw_max_slave_conn_percent(0),
         max_slave_connections(0),
-        enable_causal_read(config_get_bool(params, "enable_causal_read")),
-        causal_read_timeout(config_get_string(params, "causal_read_timeout")),
+        causal_reads(config_get_bool(params, "enable_causal_read")),
+        causal_reads_timeout(config_get_string(params, "causal_read_timeout")),
         master_reconnection(config_get_bool(params, "master_reconnection")),
         delayed_retry(config_get_bool(params, "delayed_retry")),
         delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout")),
         transaction_replay(config_get_bool(params, "transaction_replay")),
         trx_max_size(config_get_size(params, "transaction_replay_max_size"))
     {
-        if (enable_causal_read)
+        if (causal_reads)
         {
             retry_failed_reads = true;
         }
@@ -190,13 +190,13 @@ struct Config
     int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves to use for
                                                   * each connection*/
     int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
-    bool              enable_causal_read;        /**< Enable causual read */
-    std::string       causal_read_timeout;       /**< Timeout, second parameter of function master_wait_gtid */
+    bool              causal_reads;              /**< Enable causual read */
+    std::string       causal_reads_timeout;      /**< Timeout, second parameter of function master_wait_gtid */
     bool              master_reconnection;       /**< Allow changes in master server */
     bool              delayed_retry;             /**< Delay routing if no target found */
     uint64_t          delayed_retry_timeout;     /**< How long to delay until an error is returned */
     bool              transaction_replay;        /**< Replay failed transactions */
-    size_t            trx_max_size;               /**< Max transaction size for replaying */
+    size_t            trx_max_size;              /**< Max transaction size for replaying */
 };
 
 /**

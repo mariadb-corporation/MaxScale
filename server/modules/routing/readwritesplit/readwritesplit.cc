@@ -338,10 +338,10 @@ void RWSplit::diagnostics(DCB *dcb)
                config().master_accept_reads ? "true" : "false");
     dcb_printf(dcb, "\tconnection_keepalive:       %d\n",
                config().connection_keepalive);
-    dcb_printf(dcb, "\tenable_causal_read:       %s\n",
-               config().enable_causal_read ? "true" : "false");
-    dcb_printf(dcb, "\tcausal_read_timeout:       %s\n",
-               config().causal_read_timeout.c_str());
+    dcb_printf(dcb, "\tcausal_reads:       %s\n",
+               config().causal_reads ? "true" : "false");
+    dcb_printf(dcb, "\tcausal_reads_timeout:       %s\n",
+               config().causal_reads_timeout.c_str());
     dcb_printf(dcb, "\tmaster_reconnection:       %s\n",
                config().master_reconnection ? "true" : "false");
     dcb_printf(dcb, "\tdelayed_retry:        %s\n",
@@ -469,8 +469,8 @@ extern "C" MXS_MODULE *MXS_CREATE_MODULE()
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
-            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
-            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
+            {"causal_reads", MXS_MODULE_PARAM_BOOL, "false"},
+            {"causal_reads_timeout", MXS_MODULE_PARAM_STRING, "120"},
             {"master_reconnection", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry", MXS_MODULE_PARAM_BOOL, "false"},
             {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},

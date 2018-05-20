@@ -356,7 +356,7 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
 
 GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& backend)
 {
-    if (m_config.enable_causal_read)
+    if (m_config.causal_reads)
     {
         if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
         {
@@ -474,7 +474,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
 
-        if (m_config.enable_causal_read)
+        if (m_config.causal_reads)
         {
             // The reply should never be complete while we are still waiting for the header.
             ss_dassert(m_wait_gtid != WAITING_FOR_HEADER);
