@@ -1871,13 +1871,13 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                     mxs_leint_consume(&ptr); // Length of the overall entity.
                     mxs_leint_consume(&ptr); // encoding specification
                     var_value = mxs_lestr_consume_dup(&ptr);
-                    gwbuf_add_property(buff, (char *)"gtid", var_value);
+                    gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
                     MXS_FREE(var_value);
                     break;
                 case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
                     mxs_leint_consume(&ptr); //length
                     var_value = mxs_lestr_consume_dup(&ptr);
-                    gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
+                    gwbuf_add_property(buff, "trx_characteristics", var_value);
                     MXS_FREE(var_value);
                     break;
                 case SESSION_TRACK_SYSTEM_VARIABLES:

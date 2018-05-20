@@ -955,7 +955,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     if (cmd == COM_QUERY && m_router->config().enable_causal_read && !m_gtid_pos .empty())
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
-        m_waiting_for_gtid = true;
+        m_wait_gtid = WAITING_FOR_HEADER;
     }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE &&

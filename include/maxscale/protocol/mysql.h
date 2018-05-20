@@ -315,6 +315,12 @@ typedef enum
 static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) - 1;
 
 /**
+ * A GWBUF property with this name will contain the latest GTID in string form.
+ * This information is only available in OK packets.
+ */
+static const char* const MXS_LAST_GTID = "last_gtid";
+
+/**
  * List of server commands, and number of response packets are stored here.
  * server_command_t is used in MySQLProtocol structure, so for each DCB there is
  * one MySQLProtocol and one server command list.

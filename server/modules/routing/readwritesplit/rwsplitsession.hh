@@ -59,6 +59,13 @@ public:
         TARGET_RLAG_MAX     = maxscale::QueryClassifier::TARGET_RLAG_MAX,
     };
 
+    enum wait_gtid_state
+    {
+        NONE,
+        WAITING_FOR_HEADER,
+        UPDATING_PACKETS
+    };
+
     virtual ~RWSplitSession()
     {
     }
@@ -132,7 +139,7 @@ public:
     ClientHandleMap         m_ps_handles;  /**< Client PS handle to internal ID mapping */
     ExecMap                 m_exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     std::string             m_gtid_pos; /**< Gtid position for causal read */
-    bool                    m_waiting_for_gtid; /**< Waiting for MASTER_GTID_WAIT reply */
+    wait_gtid_state         m_wait_gtid; /**< State of MASTER_GTID_WAIT reply */
     uint32_t                m_next_seq; /**< Next packet's sequence number */
     mxs::QueryClassifier    m_qc; /**< The query classifier. */
     uint64_t                m_retry_duration; /**< Total time spent retrying queries */

@@ -36,7 +36,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_sent_sescmd(0),
     m_recv_sescmd(0),
     m_gtid_pos(""),
-    m_waiting_for_gtid(false),
+    m_wait_gtid(NONE),
     m_next_seq(0),
     m_qc(this, session, instance->config().use_sql_variables_in),
     m_retry_duration(0),
@@ -245,18 +245,23 @@ bool RWSplitSession::route_stored_query()
  */
 GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
 {
-    // MASTER_WAIT_GTID is complete, discard the OK packet or return the ERR packet
-    m_waiting_for_gtid = false;
-
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
     gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN + 1, header_and_command);
 
     if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK)
     {
+        // MASTER_WAIT_GTID is complete, discard the OK packet or return the ERR packet
+        m_wait_gtid = UPDATING_PACKETS;
+
         // Discard the OK packet and start updating sequence numbers
         uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
         m_next_seq = 1;
         buffer = gwbuf_consume(buffer, packet_len);
+    }
+    else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
+    {
+        // The MASTER_WAIT_GTID command failed and no further packets will come
+        m_wait_gtid = NONE;
     }
 
     return buffer;
@@ -356,19 +361,19 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& bac
         if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
         {
             /** Save gtid position */
-            char *tmp = gwbuf_get_property(writebuf, (char *)"gtid");
+            char *tmp = gwbuf_get_property(writebuf, MXS_LAST_GTID);
             if (tmp)
             {
                 m_gtid_pos = std::string(tmp);
             }
         }
 
-        if (m_waiting_for_gtid)
+        if (m_wait_gtid == WAITING_FOR_HEADER)
         {
             writebuf = discard_master_wait_gtid_result(writebuf);
         }
 
-        if (writebuf)
+        if (m_wait_gtid == UPDATING_PACKETS && writebuf)
         {
             correct_packet_sequence(writebuf);
         }
@@ -420,11 +425,6 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
 
-    if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
-    {
-        return; // Nothing to route, return
-    }
-
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
         /** If we receive an unexpected response from the server, the internal
@@ -433,6 +433,11 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         log_unexpected_response(backend_dcb, writebuf);
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         return;
+    }
+
+    if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
+    {
+        return; // Nothing to route, return
     }
 
     if (m_config.transaction_replay && m_can_replay_trx &&
@@ -468,6 +473,13 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         ss_dassert(m_expected_responses >= 0);
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
+
+        if (m_config.enable_causal_read)
+        {
+            // The reply should never be complete while we are still waiting for the header.
+            ss_dassert(m_wait_gtid != WAITING_FOR_HEADER);
+            m_wait_gtid = NONE;
+        }
 
         if (backend->local_infile_requested())
         {
