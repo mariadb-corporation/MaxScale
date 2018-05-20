@@ -391,6 +391,65 @@ that exceeds this limit will not be replayed. The default size limit is 1
 MiB. Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
 
+### `causal_reads`
+
+Enable causal reads. This parameter is disabled by default and was introduced in
+MaxScale 2.3.0.
+
+If a client connection modifies the database and `causal_reads` is enabled, any
+subsequent reads performed on slave servers will be done in a manner that
+prevents replication lag from affecting the results. This only applies to the
+modifications done by the client itself.
+
+**Note:** This feature requires MariaDB 10.2.X (TODO: update this once
+  it's merged) or newer to function. In addition to this, the
+  `session_track_system_variables` parameter must be set to `last_gtid`.
+
+A practical example can be given by the following set of SQL commands executed
+with `autocommit=1`.
+
+```sql
+INSERT INTO test.t1 (id) VALUES (1);
+SELECT * FROM test.t1 WHERE id = 1;
+```
+
+As the statements are not executed inside a transaction, from the load balancers
+point of view, the latter statement can be routed to a slave server. The problem
+with this is that if the value that was inserted on the master has not yet
+replicated to the server where the SELECT statement is being performed, it can
+appear as if the value we just inserted is not there.
+
+By prefixing these types of SELECT statements with a command that guarantees
+consistent results for the reads, read scalability can be improved without
+reduced consistency.
+
+The set of example SQL above will be translated by MaxScale into the following
+statements.
+
+```sql
+INSERT INTO test.t1 (id) VALUES (1);
+SET @maxscale_secret_variable=(
+    SELECT CASE
+           WHEN MASTER_GTID_WAIT('0-3000-8', 120) = 0 THEN 1
+           ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES)
+    END);
+SELECT * FROM test.t1 WHERE id = 1;
+```
+
+The `SET` command will synchronize the slave to a certain logical point in
+the replication stream (see
+[MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
+for more details). If the slave has not caught up to the master within the
+configured time, an error will be returned. To the client side
+application, this will appear as an error on the statement that they were
+performing. This is caused by the fact that the syncronization command is
+executed with the original command as a multi-statement command.
+
+### `causal_reads_timeout`
+
+The timeout for the slave synchronization done by `causal_reads`. The
+default value is 120 seconds.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint
