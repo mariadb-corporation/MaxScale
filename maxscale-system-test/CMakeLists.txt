@@ -675,6 +675,10 @@ add_test_executable(mxs1773_failing_ldli.cpp mxs1773_failing_ldli replication LA
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1776_ps_exec_hang.cpp mxs1776_ps_exec_hang replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1778: Use GTID from OK packets for consistent reads
+# https://jira.mariadb.org/browse/MXS-1776
+add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1786: Hang with COM_STATISTICS
 # https://jira.mariadb.org/browse/MXS-1786
 add_test_executable(mxs1786_statistics.cpp mxs1786_statistics replication LABELS readwritesplit REPL_BACKEND)
