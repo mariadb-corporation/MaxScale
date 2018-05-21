@@ -4,8 +4,6 @@
  * - check SELECT from backend
  */
 
-
-
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
@@ -30,7 +28,7 @@ void check_val(MYSQL* conn, TestConnections* Test)
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->set_timeout(30);
 
     Mariadb_nodes * nodes;
     if (strstr(Test->test_name, "galera") != NULL)
@@ -43,34 +41,13 @@ int main(int argc, char *argv[])
         nodes = Test->repl;
     }
 
-
-    /*
-    iconv_t converter = iconv_open ("koi8-r", "utf-8");
-    Test->tprintf("errno %d\n", errno);
-
-    char in_buf[] = "Кот";
-    char out_buf[100];
-    char *in_ptr = in_buf;
-    char *out_ptr = out_buf;
-    size_t in_size = strlen(in_buf);
-    size_t out_size = 100;
-
-    size_t n = iconv(converter, &in_ptr, &in_size, &out_ptr, &out_size);
-
-    Test->tprintf("n = %d\n", n);
-    //Test->tprintf("UTF-8: %s\n", out_buf);
-
-    iconv_close(converter);
-    */
-
     Test->maxscales->connect_maxscale(0);
-    Test->set_timeout(10);
+    Test->set_timeout(30);
     nodes->connect();
 
-    Test->set_timeout(10);
+    Test->set_timeout(30);
     MYSQL * conn = Test->maxscales->conn_rwsplit[0];
 
-    //Test->try_query(conn, (char *) "set names utf8mb4;");
     execute_query_silent(conn, (char *) "DROP TABLE t2;");
     Test->try_query(conn, (char *) "CREATE TABLE t2 (x varchar(10));");
     char sql[256];
@@ -79,6 +56,7 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(5);
 
+    Test->set_timeout(30);
     check_val(Test->maxscales->conn_rwsplit[0], Test);
     check_val(Test->maxscales->conn_master[0], Test);
     check_val(Test->maxscales->conn_slave[0], Test);
@@ -88,8 +66,7 @@ int main(int argc, char *argv[])
         Test->tprintf("Node %d\n", i);
         check_val(nodes->nodes[i], Test);
     }
-
-    //execute_query_silent(conn, (char *) "DROP TABLE t2;");
+    Test->stop_timeout();
 
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;

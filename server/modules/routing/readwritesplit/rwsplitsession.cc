@@ -199,6 +199,7 @@ bool RWSplitSession::route_stored_query()
      * to wait for a response before attempting another reroute */
     while (m_query_queue)
     {
+        MXS_INFO("Routing stored queries");
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&m_query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
 
