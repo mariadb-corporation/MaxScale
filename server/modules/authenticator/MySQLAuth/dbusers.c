@@ -58,7 +58,8 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
-    const char* password = strstr(server_version, "5.7.") ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.")
+                           ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
     const char *with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
