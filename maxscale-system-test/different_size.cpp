@@ -81,7 +81,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
         {
             size_t size = 0x0ffffff * i + j;
             Test->tprintf("Trying event app. %lu bytes", size);
-            Test->set_timeout(240);
+            Test->set_timeout(300);
 
             char* event = create_event_size(size);
             conn = connect_to_serv(Test, binlog);
