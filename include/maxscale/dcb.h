@@ -232,13 +232,6 @@ void dcb_close(DCB *);
  */
 void dcb_close_in_owning_thread(DCB *dcb);
 
-/**
- * Add a DCB to the owner's list
- *
- * @param dcb DCB to add
- */
-void dcb_add_to_list(DCB *dcb);
-
 void printAllDCBs();                         /* Debug to print all DCB in the system */
 void printDCB(DCB *);                        /* Debug print routine */
 void dprintDCBList(DCB *);                 /* Debug print DCB list statistics */
