@@ -65,6 +65,49 @@ inline void trim(std::string &s)
 }
 
 /**
+ * @brief Left-trimmed copy of a string.
+ *
+ * @param s  The string to the trimmed.
+ *
+ * @return A left-trimmed copy of the string.
+ */
+inline std::string ltrimmed_copy(const std::string& original)
+{
+    std::string s(original);
+    ltrim(s);
+    return s;
+}
+
+/**
+ * @brief Right-trimmed copy of a string.
+ *
+ * @param s  The string to the trimmed.
+ *
+ * @return A right-trimmed copy of the string.
+ */
+inline std::string rtrimmed_copy(const std::string& original)
+{
+    std::string s(original);
+    rtrim(s);
+    return s;
+}
+
+/**
+ * @brief Trimmed copy of a string.
+ *
+ * @param s  The string to the trimmed.
+ *
+ * @return A trimmed copy of the string.
+ */
+inline std::string trimmed_copy(const std::string& original)
+{
+    std::string s(original);
+    ltrim(s);
+    rtrim(s);
+    return s;
+}
+
+/**
  * @class CloserTraits utils.hh <maxscale/utils.hh>
  *
  * A traits class used by Closer. To be specialized for all types that are
