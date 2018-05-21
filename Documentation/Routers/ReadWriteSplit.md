@@ -154,6 +154,30 @@ reported by the server itself.
 `LEAST_BEHIND_MASTER` does not take server weights into account when choosing a
 server.
 
+#### Server Weights and `slave_selection_criteria`
+
+The following formula is used to calculate a score for a server when the
+`weightby` parameter is defined.
+
+```
+score = x / w
+```
+
+`x` is the absolute value of the chosen metric (queries, connections) and
+`w` is the weight of the server. The value of `w` is the relative weight
+of the server in relation to all the servers configured for the
+service. The server with the highest score that fulfills all other
+criteria is chosen as the target server.
+
+Read the [configuration guide](../Getting-Started/Configuration-Guide.md#weightby)
+for a more detailed example on how the weights are calculated.
+
+For `LEAST_CURRENT_OPERATIONS`, the metric is number of active queries on
+the candidate server, for `LEAST_GLOBAL_CONNECTIONS` and
+`LEAST_ROUTER_CONNECTIONS` it is the number of open connections and for
+`LEAST_BEHIND_MASTER` it is the number of seconds a server is behind the
+master.
+
 #### Interaction Between `slave_selection_criteria` and `max_slave_connections`
 
 Depending on the value of `max_slave_connections`, the slave selection criteria

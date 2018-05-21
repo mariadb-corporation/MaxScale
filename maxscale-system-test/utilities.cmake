@@ -15,7 +15,6 @@ endfunction()
 # test set, the function should be called as follows:
 #     add_test_executable(simple_test.cpp simple_test simple_config LABELS some_label)
 function(add_test_executable source name template)
-  file(APPEND templates "${name} ${template}\n")
   add_template(${name} ${template})
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
@@ -31,7 +30,6 @@ endfunction()
 
 # Same as add_test_executable, but do not add executable into tests list
 function(add_test_executable_notest source name template)
-  file(APPEND templates "${name} ${template}\n")
   add_template(${name} ${template})
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
@@ -39,7 +37,6 @@ endfunction()
 
 # Add a test which uses another test as the executable
 function(add_test_derived name executable template)
-  file(APPEND templates "${name} ${template}\n")
   add_template(${name} ${template})
   add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -55,7 +52,6 @@ endfunction()
 # The naming of the templates follow the same principles as add_test_executable.
 # also suitable for symlinks
 function(add_test_script name script template labels)
-  file(APPEND templates "${name} ${template}\n")
   add_template(${name} ${template})
   add_test(NAME ${name} COMMAND ${CMAKE_SOURCE_DIR}/${script} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 

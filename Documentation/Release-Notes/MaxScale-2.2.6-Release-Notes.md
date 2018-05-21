@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.2.6 Release Notes -- 2018-05
+# MariaDB MaxScale 2.2.6 Release Notes -- 2018-05-21
 
 Release 2.2.6 is a GA release.
 
@@ -8,9 +8,18 @@ release 2.2.5.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## New Features
+
+* It is now possible to configure the MariaDB Monitor to turn
+  on the read_only flag of a server it deems is a slave.
+
 ## Bug fixes
 
+* [MXS-1874](https://jira.mariadb.org/browse/MXS-1874) SET STATEMENT ... FOR is wrongly classified
+* [MXS-1873](https://jira.mariadb.org/browse/MXS-1873) Errors with large session commands
+* [MXS-1866](https://jira.mariadb.org/browse/MXS-1866) Prepared statements do not work
 * [MXS-1861](https://jira.mariadb.org/browse/MXS-1861) masking filter logs warnings with multistatements
+* [MXS-1852](https://jira.mariadb.org/browse/MXS-1852) mysql_client_test test_bug17309863 failed
 * [MXS-1847](https://jira.mariadb.org/browse/MXS-1847) Race condition in server_get_parameter
 * [MXS-1846](https://jira.mariadb.org/browse/MXS-1846) Wrong packet number in KILL command error
 * [MXS-1843](https://jira.mariadb.org/browse/MXS-1843) Sporadic test_logthrottling failures on Ubuntu
