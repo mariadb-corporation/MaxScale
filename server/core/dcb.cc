@@ -2005,7 +2005,8 @@ static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
         if (dcb->state == DCB_STATE_POLLING && dcb->server &&
             dcb->server == server)
         {
-            poll_fake_hangup_event(dcb);
+            dcb->flags |= DCBF_HUNG;
+            dcb->func.hangup(dcb);
         }
     }
 }
