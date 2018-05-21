@@ -148,7 +148,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
     route_target_t route_target = info.target();
     bool not_locked_to_master = !is_locked_to_master();
 
-    if (not_locked_to_master && mxs_mysql_is_ps_command(command))
+    if (not_locked_to_master && mxs_mysql_is_ps_command(command) && !m_qc.large_query())
     {
         /** Replace the client statement ID with our internal one only if the
          * target node is not the current master */
@@ -967,7 +967,17 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
 
     bool large_query = is_large_query(querybuf);
 
-    if (target->write(send_buf, response))
+    /**
+     * If we are starting a new query, we use RWBackend::write, otherwise we use
+     * RWBackend::continue_write to continue an ongoing query. RWBackend::write
+     * will do the replacement of PS IDs which must not be done if we are
+     * continuing an ongoing query.
+     */
+    bool success = !m_qc.large_query() ?
+                   target->write(send_buf, response) :
+                   target->continue_write(send_buf);
+
+    if (success)
     {
         if (store)
         {

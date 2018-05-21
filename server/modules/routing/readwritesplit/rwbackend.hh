@@ -65,7 +65,36 @@ public:
 
     bool execute_session_command();
     bool continue_session_command(GWBUF* buffer);
+
+    /**
+     * Write a query to the backend
+     *
+     * This function handles the replacement of the prepared statement IDs from
+     * the internal ID to the server specific one. Trailing parts of large
+     * packets should use RWBackend::continue_write.
+     *
+     * @param buffer Buffer to write
+     * @param type   Whether a response is expected
+     *
+     * @return True if writing was successful
+     */
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
+
+    /**
+     * Continue a previously started write
+     *
+     * This should only be used when RWBackend::write has been called to start
+     * a new query.
+     *
+     * @param buffer Buffer to write
+     *
+     * @return True if writing was successful
+     */
+    bool continue_write(GWBUF* buffer)
+    {
+        return mxs::Backend::write(buffer);
+    }
+
     void close(close_type type = CLOSE_NORMAL);
 
     // For COM_STMT_FETCH processing
