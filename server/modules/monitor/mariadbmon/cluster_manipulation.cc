@@ -1557,7 +1557,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     {
         MariaDBServer* server = *iter;
         if (server->is_slave() && !server->m_read_only &&
-            !(server->m_version != MariaDBServer::version::BINLOG_ROUTER))
+            (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
         {
             MYSQL* conn = server->m_server_base->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
