@@ -1269,6 +1269,49 @@ from the configuration.
 Removed feature. Only client authenticator modules have options, in the listener
 definition. Server authenticator options in the config file are ignored.
 
+#### `disk_space_threshold`
+
+This parameter specifies how full a disk may be, before MaxScale should start
+logging warnings or take other actions (e.g. perform a switchover). This
+functionality will only work with MariaDB server versions 10.1.32, 10.2.14 and
+10.3.6 onwards, if the `DISKS` _information schema plugin_ has been installed.
+
+A limit is specified as a path followed by a colon and a percentage specifying
+how full the corresponding disk may be, before action is taken. E.g. an entry like
+```
+/data:80
+```
+specifies that the disk that has been mounted on `/data` may be used until 80%
+of the total space has been consumed. Multiple entries can be specified by
+separating them by a comma. If the path is specified using `*`, then the limit
+applies to all disks.
+
+Note that if a particular disk has been mounted on several paths, only one path
+need to be specified. If several are specified, then the one with the smallest
+percentage will be applied.
+
+Examples:
+```
+disk_space_threshold=*:80
+disk_space_threshold=/data:80
+disk_space_threshold=/data1:80,/data2:70,/data3:30
+```
+
+Note that the path to be used, is one of the paths returned by:
+```
+> use information_schema;
+> select * from disks;
++-----------+----------------------+-----------+----------+-----------+
+| Disk      | Path                 | Total     | Used     | Available |
++-----------+----------------------+-----------+----------+-----------+
+| /dev/sda3 | /                    |  47929956 | 34332348 |  11139820 |
+| /dev/sdb1 | /data                | 961301832 |    83764 | 912363644 |
+...
+```
+
+There is no default value, but this parameter must be explicitly specified
+if the disk space situation should be monitored.
+
 ### Listener
 
 The listener defines a port and protocol pair that is used to listen for

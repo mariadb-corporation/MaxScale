@@ -65,36 +65,89 @@ backend_connect_attempts=3
 
 ### `disk_space_threshold`
 
-With this parameter it can be specified how full a disk, referred to by
-a particular path, may be, before MaxScale starts logging warnings or takes
-other action (e.g. performs a switchover). This functionality will only work
-with MariaDB server versions 10.1.32, 10.2.14 and 10.3.6 onwards, if the
-`DISKS` _information schema plugin_ has been installed.
+This parameter duplicates the `disk_space_threshold`
+[server parameter](../Getting-Started/Configuration-Guide.md#disk_space_threshold).
+If the parameter has *not* been specified for a server, then the one specified
+for the monitor is applied.
 
-A limit is specified as a path followed by a colon and a percentage specifying
-how full the corresponding disk may be, before action is taken.
-E.g. an entry like
-```
-/data:80
-```
-specifies that the disk that has been mounted on `/data` may be used until 80%
-of the total space has been consumed. Multiple entries can be specified by
-separating them by a comma. If the path is specified using `*`, then the limit
-applies to all disks.
+That is, if the disk configuration is the same on all servers monitored by
+the monitor, it is sufficient (and more convenient) to specify the disk
+space threshold in the monitor section, but if the disk configuration is
+different on all or some servers, then the disk space threshold can be
+specified individually for each server.
 
-Note that if a particular disk has been mounted on several paths, only one path
-need to be specified. If several are specified, then the one with the smallest
-percentage will be applied.
-
-Examples:
+For example, suppose `server1`, `server2` and `server3` are identical
+in all respects. In that case we can specify `disk_space_threshold`
+in the monitor.
 ```
-disk_space_threshold=*:80
+[server1]
+type=server
+...
+
+[server2]
+type=server
+...
+
+[server3]
+type=server
+...
+
+[monitor]
+type=monitor
+servers=server1,server2,server3
 disk_space_threshold=/data:80
-disk_space_threshold=/data1:80,/data2:70,/data3:30
+...
 ```
+However, if the servers are heterogenious with the disk used for the
+data directory mounted on different paths, then the disk space threshold
+must be specified separately for each server.
+```
+[server1]
+type=server
+disk_space_threshold=/data:80
+...
 
-There is no default value, but this parameter must explicitly be specified
-if the disk space situation should be monitored.
+[server2]
+type=server
+disk_space_threshold=/Data:80
+...
+
+[server3]
+type=server
+disk_space_threshold=/DBData:80
+...
+
+[monitor]
+type=monitor
+servers=server1,server2,server3
+...
+```
+If _most_ of the servers have the data directory disk mounted on
+the same path, then the disk space threshold can be specified on
+the monitor and separately on the server with a different setup.
+```
+[server1]
+type=server
+disk_space_threshold=/DbData:80
+...
+
+[server2]
+type=server
+...
+
+[server3]
+type=server
+...
+
+[monitor]
+type=monitor
+servers=server1,server2,server3
+disk_space_threshold=/data:80
+...
+```
+Above, `server1` has the disk used for the data directory mounted
+at `/DbData` while both `server2` and `server3` have it mounted on
+`/data` and thus the setting in the monitor covers them both.
 
 ### `disk_space_check_interval`
 
