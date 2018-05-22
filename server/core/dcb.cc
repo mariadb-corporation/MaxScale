@@ -3434,7 +3434,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
 
                 if (!worker->post_message(MXS_WORKER_MSG_CALL, arg1, arg2))
                 {
-                    MXS_ERROR("Could not post DCB to worker.");
+                    MXS_ERROR("Could not post listening DCB for book-keeping to worker.");
                 }
             }
 
@@ -3470,8 +3470,11 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
 
                 if (worker->post(std::auto_ptr<AddDcbToWorker>(task), mxs::Worker::EXECUTE_QUEUED))
                 {
-                    MXS_ERROR("Could not post DCB to worker.");
                     rv = true;
+                }
+                else
+                {
+                    MXS_ERROR("Could not post task to add DCB to worker.");
                 }
             }
             else
