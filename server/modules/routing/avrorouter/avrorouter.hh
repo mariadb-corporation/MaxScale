@@ -229,6 +229,7 @@ struct Avro
                                           * a flush of all tables */
     uint64_t                 block_size; /**< Avro datablock size */
     enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
+    uint32_t                 task_handle; /**< Delayed task handle */
 };
 
 struct AvroSession
