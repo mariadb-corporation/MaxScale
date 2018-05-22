@@ -2812,8 +2812,11 @@ static void dcb_remove_from_list(DCB *dcb)
         }
         else
         {
-            DCB *current = this_unit.all_dcbs[dcb->poll.thread.id]->thread.next;
+            // If the creation of the DCB failed, it will not have been added
+            // to the list at all. And if it happened to be the first DCB to be
+            // created, then `prev` is NULL at this point.
             DCB *prev = this_unit.all_dcbs[dcb->poll.thread.id];
+            DCB *current = prev ? prev->thread.next : NULL;
 
             while (current)
             {
@@ -3397,7 +3400,14 @@ public:
     void execute(Worker& worker)
     {
         ss_dassert(worker.id() == m_dcb->poll.thread.id);
-        dcb_add_to_worker(worker.id(), m_dcb, m_events);
+
+        bool added = dcb_add_to_worker(worker.id(), m_dcb, m_events);
+        ss_dassert(added);
+
+        if (!added)
+        {
+            dcb_close(m_dcb);
+        }
     }
 
 private:
@@ -3420,7 +3430,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
             // stored on the main thread),
             if (dcb->poll.thread.id == Worker::get_current_id())
             {
-                // we'll add it immediatelt to the list,
+                // we'll add it immediately to the list,
                 dcb_add_to_list(dcb);
             }
             else
@@ -3552,9 +3562,12 @@ int poll_add_dcb(DCB *dcb)
     {
         /**
          * We failed to add the DCB to a worker. Revert the state so that it
-         * will be treated as a DCB in the correct state.
+         * will be treated as a DCB in the correct state. As this will involve
+         * cleanup, ensure that the current thread is the owner, as otherwise
+         * debug asserts will be triggered.
          */
         dcb->state = old_state;
+        dcb->poll.thread.id = Worker::get_current_id();
         rc = -1;
     }
 
