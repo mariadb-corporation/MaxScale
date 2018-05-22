@@ -3933,12 +3933,12 @@ static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *val
         }
         if (params->options & MXS_MODULE_OPT_PATH_R_OK)
         {
-            mask |= S_IRUSR;
+            mask |= S_IRUSR | S_IRGRP | S_IROTH;
             mode |= R_OK;
         }
         if (params->options & MXS_MODULE_OPT_PATH_X_OK)
         {
-            mask |= S_IXUSR;
+            mask |= S_IXUSR | S_IXGRP | S_IXOTH;
         }
 
         if (access(buf, mode) == 0)

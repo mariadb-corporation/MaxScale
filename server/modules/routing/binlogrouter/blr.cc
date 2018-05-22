@@ -208,6 +208,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_DEFAULT_DATADIR,
                 MXS_MODULE_OPT_PATH_R_OK |
                 MXS_MODULE_OPT_PATH_W_OK |
+                MXS_MODULE_OPT_PATH_X_OK |
                 MXS_MODULE_OPT_PATH_CREAT
             },
             {"ssl_cert_verification_depth", MXS_MODULE_PARAM_COUNT, "9"},
