@@ -219,11 +219,13 @@ typedef struct gtid_pos
                          * rebuild GTID events in the correct order. */
 } gtid_pos_t;
 
+struct Avro;
+
 /**
  * The client structure used within this router.
  * This represents the clients that are requesting AVRO files from MaxScale.
  */
-typedef struct avro_client
+struct AvroSession
 {
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_top;
@@ -234,8 +236,7 @@ typedef struct avro_client
     char            *uuid;          /*< Client UUID */
     SPINLOCK        catch_lock;     /*< Event catchup lock */
     SPINLOCK        file_lock;      /*< Protects rses_deleted */
-    struct avro_instance *router;   /*< Pointer to the owning router */
-    struct avro_client *next;
+    Avro*           router;   /*< Pointer to the owning router */
     MAXAVRO_FILE  *file_handle;   /*< Current open file handle */
     uint64_t         last_sent_pos; /*< The last record we sent */
     AVRO_CLIENT_STATS  stats;       /*< Slave statistics */
@@ -250,16 +251,14 @@ typedef struct avro_client
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
-} AVRO_CLIENT;
+};
 
 /**
  *  * The per instance data for the AVRO router.
  *   */
-typedef struct avro_instance
+struct Avro
 {
     SERVICE                 *service;       /*< Pointer to the service using this router */
-    AVRO_CLIENT             *clients;       /*< Link list of all the CDC client connections  */
-    SPINLOCK                lock;           /*< Spinlock for the instance data */
     int                     initbinlog;     /*< Initial binlog file number */
     char                    *fileroot;      /*< Root of binlog filename */
     unsigned int            state;          /*< State of the AVRO router */
@@ -299,30 +298,30 @@ typedef struct avro_instance
     uint64_t        block_size; /**< Avro datablock size */
     enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
     struct avro_instance  *next;
-} AVRO_INSTANCE;
+};
 
 extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,
                             char* dest, size_t len);
 extern TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create);
 extern void table_map_free(TABLE_MAP *map);
 extern TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len);
-extern TABLE_CREATE* table_create_copy(AVRO_INSTANCE *router, const char* sql, size_t len, const char* db);
+extern TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
 extern void table_create_free(TABLE_CREATE* value);
 extern bool table_create_save(TABLE_CREATE *create, const char *filename);
 extern bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end);
 extern void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size);
-extern int avro_client_handle_request(AVRO_INSTANCE *, AVRO_CLIENT *, GWBUF *);
-extern void avro_client_rotate(AVRO_INSTANCE *router, AVRO_CLIENT *client, uint8_t *ptr);
+extern int avro_client_handle_request(Avro *, AvroSession *, GWBUF *);
+extern void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
 extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
-extern avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router);
+extern avro_binlog_end_t avro_read_all_events(Avro *router);
 extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema,
                                     const char *codec, size_t block_size);
 extern void avro_table_free(AVRO_TABLE *table);
 extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);
-extern bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
-extern bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
+extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
+extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 
 enum avrorouter_file_op
 {
@@ -336,7 +335,7 @@ enum avrorouter_file_op
  * @param router Router instance
  * @param flush AVROROUTER_SYNC for sync only or AVROROUTER_FLUSH for full flush
  */
-extern void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush);
+extern void avro_flush_all_tables(Avro *router, enum avrorouter_file_op flush);
 
 #define AVRO_CLIENT_UNREGISTERED 0x0000
 #define AVRO_CLIENT_REGISTERED   0x0001

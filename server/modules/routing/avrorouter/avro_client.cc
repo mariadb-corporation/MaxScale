@@ -15,7 +15,7 @@
  * @file avro_client.c - contains code for the AVRO router to client communication
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,11 +37,11 @@ extern char *blr_extract_column(GWBUF *buf, int col);
 extern uint32_t extract_field(uint8_t *src, int bits);
 
 /* AVRO */
-static int avro_client_do_registration(AVRO_INSTANCE *, AVRO_CLIENT *, GWBUF *);
+static int avro_client_do_registration(Avro *, AvroSession *, GWBUF *);
 int avro_client_callback(DCB *dcb, DCB_REASON reason, void *data);
-static void avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *queue);
-static bool avro_client_stream_data(AVRO_CLIENT *client);
-void avro_notify_client(AVRO_CLIENT *client);
+static void avro_client_process_command(Avro *router, AvroSession *client, GWBUF *queue);
+static bool avro_client_stream_data(AvroSession *client);
+void avro_notify_client(AvroSession *client);
 void poll_fake_write_event(DCB *dcb);
 GWBUF* read_avro_json_schema(const char *avrofile, const char* dir);
 GWBUF* read_avro_binary_schema(const char *avrofile, const char* dir);
@@ -56,7 +56,7 @@ const char* get_avrofile_name(const char *file_ptr, int data_len, char *dest);
  * @return 1 on success, 0 on error or failure
  */
 int
-avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *queue)
+avro_client_handle_request(Avro *router, AvroSession *client, GWBUF *queue)
 {
     int rval = 1;
 
@@ -117,7 +117,7 @@ avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *qu
  *
  */
 static int
-avro_client_do_registration(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *data)
+avro_client_do_registration(Avro *router, AvroSession *client, GWBUF *data)
 {
     const char reg_uuid[] = "REGISTER UUID=";
     const int reg_uuid_len = strlen(reg_uuid);
@@ -307,7 +307,7 @@ void add_used_tables(sqlite3 *handle, json_t* obj, gtid_pos_t* gtid)
  * @param router The AVRO router instance
  * @param dcb    The dcb to write data
  */
-void avro_get_used_tables(AVRO_INSTANCE *router, DCB* dcb)
+void avro_get_used_tables(Avro *router, DCB* dcb)
 {
     sqlite3 *handle = router->sqlite_handle;
     char sql[AVRO_SQL_BUFFER_SIZE];
@@ -382,7 +382,7 @@ void add_timestamp(sqlite3 *handle, json_t* obj, gtid_pos_t* gtid)
  * @param router Router instance
  * @param dcb Client DCB
  */
-void send_gtid_info(AVRO_INSTANCE *router, gtid_pos_t *gtid_pos, DCB *dcb)
+void send_gtid_info(Avro *router, gtid_pos_t *gtid_pos, DCB *dcb)
 {
     json_t *obj = json_object();
 
@@ -432,7 +432,7 @@ bool file_in_dir(const char *dir, const char *file)
  *
  */
 static void
-avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *queue)
+avro_client_process_command(Avro *router, AvroSession *client, GWBUF *queue)
 {
     const char req_data[] = "REQUEST-DATA";
     const char req_last_gtid[] = "QUERY-LAST-TRANSACTION";
@@ -568,7 +568,7 @@ static int send_row(DCB *dcb, json_t* row)
     return rc;
 }
 
-static void set_current_gtid(AVRO_CLIENT *client, json_t *row)
+static void set_current_gtid(AvroSession *client, json_t *row)
 {
     json_t *obj = json_object_get(row, avro_sequence);
     ss_dassert(json_is_integer(obj));
@@ -590,7 +590,7 @@ static void set_current_gtid(AVRO_CLIENT *client, json_t *row)
  * @param dcb DCB to stream to
  * @return True if more data is readable, false if all data was sent
  */
-static bool stream_json(AVRO_CLIENT *client)
+static bool stream_json(AvroSession *client)
 {
     int bytes = 0;
     MAXAVRO_FILE *file = client->file_handle;
@@ -620,7 +620,7 @@ static bool stream_json(AVRO_CLIENT *client)
  * @param dcb DCB to stream to
  * @return True if streaming was successful, false if an error occurred
  */
-static bool stream_binary(AVRO_CLIENT *client)
+static bool stream_binary(AvroSession *client)
 {
     GWBUF *buffer;
     uint64_t bytes = 0;
@@ -660,7 +660,7 @@ static int sqlite_cb(void* data, int rows, char** values, char** names)
 static const char select_template[] = "SELECT max(position) FROM gtid WHERE domain=%lu "
                                       "AND server_id=%lu AND sequence <= %lu AND avrofile=\"%s\";";
 
-static bool seek_to_index_pos(AVRO_CLIENT *client, MAXAVRO_FILE* file)
+static bool seek_to_index_pos(AvroSession *client, MAXAVRO_FILE* file)
 {
     char *name = strrchr(client->file_handle->filename, '/');
     ss_dassert(name);
@@ -696,7 +696,7 @@ static bool seek_to_index_pos(AVRO_CLIENT *client, MAXAVRO_FILE* file)
  * @param client
  * @param file
  */
-static bool seek_to_gtid(AVRO_CLIENT *client, MAXAVRO_FILE* file)
+static bool seek_to_gtid(AvroSession *client, MAXAVRO_FILE* file)
 {
     bool seeking = true;
 
@@ -755,10 +755,10 @@ static bool seek_to_gtid(AVRO_CLIENT *client, MAXAVRO_FILE* file)
  * @param avro_file  The requested AVRO file
  * @return True if more data needs to be read
  */
-static bool avro_client_stream_data(AVRO_CLIENT *client)
+static bool avro_client_stream_data(AvroSession *client)
 {
     bool read_more = false;
-    AVRO_INSTANCE *router = client->router;
+    Avro *router = client->router;
 
     if (strnlen(client->avro_binfile, 1))
     {
@@ -891,7 +891,7 @@ GWBUF* read_avro_binary_schema(const char *avrofile, const char* dir)
  * @param client Avro client session
  * @param fullname Absolute path to the file to rotate to
  */
-static void rotate_avro_file(AVRO_CLIENT *client, char *fullname)
+static void rotate_avro_file(AvroSession *client, char *fullname)
 {
     char *filename = strrchr(fullname, '/') + 1;
     size_t len = strlen(filename);
@@ -965,7 +965,7 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
 {
     if (reason == DCB_REASON_DRAINED)
     {
-        AVRO_CLIENT *client = (AVRO_CLIENT*)userdata;
+        AvroSession *client = (AvroSession*)userdata;
 
         spinlock_acquire(&client->catch_lock);
         if (client->cstate & AVRO_CS_BUSY)
@@ -1043,7 +1043,7 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
  *
  * @param client Client to notify
  */
-void avro_notify_client(AVRO_CLIENT *client)
+void avro_notify_client(AvroSession *client)
 {
     /* Add fake event that will call the avro_client_callback() routine */
     poll_fake_write_event(client->dcb);

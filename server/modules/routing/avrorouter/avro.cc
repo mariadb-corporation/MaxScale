@@ -16,7 +16,7 @@
  * MySQL replication binlog files and AVRO binary files
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 
 #include <avro/errors.h>
 #include <ctype.h>
@@ -76,35 +76,35 @@ static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
                        DCB *backend_dcb, mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 extern int MaxScaleUptime();
-extern void avro_get_used_tables(AVRO_INSTANCE *router, DCB *dcb);
+extern void avro_get_used_tables(Avro *router, DCB *dcb);
 bool converter_func(void* data);
 bool binlog_next_file_exists(const char* binlogdir, const char* binlog);
 int blr_file_get_next_binlogname(const char *router);
-bool avro_load_conversion_state(AVRO_INSTANCE *router);
-void avro_load_metadata_from_schemas(AVRO_INSTANCE *router);
+bool avro_load_conversion_state(Avro *router);
+void avro_load_metadata_from_schemas(Avro *router);
 int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 static bool ensure_dir_ok(const char* path, int mode);
-bool avro_save_conversion_state(AVRO_INSTANCE *router);
+bool avro_save_conversion_state(Avro *router);
 static void stats_func(void *);
-void avro_index_file(AVRO_INSTANCE *router, const char* path);
-void avro_update_index(AVRO_INSTANCE* router);
-static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start);
+void avro_index_file(Avro *router, const char* path);
+void avro_update_index(Avro* router);
+static bool conversion_task_ctl(Avro *inst, bool start);
 
 static SPINLOCK instlock;
-static AVRO_INSTANCE *instances;
+static Avro *instances;
 
 bool avro_handle_convert(const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
 
     if (strcmp(args->argv[1].value.string, "start") == 0 &&
-        conversion_task_ctl((AVRO_INSTANCE*)args->argv[0].value.service->router_instance, true))
+        conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, true))
     {
         MXS_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name);
         rval = true;
     }
     else if (strcmp(args->argv[1].value.string, "stop") == 0 &&
-             conversion_task_ctl((AVRO_INSTANCE*)args->argv[0].value.service->router_instance, false))
+             conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, false))
     {
         MXS_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name);
         rval = true;
@@ -175,7 +175,7 @@ static bool do_unlink_with_pattern(const char* format, ...)
 
 static bool avro_handle_purge(const MODULECMD_ARG *args, json_t** output)
 {
-    AVRO_INSTANCE* inst = (AVRO_INSTANCE*)args->argv[0].value.service->router_instance;
+    Avro* inst = (Avro*)args->argv[0].value.service->router_instance;
 
     // First stop the conversion service
     conversion_task_ctl(inst, false);
@@ -354,7 +354,7 @@ bool create_tables(sqlite3* handle)
     return true;
 }
 
-static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start)
+static bool conversion_task_ctl(Avro *inst, bool start)
 {
     bool rval = false;
 
@@ -388,7 +388,7 @@ static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start)
  * @param inst Avro router instance
  * @param options The @c router_options of a binlogrouter instance
  */
-void read_source_service_options(AVRO_INSTANCE *inst, const char** options,
+void read_source_service_options(Avro *inst, const char** options,
                                  MXS_CONFIG_PARAMETER* params)
 {
     for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
@@ -476,22 +476,19 @@ static void table_map_hfree(void* v)
 static MXS_ROUTER *
 createInstance(SERVICE *service, char **options)
 {
-    AVRO_INSTANCE *inst;
-    int i;
+    Avro *inst = new (std::nothrow) Avro;
 
-    if ((inst = static_cast<AVRO_INSTANCE*>(MXS_CALLOC(1, sizeof(AVRO_INSTANCE)))) == NULL)
+    if (inst == NULL)
     {
         return NULL;
     }
 
     memset(&inst->stats, 0, sizeof(AVRO_ROUTER_STATS));
-    spinlock_init(&inst->lock);
     spinlock_init(&inst->fileslock);
     inst->service = service;
     inst->binlog_fd = -1;
     inst->current_pos = 4;
     inst->binlog_position = 4;
-    inst->clients = NULL;
     inst->next = NULL;
     inst->lastEventTimestamp = 0;
     inst->binlog_position = 0;
@@ -549,64 +546,6 @@ createInstance(SERVICE *service, char **options)
     {
         MXS_FREE(inst->binlogdir);
         inst->binlogdir = MXS_STRDUP_A(param->value);
-    }
-
-    if (options)
-    {
-        MXS_WARNING("Router options for Avrorouter are deprecated. Please convert them to parameters.");
-
-        for (i = 0; options[i]; i++)
-        {
-            char *value;
-            if ((value = strchr(options[i], '=')))
-            {
-                *value++ = '\0';
-                trim(value);
-                trim(options[i]);
-
-                if (strcmp(options[i], "binlogdir") == 0)
-                {
-                    MXS_FREE(inst->binlogdir);
-                    inst->binlogdir = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "avrodir") == 0)
-                {
-                    MXS_FREE(inst->avrodir);
-                    inst->avrodir = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "filestem") == 0)
-                {
-                    MXS_FREE(inst->fileroot);
-                    inst->fileroot = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "group_rows") == 0)
-                {
-                    inst->row_target = atoi(value);
-                }
-                else if (strcmp(options[i], "group_trx") == 0)
-                {
-                    inst->trx_target = atoi(value);
-                }
-                else if (strcmp(options[i], "start_index") == 0)
-                {
-                    first_file = MXS_MAX(1, atoi(value));
-                }
-                else if (strcmp(options[i], "block_size") == 0)
-                {
-                    inst->block_size = atoi(value);
-                }
-                else
-                {
-                    MXS_WARNING("Unknown router option: '%s'", options[i]);
-                    err = true;
-                }
-            }
-            else
-            {
-                MXS_WARNING("Unknown router option: '%s'", options[i]);
-                err = true;
-            }
-        }
     }
 
     if (inst->binlogdir == NULL)
@@ -698,15 +637,6 @@ createInstance(SERVICE *service, char **options)
         MXS_FREE(inst);
         return NULL;
     }
-    /**
-     * We have completed the creation of the instance data, so now
-     * insert this router instance into the linked list of routers
-     * that have been created with this module.
-     */
-    spinlock_acquire(&instlock);
-    inst->next = instances;
-    instances = inst;
-    spinlock_release(&instlock);
 
     /* AVRO converter init */
     avro_load_conversion_state(inst);
@@ -743,13 +673,10 @@ createInstance(SERVICE *service, char **options)
 static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
-    AVRO_INSTANCE *inst = (AVRO_INSTANCE *) instance;
-    AVRO_CLIENT *client;
+    Avro *inst = (Avro *) instance;
+    AvroSession *client = new (std::nothrow) AvroSession;
 
-    MXS_DEBUG("%lu [newSession] new router session with "
-              "session %p, and inst %p.", pthread_self(), session, inst);
-
-    if ((client = (AVRO_CLIENT *) MXS_CALLOC(1, sizeof(AVRO_CLIENT))) == NULL)
+    if (client == NULL)
     {
         return NULL;
     }
@@ -788,14 +715,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         sqlite3_close_v2(client->sqlite_handle);
     }
 
-    /**
-     * Add this session to the list of active sessions.
-     */
-    spinlock_acquire(&inst->lock);
-    client->next = inst->clients;
-    inst->clients = client;
-    spinlock_release(&inst->lock);
-
     CHK_CLIENT_RSES(client);
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
@@ -815,8 +734,8 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  */
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
-    AVRO_INSTANCE *router = (AVRO_INSTANCE *) router_instance;
-    AVRO_CLIENT *client = (AVRO_CLIENT *) router_client_ses;
+    Avro *router = (Avro *) router_instance;
+    AvroSession *client = (AvroSession *) router_client_ses;
 
     ss_debug(int prev_val = )atomic_add(&router->stats.n_clients, -1);
     ss_dassert(prev_val > 0);
@@ -825,32 +744,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
     maxavro_file_close(client->file_handle);
     sqlite3_close_v2(client->sqlite_handle);
 
-    /*
-     * Remove the slave session form the list of slaves that are using the
-     * router currently.
-     */
-    spinlock_acquire(&router->lock);
-    if (router->clients == client)
-    {
-        router->clients = client->next;
-    }
-    else
-    {
-        AVRO_CLIENT *ptr = router->clients;
-
-        while (ptr != NULL && ptr->next != client)
-        {
-            ptr = ptr->next;
-        }
-
-        if (ptr != NULL)
-        {
-            ptr->next = client->next;
-        }
-    }
-    spinlock_release(&router->lock);
-
-    MXS_FREE(client);
+    delete client;
 }
 
 /**
@@ -862,8 +756,8 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  */
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
-    AVRO_INSTANCE *router = (AVRO_INSTANCE *) instance;
-    AVRO_CLIENT *client = (AVRO_CLIENT *) router_session;
+    Avro *router = (Avro *) instance;
+    AvroSession *client = (AvroSession *) router_session;
 
     CHK_CLIENT_RSES(client);
 
@@ -891,8 +785,8 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 static int
 routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
-    AVRO_INSTANCE *router = (AVRO_INSTANCE *) instance;
-    AVRO_CLIENT *client = (AVRO_CLIENT *) router_session;
+    Avro *router = (Avro *) instance;
+    AvroSession *client = (AvroSession *) router_session;
 
     return avro_client_handle_request(router, client, queue);
 }
@@ -906,20 +800,9 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
 static void
 diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
-    AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *) router;
-    AVRO_CLIENT *session;
-    int i = 0;
+    Avro *router_inst = (Avro *) router;
     char buf[40];
     struct tm tm;
-
-    spinlock_acquire(&router_inst->lock);
-    session = router_inst->clients;
-    while (session)
-    {
-        i++;
-        session = session->next;
-    }
-    spinlock_release(&router_inst->lock);
 
     dcb_printf(dcb, "\tAVRO Converter infofile:             %s/%s\n",
                router_inst->avrodir, AVRO_PROGRESS_FILE);
@@ -950,54 +833,6 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
     dcb_printf(dcb, "\tNumber of AVRO clients:              %u\n",
                router_inst->stats.n_clients);
 
-    if (router_inst->clients)
-    {
-        dcb_printf(dcb, "\tClients:\n");
-        spinlock_acquire(&router_inst->lock);
-        session = router_inst->clients;
-        while (session)
-        {
-
-            char sync_marker_hex[SYNC_MARKER_SIZE * 2 + 1];
-
-            dcb_printf(dcb, "\t\tClient UUID:                 %s\n", session->uuid);
-            dcb_printf(dcb, "\t\tClient_host_port:            [%s]:%d\n",
-                       session->dcb->remote, dcb_get_port(session->dcb));
-            dcb_printf(dcb, "\t\tUsername:                    %s\n", session->dcb->user);
-            dcb_printf(dcb, "\t\tClient DCB:                  %p\n", session->dcb);
-            dcb_printf(dcb, "\t\tClient protocol:             %s\n",
-                       session->dcb->service->ports->protocol);
-            dcb_printf(dcb, "\t\tClient Output Format:        %s\n",
-                       avro_client_ouput[session->format]);
-            dcb_printf(dcb, "\t\tState:                       %s\n",
-                       avro_client_states[session->state]);
-            dcb_printf(dcb, "\t\tAvro file:                   %s\n", session->avro_binfile);
-
-            gw_bin2hex(sync_marker_hex, session->avro_file.sync, SYNC_MARKER_SIZE);
-
-            dcb_printf(dcb, "\t\tAvro file SyncMarker:        %s\n", sync_marker_hex);
-            dcb_printf(dcb, "\t\tAvro file last read block:   %lu\n",
-                       session->avro_file.blocks_read);
-            dcb_printf(dcb, "\t\tAvro file last read record:  %lu\n",
-                       session->avro_file.records_read);
-
-            if (session->gtid_start.domain > 0 || session->gtid_start.server_id > 0 ||
-                session->gtid_start.seq > 0)
-            {
-                dcb_printf(dcb, "\t\tRequested GTID:          %lu-%lu-%lu\n",
-                           session->gtid_start.domain, session->gtid_start.server_id,
-                           session->gtid_start.seq);
-            }
-
-            dcb_printf(dcb, "\t\tCurrent GTID:                %lu-%lu-%lu\n",
-                       session->gtid.domain, session->gtid.server_id,
-                       session->gtid.seq);
-
-            dcb_printf(dcb, "\t\t--------------------\n\n");
-            session = session->next;
-        }
-        spinlock_release(&router_inst->lock);
-    }
 }
 
 /**
@@ -1007,7 +842,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
  */
 static json_t* diagnostics_json(const MXS_ROUTER *router)
 {
-    AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *)router;
+    Avro *router_inst = (Avro *)router;
 
     json_t* rval = json_object();
 
@@ -1026,44 +861,6 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
     json_object_set_new(rval, "gtid_timestamp", json_integer(router_inst->gtid.timestamp));
     json_object_set_new(rval, "gtid_event_number", json_integer(router_inst->gtid.event_num));
     json_object_set_new(rval, "clients", json_integer(router_inst->stats.n_clients));
-
-    if (router_inst->clients)
-    {
-        json_t* arr = json_array();
-        spinlock_acquire(&router_inst->lock);
-
-        for (AVRO_CLIENT *session = router_inst->clients; session; session = session->next)
-        {
-            json_t* client = json_object();
-            json_object_set_new(client, "uuid", json_string(session->uuid));
-            json_object_set_new(client, "host", json_string(session->dcb->remote));
-            json_object_set_new(client, "port", json_integer(dcb_get_port(session->dcb)));
-            json_object_set_new(client, "user", json_string(session->dcb->user));
-            json_object_set_new(client, "format", json_string(avro_client_ouput[session->format]));
-            json_object_set_new(client, "state", json_string(avro_client_states[session->state]));
-            json_object_set_new(client, "avrofile", json_string(session->avro_binfile));
-            json_object_set_new(client, "avrofile_last_block",
-                                json_integer(session->avro_file.blocks_read));
-            json_object_set_new(client, "avrofile_last_record",
-                                json_integer(session->avro_file.records_read));
-
-            if (session->gtid_start.domain > 0 || session->gtid_start.server_id > 0 ||
-                session->gtid_start.seq > 0)
-            {
-
-                snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", session->gtid_start.domain,
-                         session->gtid_start.server_id, session->gtid_start.seq);
-                json_object_set_new(client, "requested_gtid", json_string(pathbuf));
-            }
-            snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", session->gtid.domain,
-                     session->gtid.server_id, session->gtid.seq);
-            json_object_set_new(client, "current_gtid", json_string(pathbuf));
-            json_array_append_new(arr, client);
-        }
-        spinlock_release(&router_inst->lock);
-
-        json_object_set_new(rval, "clients", arr);
-    }
 
     return rval;
 }
@@ -1120,7 +917,7 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  */
 bool converter_func(void* data)
 {
-    AVRO_INSTANCE* router = (AVRO_INSTANCE*) data;
+    Avro* router = (Avro*) data;
     bool ok = true;
     avro_binlog_end_t binlog_end = AVRO_OK;
 

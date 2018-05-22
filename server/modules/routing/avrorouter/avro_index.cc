@@ -24,7 +24,7 @@
  * The index is stored as an SQLite3 database.
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 
 #include <maxscale/debug.h>
 #include <glob.h>
@@ -62,7 +62,7 @@ int index_query_cb(void *data, int rows, char** values, char** names)
     return 0;
 }
 
-void avro_index_file(AVRO_INSTANCE *router, const char* filename)
+void avro_index_file(Avro *router, const char* filename)
 {
     MAXAVRO_FILE *file = maxavro_file_open(filename);
 
@@ -178,7 +178,7 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
  * manner.
  * @param data The router instance
  */
-void avro_update_index(AVRO_INSTANCE* router)
+void avro_update_index(Avro* router)
 {
     char path[PATH_MAX + 1];
     snprintf(path, sizeof(path), "%s/*.avro", router->avrodir);
@@ -209,7 +209,7 @@ static const char *insert_sql = "INSERT OR IGNORE INTO " MEMORY_TABLE_NAME
  * @param router Avro router instance
  * @param table Table to add
  */
-void add_used_table(AVRO_INSTANCE* router, const char* table)
+void add_used_table(Avro* router, const char* table)
 {
     char sql[AVRO_SQL_BUFFER_SIZE], *errmsg;
     snprintf(sql, sizeof(sql), insert_sql, router->gtid.domain, router->gtid.server_id,
@@ -232,7 +232,7 @@ void add_used_table(AVRO_INSTANCE* router, const char* table)
  *
  * @param router Avro router instance
  */
-void update_used_tables(AVRO_INSTANCE* router)
+void update_used_tables(Avro* router)
 {
     char *errmsg;
 

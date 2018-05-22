@@ -22,7 +22,7 @@
  * uses.
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 #include <maxscale/query_classifier.h>
 
 #include <binlog_common.h>
@@ -39,12 +39,12 @@
 
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";
-void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr,
+void handle_query_event(Avro *router, REP_HEADER *hdr,
                         int *pending_transaction, uint8_t *ptr);
-bool is_create_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len);
-void avro_notify_client(AVRO_CLIENT *client);
-void avro_update_index(AVRO_INSTANCE* router);
-void update_used_tables(AVRO_INSTANCE* router);
+bool is_create_table_statement(Avro *router, char* ptr, size_t len);
+void avro_notify_client(AvroSession *client);
+void avro_update_index(Avro* router);
+void update_used_tables(Avro* router);
 TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
                                        const char* table, int version);
 
@@ -158,7 +158,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, cons
  * @return True if the file was written successfully to disk
  *
  */
-bool avro_save_conversion_state(AVRO_INSTANCE *router)
+bool avro_save_conversion_state(Avro *router)
 {
     FILE *config_file;
     char filename[PATH_MAX + 1];
@@ -208,7 +208,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
  */
 static int conv_state_handler(void* data, const char* section, const char* key, const char* value)
 {
-    AVRO_INSTANCE *router = (AVRO_INSTANCE*) data;
+    Avro *router = (Avro*) data;
 
     if (strcmp(section, statefile_section) == 0)
     {
@@ -261,7 +261,7 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
  * @param router Avro router instance
  * @return True if the stored state was loaded successfully
  */
-bool avro_load_conversion_state(AVRO_INSTANCE *router)
+bool avro_load_conversion_state(Avro *router)
 {
     char filename[PATH_MAX + 1];
     bool rval = false;
@@ -331,7 +331,7 @@ void avro_table_free(AVRO_TABLE *table)
  * @return AVRO_OK if the next file exists, AVRO_LAST_FILE if this is the last
  * available file.
  */
-static avro_binlog_end_t rotate_to_next_file_if_exists(AVRO_INSTANCE* router, uint64_t pos, bool stop_seen)
+static avro_binlog_end_t rotate_to_next_file_if_exists(Avro* router, uint64_t pos, bool stop_seen)
 {
     avro_binlog_end_t rval = AVRO_LAST_FILE;
 
@@ -386,7 +386,7 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(AVRO_INSTANCE* router, ui
  * @param pos Current position, only used for logging
  * @param next_binlog The next file to rotate to
  */
-static void rotate_to_file(AVRO_INSTANCE* router, uint64_t pos, const char *next_binlog)
+static void rotate_to_file(Avro* router, uint64_t pos, const char *next_binlog)
 {
     /** Binlog file is processed, prepare for next one */
     MXS_NOTICE("End of binlog file [%s] at %lu. Rotating to file [%s].",
@@ -404,7 +404,7 @@ static void rotate_to_file(AVRO_INSTANCE* router, uint64_t pos, const char *next
  * @param pos Starting position of the event header
  * @return The event data or NULL if an error occurred
  */
-static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t pos)
+static GWBUF* read_event_data(Avro *router, REP_HEADER* hdr, uint64_t pos)
 {
     GWBUF* result;
     /* Allocate a GWBUF for the event */
@@ -446,10 +446,12 @@ static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t p
     return result;
 }
 
-void notify_all_clients(AVRO_INSTANCE *router)
+void notify_all_clients(Avro *router)
 {
-    AVRO_CLIENT *client = router->clients;
+    AvroSession *client = router->clients;
     int notified = 0;
+
+    /* TODO: Use dcb_foreach or some similar mechanism for this
 
     while (client)
     {
@@ -463,6 +465,7 @@ void notify_all_clients(AVRO_INSTANCE *router)
 
         client = client->next;
     }
+     */
 
     if (notified > 0)
     {
@@ -470,7 +473,7 @@ void notify_all_clients(AVRO_INSTANCE *router)
     }
 }
 
-void do_checkpoint(AVRO_INSTANCE *router, uint64_t *total_rows, uint64_t *total_commits)
+void do_checkpoint(Avro *router, uint64_t *total_rows, uint64_t *total_commits)
 {
     update_used_tables(router);
     avro_flush_all_tables(router, AVROROUTER_FLUSH);
@@ -492,7 +495,7 @@ void do_checkpoint(AVRO_INSTANCE *router, uint64_t *total_rows, uint64_t *total_
  * @return              How the binlog was closed
  * @see enum avro_binlog_end
  */
-avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
+avro_binlog_end_t avro_read_all_events(Avro *router)
 {
     uint8_t hdbuf[BINLOG_EVENT_HDR_LEN];
     unsigned long long pos = router->current_pos;
@@ -785,7 +788,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
  *
  * @param router Router instance
  */
-void avro_load_metadata_from_schemas(AVRO_INSTANCE *router)
+void avro_load_metadata_from_schemas(Avro *router)
 {
     char path[PATH_MAX + 1];
     snprintf(path, sizeof(path), "%s/*.avsc", router->avrodir);
@@ -852,7 +855,7 @@ void avro_load_metadata_from_schemas(AVRO_INSTANCE *router)
  * @brief Flush all Avro records to disk
  * @param router Avro router instance
  */
-void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
+void avro_flush_all_tables(Avro *router, enum avrorouter_file_op flush)
 {
     HASHITERATOR *iter = hashtable_iterator(router->open_tables);
 
@@ -887,7 +890,7 @@ void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
  * @param len Statement length
  * @return True if the statement creates a new table
  */
-bool is_create_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len)
+bool is_create_table_statement(Avro *router, char* ptr, size_t len)
 {
     int rc = 0;
     pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(router->create_table_re, NULL);
@@ -939,7 +942,7 @@ bool is_create_as_statement(const char* ptr, size_t len)
  * @param len Statement length
  * @return True if the statement alters a table
  */
-bool is_alter_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len)
+bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
 {
     int rc = 0;
     pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(router->alter_table_re, NULL);
@@ -969,12 +972,11 @@ bool is_alter_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len)
  * @param created Created table
  * @return False if an error occurred and true if successful
  */
-bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
+bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
 {
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database, created->table);
 
-    spinlock_acquire(&router->lock); // Is this necessary?
     TABLE_CREATE *old = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
 
     if (old)
@@ -999,7 +1001,6 @@ bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
 
     hashtable_add(router->created_tables, table_ident, created);
     ss_dassert(created->columns > 0);
-    spinlock_release(&router->lock);
     return true;
 }
 
@@ -1056,7 +1057,7 @@ static void strip_executable_comments(char *sql, int* len)
  * @param pending_transaction Pointer where status of pending transaction is stored
  * @param ptr Pointer to the start of the event payload
  */
-void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_transaction, uint8_t *ptr)
+void handle_query_event(Avro *router, REP_HEADER *hdr, int *pending_transaction, uint8_t *ptr)
 {
     int dblen = ptr[DBNM_OFF];
     int vblklen = ptr[VBLK_OFF];

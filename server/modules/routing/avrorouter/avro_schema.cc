@@ -15,7 +15,7 @@
  * @file avro_schema.c - Avro schema related functions
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
@@ -972,7 +972,7 @@ static bool extract_create_like_identifier(const char* sql, size_t len, char* ta
 /**
  * Create a table from another table
  */
-TABLE_CREATE* table_create_copy(AVRO_INSTANCE *router, const char* sql, size_t len, const char* db)
+TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const char* db)
 {
     TABLE_CREATE* rval = NULL;
     char target[MYSQL_TABLE_MAXLEN + 1] = "";

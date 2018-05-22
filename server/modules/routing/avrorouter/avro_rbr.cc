@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "avrorouter.h"
+#include "avrorouter.hh"
 
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
@@ -33,8 +33,8 @@ static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET va
 uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create,
                                 avro_value_t *record, uint8_t *ptr,
                                 uint8_t *columns_present, uint8_t *end);
-void notify_all_clients(AVRO_INSTANCE *router);
-void add_used_table(AVRO_INSTANCE* router, const char* table);
+void notify_all_clients(Avro *router);
+void add_used_table(Avro* router, const char* table);
 
 /**
  * @brief Get row event name
@@ -92,7 +92,7 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
  * @param hdr Replication header
  * @param ptr Pointer to event payload
  */
-bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
+bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 {
     bool rval = false;
     uint64_t id;
@@ -190,7 +190,7 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
  * @param event_type Event type
  * @param record Record to prepare
  */
-static void prepare_record(AVRO_INSTANCE *router, REP_HEADER *hdr,
+static void prepare_record(Avro *router, REP_HEADER *hdr,
                            int event_type, avro_value_t *record)
 {
     avro_value_t field;
@@ -225,7 +225,7 @@ static void prepare_record(AVRO_INSTANCE *router, REP_HEADER *hdr,
  * @param ptr Pointer to the start of the event
  * @return True on succcess, false on error
  */
-bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
+bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 {
     bool rval = false;
     uint8_t *start = ptr;
