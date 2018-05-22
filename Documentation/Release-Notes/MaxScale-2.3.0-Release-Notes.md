@@ -36,6 +36,12 @@ for promotion.
 
 ## Dropped Features
 
+### `router_options` in Avrorouter
+
+The use of `router_options` with avrorouter was deprecated in MaxScale 2.1. In
+MaxScale 2.3, the use of `router_options` is no longer supported and the options
+should be given as parameters instead.
+
 ## New Features
 
 ### Runtime Configuration of the Cache
