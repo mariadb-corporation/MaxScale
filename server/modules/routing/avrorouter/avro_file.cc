@@ -446,31 +446,22 @@ static GWBUF* read_event_data(Avro *router, REP_HEADER* hdr, uint64_t pos)
     return result;
 }
 
+bool notify_cb(DCB* dcb, void* data)
+{
+    SERVICE* service = static_cast<SERVICE*>(data);
+
+    if (dcb->service == service && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        AvroSession* ses = reinterpret_cast<AvroSession*>(dcb->session->router_session);
+        avro_notify_client(ses);
+    }
+
+    return true;
+}
+
 void notify_all_clients(Avro *router)
 {
-    AvroSession *client = router->clients;
-    int notified = 0;
-
-    /* TODO: Use dcb_foreach or some similar mechanism for this
-
-    while (client)
-    {
-        spinlock_acquire(&client->catch_lock);
-        if (client->cstate & AVRO_WAIT_DATA)
-        {
-            notified++;
-            avro_notify_client(client);
-        }
-        spinlock_release(&client->catch_lock);
-
-        client = client->next;
-    }
-     */
-
-    if (notified > 0)
-    {
-        MXS_INFO("Notified %d clients about new data.", notified);
-    }
+    dcb_foreach(notify_cb, router->service);
 }
 
 void do_checkpoint(Avro *router, uint64_t *total_rows, uint64_t *total_commits)
