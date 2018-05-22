@@ -484,12 +484,10 @@ createInstance(SERVICE *service, char **options)
     }
 
     memset(&inst->stats, 0, sizeof(AVRO_ROUTER_STATS));
-    spinlock_init(&inst->fileslock);
     inst->service = service;
     inst->binlog_fd = -1;
     inst->current_pos = 4;
     inst->binlog_position = 4;
-    inst->next = NULL;
     inst->lastEventTimestamp = 0;
     inst->binlog_position = 0;
     inst->task_delay = 1;
@@ -681,12 +679,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         return NULL;
     }
 
-#if defined(SS_DEBUG)
-    client->rses_chk_top = CHK_NUM_ROUTER_SES;
-    client->rses_chk_tail = CHK_NUM_ROUTER_SES;
-#endif
-
-    memset(&client->stats, 0, sizeof(AVRO_CLIENT_STATS));
     atomic_add(&inst->stats.n_clients, 1);
     client->uuid = NULL;
     spinlock_init(&client->catch_lock);
@@ -714,8 +706,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
                   sqlite3_errmsg(inst->sqlite_handle));
         sqlite3_close_v2(client->sqlite_handle);
     }
-
-    CHK_CLIENT_RSES(client);
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
 }
@@ -759,8 +749,6 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
     Avro *router = (Avro *) instance;
     AvroSession *client = (AvroSession *) router_session;
 
-    CHK_CLIENT_RSES(client);
-
     spinlock_acquire(&client->catch_lock);
     spinlock_acquire(&client->file_lock);
 
@@ -801,16 +789,11 @@ static void
 diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     Avro *router_inst = (Avro *) router;
-    char buf[40];
-    struct tm tm;
 
     dcb_printf(dcb, "\tAVRO Converter infofile:             %s/%s\n",
                router_inst->avrodir, AVRO_PROGRESS_FILE);
     dcb_printf(dcb, "\tAVRO files directory:                %s\n",
                router_inst->avrodir);
-
-    localtime_r(&router_inst->stats.lastReply, &tm);
-    asctime_r(&tm, buf);
 
     dcb_printf(dcb, "\tBinlog directory:                    %s\n",
                router_inst->binlogdir);
