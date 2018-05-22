@@ -441,33 +441,6 @@ void read_source_service_options(Avro *inst, const char** options,
 }
 
 /**
- * TABLE_CREATE free function for use with hashtable.
- * @param v Pointer to a TABLE_CREATE
- */
-static void table_create_hfree(void* v)
-{
-    table_create_free((TABLE_CREATE*)v);
-}
-
-/**
- * AVRO_TABLE free function for use with hashtable.
- * @param v Pointer to a AVRO_TABLE
- */
-static void avro_table_hfree(void* v)
-{
-    avro_table_free((AVRO_TABLE*)v);
-}
-
-/**
- * TABLE_MAP free function for use with hashtable.
- * @param v Pointer to a TABLE_MAP
- */
-static void table_map_hfree(void* v)
-{
-    table_map_free((TABLE_MAP*)v);
-}
-
-/**
  * Create an instance of the router for a particular service
  * within MaxScale.
  *
@@ -573,24 +546,6 @@ createInstance(SERVICE *service, char **options)
         MXS_NOTICE("[%s] First binlog is: %s", service->name, inst->binlog_name);
     }
 
-    if ((inst->table_maps = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
-        (inst->open_tables = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
-        (inst->created_tables = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)))
-    {
-        hashtable_memory_fns(inst->table_maps, hashtable_item_strdup, NULL,
-                             hashtable_item_free, table_map_hfree);
-        hashtable_memory_fns(inst->open_tables, hashtable_item_strdup, NULL,
-                             hashtable_item_free, avro_table_hfree);
-        hashtable_memory_fns(inst->created_tables, hashtable_item_strdup, NULL,
-                             hashtable_item_free, table_create_hfree);
-    }
-    else
-    {
-        MXS_ERROR("Hashtable allocation failed. This is most likely caused "
-                  "by a lack of available memory.");
-        err = true;
-    }
-
     int pcreerr;
     size_t erroff;
     pcre2_code *create_re = pcre2_compile((PCRE2_SPTR) create_table_regex,
@@ -633,13 +588,10 @@ createInstance(SERVICE *service, char **options)
     if (err)
     {
         sqlite3_close_v2(inst->sqlite_handle);
-        hashtable_free(inst->table_maps);
-        hashtable_free(inst->open_tables);
-        hashtable_free(inst->created_tables);
         MXS_FREE(inst->avrodir);
         MXS_FREE(inst->binlogdir);
         MXS_FREE(inst->fileroot);
-        MXS_FREE(inst);
+        delete inst;
         return NULL;
     }
 

@@ -103,7 +103,8 @@ void avro_close_binlog(int fd)
 AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
                              size_t block_size)
 {
-    AVRO_TABLE *table = static_cast<AVRO_TABLE*>(MXS_CALLOC(1, sizeof(AVRO_TABLE)));
+    AVRO_TABLE *table = new (std::nothrow)AVRO_TABLE;
+
     if (table)
     {
         if (avro_schema_from_json_length(json_schema, strlen(json_schema),
@@ -147,6 +148,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, cons
         table->json_schema = MXS_STRDUP_A(json_schema);
         table->filename = MXS_STRDUP_A(filepath);
     }
+
     return table;
 }
 
@@ -302,24 +304,6 @@ bool avro_load_conversion_state(Avro *router)
     }
 
     return rval;
-}
-
-/**
- * @brief Free an AVRO_TABLE
- *
- * @param table Table to free
- */
-void avro_table_free(AVRO_TABLE *table)
-{
-    if (table)
-    {
-        avro_file_writer_flush(table->avro_file);
-        avro_file_writer_close(table->avro_file);
-        avro_value_iface_decref(table->avro_writer_iface);
-        avro_schema_decref(table->avro_schema);
-        MXS_FREE(table->json_schema);
-        MXS_FREE(table->filename);
-    }
 }
 
 /**
@@ -818,18 +802,13 @@ void avro_load_metadata_from_schemas(Avro *router)
             if (versionend == suffix)
             {
                 snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-                TABLE_CREATE *old =
-                    static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
+                auto it = router->created_tables.find(table_ident);
 
-                if (old == NULL || version > old->version)
+                if (it == router->created_tables.end() || version > it->second->version)
                 {
-                    TABLE_CREATE *created = table_create_from_schema(files.gl_pathv[i],
-                                                                     db, table, version);
-                    if (old)
-                    {
-                        hashtable_delete(router->created_tables, table_ident);
-                    }
-                    hashtable_add(router->created_tables, table_ident, created);
+                    STableCreate created(table_create_from_schema(files.gl_pathv[i],
+                                                                  db, table, version));
+                    router->created_tables[table_ident] = created;
                 }
             }
             else
@@ -848,29 +827,17 @@ void avro_load_metadata_from_schemas(Avro *router)
  */
 void avro_flush_all_tables(Avro *router, enum avrorouter_file_op flush)
 {
-    HASHITERATOR *iter = hashtable_iterator(router->open_tables);
-
-    if (iter)
+    for (auto it = router->open_tables.begin(); it != router->open_tables.end(); it++)
     {
-        char *key;
-        while ((key = (char*)hashtable_next(iter)))
+        if (flush == AVROROUTER_FLUSH)
         {
-            AVRO_TABLE *table = static_cast<AVRO_TABLE*>(hashtable_fetch(router->open_tables, key));
-
-            if (table)
-            {
-                if (flush == AVROROUTER_FLUSH)
-                {
-                    avro_file_writer_flush(table->avro_file);
-                }
-                else
-                {
-                    ss_dassert(flush == AVROROUTER_SYNC);
-                    avro_file_writer_sync(table->avro_file);
-                }
-            }
+            avro_file_writer_flush(it->second->avro_file);
         }
-        hashtable_iterator_free(iter);
+        else
+        {
+            ss_dassert(flush == AVROROUTER_SYNC);
+            avro_file_writer_sync(it->second->avro_file);
+        }
     }
 }
 
@@ -968,29 +935,22 @@ bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database, created->table);
 
-    TABLE_CREATE *old = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
+    auto it = router->created_tables.find(table_ident);
 
-    if (old)
+    if (it != router->created_tables.end())
     {
-        HASHITERATOR *iter = hashtable_iterator(router->table_maps);
-
-        char *key;
-        while ((key = static_cast<char*>(hashtable_next(iter))))
+        for (auto a = router->table_maps.begin(); a != router->table_maps.end(); a++)
         {
-            if (strcmp(key, table_ident) == 0)
+            if (a->first == table_ident)
             {
-                TABLE_MAP* map = static_cast<TABLE_MAP*>(hashtable_fetch(router->table_maps, key));
-                router->active_maps[map->id % MAX_MAPPED_TABLES] = NULL;
-                hashtable_delete(router->table_maps, key);
+                router->active_maps[a->second->id % MAX_MAPPED_TABLES] = NULL;
             }
         }
 
-        hashtable_iterator_free(iter);
-
-        hashtable_delete(router->created_tables, table_ident);
+        router->table_maps.erase(table_ident);
     }
 
-    hashtable_add(router->created_tables, table_ident, created);
+    router->created_tables[table_ident] = STableCreate(created);
     ss_dassert(created->columns > 0);
     return true;
 }
@@ -1119,11 +1079,11 @@ void handle_query_event(Avro *router, REP_HEADER *hdr, int *pending_transaction,
     }
     else if (is_alter_table_statement(router, sql, len))
     {
-        TABLE_CREATE *created = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, ident));
+        auto it = router->created_tables.find(ident);
 
-        if (created)
+        if (it != router->created_tables.end())
         {
-            table_create_alter(created, sql, sql + len);
+            table_create_alter(it->second.get(), sql, sql + len);
         }
         else
         {

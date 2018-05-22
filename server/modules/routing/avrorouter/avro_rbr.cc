@@ -100,24 +100,28 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
     int ev_len = router->event_type_hdr_lens[hdr->event_type];
 
     read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
-    TABLE_CREATE* create = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
+    auto create = router->created_tables.find(table_ident);
 
-    if (create)
+    if (create != router->created_tables.end())
     {
-        ss_dassert(create->columns > 0);
-        TABLE_MAP *old = static_cast<TABLE_MAP*>(hashtable_fetch(router->table_maps, table_ident));
-        TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
-        MXS_ABORT_IF_NULL(map); // Fatal error at this point
+        ss_dassert(create->second->columns > 0);
+        auto it = router->table_maps.find(table_ident);
+        STableMap map(table_map_alloc(ptr, ev_len, create->second.get()));
 
-        if (old && old->id == map->id && old->version == map->version &&
-            strcmp(old->table, map->table) == 0 &&
-            strcmp(old->database, map->database) == 0)
+        if (it != router->table_maps.end())
         {
-            table_map_free(map);
-            return true;
+            auto old = it->second;
+
+            if (old->id == map->id && old->version == map->version &&
+                strcmp(old->table, map->table) == 0 &&
+                strcmp(old->database, map->database) == 0)
+            {
+                // We can reuse the table map object
+                return true;
+            }
         }
 
-        char* json_schema = json_new_schema_from_table(map);
+        char* json_schema = json_new_schema_from_table(map.get());
 
         if (json_schema)
         {
@@ -125,26 +129,25 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
                      router->avrodir, table_ident, map->version);
 
-            /** Close the file and open a new one */
-            hashtable_delete(router->open_tables, table_ident);
-            AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
-                                                      codec_to_string(router->codec),
-                                                      router->block_size);
+            SAvroTable avro_table(avro_table_alloc(filepath, json_schema,
+                                                   codec_to_string(router->codec),
+                                                   router->block_size));
 
             if (avro_table)
             {
-                bool notify = old != NULL;
+                auto old = router->table_maps.find(table_ident);
+                bool notify = old != router->table_maps.end();
 
-                if (old)
+                if (notify)
                 {
-                            router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
-                        }
-                        hashtable_delete(router->table_maps, table_ident);
-                hashtable_add(router->table_maps, (void*)table_ident, map);
-                hashtable_add(router->open_tables, table_ident, avro_table);
-                save_avro_schema(router->avrodir, json_schema, map);
-                router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
-                ss_dassert(router->active_maps[id % MAX_MAPPED_TABLES] == map);
+                    router->active_maps[old->second->id % MAX_MAPPED_TABLES] = NULL;
+                }
+
+                router->table_maps[table_ident] = map;
+                router->open_tables[table_ident] = avro_table;
+                save_avro_schema(router->avrodir, json_schema, map.get());
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = map.get();
+                ss_dassert(router->active_maps[id % MAX_MAPPED_TABLES] == map.get());
                 MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
                 rval = true;
 
@@ -292,9 +295,15 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
     {
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
-        AVRO_TABLE* table = static_cast<AVRO_TABLE*>(hashtable_fetch(router->open_tables, table_ident));
+        SAvroTable table;
+        auto it = router->open_tables.find(table_ident);
+
+        if (it != router->open_tables.end())
+        {
+            table = it->second;
+        }
+
         TABLE_CREATE* create = map->table_create;
-        ss_dassert(hashtable_fetch(router->created_tables, table_ident) == create);
 
         if (table && create && ncolumns == map->columns && create->columns == map->columns)
         {
@@ -343,7 +352,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             avro_value_decref(&record);
             rval = true;
         }
-        else if (table == NULL)
+        else if (!table)
         {
             MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
                       " errors for more details.", map->database, map->table);

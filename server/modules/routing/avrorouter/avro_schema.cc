@@ -753,7 +753,7 @@ TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
     TABLE_CREATE *rval = NULL;
     if (n_columns > 0)
     {
-        if ((rval = static_cast<TABLE_CREATE*>(MXS_MALLOC(sizeof(TABLE_CREATE)))))
+        if ((rval = new (std::nothrow) TABLE_CREATE))
         {
             rval->version = resolve_table_version(database, table);
             rval->was_used = false;
@@ -771,7 +771,7 @@ TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
             {
                 MXS_FREE(rval->database);
                 MXS_FREE(rval->table);
-                MXS_FREE(rval);
+                delete rval;
             }
 
             for (int i = 0; i < n_columns; i++)
@@ -990,15 +990,16 @@ TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const
 
         strcat(table_ident, source);
 
-        TABLE_CREATE *old = static_cast<TABLE_CREATE*>(hashtable_fetch(router->created_tables, table_ident));
+        auto it = router->created_tables.find(table_ident);
 
-        if (old)
+        if (it != router->created_tables.end())
         {
+            auto old = it->second;
             int n = old->columns;
             char** names = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
             char** types = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
             int* lengths = static_cast<int*>(MXS_MALLOC(sizeof(int) * n));
-            rval = static_cast<TABLE_CREATE*>(MXS_MALLOC(sizeof(TABLE_CREATE)));
+            rval = new (std::nothrow) TABLE_CREATE;
 
             MXS_ABORT_IF_FALSE(names && types && lengths && rval);
 
@@ -1029,28 +1030,6 @@ TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const
     }
 
     return rval;
-}
-
-/**
- * Free a TABLE_CREATE structure
- * @param value Value to free
- */
-void table_create_free(TABLE_CREATE* value)
-{
-    if (value)
-    {
-        for (uint64_t i = 0; i < value->columns; i++)
-        {
-            MXS_FREE(value->column_names[i]);
-            MXS_FREE(value->column_types[i]);
-        }
-        MXS_FREE(value->column_names);
-        MXS_FREE(value->column_types);
-        MXS_FREE(value->column_lengths);
-        MXS_FREE(value->table);
-        MXS_FREE(value->database);
-        MXS_FREE(value);
-    }
 }
 
 static const char* get_next_def(const char* sql, const char* end)
@@ -1669,7 +1648,7 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     uint8_t* metadata = (uint8_t*)mxs_lestr_consume(&ptr, &metadata_size);
     uint8_t *nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
-    TABLE_MAP *map = static_cast<TABLE_MAP*>(MXS_MALLOC(sizeof(TABLE_MAP)));
+    TABLE_MAP *map = new (std::nothrow)TABLE_MAP;
 
     if (map)
     {
@@ -1705,21 +1684,4 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     }
 
     return map;
-}
-
-/**
- * @brief Free a table map
- * @param map Table map to free
- */
-void table_map_free(TABLE_MAP *map)
-{
-    if (map)
-    {
-        MXS_FREE(map->column_types);
-        MXS_FREE(map->column_metadata);
-        MXS_FREE(map->null_bitmap);
-        MXS_FREE(map->database);
-        MXS_FREE(map->table);
-        MXS_FREE(map);
-    }
 }
