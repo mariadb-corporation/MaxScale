@@ -749,11 +749,9 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
     AvroSession *client = (AvroSession *) router_session;
 
     spinlock_acquire(&client->catch_lock);
-    spinlock_acquire(&client->file_lock);
 
     client->state = AVRO_CLIENT_UNREGISTERED;
 
-    spinlock_release(&client->file_lock);
     spinlock_release(&client->catch_lock);
 }
 

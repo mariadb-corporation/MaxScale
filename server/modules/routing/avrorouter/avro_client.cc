@@ -767,13 +767,11 @@ static bool avro_client_stream_data(AvroSession *client)
 
         bool ok = true;
 
-        spinlock_acquire(&client->file_lock);
         if (client->file_handle == NULL &&
             (client->file_handle = maxavro_file_open(filename)) == NULL)
         {
             ok = false;
         }
-        spinlock_release(&client->file_lock);
 
         if (ok)
         {
@@ -909,7 +907,6 @@ static void rotate_avro_file(AvroSession *client, char *fullname)
     client->avro_binfile[len] = 0;
     client->last_sent_pos = 0;
 
-    spinlock_acquire(&client->file_lock);
     maxavro_file_close(client->file_handle);
 
     if ((client->file_handle = maxavro_file_open(fullname)) == NULL)
@@ -921,8 +918,6 @@ static void rotate_avro_file(AvroSession *client, char *fullname)
         MXS_INFO("Rotated '%s'@'%s' to file: %s", client->dcb->user,
                  client->dcb->remote, fullname);
     }
-
-    spinlock_release(&client->file_lock);
 }
 
 /**
