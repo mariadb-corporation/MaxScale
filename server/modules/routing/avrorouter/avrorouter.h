@@ -14,11 +14,6 @@
  * Public License.
  */
 
-/**
- * MaxScale AVRO router
- *
- */
-
 #define MXS_MODULE_NAME "avrorouter"
 
 #include <maxscale/cdefs.h>

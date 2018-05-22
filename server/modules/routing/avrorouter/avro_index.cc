@@ -22,14 +22,6 @@
  * through all the records and looking for a matching record.
  *
  * The index is stored as an SQLite3 database.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 2/04/2016   Markus Mäkelä   Initial implementation
- *
- * @endverbatim
  */
 
 #include "avrorouter.h"

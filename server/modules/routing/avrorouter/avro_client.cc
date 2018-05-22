@@ -13,15 +13,6 @@
 
 /**
  * @file avro_client.c - contains code for the AVRO router to client communication
- *
- * @verbatim
- * Revision History
- *
- * Date     Who         Description
- * 10/03/2016   Massimiliano Pinto   Initial implementation
- * 11/03/2016   Massimiliano Pinto   Addition of JSON output
- *
- * @endverbatim
  */
 
 #include "avrorouter.h"

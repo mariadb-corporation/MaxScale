@@ -1087,27 +1087,6 @@ clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *que
     ss_dassert(false);
 }
 
-/*
-static char *
-extract_message(GWBUF *errpkt)
-{
-    char *rval;
-    int len;
-
-    len = EXTRACT24(errpkt->start);
-    if ((rval = (char *) MXS_MALLOC(len)) == NULL)
-    {
-        return NULL;
-    }
-    memcpy(rval, (char *) (errpkt->start) + 7, 6);
-    rval[6] = ' ';
-    // message size is len - (1 byte field count + 2 bytes errno + 6 bytes status)
-    memcpy(&rval[7], (char *) (errpkt->start) + 13, len - 9);
-    rval[len - 2] = 0;
-    return rval;
-}
-*/
-
 /**
  * Error Reply routine
  *
@@ -1135,44 +1114,6 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_NONE;
 }
-
-/**
- * The stats gathering function called from the housekeeper so that we
- * can get timed averages of binlog records shippped
- *
- * @param inst  The router instance
- */
-/*
-static void
-stats_func(void *inst)
-{
-    AVRO_INSTANCE *router = (AVRO_INSTANCE *) inst;
-    AVRO_CLIENT *client;
-
-    router->stats.minavgs[router->stats.minno++]
-        = router->stats.n_binlogs - router->stats.lastsample;
-    router->stats.lastsample = router->stats.n_binlogs;
-    if (router->stats.minno == AVRO_NSTATS_MINUTES)
-    {
-        router->stats.minno = 0;
-    }
-
-    spinlock_acquire(&router->lock);
-    client = router->clients;
-    while (client)
-    {
-        client->stats.minavgs[client->stats.minno++]
-            = client->stats.n_events - client->stats.lastsample;
-        client->stats.lastsample = client->stats.n_events;
-        if (client->stats.minno == AVRO_NSTATS_MINUTES)
-        {
-            client->stats.minno = 0;
-        }
-        client = client->next;
-    }
-    spinlock_release(&router->lock);
-}
-*/
 
 /**
  * Conversion task: MySQL binlogs to AVRO files
