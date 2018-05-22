@@ -218,6 +218,7 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
                handle->disableMasterRoleSetting ? "on" : "off");
+    dcb_printf(dcb, "Use Priorities:\t%s\n", handle->use_priority ? "on" : "off");
     dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (handle->set_donor_nodes == 1) ? "on" : "off");
     if (handle->cluster_info.c_uuid)
     {
