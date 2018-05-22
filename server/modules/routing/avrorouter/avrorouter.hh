@@ -58,6 +58,8 @@ MXS_BEGIN_DECLS
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"
 
+static const char* avro_index_name = "avro.index";
+
 /** Buffer limits */
 #define AVRO_SQL_BUFFER_SIZE 2048
 
@@ -214,10 +216,19 @@ enum mxs_avro_codec_type
     MXS_AVRO_CODEC_NULL,
     MXS_AVRO_CODEC_DEFLATE,
     MXS_AVRO_CODEC_SNAPPY,      /**< Not yet implemented */
-} ;
+};
 
-typedef struct gtid_pos
+struct gtid_pos_t
 {
+    gtid_pos_t():
+        timestamp(0),
+        domain(0),
+        server_id(0),
+        seq(0),
+        event_num(0)
+    {
+    }
+
     uint32_t timestamp;         /*< GTID event timestamp */
     uint64_t domain;            /*< Replication domain */
     uint64_t server_id;         /*< Server ID */
@@ -226,7 +237,7 @@ typedef struct gtid_pos
                          * is an internal representation of the position of
                          * an event inside a GTID event and it is used to
                          * rebuild GTID events in the correct order. */
-} gtid_pos_t;
+};
 
 typedef std::tr1::shared_ptr<TABLE_CREATE> STableCreate;
 typedef std::tr1::shared_ptr<AVRO_TABLE> SAvroTable;
@@ -276,8 +287,15 @@ struct Avro
     uint32_t                 task_handle; /**< Delayed task handle */
 };
 
-struct AvroSession
+class AvroSession: public MXS_ROUTER_SESSION
 {
+    AvroSession(const AvroSession&) = delete;
+    AvroSession& operator=(const AvroSession&) = delete;
+public:
+
+    static AvroSession* create(Avro* router, MXS_SESSION* session);
+    ~AvroSession();
+
     DCB*                  dcb;  /*< The client DCB */
     int                   state; /*< The state of this client */
     enum avro_data_format format; /*< Stream JSON or Avro data */
@@ -293,6 +311,9 @@ struct AvroSession
     gtid_pos_t            gtid_start; /*< First sent GTID */
     unsigned int          cstate; /*< Catch up state */
     sqlite3*              sqlite_handle;
+
+private:
+    AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle);
 };
 
 extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,

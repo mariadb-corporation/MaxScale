@@ -97,7 +97,7 @@ void avro_index_file(Avro *router, const char* filename)
                 return;
             }
 
-            gtid_pos_t prev_gtid = {0, 0, 0, 0, 0};
+            gtid_pos_t prev_gtid;
 
             if (sqlite3_exec(router->sqlite_handle, "BEGIN", NULL, NULL, &errmsg) != SQLITE_OK)
             {

@@ -486,7 +486,7 @@ avro_client_process_command(Avro *router, AvroSession *client, GWBUF *queue)
     /** Return requested GTID */
     else if (strstr((char *)data, req_gtid))
     {
-        gtid_pos_t gtid = {0, 0, 0, 0, 0};
+        gtid_pos_t gtid;
         extract_gtid_request(&gtid, (char*)data + sizeof(req_gtid),
                              GWBUF_LENGTH(queue) - sizeof(req_gtid));
         send_gtid_info(router, &gtid, client->dcb);
@@ -1039,4 +1039,58 @@ void avro_notify_client(AvroSession *client)
     /* Add fake event that will call the avro_client_callback() routine */
     poll_fake_write_event(client->dcb);
     client->cstate &= ~AVRO_WAIT_DATA;
+}
+
+// static
+AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
+{
+    AvroSession* client = NULL;
+    sqlite3* handle;
+    char dbpath[PATH_MAX + 1];
+    snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir, avro_index_name);
+
+    if (sqlite3_open_v2(dbpath, &handle,
+                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to open SQLite database '%s': %s", dbpath, sqlite3_errmsg(handle));
+        sqlite3_close_v2(handle);
+    }
+    else if ((client = new (std::nothrow) AvroSession(inst, session, handle)) == NULL)
+    {
+        MXS_OOM();
+        sqlite3_close_v2(handle);
+    }
+    else
+    {
+        atomic_add(&inst->stats.n_clients, 1);
+    }
+
+    return client;
+}
+
+AvroSession::AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle):
+    dcb(session->client_dcb),
+    state(AVRO_CLIENT_UNREGISTERED),
+    format(AVRO_FORMAT_UNDEFINED),
+    uuid(NULL),
+    catch_lock(SPINLOCK_INIT),
+    router(instance),
+    file_handle(NULL),
+    last_sent_pos(0),
+    connect_time(time(NULL)),
+    avro_binfile{0},
+    requested_gtid(false),
+    cstate(0),
+    sqlite_handle(handle)
+{
+}
+
+AvroSession::~AvroSession()
+{
+    ss_debug(int prev_val = )atomic_add(&router->stats.n_clients, -1);
+    ss_dassert(prev_val > 0);
+
+    free(uuid);
+    maxavro_file_close(file_handle);
+    sqlite3_close_v2(sqlite_handle);
 }

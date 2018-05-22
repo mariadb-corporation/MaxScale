@@ -55,9 +55,6 @@ using namespace maxscale;
 
 #define AVRO_TASK_DELAY_MAX 15
 
-static const char* index_task_name = "avro_indexing";
-static const char* avro_index_name = "avro.index";
-
 /** For detection of CREATE/ALTER TABLE statements */
 static const char* create_table_regex =
     "(?i)create[a-z0-9[:space:]_]+table";
@@ -622,45 +619,8 @@ createInstance(SERVICE *service, char **options)
 static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
-    Avro *inst = (Avro *) instance;
-    AvroSession *client = new (std::nothrow) AvroSession;
-
-    if (client == NULL)
-    {
-        return NULL;
-    }
-
-    atomic_add(&inst->stats.n_clients, 1);
-
-    client->dcb = session->client_dcb;
-    client->state = AVRO_CLIENT_UNREGISTERED;
-    client->format = AVRO_FORMAT_UNDEFINED;
-    client->uuid = NULL;
-    spinlock_init(&client->catch_lock);
-    client->router = inst;
-    client->file_handle = NULL; /*< Current open file handle */
-    client->last_sent_pos = 0; /*< The last record we sent */
-    client->connect_time = time(0);
-    client->avro_binfile[0] = '\0';
-    client->requested_gtid = false; /*< If the client requested */
-    memset(&client->gtid, 0, sizeof(client->gtid));
-    memset(&client->gtid_start, 0, sizeof(client->gtid_start));
-    client->cstate = 0;
-    client->sqlite_handle = NULL;
-
-    char dbpath[PATH_MAX + 1];
-    snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir, avro_index_name);
-
-    /** A new handle for each client allows thread-safe use of the sqlite database */
-    if (sqlite3_open_v2(dbpath, &client->sqlite_handle,
-                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open SQLite database '%s': %s", dbpath,
-                  sqlite3_errmsg(inst->sqlite_handle));
-        sqlite3_close_v2(client->sqlite_handle);
-    }
-
-    return reinterpret_cast<MXS_ROUTER_SESSION*>(client);
+    Avro* inst = reinterpret_cast<Avro*>(instance);
+    return AvroSession::create(inst, session);
 }
 
 /**
@@ -677,16 +637,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  */
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
-    Avro *router = (Avro *) router_instance;
     AvroSession *client = (AvroSession *) router_client_ses;
-
-    ss_debug(int prev_val = )atomic_add(&router->stats.n_clients, -1);
-    ss_dassert(prev_val > 0);
-
-    free(client->uuid);
-    maxavro_file_close(client->file_handle);
-    sqlite3_close_v2(client->sqlite_handle);
-
     delete client;
 }
 
@@ -699,14 +650,6 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  */
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
-    Avro *router = (Avro *) instance;
-    AvroSession *client = (AvroSession *) router_session;
-
-    spinlock_acquire(&client->catch_lock);
-
-    client->state = AVRO_CLIENT_UNREGISTERED;
-
-    spinlock_release(&client->catch_lock);
 }
 
 /**
@@ -898,7 +841,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
         router->task_delay = MXS_MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
 
         MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
-            " more data is written before continuing. Next check in %d seconds.",
+                 " more data is written before continuing. Next check in %d seconds.",
                  router->binlog_name, router->current_pos, router->task_delay);
     }
 
