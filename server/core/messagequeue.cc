@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <fstream>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include "internal/routingworker.hh"
@@ -26,10 +27,24 @@ namespace
 static struct
 {
     bool initialized;
+    int  pipe_max_size;
 } this_unit =
 {
     false
 };
+
+int get_pipe_max_size()
+{
+    int size = 65536; // Default value from pipe(7)
+    std::ifstream file("/proc/sys/fs/pipe-max-size");
+
+    if (file.good())
+    {
+        file >> size;
+    }
+
+    return size;
+}
 
 }
 
@@ -65,6 +80,7 @@ bool MessageQueue::init()
     ss_dassert(!this_unit.initialized);
 
     this_unit.initialized = true;
+    this_unit.pipe_max_size = get_pipe_max_size();
 
     return this_unit.initialized;
 }
@@ -123,7 +139,17 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
     {
         int read_fd = fds[0];
         int write_fd = fds[1];
-
+#ifdef F_SETPIPE_SZ
+        /**
+         * Increase the pipe buffer size on systems that support it. Modifying
+         * the buffer size of one fd will also increase it for the other.
+         */
+        if (fcntl(fds[0], F_SETPIPE_SZ, this_unit.pipe_max_size) == -1)
+        {
+            MXS_WARNING("Failed to increase pipe buffer size to '%d': %d, %s",
+                        this_unit.pipe_max_size, errno, mxs_strerror(errno));
+        }
+#endif
         pThis = new (std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
 
         if (!pThis)

@@ -225,6 +225,18 @@ were used, they need to be recreated once MaxScale is stopped. After stopping
 MaxScale and optionally creating the schema files, the conversion process can be
 started by starting MaxScale.
 
+# Stopping the Avrorouter
+
+The safest way to stop the avrorouter when used with the binlogrouter is to
+follow the following steps:
+
+* Issue `STOP SLAVE` on the binlogrouter
+* Wait for the avrorouter to process all files
+* Stop MaxScale with `systemctl stop maxscale`
+
+This guarantees that the conversion process halts at a known good position in
+the latest binlog file.
+
 # Example Client
 
 The avrorouter comes with an example client program, _cdc.py_, written in Python 3.
