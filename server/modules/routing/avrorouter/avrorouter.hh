@@ -243,7 +243,6 @@ struct AvroSession
     MAXAVRO_FILE*         file_handle; /*< Current open file handle */
     uint64_t              last_sent_pos; /*< The last record we sent */
     time_t                connect_time; /*< Connect time of slave */
-    MAXAVRO_FILE          avro_file; /*< Avro file struct */
     char                  avro_binfile[AVRO_MAX_FILENAME_LEN + 1];
     bool                  requested_gtid; /*< If the client requested */
     gtid_pos_t            gtid; /*< Current/requested GTID */

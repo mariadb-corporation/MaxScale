@@ -805,11 +805,7 @@ static bool avro_client_stream_data(AvroSession *client)
                           maxavro_get_error_string(client->file_handle));
             }
 
-            /* update client struct */
-            memcpy(&client->avro_file, client->file_handle, sizeof(client->avro_file));
-
-            /* may be just use client->avro_file->records_read and remove this var */
-            client->last_sent_pos = client->avro_file.records_read;
+            client->last_sent_pos = client->file_handle->records_read;
         }
     }
     else

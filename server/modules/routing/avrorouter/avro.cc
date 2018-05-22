@@ -679,21 +679,23 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     }
 
     atomic_add(&inst->stats.n_clients, 1);
+
+    client->dcb = session->client_dcb;
+    client->state = AVRO_CLIENT_UNREGISTERED;
+    client->format = AVRO_FORMAT_UNDEFINED;
     client->uuid = NULL;
     spinlock_init(&client->catch_lock);
-    client->dcb = session->client_dcb;
     client->router = inst;
-    client->format = AVRO_FORMAT_UNDEFINED;
-
-    client->cstate = 0;
-
+    client->file_handle = NULL; /*< Current open file handle */
+    client->last_sent_pos = 0; /*< The last record we sent */
     client->connect_time = time(0);
-    client->last_sent_pos = 0;
+    client->avro_binfile[0] = '\0';
+    client->requested_gtid = false; /*< If the client requested */
     memset(&client->gtid, 0, sizeof(client->gtid));
     memset(&client->gtid_start, 0, sizeof(client->gtid_start));
+    client->cstate = 0;
+    client->sqlite_handle = NULL;
 
-    /* Set initial state of the slave */
-    client->state = AVRO_CLIENT_UNREGISTERED;
     char dbpath[PATH_MAX + 1];
     snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir, avro_index_name);
 
