@@ -2814,7 +2814,7 @@ static void dcb_add_to_list(DCB *dcb)
          * is not in the list. Stopped listeners are not removed from the list.
          */
 
-        ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
+        ss_dassert(dcb->poll.thread.id == RoutingWorker::get_current_id());
 
         if (this_unit.all_dcbs[dcb->poll.thread.id] == NULL)
         {
@@ -3466,7 +3466,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
         {
             // If this takes place on the main thread (all listening DCBs are
             // stored on the main thread),
-            if (dcb->poll.thread.id == Worker::get_current_id())
+            if (dcb->poll.thread.id == RoutingWorker::get_current_id())
             {
                 // we'll add it immediately to the list,
                 dcb_add_to_list(dcb);
@@ -3475,7 +3475,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
             {
                 // otherwise we must move the adding to the main thread.
                 // TODO: Separate listening and other DCBs, as this is a mess.
-                Worker* worker = Worker::get(dcb->poll.thread.id);
+                Worker* worker = RoutingWorker::get(dcb->poll.thread.id);
                 ss_dassert(worker);
 
                 intptr_t arg1 = (intptr_t)dcb_add_to_list_cb;
@@ -3494,7 +3494,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
     {
         ss_dassert(worker_id == dcb->poll.thread.id);
 
-        if (worker_id == Worker::get_current_id())
+        if (worker_id == RoutingWorker::get_current_id())
         {
             // If the DCB should end up on the current thread, we can both add it
             // to the epoll-instance and to the DCB book-keeping immediately.
@@ -3514,7 +3514,7 @@ static bool dcb_add_to_worker(int worker_id, DCB* dcb, uint32_t events)
 
             if (task)
             {
-                Worker* worker = Worker::get(dcb->poll.thread.id);
+                Worker* worker = RoutingWorker::get(dcb->poll.thread.id);
                 ss_dassert(worker);
 
                 if (worker->post(std::auto_ptr<AddDcbToWorker>(task), mxs::Worker::EXECUTE_QUEUED))
