@@ -140,14 +140,14 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
                 if (notify)
                 {
-                    router->active_maps[old->second->id % MAX_MAPPED_TABLES] = NULL;
+                    router->active_maps.erase(old->second->id);
                 }
 
                 router->table_maps[table_ident] = map;
                 router->open_tables[table_ident] = avro_table;
                 save_avro_schema(router->avrodir, json_schema, map.get());
-                router->active_maps[map->id % MAX_MAPPED_TABLES] = map.get();
-                ss_dassert(router->active_maps[id % MAX_MAPPED_TABLES] == map.get());
+                router->active_maps[map->id] = map;
+                ss_dassert(router->active_maps[id] == map);
                 MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
                 rval = true;
 
@@ -287,12 +287,13 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         ptr += coldata_size;
     }
 
-    /** There should always be a table map event prior to a row event.
-     * TODO: Make the active_maps dynamic */
-    TABLE_MAP *map = router->active_maps[table_id % MAX_MAPPED_TABLES];
+    // There should always be a table map event prior to a row event.
 
-    if (map)
+    auto it = router->active_maps.find(table_id);
+
+    if (it != router->active_maps.end())
     {
+        TABLE_MAP* map = it->second.get();
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
         SAvroTable table;

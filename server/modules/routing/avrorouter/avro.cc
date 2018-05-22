@@ -488,7 +488,6 @@ createInstance(SERVICE *service, char **options)
     inst->gtid.seq = 0;
     inst->gtid.server_id = 0;
     inst->gtid.timestamp = 0;
-    memset(&inst->active_maps, 0, sizeof(inst->active_maps));
     bool err = false;
 
     if (param)

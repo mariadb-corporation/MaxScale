@@ -932,22 +932,18 @@ bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
  */
 bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
 {
-    char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-    snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database.c_str(), created->table.c_str());
-
+    std::string table_ident = created->database + "." + created->table;
     auto it = router->created_tables.find(table_ident);
 
     if (it != router->created_tables.end())
     {
-        for (auto a = router->table_maps.begin(); a != router->table_maps.end(); a++)
-        {
-            if (a->first == table_ident)
-            {
-                router->active_maps[a->second->id % MAX_MAPPED_TABLES] = NULL;
-            }
-        }
+        auto tm_it = router->table_maps.find(table_ident);
 
-        router->table_maps.erase(table_ident);
+        if (tm_it != router->table_maps.end())
+        {
+            router->active_maps.erase(tm_it->second->id);
+            router->table_maps.erase(tm_it);
+        }
     }
 
     router->created_tables[table_ident] = STableCreate(created);

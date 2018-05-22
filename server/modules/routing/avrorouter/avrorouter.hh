@@ -253,8 +253,9 @@ typedef std::tr1::shared_ptr<AVRO_TABLE> SAvroTable;
 typedef std::tr1::shared_ptr<TABLE_MAP> STableMap;
 
 typedef std::tr1::unordered_map<std::string, STableCreate> CreatedTables;
-typedef std::tr1::unordered_map<std::string, SAvroTable> AvroTables;
-typedef std::tr1::unordered_map<std::string, STableMap> MappedTables;
+typedef std::tr1::unordered_map<std::string, SAvroTable>   AvroTables;
+typedef std::tr1::unordered_map<std::string, STableMap>    MappedTables;
+typedef std::tr1::unordered_map<uint64_t, STableMap>       ActiveMaps;
 
 struct Avro
 {
@@ -276,7 +277,7 @@ struct Avro
     uint8_t                  event_type_hdr_lens[MAX_EVENT_TYPE_END];
     uint8_t                  binlog_checksum;
     gtid_pos_t               gtid;
-    TABLE_MAP*               active_maps[MAX_MAPPED_TABLES];
+    ActiveMaps               active_maps;
     MappedTables             table_maps;
     AvroTables               open_tables;
     CreatedTables            created_tables;
