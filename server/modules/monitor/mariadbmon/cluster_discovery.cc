@@ -220,108 +220,130 @@ MXS_MONITORED_SERVER* MariaDBMonitor::getSlaveOfNodeId(long node_id, slave_down_
 }
 
 /**
- * @brief A node in a graph
- */
-struct graph_node
-{
-    int index;
-    int lowest_index;
-    int cycle;
-    bool active;
-    struct graph_node *parent;
-    MariaDBServer *info;
-    MXS_MONITORED_SERVER *db;
-};
-
-/**
  * @brief Visit a node in the graph
  *
- * This function is the main function used to determine whether the node is a
- * part of a cycle. It is an implementation of the Tarjan's strongly connected
- * component algorithm. All one node cycles are ignored since normal
- * master-slave monitoring handles that.
+ * This function is the main function used to determine whether the node is a part of a cycle. It is
+ * an implementation of the Tarjan's strongly connected component algorithm. All one node cycles are
+ * ignored since normal master-slave monitoring handles that.
  *
  * Tarjan's strongly connected component algorithm:
+ * https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
  *
- *     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+ * @param node Target server/node
+ * @param stack The stack used by the algorithm, contains nodes which have not yet been assigned a cycle
+ * @param index Visitation index of next node
+ * @param cycle Index of next found cycle
  */
-static void visit_node(struct graph_node *node, struct graph_node **stack,
-                       int *stacksize, int *index, int *cycle)
+void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* stack,
+                                           int *index, int *cycle)
 {
     /** Assign an index to this node */
-    node->lowest_index = node->index = *index;
-    node->active = true;
-    *index += 1;
+    NodeData& node_info = node->m_node;
+    auto ind = *index;
+    node_info.index = ind;
+    node_info.lowest_index = ind;
+    *index = ind + 1;
 
-    stack[*stacksize] = node;
-    *stacksize += 1;
-
-    if (node->parent == NULL)
+    if (node_info.parents.empty())
     {
-        /** This node does not connect to another node, it can't be a part of a cycle */
-        node->lowest_index = -1;
-    }
-    else if (node->parent->index == 0)
-    {
-        /** Node has not been visited */
-        visit_node(node->parent, stack, stacksize, index, cycle);
-
-        if (node->parent->lowest_index < node->lowest_index)
-        {
-            /** The parent connects to a node with a lower index, this node
-                could be a part of a cycle. */
-            node->lowest_index = node->parent->lowest_index;
-        }
-    }
-    else if (node->parent->active)
-    {
-        /** This node could be a root node of the cycle */
-        if (node->parent->index < node->lowest_index)
-        {
-            /** Root node found */
-            node->lowest_index = node->parent->index;
-        }
+        /* This node/server does not replicate from any node, it can't be a part of a cycle. Don't even
+         * bother pushing it to the stack. */
     }
     else
     {
-        /** Node connects to an already connected cycle, it can't be a part of it */
-        node->lowest_index = -1;
-    }
+        // Has master servers, need to investigate.
+        stack->push_back(node);
+        node_info.in_stack = true;
 
-    if (node->active && node->parent && node->lowest_index > 0)
-    {
-        if (node->lowest_index == node->index &&
-            node->lowest_index == node->parent->lowest_index)
+        for (auto iter = node_info.parents.begin(); iter != node_info.parents.end(); iter++)
         {
-            /**
-             * Found a multi-node cycle from the graph. The cycle is formed from the
-             * nodes with a lowest_index value equal to the lowest_index value of the
-             * current node. Rest of the nodes on the stack are not part of a cycle
-             * and can be discarded.
-             */
-
-            *cycle += 1;
-
-            while (*stacksize > 0)
+            NodeData& parent_node = (*iter)->m_node;
+            if (parent_node.index == NodeData::INDEX_NOT_VISITED)
             {
-                struct graph_node *top = stack[(*stacksize) - 1];
-                top->active = false;
+                /** Node has not been visited, so recurse. */
+                tarjan_ssc_visit_node((*iter), stack, index, cycle);
+                node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.lowest_index);
+            }
+            else if (parent_node.in_stack)
+            {
+                /* The parent node has been visited and is still on the stack. We have a cycle. */
+                node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.index);
+            }
 
-                if (top->lowest_index == node->lowest_index)
+            /* If parent_node.active==false, the parent has been visited, but is not in the current stack.
+             * This means that while there is a route from this node to the parent, there is no route
+             * from the parent to this node. No cycle. */
+        }
+
+        /* At the end of a visit to node, leave this node on the stack if it has a path to a node earlier
+         * on the stack (index > lowest_index). Otherwise, start popping elements. */
+        if (node_info.index == node_info.lowest_index)
+        {
+            int cycle_size = 0; // Keep track of cycle size since we don't mark one-node cycles.
+            while (true)
+            {
+                ss_dassert(!stack->empty());
+                NodeData& cycle_node = stack->back()->m_node;
+                stack->pop_back();
+                cycle_node.in_stack = false;
+                cycle_size++;
+                if (cycle_node.index == node_info.index) // Last node in cycle
                 {
-                    top->cycle = *cycle;
+                    if (cycle_size > 1)
+                    {
+                        cycle_node.cycle = *cycle;
+                        // All cycle elements popped. Next cycle...
+                        *cycle = *cycle + 1;
+                    }
+                    break;
                 }
-                *stacksize -= 1;
+                else
+                {
+                    cycle_node.cycle = *cycle; // Has more nodes, mark cycle.
+                }
             }
         }
     }
-    else
+}
+
+void MariaDBMonitor::build_replication_graph()
+{
+    /* Here, all slave connections are added to the graph, even if the IO thread cannot connect. Strictly
+     * speaking, building the parents-array is not required as the data already exists. This construction
+     * is more for convenience and faster access. */
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        /** Pop invalid nodes off the stack */
-        node->active = false;
-        if (*stacksize > 0)
+        /* All servers are accepted in this loop, even if the server is [Down] or [Maintenance]. For these
+         * servers, we just use the latest available information. Not adding such servers could suddenly
+         * change the topology quite a bit and all it would take is a momentarily network failure. */
+        MariaDBServer* server = *iter;
+        server->m_node.reset();
+
+        for (auto iter_ss = server->m_slave_status.begin(); iter_ss != server->m_slave_status.end();
+             iter_ss++)
         {
-            *stacksize -= 1;
+            SlaveStatus& slave_conn = *iter_ss;
+            /* We always trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output, as long as
+             * the id is > 0 (server uses 0 for default). This means that the graph constructed is faulty if
+             * an old "Master_Server_Id"- value is read from a slave which is still trying to connect to
+             * a new master. However, a server is only designated [Slave] if both IO- and SQL-threads are
+             * running fine, so the faulty graph does not cause wrong status settings. */
+            auto master_id = slave_conn.master_server_id;
+            if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && master_id > 0)
+            {
+                // Valid slave connection, find the MariaDBServer with this id.
+                auto found = get_server(master_id);
+                if (found != NULL)
+                {
+                    server->m_node.parents.push_back(found);
+                    found->m_node.children.push_back(server);
+                }
+                else
+                {
+                    // This is an external master connection. Save just the master id for now.
+                    server->m_node.external_masters.push_back(master_id);
+                }
+            }
         }
     }
 }
@@ -345,74 +367,47 @@ static void visit_node(struct graph_node *node, struct graph_node **stack,
  */
 void MariaDBMonitor::find_graph_cycles()
 {
-    const int nservers = m_servers.size();
-    struct graph_node graph[nservers];
-    struct graph_node *stack[nservers];
-    int nodes = 0;
+    build_replication_graph();
+    ServerArray stack;
+    // The next items need to be passed around in the recursive calls to keep track of algorithm state.
+    int index = 1; // Node visit index.
+    int cycle = 1; // If cycles are found, the nodes in the cycle are given an identical cycle index.
 
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        MariaDBServer* server = *iter;
-        graph[nodes].info = server;
-        graph[nodes].db = server->m_server_base;
-        graph[nodes].index = graph[nodes].lowest_index = 0;
-        graph[nodes].cycle = 0;
-        graph[nodes].active = false;
-        graph[nodes].parent = NULL;
-        nodes++;
-    }
-
-    /** Build the graph */
-    for (int i = 0; i < nservers; i++)
-    {
-        if (!graph[i].info->m_slave_status.empty() && graph[i].info->m_slave_status[0].master_server_id > 0)
+        /** Index is 0, this node has not yet been visited. */
+        if ((*iter)->m_node.index == NodeData::INDEX_NOT_VISITED)
         {
-            /** Found a connected node */
-            for (int k = 0; k < nservers; k++)
-            {
-                if (graph[k].info->m_server_id == graph[i].info->m_slave_status[0].master_server_id)
-                {
-                    graph[i].parent = &graph[k];
-                    break;
-                }
-            }
+            tarjan_ssc_visit_node(*iter, &stack, &index, &cycle);
         }
     }
 
-    int index = 1;
-    int cycle = 0;
-    int stacksize = 0;
+    assign_cycle_roles(cycle);
+}
 
-    for (int i = 0; i < nservers; i++)
+void MariaDBMonitor::assign_cycle_roles(int cycle)
+{
+    // TODO: This part needs to be rewritten as it's faulty. And moved elsewhere.
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        if (graph[i].index == 0)
-        {
-            /** Index is 0, this node has not yet been visited */
-            visit_node(&graph[i], stack, &stacksize, &index, &cycle);
-        }
-    }
-
-    for (int i = 0; i < nservers; i++)
-    {
-        graph[i].info->m_group = graph[i].cycle;
-
-        if (graph[i].cycle > 0)
+        MariaDBServer& server = **iter;
+        MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
+        if (server.m_node.cycle > 0)
         {
             /** We have at least one cycle in the graph */
-            if (graph[i].info->m_read_only)
+            if (server.m_read_only)
             {
-                monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
-                monitor_clear_pending_status(graph[i].db, SERVER_MASTER);
+                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_clear_pending_status(mon_srv, SERVER_MASTER);
             }
             else
             {
-                monitor_set_pending_status(graph[i].db, SERVER_MASTER);
-                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_set_pending_status(mon_srv, SERVER_MASTER);
+                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
             }
         }
-        else if (m_detect_stale_master && cycle == 0 &&
-                 graph[i].db->mon_prev_status & SERVER_MASTER &&
-                 (graph[i].db->pending_status & SERVER_MASTER) == 0)
+        else if (m_detect_stale_master && cycle == 1 && mon_srv->mon_prev_status & SERVER_MASTER &&
+                 (mon_srv->pending_status & SERVER_MASTER) == 0)
         {
             /**
              * Stale master detection is handled here for multi-master mode.
@@ -424,16 +419,16 @@ void MariaDBMonitor::find_graph_cycles()
              * slave in this case can be either a normal slave or another
              * master.
              */
-            if (graph[i].info->m_read_only)
+            if (server.m_read_only)
             {
                 /** The master is in read-only mode, set it into Slave state */
-                monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
-                monitor_clear_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
+                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_clear_pending_status(mon_srv, SERVER_MASTER | SERVER_STALE_STATUS);
             }
             else
             {
-                monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
-                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_set_pending_status(mon_srv, SERVER_MASTER | SERVER_STALE_STATUS);
+                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
             }
         }
     }
@@ -784,7 +779,7 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
     if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
         getSlaveOfNodeId(ptr->server->node_id, REJECT_DOWN) &&
         getServerByNodeId(ptr->server->master_id) &&
-        (!m_detect_multimaster || candidate.m_group == 0))
+        (!m_detect_multimaster || candidate.m_node.cycle == 0))
     {
         /** This server is both a slave and a master i.e. a relay master */
         monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);

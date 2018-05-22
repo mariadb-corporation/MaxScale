@@ -94,6 +94,7 @@ void MariaDBMonitor::clear_server_info()
     // All MariaDBServer*:s are now invalid, as well as any dependant data.
     m_servers.clear();
     m_server_info.clear();
+    m_servers_by_id.clear();
     m_excluded_servers.clear();
     m_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
@@ -112,6 +113,12 @@ MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 {
     ss_dassert(m_server_info.count(db) == 1); // Should always exist in the map
     return m_server_info[db];
+}
+
+MariaDBServer* MariaDBMonitor::get_server(int64_t id)
+{
+    auto found = m_servers_by_id.find(id);
+    return (found != m_servers_by_id.end()) ? (*found).second : NULL;
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
@@ -319,11 +326,18 @@ void MariaDBMonitor::main()
          * all the time. */
         release_monitor_servers(m_monitor);
 
-        // Query all servers for their status.
+        // Query all servers for their status. Update the server id array.
+        m_servers_by_id.clear();
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
             MariaDBServer* server = *iter;
             update_server_status(server->m_server_base);
+
+            if (server->m_server_id != SERVER_ID_UNKNOWN)
+            {
+                IdToServerMap::value_type new_val(server->m_server_id, server);
+                m_servers_by_id.insert(new_val);
+            }
         }
 
         // Use the information to find the so far best master server.

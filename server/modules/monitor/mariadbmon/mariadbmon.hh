@@ -30,8 +30,8 @@ class MariaDBMonitor;
 
 // Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
 typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
-// Server pointer array
-typedef std::vector<MariaDBServer*> ServerArray;
+// Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
+typedef std::tr1::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance
@@ -105,6 +105,7 @@ private:
 
     // Values updated by monitor
     MariaDBServer* m_master;         /**< Master server for Master/Slave replication */
+    IdToServerMap m_servers_by_id;   /**< Map from server id:s to MariaDBServer */
     int64_t m_master_gtid_domain;    /**< gtid_domain_id most recently seen on the master  */
     std::string m_external_master_host; /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
@@ -154,6 +155,7 @@ private:
     bool configure(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
+    MariaDBServer* get_server(int64_t id);
 
     // Cluster discovery and status assignment methods
     MariaDBServer* find_root_master();
@@ -173,6 +175,10 @@ private:
     void check_maxscale_schema_replication();
     MXS_MONITORED_SERVER* getServerByNodeId(long);
     MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
+    void build_replication_graph();
+    void tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* stack, int *index,
+                               int *cycle);
+    void assign_cycle_roles(int cycle);
 
     // Switchover methods
     bool switchover_check(SERVER* new_master, SERVER* current_master,

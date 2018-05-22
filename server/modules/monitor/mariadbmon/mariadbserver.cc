@@ -43,7 +43,6 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     , m_print_update_errormsg(true)
     , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
-    , m_group(0)
     , m_read_only(false)
     , m_n_slaves_running(0)
     , m_n_slave_heartbeats(0)
@@ -52,6 +51,24 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
 {
     ss_dassert(monitored_server);
+}
+
+NodeData::NodeData()
+    : index(INDEX_NOT_VISITED)
+    , lowest_index(INDEX_NOT_VISITED)
+    , cycle(INDEX_NOT_VISITED)
+    , in_stack(false)
+{}
+
+void NodeData::reset()
+{
+    index = INDEX_NOT_VISITED;
+    lowest_index = INDEX_NOT_VISITED;
+    cycle = INDEX_NOT_VISITED;
+    in_stack = false;
+    parents.clear();
+    children.clear();
+    external_masters.clear();
 }
 
 int64_t MariaDBServer::relay_log_events()
@@ -452,7 +469,7 @@ string MariaDBServer::diagnostics(bool multimaster) const
     }
     if (multimaster)
     {
-        ss << "Master group:           " << m_group << "\n";
+        ss << "Master group:           " << m_node.cycle << "\n";
     }
     return ss.str();
 }
@@ -486,7 +503,7 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
     }
     if (multimaster)
     {
-        json_object_set_new(srv, "master_group", json_integer(m_group));
+        json_object_set_new(srv, "master_group", json_integer(m_node.cycle));
     }
     return srv;
 }

@@ -25,6 +25,9 @@ enum print_repl_warnings_t
 };
 
 class QueryResult;
+class MariaDBServer;
+// Server pointer array
+typedef std::vector<MariaDBServer*> ServerArray;
 
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
 class SlaveStatus
@@ -68,6 +71,29 @@ public:
 };
 
 /**
+ * Data required for checking replication topology cycles. Not all of the listed data is used yet.
+ */
+struct NodeData
+{
+    static const int INDEX_NOT_VISITED = 0;
+
+    int index;           /* Marks the order in which this node was visited. */
+    int lowest_index;    /* The lowest index node this node has in its subtree. */
+    int cycle;           /* Which cycle is this node part of, if any. */
+    bool in_stack;       /* Is this node currently is the search stack. */
+    ServerArray parents; /* Which nodes is this node replicating from. External masters excluded. */
+    ServerArray children;/* Which nodes are replicating from this node. */
+    std::vector<int64_t> external_masters; /* Server id:s of external masters. */
+
+    NodeData();
+
+    /**
+     * Reset the data to default values
+     */
+    void reset();
+};
+
+/**
  * Monitor specific information about a server. Eventually, this will be the primary data structure handled
  * by the monitor. These are initialized in @c init_server_info.
  */
@@ -91,8 +117,7 @@ public:
     bool            m_print_update_errormsg;/**< Should an update error be printed. */
     version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
-    int             m_group;                /**< Multi-master group where this server belongs,
-                                              *  0 for servers not in groups */
+
     bool            m_read_only;            /**< Value of @@read_only */
     size_t          m_n_slaves_running;     /**< Number of running slave connections */
     int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
@@ -105,6 +130,7 @@ public:
     SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
 
+    NodeData        m_node;                 /**< Replication topology data */
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
 
     /**
