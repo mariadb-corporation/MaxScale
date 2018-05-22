@@ -31,10 +31,12 @@ socket=default
 type=service
 router=avrorouter
 codec=deflate
-router_options=binlogdir=/var/lib/maxscale/Binlog_Service,
-        filestem=mar-bin,start_index=1,
-        group_trx=1,group_rows=1,
-        avrodir=/var/lib/maxscale/avro/
+binlogdir=/var/lib/maxscale/Binlog_Service
+filestem=mar-bin
+start_index=1
+group_trx=1
+group_rows=1
+avrodir=/var/lib/maxscale/avro/
 user=skysql
 passwd=skysql
 
