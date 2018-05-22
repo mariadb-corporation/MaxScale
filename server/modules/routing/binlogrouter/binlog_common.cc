@@ -25,14 +25,6 @@
  *
  * This file contains functions that are common to multiple modules that all
  * handle MySQL/MariaDB binlog files.
- *
- * @verbatim
- * Revision History
- *
- * Date     Who              Description
- * 7/3/16   Markus Makela    Initial implementation
- *
- * @endverbatim
  */
 
 /**

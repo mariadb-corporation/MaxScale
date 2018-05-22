@@ -17,27 +17,6 @@
  * This utility checks a MySQL 5.6 and MariaDB 10.0.X binlog file and reports
  * any found error or an incomplete transaction.
  * It suggests the pos the file should be trucatetd at.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 24/07/2015   Massimiliano Pinto  Initial implementation
- * 26/08/2015   Massimiliano Pinto  Added mariadb10 option
- *                                  for MariaDB 10 binlog compatibility
- *                                  Currently MariadDB 10 starting transactions
- *                                  are detected checking GTID event
- *                                  with flags = 0
- * 26/04/2016   Massimiliano Pinto  MariaDB 10.1 GTID flags are properly parsed
- * 23/09/2016   Massimiliano Pinto  MariaDB 10.1 encrypted binlog compatible:
- *                                  the output shows the START_ENCRYPTION_EVENT and follows
- *                                  binlog positions without dectypting events.
- * 25/11/2016   Massimiliano Pinto  MariaDB 10.1 encrypted files can be checked
- *                                  with Key and Algo options
- * 06/12/2016   Massimiliano Pinto  A new option allows displaying of replication header
- *
- *
- * @endverbatim
  */
 
 #include "blr.h"

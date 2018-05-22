@@ -22,14 +22,6 @@
  * The current prototype implement is designed to support MySQL 5.6 and has
  * a number of limitations. This prototype is merely a proof of concept and
  * should not be considered production ready.
- *
- * @verbatim
- * Revision History
- *
- * Date     Who     Description
- * 07/04/2014   Mark Riddoch        Initial implementation
- *
- * @endverbatim
  */
 
 #include "blr.h"

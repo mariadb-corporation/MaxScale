@@ -22,49 +22,6 @@
  * The current prototype implement is designed to support MySQL 5.6 and has
  * a number of limitations. This prototype is merely a proof of concept and
  * should not be considered production ready.
- *
- * @verbatim
- * Revision History
- *
- * Date     Who         Description
- * 14/04/2014   Mark Riddoch        Initial implementation
- * 18/02/2015   Massimiliano Pinto  Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
- * 18/03/2015   Markus Makela       Better detection of CRC32 | NONE  checksum
- * 19/03/2015   Massimiliano Pinto  Addition of basic MariaDB 10 compatibility support
- * 07/05/2015   Massimiliano Pinto  Added MariaDB 10 Compatibility
- * 11/05/2015   Massimiliano Pinto  Only MariaDB 10 Slaves can register to binlog router
- *                                  with a MariaDB 10 Master
- * 25/05/2015   Massimiliano Pinto  Addition of BLRM_SLAVE_STOPPED state and blr_start/stop_slave.
- *                                  New commands STOP SLAVE, START SLAVE added.
- * 29/05/2015   Massimiliano Pinto  Addition of CHANGE MASTER TO ...
- * 05/06/2015   Massimiliano Pinto  router->service->dbref->sever->name instead of master->remote
- *                                  in blr_slave_send_slave_status()
- * 08/06/2015   Massimiliano Pinto  blr_slave_send_slave_status() shows mysql_errno and error_msg
- * 15/06/2015   Massimiliano Pinto  Added constraints to CHANGE MASTER TO MASTER_LOG_FILE/POS
- * 23/06/2015   Massimiliano Pinto  Added utility routines for blr_handle_change_master
- *                                  Call create/use binlog in blr_start_slave() (START SLAVE)
- * 29/06/2015   Massimiliano Pinto  Successfully CHANGE MASTER results in updating master.ini
- *                                  in blr_handle_change_master()
- * 20/08/2015   Massimiliano Pinto  Added parsing and validation for CHANGE MASTER TO
- * 21/08/2015   Massimiliano Pinto  Added support for new config options:
- *                                  master_uuid, master_hostname, master_version
- *                                  If set those values are sent to slaves instead of
- *                                  saved master responses
- * 03/09/2015   Massimiliano Pinto  Added support for SHOW [GLOBAL] VARIABLES LIKE
- * 04/09/2015   Massimiliano Pinto  Added support for SHOW WARNINGS
- * 15/09/2015   Massimiliano Pinto  Added support for SHOW [GLOBAL] STATUS LIKE 'Uptime'
- * 25/09/2015   Massimiliano Pinto  Addition of slave heartbeat:
- *                                  the period set during registration is checked
- *                                  and heartbeat event might be sent to the affected slave.
- * 25/09/2015   Martin Brampton     Block callback processing when no router session in the DCB
- * 23/10/2015   Markus Makela       Added current_safe_event
- * 09/05/2016   Massimiliano Pinto  Added SELECT USER()
- * 11/07/2016   Massimiliano Pinto  Added SSL backend support
- * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA
- * 16/09/2016   Massimiliano Pinto  Special events created by MaxScale are not sent to slaves:
- *                                  MARIADB10_START_ENCRYPTION_EVENT or IGNORABLE_EVENT.
- *
- * @endverbatim
  */
 
 #include "blr.h"
