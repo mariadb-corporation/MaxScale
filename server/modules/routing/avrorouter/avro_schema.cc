@@ -123,18 +123,13 @@ char* json_new_schema_from_table(TABLE_MAP *map)
     json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
                                               "type", event_types));
 
-    for (uint64_t i = 0; i < map->columns && i < create->columns; i++)
+    for (uint64_t i = 0; i < map->columns && i < create->columns.size(); i++)
     {
-        ss_info_dassert(create->column_names[i] && *create->column_names[i],
-                        "Column name should not be empty or NULL");
-        ss_info_dassert(create->column_types[i] && *create->column_types[i],
-                        "Column type should not be empty or NULL");
-
         json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
-                                                  "name", create->column_names[i],
+                                                  "name", create->columns[i].name.c_str(),
                                                   "type", column_type_to_avro_type(map->column_types[i]),
-                                                  "real_type", create->column_types[i],
-                                                  "length", create->column_lengths[i]));
+                                                  "real_type", create->columns[i].type.c_str(),
+                                                  "length", create->columns[i].length));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
@@ -166,7 +161,7 @@ static inline bool not_generated_field(const char* name)
  * @param table The TABLE_CREATE object to populate
  * @return True on success successfully, false on error
  */
-bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
+bool json_extract_field_names(const char* filename, std::vector<Column>& columns)
 {
     bool rval = false;
     json_error_t err;
@@ -175,99 +170,62 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
 
     if ((obj = json_load_file(filename, 0, &err)) && (arr = json_object_get(obj, "fields")))
     {
-        ss_dassert(json_is_array(arr));
         if (json_is_array(arr))
         {
             int array_size = json_array_size(arr);
-            table->column_names = (char**)MXS_MALLOC(sizeof(char*) * (array_size));
-            table->column_types = (char**)MXS_MALLOC(sizeof(char*) * (array_size));
-            table->column_lengths = (int*)MXS_MALLOC(sizeof(int) * (array_size));
+            rval = true;
 
-            if (table->column_names && table->column_types && table->column_lengths)
+            for (int i = 0; i < array_size; i++)
             {
-                int columns = 0;
-                rval = true;
+                json_t* val = json_array_get(arr, i);
 
-                for (int i = 0; i < array_size; i++)
+                if (json_is_object(val))
                 {
-                    json_t* val = json_array_get(arr, i);
 
-                    if (json_is_object(val))
+                    json_t *name = json_object_get(val, "name");
+
+                    if (name && json_is_string(name))
                     {
-                        json_t* value;
+                        const char *name_str = json_string_value(name);
 
-                        if ((value = json_object_get(val, "real_type")) && json_is_string(value))
+                        if (not_generated_field(name_str))
                         {
-                            table->column_types[columns] = MXS_STRDUP_A(json_string_value(value));
-                        }
-                        else
-                        {
-                            table->column_types[columns] = MXS_STRDUP_A("unknown");
-                            MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
-                        }
+                            columns.emplace_back(name_str);
 
-                        if ((value = json_object_get(val, "length")) && json_is_integer(value))
-                        {
-                            table->column_lengths[columns] = json_integer_value(value);
-                        }
-                        else
-                        {
-                            table->column_lengths[columns] = -1;
-                            MXS_WARNING("No \"length\" value defined. Treating as default length field.");
-                        }
+                            json_t* value;
 
-                        json_t *name = json_object_get(val, "name");
-
-                        if (name && json_is_string(name))
-                        {
-                            const char *name_str = json_string_value(name);
-
-                            if (not_generated_field(name_str))
+                            if ((value = json_object_get(val, "real_type")) && json_is_string(value))
                             {
-                                table->column_names[columns] = MXS_STRDUP_A(name_str);
-
-                                json_t* value;
-
-                                if ((value = json_object_get(val, "real_type")) && json_is_string(value))
-                                {
-                                    table->column_types[columns] = MXS_STRDUP_A(json_string_value(value));
-                                }
-                                else
-                                {
-                                    table->column_types[columns] = MXS_STRDUP_A("unknown");
-                                    MXS_WARNING("No \"real_type\" value defined. "
-                                                "Treating as unknown type field.");
-                                }
-
-                                if ((value = json_object_get(val, "length")) && json_is_integer(value))
-                                {
-                                    table->column_lengths[columns] = json_integer_value(value);
-                                }
-                                else
-                                {
-                                    table->column_lengths[columns] = -1;
-                                    MXS_WARNING("No \"length\" value defined. "
-                                                "Treating as default length field.");
-                                }
-
-                                columns++;
+                                columns.back().type = json_string_value(value);
                             }
-                        }
-                        else
-                        {
-                            MXS_ERROR("JSON value for \"name\" was not a string in "
-                                      "file '%s'.", filename);
-                            rval = false;
+                            else
+                            {
+                                MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
+                            }
+
+                            if ((value = json_object_get(val, "length")) && json_is_integer(value))
+                            {
+                                columns.back().length = json_integer_value(value);
+                            }
+                            else
+                            {
+                                MXS_WARNING("No \"length\" value defined. Treating as default length field.");
+                            }
                         }
                     }
                     else
                     {
-                        MXS_ERROR("JSON value for \"fields\" was not an array of objects in "
+                        MXS_ERROR("JSON value for \"name\" was not a string in "
                                   "file '%s'.", filename);
                         rval = false;
                     }
                 }
-                table->columns = columns;
+                else
+                {
+                    MXS_ERROR("JSON value for \"fields\" was not an array of objects in "
+                              "file '%s'.", filename);
+                    rval = false;
+                }
             }
         }
         else
@@ -639,65 +597,29 @@ int count_columns(const char* ptr)
  * @param nameptr table definition
  * @return Number of processed columns or -1 on error
  */
-static int process_column_definition(const char *nameptr, char*** dest, char*** dest_types, int** dest_lens)
+static void process_column_definition(const char *nameptr, std::vector<Column>& columns)
 {
-    int n = count_columns(nameptr);
-    *dest = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
-    *dest_types = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
-    *dest_lens = static_cast<int*>(MXS_MALLOC(sizeof(int) * n));
-
-    char **names = *dest;
-    char **types = *dest_types;
-    int *lengths = *dest_lens;
     char colname[512];
-    int i = 0;
 
     while ((nameptr = extract_field_name(nameptr, colname, sizeof(colname))))
     {
-        ss_dassert(i < n);
         char type[100] = "";
         int len = extract_type_length(nameptr, type);
         nameptr = next_field_definition(nameptr);
         fix_reserved_word(colname);
-
-        lengths[i] = len;
-        types[i] = MXS_STRDUP_A(type);
-        names[i] = MXS_STRDUP_A(colname);
-        ss_info_dassert(*names[i] && *types[i], "`name` and `type` must not be empty");
-        i++;
+        columns.emplace_back(colname, type, len);
     }
-
-    return i;
 }
 
 TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
                                        const char* table, int version)
 {
-    db = MXS_STRDUP(db);
-    table = MXS_STRDUP(table);
+    TABLE_CREATE* newtable = NULL;
+    std::vector<Column> columns;
 
-    TABLE_CREATE* newtable = (TABLE_CREATE*)MXS_MALLOC(sizeof(TABLE_CREATE));
-
-    if (!db || !table || !newtable)
+    if (json_extract_field_names(file, columns))
     {
-        MXS_FREE((void*)db);
-        MXS_FREE((void*)table);
-        MXS_FREE(newtable);
-
-        return NULL;
-    }
-
-    newtable->table = (char*)table;
-    newtable->database = (char*)db;
-    newtable->version = version;
-    newtable->was_used = true;
-
-    if (!json_extract_field_names(file, newtable))
-    {
-        MXS_FREE(newtable->table);
-        MXS_FREE(newtable->database);
-        MXS_FREE(newtable);
-        newtable = NULL;
+        newtable = new (std::nothrow)TABLE_CREATE(db, table, version, columns);
     }
 
     return newtable;
@@ -743,50 +665,21 @@ TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
     strcpy(database, ident);
     strcpy(table, tbl_start);
 
-    int* lengths = NULL;
-    char **names = NULL;
-    char **types = NULL;
-    int n_columns = process_column_definition(statement_sql, &names, &types, &lengths);
-    ss_dassert(n_columns > 0);
+    std::vector<Column> columns;
+    process_column_definition(statement_sql, columns);
 
-    /** We have appear to have a valid CREATE TABLE statement */
     TABLE_CREATE *rval = NULL;
-    if (n_columns > 0)
+
+    if (!columns.empty())
     {
-        if ((rval = new (std::nothrow) TABLE_CREATE))
-        {
-            rval->version = resolve_table_version(database, table);
-            rval->was_used = false;
-            rval->column_names = names;
-            rval->column_lengths = lengths;
-            rval->column_types = types;
-            rval->columns = n_columns;
-            rval->database = MXS_STRDUP(database);
-            rval->table = MXS_STRDUP(table);
-        }
-
-        if (rval == NULL || rval->database == NULL || rval->table == NULL)
-        {
-            if (rval)
-            {
-                MXS_FREE(rval->database);
-                MXS_FREE(rval->table);
-                delete rval;
-            }
-
-            for (int i = 0; i < n_columns; i++)
-            {
-                MXS_FREE(names[i]);
-            }
-
-            MXS_FREE(names);
-            rval = NULL;
-        }
+        int version = resolve_table_version(database, table);
+        rval = new (std::nothrow) TABLE_CREATE(database, table, version, columns);
     }
     else
     {
         MXS_ERROR("No columns in a CREATE TABLE statement: %.*s", stmt_len, statement_sql);
     }
+
     return rval;
 }
 
@@ -994,33 +887,12 @@ TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const
 
         if (it != router->created_tables.end())
         {
-            auto old = it->second;
-            int n = old->columns;
-            char** names = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
-            char** types = static_cast<char**>(MXS_MALLOC(sizeof(char*) * n));
-            int* lengths = static_cast<int*>(MXS_MALLOC(sizeof(int) * n));
-            rval = new (std::nothrow) TABLE_CREATE;
-
-            MXS_ABORT_IF_FALSE(names && types && lengths && rval);
-
-            for (uint64_t i = 0; i < old->columns; i++)
-            {
-                names[i] = MXS_STRDUP_A(old->column_names[i]);
-                types[i] = MXS_STRDUP_A(old->column_types[i]);
-                lengths[i] = old->column_lengths[i];
-            }
-
-            rval->version = 1;
-            rval->was_used = false;
-            rval->column_names = names;
-            rval->column_lengths = lengths;
-            rval->column_types = types;
-            rval->columns = old->columns;
-            rval->database = MXS_STRDUP_A(db);
-
+            rval = new (std::nothrow) TABLE_CREATE(*it->second);
             char* table = strchr(target, '.');
             table = table ? table + 1 : target;
-            rval->table = MXS_STRDUP_A(table);
+            rval->table = table;
+            rval->version = 1;
+            rval->was_used = false;
         }
         else
         {
@@ -1365,34 +1237,6 @@ void make_avro_token(char* dest, const char* src, int length)
     fix_reserved_word(dest);
 }
 
-int get_column_index(TABLE_CREATE *create, const char *tok, int len)
-{
-    int idx = -1;
-    char safe_tok[len + 2];
-    memcpy(safe_tok, tok, len);
-    safe_tok[len] = '\0';
-
-    if (*safe_tok == '`')
-    {
-        int toklen = strlen(safe_tok) - 2; // Token length without backticks
-        memmove(safe_tok, safe_tok + 1, toklen); // Overwrite first backtick
-        safe_tok[toklen] = '\0'; // Null-terminate the string before the second backtick
-    }
-
-    fix_reserved_word(safe_tok);
-
-    for (size_t x = 0; x < create->columns; x++)
-    {
-        if (strcasecmp(create->column_names[x], safe_tok) == 0)
-        {
-            idx = x;
-            break;
-        }
-    }
-
-    return idx;
-}
-
 static bool not_column_operation(const char* tok, int len)
 {
     const char* keywords[] =
@@ -1458,15 +1302,17 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     tok = get_tok(tok + len, &len, end);
                 }
 
+                char avro_token[len + 1];
+                make_avro_token(avro_token, tok, len);
+
                 if (tok_eq(ptok, "add", plen))
                 {
-                    char avro_token[len + 1];
-                    make_avro_token(avro_token, tok, len);
+
                     bool is_new = true;
 
-                    for (uint64_t i = 0; i < create->columns; i++)
+                    for (auto it = create->columns.begin(); it != create->columns.end(); it++)
                     {
-                        if (strcmp(avro_token, create->column_names[i]) == 0)
+                        if (it->name == avro_token)
                         {
                             is_new = false;
                             break;
@@ -1475,22 +1321,11 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
                     if (is_new)
                     {
-                        create->column_names =
-                            static_cast<char**>(MXS_REALLOC(create->column_names,
-                                                            sizeof(char*) * (create->columns + 1)));
-                        create->column_types =
-                            static_cast<char**>(MXS_REALLOC(create->column_types,
-                                                            sizeof(char*) * (create->columns + 1)));
-                        create->column_lengths =
-                            static_cast<int*>(MXS_REALLOC(create->column_lengths,
-                                                          sizeof(int) * (create->columns + 1)));
-
                         char field_type[200] = ""; // Enough to hold all types
                         int field_length = extract_type_length(tok + len, field_type);
-                        create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
-                        create->column_types[create->columns] = MXS_STRDUP_A(field_type);
-                        create->column_lengths[create->columns] = field_length;
-                        create->columns++;
+                        create->columns.emplace_back(std::string(avro_token),
+                                                     std::string(field_type),
+                                                     field_length);
                         updates++;
                     }
                     tok = get_next_def(tok, end);
@@ -1498,51 +1333,40 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 }
                 else if (tok_eq(ptok, "drop", plen))
                 {
-                    int idx = get_column_index(create, tok, len);
-
-                    if (idx != -1)
+                    for (auto it = create->columns.begin(); it != create->columns.end(); it++)
                     {
-                        MXS_FREE(create->column_names[idx]);
-                        MXS_FREE(create->column_types[idx]);
-                        for (int i = idx; i < (int)create->columns - 1; i++)
+                        if (it->name == avro_token)
                         {
-                            create->column_names[i] = create->column_names[i + 1];
-                            create->column_types[i] = create->column_types[i + 1];
-                            create->column_lengths[i] = create->column_lengths[i + 1];
+                            create->columns.erase(it);
+                            break;
                         }
-
-                        create->column_names =
-                            static_cast<char**>(MXS_REALLOC(create->column_names,
-                                                            sizeof(char*) * (create->columns - 1)));
-                        create->column_types =
-                            static_cast<char**>(MXS_REALLOC(create->column_types,
-                                                            sizeof(char*) * (create->columns - 1)));
-                        create->column_lengths =
-                            static_cast<int*>(MXS_REALLOC(create->column_lengths,
-                                                          sizeof(int) * (create->columns - 1)));
-                        create->columns--;
-                        updates++;
                     }
+
+                    updates++;
 
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
                 else if (tok_eq(ptok, "change", plen))
                 {
-                    int idx = get_column_index(create, tok, len);
-
-                    if (idx != -1 && (tok = get_tok(tok + len, &len, end)))
+                    for (auto it = create->columns.begin(); it != create->columns.end(); it++)
                     {
-                        MXS_FREE(create->column_names[idx]);
-                        MXS_FREE(create->column_types[idx]);
-                        char avro_token[len + 1];
-                        make_avro_token(avro_token, tok, len);
-                        char field_type[200] = ""; // Enough to hold all types
-                        int field_length = extract_type_length(tok + len, field_type);
-                        create->column_names[idx] = MXS_STRDUP_A(avro_token);
-                        create->column_types[idx] = MXS_STRDUP_A(field_type);
-                        create->column_lengths[idx] = field_length;
-                        updates++;
+                        if (it->name == avro_token)
+                        {
+                            if ((tok = get_tok(tok + len, &len, end)))
+                            {
+                                char avro_token[len + 1];
+                                make_avro_token(avro_token, tok, len);
+                                char field_type[200] = ""; // Enough to hold all types
+                                int field_length = extract_type_length(tok + len, field_type);
+                                it->name = avro_token;
+                                it->type = field_type;
+                                it->length = field_length;
+                                updates++;
+                            }
+
+                        }
+
                     }
 
                     tok = get_next_def(tok, end);

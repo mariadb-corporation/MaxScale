@@ -933,7 +933,7 @@ bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
 bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
 {
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-    snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database, created->table);
+    snprintf(table_ident, sizeof(table_ident), "%s.%s", created->database.c_str(), created->table.c_str());
 
     auto it = router->created_tables.find(table_ident);
 
@@ -951,7 +951,7 @@ bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
     }
 
     router->created_tables[table_ident] = STableCreate(created);
-    ss_dassert(created->columns > 0);
+    ss_dassert(created->columns.size() > 0);
     return true;
 }
 

@@ -104,7 +104,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
     if (create != router->created_tables.end())
     {
-        ss_dassert(create->second->columns > 0);
+        ss_dassert(create->second->columns.size() > 0);
         auto it = router->table_maps.find(table_ident);
         STableMap map(table_map_alloc(ptr, ev_len, create->second.get()));
 
@@ -305,7 +305,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
         TABLE_CREATE* create = map->table_create;
 
-        if (table && create && ncolumns == map->columns && create->columns == map->columns)
+        if (table && create && ncolumns == map->columns && create->columns.size() == map->columns)
         {
             avro_value_t record;
             avro_generic_value_new(table->avro_writer_iface, &record);
@@ -363,7 +363,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                       "binary logs or the stored schema was not correct.",
                       map->database, map->table);
         }
-        else if (ncolumns == map->columns && create->columns != map->columns)
+        else if (ncolumns == map->columns && create->columns.size() != map->columns)
         {
             MXS_ERROR("Table map event has a different column count for table "
                       "%s.%s than the CREATE TABLE statement. Possible "
@@ -577,7 +577,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 
     for (long i = 0; i < ncolumns && npresent < ncolumns; i++)
     {
-        ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_debug(int rc = )avro_value_get_by_name(record, create->columns[i].name.c_str(),
+                                                  &field, NULL);
         ss_dassert(rc == 0);
 
         if (bit_is_set(columns_present, ncolumns, i))
@@ -722,7 +723,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 struct tm tm;
                 ptr += unpack_temporal_value(map->column_types[i], ptr,
                                              &metadata[metadata_offset],
-                                             create->column_lengths[i], &tm);
+                                             create->columns[i].length, &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);

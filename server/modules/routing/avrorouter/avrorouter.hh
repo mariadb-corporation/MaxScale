@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
+#include <vector>
 #include <tr1/memory>
 #include <blr_constants.h>
 #include <maxscale/alloc.h>
@@ -120,31 +121,39 @@ typedef enum avro_binlog_end
 /** How many bytes each thread tries to send */
 #define AVRO_DATA_BURST_SIZE (32 * 1024)
 
+/** A single column in a CREATE TABLE statement */
+struct Column
+{
+    Column(std::string name, std::string type = "unknown", int length = -1):
+        name(name),
+        type(type),
+        length(length)
+    {
+    }
+
+    std::string name;
+    std::string type;
+    int         length;
+};
+
 /** A CREATE TABLE abstraction */
 struct TABLE_CREATE
 {
-    ~TABLE_CREATE()
+    TABLE_CREATE(std::string db, std::string table, int version, std::vector<Column>& cols):
+        table(table),
+        database(db),
+        version(version),
+        was_used(false)
+
     {
-        for (uint64_t i = 0; i < columns; i++)
-        {
-            MXS_FREE(column_names[i]);
-            MXS_FREE(column_types[i]);
-        }
-        MXS_FREE(column_names);
-        MXS_FREE(column_types);
-        MXS_FREE(column_lengths);
-        MXS_FREE(table);
-        MXS_FREE(database);
+        columns.swap(cols);
     }
 
-    uint64_t columns;
-    char**   column_names;
-    char**   column_types;
-    int*     column_lengths;
-    char*    table;
-    char*    database;
-    int      version;           /**< How many versions of this table have been used */
-    bool     was_used;          /**< Has this schema been persisted to disk */
+    std::vector<Column>        columns;
+    std::string                table;
+    std::string                database;
+    int                        version;  /**< How many versions of this table have been used */
+    bool                       was_used; /**< Has this schema been persisted to disk */
 };
 
 /** A representation of a table map event read from a binary log. A table map
