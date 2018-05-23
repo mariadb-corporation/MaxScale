@@ -1149,4 +1149,25 @@ std::string to_hex(uint8_t value)
     return out;
 }
 
+uint64_t get_byteN(const uint8_t* ptr, int bytes)
+{
+    uint64_t rval = 0;
+    ss_dassert(bytes >= 0 && bytes <= (int)sizeof(rval));
+    for (int i = 0; i < bytes; i++)
+    {
+        rval += (uint64_t)ptr[i] << (i * 8);
+    }
+    return rval;
+}
+
+uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
+{
+    ss_dassert(bytes >= 0 && bytes <= (int)sizeof(value));
+    for (int i = 0; i < bytes; i++)
+    {
+        ptr[i] = (uint8_t)(value >> (i * 8));
+    }
+    return ptr + bytes;
+}
+
 }

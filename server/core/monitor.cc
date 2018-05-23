@@ -36,7 +36,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/json_api.h>
 #include <mysqld_error.h>
 
@@ -46,14 +46,14 @@
 #include "internal/modules.h"
 
 /** Schema version, journals must have a matching version */
-#define MMB_SCHEMA_VERSION     1
+#define MMB_SCHEMA_VERSION     2
 
 /** Constants for byte lengths of the values */
 #define MMB_LEN_BYTES          4
 #define MMB_LEN_SCHEMA_VERSION 1
 #define MMB_LEN_CRC32          4
 #define MMB_LEN_VALUE_TYPE     1
-#define MMB_LEN_SERVER_STATUS  4
+#define MMB_LEN_SERVER_STATUS  8
 
 /** Type of the stored value */
 enum stored_value_type
@@ -2076,9 +2076,9 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
         ptr += strlen(db->server->name);
         *ptr++ = '\0'; // Null-terminate the string
 
-        uint32_t status = db->server->status; // Server status as 4 byte integer
-        ss_dassert(sizeof(status) == MMB_LEN_SERVER_STATUS);
-        ptr = mxs_set_byte4(ptr, status);
+        auto status = db->server->status;
+        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS);
+        ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
     }
 
     /** Store the current root master if we have one */
@@ -2163,11 +2163,11 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
             ss_dassert(sptr);
             sptr++;
 
-            uint64_t state = mxs_get_byte4(sptr); // TODO: Fix type mismatch with monitor journal
-            db->mon_prev_status = state;
-            db->server->status_pending = state;
-            server_set_status_nolock(db->server, state);
-            monitor_set_pending_status(db, state);
+            uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
+            db->mon_prev_status = status;
+            db->server->status_pending = status;
+            server_set_status_nolock(db->server, status);
+            monitor_set_pending_status(db, status);
             break;
         }
     }

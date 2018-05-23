@@ -587,4 +587,25 @@ static inline bool operator !=(const CRC32Checksum& lhs, const CRC32Checksum& rh
     return !(lhs == rhs);
 }
 
+/**
+ * Read bytes into a 64-bit unsigned integer.
+ *
+ * @param ptr   Pointer where value is stored. Read as a little-endian byte array.
+ * @param bytes How many bytes to read. Must be 0 to 8.
+ *
+ * @return The read value
+ */
+uint64_t get_byteN(const uint8_t* ptr, int bytes);
+
+/**
+ * Store bytes to a byte array in little endian format.
+ *
+ * @param ptr   Pointer where value should be stored
+ * @param value Value to store
+ * @param bytes How many bytes to store. Must be 0 to 8.
+ *
+ * @return The next byte after the stored value
+ */
+uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes);
+
 }
