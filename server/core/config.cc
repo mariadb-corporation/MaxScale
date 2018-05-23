@@ -33,25 +33,26 @@
 
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
+#include <maxscale/clock.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/http.hh>
+#include <maxscale/json_api.h>
 #include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
+#include <maxscale/router.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
-#include <maxscale/paths.h>
-#include <maxscale/router.h>
-#include <maxscale/json_api.h>
-#include <maxscale/http.hh>
+#include <maxscale/utils.hh>
 #include <maxscale/version.h>
-#include <maxscale/maxscale.h>
-#include <maxscale/clock.h>
 
 #include "internal/config.h"
 #include "internal/filter.h"
-#include "internal/service.h"
-#include "internal/monitor.h"
 #include "internal/modules.h"
+#include "internal/monitor.h"
+#include "internal/service.h"
 
 using std::set;
 using std::string;
@@ -81,6 +82,7 @@ const char CN_CONNECTION_TIMEOUT[]            = "connection_timeout";
 const char CN_DATA[]                          = "data";
 const char CN_DEFAULT[]                       = "default";
 const char CN_DESCRIPTION[]                   = "description";
+const char CN_DISK_SPACE_THRESHOLD[]          = "disk_space_threshold";
 const char CN_DUMP_LAST_STATEMENTS[]          = "dump_last_statements";
 const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
 const char CN_FILTERS[]                       = "filters";
@@ -4644,4 +4646,76 @@ static uint64_t get_suffixed_size(const char* value)
     }
 
     return size;
+}
+
+bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_threshold,
+                                     const char* zDisk_space_threshold)
+{
+    ss_dassert(pDisk_space_threshold);
+    ss_dassert(zDisk_space_threshold);
+
+    bool success = true;
+
+    using namespace std;
+
+    MxsDiskSpaceThreshold disk_space_threshold;
+    string s(zDisk_space_threshold);
+
+    // Somewhat simplified, this is what we expect: [^:]+:[:digit:]+(,[^:]+:[:digit:]+)*
+    // So, e.g. the following are fine "/data:20", "/data1:50,/data2:60", "*:80".
+
+    while (success && !s.empty())
+    {
+        size_t i = s.find_first_of(',');
+        string entry = s.substr(0, i);
+
+        s.erase(0, i != string::npos ? i + 1 : i);
+
+        size_t j = entry.find_first_of(':');
+
+        if (j != string::npos)
+        {
+            string path = entry.substr(0, j);
+            string tail = entry.substr(j + 1);
+
+            mxs::trim(path);
+            mxs::trim(tail);
+
+            if (!path.empty() && !tail.empty())
+            {
+                char* end;
+                int32_t percentage = strtol(tail.c_str(), &end, 0);
+
+                if ((*end == 0) && (percentage >= 0) && (percentage <= 100))
+                {
+                    disk_space_threshold[path] = percentage;
+                }
+                else
+                {
+                    MXS_ERROR("The value following the ':' must be a percentage: %s",
+                              entry.c_str());
+                    success = false;
+                }
+            }
+            else
+            {
+                MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
+                          CN_DISK_SPACE_THRESHOLD, zDisk_space_threshold, entry.c_str());
+                success = false;
+            }
+        }
+        else
+        {
+            MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
+                      CN_DISK_SPACE_THRESHOLD, zDisk_space_threshold, entry.c_str());
+            success = false;
+        }
+    }
+
+    if (success)
+    {
+        pDisk_space_threshold->swap(disk_space_threshold);
+    }
+
+    return success;
 }

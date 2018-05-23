@@ -16,7 +16,11 @@
 #define SS_DEBUG
 #endif
 
+#include <iostream>
+#include <maxscale/log_manager.h>
 #include "../config.cc"
+
+using namespace std;
 
 #define TEST(a) do{if(!(a)){printf("Error: `" #a "` was not true\n");return 1;}}while(false)
 
@@ -213,13 +217,174 @@ int test_required_parameters()
     return 0;
 }
 
+namespace
+{
+
+struct DISK_SPACE_THRESHOLD_RESULT
+{
+    const char* zPath;
+    int32_t     size;
+};
+
+struct DISK_SPACE_THRESHOLD_TEST
+{
+    const char*                 zValue;
+    bool                        valid;
+    DISK_SPACE_THRESHOLD_RESULT results[5];
+};
+
+int dst_report(const DISK_SPACE_THRESHOLD_TEST& test,
+               bool parsed,
+               MxsDiskSpaceThreshold& result)
+{
+    int nErrors = 0;
+
+    cout << test.zValue << endl;
+
+    if (test.valid)
+    {
+        if (parsed)
+        {
+            const DISK_SPACE_THRESHOLD_RESULT* pResult = test.results;
+
+            while (pResult->zPath)
+            {
+                auto i = result.find(pResult->zPath);
+
+                if (i != result.end())
+                {
+                    result.erase(i);
+                }
+                else
+                {
+                    cout << "error: Expected " << pResult->zPath << " to be found, but it wasn't." << endl;
+                    ++nErrors;
+                }
+
+                ++pResult;
+            }
+
+            if (result.size() != 0)
+            {
+                for (auto i = result.begin(); i != result.end(); ++i)
+                {
+                    cout << "error: " << i->first << " was found, although not expected." << endl;
+                    ++nErrors;
+                    ++i;
+                }
+            }
+        }
+        else
+        {
+            cout << "error: Expected value to be parsed, but it wasn't." << endl;
+        }
+    }
+    else
+    {
+        if (parsed)
+        {
+            cout << "error: Expected value not to be parsed, but it was." << endl;
+            ++nErrors;
+        }
+    }
+
+    if (nErrors == 0)
+    {
+        cout << "OK, ";
+        if (test.valid)
+        {
+            cout << "was valid and was parsed as such.";
+        }
+        else
+        {
+            cout << "was not valid, and was not parsed either.";
+        }
+        cout << endl;
+    }
+
+    return nErrors;
+}
+
+}
+
+int test_disk_space_threshold()
+{
+    int nErrors = 0;
+
+    static const DISK_SPACE_THRESHOLD_TEST tests[] =
+    {
+        {
+            "/data:80", true,
+            {
+                { "/data", 80 }
+            }
+        },
+        {
+            "/data1", false
+        },
+        {
+            ":50", false
+        },
+        {
+            "/data1:", false
+        },
+        {
+            "/data1:abc", false
+        },
+        {
+            "/data1:120", false
+        },
+        {
+            "/data1:-50", false
+        },
+        {
+            "/data1,/data2:50", false
+        },
+        {
+            "/data1:50,/data2", false
+        },
+        {
+            " /data1 : 40, /data2 :50, /data3: 70 ", true,
+            {
+                { "/data1", 40 },
+                { "/data2", 50 },
+                { "/data3", 70 },
+            }
+        }
+    };
+
+    const int nTests = sizeof(tests) / sizeof(tests[0]);
+
+    for (int i = 0; i < nTests; ++i)
+    {
+        const DISK_SPACE_THRESHOLD_TEST& test = tests[i];
+
+        MxsDiskSpaceThreshold dst;
+
+        bool parsed = config_parse_disk_space_threshold(&dst, test.zValue);
+
+        nErrors += dst_report(test, parsed, dst);
+    }
+
+    return nErrors;
+}
+
 int main(int argc, char **argv)
 {
     int result = 0;
 
-    result += test_validity();
-    result += test_add_parameter();
-    result += test_required_parameters();
+    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_FS))
+    {
+        result += test_validity();
+        result += test_add_parameter();
+        result += test_required_parameters();
+        result += test_disk_space_threshold();
+    }
+    else
+    {
+        cerr << "Could not initialize log manager." << endl;
+        ++result;
+    }
 
     return result;
 }

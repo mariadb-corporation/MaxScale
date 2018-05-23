@@ -28,6 +28,15 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
 
+#ifdef __cplusplus
+#include <tr1/unordered_map>
+#include <string>
+// A mapping from a path to a percentage, e.g.: "/disk" -> 80.
+typedef std::tr1::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
+#else
+typedef void MxsDiskSpaceThreshold;
+#endif
+
 MXS_BEGIN_DECLS
 
 /** Default port where the REST API listens */
@@ -102,6 +111,7 @@ extern const char CN_DUMP_LAST_STATEMENTS[];
 extern const char CN_DATA[];
 extern const char CN_DEFAULT[];
 extern const char CN_DESCRIPTION[];
+extern const char CN_DISK_SPACE_THRESHOLD[];
 extern const char CN_ENABLE_ROOT_USER[];
 extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
@@ -544,5 +554,17 @@ uint32_t config_writeq_high_water();
  * @return @return  Number of low water mark in bytes
  */
 uint32_t config_writeq_low_water();
+
+/**
+ * @brief Interpret a @disk_space_threshold configuration string.
+ *
+ * @param disk_space_threshold  Data structure for holding disk space configuration.
+ * @param config_value          Configuration value from the configuration file.
+ *
+ * @return True, if @ config_value was valid, false otherwise.
+ *
+ */
+bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* disk_space_threshold,
+                                       const char* config_value);
 
 MXS_END_DECLS
