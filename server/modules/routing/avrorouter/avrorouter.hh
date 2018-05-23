@@ -185,14 +185,6 @@ struct TABLE_MAP
     char*         database;
 };
 
-/**
- * The statistics for this AVRO router instance
- */
-typedef struct
-{
-    int n_clients;              /*< Number client sessions created */
-} AVRO_ROUTER_STATS;
-
 struct AVRO_TABLE
 {
     ~AVRO_TABLE()
@@ -257,18 +249,19 @@ typedef std::tr1::unordered_map<std::string, SAvroTable>   AvroTables;
 typedef std::tr1::unordered_map<std::string, STableMap>    MappedTables;
 typedef std::tr1::unordered_map<uint64_t, STableMap>       ActiveMaps;
 
-struct Avro
+class Avro: public MXS_ROUTER
 {
+    Avro(const Avro&) = delete;
+    Avro& operator=(const Avro&) = delete;
+
+public:
+    static Avro* create(SERVICE* service);
+
     SERVICE*                 service; /*< Pointer to the service using this router */
-    int                      initbinlog; /*< Initial binlog file number */
-    char*                    fileroot; /*< Root of binlog filename */
-    unsigned int             state; /*< State of the AVRO router */
-    uint8_t                  lastEventReceived; /*< Last even received */
-    uint32_t                 lastEventTimestamp; /*< Timestamp from last event */
-    char*                    binlogdir; /*< The directory where the binlog files are stored */
-    char*                    avrodir; /*< The directory with the AVRO files */
-    char                     binlog_name[BINLOG_FNAMELEN + 1]; /*< Name of the current binlog file */
-    uint64_t                 binlog_position; /*< last committed transaction position */
+    std::string              filestem; /*< Root of binlog filename */
+    std::string              binlogdir; /*< The directory where the binlog files are stored */
+    std::string              avrodir; /*< The directory with the AVRO files */
+    std::string              binlog_name; /*< Name of the current binlog file */
     uint64_t                 current_pos; /*< Current binlog position */
     int                      binlog_fd; /*< File descriptor of the binlog file being read */
     pcre2_code*              create_table_re;
@@ -281,11 +274,6 @@ struct Avro
     MappedTables             table_maps;
     AvroTables               open_tables;
     CreatedTables            created_tables;
-    sqlite3*                 sqlite_handle;
-    char                     prevbinlog[BINLOG_FNAMELEN + 1];
-    int                      rotating; /*< Rotation in progress flag */
-    AVRO_ROUTER_STATS        stats; /*< Statistics for this router */
-    int                      task_delay; /*< Delay in seconds until the next conversion takes place */
     uint64_t                 trx_count; /*< Transactions processed */
     uint64_t                 trx_target; /*< Minimum about of transactions that will trigger
                                           * a flush of all tables */
@@ -294,7 +282,17 @@ struct Avro
                                           * a flush of all tables */
     uint64_t                 block_size; /**< Avro datablock size */
     enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
+    sqlite3*                 sqlite_handle;
     uint32_t                 task_handle; /**< Delayed task handle */
+
+    struct
+    {
+        int n_clients; /*< Number client sessions created */
+    } stats; /*< Statistics for this router */
+
+private:
+    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERVICE* source);
+    void read_source_service_options(SERVICE* source);
 };
 
 class AvroSession: public MXS_ROUTER_SESSION

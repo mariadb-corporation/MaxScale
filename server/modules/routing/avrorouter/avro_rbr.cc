@@ -127,7 +127,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         {
             char filepath[PATH_MAX + 1];
             snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
-                     router->avrodir, table_ident, map->version);
+                     router->avrodir.c_str(), table_ident, map->version);
 
             SAvroTable avro_table(avro_table_alloc(filepath, json_schema,
                                                    codec_to_string(router->codec),
@@ -145,7 +145,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
                 router->table_maps[table_ident] = map;
                 router->open_tables[table_ident] = avro_table;
-                save_avro_schema(router->avrodir, json_schema, map.get());
+                save_avro_schema(router->avrodir.c_str(), json_schema, map.get());
                 router->active_maps[map->id] = map;
                 ss_dassert(router->active_maps[id] == map);
                 MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);

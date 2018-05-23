@@ -460,7 +460,7 @@ avro_client_process_command(Avro *router, AvroSession *client, GWBUF *queue)
                 memcpy(&client->gtid_start, &client->gtid, sizeof(client->gtid_start));
             }
 
-            if (file_in_dir(router->avrodir, client->avro_binfile))
+            if (file_in_dir(router->avrodir.c_str(), client->avro_binfile))
             {
                 /* set callback routine for data sending */
                 dcb_add_callback(client->dcb, DCB_REASON_DRAINED, avro_client_callback, client);
@@ -763,7 +763,7 @@ static bool avro_client_stream_data(AvroSession *client)
     if (strnlen(client->avro_binfile, 1))
     {
         char filename[PATH_MAX + 1];
-        snprintf(filename, PATH_MAX, "%s/%s", router->avrodir, client->avro_binfile);
+        snprintf(filename, PATH_MAX, "%s/%s", router->avrodir.c_str(), client->avro_binfile);
 
         bool ok = true;
 
@@ -976,11 +976,11 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
             switch (client->format)
             {
             case AVRO_FORMAT_JSON:
-                schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir);
+                schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir.c_str());
                 break;
 
             case AVRO_FORMAT_AVRO:
-                schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir);
+                schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir.c_str());
                 break;
 
             default:
@@ -997,7 +997,7 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
         bool read_more = avro_client_stream_data(client);
 
         char filename[PATH_MAX + 1];
-        print_next_filename(client->avro_binfile, client->router->avrodir,
+        print_next_filename(client->avro_binfile, client->router->avrodir.c_str(),
                             filename, sizeof(filename));
 
         bool next_file;
@@ -1047,7 +1047,7 @@ AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
     AvroSession* client = NULL;
     sqlite3* handle;
     char dbpath[PATH_MAX + 1];
-    snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir, avro_index_name);
+    snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir.c_str(), avro_index_name);
 
     if (sqlite3_open_v2(dbpath, &handle,
                         SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) != SQLITE_OK)

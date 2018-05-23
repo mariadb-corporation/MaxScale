@@ -181,7 +181,7 @@ void avro_index_file(Avro *router, const char* filename)
 void avro_update_index(Avro* router)
 {
     char path[PATH_MAX + 1];
-    snprintf(path, sizeof(path), "%s/*.avro", router->avrodir);
+    snprintf(path, sizeof(path), "%s/*.avro", router->avrodir.c_str());
     glob_t files;
 
     if (glob(path, 0, NULL, &files) != GLOB_NOMATCH)
