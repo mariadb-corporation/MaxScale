@@ -31,7 +31,7 @@
 /**
  * The keywords in the hint syntax
  */
-struct
+static struct
 {
     const char *keyword;
     TOKEN_VALUE token;
@@ -51,23 +51,6 @@ struct
     { "server", TOK_SERVER},
     { NULL, static_cast<TOKEN_VALUE>(0)}
 };
-/**
-HINT_TOKEN kwords[] = {
-        { TOK_MAXSCALE, "maxscale" },
-        { TOK_PREPARE,  "prepare" },
-        { TOK_START,    "start" },
-        { TOK_START,    "begin" },
-        { TOK_STOP,     "stop" },
-        { TOK_STOP,     "end" },
-        { TOK_EQUAL,    "=" },
-        { TOK_ROUTE,    "route" },
-        { TOK_TO,       "to" },
-        { TOK_MASTER,   "master" },
-        { TOK_SLAVE,    "slave" },
-        { TOK_SERVER,   "server" },
-        { 0,            NULL}
-};
- */
 
 static HINT_TOKEN *hint_next_token(GWBUF **buf, char **ptr);
 static void hint_pop(HINT_SESSION *);

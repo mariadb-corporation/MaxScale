@@ -197,7 +197,7 @@ int test_store()
 {
     int errors = 0;
 
-    for (size_t i = 0; i < n_store_test_cases; ++i)
+    for (int i = 0; i < n_store_test_cases; ++i)
     {
         printf("TC      : %d\n", (int)(i + 1));
         const struct store_test_case& test_case = store_test_cases[i];
@@ -306,12 +306,27 @@ struct ARRAY_TEST_CASE
 
 const int n_array_test_cases = sizeof(array_test_cases) / sizeof(array_test_cases[0]);
 
+typedef CacheRules::SCacheRules SCacheRules;
+std::vector<SCacheRules> rules;
+
+struct ShouldStore
+{
+    ShouldStore(GWBUF* buf):
+        pStmt(buf)
+    {
+    }
+
+    bool operator()(SCacheRules sRules)
+    {
+        return sRules->should_store(NULL, pStmt);
+    }
+
+    GWBUF* pStmt;
+};
+
 int test_array_store()
 {
     int errors = 0;
-
-    typedef CacheRules::SCacheRules SCacheRules;
-    std::vector<SCacheRules> rules;
 
     if (CacheRules::parse(ARRAY_RULES, 0, &rules))
     {
@@ -322,10 +337,7 @@ int test_array_store()
             cout << tc.zStmt << endl;
 
             GWBUF* pStmt = create_gwbuf(tc.zStmt);
-            auto it = std::find_if(rules.begin(), rules.end(), [pStmt](SCacheRules sRules)
-                                   {
-                                       return sRules->should_store(NULL, pStmt);
-                                   });
+            auto it = std::find_if(rules.begin(), rules.end(), ShouldStore(pStmt));
 
             int index = (it == rules.end()) ? -1 : std::distance(rules.begin(), it);
 
