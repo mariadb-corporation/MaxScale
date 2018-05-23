@@ -284,6 +284,7 @@ const char *config_monitor_params[] =
     CN_BACKEND_READ_TIMEOUT,
     CN_BACKEND_WRITE_TIMEOUT,
     CN_BACKEND_CONNECT_ATTEMPTS,
+    CN_DISK_SPACE_THRESHOLD,
     NULL
 };
 
@@ -3372,6 +3373,17 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
+        const char* disk_space_threshold = config_get_value_string(obj->parameters, CN_DISK_SPACE_THRESHOLD);
+        if (*disk_space_threshold)
+        {
+            if (!server_set_disk_space_threshold(server, disk_space_threshold))
+            {
+                MXS_ERROR("Invalid value for '%s' for server %s: %s",
+                          CN_DISK_SPACE_THRESHOLD, server->name, disk_space_threshold);
+                error_count++;
+            }
+        }
+
         MXS_CONFIG_PARAMETER *params = obj->parameters;
 
         server->server_ssl = make_ssl_structure(obj, false, &error_count);
@@ -3649,6 +3661,17 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                                           atoi(connect_attempts), CN_BACKEND_CONNECT_ATTEMPTS))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_ATTEMPTS);
+                error_count++;
+            }
+        }
+
+        const char* disk_space_threshold = config_get_value_string(obj->parameters, CN_DISK_SPACE_THRESHOLD);
+        if (*disk_space_threshold)
+        {
+            if (!monitor_set_disk_space_threshold(monitor, disk_space_threshold))
+            {
+                MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
+                          CN_DISK_SPACE_THRESHOLD, monitor->name, disk_space_threshold);
                 error_count++;
             }
         }
