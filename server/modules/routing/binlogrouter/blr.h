@@ -30,6 +30,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/router.h>
 #include <maxscale/secrets.h>
 #include <maxscale/service.h>
 #include <maxscale/sqlite3.h>
@@ -665,7 +666,7 @@ typedef struct binlog_encryption_ctx
 /**
  * The per instance data for the router.
  */
-typedef struct router_instance
+typedef struct router_instance: public MXS_ROUTER
 {
     SERVICE                 *service;       /*< Pointer to the service using this router */
     ROUTER_SLAVE            *slaves;        /*< Link list of all the slave connections  */
@@ -765,6 +766,14 @@ typedef struct router_instance
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
+
+/** Master Semi-Sync capability */
+typedef enum
+{
+    MASTER_SEMISYNC_NOT_AVAILABLE, /*< Semi-Sync replication not available */
+    MASTER_SEMISYNC_DISABLED, /*< Semi-Sync is disabled */
+    MASTER_SEMISYNC_ENABLED /*< Semi-Sync is enabled */
+} master_semisync_capability_t;
 
 /**
  * Holds information about:
@@ -943,6 +952,13 @@ static const char *blrs_states[] =
 #define EXTRACT32(x)            extract_field((x), 32)
 #endif
 
+#define MASTER_BYTES_BEFORE_EVENT 5
+#define MASTER_BYTES_BEFORE_EVENT_SEMI_SYNC MASTER_BYTES_BEFORE_EVENT + 2
+/* Semi-Sync indicator in network packet (byte 6) */
+#define BLR_MASTER_SEMI_SYNC_INDICATOR  0xef
+/* Semi-Sync flag ACK_REQ in network packet (byte 7) */
+#define BLR_MASTER_SEMI_SYNC_ACK_REQ    0x01
+
 /*
  * Externals within the router
  */
@@ -1021,6 +1037,33 @@ extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
 extern bool blr_start_master_in_main(void* data);
 extern bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
                                    const MARIADB_GTID_INFO *info_file);
+
+// Functions used by blr_handle_one_event
+int blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr);
+int blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos);
+bool blr_handle_fake_rotate(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
+void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
+void blr_master_close(ROUTER_INSTANCE *);
+void blr_notify_all_slaves(ROUTER_INSTANCE *router);
+bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
+void blr_master_delayed_connect(ROUTER_INSTANCE *router);
+
+/**
+ * Handler for binlog events
+ *
+ * This function is called for each event replicated from the master.
+ *
+ * @param instance Router instance
+ * @param hdr      Event header
+ * @param ptr      Event data
+ * @param len      Buffer length
+ * @param semisync 1 if semisync is enabled (TODO: change this)
+ *
+ * @return True if event was successfully processed, false if an error occurred
+ *         and the processing should be stopped.
+ */
+bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, uint32_t len,
+                          int semi_sync_send_ack);
 
 MXS_END_DECLS
 

@@ -140,7 +140,6 @@ static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
 extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
-bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 
 typedef struct binlog_event_desc
