@@ -65,15 +65,16 @@ enum stored_value_type
 using std::string;
 using std::set;
 
-const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
-const char CN_BACKEND_READ_TIMEOUT[]     = "backend_read_timeout";
-const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
-const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
-const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
-const char CN_JOURNAL_MAX_AGE[]          = "journal_max_age";
-const char CN_SCRIPT_TIMEOUT[]           = "script_timeout";
-const char CN_SCRIPT[]                   = "script";
-const char CN_EVENTS[]                   = "events";
+const char CN_BACKEND_CONNECT_ATTEMPTS[]  = "backend_connect_attempts";
+const char CN_BACKEND_CONNECT_TIMEOUT[]   = "backend_connect_timeout";
+const char CN_BACKEND_READ_TIMEOUT[]      = "backend_read_timeout";
+const char CN_BACKEND_WRITE_TIMEOUT[]     = "backend_write_timeout";
+const char CN_DISK_SPACE_CHECK_INTERVAL[] = "disk_space_check_interval";
+const char CN_EVENTS[]                    = "events";
+const char CN_JOURNAL_MAX_AGE[]           = "journal_max_age";
+const char CN_MONITOR_INTERVAL[]          = "monitor_interval";
+const char CN_SCRIPT[]                    = "script";
+const char CN_SCRIPT_TIMEOUT[]            = "script_timeout";
 
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
@@ -138,6 +139,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     mon->server_pending_changes = false;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     mon->disk_space_threshold = NULL;
+    mon->disk_space_check_interval = 0;
     spinlock_init(&mon->lock);
 
     if ((mon->instance = mon->api->createInstance(mon)) == NULL)

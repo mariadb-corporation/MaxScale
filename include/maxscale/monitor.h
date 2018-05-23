@@ -267,6 +267,7 @@ struct mxs_monitor
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
     uint8_t journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
+    int64_t disk_space_check_interval; /**< How often should a disk space check be made at most. */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
@@ -307,14 +308,15 @@ static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,sla
  * Monitor configuration parameters names
  */
 extern const char CN_BACKEND_CONNECT_ATTEMPTS[];
+extern const char CN_BACKEND_CONNECT_TIMEOUT[];
 extern const char CN_BACKEND_READ_TIMEOUT[];
 extern const char CN_BACKEND_WRITE_TIMEOUT[];
-extern const char CN_BACKEND_CONNECT_TIMEOUT[];
-extern const char CN_MONITOR_INTERVAL[];
-extern const char CN_JOURNAL_MAX_AGE[];
-extern const char CN_SCRIPT_TIMEOUT[];
-extern const char CN_SCRIPT[];
+extern const char CN_DISK_SPACE_CHECK_INTERVAL[];
 extern const char CN_EVENTS[];
+extern const char CN_JOURNAL_MAX_AGE[];
+extern const char CN_MONITOR_INTERVAL[];
+extern const char CN_SCRIPT[];
+extern const char CN_SCRIPT_TIMEOUT[];
 
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 

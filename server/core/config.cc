@@ -285,6 +285,7 @@ const char *config_monitor_params[] =
     CN_BACKEND_WRITE_TIMEOUT,
     CN_BACKEND_CONNECT_ATTEMPTS,
     CN_DISK_SPACE_THRESHOLD,
+    CN_DISK_SPACE_CHECK_INTERVAL,
     NULL
 };
 
@@ -3373,8 +3374,8 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
-        const char* disk_space_threshold = config_get_value_string(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-        if (*disk_space_threshold)
+        const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
+        if (disk_space_threshold)
         {
             if (!server_set_disk_space_threshold(server, disk_space_threshold))
             {
@@ -3665,14 +3666,32 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             }
         }
 
-        const char* disk_space_threshold = config_get_value_string(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-        if (*disk_space_threshold)
+        const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
+        if (disk_space_threshold)
         {
             if (!monitor_set_disk_space_threshold(monitor, disk_space_threshold))
             {
                 MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
                           CN_DISK_SPACE_THRESHOLD, monitor->name, disk_space_threshold);
                 error_count++;
+            }
+        }
+
+        const char* disk_space_check_interval =
+            config_get_value(obj->parameters, CN_DISK_SPACE_CHECK_INTERVAL);
+        if (disk_space_check_interval)
+        {
+            char* endptr;
+            long int value = strtoll(disk_space_check_interval, &endptr, 0);
+            if (*endptr == 0 && value >= 0)
+            {
+                monitor->disk_space_check_interval = value;
+            }
+            else
+            {
+                MXS_ERROR("Invalid value for '%s': %s",
+                          CN_DISK_SPACE_CHECK_INTERVAL, disk_space_check_interval);
+                ++error_count;
             }
         }
 
