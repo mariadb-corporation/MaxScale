@@ -18,6 +18,7 @@
 
 MXS_BEGIN_DECLS
 
+// The worker ID of the "main" thread
 #define MXS_RWORKER_MAIN -1
 
 /**
