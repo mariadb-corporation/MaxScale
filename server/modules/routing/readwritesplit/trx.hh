@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <deque>
+#include <list>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
@@ -24,7 +24,7 @@ class Trx
 {
 public:
     // A log of executed queries, for transaction replay
-    typedef std::deque<mxs::Buffer> TrxLog;
+    typedef std::list<mxs::Buffer> TrxLog;
 
     Trx():
         m_size(0)
@@ -39,7 +39,7 @@ public:
     void add_stmt(GWBUF* buf)
     {
         m_size += gwbuf_length(buf);
-        m_log.push_back(buf);
+        m_log.emplace_back(buf);
     }
 
     /**
