@@ -354,6 +354,34 @@ bool create_tables(sqlite3* handle)
     return true;
 }
 
+class ConversionCtlTask: public mxs::WorkerDisposableTask
+{
+public:
+    ConversionCtlTask(Avro* instance, bool start):
+        m_instance(instance),
+        m_start(start)
+    {
+    }
+
+    void execute(Worker& worker)
+    {
+        if (m_instance->task_handle)
+        {
+            worker.cancel_delayed_call(m_instance->task_handle);
+            m_instance->task_handle = 0;
+        }
+
+        if (m_start)
+        {
+            m_instance->task_handle = worker.delayed_call(1000, converter_func, m_instance);
+        }
+    }
+
+private:
+    Avro* m_instance;
+    bool  m_start;
+};
+
 static bool conversion_task_ctl(Avro *inst, bool start)
 {
     bool rval = false;
@@ -361,19 +389,13 @@ static bool conversion_task_ctl(Avro *inst, bool start)
     if (!inst->service->svc_do_shutdown)
     {
         Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
+        std::auto_ptr<ConversionCtlTask> task(new (std::nothrow) ConversionCtlTask(inst, start));
 
-        if (inst->task_handle)
+        if (task.get())
         {
-            worker->cancel_delayed_call(inst->task_handle);
-            inst->task_handle = 0;
+            worker->post(task);
+            rval = true;
         }
-
-        if (start)
-        {
-            inst->task_handle = worker->delayed_call(1000, converter_func, inst);
-        }
-
-        rval = true;
     }
 
     return rval;
