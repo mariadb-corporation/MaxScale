@@ -125,7 +125,7 @@ static bool is_slave(MXS_MONITORED_SERVER* server)
     return rval;
 }
 
-static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* server)
+void GRMon::update_server_status(MXS_MONITORED_SERVER* server)
 {
     /* Don't even probe server flagged as in maintenance */
     if (SERVER_IN_MAINT(server->server))
@@ -136,7 +136,7 @@ static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* ser
     /** Store previous status */
     server->mon_prev_status = server->server->status;
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, server);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, server);
 
     if (!mon_connection_is_ok(rval))
     {
@@ -185,7 +185,7 @@ void GRMon::tick()
 {
     for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
-        update_server_status(m_monitor, ptr);
+        update_server_status(ptr);
     }
 }
 

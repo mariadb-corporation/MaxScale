@@ -55,7 +55,7 @@ void AuroraMonitor::destroy()
  * @param monitor  Monitor object
  * @param database Server whose status should be updated
  */
-void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
+void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
@@ -65,7 +65,7 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
         database->mon_prev_status = database->server->status;
 
         /** Try to connect to or ping the database */
-        mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
 
         if (mon_connection_is_ok(rval))
         {
@@ -118,7 +118,7 @@ void AuroraMonitor::tick()
 {
     for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
-        update_server_status(m_monitor, ptr);
+        update_server_status(ptr);
     }
 }
 

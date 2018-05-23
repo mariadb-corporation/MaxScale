@@ -261,7 +261,7 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
  * @param handle        The MySQL Monitor object
  * @param database      The database to probe
  */
-void GaleraMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
+void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -453,7 +453,7 @@ void GaleraMonitor::tick()
     {
         ptr->mon_prev_status = ptr->server->status;
 
-        monitorDatabase(ptr);
+        update_server_status(ptr);
 
         /* Log server status change */
         if (mon_status_changed(ptr))

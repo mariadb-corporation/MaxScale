@@ -145,8 +145,7 @@ json_t* MMMonitor::diagnostics_json() const
  * @param handle        The MySQL Monitor object
  * @param database  The database to probe
  */
-static void
-monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
+void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -163,7 +162,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
 
     /** Store previous status */
     database->mon_prev_status = database->server->status;
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
 
     if (!mon_connection_is_ok(rval))
     {
@@ -444,7 +443,7 @@ void MMMonitor::tick()
         ptr->pending_status = ptr->server->status;
 
         /* monitor current node */
-        monitorDatabase(m_monitor, ptr);
+        update_server_status(ptr);
 
         if (mon_status_changed(ptr) ||
             mon_print_fail_status(ptr))
