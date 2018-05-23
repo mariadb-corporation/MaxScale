@@ -127,15 +127,6 @@ static bool is_slave(MXS_MONITORED_SERVER* server)
 
 void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    /* Don't even probe server flagged as in maintenance */
-    if (SERVER_IN_MAINT(monitored_server->server))
-    {
-        return;
-    }
-
-    /** Store previous status */
-    monitored_server->mon_prev_status = monitored_server->server->status;
-
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
     if (!mon_connection_is_ok(rval))
@@ -178,14 +169,6 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     {
         server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
         server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
-    }
-}
-
-void GRMon::tick()
-{
-    for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
-    {
-        update_server_status(ptr);
     }
 }
 

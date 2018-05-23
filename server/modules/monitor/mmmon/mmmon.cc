@@ -153,14 +153,6 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     unsigned long int server_version = 0;
     char *server_string;
 
-    /* Don't probe servers in maintenance mode */
-    if (SERVER_IN_MAINT(monitored_server->server))
-    {
-        return;
-    }
-
-    /** Store previous status */
-    monitored_server->mon_prev_status = monitored_server->server->status;
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
     if (!mon_connection_is_ok(rval))
@@ -433,45 +425,14 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
 void MMMonitor::tick()
 {
-    /* start from the first server in the list */
-    MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers;
-
-    while (ptr)
-    {
-        /* copy server status into monitor pending_status */
-        ptr->pending_status = ptr->server->status;
-
-        /* monitor current node */
-        update_server_status(ptr);
-
-        if (mon_status_changed(ptr) ||
-            mon_print_fail_status(ptr))
-        {
-            MXS_DEBUG("Backend server [%s]:%d state : %s",
-                      ptr->server->address,
-                      ptr->server->port,
-                      STRSRVSTATUS(ptr->server));
-        }
-        if (SERVER_IS_DOWN(ptr->server))
-        {
-            /** Increase this server'e error count */
-            ptr->mon_err_count += 1;
-        }
-        else
-        {
-            /** Reset this server's error count */
-            ptr->mon_err_count = 0;
-        }
-
-        ptr = ptr->next;
-    }
+    MonitorInstance::tick();
 
     /* Get Master server pointer */
     MXS_MONITORED_SERVER *root_master = get_current_master();
 
     /* Update server status from monitor pending status on that server*/
 
-    ptr = m_monitor->monitored_servers;
+    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
     while (ptr)
     {
         if (!SERVER_IN_MAINT(ptr->server))

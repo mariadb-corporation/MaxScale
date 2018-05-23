@@ -2635,6 +2635,37 @@ void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
 }
 
+void MonitorInstance::tick()
+{
+    for (MXS_MONITORED_SERVER *pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
+    {
+        if (!SERVER_IN_MAINT(pMs->server))
+        {
+            pMs->mon_prev_status = pMs->server->status;
+            pMs->pending_status = pMs->server->status;
+
+            update_server_status(pMs);
+
+            if (mon_status_changed(pMs) || mon_print_fail_status(pMs))
+            {
+                MXS_DEBUG("Backend server [%s]:%d state : %s",
+                          pMs->server->address,
+                          pMs->server->port,
+                          STRSRVSTATUS(pMs->server));
+            }
+
+            if (SERVER_IS_DOWN(pMs->server))
+            {
+                pMs->mon_err_count += 1;
+            }
+            else
+            {
+                pMs->mon_err_count = 0;
+            }
+        }
+    }
+}
+
 void MonitorInstance::main()
 {
     load_server_journal(m_monitor, &m_master);

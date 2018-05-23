@@ -70,8 +70,13 @@ protected:
      * This function is called once per monitor round, and the concrete
      * implementation should probe all servers, i.e. call @c update_server_status
      * on each server.
+     *
+     * The default implementation will:
+     *   - Not call @update_server_status for a server that is in maintenance.
+     *   - Before calling, update the previous status of the server.
+     *   - After the call, update the error count of the server.
      */
-    virtual void tick() = 0;
+    virtual void tick();
 
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */

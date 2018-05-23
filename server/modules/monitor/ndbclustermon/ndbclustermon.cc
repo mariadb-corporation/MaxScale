@@ -134,12 +134,6 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     int isjoined = 0;
     char *server_string;
 
-    /* Don't even probe server flagged as in maintenance */
-    if (SERVER_IN_MAINT(monitored_server->server))
-    {
-        return;
-    }
-
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
     if (!mon_connection_is_ok(rval))
     {
@@ -234,26 +228,5 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     {
         server_clear_status_nolock(monitored_server->server, SERVER_NDB);
         monitored_server->server->depth = -1;
-    }
-}
-
-void NDBCMonitor::tick()
-{
-    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
-    while (ptr)
-    {
-        ptr->mon_prev_status = ptr->server->status;
-        update_server_status(ptr);
-
-        if (ptr->server->status != ptr->mon_prev_status ||
-            SERVER_IS_DOWN(ptr->server))
-        {
-            MXS_DEBUG("Backend server [%s]:%d state : %s",
-                      ptr->server->address,
-                      ptr->server->port,
-                      STRSRVSTATUS(ptr->server));
-        }
-
-        ptr = ptr->next;
     }
 }
