@@ -266,6 +266,7 @@ struct mxs_monitor
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
     uint8_t journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
+    MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
@@ -443,5 +444,15 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* s
  */
 int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_MONITOR* mon,
                            MXS_MONITORED_SERVER*** monitored_array_out);
+
+/**
+ * @brief Set the disk space threshold of a monitor
+ *
+ * @param server                The monitor.
+ * @param disk_space_threshold  The disk space threshold as specified in the config file.
+ *
+ * @return True, if the provided string is valid and the threshold could be set.
+ */
+bool monitor_set_disk_space_threshold(MXS_MONITOR *monitor, const char *disk_space_threshold);
 
 MXS_END_DECLS

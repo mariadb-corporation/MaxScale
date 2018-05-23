@@ -137,6 +137,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     mon->parameters = NULL;
     mon->server_pending_changes = false;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
+    mon->disk_space_threshold = NULL;
     spinlock_init(&mon->lock);
 
     if ((mon->instance = mon->api->createInstance(mon)) == NULL)
@@ -187,6 +188,7 @@ monitor_destroy(MXS_MONITOR *mon)
     spinlock_release(&monLock);
     mon->api->destroyInstance(mon->instance);
     mon->state = MONITOR_STATE_FREED;
+    delete mon->disk_space_threshold;
     config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->monitored_servers);
     MXS_FREE(mon->name);
@@ -2506,6 +2508,34 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
         *monitored_servers_out = monitored_array;
     }
     return found;
+}
+
+bool monitor_set_disk_space_threshold(MXS_MONITOR *monitor, const char *disk_space_threshold)
+{
+    bool rv = false;
+
+    MxsDiskSpaceThreshold dst;
+
+    rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
+
+    if (rv)
+    {
+        if (!monitor->disk_space_threshold)
+        {
+            monitor->disk_space_threshold = new (std::nothrow) MxsDiskSpaceThreshold;
+        }
+
+        if (monitor->disk_space_threshold)
+        {
+            monitor->disk_space_threshold->swap(dst);
+        }
+        else
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
 }
 
 namespace maxscale

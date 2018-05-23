@@ -147,6 +147,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     // Log all warnings once
     server->warn_ssl_not_enabled = true;
 
+    server->disk_space_threshold = NULL;
     spinlock_acquire(&server_spin);
     server->next = allServers;
     allServers = server;
@@ -201,6 +202,7 @@ server_free(SERVER *tofreeserver)
             dcb_persistent_clean_count(tofreeserver->persistent[i], i, true);
         }
     }
+    delete tofreeserver->disk_space_threshold;
     MXS_FREE(tofreeserver);
     return 1;
 }
@@ -1563,4 +1565,32 @@ json_t* server_list_to_json(const char* host)
     spinlock_release(&server_spin);
 
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
+}
+
+bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold)
+{
+    bool rv = false;
+
+    MxsDiskSpaceThreshold dst;
+
+    rv = config_parse_disk_space_threshold(&dst, disk_space_threshold);
+
+    if (rv)
+    {
+        if (!server->disk_space_threshold)
+        {
+            server->disk_space_threshold = new (std::nothrow) MxsDiskSpaceThreshold;
+        }
+
+        if (server->disk_space_threshold)
+        {
+            server->disk_space_threshold->swap(dst);
+        }
+        else
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
 }

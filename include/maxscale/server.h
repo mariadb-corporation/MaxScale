@@ -19,6 +19,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/resultset.h>
 #include <maxscale/jansson.h>
@@ -159,6 +160,7 @@ typedef struct server
     bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
                                           *   by rwsplit. TODO: Move to rwsplit */
     bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
+    MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
@@ -358,6 +360,16 @@ json_t* server_to_json(const SERVER* server, const char* host);
  * @return JSON array of servers or NULL if an error occurred
  */
 json_t* server_list_to_json(const char* host);
+
+/**
+ * @brief Set the disk space threshold of the server
+ *
+ * @param server                The server.
+ * @param disk_space_threshold  The disk space threshold as specified in the config file.
+ *
+ * @return True, if the provided string is valid and the threshold could be set.
+ */
+bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold);
 
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
