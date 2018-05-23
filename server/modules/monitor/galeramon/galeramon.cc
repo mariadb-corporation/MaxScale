@@ -258,54 +258,53 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
  * slave bits, except for clearing them when a server is not joined to the
  * cluster.
  *
- * @param handle        The MySQL Monitor object
- * @param database      The database to probe
+ * @param monitored_server  The server to probe.
  */
-void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
+void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
     char *server_string;
 
     /* Don't even probe server flagged as in maintenance */
-    if (SERVER_IN_MAINT(database->server))
+    if (SERVER_IN_MAINT(monitored_server->server))
     {
         return;
     }
 
     /** Store previous status */
-    database->mon_prev_status = database->server->status;
+    monitored_server->mon_prev_status = monitored_server->server->status;
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
     if (!mon_connection_is_ok(rval))
     {
-        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
+            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
 
-        database->server->node_id = -1;
+        monitored_server->server->node_id = -1;
 
-        server_clear_status_nolock(database->server, SERVER_RUNNING);
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
 
-        if (mon_status_changed(database) && mon_print_fail_status(database))
+        if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
-            mon_log_connect_error(database, rval);
+            mon_log_connect_error(monitored_server, rval);
         }
 
         return;
     }
 
     /* If we get this far then we have a working connection */
-    server_set_status_nolock(database->server, SERVER_RUNNING);
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
 
     /* get server version string */
-    mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->version_string;
+    mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
+    server_string = monitored_server->server->version_string;
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     const char *cluster_member =
@@ -315,10 +314,10 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
         " 'wsrep_local_index',"
         " 'wsrep_local_state')";
 
-    if (mxs_mysql_query(database->con, cluster_member) == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(monitored_server->con, cluster_member) == 0
+        && (result = mysql_store_result(monitored_server->con)) != NULL)
     {
-        if (mysql_field_count(database->con) < 2)
+        if (mysql_field_count(monitored_server->con) < 2)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"%s\". "
@@ -344,7 +343,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
                     if (warn_erange_on_local_index)
                     {
                         MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
-                                    database->server->name, row[1]);
+                                    monitored_server->server->name, row[1]);
                         warn_erange_on_local_index = false;
                     }
                     local_index = -1;
@@ -365,7 +364,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
                 }
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
                 else if (strcmp(row[1], "2") == 0 && m_availableWhenDonor == 1 &&
-                         using_xtrabackup(database, server_string))
+                         using_xtrabackup(monitored_server, server_string))
                 {
                     info.joined = 1;
                 }
@@ -388,7 +387,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
                 if (row[1] == NULL || !strlen(row[1]))
                 {
                     MXS_DEBUG("Node %s is not running Galera Cluster",
-                              database->server->name);
+                              monitored_server->server->name);
                     info.cluster_uuid = NULL;
                     info.joined = 0;
                 }
@@ -399,19 +398,19 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
             }
         }
 
-        database->server->node_id = info.joined ? info.local_index : -1;
+        monitored_server->server->node_id = info.joined ? info.local_index : -1;
 
         /* Add server pointer */
-        info.node = database->server;
+        info.node = monitored_server->server;
 
         /* Galera Cluster vars fetch */
         HASHTABLE *table = m_galera_nodes_info;
         GALERA_NODE_INFO *node =
-            static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, database->server->name));
+            static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, monitored_server->server->name));
         if (node)
         {
             MXS_DEBUG("Node %s is present in galera_nodes_info, updtating info",
-                      database->server->name);
+                      monitored_server->server->name);
 
             MXS_FREE(node->cluster_uuid);
             /* Update node data */
@@ -419,17 +418,17 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
         }
         else
         {
-            if (hashtable_add(table, database->server->name, &info))
+            if (hashtable_add(table, monitored_server->server->name, &info))
             {
                 MXS_DEBUG("Added %s to galera_nodes_info",
-                          database->server->name);
+                          monitored_server->server->name);
             }
             /* Free the info.cluster_uuid as it's been added to the table */
             MXS_FREE(info.cluster_uuid);
         }
 
         MXS_DEBUG("Server %s: local_state %d, local_index %d, UUID %s, size %d, possible member %d",
-                  database->server->name,
+                  monitored_server->server->name,
                   info.local_state,
                   info.local_index,
                   info.cluster_uuid ? info.cluster_uuid : "_none_",
@@ -440,7 +439,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     }
     else
     {
-        mon_report_query_error(database);
+        mon_report_query_error(monitored_server);
     }
 }
 

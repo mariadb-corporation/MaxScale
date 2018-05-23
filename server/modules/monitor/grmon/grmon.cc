@@ -125,59 +125,59 @@ static bool is_slave(MXS_MONITORED_SERVER* server)
     return rval;
 }
 
-void GRMon::update_server_status(MXS_MONITORED_SERVER* server)
+void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     /* Don't even probe server flagged as in maintenance */
-    if (SERVER_IN_MAINT(server->server))
+    if (SERVER_IN_MAINT(monitored_server->server))
     {
         return;
     }
 
     /** Store previous status */
-    server->mon_prev_status = server->server->status;
+    monitored_server->mon_prev_status = monitored_server->server->status;
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, server);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
     if (!mon_connection_is_ok(rval))
     {
-        if (mysql_errno(server->con) == ER_ACCESS_DENIED_ERROR)
+        if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(server->server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(server->server, SERVER_AUTH_ERROR);
+            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
 
-        server->server->node_id = -1;
+        monitored_server->server->node_id = -1;
 
-        server_clear_status_nolock(server->server, SERVER_RUNNING);
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
 
-        if (mon_status_changed(server) && mon_print_fail_status(server))
+        if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
-            mon_log_connect_error(server, rval);
+            mon_log_connect_error(monitored_server, rval);
         }
     }
     else
     {
         /* If we get this far then we have a working connection */
-        server_set_status_nolock(server->server, SERVER_RUNNING);
+        server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
     }
 
-    if (is_master(server))
+    if (is_master(monitored_server))
     {
-        server_set_status_nolock(server->server, SERVER_MASTER);
-        server_clear_status_nolock(server->server, SERVER_SLAVE);
+        server_set_status_nolock(monitored_server->server, SERVER_MASTER);
+        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
     }
-    else if (is_slave(server))
+    else if (is_slave(monitored_server))
     {
-        server_set_status_nolock(server->server, SERVER_SLAVE);
-        server_clear_status_nolock(server->server, SERVER_MASTER);
+        server_set_status_nolock(monitored_server->server, SERVER_SLAVE);
+        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
     }
     else
     {
-        server_clear_status_nolock(server->server, SERVER_SLAVE);
-        server_clear_status_nolock(server->server, SERVER_MASTER);
+        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
+        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
     }
 }
 

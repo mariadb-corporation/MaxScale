@@ -37,7 +37,7 @@ private:
     NDBCMonitor(MXS_MONITOR* monitor);
     ~NDBCMonitor();
 
-    void update_server_status(MXS_MONITORED_SERVER *database);
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
     bool has_sufficient_permissions() const;
     void configure(const MXS_CONFIG_PARAMETER* params);

@@ -35,7 +35,7 @@ private:
     GRMon(MXS_MONITOR* monitor);
     ~GRMon();
 
-    void update_server_status(MXS_MONITORED_SERVER* server);
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
     bool has_sufficient_permissions() const;
     void configure(const MXS_CONFIG_PARAMETER* params);

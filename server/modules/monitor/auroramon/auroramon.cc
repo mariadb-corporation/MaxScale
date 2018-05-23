@@ -52,20 +52,20 @@ void AuroraMonitor::destroy()
  * status of the server is adjusted accordingly based on the results of the
  * query.
  *
- * @param monitor  Monitor object
- * @param database Server whose status should be updated
+ * @param monitored_server  Server whose status should be updated
  */
-void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
+void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    if (!SERVER_IN_MAINT(database->server))
+    if (!SERVER_IN_MAINT(monitored_server->server))
     {
         SERVER temp_server = {};
-        temp_server.status = database->server->status;
-        server_clear_status_nolock(&temp_server, SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
-        database->mon_prev_status = database->server->status;
+        temp_server.status = monitored_server->server->status;
+        server_clear_status_nolock(&temp_server,
+                                   SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
+        monitored_server->mon_prev_status = monitored_server->server->status;
 
         /** Try to connect to or ping the database */
-        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
         if (mon_connection_is_ok(rval))
         {
@@ -73,12 +73,12 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
             MYSQL_RES *result;
 
             /** Connection is OK, query for replica status */
-            if (mxs_mysql_query(database->con, "SELECT @@aurora_server_id, server_id FROM "
+            if (mxs_mysql_query(monitored_server->con, "SELECT @@aurora_server_id, server_id FROM "
                                 "information_schema.replica_host_status "
                                 "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
-                (result = mysql_store_result(database->con)))
+                (result = mysql_store_result(monitored_server->con)))
             {
-                ss_dassert(mysql_field_count(database->con) == 2);
+                ss_dassert(mysql_field_count(monitored_server->con) == 2);
                 MYSQL_ROW row = mysql_fetch_row(result);
                 int status = SERVER_SLAVE;
 
@@ -93,24 +93,24 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER *database)
             }
             else
             {
-                mon_report_query_error(database);
+                mon_report_query_error(monitored_server);
             }
         }
         else
         {
             /** Failed to connect to the database */
-            if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+            if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
             {
                 server_set_status_nolock(&temp_server, SERVER_AUTH_ERROR);
             }
 
-            if (mon_status_changed(database) && mon_print_fail_status(database))
+            if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
             {
-                mon_log_connect_error(database, rval);
+                mon_log_connect_error(monitored_server, rval);
             }
         }
 
-        server_transfer_status(database->server, &temp_server);
+        server_transfer_status(monitored_server->server, &temp_server);
     }
 }
 

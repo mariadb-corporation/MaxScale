@@ -142,10 +142,9 @@ json_t* MMMonitor::diagnostics_json() const
 /**
  * Monitor an individual server
  *
- * @param handle        The MySQL Monitor object
- * @param database  The database to probe
+ * @param monitored_server  The server to probe
  */
-void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
+void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -155,65 +154,65 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     char *server_string;
 
     /* Don't probe servers in maintenance mode */
-    if (SERVER_IN_MAINT(database->server))
+    if (SERVER_IN_MAINT(monitored_server->server))
     {
         return;
     }
 
     /** Store previous status */
-    database->mon_prev_status = database->server->status;
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
+    monitored_server->mon_prev_status = monitored_server->server->status;
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
     if (!mon_connection_is_ok(rval))
     {
-        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
-            monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
-        server_clear_status_nolock(database->server, SERVER_RUNNING);
-        monitor_clear_pending_status(database, SERVER_RUNNING);
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         /* Also clear M/S state in both server and monitor server pending struct */
-        server_clear_status_nolock(database->server, SERVER_SLAVE);
-        server_clear_status_nolock(database->server, SERVER_MASTER);
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
+        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
+        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
+        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
 
         /* Clean addition status too */
-        server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
-        monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+        server_clear_status_nolock(monitored_server->server, SERVER_STALE_STATUS);
+        monitor_clear_pending_status(monitored_server, SERVER_STALE_STATUS);
 
-        if (mon_status_changed(database) && mon_print_fail_status(database))
+        if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
-            mon_log_connect_error(database, rval);
+            mon_log_connect_error(monitored_server, rval);
         }
         return;
     }
     else
     {
-        server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
-        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
+        server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+        monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
     }
 
     /* Store current status in both server and monitor server pending struct */
-    server_set_status_nolock(database->server, SERVER_RUNNING);
-    monitor_set_pending_status(database, SERVER_RUNNING);
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     /* get server version from current server */
-    server_version = mysql_get_server_version(database->con);
+    server_version = mysql_get_server_version(monitored_server->con);
 
     /* get server version string */
-    mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->version_string;
+    mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
+    server_string = monitored_server->server->version_string;
 
     /* get server_id form current node */
-    if (mxs_mysql_query(database->con, "SELECT @@server_id") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(monitored_server->con, "SELECT @@server_id") == 0
+        && (result = mysql_store_result(monitored_server->con)) != NULL)
     {
         long server_id = -1;
 
-        if (mysql_field_count(database->con) != 1)
+        if (mysql_field_count(monitored_server->con) != 1)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
@@ -229,13 +228,13 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
             {
                 server_id = -1;
             }
-            database->server->node_id = server_id;
+            monitored_server->server->node_id = server_id;
         }
         mysql_free_result(result);
     }
     else
     {
-        mon_report_query_error(database);
+        mon_report_query_error(monitored_server);
     }
     /* Check if the Slave_SQL_Running and Slave_IO_Running status is
      * set to Yes
@@ -245,13 +244,13 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     if (server_version >= 100000)
     {
 
-        if (mxs_mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
-            && (result = mysql_store_result(database->con)) != NULL)
+        if (mxs_mysql_query(monitored_server->con, "SHOW ALL SLAVES STATUS") == 0
+            && (result = mysql_store_result(monitored_server->con)) != NULL)
         {
             int i = 0;
             long master_id = -1;
 
-            if (mysql_field_count(database->con) < 42)
+            if (mysql_field_count(monitored_server->con) < 42)
             {
                 mysql_free_result(result);
                 MXS_ERROR("\"SHOW ALL SLAVES STATUS\" returned less than the expected"
@@ -287,7 +286,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
                 i++;
             }
             /* store master_id of current node */
-            memcpy(&database->server->master_id, &master_id, sizeof(long));
+            memcpy(&monitored_server->server->master_id, &master_id, sizeof(long));
 
             mysql_free_result(result);
 
@@ -303,29 +302,29 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
         }
         else
         {
-            mon_report_query_error(database);
+            mon_report_query_error(monitored_server);
         }
     }
     else
     {
-        if (mxs_mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-            && (result = mysql_store_result(database->con)) != NULL)
+        if (mxs_mysql_query(monitored_server->con, "SHOW SLAVE STATUS") == 0
+            && (result = mysql_store_result(monitored_server->con)) != NULL)
         {
             long master_id = -1;
 
-            if (mysql_field_count(database->con) < 40)
+            if (mysql_field_count(monitored_server->con) < 40)
             {
                 mysql_free_result(result);
 
                 if (server_version < 5 * 10000 + 5 * 100)
                 {
-                    if (database->log_version_err)
+                    if (monitored_server->log_version_err)
                     {
                         MXS_ERROR("\"SHOW SLAVE STATUS\" "
                                   " for versions less than 5.5 does not have master_server_id, "
                                   "replication tree cannot be resolved for server %s."
-                                  " MySQL Version: %s", database->server->name, server_string);
-                        database->log_version_err = false;
+                                  " MySQL Version: %s", monitored_server->server->name, server_string);
+                        monitored_server->log_version_err = false;
                     }
                 }
                 else
@@ -362,21 +361,21 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
                 }
             }
             /* store master_id of current node */
-            memcpy(&database->server->master_id, &master_id, sizeof(long));
+            memcpy(&monitored_server->server->master_id, &master_id, sizeof(long));
 
             mysql_free_result(result);
         }
         else
         {
-            mon_report_query_error(database);
+            mon_report_query_error(monitored_server);
         }
     }
 
     /* get variable 'read_only' set by an external component */
-    if (mxs_mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(monitored_server->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
+        && (result = mysql_store_result(monitored_server->con)) != NULL)
     {
-        if (mysql_field_count(database->con) < 2)
+        if (mysql_field_count(monitored_server->con) < 2)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW GLOBAL VARIABLES LIKE 'read_only'\". "
@@ -399,36 +398,36 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     }
     else
     {
-        mon_report_query_error(database);
+        mon_report_query_error(monitored_server);
     }
 
     /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+    monitor_clear_pending_status(monitored_server, SERVER_STALE_STATUS);
 
     /* Set the Slave Role */
     /* Set the Master role */
     if (ismaster)
     {
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_set_pending_status(database, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
+        monitor_set_pending_status(monitored_server, SERVER_MASTER);
 
         /* Set replication depth to 0 */
-        database->server->depth = 0;
+        monitored_server->server->depth = 0;
     }
     else if (isslave)
     {
-        monitor_set_pending_status(database, SERVER_SLAVE);
+        monitor_set_pending_status(monitored_server, SERVER_SLAVE);
         /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
 
         /* Set replication depth to 1 */
-        database->server->depth = 1;
+        monitored_server->server->depth = 1;
     }
     /* Avoid any possible Master/Slave stale state */
     else
     {
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
+        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
     }
 }
 

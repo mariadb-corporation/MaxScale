@@ -127,7 +127,7 @@ static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
  *
  * @param database  The database to probe
  */
-void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER *database)
+void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -135,43 +135,43 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     char *server_string;
 
     /* Don't even probe server flagged as in maintenance */
-    if (SERVER_IN_MAINT(database->server))
+    if (SERVER_IN_MAINT(monitored_server->server))
     {
         return;
     }
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(database->server, SERVER_RUNNING);
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
 
-        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
 
-        database->server->node_id = -1;
+        monitored_server->server->node_id = -1;
 
-        if (mon_status_changed(database) && mon_print_fail_status(database))
+        if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
-            mon_log_connect_error(database, rval);
+            mon_log_connect_error(monitored_server, rval);
         }
         return;
     }
 
-    server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
+    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
     /* If we get this far then we have a working connection */
-    server_set_status_nolock(database->server, SERVER_RUNNING);
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
 
     /* get server version string */
-    mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->version_string;
+    mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
+    server_string = monitored_server->server->version_string;
 
     /* Check if the the SQL node is able to contact one or more data nodes */
-    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(monitored_server->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
+        && (result = mysql_store_result(monitored_server->con)) != NULL)
     {
-        if (mysql_field_count(database->con) < 2)
+        if (mysql_field_count(monitored_server->con) < 2)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE "
@@ -191,14 +191,14 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER *database)
     }
     else
     {
-        mon_report_query_error(database);
+        mon_report_query_error(monitored_server);
     }
 
     /* Check the the SQL node id in the MySQL cluster */
-    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    if (mxs_mysql_query(monitored_server->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
+        && (result = mysql_store_result(monitored_server->con)) != NULL)
     {
-        if (mysql_field_count(database->con) < 2)
+        if (mysql_field_count(monitored_server->con) < 2)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\". "
@@ -216,24 +216,24 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER *database)
             {
                 cluster_node_id = -1;
             }
-            database->server->node_id = cluster_node_id;
+            monitored_server->server->node_id = cluster_node_id;
         }
         mysql_free_result(result);
     }
     else
     {
-        mon_report_query_error(database);
+        mon_report_query_error(monitored_server);
     }
 
     if (isjoined)
     {
-        server_set_status_nolock(database->server, SERVER_NDB);
-        database->server->depth = 0;
+        server_set_status_nolock(monitored_server->server, SERVER_NDB);
+        monitored_server->server->depth = 0;
     }
     else
     {
-        server_clear_status_nolock(database->server, SERVER_NDB);
-        database->server->depth = -1;
+        server_clear_status_nolock(monitored_server->server, SERVER_NDB);
+        monitored_server->server->depth = -1;
     }
 }
 

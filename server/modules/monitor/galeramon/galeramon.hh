@@ -84,7 +84,7 @@ private:
                              const char *candidate_uuid,
                              const int candidate_size);
     MXS_MONITORED_SERVER *get_candidate_master();
-    void update_server_status(MXS_MONITORED_SERVER *database);
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
     void reset_cluster_info();
     void set_cluster_members();
     void set_galera_cluster();
