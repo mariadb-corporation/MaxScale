@@ -835,7 +835,7 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
 
         if (m_detect_stale_slave)
         {
-            unsigned int bits = SERVER_SLAVE | SERVER_RUNNING;
+            uint64_t bits = SERVER_SLAVE | SERVER_RUNNING;
 
             if ((ptr->mon_prev_status & bits) == bits &&
                 root_master && SRV_MASTER_STATUS(root_master->pending_status))

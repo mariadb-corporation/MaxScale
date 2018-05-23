@@ -227,8 +227,8 @@ typedef struct monitored_server
     MYSQL *con;                     /**< The MySQL connection */
     bool log_version_err;
     int mon_err_count;
-    unsigned int mon_prev_status;
-    unsigned int pending_status;    /**< Pending Status flag bitmap */
+    uint64_t mon_prev_status;       /**< Status before starting the current monitor loop */
+    uint64_t pending_status;        /**< Status during current monitor loop */
     bool new_event;                 /**< Whether an action was taken on the last event */
     struct monitored_server *next;  /**< The next server in the list */
 } MXS_MONITORED_SERVER;
@@ -317,8 +317,8 @@ extern const char CN_EVENTS[];
 
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
-void monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, int bit);
-void monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, int bit);
+void monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit);
+void monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit);
 void servers_status_pending_to_current(MXS_MONITOR *monitor);
 void servers_status_current_to_pending(MXS_MONITOR *monitor);
 

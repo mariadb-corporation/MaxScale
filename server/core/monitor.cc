@@ -83,13 +83,11 @@ static void remove_server_journal(MXS_MONITOR *monitor);
 static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
 
 /** Server type specific bits */
-static unsigned int server_type_bits = SERVER_MASTER | SERVER_SLAVE |
-                                       SERVER_JOINED | SERVER_NDB;
+static uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB;
 
 /** All server bits */
-static unsigned int all_server_bits = SERVER_RUNNING |  SERVER_MAINT |
-                                      SERVER_MASTER | SERVER_SLAVE |
-                                      SERVER_JOINED | SERVER_NDB;
+static uint64_t all_server_bits = SERVER_RUNNING |  SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE |
+                                  SERVER_JOINED | SERVER_NDB;
 
 /**
  * Create a new monitor, load the associated module for the monitor
@@ -957,25 +955,23 @@ void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* valu
 }
 
 /**
- * Set a pending status bit in the monitor server
+ * Set pending status bits in the monitor server
  *
  * @param server        The server to update
- * @param bit           The bit to clear for the server
+ * @param bit           The bits to set for the server
  */
-void
-monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, int bit)
+void monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit)
 {
     ptr->pending_status |= bit;
 }
 
 /**
- * Clear a pending status bit in the monitor server
+ * Clear pending status bits in the monitor server
  *
  * @param server        The server to update
- * @param bit           The bit to clear for the server
+ * @param bit           The bits to clear for the server
  */
-void
-monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, int bit)
+void monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit)
 {
     ptr->pending_status &= ~bit;
 }
@@ -1002,8 +998,8 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    unsigned int prev = node->mon_prev_status & all_server_bits;
-    unsigned int present = node->server->status & all_server_bits;
+    uint64_t prev = node->mon_prev_status & all_server_bits;
+    uint64_t present = node->server->status & all_server_bits;
 
     if (prev == present)
     {
@@ -1036,8 +1032,8 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
         {
             /** These are used to detect whether we actually lost something or
              * just transitioned from one state to another */
-            unsigned int prev_bits = prev & (SERVER_MASTER | SERVER_SLAVE);
-            unsigned int present_bits = present & (SERVER_MASTER | SERVER_SLAVE);
+            uint64_t prev_bits = prev & (SERVER_MASTER | SERVER_SLAVE);
+            uint64_t present_bits = present & (SERVER_MASTER | SERVER_SLAVE);
 
             /* Was running and still is */
             if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
@@ -1208,11 +1204,11 @@ bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv)
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_srv->mon_prev_status != static_cast<uint32_t>(-1))
+    if (mon_srv->mon_prev_status != static_cast<uint64_t>(-1))
     {
 
-        unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
-        unsigned int new_status = mon_srv->server->status & all_server_bits;
+        uint64_t old_status = mon_srv->mon_prev_status & all_server_bits;
+        uint64_t new_status = mon_srv->server->status & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same,
@@ -2167,7 +2163,7 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
             ss_dassert(sptr);
             sptr++;
 
-            uint32_t state = mxs_get_byte4(sptr);
+            uint64_t state = mxs_get_byte4(sptr); // TODO: Fix type mismatch with monitor journal
             db->mon_prev_status = state;
             db->server->status_pending = state;
             server_set_status_nolock(db->server, state);
