@@ -37,8 +37,40 @@ protected:
     const std::string& script() const { return m_script; }
     uint64_t           events() const { return m_events; }
 
+    /**
+     * @brief Update server information
+     *
+     * The implementation should probe the server in question and update
+     * the server status bits.
+     */
+    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
+
+    /**
+     * @brief Check whether the monitor has sufficient rights
+     *
+     * The implementation should check whether the monitor user has sufficient
+     * rights to access the servers. The default implementation returns True.
+     *
+     * @return True, if the monitor user has sufficient rights, false otherwise.
+     */
     virtual bool has_sufficient_permissions() const;
+
+    /**
+     * @brief Configure the monitor.
+     *
+     * When the monitor is started, this function will be called in order
+     * to allow the concrete implementation to configure itself from
+     * configuration parameters. The default implementation does nothing.
+     */
     virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
+
+    /**
+     * @brief Monitor the servers
+     *
+     * This function is called once per monitor round, and the concrete
+     * implementation should probe all servers, i.e. call @c update_server_status
+     * on each server.
+     */
     virtual void tick() = 0;
 
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
