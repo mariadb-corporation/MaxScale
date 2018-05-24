@@ -150,17 +150,14 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
         monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
             monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
             monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
 
@@ -174,9 +171,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
     monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
     monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     MYSQL_ROW row;
@@ -443,13 +438,17 @@ void MMMonitor::tick()
                 MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
                            "use it again even if it could be a stale master, you have "
                            "been warned!", ptr->server->address, ptr->server->port);
+
+                /* Reset the pending_status. */
+                ptr->pending_status = ptr->server->status;
+                monitor_clear_pending_status(ptr, SERVER_AUTH_ERROR);
+                monitor_set_pending_status(ptr, SERVER_RUNNING);
+
                 /* Set the STALE bit for this server in server struct */
-                server_set_status_nolock(ptr->server, SERVER_STALE_STATUS);
+                monitor_set_pending_status(ptr, SERVER_STALE_STATUS);
             }
-            else
-            {
-                ptr->server->status = ptr->pending_status;
-            }
+
+            ptr->server->status = ptr->pending_status;
         }
         ptr = ptr->next;
     }
