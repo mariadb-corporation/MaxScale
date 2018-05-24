@@ -131,15 +131,15 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
 
         monitored_server->server->node_id = -1;
@@ -153,23 +153,25 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 
     /* If we get this far then we have a working connection */
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     if (is_master(monitored_server))
     {
-        server_set_status_nolock(monitored_server->server, SERVER_MASTER);
-        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
+        monitor_set_pending_status(monitored_server, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
     }
     else if (is_slave(monitored_server))
     {
-        server_set_status_nolock(monitored_server->server, SERVER_SLAVE);
-        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
+        monitor_set_pending_status(monitored_server, SERVER_SLAVE);
+        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
     }
     else
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
-        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
+        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
+        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
     }
+
+    monitored_server->server->status = monitored_server->pending_status;
 }
 
 /**
