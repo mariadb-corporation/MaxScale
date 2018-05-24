@@ -72,8 +72,13 @@ protected:
      * on each server.
      *
      * The default implementation will:
-     *   - Not call @update_server_status for a server that is in maintenance.
+     *   - Not call @c update_server_status for a server that is in maintenance.
      *   - Before calling, update the previous status of the server.
+     *   - Before calling, update the pending status of the monitored server object
+     *     to the status of the corresponing server object.
+     *   - Ensure that there is a connection to the server. If that fails, then
+     *     the pending status will be updated accordingly and @c update_server_status
+     *     will *not* be called.
      *   - After the call, update the error count of the server.
      */
     virtual void tick();

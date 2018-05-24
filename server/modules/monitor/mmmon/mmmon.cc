@@ -146,34 +146,6 @@ json_t* MMMonitor::diagnostics_json() const
  */
 void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
-
-    if (!mon_connection_is_ok(rval))
-    {
-        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
-
-        if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
-        {
-            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
-        }
-        else
-        {
-            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
-        }
-
-        monitored_server->server->node_id = -1;
-
-        if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
-        {
-            mon_log_connect_error(monitored_server, rval);
-        }
-
-        return;
-    }
-
-    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
-    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
-
     MYSQL_ROW row;
     MYSQL_RES *result;
     int isslave = 0;

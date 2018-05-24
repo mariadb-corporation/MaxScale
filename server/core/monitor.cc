@@ -2644,7 +2644,33 @@ void MonitorInstance::tick()
             pMs->mon_prev_status = pMs->server->status;
             pMs->pending_status = pMs->server->status;
 
-            update_server_status(pMs);
+            mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, pMs);
+
+            if (mon_connection_is_ok(rval))
+            {
+                monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
+                monitor_set_pending_status(pMs, SERVER_RUNNING);
+
+                update_server_status(pMs);
+            }
+            else
+            {
+                monitor_clear_pending_status(pMs, SERVER_RUNNING);
+
+                if (mysql_errno(pMs->con) == ER_ACCESS_DENIED_ERROR)
+                {
+                    monitor_set_pending_status(pMs, SERVER_AUTH_ERROR);
+                }
+                else
+                {
+                    monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
+                }
+
+                if (mon_status_changed(pMs) && mon_print_fail_status(pMs))
+                {
+                    mon_log_connect_error(pMs, rval);
+                }
+            }
 
             if (mon_status_changed(pMs) || mon_print_fail_status(pMs))
             {
