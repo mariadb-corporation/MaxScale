@@ -30,13 +30,15 @@ enable_testing()
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
 
+include_directories(${CMAKE_SOURCE_DIR})
+
 # The core library
 include_directories(${CMAKE_BINARY_DIR})
 add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxscales.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp keepalived_func.cpp tcp_connection.cpp
+  blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt)
@@ -974,6 +976,9 @@ add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication 
 
 # MXS-1836: MaxInfo "show eventTimes" returns garbage.
 add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_show_eventTimes LABELS REPL_BACKEND)
+
+# MXS-173 throttling filter
+add_test_executable(mxs173.cpp mxs173_throttle_filter mxs173_throttle_filter LABELS REPL_BACKEND)
 
 configure_file(templates.h.in templates.h @ONLY)
 

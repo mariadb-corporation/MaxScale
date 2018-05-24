@@ -504,8 +504,14 @@ void TestConnections::print_env()
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
     printf("Maxadmin password\t%s\n", maxscales->maxadmin_password[0]);
     printf("Access user\t%s\n", maxscales->access_user[0]);
-    repl->print_env();
-    galera->print_env();
+    if (repl)
+    {
+        repl->print_env();
+    }
+    if (galera)
+    {
+        galera->print_env();
+    }
 }
 
 const char * get_template_name(char * test_name)
@@ -686,7 +692,10 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     int exit_code;
     char str[4096];
 
-    if (repl == NULL) return local_result;
+    if (repl == NULL)
+    {
+        return local_result;
+    }
 
     sprintf(str, "mkdir -p LOGS/%s", test_name);
     system(str);
@@ -1817,7 +1826,9 @@ StringSet TestConnections::get_server_status(const char* name)
             char* p = tok;
             char *end = strchr(tok, '\n');
             if (!end)
+            {
                 end = strchr(tok, '\0');
+            }
 
             // Trim leading whitespace
             while (p < end && isspace(*p))
@@ -1913,14 +1924,14 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
     std::stringstream ss;
     ss << "Current status: (";
 
-    for (const auto& a: current)
+    for (const auto& a : current)
     {
         ss << a << ",";
     }
 
     ss << ") Expected status: (";
 
-    for (const auto& a: expected)
+    for (const auto& a : expected)
     {
         ss << a << ",";
     }

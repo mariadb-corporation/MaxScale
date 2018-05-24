@@ -1,0 +1,116 @@
+[maxscale]
+ms_timestamp = 1
+threads = ###threads###
+
+[MySQL-Monitor]
+type = monitor
+module = mariadbmon
+servers = server1,server2,server3,server4
+user = maxskysql
+passwd = skysql
+monitor_interval = 5000
+auto_failover = 1
+
+[RW-Split-Router]
+type = service
+router = readwritesplit
+servers = server1,server2,server3,server4
+user = maxskysql
+passwd = skysql
+filters = throttle
+
+[RW-Split-Listener]
+type = listener
+service = RW-Split-Router
+protocol = mariadbclient
+port = 4006
+
+[Read-Connection-Router-Master]
+type = service
+router = readconnroute
+router_options = master
+servers = server1,server2,server3,server4
+user = maxskysql
+passwd = skysql
+
+[Read-Connection-Listener-Master]
+type = listener
+service = Read-Connection-Router-Master
+protocol = MySQLClient
+port = 4008
+
+[Read-Connection-Router-Slave]
+type = service
+router = readconnroute
+router_options = slave
+servers = server1,server2,server3,server4
+user = maxskysql
+passwd = skysql
+
+[Read-Connection-Listener-Slave]
+type = listener
+service = Read-Connection-Router-Slave
+protocol = MySQLClient
+port = 4009
+
+[throttle]
+type = filter
+module = throttlefilter
+max_qps = 1000
+throttling_duration = 10000
+sampling_duration = 250
+continuous_duration = 2000
+
+[Debug-Service]
+type = service
+router = debugcli
+
+[Debug-Listener]
+type = listener
+service = Debug-Service
+protocol = telnetd
+port = 4007
+
+[MaxAdmin-Service]
+type = service
+router = cli
+
+[MaxAdmin-Unix-Listener]
+type = listener
+service = MaxAdmin-Service
+protocol = maxscaled
+socket = default
+
+[server1]
+type = server
+address = ###node_server_IP_1###
+port = ###node_server_port_1###
+protocol = MariaDBBackend
+localhost_match_wildcard_host = true
+router_options = master
+
+[server2]
+type = server
+address = ###node_server_IP_2###
+port = ###node_server_port_2###
+protocol = MariaDBBackend
+localhost_match_wildcard_host = true
+router_options = slave
+
+[server3]
+type = server
+address = ###node_server_IP_3###
+port = ###node_server_port_3###
+protocol = MariaDBBackend
+localhost_match_wildcard_host = true
+router_options = slave
+
+[server4]
+type = server
+address = ###node_server_IP_4###
+port = ###node_server_port_4###
+protocol = MariaDBBackend
+localhost_match_wildcard_host = true
+router_options = slave
+
+
