@@ -131,6 +131,8 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
             server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
@@ -141,8 +143,6 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         }
 
         monitored_server->server->node_id = -1;
-
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
 
         if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {

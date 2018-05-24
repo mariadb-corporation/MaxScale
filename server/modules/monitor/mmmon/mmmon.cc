@@ -150,23 +150,21 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
+        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
+
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
             server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
             monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
-        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
+        else
+        {
+            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
+        }
 
-        /* Also clear M/S state in both server and monitor server pending struct */
-        server_clear_status_nolock(monitored_server->server, SERVER_SLAVE);
-        server_clear_status_nolock(monitored_server->server, SERVER_MASTER);
-        monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
-        monitor_clear_pending_status(monitored_server, SERVER_MASTER);
-
-        /* Clean addition status too */
-        server_clear_status_nolock(monitored_server->server, SERVER_STALE_STATUS);
-        monitor_clear_pending_status(monitored_server, SERVER_STALE_STATUS);
+        monitored_server->server->node_id = -1;
 
         if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
