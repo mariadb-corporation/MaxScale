@@ -469,7 +469,7 @@ void GaleraMonitor::tick()
             if (ptr != m_master)
             {
                 /* set the Slave role and clear master stickiness */
-                server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
+                server_clear_set_status_nolock(ptr->server, repl_bits, SERVER_SLAVE);
             }
             else
             {
@@ -477,13 +477,13 @@ void GaleraMonitor::tick()
                     m_master->server->node_id != candidate_master->server->node_id)
                 {
                     /* set master role and master stickiness */
-                    server_clear_set_status(ptr->server, repl_bits,
-                                            (SERVER_MASTER | SERVER_MASTER_STICKINESS));
+                    server_clear_set_status_nolock(ptr->server, repl_bits,
+                                                   (SERVER_MASTER | SERVER_MASTER_STICKINESS));
                 }
                 else
                 {
                     /* set master role and clear master stickiness */
-                    server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
+                    server_clear_set_status_nolock(ptr->server, repl_bits, SERVER_MASTER);
                 }
             }
 
@@ -491,7 +491,7 @@ void GaleraMonitor::tick()
         }
         else
         {
-            server_clear_set_status(ptr->server, repl_bits, 0);
+            server_clear_set_status_nolock(ptr->server, repl_bits, 0);
         }
         ptr = ptr->next;
     }

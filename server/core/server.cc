@@ -730,16 +730,16 @@ server_set_status_nolock(SERVER *server, uint64_t bit)
 }
 
 /**
- * Set one or more status bit(s) from a specified set, clearing any others
- * in the specified set
+ * Clears and sets specified bits.
  *
  * @attention This function does no locking
  *
- * @param server        The server to update
- * @param bit           The bit to set for the server
+ * @param server         The server to update
+ * @param bits_to_clear  The bits to clear for the server.
+ * @param bits_to_set    The bits to set for the server.
  */
 void
-server_clear_set_status(SERVER *server, uint64_t specified_bits, uint64_t bits_to_set)
+server_clear_set_status_nolock(SERVER *server, uint64_t bits_to_clear, uint64_t bits_to_set)
 {
     /** clear error logged flag before the next failure */
     if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
@@ -747,9 +747,9 @@ server_clear_set_status(SERVER *server, uint64_t specified_bits, uint64_t bits_t
         server->master_err_is_logged = false;
     }
 
-    if ((server->status & specified_bits) != bits_to_set)
+    if ((server->status & bits_to_clear) != bits_to_set)
     {
-        server->status = (server->status & ~specified_bits) | bits_to_set;
+        server->status = (server->status & ~bits_to_clear) | bits_to_set;
     }
 }
 
