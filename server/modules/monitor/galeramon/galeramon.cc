@@ -266,15 +266,15 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
 
         monitored_server->server->node_id = -1;
@@ -287,8 +287,8 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -469,7 +469,8 @@ void GaleraMonitor::tick()
             if (ptr != m_master)
             {
                 /* set the Slave role and clear master stickiness */
-                server_clear_set_status_nolock(ptr->server, repl_bits, SERVER_SLAVE);
+                monitor_clear_pending_status(ptr, repl_bits);
+                monitor_set_pending_status(ptr, SERVER_SLAVE);
             }
             else
             {
@@ -477,13 +478,14 @@ void GaleraMonitor::tick()
                     m_master->server->node_id != candidate_master->server->node_id)
                 {
                     /* set master role and master stickiness */
-                    server_clear_set_status_nolock(ptr->server, repl_bits,
-                                                   (SERVER_MASTER | SERVER_MASTER_STICKINESS));
+                    monitor_clear_pending_status(ptr, repl_bits);
+                    monitor_set_pending_status(ptr, SERVER_MASTER | SERVER_MASTER_STICKINESS);
                 }
                 else
                 {
                     /* set master role and clear master stickiness */
-                    server_clear_set_status_nolock(ptr->server, repl_bits, SERVER_MASTER);
+                    monitor_clear_pending_status(ptr, repl_bits);
+                    monitor_set_pending_status(ptr, SERVER_MASTER);
                 }
             }
 
@@ -491,7 +493,8 @@ void GaleraMonitor::tick()
         }
         else
         {
-            server_clear_set_status_nolock(ptr->server, repl_bits, 0);
+            monitor_clear_pending_status(ptr, repl_bits);
+            monitor_set_pending_status(ptr, 0);
         }
         ptr = ptr->next;
     }
@@ -516,6 +519,14 @@ void GaleraMonitor::tick()
     if (m_set_donor_nodes)
     {
         update_sst_donor_nodes(is_cluster);
+    }
+
+    ptr = m_monitor->monitored_servers;
+
+    while (ptr)
+    {
+        ptr->server->status = ptr->pending_status;
+        ptr = ptr->next;
     }
 }
 
@@ -1073,18 +1084,18 @@ void GaleraMonitor::set_cluster_members()
                 value->cluster_size == c_size)
             {
                 /* Server is member of current cluster */
-                server_set_status_nolock(ptr->server, SERVER_JOINED);
+                monitor_set_pending_status(ptr, SERVER_JOINED);
             }
             else
             {
                 /* This server is not part of current cluster */
-                server_clear_status_nolock(ptr->server, SERVER_JOINED);
+                monitor_clear_pending_status(ptr, SERVER_JOINED);
             }
         }
         else
         {
             /* This server is not member of any cluster */
-            server_clear_status_nolock(ptr->server, SERVER_JOINED);
+            monitor_clear_pending_status(ptr, SERVER_JOINED);
         }
 
         /* Clear bits for non member nodes */
@@ -1094,11 +1105,11 @@ void GaleraMonitor::set_cluster_members()
             ptr->server->node_id = -1;
 
             /* clear M/S status */
-            server_clear_status_nolock(ptr->server, SERVER_SLAVE);
-            server_clear_status_nolock(ptr->server, SERVER_MASTER);
+            monitor_clear_pending_status(ptr, SERVER_SLAVE);
+            monitor_clear_pending_status(ptr, SERVER_MASTER);
 
             /* clear master sticky status */
-            server_clear_status_nolock(ptr->server, SERVER_MASTER_STICKINESS);
+            monitor_clear_pending_status(ptr, SERVER_MASTER_STICKINESS);
         }
 
         ptr = ptr->next;
