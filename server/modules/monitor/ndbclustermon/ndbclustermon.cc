@@ -133,15 +133,15 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
 
         monitored_server->server->node_id = -1;
@@ -154,9 +154,9 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
     /* If we get this far then we have a working connection */
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -227,12 +227,14 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (isjoined)
     {
-        server_set_status_nolock(monitored_server->server, SERVER_NDB);
+        monitor_set_pending_status(monitored_server, SERVER_NDB);
         monitored_server->server->depth = 0;
     }
     else
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_NDB);
+        monitor_clear_pending_status(monitored_server, SERVER_NDB);
         monitored_server->server->depth = -1;
     }
+
+    monitored_server->server->status = monitored_server->pending_status;
 }
