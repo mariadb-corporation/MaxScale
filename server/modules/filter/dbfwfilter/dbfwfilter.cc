@@ -101,9 +101,18 @@ namespace
 class DbfwThread
 {
 public:
-    int&      rule_version(const Dbfw* d) { return m_instance_data[d].rule_version; }
-    RuleList& rules(const Dbfw* d) { return m_instance_data[d].rules; }
-    UserMap&  users(const Dbfw* d) { return m_instance_data[d].users; }
+    int&      rule_version(const Dbfw* d)
+    {
+        return m_instance_data[d].rule_version;
+    }
+    RuleList& rules(const Dbfw* d)
+    {
+        return m_instance_data[d].rules;
+    }
+    UserMap&  users(const Dbfw* d)
+    {
+        return m_instance_data[d].users;
+    }
 
 private:
     class Data
@@ -941,6 +950,10 @@ void define_where_clause_rule(void* scanner)
  */
 void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff)
 {
+    MXS_WARNING("The Database Firewall rule 'limit_queries' has been deprecated"
+                " and will be removed in a later version of MaxScale. "
+                "Please use the Throttle Filter instead");
+
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->add(new LimitQueriesRule(rstack->name, max, timeperiod, holdoff));

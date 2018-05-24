@@ -261,6 +261,8 @@ rule examplerule match regex '.*select.*from.*accounts.*'
 
 #### `limit_queries`
 
+This rule has been DEPRECATED. Please use the Throttle Filter instead.
+
 The limit_queries rule expects three parameters. The first parameter is the
 number of allowed queries during the time period. The second is the time period
 in seconds and the third is the amount of time in seconds for which the rule is
