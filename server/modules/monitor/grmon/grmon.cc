@@ -148,12 +148,12 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         {
             mon_log_connect_error(monitored_server, rval);
         }
+
+        return;
     }
-    else
-    {
-        /* If we get this far then we have a working connection */
-        server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
-    }
+
+    /* If we get this far then we have a working connection */
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
 
     if (is_master(monitored_server))
     {

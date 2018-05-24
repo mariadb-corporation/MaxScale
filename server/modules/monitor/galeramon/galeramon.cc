@@ -262,10 +262,6 @@ static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_
  */
 void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    MYSQL_ROW row;
-    MYSQL_RES *result;
-    char *server_string;
-
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
     if (!mon_connection_is_ok(rval))
     {
@@ -289,6 +285,10 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
         return;
     }
+
+    MYSQL_ROW row;
+    MYSQL_RES *result;
+    char *server_string;
 
     /* If we get this far then we have a working connection */
     server_set_status_nolock(monitored_server->server, SERVER_RUNNING);

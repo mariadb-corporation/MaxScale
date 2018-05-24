@@ -56,55 +56,55 @@ void AuroraMonitor::destroy()
  */
 void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    SERVER temp_server = {};
-    temp_server.status = monitored_server->server->status;
-    server_clear_status_nolock(&temp_server,
-                               SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
-
-    /** Try to connect to or ping the database */
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
-    if (mon_connection_is_ok(rval))
-    {
-        server_set_status_nolock(&temp_server, SERVER_RUNNING);
-        MYSQL_RES *result;
-
-        /** Connection is OK, query for replica status */
-        if (mxs_mysql_query(monitored_server->con, "SELECT @@aurora_server_id, server_id FROM "
-                            "information_schema.replica_host_status "
-                            "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
-            (result = mysql_store_result(monitored_server->con)))
-        {
-            ss_dassert(mysql_field_count(monitored_server->con) == 2);
-            MYSQL_ROW row = mysql_fetch_row(result);
-            int status = SERVER_SLAVE;
-
-            /** The master will return a row with two identical non-NULL fields */
-            if (row[0] && row[1] && strcmp(row[0], row[1]) == 0)
-            {
-                status = SERVER_MASTER;
-            }
-
-            server_set_status_nolock(&temp_server, status);
-            mysql_free_result(result);
-        }
-        else
-        {
-            mon_report_query_error(monitored_server);
-        }
-    }
-    else
+    if (!mon_connection_is_ok(rval))
     {
         /** Failed to connect to the database */
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(&temp_server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
         }
 
         if (mon_status_changed(monitored_server) && mon_print_fail_status(monitored_server))
         {
             mon_log_connect_error(monitored_server, rval);
         }
+
+        return;
+    }
+
+    SERVER temp_server = {};
+    temp_server.status = monitored_server->server->status;
+    server_clear_status_nolock(&temp_server,
+                               SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
+
+
+    server_set_status_nolock(&temp_server, SERVER_RUNNING);
+    MYSQL_RES *result;
+
+    /** Connection is OK, query for replica status */
+    if (mxs_mysql_query(monitored_server->con, "SELECT @@aurora_server_id, server_id FROM "
+                        "information_schema.replica_host_status "
+                        "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
+        (result = mysql_store_result(monitored_server->con)))
+    {
+        ss_dassert(mysql_field_count(monitored_server->con) == 2);
+        MYSQL_ROW row = mysql_fetch_row(result);
+        int status = SERVER_SLAVE;
+
+        /** The master will return a row with two identical non-NULL fields */
+        if (row[0] && row[1] && strcmp(row[0], row[1]) == 0)
+        {
+            status = SERVER_MASTER;
+        }
+
+        server_set_status_nolock(&temp_server, status);
+        mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(monitored_server);
     }
 
     server_transfer_status(monitored_server->server, &temp_server);

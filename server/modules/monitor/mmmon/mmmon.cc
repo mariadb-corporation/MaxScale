@@ -146,13 +146,6 @@ json_t* MMMonitor::diagnostics_json() const
  */
 void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    MYSQL_ROW row;
-    MYSQL_RES *result;
-    int isslave = 0;
-    int ismaster = 0;
-    unsigned long int server_version = 0;
-    char *server_string;
-
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
 
     if (!mon_connection_is_ok(rval))
@@ -179,13 +172,19 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         {
             mon_log_connect_error(monitored_server, rval);
         }
+
         return;
     }
-    else
-    {
-        server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
-        monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
-    }
+
+    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
+
+    MYSQL_ROW row;
+    MYSQL_RES *result;
+    int isslave = 0;
+    int ismaster = 0;
+    unsigned long int server_version = 0;
+    char *server_string;
 
     /* Store current status in both server and monitor server pending struct */
     server_set_status_nolock(monitored_server->server, SERVER_RUNNING);

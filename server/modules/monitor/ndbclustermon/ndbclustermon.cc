@@ -129,12 +129,8 @@ static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
  */
 void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    MYSQL_ROW row;
-    MYSQL_RES *result;
-    int isjoined = 0;
-    char *server_string;
-
     mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, monitored_server);
+
     if (!mon_connection_is_ok(rval))
     {
         server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
@@ -150,12 +146,18 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         {
             mon_log_connect_error(monitored_server, rval);
         }
+
         return;
     }
 
     server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
     /* If we get this far then we have a working connection */
     server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+
+    MYSQL_ROW row;
+    MYSQL_RES *result;
+    int isjoined = 0;
+    char *server_string;
 
     /* get server version string */
     mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
