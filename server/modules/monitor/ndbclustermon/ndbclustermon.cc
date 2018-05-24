@@ -155,7 +155,6 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 
     monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
-    /* If we get this far then we have a working connection */
     monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     MYSQL_ROW row;

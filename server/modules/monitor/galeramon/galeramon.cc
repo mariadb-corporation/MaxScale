@@ -287,12 +287,12 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
+    server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+
     MYSQL_ROW row;
     MYSQL_RES *result;
     char *server_string;
-
-    /* If we get this far then we have a working connection */
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
 
     /* get server version string */
     mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);

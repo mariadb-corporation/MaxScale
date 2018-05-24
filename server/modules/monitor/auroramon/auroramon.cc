@@ -81,9 +81,10 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    monitor_clear_pending_status(monitored_server,
-                                 SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
+    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
     monitor_set_pending_status(monitored_server, SERVER_RUNNING);
+
+    monitor_clear_pending_status(monitored_server, SERVER_MASTER | SERVER_SLAVE);
     MYSQL_RES *result;
 
     /** Connection is OK, query for replica status */

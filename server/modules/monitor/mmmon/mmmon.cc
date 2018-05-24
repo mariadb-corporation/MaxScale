@@ -176,6 +176,8 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
     monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
+    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -184,9 +186,6 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     unsigned long int server_version = 0;
     char *server_string;
 
-    /* Store current status in both server and monitor server pending struct */
-    server_set_status_nolock(monitored_server->server, SERVER_RUNNING);
-    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     /* get server version from current server */
     server_version = mysql_get_server_version(monitored_server->con);

@@ -152,7 +152,7 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    /* If we get this far then we have a working connection */
+    monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
     monitor_set_pending_status(monitored_server, SERVER_RUNNING);
 
     if (is_master(monitored_server))
