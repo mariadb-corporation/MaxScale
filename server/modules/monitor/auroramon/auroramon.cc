@@ -60,15 +60,15 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
     if (!mon_connection_is_ok(rval))
     {
-        server_clear_status_nolock(monitored_server->server, SERVER_RUNNING);
+        monitor_clear_pending_status(monitored_server, SERVER_RUNNING);
 
         if (mysql_errno(monitored_server->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status_nolock(monitored_server->server, SERVER_AUTH_ERROR);
+            monitor_clear_pending_status(monitored_server, SERVER_AUTH_ERROR);
         }
 
         monitored_server->server->node_id = -1;
@@ -81,13 +81,9 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         return;
     }
 
-    SERVER temp_server = {};
-    temp_server.status = monitored_server->server->status;
-    server_clear_status_nolock(&temp_server,
-                               SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
-
-
-    server_set_status_nolock(&temp_server, SERVER_RUNNING);
+    monitor_clear_pending_status(monitored_server,
+                                 SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
+    monitor_set_pending_status(monitored_server, SERVER_RUNNING);
     MYSQL_RES *result;
 
     /** Connection is OK, query for replica status */
@@ -106,7 +102,7 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             status = SERVER_MASTER;
         }
 
-        server_set_status_nolock(&temp_server, status);
+        monitor_set_pending_status(monitored_server, status);
         mysql_free_result(result);
     }
     else
@@ -114,7 +110,7 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         mon_report_query_error(monitored_server);
     }
 
-    server_transfer_status(monitored_server->server, &temp_server);
+    monitored_server->server->status = monitored_server->pending_status;
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const
