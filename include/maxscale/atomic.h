@@ -121,4 +121,13 @@ static inline void atomic_synchronize()
  */
 bool atomic_cas_ptr(void **variable, void** old_value, void *new_value);
 
+/**
+ * Atomic read-and-write. Writes new value into the given memory address and returns the old value.
+ *
+ * @param variable The variable which is overwritten
+ * @param new_value The value to write
+ * @return The value before writing
+ */
+int atomic_exchange_int(int *variable, int new_value);
+
 MXS_END_DECLS

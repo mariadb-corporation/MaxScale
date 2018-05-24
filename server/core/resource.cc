@@ -25,6 +25,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/semaphore.hh>
+#include <maxscale/server.hh>
 
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
@@ -658,8 +659,15 @@ HttpResponse cb_set_server(const HttpRequest& request)
 
     if (opt)
     {
-        server_set_status(server, opt);
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
+        string errmsg;
+        if (mxs::server_set_status(server, opt, &errmsg))
+        {
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        }
+        else
+        {
+            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(errmsg.c_str()));
+        }
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN,
@@ -674,8 +682,15 @@ HttpResponse cb_clear_server(const HttpRequest& request)
 
     if (opt)
     {
-        server_clear_status(server, opt);
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
+        string errmsg;
+        if (mxs::server_clear_status(server, opt, &errmsg))
+        {
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        }
+        else
+        {
+            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(errmsg.c_str()));
+        }
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN,

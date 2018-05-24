@@ -26,7 +26,6 @@
 #include <maxscale/config.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/server.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
@@ -40,10 +39,12 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
+#include <maxscale/server.hh>
 
 #include "internal/monitor.h"
 #include "internal/poll.h"
 #include "internal/routingworker.hh"
+
 
 using maxscale::Semaphore;
 using maxscale::Worker;
@@ -62,7 +63,10 @@ const char CN_PROXY_PROTOCOL[]     = "proxy_protocol";
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
-
+static const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
+                                        "set/cleared manually. Status was not modified.";
+static const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
+                                              "and was overwritten.";
 static void spin_reporter(void *, char *, int);
 static void server_parameter_free(SERVER_PARAM *tofree);
 
@@ -119,7 +123,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->auth_instance = auth_instance;
     server->port = port;
     server->status = SERVER_RUNNING;
-    server->status_pending = SERVER_RUNNING;
+    server->maint_request = MAINTENANCE_NO_CHANGE;
     server->node_id = -1;
     server->rlag = MAX_RLAG_UNDEFINED;
     server->master_id = -1;
@@ -1306,28 +1310,47 @@ SERVER* server_repurpose_destroyed(const char *name, const char *protocol, const
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
-void server_set_status(SERVER *server, int bit)
+bool mxs::server_set_status(SERVER *server, int bit, string* errmsg_out)
 {
+    bool written = false;
     /* First check if the server is monitored. This isn't done under a lock
      * but the race condition cannot cause significant harm. Monitors are never
-     * freed so the pointer stays valid.
-     */
+     * freed so the pointer stays valid. */
     MXS_MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
-        /* Set a pending status bit. It will be activated on the next monitor
-         * loop. Also set a flag so the next loop happens sooner.
-         */
-        server->status_pending |= bit;
-        mon->server_pending_changes = true;
+        /* This server is monitored, in which case modifying any other status bit than Maintenance is
+         * disallowed. Maintenance is set/cleared using a special variable which the monitor reads when
+         * starting the next update cycle. Also set a flag so the next loop happens sooner. */
+        if (bit & ~SERVER_MAINT)
+        {
+            MXS_ERROR(ERR_CANNOT_MODIFY);
+            if (errmsg_out)
+            {
+                *errmsg_out = ERR_CANNOT_MODIFY;
+            }
+        }
+        else if (bit & SERVER_MAINT)
+        {
+            // Warn if the previous request hasn't been read.
+            int previous_request = atomic_exchange_int(&server->maint_request, MAINTENANCE_ON);
+            written = true;
+            if (previous_request != MAINTENANCE_NO_CHANGE)
+            {
+                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
+            }
+            mon->server_pending_changes = true;
+        }
     }
     else
     {
         /* Set the bit directly */
         server_set_status_nolock(server, bit);
+        written = true;
     }
     spinlock_release(&server->lock);
+    return written;
 }
 /**
  * Clear a status bit in the server under a lock. This ensures synchronization
@@ -1337,24 +1360,42 @@ void server_set_status(SERVER *server, int bit)
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
-void server_clear_status(SERVER *server, int bit)
+bool mxs::server_clear_status(SERVER *server, int bit, string* errmsg_out)
 {
+    bool written = false;
     MXS_MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
-        /* Clear a pending status bit. It will be activated on the next monitor
-         * loop. Also set a flag so the next loop happens sooner.
-         */
-        server->status_pending &= ~bit;
-        mon->server_pending_changes = true;
+        // See server_set_status().
+        if (bit & ~SERVER_MAINT)
+        {
+            MXS_ERROR(ERR_CANNOT_MODIFY);
+            if (errmsg_out)
+            {
+                *errmsg_out = ERR_CANNOT_MODIFY;
+            }
+        }
+        else if (bit & SERVER_MAINT)
+        {
+            // Warn if the previous request hasn't been read.
+            int previous_request = atomic_exchange_int(&server->maint_request, MAINTENANCE_OFF);
+            written = true;
+            if (previous_request != MAINTENANCE_NO_CHANGE)
+            {
+                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
+            }
+            mon->server_pending_changes = true;
+        }
     }
     else
     {
         /* Clear bit directly */
         server_clear_status_nolock(server, bit);
+        written = true;
     }
     spinlock_release(&server->lock);
+    return written;
 }
 
 bool server_is_mxs_service(const SERVER *server)

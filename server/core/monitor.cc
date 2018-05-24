@@ -1737,9 +1737,9 @@ void release_monitor_servers(MXS_MONITOR *monitor)
     }
 }
 /**
-  * Sets the current status of all servers monitored by this monitor to
-  * the pending status. This should only be called at the beginning of
-  * a monitor loop, after the servers are locked.
+  * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
+  * Should be called at the beginning of a monitor loop.
+  *
   * @param monitor The target monitor
   */
 void servers_status_pending_to_current(MXS_MONITOR *monitor)
@@ -1747,11 +1747,22 @@ void servers_status_pending_to_current(MXS_MONITOR *monitor)
     MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
     while (ptr)
     {
-        ptr->server->status = ptr->server->status_pending;
+        // The only server status bit the admin may change is the [Maintenance] bit.
+        int admin_msg = atomic_exchange_int(&ptr->server->maint_request, MAINTENANCE_NO_CHANGE);
+        if (admin_msg == MAINTENANCE_ON)
+        {
+            // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
+            server_set_status_nolock(ptr->server, SERVER_MAINT);
+        }
+        else if (admin_msg == MAINTENANCE_OFF)
+        {
+            server_clear_status_nolock(ptr->server, SERVER_MAINT);
+        }
         ptr = ptr->next;
     }
     monitor->server_pending_changes = false;
 }
+
 /**
   *  Sets the pending status of all servers monitored by this monitor to
   *  the current status. This should only be called at the end of
@@ -1763,7 +1774,6 @@ void servers_status_current_to_pending(MXS_MONITOR *monitor)
     MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
     while (ptr)
     {
-        ptr->server->status_pending = ptr->server->status;
         ptr = ptr->next;
     }
 }
@@ -2165,7 +2175,6 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
 
             uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
             db->mon_prev_status = status;
-            db->server->status_pending = status;
             server_set_status_nolock(db->server, status);
             monitor_set_pending_status(db, status);
             break;

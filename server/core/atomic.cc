@@ -182,3 +182,19 @@ bool atomic_cas_ptr(void **variable, void** old_value, void *new_value)
     return __sync_bool_compare_and_swap(variable, *old_value, new_value);
 #endif
 }
+
+int atomic_exchange_int(int *variable, int new_value)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    return __atomic_exchange_n(variable, new_value, __ATOMIC_SEQ_CST);
+#else
+    /* The __sync-functions have a questionable exchange-operation (__sync_lock_test_and_set) which
+     * doesn't always write the requested value. Using compare-and-swap instead. */
+    int old_val = *variable;
+    while (!__sync_bool_compare_and_swap(variable, old_val, new_value))
+    {
+        old_val = *variable;
+    }
+    return old_val;
+#endif
+}

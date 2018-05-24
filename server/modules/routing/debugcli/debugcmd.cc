@@ -46,7 +46,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/router.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
@@ -2233,7 +2233,11 @@ set_server(DCB *dcb, SERVER *server, char *bit)
 
     if ((bitvalue = server_map_status(bit)) != 0)
     {
-        server_set_status(server, bitvalue);
+        std::string errmsg;
+        if (!mxs::server_set_status(server, bitvalue, &errmsg))
+        {
+            dcb_printf(dcb, "%s\n", errmsg.c_str());
+        }
     }
     else
     {
@@ -2256,7 +2260,11 @@ clear_server(DCB *dcb, SERVER *server, char *bit)
 
     if ((bitvalue = server_map_status(bit)) != 0)
     {
-        server_clear_status(server, bitvalue);
+        std::string errmsg;
+        if (!mxs::server_clear_status(server, bitvalue, &errmsg))
+        {
+            dcb_printf(dcb, "%s", errmsg.c_str());
+        }
     }
     else
     {

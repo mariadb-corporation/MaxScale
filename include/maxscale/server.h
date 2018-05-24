@@ -42,6 +42,13 @@ extern const char CN_PERSISTPOOLMAX[];
 extern const char CN_PROXY_PROTOCOL[];
 
 /**
+ * Maintenance mode request constants.
+ */
+const int MAINTENANCE_OFF = -100;
+const int MAINTENANCE_NO_CHANGE = 0;
+const int MAINTENANCE_ON = 100;
+
+/**
  * The server parameters used for weighting routing decissions
  */
 typedef struct server_params
@@ -137,9 +144,9 @@ typedef struct server
     int            last_event;     /**< The last event that occurred on this server */
     int64_t        triggered_at;   /**< Time when the last event was triggered */
     bool           active_event;   /**< Was MaxScale active when last event was observed */
-    // Values updated mainly by monitor
+    // Status descriptors. Updated automatically by a monitor or manually by the admin
     uint64_t       status;         /**< Current status flag bitmap */
-    uint64_t       status_pending; /**< Temporary status, usually written to current status once ready */
+    int            maint_request;  /**< Is admin requesting Maintenance=ON/OFF on the server? */
     char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string as given by backend */
     uint64_t       version;        /**< Server version numeric representation */
     server_type_t  server_type;    /**< Server type (MariaDB or MySQL), deduced from version string */
@@ -372,8 +379,6 @@ extern uint64_t server_map_status(const char *str);
 extern void server_set_version_string(SERVER* server, const char* version_string);
 extern void server_set_version(SERVER* server, const char* version_string, uint64_t version);
 extern uint64_t server_get_version(const SERVER* server);
-extern void server_set_status(SERVER *server, int bit);
-extern void server_clear_status(SERVER *server, int bit);
 
 extern void printServer(const SERVER *);
 extern void printAllServers();

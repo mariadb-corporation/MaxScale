@@ -41,6 +41,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/resultset.h>
 #include <maxscale/router.h>
+#include <maxscale/server.hh>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/version.h>
@@ -392,8 +393,15 @@ void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
         int status = server_map_status(tree->right->value);
         if (status != 0)
         {
-            server_set_status(server, status);
-            maxinfo_send_ok(dcb);
+            std::string errmsgs;
+            if (mxs::server_set_status(server, status, &errmsgs))
+            {
+                maxinfo_send_ok(dcb);
+            }
+            else
+            {
+                maxinfo_send_error(dcb, 0, errmsgs.c_str());
+            }
         }
         else
         {
@@ -473,8 +481,15 @@ void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
         int status = server_map_status(tree->right->value);
         if (status != 0)
         {
-            server_clear_status(server, status);
-            maxinfo_send_ok(dcb);
+            std::string errmsgs;
+            if (mxs::server_clear_status(server, status, &errmsgs))
+            {
+                maxinfo_send_ok(dcb);
+            }
+            else
+            {
+                maxinfo_send_error(dcb, 0, errmsgs.c_str());
+            }
         }
         else
         {

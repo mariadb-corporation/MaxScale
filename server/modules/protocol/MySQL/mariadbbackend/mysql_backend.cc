@@ -22,6 +22,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.h>
+#include <maxscale/server.hh>
 #include <maxscale/utils.h>
 
 /*
@@ -329,7 +330,7 @@ static void handle_error_response(DCB *dcb, GWBUF *buffer)
                   "mode.", dcb->server->name,
                   dcb->server->address, dcb->server->port);
 
-        server_set_status(dcb->server, SERVER_MAINT);
+        mxs::server_set_status(dcb->server, SERVER_MAINT, NULL);
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR ||
              errcode == ER_DBACCESS_DENIED_ERROR ||

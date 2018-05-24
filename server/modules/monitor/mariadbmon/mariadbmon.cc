@@ -476,7 +476,6 @@ void MariaDBMonitor::main_loop()
                 auto new_status = mon_srv->pending_status;
                 auto srv = mon_srv->server;
                 srv->status = new_status;
-                srv->status_pending = new_status;
             }
 
             /* Check if monitor events need to be launched. */
