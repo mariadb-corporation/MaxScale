@@ -2077,7 +2077,7 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
         *ptr++ = '\0'; // Null-terminate the string
 
         auto status = db->server->status;
-        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS);
+        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS, "Status size should be MMB_LEN_SERVER_STATUS bytes");
         ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
     }
 
