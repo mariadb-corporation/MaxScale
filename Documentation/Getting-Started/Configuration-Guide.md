@@ -123,7 +123,8 @@ form.
 ### Global Settings
 
 The global settings, in a section named `[MaxScale]`, allow various parameters
-that affect MariaDB MaxScale as a whole to be tuned.
+that affect MariaDB MaxScale as a whole to be tuned. This section must be
+defined in the root configuration file which by default is `/etc/maxscale.cnf`.
 
 #### `threads`
 
