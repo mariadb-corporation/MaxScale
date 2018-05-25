@@ -63,6 +63,12 @@ public:
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
+protected:
+    void configure(const MXS_CONFIG_PARAMETER* param);
+    bool has_sufficient_permissions() const;
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
+    void tick();
+
 private:
     unsigned long m_id;                 /**< Monitor ID */
     int m_disableMasterFailback;        /**< Monitor flag for Galera Cluster Master failback */
@@ -83,13 +89,8 @@ private:
                              const char *candidate_uuid,
                              const int candidate_size);
     MXS_MONITORED_SERVER *get_candidate_master();
-    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
     void reset_cluster_info();
     void set_cluster_members();
     void set_galera_cluster();
     void update_sst_donor_nodes(int is_cluster);
-
-    bool has_sufficient_permissions() const;
-    void configure(const MXS_CONFIG_PARAMETER* param);
-    void tick();
 };

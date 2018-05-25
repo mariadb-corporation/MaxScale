@@ -21,7 +21,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/mysql_utils.h>
 
-bool isNdbEvent(mxs_monitor_event_t event);
 
 NDBCMonitor::NDBCMonitor(MXS_MONITOR *monitor)
     : maxscale::MonitorInstance(monitor)
@@ -39,42 +38,24 @@ NDBCMonitor* NDBCMonitor::create(MXS_MONITOR* monitor)
     return new NDBCMonitor(monitor);
 }
 
-bool NDBCMonitor::has_sufficient_permissions() const
+void NDBCMonitor::diagnostics(DCB *dcb) const
 {
-    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
+}
+
+json_t* NDBCMonitor::diagnostics_json() const
+{
+    return NULL;
 }
 
 void NDBCMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
 }
 
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param arg   The monitor handle
- */
-static void
-diagnostics(const MXS_MONITOR_INSTANCE *mon, DCB *dcb)
+bool NDBCMonitor::has_sufficient_permissions() const
 {
+    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");
 }
 
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param arg   The monitor handle
- */
-static json_t* diagnostics_json(const MXS_MONITOR_INSTANCE *mon)
-{
-    return NULL;
-}
-
-/**
- * Monitor an individual server
- *
- * @param database  The database to probe
- */
 void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;

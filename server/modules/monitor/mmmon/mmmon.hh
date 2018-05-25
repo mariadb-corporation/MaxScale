@@ -31,6 +31,12 @@ public:
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
+protected:
+    void configure(const MXS_CONFIG_PARAMETER* params);
+    bool has_sufficient_permissions() const;
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
+    void tick();
+
 private:
     unsigned long m_id;      /**< Monitor ID */
     int m_detectStaleMaster; /**< Monitor flag for Stale Master detection */
@@ -38,10 +44,4 @@ private:
     MMMonitor(MXS_MONITOR* monitor);
 
     MXS_MONITORED_SERVER *get_current_master();
-
-    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
-
-    bool has_sufficient_permissions() const;
-    void configure(const MXS_CONFIG_PARAMETER* params);
-    void tick();
 };

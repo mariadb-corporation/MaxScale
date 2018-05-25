@@ -52,32 +52,11 @@ MMMonitor* MMMonitor::create(MXS_MONITOR* monitor)
     return new MMMonitor(monitor);
 }
 
-bool MMMonitor::has_sufficient_permissions() const
-{
-    return check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
-}
-
-void MMMonitor::configure(const MXS_CONFIG_PARAMETER* params)
-{
-    m_detectStaleMaster = config_get_bool(params, "detect_stale_master");
-}
-
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to print diagnostics
- * @param arg   The monitor handle
- */
 void MMMonitor::diagnostics(DCB *dcb) const
 {
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (m_detectStaleMaster == 1) ? "enabled" : "disabled");
 }
 
-/**
- * Diagnostic interface
- *
- * @param arg   The monitor handle
- */
 json_t* MMMonitor::diagnostics_json() const
 {
     json_t* rval = json_object();
@@ -85,11 +64,16 @@ json_t* MMMonitor::diagnostics_json() const
     return rval;
 }
 
-/**
- * Monitor an individual server
- *
- * @param monitored_server  The server to probe
- */
+void MMMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+{
+    m_detectStaleMaster = config_get_bool(params, "detect_stale_master");
+}
+
+bool MMMonitor::has_sufficient_permissions() const
+{
+    return check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
+}
+
 void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;

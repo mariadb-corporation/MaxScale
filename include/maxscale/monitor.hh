@@ -28,8 +28,46 @@ public:
 
     virtual ~MonitorInstance();
 
-    bool start(const MXS_CONFIG_PARAMETER* param);
+    /**
+     * @brief Starts the monitor.
+     *
+     * - Calls @c has_sufficient_permissions(), if it has not been done earlier.
+     * - Updates the 'script' and 'events' configuration paramameters.
+     * - Calls @c configure().
+     * - Starts the monitor thread.
+     *
+     * @param param  The parameters of the monitor.
+     *
+     * @return True, if the monitor started, false otherwise.
+     */
+    bool start(const MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * @brief Stops the monitor.
+     *
+     * When the function returns, the monitor has stopped.
+     */
     void stop();
+
+    /**
+     * @brief Write diagnostics
+     *
+     * The implementation should write diagnostic information to the
+     * provided dcb.
+     *
+     * @param dcb  The dcb to write to.
+     */
+    virtual void diagnostics(DCB* dcb) const = 0;
+
+    /**
+     * @brief Obtain diagnostics
+     *
+     * The implementation should create a JSON object and fill it with diagnostics
+     * information.
+     *
+     * @return An object, if there is information to return, NULL otherwise.
+     */
+    virtual json_t* diagnostics_json() const = 0;
 
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
@@ -38,12 +76,13 @@ protected:
     uint64_t           events() const { return m_events; }
 
     /**
-     * @brief Update server information
+     * @brief Configure the monitor.
      *
-     * The implementation should probe the server in question and update
-     * the server status bits.
+     * When the monitor is started, this function will be called in order
+     * to allow the concrete implementation to configure itself from
+     * configuration parameters. The default implementation does nothing.
      */
-    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
+    virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
 
     /**
      * @brief Check whether the monitor has sufficient rights
@@ -56,13 +95,12 @@ protected:
     virtual bool has_sufficient_permissions() const;
 
     /**
-     * @brief Configure the monitor.
+     * @brief Update server information
      *
-     * When the monitor is started, this function will be called in order
-     * to allow the concrete implementation to configure itself from
-     * configuration parameters. The default implementation does nothing.
+     * The implementation should probe the server in question and update
+     * the server status bits.
      */
-    virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
+    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
 
     /**
      * @brief Flush pending server status to each server.

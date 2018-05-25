@@ -31,11 +31,11 @@ public:
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
-private:
-    AuroraMonitor(MXS_MONITOR* monitor);
-
+protected:
+    void configure(const MXS_CONFIG_PARAMETER* params);
+    bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 
-    bool has_sufficient_permissions() const;
-    void configure(const MXS_CONFIG_PARAMETER* params);
+private:
+    AuroraMonitor(MXS_MONITOR* monitor);
 };

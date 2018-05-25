@@ -40,11 +40,11 @@ static bool warn_erange_on_local_index = true;
 
 static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONITORED_SERVER *, int);
 static void disableMasterFailback(void *, int);
-bool isGaleraEvent(mxs_monitor_event_t event);
 static int compare_node_index(const void*, const void*);
 static int compare_node_priority(const void*, const void*);
 static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *);
 static void nodeval_free(GALERA_NODE_INFO *);
+static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
     : maxscale::MonitorInstance(mon)
@@ -89,31 +89,6 @@ GaleraMonitor* GaleraMonitor::create(MXS_MONITOR* monitor)
     return new GaleraMonitor(monitor);
 }
 
-bool GaleraMonitor::has_sufficient_permissions() const
-{
-    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'");
-}
-
-void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
-{
-    m_disableMasterFailback = config_get_bool(params, "disable_master_failback");
-    m_availableWhenDonor = config_get_bool(params, "available_when_donor");
-    m_disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
-    m_root_node_as_master = config_get_bool(params, "root_node_as_master");
-    m_use_priority = config_get_bool(params, "use_priority");
-    m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
-    m_log_no_members = true;
-
-    /* Reset all data in the hashtable */
-    reset_cluster_info();
-}
-
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param arg   The monitor handle
- */
 void GaleraMonitor::diagnostics(DCB *dcb) const
 {
     dcb_printf(dcb, "Master Failback:\t%s\n", (m_disableMasterFailback == 1) ? "off" : "on");
@@ -132,11 +107,6 @@ void GaleraMonitor::diagnostics(DCB *dcb) const
     }
 }
 
-/**
- * Diagnostic interface
- *
- * @param arg   The monitor handle
- */
 json_t* GaleraMonitor::diagnostics_json() const
 {
     json_t* rval = json_object();
@@ -160,48 +130,25 @@ json_t* GaleraMonitor::diagnostics_json() const
     return rval;
 }
 
-static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string)
+void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
-    bool rval = false;
-    MYSQL_RES* result;
+    m_disableMasterFailback = config_get_bool(params, "disable_master_failback");
+    m_availableWhenDonor = config_get_bool(params, "available_when_donor");
+    m_disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
+    m_root_node_as_master = config_get_bool(params, "root_node_as_master");
+    m_use_priority = config_get_bool(params, "use_priority");
+    m_set_donor_nodes = config_get_bool(params, "set_donor_nodes");
+    m_log_no_members = true;
 
-    if (mxs_mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        if (mysql_field_count(database->con) < 2)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
-                      "'wsrep_sst_method'\". Expected 2 columns."
-                      " MySQL Version: %s", server_string);
-        }
-
-        MYSQL_ROW row;
-
-        while ((row = mysql_fetch_row(result)))
-        {
-            if (row[1] && strncmp(row[1], "xtrabackup", 10) == 0)
-            {
-                rval = true;
-            }
-        }
-        mysql_free_result(result);
-    }
-    else
-    {
-        mon_report_query_error(database);
-    }
-
-    return rval;
+    /* Reset all data in the hashtable */
+    reset_cluster_info();
 }
 
-/**
- * Monitor an individual server. Does not deal with the setting of master or
- * slave bits, except for clearing them when a server is not joined to the
- * cluster.
- *
- * @param monitored_server  The server to probe.
- */
+bool GaleraMonitor::has_sufficient_permissions() const
+{
+    return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'");
+}
+
 void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
@@ -434,6 +381,41 @@ void GaleraMonitor::tick()
     {
         update_sst_donor_nodes(is_cluster);
     }
+}
+
+static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string)
+{
+    bool rval = false;
+    MYSQL_RES* result;
+
+    if (mxs_mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
+        && (result = mysql_store_result(database->con)) != NULL)
+    {
+        if (mysql_field_count(database->con) < 2)
+        {
+            mysql_free_result(result);
+            MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
+                      "'wsrep_sst_method'\". Expected 2 columns."
+                      " MySQL Version: %s", server_string);
+        }
+
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (row[1] && strncmp(row[1], "xtrabackup", 10) == 0)
+            {
+                rval = true;
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
+    }
+
+    return rval;
 }
 
 /**

@@ -40,6 +40,26 @@ AuroraMonitor* AuroraMonitor::create(MXS_MONITOR* monitor)
     return new AuroraMonitor(monitor);
 }
 
+void AuroraMonitor::diagnostics(DCB *dcb) const
+{
+}
+
+json_t* AuroraMonitor::diagnostics_json() const
+{
+    return NULL;
+}
+
+void AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+{
+}
+
+bool AuroraMonitor::has_sufficient_permissions() const
+{
+    return check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
+                                     "information_schema.replica_host_status "
+                                     "WHERE session_id = 'MASTER_SESSION_ID'");
+}
+
 /**
  * @brief Update the status of a server
  *
@@ -78,38 +98,6 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     {
         mon_report_query_error(monitored_server);
     }
-}
-
-bool AuroraMonitor::has_sufficient_permissions() const
-{
-    return check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "
-                                     "information_schema.replica_host_status "
-                                     "WHERE session_id = 'MASTER_SESSION_ID'");
-}
-
-void AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
-{
-}
-
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param mon   The monitor
- */
-void AuroraMonitor::diagnostics(DCB *dcb) const
-{
-}
-
-/**
- * Diagnostic interface
- *
- * @param dcb   DCB to send output
- * @param mon   The monitor
- */
-json_t* AuroraMonitor::diagnostics_json() const
-{
-    return NULL;
 }
 
 /**

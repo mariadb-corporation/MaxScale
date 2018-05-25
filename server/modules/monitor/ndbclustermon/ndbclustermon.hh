@@ -31,13 +31,13 @@ public:
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
+protected:
+    void configure(const MXS_CONFIG_PARAMETER* params);
+    bool has_sufficient_permissions() const;
+    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
+
 private:
     unsigned long m_id; /**< Monitor ID */
 
     NDBCMonitor(MXS_MONITOR* monitor);
-
-    void update_server_status(MXS_MONITORED_SERVER* monitored_server);
-
-    bool has_sufficient_permissions() const;
-    void configure(const MXS_CONFIG_PARAMETER* params);
 };
