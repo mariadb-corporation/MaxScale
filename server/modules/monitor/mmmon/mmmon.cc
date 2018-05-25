@@ -59,7 +59,7 @@ void MMMonitor::diagnostics(DCB *dcb) const
 
 json_t* MMMonitor::diagnostics_json() const
 {
-    json_t* rval = json_object();
+    json_t* rval = MonitorInstance::diagnostics_json();
     json_object_set_new(rval, "detect_stale_master", json_boolean(m_detectStaleMaster));
     return rval;
 }

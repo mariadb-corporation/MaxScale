@@ -2573,6 +2573,43 @@ void MonitorInstance::stop()
     m_shutdown = 0;
 }
 
+void MonitorInstance::diagnostics(DCB* pDcb) const
+{
+}
+
+json_t* MonitorInstance::diagnostics_json() const
+{
+    json_t* pJson = json_object();
+
+    if (!m_script.empty())
+    {
+        json_object_set_new(pJson, CN_SCRIPT, json_string(m_script.c_str()));
+
+        string events;
+
+        const MXS_ENUM_VALUE* pValue = mxs_monitor_event_enum_values;
+
+        while (pValue->name)
+        {
+            if (pValue->enum_value & m_events)
+            {
+                if (!events.empty())
+                {
+                    events += ",";
+                }
+
+                events += pValue->enum_value;
+            }
+
+            ++pValue;
+        }
+
+        json_object_set_new(pJson, CN_EVENTS, json_string(events.c_str()));
+    }
+
+    return pJson;
+}
+
 bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 {
     bool started = false;
@@ -2595,8 +2632,8 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
     if (m_checked)
     {
-        m_script = config_get_string(pParams, "script");
-        m_events = config_get_enum(pParams, "events", mxs_monitor_event_enum_values);
+        m_script = config_get_string(pParams, CN_SCRIPT);
+        m_events = config_get_enum(pParams, CN_EVENTS, mxs_monitor_event_enum_values);
         m_master = NULL;
 
         if (configure(pParams))

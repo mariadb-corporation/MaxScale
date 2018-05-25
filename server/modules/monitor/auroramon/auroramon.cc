@@ -40,20 +40,6 @@ AuroraMonitor* AuroraMonitor::create(MXS_MONITOR* monitor)
     return new AuroraMonitor(monitor);
 }
 
-void AuroraMonitor::diagnostics(DCB *dcb) const
-{
-}
-
-json_t* AuroraMonitor::diagnostics_json() const
-{
-    return NULL;
-}
-
-bool AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
-{
-    return true;
-}
-
 bool AuroraMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SELECT @@aurora_server_id, server_id FROM "

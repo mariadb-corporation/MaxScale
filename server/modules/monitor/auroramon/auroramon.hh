@@ -28,11 +28,8 @@ public:
 
     ~AuroraMonitor();
     static AuroraMonitor* create(MXS_MONITOR* monitor);
-    void diagnostics(DCB* dcb) const;
-    json_t* diagnostics_json() const;
 
 protected:
-    bool configure(const MXS_CONFIG_PARAMETER* params);
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 

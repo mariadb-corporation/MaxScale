@@ -109,17 +109,12 @@ void GaleraMonitor::diagnostics(DCB *dcb) const
 
 json_t* GaleraMonitor::diagnostics_json() const
 {
-    json_t* rval = json_object();
+    json_t* rval = MonitorInstance::diagnostics_json();
     json_object_set_new(rval, "disable_master_failback", json_boolean(m_disableMasterFailback));
     json_object_set_new(rval, "disable_master_role_setting", json_boolean(m_disableMasterRoleSetting));
     json_object_set_new(rval, "root_node_as_master", json_boolean(m_root_node_as_master));
     json_object_set_new(rval, "use_priority", json_boolean(m_use_priority));
     json_object_set_new(rval, "set_donor_nodes", json_boolean(m_set_donor_nodes));
-
-    if (!script().empty())
-    {
-        json_object_set_new(rval, "script", json_string(script().c_str()));
-    }
 
     if (m_cluster_info.c_uuid)
     {

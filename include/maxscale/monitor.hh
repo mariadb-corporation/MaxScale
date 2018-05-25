@@ -53,21 +53,23 @@ public:
      * @brief Write diagnostics
      *
      * The implementation should write diagnostic information to the
-     * provided dcb.
+     * provided dcb. The default implementation writes nothing.
      *
      * @param dcb  The dcb to write to.
      */
-    virtual void diagnostics(DCB* dcb) const = 0;
+    virtual void diagnostics(DCB* dcb) const;
 
     /**
      * @brief Obtain diagnostics
      *
      * The implementation should create a JSON object and fill it with diagnostics
-     * information.
+     * information. The default implementation returns an object that is populated
+     * with the keys 'script' and 'events' if they have been set, otherwise the
+     * object is empty.
      *
      * @return An object, if there is information to return, NULL otherwise.
      */
-    virtual json_t* diagnostics_json() const = 0;
+    virtual json_t* diagnostics_json() const;
 
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);

@@ -40,20 +40,6 @@ GRMon* GRMon::create(MXS_MONITOR* monitor)
     return new GRMon(monitor);
 }
 
-void GRMon::diagnostics(DCB* dcb) const
-{
-}
-
-json_t* GRMon::diagnostics_json() const
-{
-    return NULL;
-}
-
-bool GRMon::configure(const MXS_CONFIG_PARAMETER* params)
-{
-    return true;
-}
-
 bool GRMon::has_sufficient_permissions() const
 {
     return true;
