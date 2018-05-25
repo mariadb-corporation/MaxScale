@@ -134,7 +134,7 @@ public:
 
     static void destroyInstance(MXS_MONITOR_INSTANCE* pInstance)
     {
-        MXS_EXCEPTION_GUARD(static_cast<MonitorInstance*>(pInstance)->destroy());
+        MXS_EXCEPTION_GUARD(delete static_cast<MonitorInstance*>(pInstance));
     }
 
     static bool startMonitor(MXS_MONITOR_INSTANCE* pInstance,

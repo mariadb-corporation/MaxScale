@@ -26,8 +26,8 @@ public:
     MMMonitor(const MMMonitor&) = delete;
     MMMonitor& operator = (const MMMonitor&) = delete;
 
+    ~MMMonitor();
     static MMMonitor* create(MXS_MONITOR* monitor);
-    void destroy();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
@@ -36,7 +36,6 @@ private:
     int m_detectStaleMaster; /**< Monitor flag for Stale Master detection */
 
     MMMonitor(MXS_MONITOR* monitor);
-    ~MMMonitor();
 
     MXS_MONITORED_SERVER *get_current_master();
 

@@ -86,11 +86,6 @@ NDBCMonitor* NDBCMonitor::create(MXS_MONITOR* monitor)
     return new NDBCMonitor(monitor);
 }
 
-void NDBCMonitor::destroy()
-{
-    delete this;
-}
-
 bool NDBCMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'");

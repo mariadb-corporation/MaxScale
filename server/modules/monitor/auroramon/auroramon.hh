@@ -26,14 +26,13 @@ public:
     AuroraMonitor(const AuroraMonitor&) = delete;
     AuroraMonitor& operator = (const AuroraMonitor&) = delete;
 
+    ~AuroraMonitor();
     static AuroraMonitor* create(MXS_MONITOR* monitor);
-    void destroy();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
 private:
     AuroraMonitor(MXS_MONITOR* monitor);
-    ~AuroraMonitor();
 
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 

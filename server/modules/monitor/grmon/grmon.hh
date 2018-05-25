@@ -26,14 +26,13 @@ public:
     GRMon(const GRMon&) = delete;
     GRMon& operator&(const GRMon&) = delete;
 
+    ~GRMon();
     static GRMon* create(MXS_MONITOR* monitor);
-    void destroy();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
 private:
     GRMon(MXS_MONITOR* monitor);
-    ~GRMon();
 
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 

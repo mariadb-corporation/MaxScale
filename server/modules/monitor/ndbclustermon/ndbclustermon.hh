@@ -26,8 +26,8 @@ public:
     NDBCMonitor(const NDBCMonitor&) = delete;
     NDBCMonitor& operator = (const NDBCMonitor&) = delete;
 
+    ~NDBCMonitor();
     static NDBCMonitor* create(MXS_MONITOR* monitor);
-    void destroy();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
@@ -35,7 +35,6 @@ private:
     unsigned long m_id; /**< Monitor ID */
 
     NDBCMonitor(MXS_MONITOR* monitor);
-    ~NDBCMonitor();
 
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
 

@@ -40,11 +40,6 @@ AuroraMonitor* AuroraMonitor::create(MXS_MONITOR* monitor)
     return new AuroraMonitor(monitor);
 }
 
-void AuroraMonitor::destroy()
-{
-    delete this;
-}
-
 /**
  * @brief Update the status of a server
  *

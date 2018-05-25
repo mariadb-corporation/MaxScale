@@ -40,11 +40,6 @@ GRMon* GRMon::create(MXS_MONITOR* monitor)
     return new GRMon(monitor);
 }
 
-void GRMon::destroy()
-{
-    delete this;
-}
-
 bool GRMon::has_sufficient_permissions() const
 {
     return true;

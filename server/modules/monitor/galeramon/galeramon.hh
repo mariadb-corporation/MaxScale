@@ -58,8 +58,8 @@ public:
     GaleraMonitor(const GaleraMonitor&) = delete;
     GaleraMonitor& operator = (const GaleraMonitor&) = delete;
 
+    ~GaleraMonitor();
     static GaleraMonitor* create(MXS_MONITOR* monitor);
-    void destroy();
     void diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
@@ -78,7 +78,6 @@ private:
     bool m_log_no_members;              /**< Should we log if no member are found. */
 
     GaleraMonitor(MXS_MONITOR* monitor);
-    ~GaleraMonitor();
 
     bool detect_cluster_size(const int n_nodes,
                              const char *candidate_uuid,

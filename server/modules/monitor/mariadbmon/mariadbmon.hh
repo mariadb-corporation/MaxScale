@@ -42,6 +42,8 @@ private:
 public:
     // TODO: Once done refactoring, see which of these can be moved to private.
 
+    ~MariaDBMonitor();
+
     /**
      * Print diagnostics.
      *
@@ -77,11 +79,6 @@ public:
      * @return True, if the monitor could be started, false otherwise.
      */
     bool start(const MXS_CONFIG_PARAMETER* params);
-
-    /**
-     * Destroyes aka deletes the instance.
-     */
-    void destroy();
 
     /**
      * Stop the monitor. Waits until monitor has stopped.
@@ -171,7 +168,6 @@ private:
 
     // Base methods
     MariaDBMonitor(MXS_MONITOR* monitor_base);
-    ~MariaDBMonitor();
     void reset_server_info();
     void clear_server_info();
     bool load_config_params(const MXS_CONFIG_PARAMETER* params);

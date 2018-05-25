@@ -101,11 +101,6 @@ MMMonitor* MMMonitor::create(MXS_MONITOR* monitor)
     return new MMMonitor(monitor);
 }
 
-void MMMonitor::destroy()
-{
-    delete this;
-}
-
 bool MMMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");

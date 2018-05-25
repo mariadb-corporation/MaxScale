@@ -142,11 +142,6 @@ GaleraMonitor* GaleraMonitor::create(MXS_MONITOR* monitor)
     return new GaleraMonitor(monitor);
 }
 
-void GaleraMonitor::destroy()
-{
-    delete this;
-}
-
 bool GaleraMonitor::has_sufficient_permissions() const
 {
     return check_monitor_permissions(m_monitor, "SHOW STATUS LIKE 'wsrep_local_state'");
