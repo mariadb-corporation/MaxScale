@@ -80,9 +80,13 @@ protected:
      *
      * When the monitor is started, this function will be called in order
      * to allow the concrete implementation to configure itself from
-     * configuration parameters. The default implementation does nothing.
+     * configuration parameters. The default implementation returns true.
+     *
+     * @return True, if the monitor could be configured, false otherwise.
+     *
+     * @note If false is returned, then the monitor will not be started.
      */
-    virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
+    virtual bool configure(const MXS_CONFIG_PARAMETER* pParams);
 
     /**
      * @brief Check whether the monitor has sufficient rights

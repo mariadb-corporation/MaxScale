@@ -47,8 +47,9 @@ json_t* NDBCMonitor::diagnostics_json() const
     return NULL;
 }
 
-void NDBCMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool NDBCMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    return true;
 }
 
 bool NDBCMonitor::has_sufficient_permissions() const

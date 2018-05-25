@@ -49,8 +49,9 @@ json_t* AuroraMonitor::diagnostics_json() const
     return NULL;
 }
 
-void AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool AuroraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    return true;
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const

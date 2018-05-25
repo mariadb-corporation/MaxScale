@@ -130,7 +130,7 @@ json_t* GaleraMonitor::diagnostics_json() const
     return rval;
 }
 
-void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
     m_disableMasterFailback = config_get_bool(params, "disable_master_failback");
     m_availableWhenDonor = config_get_bool(params, "available_when_donor");
@@ -142,6 +142,8 @@ void GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 
     /* Reset all data in the hashtable */
     reset_cluster_info();
+
+    return true;
 }
 
 bool GaleraMonitor::has_sufficient_permissions() const

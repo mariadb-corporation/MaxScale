@@ -64,7 +64,7 @@ public:
     json_t* diagnostics_json() const;
 
 protected:
-    void configure(const MXS_CONFIG_PARAMETER* param);
+    bool configure(const MXS_CONFIG_PARAMETER* param);
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
     void tick();

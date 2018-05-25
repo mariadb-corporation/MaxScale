@@ -2599,26 +2599,27 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
         m_events = config_get_enum(pParams, "events", mxs_monitor_event_enum_values);
         m_master = NULL;
 
-        configure(pParams);
-
-        if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
+        if (configure(pParams))
         {
-            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-        }
-        else
-        {
-            // Ok, so the thread started. Let's wait until we can be certain the
-            // state has been updated.
-            m_semaphore.wait();
-
-            started = (atomic_load_int32(&m_status) == MXS_MONITOR_RUNNING);
-
-            if (!started)
+            if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
             {
-                // Ok, so the initialization failed and the thread will exit.
-                // We need to wait on it so that the thread resources will not leak.
-                thread_wait(m_thread);
-                m_thread = 0;
+                MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+            }
+            else
+            {
+                // Ok, so the thread started. Let's wait until we can be certain the
+                // state has been updated.
+                m_semaphore.wait();
+
+                started = (atomic_load_int32(&m_status) == MXS_MONITOR_RUNNING);
+
+                if (!started)
+                {
+                    // Ok, so the initialization failed and the thread will exit.
+                    // We need to wait on it so that the thread resources will not leak.
+                    thread_wait(m_thread);
+                    m_thread = 0;
+                }
             }
         }
     }
@@ -2626,13 +2627,14 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     return started;
 }
 
-bool MonitorInstance::has_sufficient_permissions() const
+bool MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
     return true;
 }
 
-void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool MonitorInstance::has_sufficient_permissions() const
 {
+    return true;
 }
 
 void MonitorInstance::flush_server_status()

@@ -49,8 +49,9 @@ json_t* GRMon::diagnostics_json() const
     return NULL;
 }
 
-void GRMon::configure(const MXS_CONFIG_PARAMETER* params)
+bool GRMon::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    return true;
 }
 
 bool GRMon::has_sufficient_permissions() const
