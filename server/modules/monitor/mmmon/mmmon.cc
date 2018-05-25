@@ -35,55 +35,6 @@
 static void detectStaleMaster(void *, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_NOTICE("Initialise the Multi-Master Monitor module.");
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_BETA_RELEASE,
-        MXS_MONITOR_VERSION,
-        "A Multi-Master Multi Master monitor",
-        "V1.1.1",
-        MXS_NO_MODULE_CAPABILITIES,
-        &maxscale::MonitorApi<MMMonitor>::s_api,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        {
-            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
-
-/*lint +e14 */
-
 MMMonitor::MMMonitor(MXS_MONITOR *monitor)
     : maxscale::MonitorInstance(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
@@ -418,24 +369,6 @@ void MMMonitor::tick()
     }
 }
 
-/**
- * Enable/Disable the MySQL Replication Stale Master dectection, allowing a previouvsly detected master to still act as a Master.
- * This option must be enabled in order to keep the Master when the replication is stopped or removed from slaves.
- * If the replication is still stopped when MaxSclale is restarted no Master will be available.
- *
- * @param arg       The handle allocated by startMonitor
- * @param enable    To enable it 1, disable it with 0
- */
-/* Not used
-static void
-detectStaleMaster(void *arg, int enable)
-{
-    MONITOR* mon = (MONITOR*) arg;
-    MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
-    memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
-}
-*/
-
 /*******
  * This function returns the master server
  * from a set of MySQL Multi Master monitored servers
@@ -494,4 +427,51 @@ MXS_MONITORED_SERVER *MMMonitor::get_current_master()
     {
         return NULL;
     }
+}
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_NOTICE("Initialise the Multi-Master Monitor module.");
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_BETA_RELEASE,
+        MXS_MONITOR_VERSION,
+        "A Multi-Master Multi Master monitor",
+        "V1.1.1",
+        MXS_NO_MODULE_CAPABILITIES,
+        &maxscale::MonitorApi<MMMonitor>::s_api,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
 }

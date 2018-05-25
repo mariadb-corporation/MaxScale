@@ -46,59 +46,6 @@ static int compare_node_priority(const void*, const void*);
 static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *);
 static void nodeval_free(GALERA_NODE_INFO *);
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_GA,
-        MXS_MONITOR_VERSION,
-        "A Galera cluster monitor",
-        "V2.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &maxscale::MonitorApi<GaleraMonitor>::s_api,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        {
-            {"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
-            {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},
-            {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
-            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "false"},
-            {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
-            {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
-
-
 GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
     : maxscale::MonitorInstance(mon)
     , m_id(MXS_MONITOR_DEFAULT_ID)
@@ -1166,4 +1113,56 @@ bool GaleraMonitor::detect_cluster_size(const int n_nodes,
     }
 
     return ret;
+}
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_GA,
+        MXS_MONITOR_VERSION,
+        "A Galera cluster monitor",
+        "V2.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &maxscale::MonitorApi<GaleraMonitor>::s_api,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
+            {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},
+            {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
+            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
+            {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
 }

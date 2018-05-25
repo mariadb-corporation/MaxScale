@@ -23,53 +23,6 @@
 
 bool isNdbEvent(mxs_monitor_event_t event);
 
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_BETA_RELEASE,
-        MXS_MONITOR_VERSION,
-        "A MySQL cluster SQL node monitor",
-        "V2.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &maxscale::MonitorApi<NDBCMonitor>::s_api,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        {
-            {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
-            {MXS_END_MODULE_PARAMS} // No parameters
-        }
-    };
-
-    return &info;
-}
-
-
 NDBCMonitor::NDBCMonitor(MXS_MONITOR *monitor)
     : maxscale::MonitorInstance(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
@@ -201,4 +154,50 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         monitor_clear_pending_status(monitored_server, SERVER_NDB);
         monitored_server->server->depth = -1;
     }
+}
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_BETA_RELEASE,
+        MXS_MONITOR_VERSION,
+        "A MySQL cluster SQL node monitor",
+        "V2.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &maxscale::MonitorApi<NDBCMonitor>::s_api,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
+            {MXS_END_MODULE_PARAMS} // No parameters
+        }
+    };
+
+    return &info;
 }
