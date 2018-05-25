@@ -2635,6 +2635,17 @@ void MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
 }
 
+void MonitorInstance::flush_server_status()
+{
+    for (MXS_MONITORED_SERVER *pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
+    {
+        if (!SERVER_IN_MAINT(pMs->server))
+        {
+            pMs->server->status = pMs->pending_status;
+        }
+    }
+}
+
 void MonitorInstance::tick()
 {
     for (MXS_MONITORED_SERVER *pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
@@ -2672,13 +2683,18 @@ void MonitorInstance::tick()
                 }
             }
 
+#if defined(SS_DEBUG)
             if (mon_status_changed(pMs) || mon_print_fail_status(pMs))
             {
+                // The current status is still in pMs->pending_status.
+                SERVER server = {};
+                server.status = pMs->pending_status;
                 MXS_DEBUG("Backend server [%s]:%d state : %s",
                           pMs->server->address,
                           pMs->server->port,
-                          STRSRVSTATUS(pMs->server));
+                          STRSRVSTATUS(&server));
             }
+#endif
 
             if (SERVER_IS_DOWN(pMs->server))
             {
@@ -2690,6 +2706,8 @@ void MonitorInstance::tick()
             }
         }
     }
+
+    flush_server_status();
 }
 
 void MonitorInstance::main()

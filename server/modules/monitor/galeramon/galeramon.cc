@@ -492,14 +492,6 @@ void GaleraMonitor::tick()
     {
         update_sst_donor_nodes(is_cluster);
     }
-
-    ptr = m_monitor->monitored_servers;
-
-    while (ptr)
-    {
-        ptr->server->status = ptr->pending_status;
-        ptr = ptr->next;
-    }
 }
 
 /**

@@ -419,10 +419,7 @@ void MMMonitor::tick()
                 /* Set the STALE bit for this server in server struct */
                 monitor_set_pending_status(ptr, SERVER_STALE_STATUS);
             }
-
-            ptr->server->status = ptr->pending_status;
         }
-        ptr = ptr->next;
     }
 }
 

@@ -142,8 +142,6 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
         monitor_clear_pending_status(monitored_server, SERVER_MASTER);
     }
-
-    monitored_server->server->status = monitored_server->pending_status;
 }
 
 /**

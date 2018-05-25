@@ -65,21 +65,33 @@ protected:
     virtual void configure(const MXS_CONFIG_PARAMETER* pParams);
 
     /**
+     * @brief Flush pending server status to each server.
+     *
+     * This function is expected to flush the pending status to each server.
+     * The default implementation simply copies monitored_server->pending_status
+     * to server->status.
+     */
+    virtual void flush_server_status();
+
+    /**
      * @brief Monitor the servers
      *
      * This function is called once per monitor round, and the concrete
      * implementation should probe all servers, i.e. call @c update_server_status
      * on each server.
      *
-     * The default implementation will:
-     *   - Not call @c update_server_status for a server that is in maintenance.
-     *   - Before calling, update the previous status of the server.
-     *   - Before calling, update the pending status of the monitored server object
-     *     to the status of the corresponing server object.
-     *   - Ensure that there is a connection to the server. If that fails, then
-     *     the pending status will be updated accordingly and @c update_server_status
-     *     will *not* be called.
-     *   - After the call, update the error count of the server.
+     * The default implementation will for each server:
+     *   - Do nothing, if the server is in maintenance.
+     *   - Before calling, store the previous status of the server.
+     *   - Before calling, set the pending status of the monitored server object
+     *     to the status of the corresponding server object.
+     *   - Ensure that there is a connection to the server.
+     *     If there is, @c update_server_status is called.
+     *     If there is not, the pending status will be updated accordingly and
+     *     @c update_server_status will *not* be called.
+     *   - After the call, update the error count of the server if it is down.
+     *
+     * Finally, it will call @c flush_server_status.
      */
     virtual void tick();
 

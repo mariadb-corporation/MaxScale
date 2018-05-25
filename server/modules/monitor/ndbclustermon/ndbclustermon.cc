@@ -206,6 +206,4 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         monitor_clear_pending_status(monitored_server, SERVER_NDB);
         monitored_server->server->depth = -1;
     }
-
-    monitored_server->server->status = monitored_server->pending_status;
 }

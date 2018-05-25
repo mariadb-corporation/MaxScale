@@ -83,8 +83,6 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     {
         mon_report_query_error(monitored_server);
     }
-
-    monitored_server->server->status = monitored_server->pending_status;
 }
 
 bool AuroraMonitor::has_sufficient_permissions() const
