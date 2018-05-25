@@ -523,6 +523,8 @@ static bool is_empty_string(const char* str)
     return true;
 }
 
+static bool is_root_config_file = true;
+
 /**
  * Config item handler for the ini file reader
  *
@@ -573,7 +575,15 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
 
     if (strcmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0)
     {
-        return handle_global_item(name, value);
+        if (is_root_config_file)
+        {
+            return handle_global_item(name, value);
+        }
+        else
+        {
+            MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
+            return 0;
+        }
     }
     else if (strlen(section) == 0)
     {
@@ -899,6 +909,7 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
         if (config_load_single_file(filename, &dcontext, &ccontext))
         {
+            is_root_config_file = false;
             const char DIR_SUFFIX[] = ".d";
 
             char dir[strlen(filename) + sizeof(DIR_SUFFIX)];

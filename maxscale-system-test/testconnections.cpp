@@ -642,8 +642,8 @@ void TestConnections::init_maxscale(int m)
                           "chmod a+x %s;"
                           "%s"
                           "iptables -F INPUT;"
-                          "truncate -s 0 %s/maxscale.log;"
-                          "truncate -s 0 %s/maxscale1.log;"
+                          "rm -f %s/maxscale.log;"
+                          "rm -f %s/maxscale1.log;"
                           "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
                           "%s",
                           maxscales->access_homedir[m],
