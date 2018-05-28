@@ -987,7 +987,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
         atomic_add_uint64(&m_router->stats().n_queries, 1);
         atomic_add_uint64(&target->server()->stats.packets, 1);
 
-        if (!large_query && response == mxs::Backend::EXPECT_RESPONSE)
+        if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {
             /** The server will reply to this command */
             ss_dassert(target->get_reply_state() == REPLY_STATE_DONE);

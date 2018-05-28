@@ -643,6 +643,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 else
                 {
                     // We were expecting a response but we aren't going to get one
+                    ss_dassert(m_expected_responses > 0);
                     m_expected_responses--;
 
                     if (can_retry_query())
