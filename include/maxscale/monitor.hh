@@ -29,6 +29,20 @@ public:
     virtual ~MonitorInstance();
 
     /**
+     * @brief Current state of the monitor.
+     *
+     * Note that in principle the state of the monitor may already have
+     * changed when the current state is returned. The state can be fully
+     * trusted only if it is asked in a context when it is known that nobody
+     * else can affect it.
+     *
+     * @return @c MXS_MONITOR_RUNNING if the monitor is running,
+     *         @c MXS_MONITOR_STOPPING if the monitor is stopping, and
+     *         @c MXS_MONITOR_STOPPED of the monitor is stopped.
+     */
+    int32_t state() const;
+
+    /**
      * @brief Starts the monitor.
      *
      * - Calls @c has_sufficient_permissions(), if it has not been done earlier.
@@ -143,7 +157,7 @@ protected:
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
-    int32_t     m_status;    /**< The current status of the monitor. */
+    int32_t     m_state;     /**< The current state of the monitor. */
     THREAD      m_thread;    /**< The thread handle of the monitoring thread. */
     int32_t     m_shutdown;  /**< Non-zero if the monitor should shut down. */
     bool        m_checked;   /**< Whether server access has been checked. */

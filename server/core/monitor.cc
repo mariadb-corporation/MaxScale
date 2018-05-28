@@ -2546,7 +2546,7 @@ namespace maxscale
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_monitor(pMonitor)
     , m_master(NULL)
-    , m_status(MXS_MONITOR_STOPPED)
+    , m_state(MXS_MONITOR_STOPPED)
     , m_thread(0)
     , m_shutdown(0)
     , m_checked(false)
@@ -2559,15 +2559,21 @@ MonitorInstance::~MonitorInstance()
     ss_dassert(!m_thread);
 }
 
+int32_t MonitorInstance::state() const
+{
+    return atomic_load_int32(&m_state);
+}
+
 void MonitorInstance::stop()
 {
     // This is always called in single-thread context.
     ss_dassert(m_thread);
-    ss_dassert(m_status == MXS_MONITOR_RUNNING);
+    ss_dassert(m_state == MXS_MONITOR_RUNNING);
 
-    atomic_store_int32(&m_status, MXS_MONITOR_STOPPING);
+    atomic_store_int32(&m_state, MXS_MONITOR_STOPPING);
     atomic_store_int32(&m_shutdown, 1);
     thread_wait(m_thread);
+    atomic_store_int32(&m_state, MXS_MONITOR_STOPPED);
 
     m_thread = 0;
     m_shutdown = 0;
@@ -2616,7 +2622,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
     ss_dassert(!m_shutdown);
     ss_dassert(!m_thread);
-    ss_dassert(m_status == MXS_MONITOR_STOPPED);
+    ss_dassert(m_state == MXS_MONITOR_STOPPED);
 
     if (!m_checked)
     {
@@ -2648,7 +2654,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
                 // state has been updated.
                 m_semaphore.wait();
 
-                started = (atomic_load_int32(&m_status) == MXS_MONITOR_RUNNING);
+                started = (atomic_load_int32(&m_state) == MXS_MONITOR_RUNNING);
 
                 if (!started)
                 {
@@ -2793,12 +2799,10 @@ void MonitorInstance::main(void* pArg)
 
     if (mysql_thread_init() == 0)
     {
-        atomic_store_int32(&pThis->m_status, MXS_MONITOR_RUNNING);
+        atomic_store_int32(&pThis->m_state, MXS_MONITOR_RUNNING);
         pThis->m_semaphore.post();
 
         pThis->main();
-
-        atomic_store_int32(&pThis->m_status, MXS_MONITOR_STOPPED);
 
         mysql_thread_end();
     }
