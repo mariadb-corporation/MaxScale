@@ -157,9 +157,6 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
     m_shutdown = false;
-    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
-     * added, removed and modified. */
-    reset_server_info();
 
     if (!configure(params))
     {
@@ -188,6 +185,10 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
  */
 bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
+    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
+     * added, removed and modified. */
+    reset_server_info();
+
     m_detect_stale_master = config_get_bool(params, "detect_stale_master");
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
     m_detect_replication_lag = config_get_bool(params, "detect_replication_lag");
