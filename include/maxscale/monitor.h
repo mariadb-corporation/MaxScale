@@ -259,9 +259,7 @@ struct mxs_monitor
     char *module_name;            /**< Name of the monitor module */
     MXS_MONITOR_INSTANCE *instance; /**< Instance returned from startMonitor */
     size_t interval;              /**< The monitor interval */
-    volatile bool server_pending_changes;
-    /**< Are there any pending changes to a server?
-       * If yes, the next monitor loop starts early.  */
+    int check_maintenance_flag;   /**< Set when admin requests a maintenance status change. */
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
@@ -322,8 +320,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
 void monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit);
 void monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, uint64_t bit);
-void servers_status_pending_to_current(MXS_MONITOR *monitor);
-void servers_status_current_to_pending(MXS_MONITOR *monitor);
+void monitor_check_maintenance_requests(MXS_MONITOR *monitor);
 
 bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
 bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
@@ -332,9 +329,6 @@ mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_S
 bool mon_connection_is_ok(mxs_connect_result_t connect_result);
 void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
 const char* mon_get_event_name(mxs_monitor_event_t event);
-
-void lock_monitor_servers(MXS_MONITOR *monitor);
-void release_monitor_servers(MXS_MONITOR *monitor);
 
 /**
  * Alter monitor parameters

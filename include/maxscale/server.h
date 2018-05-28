@@ -48,7 +48,8 @@ extern const char CN_PROXY_PROTOCOL[];
 const int MAINTENANCE_OFF = -100;
 const int MAINTENANCE_NO_CHANGE = 0;
 const int MAINTENANCE_ON = 100;
-
+const int MAINTENANCE_FLAG_NOCHECK = 0;
+const int MAINTENANCE_FLAG_CHECK = -1;
 /**
  * The server parameters used for weighting routing decissions
  */

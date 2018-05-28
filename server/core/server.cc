@@ -1342,7 +1342,7 @@ bool mxs::server_set_status(SERVER *server, int bit, string* errmsg_out)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            mon->server_pending_changes = true;
+            atomic_store_int(&mon->check_maintenance_flag, MAINTENANCE_FLAG_CHECK);
         }
     }
     else
@@ -1387,7 +1387,7 @@ bool mxs::server_clear_status(SERVER *server, int bit, string* errmsg_out)
             {
                 MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
             }
-            mon->server_pending_changes = true;
+            atomic_store_int(&mon->check_maintenance_flag, MAINTENANCE_FLAG_CHECK);
         }
     }
     else

@@ -308,12 +308,8 @@ void MariaDBMonitor::main()
         /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);
 
-        lock_monitor_servers(m_monitor);
         /* Read any admin status changes from SERVER->status_pending. */
-        if (m_monitor->server_pending_changes)
-        {
-            servers_status_pending_to_current(m_monitor);
-        }
+        monitor_check_maintenance_requests(m_monitor);
         /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
          * Also, backup current status so that it can be compared to any deduced state. */
         for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
@@ -322,9 +318,6 @@ void MariaDBMonitor::main()
             mon_srv->pending_status = status;
             mon_srv->mon_prev_status = status;
         }
-        /* Avoid reading/writing SERVER->status while servers are not locked. Routers read the state
-         * all the time. */
-        release_monitor_servers(m_monitor);
 
         // Query all servers for their status. Update the server id array.
         m_servers_by_id.clear();
@@ -415,66 +408,43 @@ void MariaDBMonitor::main()
             measure_replication_lag(root_master);
         }
 
-        /* Servers have been queried and states deduced. Lock servers for a short while again while we update
-         * the shared server states and make the changes visible. There is a problem though: the admin could
-         * have changed the shared state while the queries were running. In this rare case, the deduced
-         * server states no longer apply and may be inconsistent. The most straightforward solution to this
-         * is to discard the results of the latest monitor loop and start another immediately. Cluster
-         * modifications are not performed until the next loop. The discarding of results is not perfect as
-         * some data has already been written. But this data is only used by the monitor itself and will be
-         * rewritten next loop. TODO: make versions of log_master_changes() and mon_process_state_changes()
-         * which read from MXS_MONITORED_SERVER->pending_status instead of SERVER->status. Then this locking
-         * and releasing can be moved after failover etc and the user changes can be applied gracefully. */
-        lock_monitor_servers(m_monitor);
-        if (m_monitor->server_pending_changes)
+        // Update shared status. The next functions read the shared status. TODO: change the following
+        // functions to read "pending_status" instead.
+        for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
         {
-            MXS_WARNING("MaxAdmin or REST API modified the state of a server monitored by '%s' during a "
-                        "monitor iteration. Discarding the monitor results and retrying.",
-                        m_monitor->name);
-            release_monitor_servers(m_monitor);
+            mon_srv->server->status = mon_srv->pending_status;
         }
-        else
+
+        /* Check if monitor events need to be launched. */
+        mon_process_state_changes(m_monitor, m_script.c_str(), m_events);
+        m_cluster_modified = false;
+        if (m_auto_failover)
         {
-            // Update shared status.
-            for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
-            {
-                auto new_status = mon_srv->pending_status;
-                auto srv = mon_srv->server;
-                srv->status = new_status;
-            }
-
-            /* Check if monitor events need to be launched. */
-            mon_process_state_changes(m_monitor, m_script.c_str(), m_events);
-            m_cluster_modified = false;
-            if (m_auto_failover)
-            {
-                m_cluster_modified = handle_auto_failover();
-            }
-
-             /* log master detection failure of first master becomes available after failure */
-            log_master_changes(root_master, &log_no_master);
-
-            // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-            // has been performed, as server states have not been updated yet. It will happen next iteration.
-            if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
-                cluster_can_be_joined())
-            {
-                // Check if any servers should be autojoined to the cluster and try to join them.
-                handle_auto_rejoin();
-            }
-
-            /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-             * perform this if cluster has been modified this loop since it may not be clear which server
-             * should be a slave. */
-            if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
-            {
-                enforce_read_only_on_slaves();
-            }
-
-            mon_hangup_failed_servers(m_monitor);
-            store_server_journal(m_monitor, m_master ? m_master->m_server_base : NULL);
-            release_monitor_servers(m_monitor);
+            m_cluster_modified = handle_auto_failover();
         }
+
+         /* log master detection failure of first master becomes available after failure */
+        log_master_changes(root_master, &log_no_master);
+
+        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+        // has been performed, as server states have not been updated yet. It will happen next iteration.
+        if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
+            cluster_can_be_joined())
+        {
+            // Check if any servers should be autojoined to the cluster and try to join them.
+            handle_auto_rejoin();
+        }
+
+        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+         * perform this if cluster has been modified this loop since it may not be clear which server
+         * should be a slave. */
+        if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+        {
+            enforce_read_only_on_slaves();
+        }
+
+        mon_hangup_failed_servers(m_monitor);
+        store_server_journal(m_monitor, m_master ? m_master->m_server_base : NULL);
 
         // Check how much the monitor should sleep to get one full monitor interval.
         timespec loop_end;
@@ -486,7 +456,8 @@ void MariaDBMonitor::main()
         sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
         /* Sleep in small increments to react faster to some events. This should ideally use some type of
          * notification mechanism. */
-        while (sleep_time_remaining > 0 && !should_shutdown() && !m_monitor->server_pending_changes)
+        while (sleep_time_remaining > 0 && !should_shutdown() &&
+               atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_NOCHECK)
         {
             int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
                 MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;

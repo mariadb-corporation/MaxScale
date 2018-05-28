@@ -136,7 +136,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
     mon->journal_max_age = DEFAULT_JOURNAL_MAX_AGE;
     mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
-    mon->server_pending_changes = false;
+    mon->check_maintenance_flag = MAINTENANCE_FLAG_NOCHECK;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     mon->disk_space_threshold = NULL;
     mon->disk_space_check_interval = 0;
@@ -1713,72 +1713,34 @@ void mon_report_query_error(MXS_MONITORED_SERVER* db)
 }
 
 /**
-  * Acquire locks on all servers monitored by this monitor. There should
-  * only be max 1 monitor per server.
-  * @param monitor The target monitor
-  */
-void lock_monitor_servers(MXS_MONITOR *monitor)
-{
-    MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
-    while (ptr)
-    {
-        spinlock_acquire(&ptr->server->lock);
-        ptr = ptr->next;
-    }
-}
-/**
-  * Release locks on all servers monitored by this monitor. There should
-  * only be max 1 monitor per server.
-  * @param monitor The target monitor
-  */
-void release_monitor_servers(MXS_MONITOR *monitor)
-{
-    MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
-    while (ptr)
-    {
-        spinlock_release(&ptr->server->lock);
-        ptr = ptr->next;
-    }
-}
-/**
   * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
   * Should be called at the beginning of a monitor loop.
   *
   * @param monitor The target monitor
   */
-void servers_status_pending_to_current(MXS_MONITOR *monitor)
+void monitor_check_maintenance_requests(MXS_MONITOR *monitor)
 {
-    MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
-    while (ptr)
+    /* In theory, the admin may be modifying the server maintenance status during this function. The overall
+     * maintenance flag should be read-written atomically to prevent missing a value. */
+    int flags_changed = atomic_exchange_int(&monitor->check_maintenance_flag, MAINTENANCE_FLAG_NOCHECK);
+    if (flags_changed != MAINTENANCE_FLAG_NOCHECK)
     {
-        // The only server status bit the admin may change is the [Maintenance] bit.
-        int admin_msg = atomic_exchange_int(&ptr->server->maint_request, MAINTENANCE_NO_CHANGE);
-        if (admin_msg == MAINTENANCE_ON)
+        MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
+        while (ptr)
         {
-            // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
-            server_set_status_nolock(ptr->server, SERVER_MAINT);
+            // The only server status bit the admin may change is the [Maintenance] bit.
+            int admin_msg = atomic_exchange_int(&ptr->server->maint_request, MAINTENANCE_NO_CHANGE);
+            if (admin_msg == MAINTENANCE_ON)
+            {
+                // TODO: Change to writing MONITORED_SERVER->pending status instead once cleanup done.
+                server_set_status_nolock(ptr->server, SERVER_MAINT);
+            }
+            else if (admin_msg == MAINTENANCE_OFF)
+            {
+                server_clear_status_nolock(ptr->server, SERVER_MAINT);
+            }
+            ptr = ptr->next;
         }
-        else if (admin_msg == MAINTENANCE_OFF)
-        {
-            server_clear_status_nolock(ptr->server, SERVER_MAINT);
-        }
-        ptr = ptr->next;
-    }
-    monitor->server_pending_changes = false;
-}
-
-/**
-  *  Sets the pending status of all servers monitored by this monitor to
-  *  the current status. This should only be called at the end of
-  *  a monitor loop, before the servers are released.
-  *  @param monitor The target monitor
-  */
-void servers_status_current_to_pending(MXS_MONITOR *monitor)
-{
-    MXS_MONITORED_SERVER *ptr = monitor->monitored_servers;
-    while (ptr)
-    {
-        ptr = ptr->next;
     }
 }
 
@@ -2778,8 +2740,7 @@ void MonitorInstance::main()
 
     while (!m_shutdown)
     {
-        lock_monitor_servers(m_monitor);
-        servers_status_pending_to_current(m_monitor);
+        monitor_check_maintenance_requests(m_monitor);
 
         tick();
 
@@ -2790,15 +2751,13 @@ void MonitorInstance::main()
         mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
 
         mon_hangup_failed_servers(m_monitor);
-        servers_status_current_to_pending(m_monitor);
         store_server_journal(m_monitor, m_master);
-        release_monitor_servers(m_monitor);
 
         /** Sleep until the next monitoring interval */
         unsigned int ms = 0;
         while (ms < m_monitor->interval && !m_shutdown)
         {
-            if (m_monitor->server_pending_changes)
+            if (atomic_load_int(&m_monitor->check_maintenance_flag) != MAINTENANCE_FLAG_NOCHECK)
             {
                 // Admin has changed something, skip sleep
                 break;
