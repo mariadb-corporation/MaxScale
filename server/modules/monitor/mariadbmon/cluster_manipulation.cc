@@ -29,11 +29,11 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
     if (running)
     {
         stop();
-        MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", m_monitor_base->name);
+        MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", m_monitor->name);
     }
     else
     {
-        MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
+        MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor->name);
     }
 
     /* It's possible for either current_master, or both new_master & current_master to be NULL, which means
@@ -59,7 +59,7 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
         else
         {
             string format = "Switchover %s -> %s failed";
-            bool failover_setting = config_get_bool(m_monitor_base->parameters, CN_AUTO_FAILOVER);
+            bool failover_setting = config_get_bool(m_monitor->parameters, CN_AUTO_FAILOVER);
             if (failover_setting)
             {
                 disable_setting(CN_AUTO_FAILOVER);
@@ -73,7 +73,7 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
     if (running)
     {
         // TODO: What if this fails?
-        start(m_monitor_base->parameters);
+        start(m_monitor->parameters);
     }
     return rval;
 }
@@ -84,11 +84,11 @@ bool MariaDBMonitor::manual_failover(json_t** output)
     if (running)
     {
         stop();
-        MXS_NOTICE("Stopped monitor %s for the duration of failover.", m_monitor_base->name);
+        MXS_NOTICE("Stopped monitor %s for the duration of failover.", m_monitor->name);
     }
     else
     {
-        MXS_NOTICE("Monitor %s already stopped, failover can proceed.", m_monitor_base->name);
+        MXS_NOTICE("Monitor %s already stopped, failover can proceed.", m_monitor->name);
     }
 
     bool rv = true;
@@ -109,7 +109,7 @@ bool MariaDBMonitor::manual_failover(json_t** output)
     if (running)
     {
         // TODO: What if this fails?
-        start(m_monitor_base->parameters);
+        start(m_monitor->parameters);
     }
     return rv;
 }
@@ -120,18 +120,18 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
     if (running)
     {
         stop();
-        MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", m_monitor_base->name);
+        MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", m_monitor->name);
     }
     else
     {
-        MXS_NOTICE("Monitor %s already stopped, rejoin can proceed.", m_monitor_base->name);
+        MXS_NOTICE("Monitor %s already stopped, rejoin can proceed.", m_monitor->name);
     }
 
     bool rval = false;
     if (cluster_can_be_joined())
     {
         const char* rejoin_serv_name = rejoin_server->name;
-        MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor_base, rejoin_server);
+        MXS_MONITORED_SERVER* mon_slave_cand = mon_get_monitored_server(m_monitor, rejoin_server);
         if (mon_slave_cand)
         {
             MariaDBServer* slave_cand = get_server_info(mon_slave_cand);
@@ -178,13 +178,13 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
     {
         const char BAD_CLUSTER[] = "The server cluster of monitor '%s' is not in a state valid for joining. "
                                    "Either it has no master or its gtid domain is unknown.";
-        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor_base->name);
+        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor->name);
     }
 
     if (running)
     {
         // TODO: What if this fails?
-        start(m_monitor_base->parameters);
+        start(m_monitor->parameters);
     }
     return rval;
 }
@@ -1202,7 +1202,7 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
     ss_dassert(suggested_curr_master);
     bool server_is_master = false;
     MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
-    for (MXS_MONITORED_SERVER* mon_serv = m_monitor_base->monitored_servers;
+    for (MXS_MONITORED_SERVER* mon_serv = m_monitor->monitored_servers;
          mon_serv != NULL && extra_master == NULL;
          mon_serv = mon_serv->next)
     {
@@ -1337,7 +1337,7 @@ bool MariaDBMonitor::handle_auto_failover()
                                 "replication configuration, disabling automatic failover. Failover "
                                 "should only be enabled after the replication configuration has been "
                                 "fixed.";
-        MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor_base->name);
+        MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor->name);
         m_auto_failover = false;
         disable_setting(CN_AUTO_FAILOVER);
         return cluster_modified;
@@ -1395,7 +1395,7 @@ bool MariaDBMonitor::handle_auto_failover()
                 if (!do_failover(NULL))
                 {
                     const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
-                    MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, m_monitor_base->name);
+                    MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, m_monitor->name);
                     m_auto_failover = false;
                     disable_setting(CN_AUTO_FAILOVER);
                 }
@@ -1504,11 +1504,11 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
     // Check that both servers are ok if specified. Null is a valid value.
     if (new_master)
     {
-        auto mon_new_master = mon_get_monitored_server(m_monitor_base, new_master);
+        auto mon_new_master = mon_get_monitored_server(m_monitor, new_master);
         if (mon_new_master == NULL)
         {
             new_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->name, m_monitor_base->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->name, m_monitor->name);
         }
         else
         {
@@ -1526,11 +1526,11 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
 
     if (current_master)
     {
-        auto mon_curr_master = mon_get_monitored_server(m_monitor_base, current_master);
+        auto mon_curr_master = mon_get_monitored_server(m_monitor, current_master);
         if (mon_curr_master == NULL)
         {
             current_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->name, m_monitor_base->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->name, m_monitor->name);
         }
         else if (!switchover_check_current(mon_curr_master, error_out))
         {

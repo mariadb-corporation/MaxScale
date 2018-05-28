@@ -39,7 +39,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
     long node_id;
     int root_level;
 
-    ptr = m_monitor_base->monitored_servers;
+    ptr = m_monitor->monitored_servers;
     root_level = num_servers;
 
     while (ptr)
@@ -182,7 +182,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
 MXS_MONITORED_SERVER* MariaDBMonitor::getServerByNodeId(long node_id)
 {
     SERVER *current;
-    MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers;
+    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
     while (ptr)
     {
         current = ptr->server;
@@ -204,7 +204,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::getServerByNodeId(long node_id)
  */
 MXS_MONITORED_SERVER* MariaDBMonitor::getSlaveOfNodeId(long node_id, slave_down_setting_t slave_down_setting)
 {
-    MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers;
+    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
     SERVER *current;
     while (ptr)
     {
@@ -447,12 +447,12 @@ void MariaDBMonitor::find_graph_cycles()
  */
 void MariaDBMonitor::check_maxscale_schema_replication()
 {
-    MXS_MONITORED_SERVER* database = m_monitor_base->monitored_servers;
+    MXS_MONITORED_SERVER* database = m_monitor->monitored_servers;
     bool err = false;
 
     while (database)
     {
-        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor_base, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, database);
         if (mon_connection_is_ok(rval))
         {
             if (!check_replicate_ignore_table(database) ||

@@ -140,7 +140,7 @@ public:
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
 
 private:
-    MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
+    MXS_MONITOR* m_monitor;          /**< Generic monitor object */
     THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
     volatile bool m_shutdown;        /**< Should the monitor shut down? */

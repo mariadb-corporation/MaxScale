@@ -51,8 +51,8 @@ static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
-MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
-    : m_monitor_base(monitor_base)
+MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
+    : m_monitor(monitor)
     , m_id(config_get_global_options()->id)
     , m_shutdown(false)
     , m_state(MXS_MONITOR_STOPPED)
@@ -81,7 +81,7 @@ void MariaDBMonitor::reset_server_info()
     clear_server_info();
 
     // Next, initialize the data.
-    for (auto mon_server = m_monitor_base->monitored_servers; mon_server; mon_server = mon_server->next)
+    for (auto mon_server = m_monitor->monitored_servers; mon_server; mon_server = mon_server->next)
     {
         m_servers.push_back(new MariaDBServer(mon_server));
     }
@@ -132,8 +132,8 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     if (repl_user.empty() && repl_pw.empty())
     {
         // No replication credentials defined, use monitor credentials
-        repl_user = m_monitor_base->user;
-        repl_pw = m_monitor_base->password;
+        repl_user = m_monitor->user;
+        repl_pw = m_monitor->password;
     }
 
     if (!repl_user.empty() && !repl_pw.empty())
@@ -168,7 +168,7 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
 
     if (!error && (thread_start(&m_thread, monitorMain, this, 0) == NULL))
     {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor_base->name);
+        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
         error = true;
     }
 
@@ -210,7 +210,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 
     m_excluded_servers.clear();
     MXS_MONITORED_SERVER** excluded_array = NULL;
-    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor_base, &excluded_array);
+    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, m_monitor, &excluded_array);
     for (int i = 0; i < n_excluded; i++)
     {
         m_excluded_servers.push_back(get_server_info(excluded_array[i]));
@@ -339,7 +339,7 @@ void MariaDBMonitor::main_loop()
     /* Check monitor permissions. Failure won't cause the monitor to stop. Afterwards, close connections so
      * that update_server() reconnects and checks server version. TODO: check permissions when checking
      * server version. */
-    check_monitor_permissions(m_monitor_base, "SHOW SLAVE STATUS");
+    check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         mysql_close((*iter)->m_server_base->con);
@@ -352,15 +352,15 @@ void MariaDBMonitor::main_loop()
         /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);
 
-        lock_monitor_servers(m_monitor_base);
+        lock_monitor_servers(m_monitor);
         /* Read any admin status changes from SERVER->status_pending. */
-        if (m_monitor_base->server_pending_changes)
+        if (m_monitor->server_pending_changes)
         {
-            servers_status_pending_to_current(m_monitor_base);
+            servers_status_pending_to_current(m_monitor);
         }
         /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
          * Also, backup current status so that it can be compared to any deduced state. */
-        for (auto mon_srv = m_monitor_base->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+        for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
         {
             auto status = mon_srv->server->status;
             mon_srv->pending_status = status;
@@ -368,13 +368,13 @@ void MariaDBMonitor::main_loop()
         }
         /* Avoid reading/writing SERVER->status while servers are not locked. Routers read the state
          * all the time. */
-        release_monitor_servers(m_monitor_base);
+        release_monitor_servers(m_monitor);
 
         // Query all servers for their status.
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
             MariaDBServer* server = *iter;
-            server->update_server(m_monitor_base);
+            server->update_server(m_monitor);
         }
 
         // Use the information to find the so far best master server.
@@ -462,18 +462,18 @@ void MariaDBMonitor::main_loop()
          * rewritten next loop. TODO: make versions of log_master_changes() and mon_process_state_changes()
          * which read from MXS_MONITORED_SERVER->pending_status instead of SERVER->status. Then this locking
          * and releasing can be moved after failover etc and the user changes can be applied gracefully. */
-        lock_monitor_servers(m_monitor_base);
-        if (m_monitor_base->server_pending_changes)
+        lock_monitor_servers(m_monitor);
+        if (m_monitor->server_pending_changes)
         {
             MXS_WARNING("MaxAdmin or REST API modified the state of a server monitored by '%s' during a "
                         "monitor iteration. Discarding the monitor results and retrying.",
-                        m_monitor_base->name);
-            release_monitor_servers(m_monitor_base);
+                        m_monitor->name);
+            release_monitor_servers(m_monitor);
         }
         else
         {
             // Update shared status.
-            for (auto mon_srv = m_monitor_base->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+            for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
             {
                 auto new_status = mon_srv->pending_status;
                 auto srv = mon_srv->server;
@@ -481,7 +481,7 @@ void MariaDBMonitor::main_loop()
             }
 
             /* Check if monitor events need to be launched. */
-            mon_process_state_changes(m_monitor_base, m_script.c_str(), m_events);
+            mon_process_state_changes(m_monitor, m_script.c_str(), m_events);
             m_cluster_modified = false;
             if (m_auto_failover)
             {
@@ -508,9 +508,9 @@ void MariaDBMonitor::main_loop()
                 enforce_read_only_on_slaves();
             }
 
-            mon_hangup_failed_servers(m_monitor_base);
-            store_server_journal(m_monitor_base, m_master ? m_master->m_server_base : NULL);
-            release_monitor_servers(m_monitor_base);
+            mon_hangup_failed_servers(m_monitor);
+            store_server_journal(m_monitor, m_master ? m_master->m_server_base : NULL);
+            release_monitor_servers(m_monitor);
         }
 
         // Check how much the monitor should sleep to get one full monitor interval.
@@ -518,12 +518,12 @@ void MariaDBMonitor::main_loop()
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_end);
         int64_t time_elapsed_ms = (loop_end.tv_sec - loop_start.tv_sec) * 1000 +
                                   (loop_end.tv_nsec - loop_start.tv_nsec) / 1000000;
-        int64_t sleep_time_remaining = m_monitor_base->interval - time_elapsed_ms;
+        int64_t sleep_time_remaining = m_monitor->interval - time_elapsed_ms;
         // Sleep at least one full interval.
         sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
         /* Sleep in small increments to react faster to some events. This should ideally use some type of
          * notification mechanism. */
-        while (sleep_time_remaining > 0 && !m_shutdown && !m_monitor_base->server_pending_changes)
+        while (sleep_time_remaining > 0 && !m_shutdown && !m_monitor->server_pending_changes)
         {
             int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
                 MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
@@ -655,7 +655,7 @@ void MariaDBMonitor::handle_auto_rejoin()
         {
             MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
                       "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                      "the REST API.", CN_AUTO_REJOIN, m_monitor_base->name);
+                      "the REST API.", CN_AUTO_REJOIN, m_monitor->name);
             m_auto_rejoin = false;
             disable_setting(CN_AUTO_REJOIN);
         }
@@ -879,7 +879,7 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
             if (rlag >= 0)
             {
                 /* store rlag only if greater than monitor sampling interval */
-                database->server->rlag = ((unsigned int)rlag > (m_monitor_base->interval / 1000)) ? rlag : 0;
+                database->server->rlag = ((unsigned int)rlag > (m_monitor->interval / 1000)) ? rlag : 0;
             }
             else
             {
@@ -934,7 +934,7 @@ void MariaDBMonitor::disable_setting(const char* setting)
     MXS_CONFIG_PARAMETER p = {};
     p.name = const_cast<char*>(setting);
     p.value = const_cast<char*>("false");
-    monitor_add_parameters(m_monitor_base, &p);
+    monitor_add_parameters(m_monitor, &p);
 }
 
 /**
@@ -944,7 +944,7 @@ void MariaDBMonitor::disable_setting(const char* setting)
 void MariaDBMonitor::load_journal()
 {
     MXS_MONITORED_SERVER* master_output = NULL;
-    load_server_journal(m_monitor_base, &master_output);
+    load_server_journal(m_monitor, &master_output);
     m_master = master_output ? get_server_info(master_output) : NULL;
 }
 
