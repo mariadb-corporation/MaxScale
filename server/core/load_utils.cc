@@ -482,7 +482,7 @@ bool modulecmd_cb(const MODULECMD *cmd, void *data)
     std::string s = d->domain;
     s += "/";
     s += cmd->identifier;
-    ss_dassert(strcmp(d->domain, cmd->domain) == 0);
+    ss_dassert(strcasecmp(d->domain, cmd->domain) == 0);
 
     json_object_set_new(obj, CN_LINKS, mxs_json_self_link(d->host, CN_MODULES, s.c_str()));
     json_object_set_new(attr, CN_PARAMETERS, param);
