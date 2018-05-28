@@ -44,8 +44,8 @@ bool is_create_table_statement(Avro *router, char* ptr, size_t len);
 void avro_notify_client(AvroSession *client);
 void avro_update_index(Avro* router);
 void update_used_tables(Avro* router);
-TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
-                                       const char* table, int version);
+TableCreateEvent* table_create_from_schema(const char* file, const char* db,
+                                           const char* table, int version);
 
 /**
  * Open a binlog file for reading
@@ -99,8 +99,8 @@ void avro_close_binlog(int fd)
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
-                             size_t block_size)
+AvroTable* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
+                            size_t block_size)
 {
     avro_file_writer_t avro_file;
     avro_value_iface_t* avro_writer_iface;
@@ -141,7 +141,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, cons
         return NULL;
     }
 
-    AVRO_TABLE* table = new (std::nothrow) AVRO_TABLE(avro_file, avro_writer_iface, avro_schema);
+    AvroTable* table = new (std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
 
     if (!table)
     {
@@ -759,7 +759,7 @@ void avro_load_metadata_from_schemas(Avro *router)
 
                 if (it == router->created_tables.end() || version > it->second->version)
                 {
-                    STableCreate created(table_create_from_schema(files.gl_pathv[i],
+                    STableCreateEvent created(table_create_from_schema(files.gl_pathv[i],
                                                                   db, table, version));
                     router->created_tables[table_ident] = created;
                 }
@@ -883,7 +883,7 @@ bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
  * @param created Created table
  * @return False if an error occurred and true if successful
  */
-bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
+bool save_and_replace_table_create(Avro *router, TableCreateEvent *created)
 {
     std::string table_ident = created->database + "." + created->table;
     auto it = router->created_tables.find(table_ident);
@@ -899,7 +899,7 @@ bool save_and_replace_table_create(Avro *router, TABLE_CREATE *created)
         }
     }
 
-    router->created_tables[table_ident] = STableCreate(created);
+    router->created_tables[table_ident] = STableCreateEvent(created);
     ss_dassert(created->columns.size() > 0);
     return true;
 }
@@ -1001,7 +1001,7 @@ void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
     if (is_create_table_statement(router, sql, len))
     {
-        TABLE_CREATE *created = NULL;
+        TableCreateEvent *created = NULL;
 
         if (is_create_like_statement(sql, len))
         {

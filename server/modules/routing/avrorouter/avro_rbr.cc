@@ -30,7 +30,7 @@ static bool warn_bit = false; /**< Remove when support for BIT is added */
 static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET values
                                          * larger than 255 is added */
 
-uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create,
+uint8_t* process_row_event_data(TableMapEvent *map, TableCreateEvent *create,
                                 avro_value_t *record, uint8_t *ptr,
                                 uint8_t *columns_present, uint8_t *end);
 void notify_all_clients(Avro *router);
@@ -106,7 +106,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
     {
         ss_dassert(create->second->columns.size() > 0);
         auto it = router->table_maps.find(table_ident);
-        STableMap map(table_map_alloc(ptr, ev_len, create->second.get()));
+        STableMapEvent map(table_map_alloc(ptr, ev_len, create->second.get()));
 
         if (it != router->table_maps.end())
         {
@@ -292,7 +292,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
     if (it != router->active_maps.end())
     {
-        TABLE_MAP* map = it->second.get();
+        TableMapEvent* map = it->second.get();
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
         SAvroTable table;
@@ -556,7 +556,7 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value_t *record,
+uint8_t* process_row_event_data(TableMapEvent *map, TableCreateEvent *create, avro_value_t *record,
                                 uint8_t *ptr, uint8_t *columns_present, uint8_t *end)
 {
     int npresent = 0;

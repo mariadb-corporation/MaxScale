@@ -137,9 +137,9 @@ struct Column
 };
 
 /** A CREATE TABLE abstraction */
-struct TABLE_CREATE
+struct TableCreateEvent
 {
-    TABLE_CREATE(std::string db, std::string table, int version, std::vector<Column>& cols):
+    TableCreateEvent(std::string db, std::string table, int version, std::vector<Column>& cols):
         table(table),
         database(db),
         version(version),
@@ -162,10 +162,10 @@ typedef std::vector<uint8_t> Bytes;
  * maps a table to a unique ID which can be used to match row events to table map
  * events. The table map event tells us how the table is laid out and gives us
  * some meta information on the columns. */
-struct TABLE_MAP
+struct TableMapEvent
 {
-    TABLE_MAP(const std::string& db, const std::string& table, uint64_t id,
-              int version, Bytes&& cols, Bytes&& nulls, Bytes&& metadata):
+    TableMapEvent(const std::string& db, const std::string& table, uint64_t id,
+                  int version, Bytes&& cols, Bytes&& nulls, Bytes&& metadata):
         database(db),
         table(table),
         id(id),
@@ -190,16 +190,16 @@ struct TABLE_MAP
     Bytes       column_metadata;
 };
 
-struct AVRO_TABLE
+struct AvroTable
 {
-    AVRO_TABLE(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
+    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
         avro_file(file),
         avro_writer_iface(iface),
         avro_schema(schema)
     {
     }
 
-    ~AVRO_TABLE()
+    ~AvroTable()
     {
         avro_file_writer_flush(avro_file);
         avro_file_writer_close(avro_file);
@@ -248,14 +248,14 @@ struct gtid_pos_t
                          * rebuild GTID events in the correct order. */
 };
 
-typedef std::tr1::shared_ptr<TABLE_CREATE> STableCreate;
-typedef std::tr1::shared_ptr<AVRO_TABLE> SAvroTable;
-typedef std::tr1::shared_ptr<TABLE_MAP> STableMap;
+typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
+typedef std::tr1::shared_ptr<AvroTable>        SAvroTable;
+typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
 
-typedef std::tr1::unordered_map<std::string, STableCreate> CreatedTables;
-typedef std::tr1::unordered_map<std::string, SAvroTable>   AvroTables;
-typedef std::tr1::unordered_map<std::string, STableMap>    MappedTables;
-typedef std::tr1::unordered_map<uint64_t, STableMap>       ActiveMaps;
+typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
+typedef std::tr1::unordered_map<std::string, SAvroTable>        AvroTables;
+typedef std::tr1::unordered_map<std::string, STableMapEvent>    MappedTables;
+typedef std::tr1::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
 
 class Avro: public MXS_ROUTER
 {
@@ -358,21 +358,21 @@ private:
 
 extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,
                             char* dest, size_t len);
-extern TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create);
-extern TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len);
-extern TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
-extern bool table_create_save(TABLE_CREATE *create, const char *filename);
-extern bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end);
+extern TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create);
+extern TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len);
+extern TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
+extern bool table_create_save(TableCreateEvent *create, const char *filename);
+extern bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end);
 extern void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size);
 extern int avro_client_handle_request(Avro *, AvroSession *, GWBUF *);
 extern void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
 extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(Avro *router);
-extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema,
-                                    const char *codec, size_t block_size);
-extern char* json_new_schema_from_table(const STableMap& map, const STableCreate& create);
-extern void save_avro_schema(const char *path, const char* schema, STableMap& map, STableCreate& create);
+extern AvroTable* avro_table_alloc(const char* filepath, const char* json_schema,
+                                   const char *codec, size_t block_size);
+extern char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
+extern void save_avro_schema(const char *path, const char* schema, STableMapEvent& map, STableCreateEvent& create);
 extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 

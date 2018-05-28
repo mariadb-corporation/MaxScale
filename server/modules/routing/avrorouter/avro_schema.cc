@@ -82,7 +82,7 @@ static const char* column_type_to_avro_type(uint8_t type)
  * @param create The TABLE_CREATE for this table
  * @return New schema or NULL if an error occurred
  */
-char* json_new_schema_from_table(const STableMap& map, const STableCreate& create)
+char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create)
 {
     if (map->version != create->version)
     {
@@ -249,7 +249,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
  * @param schema Schema in JSON format
  * @param map Table map that @p schema represents
  */
-void save_avro_schema(const char *path, const char* schema, STableMap& map, STableCreate& create)
+void save_avro_schema(const char *path, const char* schema, STableMapEvent& map, STableCreateEvent& create)
 {
     char filepath[PATH_MAX];
     snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path,
@@ -610,15 +610,15 @@ static void process_column_definition(const char *nameptr, std::vector<Column>& 
     }
 }
 
-TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
-                                       const char* table, int version)
+TableCreateEvent* table_create_from_schema(const char* file, const char* db,
+                                           const char* table, int version)
 {
-    TABLE_CREATE* newtable = NULL;
+    TableCreateEvent* newtable = NULL;
     std::vector<Column> columns;
 
     if (json_extract_field_names(file, columns))
     {
-        newtable = new (std::nothrow)TABLE_CREATE(db, table, version, columns);
+        newtable = new (std::nothrow)TableCreateEvent(db, table, version, columns);
     }
 
     return newtable;
@@ -648,7 +648,7 @@ int resolve_table_version(const char* db, const char* table)
  *
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
+TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
@@ -667,12 +667,12 @@ TABLE_CREATE* table_create_alloc(char* ident, const char* sql, int len)
     std::vector<Column> columns;
     process_column_definition(statement_sql, columns);
 
-    TABLE_CREATE *rval = NULL;
+    TableCreateEvent *rval = NULL;
 
     if (!columns.empty())
     {
         int version = resolve_table_version(database, table);
-        rval = new (std::nothrow) TABLE_CREATE(database, table, version, columns);
+        rval = new (std::nothrow) TableCreateEvent(database, table, version, columns);
     }
     else
     {
@@ -864,9 +864,9 @@ static bool extract_create_like_identifier(const char* sql, size_t len, char* ta
 /**
  * Create a table from another table
  */
-TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const char* db)
+TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db)
 {
-    TABLE_CREATE* rval = NULL;
+    TableCreateEvent* rval = NULL;
     char target[MYSQL_TABLE_MAXLEN + 1] = "";
     char source[MYSQL_TABLE_MAXLEN + 1] = "";
 
@@ -886,7 +886,7 @@ TABLE_CREATE* table_create_copy(Avro *router, const char* sql, size_t len, const
 
         if (it != router->created_tables.end())
         {
-            rval = new (std::nothrow) TABLE_CREATE(*it->second);
+            rval = new (std::nothrow) TableCreateEvent(*it->second);
             char* table = strchr(target, '.');
             table = table ? table + 1 : target;
             rval->table = table;
@@ -1265,7 +1265,7 @@ static bool not_column_operation(const char* tok, int len)
     return false;
 }
 
-bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
+bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end)
 {
     const char *tbl = strcasestr(sql, "table"), *def;
 
@@ -1435,7 +1435,7 @@ void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *tbl_id, ch
  * @param post_header_len Length of the event specific header, 8 or 6 bytes
  * @return New TABLE_MAP or NULL if memory allocation failed
  */
-TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
+TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create)
 {
     uint64_t table_id = 0;
     size_t id_size = hdr_len == 6 ? 4 : 6;
@@ -1475,6 +1475,6 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     Bytes cols(column_types, column_types + column_count);
     Bytes nulls(nullmap, nullmap + nullmap_size);
     Bytes meta(metadata, metadata + metadata_size);
-    return new (std::nothrow)TABLE_MAP(schema_name, table_name, table_id, create->version,
-                                       std::move(cols), std::move(nulls), std::move(meta));
+    return new (std::nothrow)TableMapEvent(schema_name, table_name, table_id, create->version,
+                                           std::move(cols), std::move(nulls), std::move(meta));
 }
