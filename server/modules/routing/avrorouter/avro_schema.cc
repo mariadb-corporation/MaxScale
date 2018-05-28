@@ -82,15 +82,14 @@ static const char* column_type_to_avro_type(uint8_t type)
  * @param create The TABLE_CREATE for this table
  * @return New schema or NULL if an error occurred
  */
-char* json_new_schema_from_table(TABLE_MAP *map)
+char* json_new_schema_from_table(const STableMap& map, const STableCreate& create)
 {
-    TABLE_CREATE *create = map->table_create;
-
     if (map->version != create->version)
     {
         MXS_ERROR("Version mismatch for table %s.%s. Table map version is %d and "
-                  "the table definition version is %d.", map->database, map->table,
-                  map->version, create->version);
+                  "the table definition version is %d.", map->database.c_str(),
+                  map->table.c_str(), map->version, create->version);
+        ss_dassert(!true); // Should not happen
         return NULL;
     }
 
@@ -123,7 +122,7 @@ char* json_new_schema_from_table(TABLE_MAP *map)
     json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
                                               "type", event_types));
 
-    for (uint64_t i = 0; i < map->columns && i < create->columns.size(); i++)
+    for (uint64_t i = 0; i < map->columns() && i < create->columns.size(); i++)
     {
         json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
                                                   "name", create->columns[i].name.c_str(),
@@ -250,21 +249,21 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
  * @param schema Schema in JSON format
  * @param map Table map that @p schema represents
  */
-void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map)
+void save_avro_schema(const char *path, const char* schema, STableMap& map, STableCreate& create)
 {
     char filepath[PATH_MAX];
-    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, map->database,
-             map->table, map->version);
+    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path,
+             map->database.c_str(), map->table.c_str(), map->version);
 
     if (access(filepath, F_OK) != 0)
     {
-        if (!map->table_create->was_used)
+        if (!create->was_used)
         {
             FILE *file = fopen(filepath, "wb");
             if (file)
             {
                 fprintf(file, "%s\n", schema);
-                map->table_create->was_used = true;
+                create->was_used = true;
                 fclose(file);
             }
         }
@@ -1472,40 +1471,10 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     uint8_t* metadata = (uint8_t*)mxs_lestr_consume(&ptr, &metadata_size);
     uint8_t *nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
-    TABLE_MAP *map = new (std::nothrow)TABLE_MAP;
 
-    if (map)
-    {
-        map->id = table_id;
-        map->version = create->version;
-        map->flags = flags;
-        map->columns = column_count;
-        map->column_types = static_cast<uint8_t*>(MXS_MALLOC(column_count));
-        /** Allocate at least one byte for the metadata */
-        map->column_metadata = static_cast<uint8_t*>(MXS_CALLOC(1, metadata_size + 1));
-        map->column_metadata_size = metadata_size;
-        map->null_bitmap = static_cast<uint8_t*>(MXS_MALLOC(nullmap_size));
-        map->database = MXS_STRDUP(schema_name);
-        map->table = MXS_STRDUP(table_name);
-        map->table_create = create;
-        if (map->column_types && map->database && map->table &&
-            map->column_metadata && map->null_bitmap)
-        {
-            memcpy(map->column_types, column_types, column_count);
-            memcpy(map->null_bitmap, nullmap, nullmap_size);
-            memcpy(map->column_metadata, metadata, metadata_size);
-        }
-        else
-        {
-            MXS_FREE(map->null_bitmap);
-            MXS_FREE(map->column_metadata);
-            MXS_FREE(map->column_types);
-            MXS_FREE(map->database);
-            MXS_FREE(map->table);
-            MXS_FREE(map);
-            map = NULL;
-        }
-    }
-
-    return map;
+    Bytes cols(column_types, column_types + column_count);
+    Bytes nulls(nullmap, nullmap + nullmap_size);
+    Bytes meta(metadata, metadata + metadata_size);
+    return new (std::nothrow)TABLE_MAP(schema_name, table_name, table_id, create->version,
+                                       std::move(cols), std::move(nulls), std::move(meta));
 }

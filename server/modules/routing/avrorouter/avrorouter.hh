@@ -156,33 +156,38 @@ struct TABLE_CREATE
     bool                       was_used; /**< Has this schema been persisted to disk */
 };
 
+typedef std::vector<uint8_t> Bytes;
+
 /** A representation of a table map event read from a binary log. A table map
  * maps a table to a unique ID which can be used to match row events to table map
  * events. The table map event tells us how the table is laid out and gives us
  * some meta information on the columns. */
 struct TABLE_MAP
 {
-    ~TABLE_MAP()
+    TABLE_MAP(const std::string& db, const std::string& table, uint64_t id,
+              int version, Bytes&& cols, Bytes&& nulls, Bytes&& metadata):
+        database(db),
+        table(table),
+        id(id),
+        version(version),
+        column_types(cols),
+        null_bitmap(nulls),
+        column_metadata(metadata)
     {
-        MXS_FREE(column_types);
-        MXS_FREE(column_metadata);
-        MXS_FREE(null_bitmap);
-        MXS_FREE(database);
-        MXS_FREE(table);
     }
 
-    uint64_t      id;
-    uint64_t      columns;
-    uint16_t      flags;
-    uint8_t*      column_types;
-    uint8_t*      null_bitmap;
-    uint8_t*      column_metadata;
-    size_t        column_metadata_size;
-    TABLE_CREATE* table_create; /*< The definition of the table */
-    int           version;
-    char          version_string[TABLE_MAP_VERSION_DIGITS + 1];
-    char*         table;
-    char*         database;
+    uint64_t columns() const
+    {
+        return column_types.size();
+    }
+
+    std::string database;
+    std::string table;
+    uint64_t    id;
+    int         version;
+    Bytes       column_types;
+    Bytes       null_bitmap;
+    Bytes       column_metadata;
 };
 
 struct AVRO_TABLE
@@ -363,8 +368,8 @@ extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(Avro *router);
 extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema,
                                     const char *codec, size_t block_size);
-extern char* json_new_schema_from_table(TABLE_MAP *map);
-extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);
+extern char* json_new_schema_from_table(const STableMap& map, const STableCreate& create);
+extern void save_avro_schema(const char *path, const char* schema, STableMap& map, STableCreate& create);
 extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 

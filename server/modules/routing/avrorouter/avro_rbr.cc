@@ -113,15 +113,14 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             auto old = it->second;
 
             if (old->id == map->id && old->version == map->version &&
-                strcmp(old->table, map->table) == 0 &&
-                strcmp(old->database, map->database) == 0)
+                old->table == map->table && old->database == map->database)
             {
                 // We can reuse the table map object
                 return true;
             }
         }
 
-        char* json_schema = json_new_schema_from_table(map.get());
+        char* json_schema = json_new_schema_from_table(map, create->second);
 
         if (json_schema)
         {
@@ -145,7 +144,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
                 router->table_maps[table_ident] = map;
                 router->open_tables[table_ident] = avro_table;
-                save_avro_schema(router->avrodir.c_str(), json_schema, map.get());
+                save_avro_schema(router->avrodir.c_str(), json_schema, map, create->second);
                 router->active_maps[map->id] = map;
                 ss_dassert(router->active_maps[id] == map);
                 MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
@@ -295,7 +294,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
     {
         TABLE_MAP* map = it->second.get();
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
+        snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
         SAvroTable table;
         auto it = router->open_tables.find(table_ident);
 
@@ -304,9 +303,10 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             table = it->second;
         }
 
-        TABLE_CREATE* create = map->table_create;
+        auto create = router->created_tables.find(table_ident);
 
-        if (table && create && ncolumns == map->columns && create->columns.size() == map->columns)
+        if (table && create != router->created_tables.end() &&
+            ncolumns == map->columns() && create->second->columns.size() == map->columns())
         {
             avro_value_t record;
             avro_generic_value_new(table->avro_writer_iface, &record);
@@ -325,7 +325,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                 /** Add the current GTID and timestamp */
                 int event_type = get_event_type(hdr->event_type);
                 prepare_record(router, hdr, event_type, &record);
-                ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
+                ptr = process_row_event_data(map, create->second.get(), &record, ptr, col_present, end);
                 if (avro_file_writer_append_value(table->avro_file, &record))
                 {
                     MXS_ERROR("Failed to write value at position %ld: %s",
@@ -338,7 +338,8 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                 if (event_type == UPDATE_EVENT)
                 {
                     prepare_record(router, hdr, UPDATE_EVENT_AFTER, &record);
-                    ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
+                    ptr = process_row_event_data(map, create->second.get(), &record, ptr, col_present, end);
+
                     if (avro_file_writer_append_value(table->avro_file, &record))
                     {
                         MXS_ERROR("Failed to write value at position %ld: %s",
@@ -356,25 +357,25 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         else if (!table)
         {
             MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
-                      " errors for more details.", map->database, map->table);
+                      " errors for more details.", map->database.c_str(), map->table.c_str());
         }
-        else if (create == NULL)
+        else if (create == router->created_tables.end())
         {
             MXS_ERROR("Create table statement for %s.%s was not found from the "
                       "binary logs or the stored schema was not correct.",
-                      map->database, map->table);
+                      map->database.c_str(), map->table.c_str());
         }
-        else if (ncolumns == map->columns && create->columns.size() != map->columns)
+        else if (ncolumns == map->columns() && create->second->columns.size() != map->columns())
         {
             MXS_ERROR("Table map event has a different column count for table "
                       "%s.%s than the CREATE TABLE statement. Possible "
-                      "unsupported DDL detected.", map->database, map->table);
+                      "unsupported DDL detected.", map->database.c_str(), map->table.c_str());
         }
         else
         {
             MXS_ERROR("Row event and table map event have different column "
                       "counts for table %s.%s, only full row image is currently "
-                      "supported.", map->database, map->table);
+                      "supported.", map->database.c_str(), map->table.c_str());
         }
     }
     else
@@ -560,8 +561,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 {
     int npresent = 0;
     avro_value_t field;
-    long ncolumns = map->columns;
-    uint8_t *metadata = map->column_metadata;
+    long ncolumns = map->columns();
+    uint8_t *metadata = &map->column_metadata[0];
     size_t metadata_offset = 0;
 
     /** BIT type values use the extra bits in the row event header */
@@ -741,7 +742,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
                 check_overflow(ptr <= end);
             }
-            ss_dassert(metadata_offset <= map->column_metadata_size);
+            ss_dassert(metadata_offset <= map->column_metadata.size());
             metadata_offset += get_metadata_len(map->column_types[i]);
         }
         else
