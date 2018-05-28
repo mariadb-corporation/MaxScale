@@ -102,50 +102,53 @@ void avro_close_binlog(int fd)
 AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
                              size_t block_size)
 {
-    AVRO_TABLE *table = new (std::nothrow)AVRO_TABLE;
+    avro_file_writer_t avro_file;
+    avro_value_iface_t* avro_writer_iface;
+    avro_schema_t avro_schema;
 
-    if (table)
+    if (avro_schema_from_json_length(json_schema, strlen(json_schema),
+                                     &avro_schema))
     {
-        if (avro_schema_from_json_length(json_schema, strlen(json_schema),
-                                         &table->avro_schema))
-        {
-            MXS_ERROR("Avro error: %s", avro_strerror());
-            MXS_INFO("Avro schema: %s", json_schema);
-            MXS_FREE(table);
-            return NULL;
-        }
+        MXS_ERROR("Avro error: %s", avro_strerror());
+        MXS_INFO("Avro schema: %s", json_schema);
+        return NULL;
+    }
 
-        int rc = 0;
+    int rc = 0;
 
-        if (access(filepath, F_OK) == 0)
-        {
-            rc = avro_file_writer_open_bs(filepath, &table->avro_file, block_size);
-        }
-        else
-        {
-            rc = avro_file_writer_create_with_codec(filepath, table->avro_schema,
-                                                    &table->avro_file, codec, block_size);
-        }
+    if (access(filepath, F_OK) == 0)
+    {
+        rc = avro_file_writer_open_bs(filepath, &avro_file, block_size);
+    }
+    else
+    {
+        rc = avro_file_writer_create_with_codec(filepath, avro_schema,
+                                                &avro_file, codec, block_size);
+    }
 
-        if (rc)
-        {
-            MXS_ERROR("Avro error: %s", avro_strerror());
-            avro_schema_decref(table->avro_schema);
-            MXS_FREE(table);
-            return NULL;
-        }
+    if (rc)
+    {
+        MXS_ERROR("Avro error: %s", avro_strerror());
+        avro_schema_decref(avro_schema);
+        return NULL;
+    }
 
-        if ((table->avro_writer_iface = avro_generic_class_from_schema(table->avro_schema)) == NULL)
-        {
-            MXS_ERROR("Avro error: %s", avro_strerror());
-            avro_schema_decref(table->avro_schema);
-            avro_file_writer_close(table->avro_file);
-            MXS_FREE(table);
-            return NULL;
-        }
+    if ((avro_writer_iface = avro_generic_class_from_schema(avro_schema)) == NULL)
+    {
+        MXS_ERROR("Avro error: %s", avro_strerror());
+        avro_schema_decref(avro_schema);
+        avro_file_writer_close(avro_file);
+        return NULL;
+    }
 
-        table->json_schema = MXS_STRDUP_A(json_schema);
-        table->filename = MXS_STRDUP_A(filepath);
+    AVRO_TABLE* table = new (std::nothrow) AVRO_TABLE(avro_file, avro_writer_iface, avro_schema);
+
+    if (!table)
+    {
+        avro_file_writer_close(avro_file);
+        avro_value_iface_decref(avro_writer_iface);
+        avro_schema_decref(avro_schema);
+        MXS_OOM();
     }
 
     return table;

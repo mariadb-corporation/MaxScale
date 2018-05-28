@@ -192,18 +192,21 @@ struct TABLE_MAP
 
 struct AVRO_TABLE
 {
+    AVRO_TABLE(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
+        avro_file(file),
+        avro_writer_iface(iface),
+        avro_schema(schema)
+    {
+    }
+
     ~AVRO_TABLE()
     {
         avro_file_writer_flush(avro_file);
         avro_file_writer_close(avro_file);
         avro_value_iface_decref(avro_writer_iface);
         avro_schema_decref(avro_schema);
-        MXS_FREE(json_schema);
-        MXS_FREE(filename);
     }
 
-    char*               filename; /*< Absolute filename */
-    char*               json_schema; /*< JSON representation of the schema */
     avro_file_writer_t  avro_file; /*< Current Avro data file */
     avro_value_iface_t* avro_writer_iface; /*< Avro C API writer interface */
     avro_schema_t       avro_schema; /*< Native Avro schema of the table */
