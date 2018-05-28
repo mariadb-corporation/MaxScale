@@ -647,6 +647,10 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET - FDE_EXTRA_BYTES;
             uint8_t* checksum = ptr + hdr.event_size - event_header_length - FDE_EXTRA_BYTES;
 
+            // Precaution to prevent writing too much in case new events are added
+            int real_len = MXS_MIN(n_events, sizeof(router->event_type_hdr_lens));
+            memcpy(router->event_type_hdr_lens, ptr + BLRM_FDE_EVENT_TYPES_OFFSET, real_len);
+
             router->event_types = n_events;
             router->binlog_checksum = checksum[0];
         }
