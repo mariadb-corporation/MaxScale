@@ -55,6 +55,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     : m_monitor_base(monitor_base)
     , m_id(config_get_global_options()->id)
     , m_shutdown(false)
+    , m_state(MXS_MONITOR_STOPPED)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_modified(true)
@@ -64,6 +65,11 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
 MariaDBMonitor::~MariaDBMonitor()
 {
     clear_server_info();
+}
+
+int32_t MariaDBMonitor::state() const
+{
+    return m_state;
 }
 
 /**

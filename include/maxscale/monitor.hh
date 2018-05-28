@@ -43,6 +43,18 @@ public:
     int32_t state() const;
 
     /**
+     * @brief Find out whether the monitor is running.
+     *
+     * @return True, if the monitor is running, false otherwise.
+     *
+     * @see state().
+     */
+    bool is_running() const
+    {
+        return state() == MXS_MONITOR_RUNNING;
+    }
+
+    /**
      * @brief Starts the monitor.
      *
      * - Calls @c has_sufficient_permissions(), if it has not been done earlier.

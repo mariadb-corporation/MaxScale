@@ -25,9 +25,10 @@ static void print_redirect_errors(MariaDBServer* first_server, const ServerArray
 
 bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
-    bool stopped = stop();
-    if (stopped)
+    bool running = is_running();
+    if (running)
     {
+        stop();
         MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", m_monitor_base->name);
     }
     else
@@ -69,7 +70,7 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
         }
     }
 
-    if (stopped)
+    if (running)
     {
         // TODO: What if this fails?
         start(m_monitor_base->parameters);
@@ -79,9 +80,10 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
 
 bool MariaDBMonitor::manual_failover(json_t** output)
 {
-    bool stopped = stop();
-    if (stopped)
+    bool running = is_running();
+    if (running)
     {
+        stop();
         MXS_NOTICE("Stopped monitor %s for the duration of failover.", m_monitor_base->name);
     }
     else
@@ -104,7 +106,7 @@ bool MariaDBMonitor::manual_failover(json_t** output)
         }
     }
 
-    if (stopped)
+    if (running)
     {
         // TODO: What if this fails?
         start(m_monitor_base->parameters);
@@ -114,9 +116,10 @@ bool MariaDBMonitor::manual_failover(json_t** output)
 
 bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
 {
-    bool stopped = stop();
-    if (stopped)
+    bool running = is_running();
+    if (running)
     {
+        stop();
         MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", m_monitor_base->name);
     }
     else
@@ -178,7 +181,7 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor_base->name);
     }
 
-    if (stopped)
+    if (running)
     {
         // TODO: What if this fails?
         start(m_monitor_base->parameters);

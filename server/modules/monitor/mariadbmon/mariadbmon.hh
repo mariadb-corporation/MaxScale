@@ -45,6 +45,32 @@ public:
     ~MariaDBMonitor();
 
     /**
+     * @brief Current state of the monitor.
+     *
+     * Note that in principle the state of the monitor may already have
+     * changed when the current state is returned. The state can be fully
+     * trusted only if it is asked in a context when it is know nobody else
+     * can affect it.
+     *
+     * @return @c MXS_MONITOR_RUNNING if the monitor is running,
+     *         @c MXS_MONITOR_STOPPING if the monitor is stopping, and
+     *         @c MXS_MONITOR_STOPPED of the monitor is stopped.
+     */
+    int32_t state() const;
+
+    /**
+     * @brief Find out whether the monitor is running.
+     *
+     * @return True, if the monitor is running, false otherwise.
+     *
+     * @see state().
+     */
+    bool is_running() const
+    {
+        return state() == MXS_MONITOR_RUNNING;
+    }
+
+    /**
      * Print diagnostics.
      *
      * @param dcb DCB to print to
