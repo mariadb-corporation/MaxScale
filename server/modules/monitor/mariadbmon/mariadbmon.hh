@@ -117,8 +117,8 @@ private:
     MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
     THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
-    volatile bool m_keep_running;    /**< Should monitor main loop keep running? */
-    volatile int m_status;           /**< Monitor status  */
+    volatile bool m_shutdown;        /**< Should the monitor shut down? */
+    volatile int m_state;            /**< Monitor state  */
     ServerArray m_servers;           /**< Servers of the monitor */
     ServerInfoMap m_server_info;     /**< Map from server base struct to MariaDBServer */
 
@@ -170,7 +170,7 @@ private:
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     void reset_server_info();
     void clear_server_info();
-    bool load_config_params(const MXS_CONFIG_PARAMETER* params);
+    bool configure(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
 

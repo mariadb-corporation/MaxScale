@@ -54,6 +54,7 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
     : m_monitor_base(monitor_base)
     , m_id(config_get_global_options()->id)
+    , m_shutdown(false)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_modified(true)
@@ -149,12 +150,12 @@ MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor)
 bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    m_keep_running = true;
+    m_shutdown = false;
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
     reset_server_info();
 
-    if (!load_config_params(params))
+    if (!configure(params))
     {
         error = true;
     }
@@ -179,7 +180,7 @@ bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
  * @param params Config parameters
  * @return True if settings are ok
  */
-bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
+bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 {
     m_detect_stale_master = config_get_bool(params, "detect_stale_master");
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
@@ -233,9 +234,9 @@ bool MariaDBMonitor::stop()
     // There should be no race here as long as admin operations are performed
     // with the single admin lock locked.
     bool actually_stopped = false;
-    if (m_status == MXS_MONITOR_RUNNING)
+    if (m_state == MXS_MONITOR_RUNNING)
     {
-        m_keep_running = false;
+        m_shutdown = true;
         thread_wait(m_thread);
         actually_stopped = true;
     }
@@ -311,14 +312,14 @@ json_t* MariaDBMonitor::diagnostics_json() const
 
 void MariaDBMonitor::main_loop()
 {
-    m_status = MXS_MONITOR_RUNNING;
+    m_state = MXS_MONITOR_RUNNING;
     MariaDBServer* root_master = NULL;
     int log_no_master = 1;
 
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
-        m_status = MXS_MONITOR_STOPPED;
+        m_state = MXS_MONITOR_STOPPED;
         return;
     }
 
@@ -339,7 +340,7 @@ void MariaDBMonitor::main_loop()
         (*iter)->m_server_base->con = NULL;
     }
 
-    while (m_keep_running)
+    while (!m_shutdown)
     {
         timespec loop_start;
         /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
@@ -516,7 +517,7 @@ void MariaDBMonitor::main_loop()
         sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
         /* Sleep in small increments to react faster to some events. This should ideally use some type of
          * notification mechanism. */
-        while (sleep_time_remaining > 0 && m_keep_running && !m_monitor_base->server_pending_changes)
+        while (sleep_time_remaining > 0 && !m_shutdown && !m_monitor_base->server_pending_changes)
         {
             int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
                 MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
@@ -525,9 +526,9 @@ void MariaDBMonitor::main_loop()
         }
     }
 
-    m_status = MXS_MONITOR_STOPPING;
+    m_state = MXS_MONITOR_STOPPING;
     mysql_thread_end();
-    m_status = MXS_MONITOR_STOPPED;
+    m_state = MXS_MONITOR_STOPPED;
 }
 
 void MariaDBMonitor::update_gtid_domain()
