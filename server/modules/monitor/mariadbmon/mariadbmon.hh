@@ -34,7 +34,7 @@ typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInf
 typedef std::vector<MariaDBServer*> ServerArray;
 
 // MariaDB Monitor instance data
-class MariaDBMonitor : public MXS_MONITOR_INSTANCE
+class MariaDBMonitor : public maxscale::MonitorInstance
 {
 private:
     MariaDBMonitor(const MariaDBMonitor&);
@@ -43,32 +43,6 @@ public:
     // TODO: Once done refactoring, see which of these can be moved to private.
 
     ~MariaDBMonitor();
-
-    /**
-     * @brief Current state of the monitor.
-     *
-     * Note that in principle the state of the monitor may already have
-     * changed when the current state is returned. The state can be fully
-     * trusted only if it is asked in a context when it is know nobody else
-     * can affect it.
-     *
-     * @return @c MXS_MONITOR_RUNNING if the monitor is running,
-     *         @c MXS_MONITOR_STOPPING if the monitor is stopping, and
-     *         @c MXS_MONITOR_STOPPED of the monitor is stopped.
-     */
-    int32_t state() const;
-
-    /**
-     * @brief Find out whether the monitor is running.
-     *
-     * @return True, if the monitor is running, false otherwise.
-     *
-     * @see state().
-     */
-    bool is_running() const
-    {
-        return state() == MXS_MONITOR_RUNNING;
-    }
 
     /**
      * Print diagnostics.
@@ -85,31 +59,12 @@ public:
     json_t* diagnostics_json() const;
 
     /**
-     * Runs the main monitor loop. Called from the static monitorMain()-function.
-     */
-    void main();
-
-    /**
      * Create the monitor instance and return the instance data.
      *
      * @param monitor General monitor data
      * @return A pointer to MariaDBMonitor specific data.
      */
     static MariaDBMonitor* create(MXS_MONITOR *monitor);
-
-    /**
-     * Start the monitor instance.
-     * This function creates a thread to execute the monitoring.
-     *
-     * @param params Configuration parameters
-     * @return True, if the monitor could be started, false otherwise.
-     */
-    bool start(const MXS_CONFIG_PARAMETER* params);
-
-    /**
-     * Stop the monitor. Waits until monitor has stopped.
-     */
-    bool stop();
 
     /**
      * Handle switchover
@@ -139,12 +94,12 @@ public:
      */
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
 
+protected:
+    void update_server_status(MXS_MONITORED_SERVER* pMonitored_server);
+    void main();
+
 private:
-    MXS_MONITOR* m_monitor;          /**< Generic monitor object */
-    THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
-    volatile bool m_shutdown;        /**< Should the monitor shut down? */
-    volatile int m_state;            /**< Monitor state  */
     ServerArray m_servers;           /**< Servers of the monitor */
     ServerInfoMap m_server_info;     /**< Map from server base struct to MariaDBServer */
 

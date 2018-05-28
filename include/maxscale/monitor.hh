@@ -104,6 +104,16 @@ protected:
     uint64_t           events() const { return m_events; }
 
     /**
+     * @brief Should the monitor shut down?
+     *
+     * @return True, if the monitor should shut down, false otherwise.
+     */
+    bool should_shutdown() const
+    {
+        return atomic_load_int32(&m_shutdown) != 0;
+    }
+
+    /**
      * @brief Configure the monitor.
      *
      * When the monitor is started, this function will be called in order
@@ -165,6 +175,11 @@ protected:
      */
     virtual void tick();
 
+    /**
+     * TODO: Temporarily virtual so that MariaDBMonitor can override.
+     */
+    virtual void main();
+
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
@@ -176,8 +191,6 @@ private:
     std::string m_script;    /**< Launchable script. */
     uint64_t    m_events;    /**< Enabled monitor events. */
     Semaphore   m_semaphore; /**< Semaphore for synchronizing with monitor thread. */
-
-    void main();
 
     static void main(void* pArg);
 };

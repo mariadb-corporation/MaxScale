@@ -30,8 +30,6 @@
 
 using std::string;
 
-static void monitorMain(void *);
-
 // Config parameter names
 const char * const CN_AUTO_FAILOVER       = "auto_failover";
 const char * const CN_PROMOTION_SQL_FILE  = "promotion_sql_file";
@@ -52,10 +50,8 @@ static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
-    : m_monitor(monitor)
+    : maxscale::MonitorInstance(monitor)
     , m_id(config_get_global_options()->id)
-    , m_shutdown(false)
-    , m_state(MXS_MONITOR_STOPPED)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_modified(true)
@@ -65,11 +61,6 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
 MariaDBMonitor::~MariaDBMonitor()
 {
     clear_server_info();
-}
-
-int32_t MariaDBMonitor::state() const
-{
-    return m_state;
 }
 
 /**
@@ -153,30 +144,6 @@ MariaDBMonitor* MariaDBMonitor::create(MXS_MONITOR *monitor)
     return new MariaDBMonitor(monitor);
 }
 
-bool MariaDBMonitor::start(const MXS_CONFIG_PARAMETER* params)
-{
-    bool error = false;
-    m_shutdown = false;
-
-    if (!configure(params))
-    {
-        error = true;
-    }
-
-    if (!error && (thread_start(&m_thread, monitorMain, this, 0) == NULL))
-    {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
-        error = true;
-    }
-
-    if (error)
-    {
-        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-    }
-
-    return !error;
-}
-
 /**
  * Load config parameters
  *
@@ -229,25 +196,6 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
         settings_ok = false;
     }
     return settings_ok;
-}
-
-/**
- * Stop the monitor.
- *
- * @return True, if the monitor had to be stopped. False, if the monitor already was stopped.
- */
-bool MariaDBMonitor::stop()
-{
-    // There should be no race here as long as admin operations are performed
-    // with the single admin lock locked.
-    bool actually_stopped = false;
-    if (m_state == MXS_MONITOR_RUNNING)
-    {
-        m_shutdown = true;
-        thread_wait(m_thread);
-        actually_stopped = true;
-    }
-    return actually_stopped;
 }
 
 void MariaDBMonitor::diagnostics(DCB *dcb) const
@@ -317,18 +265,18 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return rval;
 }
 
+void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
+{
+    auto i = m_server_info.find(monitored_server);
+    ss_dassert(i != m_server_info.end());
+
+    (*i).second->update_server(m_monitor);
+}
+
 void MariaDBMonitor::main()
 {
-    m_state = MXS_MONITOR_RUNNING;
     MariaDBServer* root_master = NULL;
     int log_no_master = 1;
-
-    if (mysql_thread_init())
-    {
-        MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
-        m_state = MXS_MONITOR_STOPPED;
-        return;
-    }
 
     load_journal();
 
@@ -347,7 +295,7 @@ void MariaDBMonitor::main()
         (*iter)->m_server_base->con = NULL;
     }
 
-    while (!m_shutdown)
+    while (!should_shutdown())
     {
         timespec loop_start;
         /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
@@ -375,7 +323,7 @@ void MariaDBMonitor::main()
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
             MariaDBServer* server = *iter;
-            server->update_server(m_monitor);
+            update_server_status(server->m_server_base);
         }
 
         // Use the information to find the so far best master server.
@@ -524,7 +472,7 @@ void MariaDBMonitor::main()
         sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
         /* Sleep in small increments to react faster to some events. This should ideally use some type of
          * notification mechanism. */
-        while (sleep_time_remaining > 0 && !m_shutdown && !m_monitor->server_pending_changes)
+        while (sleep_time_remaining > 0 && !should_shutdown() && !m_monitor->server_pending_changes)
         {
             int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
                 MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
@@ -532,10 +480,6 @@ void MariaDBMonitor::main()
             sleep_time_remaining -= small_sleep_ms;
         }
     }
-
-    m_state = MXS_MONITOR_STOPPING;
-    mysql_thread_end();
-    m_state = MXS_MONITOR_STOPPED;
 }
 
 void MariaDBMonitor::update_gtid_domain()
@@ -665,17 +609,6 @@ void MariaDBMonitor::handle_auto_rejoin()
     {
         MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.", m_master->name());
     }
-}
-
-/**
- * The entry point for the monitoring module thread
- *
- * @param arg   The handle of the monitor. Must be the object returned by startMonitor.
- */
-static void monitorMain(void *arg)
-{
-    MariaDBMonitor* handle  = static_cast<MariaDBMonitor*>(arg);
-    handle->main();
 }
 
 /**
