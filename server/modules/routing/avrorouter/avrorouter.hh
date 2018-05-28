@@ -307,21 +307,45 @@ public:
     DCB*                  dcb;  /*< The client DCB */
     int                   state; /*< The state of this client */
     enum avro_data_format format; /*< Stream JSON or Avro data */
-    char*                 uuid; /*< Client UUID */
+    std::string           uuid; /*< Client UUID */
     SPINLOCK              catch_lock; /*< Event catchup lock */
     Avro*                 router; /*< Pointer to the owning router */
     MAXAVRO_FILE*         file_handle; /*< Current open file handle */
     uint64_t              last_sent_pos; /*< The last record we sent */
     time_t                connect_time; /*< Connect time of slave */
-    char                  avro_binfile[AVRO_MAX_FILENAME_LEN + 1];
+    std::string           avro_binfile;
     bool                  requested_gtid; /*< If the client requested */
     gtid_pos_t            gtid; /*< Current/requested GTID */
     gtid_pos_t            gtid_start; /*< First sent GTID */
-    unsigned int          cstate; /*< Catch up state */
     sqlite3*              sqlite_handle;
+
+    /**
+     * Process a client request
+     *
+     * @param Buffer The incoming request packet
+     *
+     * @return 1 on success, 0 on error
+     */
+    int routeQuery(GWBUF* buffer);
+
+    /**
+     * Handler for the EPOLLOUT event
+     */
+    void client_callback();
 
 private:
     AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle);
+
+    int do_registration(GWBUF *data);
+    void process_command(GWBUF *queue);
+    void send_gtid_info(gtid_pos_t *gtid_pos);
+    void set_current_gtid(json_t *row);
+    bool stream_json();
+    bool stream_binary();
+    bool seek_to_index_pos();
+    bool seek_to_gtid();
+    bool stream_data();
+    void rotate_avro_file(std::string fullname);
 };
 
 extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,

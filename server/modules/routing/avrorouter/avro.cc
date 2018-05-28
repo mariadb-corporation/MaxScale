@@ -539,6 +539,8 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERV
     avrodir(config_get_string(params, "avrodir")),
     current_pos(4),
     binlog_fd(-1),
+    event_types(0),
+    event_type_hdr_lens{0},
     trx_count(0),
     trx_target(config_get_integer(params, "group_trx")),
     row_count(0),
@@ -644,10 +646,9 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 static int
 routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
-    Avro *router = (Avro *) instance;
     AvroSession *client = (AvroSession *) router_session;
 
-    return avro_client_handle_request(router, client, queue);
+    return client->routeQuery(queue);
 }
 
 /**

@@ -432,8 +432,7 @@ bool notify_cb(DCB* dcb, void* data)
 
     if (dcb->service == service && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
-        AvroSession* ses = reinterpret_cast<AvroSession*>(dcb->session->router_session);
-        avro_notify_client(ses);
+        poll_fake_write_event(dcb);
     }
 
     return true;
