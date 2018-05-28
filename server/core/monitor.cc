@@ -2570,13 +2570,20 @@ void MonitorInstance::stop()
     ss_dassert(m_thread);
     ss_dassert(m_state == MXS_MONITOR_RUNNING);
 
-    atomic_store_int32(&m_state, MXS_MONITOR_STOPPING);
-    atomic_store_int32(&m_shutdown, 1);
-    thread_wait(m_thread);
-    atomic_store_int32(&m_state, MXS_MONITOR_STOPPED);
+    if (state() == MXS_MONITOR_RUNNING)
+    {
+        atomic_store_int32(&m_state, MXS_MONITOR_STOPPING);
+        atomic_store_int32(&m_shutdown, 1);
+        thread_wait(m_thread);
+        atomic_store_int32(&m_state, MXS_MONITOR_STOPPED);
 
-    m_thread = 0;
-    m_shutdown = 0;
+        m_thread = 0;
+        m_shutdown = 0;
+    }
+    else
+    {
+        MXS_WARNING("An attempt was made to stop a monitor that is not running.");
+    }
 }
 
 void MonitorInstance::diagnostics(DCB* pDcb) const
@@ -2624,47 +2631,57 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     ss_dassert(!m_thread);
     ss_dassert(m_state == MXS_MONITOR_STOPPED);
 
-    if (!m_checked)
+    if (state() == MXS_MONITOR_STOPPED)
     {
-        if (!has_sufficient_permissions())
+        if (!m_checked)
         {
-            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        }
-        else
-        {
-            m_checked = true;
-        }
-    }
-
-    if (m_checked)
-    {
-        m_script = config_get_string(pParams, CN_SCRIPT);
-        m_events = config_get_enum(pParams, CN_EVENTS, mxs_monitor_event_enum_values);
-        m_master = NULL;
-
-        if (configure(pParams))
-        {
-            if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
+            if (!has_sufficient_permissions())
             {
-                MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+                MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
             }
             else
             {
-                // Ok, so the thread started. Let's wait until we can be certain the
-                // state has been updated.
-                m_semaphore.wait();
+                m_checked = true;
+            }
+        }
 
-                started = (atomic_load_int32(&m_state) == MXS_MONITOR_RUNNING);
+        if (m_checked)
+        {
+            m_script = config_get_string(pParams, CN_SCRIPT);
+            m_events = config_get_enum(pParams, CN_EVENTS, mxs_monitor_event_enum_values);
+            m_master = NULL;
 
-                if (!started)
+            if (configure(pParams))
+            {
+                if (thread_start(&m_thread, &maxscale::MonitorInstance::main, this, 0) == NULL)
                 {
-                    // Ok, so the initialization failed and the thread will exit.
-                    // We need to wait on it so that the thread resources will not leak.
-                    thread_wait(m_thread);
-                    m_thread = 0;
+                    MXS_ERROR("Failed to start monitor thread for monitor '%s'.", m_monitor->name);
+                }
+                else
+                {
+                    // Ok, so the thread started. Let's wait until we can be certain the
+                    // state has been updated.
+                    m_semaphore.wait();
+
+                    started = (atomic_load_int32(&m_state) == MXS_MONITOR_RUNNING);
+
+                    if (!started)
+                    {
+                        // Ok, so the initialization failed and the thread will exit.
+                        // We need to wait on it so that the thread resources will not leak.
+                        thread_wait(m_thread);
+                        m_thread = 0;
+                    }
                 }
             }
         }
+    }
+    else
+    {
+        MXS_WARNING("An attempt was made to start a monitor that is already running.");
+        // Likely to cause the least amount of damage if we pretend the monitor
+        // was started.
+        started = true;
     }
 
     return started;
