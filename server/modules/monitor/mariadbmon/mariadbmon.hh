@@ -87,7 +87,7 @@ public:
     /**
      * Runs the main monitor loop. Called from the static monitorMain()-function.
      */
-    void main_loop();
+    void main();
 
     /**
      * Create the monitor instance and return the instance data.

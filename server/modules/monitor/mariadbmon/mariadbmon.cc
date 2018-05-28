@@ -316,7 +316,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return rval;
 }
 
-void MariaDBMonitor::main_loop()
+void MariaDBMonitor::main()
 {
     m_state = MXS_MONITOR_RUNNING;
     MariaDBServer* root_master = NULL;
@@ -674,7 +674,7 @@ void MariaDBMonitor::handle_auto_rejoin()
 static void monitorMain(void *arg)
 {
     MariaDBMonitor* handle  = static_cast<MariaDBMonitor*>(arg);
-    handle->main_loop();
+    handle->main();
 }
 
 /**
