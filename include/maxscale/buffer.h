@@ -380,15 +380,6 @@ extern char *gwbuf_get_property(GWBUF *buf, char *name);
 extern GWBUF *gwbuf_make_contiguous(GWBUF *buf);
 
 /**
- * Add hint to a buffer.
- *
- * @param buf   The buffer to add the hint to
- * @param hint  The hint. Note that the ownership of @c hint is transferred
- *              to @c buf.
- */
-extern void gwbuf_add_hint(GWBUF *buf, HINT *hint);
-
-/**
  * Add a buffer object to GWBUF buffer.
  *
  * @param buf         GWBUF where object is added

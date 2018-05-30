@@ -53,6 +53,7 @@ typedef struct hint
 HINT *hint_alloc(HINT_TYPE, void *, unsigned int);
 HINT *hint_create_parameter(HINT *, char *, const char *);
 HINT *hint_create_route(HINT *, HINT_TYPE, const char *);
+HINT *hint_splice(HINT *head, HINT *list);
 void hint_free(HINT *);
 HINT *hint_dup(const HINT *);
 bool hint_exists(HINT **, HINT_TYPE);

@@ -814,28 +814,6 @@ gwbuf_make_contiguous(GWBUF *orig)
     return newbuf;
 }
 
-void
-gwbuf_add_hint(GWBUF *buf, HINT *hint)
-{
-    HINT *ptr;
-
-    spinlock_acquire(&buf->gwbuf_lock);
-    if (buf->hint)
-    {
-        ptr = buf->hint;
-        while (ptr->next)
-        {
-            ptr = ptr->next;
-        }
-        ptr->next = hint;
-    }
-    else
-    {
-        buf->hint = hint;
-    }
-    spinlock_release(&buf->gwbuf_lock);
-}
-
 size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
     uint32_t buflen;
