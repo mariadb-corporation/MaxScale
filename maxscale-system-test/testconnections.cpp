@@ -69,6 +69,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     global_result(0),
     use_snapshots(false),
     no_backend_log_copy(false),
+    no_maxscale_log_copy(false),
     verbose(false),
     smoke(true),
     binlog_cmd_option(0),
@@ -104,15 +105,17 @@ TestConnections::TestConnections(int argc, char *argv[]):
     static struct option long_options[] =
     {
 
-        {"verbose", no_argument, 0, 'v'},
-        {"silent", no_argument, 0, 'n'},
-        {"help", no_argument, 0, 'h'},
+        {"help",              no_argument, 0, 'h'},
+        {"verbose",           no_argument, 0, 'v'},
+        {"silent",            no_argument, 0, 'n'},
+        {"quiet",             no_argument, 0, 'q'},
         {"no-maxscale-start", no_argument, 0, 's'},
-        {"no-nodes-check", no_argument, 0, 'r'},
-        {"quiet", no_argument, 0, 'q'},
-        {"restart-galera", no_argument, 0, 'g'},
-        {"no-timeouts", no_argument, 0, 'z'},
-        {"no-galera", no_argument, 0, 'y'},
+        {"no-maxscale-init",  no_argument, 0, 'i'},
+        {"no-nodes-check",    no_argument, 0, 'r'},
+        {"restart-galera",    no_argument, 0, 'g'},
+        {"no-timeouts",       no_argument, 0, 'z'},
+        {"no-galera",         no_argument, 0, 'y'},
+        {"local-maxscale",    no_argument, 0, 'l'},
         {0, 0, 0, 0}
     };
 
@@ -120,7 +123,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     int option_index = 0;
     bool restart_galera = false;
 
-    while ((c = getopt_long(argc, argv, "vnqhsirgzy", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzyl", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -137,22 +140,25 @@ TestConnections::TestConnections(int argc, char *argv[]):
             break;
 
         case 'h':
-            printf("Options:\n"
-                   "-h, --help\n"
-                   "-v, --verbose\n"
-                   "-q, --silent\n"
-                   "-s, --no-maxscale-start\n"
-                   "-i, --no-maxscale-init\n"
-                   "-g, --restart-galera\n"
-                   "-y, --no-galera\n"
-                   "-z, --no-timeouts\n");
-            exit(0);
+            {
+                printf("Options:\n");
+
+                struct option *o = long_options;
+
+                while (o->name)
+                {
+                    printf("-%c, --%s\n", o->val, o->name);
+                    ++o;
+                }
+                exit(0);
+            }
             break;
 
         case 's':
             printf("Maxscale won't be started\n");
             maxscale::start = false;
             break;
+
         case 'i':
             printf("Maxscale won't be started and Maxscale.cnf won't be uploaded\n");
             maxscale_init = false;
@@ -175,6 +181,15 @@ TestConnections::TestConnections(int argc, char *argv[]):
         case 'y':
             printf("Do not use Galera setup\n");
             no_galera = true;
+            break;
+
+        case 'l':
+            printf("MaxScale assumed to be running locally; not started and logs not downloaded.\n");
+            maxscale_init = false;
+            no_maxscale_log_copy = true;
+            setenv("maxscale_IP", "127.0.0.1", true);
+            setenv("maxscale_network", "127.0.0.1", true);
+            setenv("maxscale_private_ip", "127.0.0.1", true);
             break;
 
         default:
@@ -422,6 +437,11 @@ void TestConnections::read_env()
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
         no_backend_log_copy = true;
+    }
+    env = getenv("no_maxscale_log_copy");
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    {
+        no_maxscale_log_copy = true;
     }
     env = getenv("use_ipv6");
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
@@ -723,7 +743,14 @@ int TestConnections::copy_all_logs()
         copy_mariadb_logs(galera, (char *) "galera");
     }
 
-    return (copy_maxscale_logs(0));
+    int rv = 0;
+
+    if (!no_maxscale_log_copy)
+    {
+        rv = copy_maxscale_logs(0);
+    }
+
+    return rv;
 }
 int TestConnections::copy_maxscale_logs(double timestamp)
 {
