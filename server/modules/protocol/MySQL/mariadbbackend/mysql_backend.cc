@@ -57,6 +57,7 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
                                    in_port_t *port_out);
 static bool gw_connection_established(DCB* dcb);
+static inline bool expecting_resultset(MySQLProtocol *proto);
 json_t* gw_json_diagnostics(DCB* dcb);
 
 extern "C"
@@ -417,6 +418,11 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
                 proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(data);
             }
 
+            if (expecting_resultset(proto))
+            {
+                proto->rinfo.rstate = REPLY_STATE_START;
+            }
+
             /**
              * If the buffer contains a large query, we have to skip the command
              * byte extraction for the next packet. This way current_command always
@@ -659,43 +665,39 @@ static inline bool session_ok_to_route(DCB *dcb)
 static inline bool expecting_resultset(MySQLProtocol *proto)
 {
     return proto->current_command == MXS_COM_QUERY ||
-           proto->current_command == MXS_COM_STMT_FETCH;
+           proto->current_command == MXS_COM_STMT_EXECUTE ||
+           proto->current_command == MXS_COM_STMT_BULK_EXECUTE;
+}
+
+static inline bool expecting_ok_packet(MySQLProtocol *proto)
+{
+    bool rval = false;
+    switch (proto->current_command)
+    {
+        case MXS_COM_INIT_DB:
+        case MXS_COM_CREATE_DB:
+        case MXS_COM_DROP_DB:
+        case MXS_COM_REFRESH:
+        case MXS_COM_SHUTDOWN:
+        case MXS_COM_CONNECT:
+        case MXS_COM_PROCESS_KILL:
+        case MXS_COM_PING:
+        case MXS_COM_TIME:
+        case MXS_COM_DELAYED_INSERT:
+        case MXS_COM_SET_OPTION:
+            rval = true;
+            break;
+        default:
+            rval = false;
+            break; 
+    }
+
+    return rval;
 }
 
 static inline bool expecting_ps_response(MySQLProtocol *proto)
 {
     return proto->current_command == MXS_COM_STMT_PREPARE;
-}
-
-static inline bool complete_ps_response(GWBUF *buffer)
-{
-    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
-    MXS_PS_RESPONSE resp;
-    bool rval = false;
-
-    if (mxs_mysql_extract_ps_response(buffer, &resp))
-    {
-        int expected_eof = 0;
-
-        if (resp.columns > 0)
-        {
-            expected_eof++;
-        }
-
-        if (resp.parameters > 0)
-        {
-            expected_eof++;
-        }
-
-        bool more;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more, NULL);
-
-        MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
-
-        rval = n_eof == expected_eof;
-    }
-
-    return rval;
 }
 
 static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
@@ -756,6 +758,220 @@ static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB*
     return rval;
 }
 
+static void mark_resultset_packets(MySQLProtocol *proto, GWBUF *buff, uint8_t reply)
+{
+    reply_info_t *rinfo = &(proto->rinfo);
+    if (rinfo->rstate == REPLY_STATE_START)
+    {
+        if (reply == MYSQL_REPLY_OK)
+        {
+            uint16_t status = mxs_mysql_parse_ok_packet(buff);
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_OK);
+            if (!(status & SERVER_MORE_RESULTS_EXIST))
+            {
+                rinfo->rstate = REPLY_STATE_DONE;
+                gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LAST);
+            }
+        }
+        else if (reply == MYSQL_REPLY_ERR)
+        {
+            rinfo->rstate = REPLY_STATE_DONE;
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LAST);
+        }
+        else if (reply == MYSQL_REPLY_LOCAL_INFILE)
+        {
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LINFILE);
+            rinfo->local_infile_requested = true;
+        }
+        else if (mxs_mysql_is_result_set(buff))
+        {
+            if (DEPRECATE_EOF_ENABLED(proto))
+            {
+                rinfo->rstate = REPLY_STATE_RSET_ROWS;
+            }
+            else
+            {
+                rinfo->rstate = REPLY_STATE_RSET_COLDEF;
+            }
+        }
+    }
+    else if (rinfo->rstate == REPLY_STATE_RSET_COLDEF)
+    {
+        if (reply == MYSQL_REPLY_EOF && GWBUF_LENGTH(buff) == MYSQL_EOF_PACKET_LEN)
+        {
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_EOF);
+            rinfo->rstate = REPLY_STATE_RSET_ROWS;
+            rinfo->status = mxs_mysql_parse_eof_packet(buff);
+            /* COM_STMT_EXECUTE with cursor opened */
+            if (rinfo->status & SERVER_STATUS_CURSOR_EXISTS)
+            {
+                rinfo->rstate = REPLY_STATE_DONE;
+                gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LAST);
+            }
+        }
+    }
+    else if (rinfo->rstate == REPLY_STATE_RSET_ROWS)
+    {
+        if (reply == MYSQL_REPLY_EOF && GWBUF_LENGTH(buff) == MYSQL_EOF_PACKET_LEN)
+        {
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_EOF);
+            uint16_t status = mxs_mysql_parse_eof_packet(buff);
+            /**
+              * MySQL 5.6 and 5.7 have a "feature" that doesn't set
+              * the SERVER_MORE_RESULTS_EXIST flag in the last EOF packet of
+              * a result set if the SERVER_PS_OUT_PARAMS flag was set in
+              * the first eof. To handle this, we have to use last eof
+              * status
+             */
+            if (rinfo->status & SERVER_PS_OUT_PARAMS)
+            {
+                rinfo->rstate = REPLY_STATE_START;
+            }
+            else if (status & SERVER_MORE_RESULTS_EXIST)
+            {
+                rinfo->rstate = REPLY_STATE_START;
+            }
+            else
+            {
+                gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LAST);
+                rinfo->rstate = REPLY_STATE_DONE;
+            }
+            rinfo->status = status;
+        }
+        else if (reply == MYSQL_REPLY_EOF && DEPRECATE_EOF_ENABLED(proto))
+        {
+            gwbuf_set_type(buff, GWBUF_TYPE_REPLY_EOF);
+            rinfo->status = mxs_mysql_parse_ok_packet(buff);
+            if (rinfo->status & SERVER_MORE_RESULTS_EXIST)
+            {
+                rinfo->rstate = REPLY_STATE_START;
+            }
+            else
+            {
+                rinfo->rstate = REPLY_STATE_DONE;
+                gwbuf_set_type(buff, GWBUF_TYPE_REPLY_LAST);
+            }
+        }
+    }
+}
+
+static inline void mark_packet_type(MySQLProtocol *proto, GWBUF *queue)
+{
+    reply_info_t *rinfo = &(proto->rinfo);
+    while (queue)
+    {
+        uint8_t header[MYSQL_HEADER_LEN + 1];
+        gwbuf_copy_data(queue, 0, MYSQL_HEADER_LEN + 1, header);
+        uint8_t reply = MYSQL_GET_COMMAND(header);
+        unsigned int packet_len = gw_mysql_get_byte3(header) + MYSQL_HEADER_LEN;
+
+        if (packet_len == GW_MYSQL_MAX_PACKET_LEN)
+        {
+            rinfo->skip_next = true;
+        }
+        else if (rinfo->skip_next)
+        {
+            rinfo->skip_next = false;
+        }
+        else if (rinfo->local_infile_requested)
+        {
+            rinfo->local_infile_requested = false;
+            gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+            if (reply == MYSQL_REPLY_OK)
+            {
+                rinfo->status = mxs_mysql_parse_ok_packet(queue);
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_OK);
+            }
+            rinfo->rstate = REPLY_STATE_DONE;
+        }
+        else if (expecting_resultset(proto))
+        {
+            mark_resultset_packets(proto, queue, cmd);
+        }
+        else if (expecting_ok_packet(proto))
+        {
+            if (reply == MYSQL_REPLY_OK)
+            {
+                rinfo->status = mxs_mysql_parse_ok_packet(queue);
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_OK);
+            }
+            gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+        }
+        else if (proto->current_command == MXS_COM_STMT_FETCH)
+        {
+            if (cmd == MYSQL_REPLY_EOF && 
+                (packet_len == MYSQL_EOF_PACKET_LEN || DEPRECATE_EOF_ENABLED(proto))
+            {
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST | GWBUF_TYPE_REPLY_EOF);
+                rinfo->status = mxs_mysql_parse_eof_packet(queue);
+            }
+            else if (MYSQL_REPLY_ERR)
+            {
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+            }
+        }
+        else if (proto->current_command == MXS_COM_STATISTICS)
+        {
+            gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+        }
+        else if (proto->current_command == MXS_COM_FIELD_LIST)
+        {
+            if (reply == MYSQL_REPLY_EOF)
+            {
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST | GWBUF_TYPE_REPLY_EOF);
+                rinfo->status = mxs_mysql_parse_eof_packet(queue);
+            }
+            else if (reply == MYSQL_REPLY_ERR)
+            {
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+            }
+        }
+        else if (proto->current_command == MXS_COM_STMT_PREPARE)
+        {
+            if (reply == MYSQL_REPLY_OK)
+            {
+                MXS_PS_RESPONSE resp;
+                mxs_mysql_extract_ps_response(queue, &resp);
+                rinfo->expected_packets += resp.columns;
+                rinfo->expected_packets += resp.parameters;
+
+                if (!DEPRECATE_EOF_ENABLED(proto))
+                {
+                    /* If DEPRECATE_EOF enabled there will be no eof packet of ps response */
+                    if (resp.columns)
+                    {
+                        rinfo->expected_packets++;
+                    }
+
+                    if (resp.parameters)
+                    {
+                        rinfo->expected_packets++;
+                    }
+                }
+                
+                if (rinfo->expected_packets == 0)
+                {
+                    gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+                }
+            }
+            else if (reply == MYSQL_REPLY_ERR)
+            {
+                gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+            }
+            else
+            {
+                rinfo->expected_packets--;
+                if (rinfo->expected_packets == 0)
+                {
+                    gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST);
+                }
+            }
+        }
+        
+        queue = queue->next;
+    }
+}
+
 /**
  * @brief With authentication completed, read new data and write to backend
  *
@@ -775,6 +991,7 @@ gw_read_and_write(DCB *dcb)
 
     /* read available backend data */
     return_code = dcb_read(dcb, &read_buffer, 0);
+    ss_dassert(dcb->readq == NULL);
 
     if (return_code < 0)
     {
@@ -803,7 +1020,7 @@ gw_read_and_write(DCB *dcb)
         proto->collect_result ||
         proto->ignore_replies != 0)
     {
-        GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
+        GWBUF *tmp = mxs_mysql_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
 
         dcb_readq_set(dcb, read_buffer);
@@ -814,20 +1031,39 @@ gw_read_and_write(DCB *dcb)
             return 0;
         }
 
-        /** Get sesion track info from ok packet and save it to gwbuf properties.
-         *
-         * The OK packets sent in response to COM_STMT_PREPARE are of a different
-         * format so we need to detect and skip them. */
-        if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING) &&
-            !expecting_ps_response(proto))
+        read_buffer = tmp;
+        reply_info_t old_info = proto->rinfo;
+        mark_packet_type(proto, read_buffer);
+
+        if (collecting_resultset(proto, capabilities))
         {
-            mxs_mysql_get_session_track_info(tmp, proto);
+            if (expecting_resultset(proto))
+            {
+                if (!GWBUF_IS_REPLY_LAST(read_buffer->tail))
+                {
+                    proto->rinfo = old_info;
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
+                }
+                proto->collect_result = true;
+                result_collected = true;
+            }
+            else if (expecting_ps_response(proto))
+            {
+                if (!GWBUF_IS_REPLY_LAST(read_buffer->tail))
+                {
+                    proto->rinfo = old_info;
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
+                }
+
+                // Collected the complete result
+                proto->collect_result = false;
+                result_collected = true;
+            }
         }
 
-        read_buffer = tmp;
-
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
-            proto->collect_result ||
             proto->ignore_replies != 0)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
@@ -840,39 +1076,6 @@ gw_read_and_write(DCB *dcb)
                 gwbuf_free(read_buffer);
                 poll_fake_hangup_event(dcb);
                 return 0;
-            }
-
-            if (collecting_resultset(proto, capabilities))
-            {
-                if (expecting_resultset(proto))
-                {
-                    if (mxs_mysql_is_result_set(read_buffer))
-                    {
-                        bool more = false;
-                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
-                        {
-                            dcb_readq_prepend(dcb, read_buffer);
-                            return 0;
-                        }
-                    }
-
-                    // Collected the complete result
-                    proto->collect_result = false;
-                    result_collected = true;
-                }
-                else if (expecting_ps_response(proto) &&
-                         mxs_mysql_is_prep_stmt_ok(read_buffer))
-                {
-                    if (!complete_ps_response(read_buffer))
-                    {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
-                    }
-
-                    // Collected the complete result
-                    proto->collect_result = false;
-                    result_collected = true;
-                }
             }
         }
     }

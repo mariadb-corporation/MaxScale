@@ -263,6 +263,7 @@ typedef enum
         GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
 } gw_mysql_capabilities_t;
 
+#define DEPRECATE_EOF_ENABLED(p)  (p->client_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF)
 /**
  * Capabilities supported by MariaDB 10.2 and later, stored in the last 4 bytes
  * of the 10 byte filler of the initial handshake packet.
@@ -333,6 +334,25 @@ typedef struct server_command_st
     struct server_command_st* scom_next;
 } server_command_t;
 
+/** Enum for tracking client reply state */
+typedef enum
+{
+    REPLY_STATE_START,          /**< Query sent to backend */
+    REPLY_STATE_DONE,           /**< Complete reply received */
+    REPLY_STATE_RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
+    REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
+} reply_state_t;
+
+
+typedef struct
+{
+    reply_state_t          rstate;                       /*< Reply state */
+    uint16_t               status;                       /*< Backend returned status, from ok or eof packet*/
+    bool                   skip_next;                    /*< Handle big packet */
+    uint16_t               expected_packets;             /*< Counting for COM_STMT_PREPARE */
+    bool                   local_infile_requested;       /*< Mark of local infile */
+} reply_info_t;
+
 /**
  * MySQL Protocol specific state data.
  *
@@ -361,8 +381,8 @@ typedef struct
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
     bool                   collect_result;               /*< Collect the next result set as one buffer */
     bool                   changing_user;
-    uint32_t               num_eof_packets;              /*< Encountered eof packet number, used for check packet type */
     bool                   large_query;                  /*< Whether to ignore the command byte of the next packet*/
+    reply_info_t           rinfo;                        /*< All book keeping info for determine reply packet type */
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif
@@ -502,7 +522,6 @@ char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
-void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto);
 mysql_tx_state_t parse_trx_state(const char *str);
 
 /**
@@ -706,6 +725,33 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
  * @return True if a response is expected from the server
  */
 bool mxs_mysql_command_will_respond(uint8_t cmd);
+
+/**
+ * @brief Split input into multi complete packets
+ *
+ * @param p_readbuf received tcp raw data
+ *
+ * @return Every buffer contain a compilete packet
+ */
+GWBUF *mxs_mysql_get_complete_packets(GWBUF **p_readbuf);
+
+/**
+ * @brief Get server status from eof packet
+ *
+ * @param buff EOF packet
+ *
+ * @return server status
+ */
+uint16_t mxs_mysql_parse_eof_packet(GWBUF *buff);
+
+/**
+ * @brief Parser ok packet, get server status and session track info
+ *
+ * @param buff OK packet
+ *
+ * @return server status
+ */
+uint16_t mxs_mysql_parse_ok_packet(GWBUF *buff);
 
 /* Type of the kill-command sent by client. */
 typedef enum kill_type
