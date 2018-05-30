@@ -735,7 +735,7 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
     {
         /* The current server is not running. Clear all but the stale master bit as it is used to detect
          * masters that went down but came up. */
-        clear_status(~SERVER_STALE_STATUS);
+        clear_status(~SERVER_WAS_MASTER);
         auto conn_errno = mysql_errno(conn);
         if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
@@ -797,7 +797,7 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
 bool MariaDBServer::update_slave_status(string* errmsg_out)
 {
     /** Clear old states */
-    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXT_MASTER);
 
     bool rval = false;
     if (do_show_slave_status(errmsg_out))

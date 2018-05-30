@@ -752,7 +752,7 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
     MYSQL* conn = current_master->m_server_base->con;
     const char* query = ""; // The next query to execute. Used also for error printing.
     // The presence of an external master changes several things.
-    const bool external_master = SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(current_master->m_server_base->server);
+    const bool external_master = SERVER_IS_SLAVE_OF_EXT_MASTER(current_master->m_server_base->server);
 
     if (external_master)
     {

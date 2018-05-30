@@ -390,7 +390,7 @@ void MariaDBMonitor::main()
         if (root_master && root_master->is_master())
         {
             // Clear slave and stale slave status bits from current master
-            root_master->clear_status(SERVER_SLAVE | SERVER_STALE_SLAVE);
+            root_master->clear_status(SERVER_SLAVE | SERVER_WAS_SLAVE);
 
             /**
              * Clear external slave status from master if configured to do so.
@@ -399,7 +399,7 @@ void MariaDBMonitor::main()
              */
             if (m_ignore_external_masters)
             {
-                root_master->clear_status(SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                root_master->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
             }
         }
 
@@ -509,7 +509,7 @@ void MariaDBMonitor::update_gtid_domain()
 
 void MariaDBMonitor::update_external_master()
 {
-    if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(m_master->m_server_base->server))
+    if (SERVER_IS_SLAVE_OF_EXT_MASTER(m_master->m_server_base->server))
     {
         ss_dassert(!m_master->m_slave_status.empty());
         if (m_master->m_slave_status[0].master_host != m_external_master_host ||
@@ -569,11 +569,11 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
 {
     MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
     if (root_master && mon_status_changed(root_master) &&
-        !(root_master->pending_status & SERVER_STALE_STATUS))
+        !(root_master->pending_status & SERVER_WAS_MASTER))
     {
         if ((root_master->pending_status & SERVER_MASTER) && root_master_server->is_running())
         {
-            if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) &&
+            if (!(root_master->mon_prev_status & SERVER_WAS_MASTER) &&
                 !(root_master->pending_status & SERVER_MAINT))
             {
                 MXS_NOTICE("A Master Server is now available: %s:%i",

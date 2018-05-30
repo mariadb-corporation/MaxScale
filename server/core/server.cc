@@ -688,7 +688,7 @@ server_status(const SERVER *server)
     {
         strcat(status, "NDB, ");
     }
-    if (server_status & SERVER_SLAVE_OF_EXTERNAL_MASTER)
+    if (server_status & SERVER_SLAVE_OF_EXT_MASTER)
     {
         strcat(status, "Slave of External Server, ");
     }
@@ -1103,7 +1103,7 @@ static struct
     { "ndb",         SERVER_NDB },
     { "maintenance", SERVER_MAINT },
     { "maint",       SERVER_MAINT },
-    { "stale",       SERVER_STALE_STATUS },
+    { "stale",       SERVER_WAS_MASTER },
     { NULL,          0 }
 };
 

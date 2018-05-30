@@ -139,7 +139,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree()
                     if (current->master_id > 0)
                     {
                         monitor_set_pending_status(ptr, SERVER_SLAVE);
-                        monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                        monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXT_MASTER);
                     }
                 }
                 break;
@@ -397,13 +397,13 @@ void MariaDBMonitor::assign_cycle_roles(int cycle)
             /** We have at least one cycle in the graph */
             if (server.m_read_only)
             {
-                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
                 monitor_clear_pending_status(mon_srv, SERVER_MASTER);
             }
             else
             {
                 monitor_set_pending_status(mon_srv, SERVER_MASTER);
-                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
             }
         }
         else if (m_detect_stale_master && cycle == 1 && mon_srv->mon_prev_status & SERVER_MASTER &&
@@ -422,13 +422,13 @@ void MariaDBMonitor::assign_cycle_roles(int cycle)
             if (server.m_read_only)
             {
                 /** The master is in read-only mode, set it into Slave state */
-                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
-                monitor_clear_pending_status(mon_srv, SERVER_MASTER | SERVER_STALE_STATUS);
+                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
+                monitor_clear_pending_status(mon_srv, SERVER_MASTER | SERVER_WAS_MASTER);
             }
             else
             {
-                monitor_set_pending_status(mon_srv, SERVER_MASTER | SERVER_STALE_STATUS);
-                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_STALE_SLAVE);
+                monitor_set_pending_status(mon_srv, SERVER_MASTER | SERVER_WAS_MASTER);
+                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
             }
         }
     }
@@ -711,7 +711,7 @@ bool MariaDBMonitor::set_standalone_master()
                 m_warn_set_standalone_master = false;
             }
 
-            monitor_set_pending_status(mon_server, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_set_pending_status(mon_server, SERVER_MASTER | SERVER_WAS_MASTER);
             monitor_clear_pending_status(mon_server, SERVER_SLAVE);
             m_master = server;
             rval = true;
@@ -815,11 +815,11 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             (ptr->mon_prev_status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER) &&
             !db_server.m_read_only)
         {
-            db_server.set_status(SERVER_STALE_STATUS | SERVER_MASTER);
+            db_server.set_status(SERVER_WAS_MASTER | SERVER_MASTER);
 
             /** Log the message only if the master server didn't have
              * the stale master bit set */
-            if ((ptr->mon_prev_status & SERVER_STALE_STATUS) == 0)
+            if ((ptr->mon_prev_status & SERVER_WAS_MASTER) == 0)
             {
                 MXS_WARNING("All slave servers under the current master server have been lost. "
                             "Assigning Stale Master status to the old master server '%s' (%s:%i).",
@@ -838,18 +838,18 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
                 /** Slave with a running master, assign stale slave candidacy */
                 if ((ptr->pending_status & bits) == bits)
                 {
-                    monitor_set_pending_status(ptr, SERVER_STALE_SLAVE);
+                    monitor_set_pending_status(ptr, SERVER_WAS_SLAVE);
                 }
                 /** Server lost slave when a master is available, remove
                  * stale slave candidacy */
                 else if ((ptr->pending_status & bits) == SERVER_RUNNING)
                 {
-                    monitor_clear_pending_status(ptr, SERVER_STALE_SLAVE);
+                    monitor_clear_pending_status(ptr, SERVER_WAS_SLAVE);
                 }
             }
             /** If this server was a stale slave candidate, assign
              * slave status to it */
-            else if (ptr->mon_prev_status & SERVER_STALE_SLAVE &&
+            else if (ptr->mon_prev_status & SERVER_WAS_SLAVE &&
                      ptr->pending_status & SERVER_RUNNING &&
                      // Master is down
                      (!root_master || !SRV_MASTER_STATUS(root_master->pending_status) ||

@@ -173,23 +173,25 @@ enum
 };
 
 /**
- * Status bits in the server->status member.
- *
- * These are a bitmap of attributes that may be applied to a server
+ * Status bits in the SERVER->status member, which describes the general state of a server. Although the
+ * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
-#define SERVER_RUNNING           0x0001  /**<< The server is up and running */
-#define SERVER_MASTER            0x0002  /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE             0x0004  /**<< The server is a slave, i.e. can handle reads */
-#define SERVER_JOINED            0x0008  /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB               0x0010  /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MAINT             0x0020  /**<< Server is in maintenance mode */
-#define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0040 /**<< Server is slave of a Master outside
-                                                   the provided replication topology */
-#define SERVER_STALE_STATUS      0x0080  /**<< Server stale status, monitor didn't update it */
-#define SERVER_MASTER_STICKINESS 0x0100  /**<< Server Master stickiness */
-#define SERVER_AUTH_ERROR        0x1000  /**<< Authentication error from monitor */
-#define SERVER_STALE_SLAVE       0x2000  /**<< Slave status is possible even without a master */
-#define SERVER_RELAY_MASTER      0x4000  /**<< Server is a relay master */
+// Bits used by most monitors
+#define SERVER_RUNNING             (1 << 0)  /**<< The server is up and running */
+#define SERVER_MAINT               (1 << 1)  /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR          (1 << 2)  /**<< Authentication error from monitor */
+#define SERVER_MASTER              (1 << 3)  /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE               (1 << 4)  /**<< The server is a slave, i.e. can handle reads */
+// Bits used by MariaDB Monitor (mostly)
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)  /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY_MASTER        (1 << 6)  /**<< Server is a relay master */
+#define SERVER_WAS_MASTER          (1 << 7)  /**<< Server was a master but lost all slaves. */
+#define SERVER_WAS_SLAVE           (1 << 8)  /**<< Server was a slave but lost its master. */
+// Bits used by other monitors
+#define SERVER_JOINED              (1 << 9)  /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB                 (1 << 10) /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS   (1 << 11) /**<< Server Master stickiness */
+
 
 /**
  * Is the server valid and active
@@ -217,13 +219,6 @@ enum
                                    (SERVER_RUNNING|SERVER_MASTER))
 
 /**
- * Is the server valid candidate for root master. The server must be running,
- * marked as master and not have maintenance bit set.
- */
-#define SERVER_IS_ROOT_MASTER(server)                                   \
-    (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
-
-/**
  * Is the server a slave? The server must be both running and marked as a slave
  * in order for the macro to return true
  */
@@ -248,18 +243,15 @@ enum
  */
 #define SERVER_IN_MAINT(server)         ((server)->status & SERVER_MAINT)
 
-/** server is not master, slave or joined */
-#define SERVER_NOT_IN_CLUSTER(s) (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB)) == 0)
-
 #define SERVER_IS_IN_CLUSTER(s)  (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB)) != 0)
 
 #define SERVER_IS_RELAY_SERVER(server)                                  \
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
 
-#define SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(s) (((s)->status & \
-    (SERVER_RUNNING|SERVER_SLAVE_OF_EXTERNAL_MASTER)) == \
-    (SERVER_RUNNING|SERVER_SLAVE_OF_EXTERNAL_MASTER))
+#define SERVER_IS_SLAVE_OF_EXT_MASTER(s) (((s)->status & \
+    (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER)) == \
+    (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER))
 
 /**
  * @brief Allocate a new server

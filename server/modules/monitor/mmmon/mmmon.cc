@@ -289,7 +289,7 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 
     /* Remove addition info */
-    monitor_clear_pending_status(monitored_server, SERVER_STALE_STATUS);
+    monitor_clear_pending_status(monitored_server, SERVER_WAS_MASTER);
 
     /* Set the Slave Role */
     /* Set the Master role */
@@ -349,7 +349,7 @@ void MMMonitor::tick()
                 monitor_set_pending_status(ptr, SERVER_RUNNING);
 
                 /* Set the STALE bit for this server in server struct */
-                monitor_set_pending_status(ptr, SERVER_STALE_STATUS);
+                monitor_set_pending_status(ptr, SERVER_WAS_MASTER);
             }
         }
     }
