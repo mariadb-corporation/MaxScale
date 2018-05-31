@@ -1,0 +1,3 @@
+add_executable(test_cycle_find test_cycle_find.cc)
+target_link_libraries(test_cycle_find mariadbmon maxscale-common)
+add_test(test_mariadbmon_cycle_find test_cycle_find)

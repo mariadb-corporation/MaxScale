@@ -42,7 +42,9 @@ private:
     MariaDBMonitor(const MariaDBMonitor&);
     MariaDBMonitor& operator = (const MariaDBMonitor&);
 public:
-    // TODO: Once done refactoring, see which of these can be moved to private.
+    // Helper class used for testing
+    class Test;
+    friend class Test;
 
     ~MariaDBMonitor();
 
