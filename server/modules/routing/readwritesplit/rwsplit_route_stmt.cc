@@ -624,6 +624,7 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
      */
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE) ||
         command == MXS_COM_STMT_CLOSE ||
         command == MXS_COM_STMT_RESET)
     {

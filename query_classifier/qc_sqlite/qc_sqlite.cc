@@ -2136,7 +2136,7 @@ public:
         ss_dassert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = QUERY_TYPE_DEALLOC_PREPARE;
 
         // If information is collected in several passes, then we may
         // this information already.
