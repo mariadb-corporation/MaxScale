@@ -685,6 +685,7 @@ static inline bool expecting_ok_packet(MySQLProtocol *proto)
         case MXS_COM_TIME:
         case MXS_COM_DELAYED_INSERT:
         case MXS_COM_SET_OPTION:
+        case MXS_COM_STMT_RESET:
             rval = true;
             break;
         default:
@@ -886,7 +887,7 @@ static inline void mark_packet_type(MySQLProtocol *proto, GWBUF *queue)
         }
         else if (expecting_resultset(proto))
         {
-            mark_resultset_packets(proto, queue, cmd);
+            mark_resultset_packets(proto, queue, reply);
         }
         else if (expecting_ok_packet(proto))
         {
@@ -899,8 +900,8 @@ static inline void mark_packet_type(MySQLProtocol *proto, GWBUF *queue)
         }
         else if (proto->current_command == MXS_COM_STMT_FETCH)
         {
-            if (cmd == MYSQL_REPLY_EOF && 
-                (packet_len == MYSQL_EOF_PACKET_LEN || DEPRECATE_EOF_ENABLED(proto))
+            if (reply == MYSQL_REPLY_EOF && 
+                (packet_len == MYSQL_EOF_PACKET_LEN || DEPRECATE_EOF_ENABLED(proto)))
             {
                 gwbuf_set_type(queue, GWBUF_TYPE_REPLY_LAST | GWBUF_TYPE_REPLY_EOF);
                 rinfo->status = mxs_mysql_parse_eof_packet(queue);
