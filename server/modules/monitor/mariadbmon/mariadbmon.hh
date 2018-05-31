@@ -32,6 +32,8 @@ class MariaDBMonitor;
 typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
 typedef std::tr1::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
+// Map of cycle number to cycle members
+typedef std::tr1::unordered_map<int, ServerArray> CycleMap;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance
@@ -102,6 +104,7 @@ private:
     unsigned long m_id;              /**< Monitor ID */
     ServerArray m_servers;           /**< Servers of the monitor */
     ServerInfoMap m_server_info;     /**< Map from server base struct to MariaDBServer */
+    CycleMap m_cycles;               /**< Map from cycle number to cycle member servers */
 
     // Values updated by monitor
     MariaDBServer* m_master;         /**< Master server for Master/Slave replication */
@@ -176,7 +179,7 @@ private:
     MXS_MONITORED_SERVER* getServerByNodeId(long);
     MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
     void build_replication_graph();
-    void tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* stack, int *index,
+    void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index,
                                int *cycle);
     void assign_cycle_roles(int cycle);
 

@@ -231,18 +231,18 @@ MXS_MONITORED_SERVER* MariaDBMonitor::getSlaveOfNodeId(long node_id, slave_down_
  *
  * @param node Target server/node
  * @param stack The stack used by the algorithm, contains nodes which have not yet been assigned a cycle
- * @param index Visitation index of next node
- * @param cycle Index of next found cycle
+ * @param next_ind Visitation index of next node
+ * @param next_cycle Index of next found cycle
  */
-void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* stack,
-                                           int *index, int *cycle)
+void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack,
+                                           int *next_ind, int *next_cycle)
 {
     /** Assign an index to this node */
     NodeData& node_info = node->m_node;
-    auto ind = *index;
+    auto ind = *next_ind;
     node_info.index = ind;
     node_info.lowest_index = ind;
-    *index = ind + 1;
+    *next_ind = ind + 1;
 
     if (node_info.parents.empty())
     {
@@ -261,7 +261,7 @@ void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* sta
             if (parent_node.index == NodeData::INDEX_NOT_VISITED)
             {
                 /** Node has not been visited, so recurse. */
-                tarjan_ssc_visit_node((*iter), stack, index, cycle);
+                tarjan_scc_visit_node((*iter), stack, next_ind, next_cycle);
                 node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.lowest_index);
             }
             else if (parent_node.in_stack)
@@ -280,10 +280,12 @@ void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* sta
         if (node_info.index == node_info.lowest_index)
         {
             int cycle_size = 0; // Keep track of cycle size since we don't mark one-node cycles.
+            auto cycle_ind = *next_cycle;
             while (true)
             {
                 ss_dassert(!stack->empty());
-                NodeData& cycle_node = stack->back()->m_node;
+                MariaDBServer* cycle_server = stack->back();
+                NodeData& cycle_node = cycle_server->m_node;
                 stack->pop_back();
                 cycle_node.in_stack = false;
                 cycle_size++;
@@ -291,15 +293,19 @@ void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* sta
                 {
                     if (cycle_size > 1)
                     {
-                        cycle_node.cycle = *cycle;
+                        cycle_node.cycle = cycle_ind;
+                        ServerArray& members = m_cycles[cycle_ind]; // Creates array if didn't exist
+                        members.push_back(cycle_server);
                         // All cycle elements popped. Next cycle...
-                        *cycle = *cycle + 1;
+                        *next_cycle = cycle_ind + 1;
                     }
                     break;
                 }
                 else
                 {
-                    cycle_node.cycle = *cycle; // Has more nodes, mark cycle.
+                    cycle_node.cycle = cycle_ind; // Has more nodes, mark cycle.
+                    ServerArray& members = m_cycles[cycle_ind];
+                    members.push_back(cycle_server);
                 }
             }
         }
@@ -308,18 +314,23 @@ void MariaDBMonitor::tarjan_ssc_visit_node(MariaDBServer *node, ServerArray* sta
 
 void MariaDBMonitor::build_replication_graph()
 {
+    // First, reset all node data.
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        (*iter)->m_node.reset();
+    }
+
     /* Here, all slave connections are added to the graph, even if the IO thread cannot connect. Strictly
      * speaking, building the parents-array is not required as the data already exists. This construction
-     * is more for convenience and faster access. */
+     * is more for convenience and faster access later on. */
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         /* All servers are accepted in this loop, even if the server is [Down] or [Maintenance]. For these
          * servers, we just use the latest available information. Not adding such servers could suddenly
          * change the topology quite a bit and all it would take is a momentarily network failure. */
-        MariaDBServer* server = *iter;
-        server->m_node.reset();
+        MariaDBServer* slave = *iter;
 
-        for (auto iter_ss = server->m_slave_status.begin(); iter_ss != server->m_slave_status.end();
+        for (auto iter_ss = slave->m_slave_status.begin(); iter_ss != slave->m_slave_status.end();
              iter_ss++)
         {
             SlaveStatus& slave_conn = *iter_ss;
@@ -332,16 +343,16 @@ void MariaDBMonitor::build_replication_graph()
             if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && master_id > 0)
             {
                 // Valid slave connection, find the MariaDBServer with this id.
-                auto found = get_server(master_id);
-                if (found != NULL)
+                auto master = get_server(master_id);
+                if (master != NULL)
                 {
-                    server->m_node.parents.push_back(found);
-                    found->m_node.children.push_back(server);
+                    slave->m_node.parents.push_back(master);
+                    master->m_node.children.push_back(slave);
                 }
                 else
                 {
                     // This is an external master connection. Save just the master id for now.
-                    server->m_node.external_masters.push_back(master_id);
+                    slave->m_node.external_masters.push_back(master_id);
                 }
             }
         }
@@ -368,8 +379,9 @@ void MariaDBMonitor::build_replication_graph()
 void MariaDBMonitor::find_graph_cycles()
 {
     build_replication_graph();
-    ServerArray stack;
+    m_cycles.clear();
     // The next items need to be passed around in the recursive calls to keep track of algorithm state.
+    ServerArray stack;
     int index = 1; // Node visit index.
     int cycle = 1; // If cycles are found, the nodes in the cycle are given an identical cycle index.
 
@@ -378,7 +390,7 @@ void MariaDBMonitor::find_graph_cycles()
         /** Index is 0, this node has not yet been visited. */
         if ((*iter)->m_node.index == NodeData::INDEX_NOT_VISITED)
         {
-            tarjan_ssc_visit_node(*iter, &stack, &index, &cycle);
+            tarjan_scc_visit_node(*iter, &stack, &index, &cycle);
         }
     }
 
