@@ -286,6 +286,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
     client_rses->client_dcb = session->client_dcb;
+    client_rses->bitvalue = inst->bitvalue;
 
     /**
      * Find the Master host from available servers
@@ -397,6 +398,14 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         if (master_host)
         {
             candidate = master_host;
+            // Even if we had 'router_options=slave' in the configuration file, we
+            // will still end up here if there are no slaves, but a sole master. So
+            // that the server will be considered valid in connection_is_valid(), we
+            // turn on the SERVER_MASTER bit.
+            //
+            // We must do that so that readconnroute in MaxScale 2.2 will again behave
+            // the same way as it did up until 2.1.12.
+            client_rses->bitvalue |= SERVER_MASTER;
         }
         else
         {
@@ -542,10 +551,17 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
 {
     bool rval = false;
 
+    // inst->bitvalue and router_cli_ses->bitvalue are different, if we had
+    // 'router_options=slave' in the configuration file and there was only
+    // the sole master available at session creation time.
+
     if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
-        (router_cli_ses->backend->server->status & inst->bitmask & inst->bitvalue))
+        (router_cli_ses->backend->server->status & inst->bitmask & router_cli_ses->bitvalue))
     {
-        if ((inst->bitvalue == SERVER_MASTER) && router_cli_ses->backend->active)
+        // Note the use of '==' and not '|'. We must use the former to exclude a
+        // 'router_options=slave' that uses the master due to no slave having been
+        // available at session creation time. Its bitvalue is (SERVER_MASTER | SERVER_SLAVE).
+        if ((router_cli_ses->bitvalue == SERVER_MASTER) && router_cli_ses->backend->active)
         {
             // If we're using an active master server, verify that it is still a master
             rval = router_cli_ses->backend == get_root_master(inst->service->dbref);

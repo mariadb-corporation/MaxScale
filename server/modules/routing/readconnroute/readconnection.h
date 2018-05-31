@@ -49,6 +49,7 @@ typedef struct router_client_session
     SERVER_REF *backend; /*< Backend used by the client session */
     DCB *backend_dcb; /*< DCB Connection to the backend      */
     DCB *client_dcb; /**< Client DCB */
+    unsigned int bitvalue; /*< Session specific required value of server->status */
     struct router_client_session *next;
 #if defined(SS_DEBUG)
     skygw_chk_t rses_chk_tail;
