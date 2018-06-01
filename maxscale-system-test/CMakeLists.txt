@@ -922,6 +922,10 @@ add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication 
 # MXS-1836: MaxInfo "show eventTimes" returns garbage.
 add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_show_eventTimes LABELS REPL_BACKEND)
 
+ # MXS-1889: A single remaining master is valid for readconnroute configured with 'router_options=slave'
+ # https://jira.mariadb.org/browse/MXS-1889
+add_test_executable(mxs1889.cpp mxs1889 mxs1889 LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
