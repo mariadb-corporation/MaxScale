@@ -345,6 +345,11 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
         rses->ps_manager.store(querybuf, id);
     }
 
+    if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+    {
+        rses->ps_manager.erase(get_text_ps_id(querybuf));
+    }
+
     MXS_INFO("Session write, routing to all servers.");
 
     for (SRWBackendList::iterator it = rses->backends.begin();
