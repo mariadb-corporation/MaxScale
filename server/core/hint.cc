@@ -113,6 +113,32 @@ hint_create_route(HINT *head, HINT_TYPE type, const char *data)
     return hint;
 }
 
+
+/**
+ * Insert a hint list before head.
+ *
+ * @param head  Element before which contents is inserted.
+ *              May be NULL, in which case the result is list.
+ * @param list  Hint list to prepend
+ * @return Head of list
+ */
+HINT *
+hint_splice(HINT *head, HINT *list)
+{
+    ss_dassert(list);
+    if (head)
+    {
+        HINT* tail = list;
+        while (tail->next)
+        {
+            tail = tail->next;
+        }
+        tail->next = head;
+    }
+
+    return list;
+}
+
 /**
  * Create name/value parameter hint
  *

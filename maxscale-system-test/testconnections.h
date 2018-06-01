@@ -131,10 +131,15 @@ public:
     int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
 
     /**
-     * @brief no_backend_log_copy if true logs from backends are not copied (needed if case of Aurora RDS backend or similar)
+     * @brief no_backend_log_copy if true logs from backends are not copied
+     *        (needed if case of Aurora RDS backend or similar)
      */
     bool no_backend_log_copy;
 
+    /**
+     * @brief Do not download MaxScale logs.
+     */
+    bool no_maxscale_log_copy;
     /**
      * @brief verbose if true more printing activated
      */

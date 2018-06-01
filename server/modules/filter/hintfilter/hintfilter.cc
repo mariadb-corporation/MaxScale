@@ -213,8 +213,11 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     {
         my_session->request = NULL;
         my_session->query_len = 0;
-        HINT *hint = hint_parser(my_session, queue);
-        queue->hint = hint;
+        HINT *new_hint = hint_parser(my_session, queue);
+        if (new_hint)
+        {
+            queue->hint = hint_splice(queue->hint, new_hint);
+        }
     }
 
     /* Now process the request */
