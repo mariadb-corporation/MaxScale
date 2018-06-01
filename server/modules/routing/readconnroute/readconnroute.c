@@ -405,7 +405,10 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
             //
             // We must do that so that readconnroute in MaxScale 2.2 will again behave
             // the same way as it did up until 2.1.12.
-            client_rses->bitvalue |= SERVER_MASTER;
+            if (client_rses->bitvalue & SERVER_SLAVE)
+            {
+                client_rses->bitvalue |= SERVER_MASTER;
+            }
         }
         else
         {
