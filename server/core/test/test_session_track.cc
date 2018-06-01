@@ -7,8 +7,6 @@
 #include <maxscale/buffer.h>
 #include <maxscale/protocol/mysql.h>
 
-MySQLProtocol proto;
-
 static const uint8_t resultset1[] =
 {
     /* BEGIN;*/
@@ -164,8 +162,133 @@ static const uint8_t resultset3[] =
     0x00, 0x07, 0xFE, 0x00, 0x00, 0x21, 0x00
 };
 
+MySQLProtocol init_protocol()
+{
+    reply_info_t rinfo = {REPLY_STATE_START, 0, false, 0, false};
+    MySQLProtocol proto;
+    proto.client_capabilities = GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
+    proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    proto.rinfo               = rinfo;
+
+    return proto;
+}
+
+bool have_target_session_track_state(GWBUF *buff,char *key, char *value, size_t len)
+{
+    while (buff)
+    {
+        char *tmp = gwbuf_get_property(buff, key);
+        if (tmp && strcmp(tmp, value) == 0)
+        {
+            return true;
+        }
+        buff = buff->next;
+    }
+
+    return false;
+}
+
+bool have_target_property(GWBUF *buff,char *key)
+{
+    while (buff)
+    {
+        if (gwbuf_get_property(buff, key))
+        {
+            return true;
+        }
+        buff = buff->next;
+    }
+
+    return false;
+}
+
+/* functional test , test packet by packet */
+void test1()
+{
+    GWBUF   *buffer;
+    MySQLProtocol proto = init_protocol();
+    ss_dfprintf(stderr, "test_session_track : Functional tests.\n");
+    //BEGIN
+    buffer = gwbuf_alloc_and_load(PACKET_1_LEN, resultset1 + PACKET_1_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"T_______", 8));
+    gwbuf_free(buffer);
+    //COMMIT
+    buffer = gwbuf_alloc_and_load(PACKET_2_LEN, resultset1 + PACKET_2_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"________", 8));
+    gwbuf_free(buffer);
+    //START TRANSACTION
+    buffer = gwbuf_alloc_and_load(PACKET_3_LEN, resultset1 + PACKET_3_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"T_______", 8));
+    gwbuf_free(buffer);
+    //START TRANSACTION READ ONLY
+    buffer = gwbuf_alloc_and_load(PACKET_4_LEN, resultset1 + PACKET_4_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_characteristics", 
+        (char *)"START TRANSACTION READ ONLY;", 28));
+    gwbuf_free(buffer);
+    //COMMIT
+    buffer = gwbuf_alloc_and_load(PACKET_5_LEN, resultset1 + PACKET_5_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(!have_target_property(buffer, (char *)"trx_state"));
+    ss_debug(!have_target_property(buffer, (char *)"trx_characteristics"));
+    gwbuf_free(buffer);
+    //SET AUTOCOMMIT=0;
+    buffer = gwbuf_alloc_and_load(PACKET_6_LEN, resultset1 + PACKET_6_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"autocommit", (char *)"OFF", 3));
+    gwbuf_free(buffer);
+    //INSERT INTO t1 VALUES(1);
+    buffer = gwbuf_alloc_and_load(PACKET_7_LEN, resultset1 + PACKET_7_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"I___W___", 8));
+    gwbuf_free(buffer);
+    //COMMIT
+    buffer = gwbuf_alloc_and_load(PACKET_8_LEN, resultset1 + PACKET_8_IDX);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"________", 8));
+    gwbuf_free(buffer);
+}
+
+/* multi results combine in one buffer, test for check boundary handle properly */
+void test2()
+{
+    GWBUF   *buffer;
+    MySQLProtocol proto = init_protocol();
+    ss_dfprintf(stderr, "test_session_track: multi results test\n");
+    buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"I_R_W___", 8));
+    gwbuf_free(buffer);
+}
+
+void test3()
+{
+    GWBUF   *buffer;
+    MySQLProtocol proto = init_protocol();
+    ss_dfprintf(stderr, "test_session_track: protocol state test\n");
+    buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
+    buffer = mxs_mysql_get_complete_packets(&buffer);
+    mxs_mysql_mark_packet_type(&proto, buffer);
+    ss_debug(have_target_session_track_state(buffer, (char *)"trx_state", (char *)"I_R_W___", 8) == true);
+    gwbuf_free(buffer);
+}
+
 int main(int argc, char **argv)
 {
-    
+    test1();
+    test2();
+    test3();
     return 0;
 }

@@ -449,6 +449,13 @@ static inline bool MYSQL_IS_CHANGE_USER(const uint8_t* header)
     return MYSQL_GET_COMMAND(header) == MXS_COM_CHANGE_USER;
 }
 
+static inline bool expecting_resultset(MySQLProtocol *proto)
+{
+    return proto->current_command == MXS_COM_QUERY ||
+           proto->current_command == MXS_COM_STMT_EXECUTE ||
+           proto->current_command == MXS_COM_STMT_BULK_EXECUTE;
+}
+
 /* The following can be compared using memcmp to detect a null password */
 extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
 
@@ -753,6 +760,16 @@ uint16_t mxs_mysql_parse_eof_packet(GWBUF *buff);
  */
 uint16_t mxs_mysql_parse_ok_packet(GWBUF *buff);
 
+/**
+ * @brief Determine reply packet type: is the last of reply, or is eof
+ *  or ok;
+ *
+ * @param proto MySQLProtocol, privide protocol state info
+ * @param queue multi complete packets, !!!Important, every buffer should
+ *      contain a complete packet, so need called after mxs_mysql_get_complete_packets
+ *
+ */
+void mxs_mysql_mark_packet_type(MySQLProtocol *proto, GWBUF *queue);
 /* Type of the kill-command sent by client. */
 typedef enum kill_type
 {
