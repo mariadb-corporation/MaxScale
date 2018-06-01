@@ -178,21 +178,22 @@ enum
  * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
 // Bits used by most monitors
-#define SERVER_RUNNING             (1 << 0)  /**<< The server is up and running */
-#define SERVER_MAINT               (1 << 1)  /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR          (1 << 2)  /**<< Authentication error from monitor */
-#define SERVER_MASTER              (1 << 3)  /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE               (1 << 4)  /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_RUNNING              (1 << 0)  /**<< The server is up and running */
+#define SERVER_MAINT                (1 << 1)  /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR           (1 << 2)  /**<< Authentication error from monitor */
+#define SERVER_MASTER               (1 << 3)  /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE                (1 << 4)  /**<< The server is a slave, i.e. can handle reads */
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)  /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY_MASTER        (1 << 6)  /**<< Server is a relay master */
-#define SERVER_WAS_MASTER          (1 << 7)  /**<< Server was a master but lost all slaves. */
-#define SERVER_WAS_SLAVE           (1 << 8)  /**<< Server was a slave but lost its master. */
+#define SERVER_SLAVE_OF_EXT_MASTER  (1 << 5)  /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY_MASTER         (1 << 6)  /**<< Server is a relay master */
+#define SERVER_WAS_MASTER           (1 << 7)  /**<< Server was a master but lost all slaves. */
+#define SERVER_WAS_SLAVE            (1 << 8)  /**<< Server was a slave but lost its master. */
 // Bits used by other monitors
-#define SERVER_JOINED              (1 << 9)  /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB                 (1 << 10) /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS   (1 << 11) /**<< Server Master stickiness */
-
+#define SERVER_JOINED               (1 << 9)  /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB                  (1 << 10) /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS    (1 << 11) /**<< Server Master stickiness */
+// Bits providing general information
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31) /**<< The disk space of the server is exhausted */
 
 /**
  * Is the server valid and active
@@ -253,6 +254,8 @@ enum
 #define SERVER_IS_SLAVE_OF_EXT_MASTER(s) (((s)->status & \
     (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER)) == \
     (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER))
+
+#define SERVER_IS_DISK_SPACE_EXHAUSTED(s) ((s)->status & SERVER_DISK_SPACE_EXHAUSTED)
 
 /**
  * @brief Allocate a new server
