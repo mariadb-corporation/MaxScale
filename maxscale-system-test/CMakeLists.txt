@@ -980,6 +980,10 @@ add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_
 # MXS-173 throttling filter
 add_test_executable(mxs173.cpp mxs173_throttle_filter mxs173_throttle_filter LABELS REPL_BACKEND)
 
+ # MXS-1889: A single remaining master is valid for readconnroute configured with 'router_options=slave'
+ # https://jira.mariadb.org/browse/MXS-1889
+add_test_executable(mxs1889.cpp mxs1889 mxs1889 LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
