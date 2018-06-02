@@ -4,7 +4,6 @@ threads=###threads###
 [MySQL Monitor]
 type=monitor
 module=mariadbmon
-###repl51###
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql

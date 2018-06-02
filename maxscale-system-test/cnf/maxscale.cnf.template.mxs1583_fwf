@@ -5,7 +5,6 @@ query_classifier_args=log_unrecognized_statements=3
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
-###repl51###
 servers=server1
 user=maxskysql
 passwd=skysql
