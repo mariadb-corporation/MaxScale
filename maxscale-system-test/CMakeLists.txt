@@ -658,6 +658,10 @@ add_test_executable(mxs1831_unknown_param.cpp mxs1831_unknown_param replication 
 # https://jira.mariadb.org/browse/MXS-1873
 add_test_executable(mxs1873_large_sescmd.cpp mxs1873_large_sescmd replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1896: LOAD DATA INFILE is mistaken for LOAD DATA LOCAL INFILE
+# https://jira.mariadb.org/browse/MXS-1896
+add_test_executable(mxs1896_load_data_infile.cpp mxs1896_load_data_infile replication LABELS readwritesplit REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

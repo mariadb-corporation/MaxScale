@@ -120,7 +120,7 @@ extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, 
 extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
-extern void maxscaleLoadData(Parse*, SrcList* pFullName);
+extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
@@ -2913,19 +2913,21 @@ handler ::= HANDLER nm(X) CLOSE. {
 //////////////////////// The LOAD DATA INFILE statement ////////////////////////////////////
 //
 
+%type ld_local_opt {int}
+
 cmd ::= load_data.
 
 ld_priority_opt ::= .
 ld_priority_opt ::= LOW_PRIORITY.
 ld_priority_opt ::= CONCURRENT.
 
-ld_local_opt ::= .
-ld_local_opt ::= LOCAL.
+ld_local_opt(A) ::= .      {A = 0;}
+ld_local_opt(A) ::= LOCAL. {A = 1;}
 
 ld_charset_opt ::= .
 ld_charset_opt ::= CHARACTER SET ids.
 
-load_data ::= LOAD DATA ld_priority_opt ld_local_opt
+load_data ::= LOAD DATA ld_priority_opt ld_local_opt(Y)
               INFILE STRING ignore_or_replace_opt
               INTO TABLE fullname(X)
               /* ld_partition_opt */
@@ -2935,7 +2937,7 @@ load_data ::= LOAD DATA ld_priority_opt ld_local_opt
               /* ld_col_name_or_user_var_opt */
               /* ld_set */.
 {
-    maxscaleLoadData(pParse, X);
+    maxscaleLoadData(pParse, X, Y);
 }
 
 //////////////////////// The LOCK/UNLOCK statement ////////////////////////////////////

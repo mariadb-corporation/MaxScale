@@ -2327,13 +2327,13 @@ public:
         exposed_sqlite3SrcListDelete(pParse->db, pFullName);
     }
 
-    void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
+    void maxscaleLoadData(Parse* pParse, SrcList* pFullName, int local)
     {
         ss_dassert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
-        m_operation = QUERY_OP_LOAD;
+        m_operation = local ? QUERY_OP_LOAD_LOCAL: QUERY_OP_LOAD;
 
         if (pFullName)
         {
@@ -3299,7 +3299,7 @@ extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, 
 extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
-extern void maxscaleLoadData(Parse*, SrcList* pFullName);
+extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
@@ -4201,14 +4201,14 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
     QC_EXCEPTION_GUARD(pInfo->maxscaleHandler(pParse, type, pFullName, pName));
 }
 
-void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
+void maxscaleLoadData(Parse* pParse, SrcList* pFullName, int local)
 {
     QC_TRACE();
 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->maxscaleLoadData(pParse, pFullName));
+    QC_EXCEPTION_GUARD(pInfo->maxscaleLoadData(pParse, pFullName, local));
 }
 
 void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)

@@ -881,7 +881,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
     else if (is_packet_a_query(packet_type))
     {
         qc_query_op_t queryop = qc_get_operation(querybuf);
-        if (queryop == QUERY_OP_LOAD)
+        if (queryop == QUERY_OP_LOAD_LOCAL)
         {
             rses->load_data_state = LOAD_DATA_START;
             rses->rses_load_data_sent = 0;

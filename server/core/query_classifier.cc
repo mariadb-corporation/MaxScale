@@ -389,6 +389,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_LOAD:
         return "QUERY_OP_LOAD";
 
+    case QUERY_OP_LOAD_LOCAL:
+        return "QUERY_OP_LOAD_LOCAL";
+
     case QUERY_OP_REVOKE:
         return "QUERY_OP_REVOKE";
 
