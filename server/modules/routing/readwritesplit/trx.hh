@@ -83,13 +83,27 @@ public:
     }
 
     /**
-     * Check if transaction is empty
+     * Check if transaction has statements
      *
-     * @return True if transaction has no statements
+     * @return True if transaction has statements
+     *
+     * @note This function should only be used when checking whether a transaction
+     *       that is being replayed has ended. The empty() method can be used
+     *       to check whether statements were added to the transaction.
+     */
+    bool have_stmts() const
+    {
+        return !m_log.empty();
+    }
+
+    /**
+     * Check whether the transaction is empty
+     *
+     * @return True if no statements have been added to the transaction
      */
     bool empty() const
     {
-        return m_log.empty();
+        return m_size == 0;
     }
 
     /**

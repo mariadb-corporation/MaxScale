@@ -480,6 +480,7 @@ public:
     SHA1Checksum()
     {
         SHA1_Init(&m_ctx);
+        m_sum.fill(0); // CentOS 6 doesn't like aggregate initialization...
     }
 
     void update(GWBUF* buffer)
