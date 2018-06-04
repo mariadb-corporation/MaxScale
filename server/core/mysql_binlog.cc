@@ -458,7 +458,7 @@ size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
  * @param decimals How many decimals the field has
  * @return Number of bytes the temporal value takes
  */
-static size_t temporal_field_size(uint8_t type, uint8_t decimals, int length)
+static size_t temporal_field_size(uint8_t type, uint8_t* decimals, int length)
 {
     switch (type)
     {
@@ -470,7 +470,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals, int length)
         return 3;
 
     case TABLE_COL_TYPE_TIME2:
-        return 3 + ((decimals + 1) / 2);
+        return 3 + ((*decimals + 1) / 2);
 
     case TABLE_COL_TYPE_DATETIME:
         return 8;
@@ -479,10 +479,10 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals, int length)
         return 4;
 
     case TABLE_COL_TYPE_TIMESTAMP2:
-        return 4 + ((decimals + 1) / 2);
+        return 4 + ((*decimals + 1) / 2);
 
     case TABLE_COL_TYPE_DATETIME2:
-        return 5 + ((decimals + 1) / 2);
+        return 5 + ((*decimals + 1) / 2);
 
     default:
         MXS_ERROR("Unknown field type: %x %s", type, column_type_to_string(type));
@@ -538,7 +538,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int 
         ss_dassert(false);
         break;
     }
-    return temporal_field_size(type, *metadata, length);
+    return temporal_field_size(type, metadata, length);
 }
 
 void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
