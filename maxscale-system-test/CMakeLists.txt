@@ -662,6 +662,10 @@ add_test_executable(mxs1873_large_sescmd.cpp mxs1873_large_sescmd replication LA
 # https://jira.mariadb.org/browse/MXS-1896
 add_test_executable(mxs1896_load_data_infile.cpp mxs1896_load_data_infile replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1899: generated [maxscale] section causes errors
+# https://jira.mariadb.org/browse/MXS-1899
+add_test_executable(mxs1899_generated_cnf.cpp mxs1899_generated_cnf replication LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
