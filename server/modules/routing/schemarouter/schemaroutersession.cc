@@ -424,7 +424,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         /** We know where to route this query */
         SSRBackend bref = get_bref_from_dcb(target_dcb);
 
-        if (op == QUERY_OP_LOAD)
+        if (op == QUERY_OP_LOAD_LOCAL)
         {
             m_load_target = bref->backend()->server;
         }
