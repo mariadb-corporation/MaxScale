@@ -418,6 +418,11 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
                 proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(data);
             }
 
+            if (expecting_resultset(proto))
+            {
+                proto->rinfo.rstate = REPLY_STATE_START;
+            }
+
             /**
              * If the buffer contains a large query, we have to skip the command
              * byte extraction for the next packet. This way current_command always
@@ -657,46 +662,9 @@ static inline bool session_ok_to_route(DCB *dcb)
     return rval;
 }
 
-static inline bool expecting_resultset(MySQLProtocol *proto)
-{
-    return proto->current_command == MXS_COM_QUERY ||
-           proto->current_command == MXS_COM_STMT_FETCH;
-}
-
 static inline bool expecting_ps_response(MySQLProtocol *proto)
 {
     return proto->current_command == MXS_COM_STMT_PREPARE;
-}
-
-static inline bool complete_ps_response(GWBUF *buffer)
-{
-    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
-    MXS_PS_RESPONSE resp;
-    bool rval = false;
-
-    if (mxs_mysql_extract_ps_response(buffer, &resp))
-    {
-        int expected_eof = 0;
-
-        if (resp.columns > 0)
-        {
-            expected_eof++;
-        }
-
-        if (resp.parameters > 0)
-        {
-            expected_eof++;
-        }
-
-        bool more;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more, NULL);
-
-        MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
-
-        rval = n_eof == expected_eof;
-    }
-
-    return rval;
 }
 
 static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
@@ -776,6 +744,7 @@ gw_read_and_write(DCB *dcb)
 
     /* read available backend data */
     return_code = dcb_read(dcb, &read_buffer, 0);
+    ss_dassert(dcb->readq == NULL);
 
     if (return_code < 0)
     {
@@ -804,7 +773,7 @@ gw_read_and_write(DCB *dcb)
         proto->collect_result ||
         proto->ignore_replies != 0)
     {
-        GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
+        GWBUF *tmp = mxs_mysql_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
 
         dcb_readq_set(dcb, read_buffer);
@@ -815,20 +784,39 @@ gw_read_and_write(DCB *dcb)
             return 0;
         }
 
-        /** Get sesion track info from ok packet and save it to gwbuf properties.
-         *
-         * The OK packets sent in response to COM_STMT_PREPARE are of a different
-         * format so we need to detect and skip them. */
-        if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING) &&
-            !expecting_ps_response(proto))
+        read_buffer = tmp;
+        reply_info_t old_info = proto->rinfo;
+        mxs_mysql_mark_packet_type(proto, read_buffer);
+
+        if (collecting_resultset(proto, capabilities))
         {
-            mxs_mysql_get_session_track_info(tmp, proto);
+            if (expecting_resultset(proto))
+            {
+                if (!GWBUF_IS_REPLY_LAST(read_buffer->tail))
+                {
+                    proto->rinfo = old_info;
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
+                }
+                proto->collect_result = true;
+                result_collected = true;
+            }
+            else if (expecting_ps_response(proto))
+            {
+                if (!GWBUF_IS_REPLY_LAST(read_buffer->tail))
+                {
+                    proto->rinfo = old_info;
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
+                }
+
+                // Collected the complete result
+                proto->collect_result = false;
+                result_collected = true;
+            }
         }
 
-        read_buffer = tmp;
-
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
-            proto->collect_result ||
             proto->ignore_replies != 0)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
@@ -841,39 +829,6 @@ gw_read_and_write(DCB *dcb)
                 gwbuf_free(read_buffer);
                 poll_fake_hangup_event(dcb);
                 return 0;
-            }
-
-            if (collecting_resultset(proto, capabilities))
-            {
-                if (expecting_resultset(proto))
-                {
-                    if (mxs_mysql_is_result_set(read_buffer))
-                    {
-                        bool more = false;
-                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
-                        {
-                            dcb_readq_prepend(dcb, read_buffer);
-                            return 0;
-                        }
-                    }
-
-                    // Collected the complete result
-                    proto->collect_result = false;
-                    result_collected = true;
-                }
-                else if (expecting_ps_response(proto) &&
-                         mxs_mysql_is_prep_stmt_ok(read_buffer))
-                {
-                    if (!complete_ps_response(read_buffer))
-                    {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
-                    }
-
-                    // Collected the complete result
-                    proto->collect_result = false;
-                    result_collected = true;
-                }
             }
         }
     }

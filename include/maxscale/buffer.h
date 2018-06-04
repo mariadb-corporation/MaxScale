@@ -60,6 +60,9 @@ typedef enum
     GWBUF_TYPE_COLLECT_RESULT  = 0x20,
     GWBUF_TYPE_RESULT          = 0x40,
     GWBUF_TYPE_REPLY_OK        = 0x80,
+    GWBUF_TYPE_REPLY_EOF       = 0x100,
+    GWBUF_TYPE_REPLY_LAST      = 0x200,
+    GWBUF_TYPE_REPLY_LINFILE   = 0x400,
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -70,6 +73,9 @@ typedef enum
 #define GWBUF_IS_COLLECTED_RESULT(b)     (b->gwbuf_type & GWBUF_TYPE_RESULT)
 #define GWBUF_SHOULD_COLLECT_RESULT(b)   (b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
 #define GWBUF_IS_REPLY_OK(b)             (b->gwbuf_type & GWBUF_TYPE_REPLY_OK)
+#define GWBUF_IS_REPLY_EOF(b)            (b->gwbuf_type & GWBUF_TYPE_REPLY_EOF)
+#define GWBUF_IS_REPLY_LAST(b)           (b->gwbuf_type & GWBUF_TYPE_REPLY_LAST)
+#define GWBUF_IS_REPLY_LINFILE(b)        (b->gwbuf_type & GWBUF_TYPE_REPLY_LINFILE)
 
 typedef enum
 {
