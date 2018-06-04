@@ -526,7 +526,7 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
 
     if (strcmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0)
     {
-        if (is_root_config_file)
+        if (is_root_config_file || is_persisted_config)
         {
             return handle_global_item(name, value);
         }
