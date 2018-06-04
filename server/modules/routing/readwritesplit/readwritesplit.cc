@@ -1123,7 +1123,7 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
     return rval;
 }
 
-static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
+static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer)
 {
     if (mxs_mysql_is_err_packet(buffer))
     {
@@ -1138,21 +1138,27 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
         if (errcode == ER_CONNECTION_KILLED)
         {
             MXS_INFO("Connection from '%s'@'%s' to '%s' was killed",
-                     dcb->session->client_dcb->user,
-                     dcb->session->client_dcb->remote,
-                     dcb->server->unique_name);
+                     backend->dcb()->session->client_dcb->user,
+                     backend->dcb()->session->client_dcb->remote,
+                     backend->name());
         }
         else
         {
             MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
-                        dcb->server->unique_name, errcode, errstr.c_str());
+                        backend->name(), errcode, errstr.c_str());
         }
     }
     else
     {
+        char* sql = session_have_stmt(backend->dcb()->session) ?
+                    modutil_get_SQL(backend->dcb()->session->stmt.buffer) :
+                    NULL;
         MXS_ERROR("Unexpected internal state: received response 0x%02hhx from "
-                  "server '%s' when no response was expected",
-                  mxs_mysql_get_command(buffer), dcb->server->unique_name);
+                  "server '%s' when no response was expected. Command: 0x%02hhx "
+                  "Query: %s", mxs_mysql_get_command(buffer), backend->name(),
+                  backend->current_command(), sql ? sql : "<not available>");
+        MXS_FREE(sql);
+
         ss_dassert(false);
     }
 }
@@ -1188,7 +1194,7 @@ static void clientReply(MXS_ROUTER *instance,
         /** If we receive an unexpected response from the server, the internal
          * logic cannot handle this situation. Routing the reply straight to
          * the client should be the safest thing to do at this point. */
-        log_unexpected_response(backend_dcb, writebuf);
+        log_unexpected_response(backend, writebuf);
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         return;
     }
