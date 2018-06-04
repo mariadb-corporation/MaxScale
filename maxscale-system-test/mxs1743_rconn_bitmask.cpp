@@ -44,9 +44,11 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 20; i++)
     {
-        connections.push_back(open_conn(test.maxscales->readconn_master_port[0],
-                                        test.maxscales->IP[0], "mxs1743",
-                                        "mxs1743", false));
+        // Open a connection and make sure it works
+        MYSQL* conn = open_conn(test.maxscales->readconn_master_port[0], test.maxscales->IP[0],
+                                "mxs1743", "mxs1743", false);
+        test.try_query(conn, "SELECT 1");
+        connections.push_back(conn);
     }
 
     // Give the connections a few seconds to establish
