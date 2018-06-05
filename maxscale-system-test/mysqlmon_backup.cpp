@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     test.repl->block_node(1);
     test.repl->block_node(2);
     test.repl->block_node(3);
-    sleep(5);
+    sleep(10);
 
     test.tprintf("Checking that master has stale status");
     check_master(test);
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     test.repl->unblock_node(1);
     test.repl->unblock_node(2);
     test.repl->unblock_node(3);
-    sleep(5);
+    sleep(10);
 
     test.tprintf("Checking that node 0 is the master and slaves are OK");
     check_master(test);
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Blocking master to trigger stale slave status");
     test.repl->block_node(0);
-    sleep(5);
+    sleep(10);
 
     test.tprintf("Checking that slaves have stale status");
     check_slave(test);
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     check_slave(test);
 
     test.repl->unblock_node(0);
-    sleep(5);
+    sleep(10);
 
     test.tprintf("Checking that node 0 is the master and slaves are OK");
     check_master(test);

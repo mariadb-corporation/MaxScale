@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     test.tprintf("Start by having the current master replicate from the external server");
     test.repl->connect();
     test.repl->replicate_from(0, 3);
-    sleep(5);
+    sleep(10);
     check_status(test, "server1", master_running, "server1 should be the master");
     check_status(test, "server2", slave_running, "server2 should be a slave");
     check_status(test, "server3", slave_running, "server3 should be a slave");
