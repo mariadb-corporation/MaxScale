@@ -5,7 +5,6 @@ log_warning=1
 [galera Monitor]
 type=monitor
 module=galeramon
-###repl51###
 servers= server1, server2,server3  ,server4
 user=maxskysql
 passwd= skysql

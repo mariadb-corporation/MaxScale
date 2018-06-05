@@ -85,6 +85,7 @@ static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
     case QUERY_OP_INSERT:
         return FW_OP_INSERT;
 
+    case QUERY_OP_LOAD_LOCAL:
     case QUERY_OP_LOAD:
         return FW_OP_LOAD;
 

@@ -613,6 +613,10 @@ add_test_executable(mxs1507_inconsistent_trx.cpp mxs1507_inconsistent_trx mxs150
 # https://jira.mariadb.org/browse/MXS-1507
 add_test_executable(mxs1507_migrate_trx.cpp mxs1507_migrate_trx mxs1507_trx_replay LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1507: Transaction replay
+# https://jira.mariadb.org/browse/MXS-1507
+add_test_executable(mxs1507_trx_stress.cpp mxs1507_trx_stress mxs1507_trx_stress LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)
@@ -712,6 +716,10 @@ add_test_executable(mxs1831_unknown_param.cpp mxs1831_unknown_param replication 
 # MXS-1873: Large session commands cause errors
 # https://jira.mariadb.org/browse/MXS-1873
 add_test_executable(mxs1873_large_sescmd.cpp mxs1873_large_sescmd replication LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1896: LOAD DATA INFILE is mistaken for LOAD DATA LOCAL INFILE
+# https://jira.mariadb.org/browse/MXS-1896
+add_test_executable(mxs1896_load_data_infile.cpp mxs1896_load_data_infile replication LABELS readwritesplit REPL_BACKEND)
 
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)

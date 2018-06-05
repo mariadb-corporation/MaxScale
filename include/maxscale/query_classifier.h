@@ -104,6 +104,7 @@ typedef enum qc_query_op
     QUERY_OP_EXPLAIN,
     QUERY_OP_GRANT,
     QUERY_OP_INSERT,
+    QUERY_OP_LOAD_LOCAL,
     QUERY_OP_LOAD,
     QUERY_OP_REVOKE,
     QUERY_OP_SELECT,

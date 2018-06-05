@@ -344,7 +344,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
                     continue;
                 }
-                if (ref == master_host && (inst->bitvalue & SERVER_MASTER))
+                if (ref == master_host && inst->bitvalue == SERVER_MASTER)
                 {
                     /* If option is "master" return only the root Master as there could be
                      * intermediate masters (Relay Servers) and they must not be selected.

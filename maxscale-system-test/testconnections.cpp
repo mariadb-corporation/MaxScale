@@ -628,10 +628,6 @@ void TestConnections::process_template(int m, const char *template_name, const c
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
     system(str);
 
-    if (repl->v51)
-    {
-        system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
-    }
     maxscales->copy_to_node_legacy((char *) "maxscale.cnf", (char *) dest, m);
 }
 

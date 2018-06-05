@@ -28,7 +28,6 @@ protocol=MySQLBackend
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
-###repl51###
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql

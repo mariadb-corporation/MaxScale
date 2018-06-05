@@ -4,7 +4,6 @@ threads=###threads###
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
-###repl51###
 servers=server1,server2
 user=maxskysql
 passwd=skysql

@@ -2001,7 +2001,7 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                         break;
 
                     case SQLCOM_LOAD:
-                        *operation = QUERY_OP_LOAD;
+                        *operation = QUERY_OP_LOAD_LOCAL;
                         break;
 
                     case SQLCOM_GRANT:
