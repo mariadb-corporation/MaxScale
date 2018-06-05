@@ -19,6 +19,7 @@
 #include <sstream>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/thread.h>
+#include "mariadbmon.hh"
 
 using std::string;
 
@@ -697,13 +698,13 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     return !error;
 }
 
-void MariaDBServer::update_server(MXS_MONITOR* base_monitor)
+void MariaDBServer::update_server(MariaDBMonitor& monitor)
 {
     /* Monitor current node if not in maintenance. */
     bool in_maintenance = m_server_base->pending_status & SERVER_MAINT;
     if (!in_maintenance)
     {
-        monitor_server(base_monitor);
+        monitor_server(monitor);
     }
     /** Increase or reset the error count of the server. */
     bool is_running = m_server_base->pending_status & SERVER_RUNNING;
@@ -715,10 +716,10 @@ void MariaDBServer::update_server(MXS_MONITOR* base_monitor)
  *
  * @param base_monitor The cluster monitor.
  */
-void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
+void MariaDBServer::monitor_server(MariaDBMonitor& monitor)
 {
     MXS_MONITORED_SERVER* mon_srv = m_server_base;
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(base_monitor, mon_srv);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor.m_monitor, mon_srv);
 
     MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
     if (mon_connection_is_ok(rval))
@@ -749,6 +750,11 @@ void MariaDBServer::monitor_server(MXS_MONITOR* base_monitor)
             mon_log_connect_error(mon_srv, rval);
         }
         return;
+    }
+
+    if (monitor.should_update_disk_space_status(m_server_base))
+    {
+        monitor.update_disk_space_status(m_server_base);
     }
 
     string errmsg;

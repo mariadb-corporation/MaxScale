@@ -278,7 +278,7 @@ void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server
     auto i = m_server_info.find(monitored_server);
     ss_dassert(i != m_server_info.end());
 
-    (*i).second->update_server(m_monitor);
+    (*i).second->update_server(*this);
 }
 
 void MariaDBMonitor::pre_loop()

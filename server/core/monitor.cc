@@ -2664,7 +2664,7 @@ int64_t MonitorInstance::get_time_ms()
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
 
-bool MonitorInstance::should_check_disk_space(const MXS_MONITORED_SERVER* pMs) const
+bool MonitorInstance::should_update_disk_space_status(const MXS_MONITORED_SERVER* pMs) const
 {
     bool should_check = false;
 
@@ -2709,7 +2709,7 @@ bool check_disk_space_exhausted(MXS_MONITORED_SERVER*               pMs,
 
 }
 
-void MonitorInstance::check_disk_space(MXS_MONITORED_SERVER* pMs)
+void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
 {
     std::map<std::string, disk::SizesAndName> info;
 
@@ -2843,9 +2843,9 @@ void MonitorInstance::tick()
                 monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
                 monitor_set_pending_status(pMs, SERVER_RUNNING);
 
-                if (should_check_disk_space(pMs))
+                if (should_update_disk_space_status(pMs))
                 {
-                    check_disk_space(pMs);
+                    update_disk_space_status(pMs);
                 }
 
                 update_server_status(pMs);

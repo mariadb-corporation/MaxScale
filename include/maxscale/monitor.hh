@@ -113,9 +113,23 @@ protected:
         return atomic_load_int32(&m_shutdown) != 0;
     }
 
-    bool should_check_disk_space(const MXS_MONITORED_SERVER* pMonitored_server) const;
+    /**
+     * @brief Should the disk space status be updated.
+     *
+     * @param pMonitored_server  The monitored server in question.
+     *
+     * @return True, if the disk space should be checked, false otherwise.
+     */
+    bool should_update_disk_space_status(const MXS_MONITORED_SERVER* pMonitored_server) const;
 
-    void check_disk_space(MXS_MONITORED_SERVER* pMonitored_server);
+    /**
+     * @brief Update the disk space status of a server.
+     *
+     * After the call, the bit @c SERVER_DISK_SPACE_EXHAUSTED will be set on
+     * @c pMonitored_server->pending_status if the disk space is exhausted
+     * or cleared if it is not.
+     */
+    void update_disk_space_status(MXS_MONITORED_SERVER* pMonitored_server);
 
     static int64_t get_time_ms();
 

@@ -25,6 +25,7 @@ enum print_repl_warnings_t
 };
 
 class QueryResult;
+class MariaDBMonitor;
 class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
@@ -333,7 +334,7 @@ public:
      *
      * @param base_monitor The base monitor object monitoring this server. Required for connection settings.
      */
-    void update_server(MXS_MONITOR* base_monitor);
+    void update_server(MariaDBMonitor& monitor);
 
     /**
      * Clear server pending status flags.
@@ -350,7 +351,7 @@ public:
     void set_status(uint64_t bits);
 
 private:
-    void monitor_server(MXS_MONITOR* base_monitor);
+    void monitor_server(MariaDBMonitor& monitor);
     bool update_slave_status(std::string* errmsg_out = NULL);
     void update_server_info();
 };

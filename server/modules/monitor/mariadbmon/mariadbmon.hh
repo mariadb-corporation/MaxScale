@@ -99,6 +99,7 @@ public:
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
 
 protected:
+    friend class MariaDBServer;
     void update_server_status(MXS_MONITORED_SERVER* pMonitored_server);
     void pre_loop();
     void tick();
