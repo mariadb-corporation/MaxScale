@@ -307,6 +307,113 @@ void MariaDBMonitor::pre_loop()
 
 void MariaDBMonitor::tick()
 {
+    /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
+     * Also, backup current status so that it can be compared to any deduced state. */
+    for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+    {
+        auto status = mon_srv->server->status;
+        mon_srv->pending_status = status;
+        mon_srv->mon_prev_status = status;
+    }
+
+    // Query all servers for their status. Update the server id array.
+    m_servers_by_id.clear();
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        update_server_status(server->m_server_base);
+
+        if (server->m_server_id != SERVER_ID_UNKNOWN)
+        {
+            IdToServerMap::value_type new_val(server->m_server_id, server);
+            m_servers_by_id.insert(new_val);
+        }
+    }
+
+    // Use the information to find the so far best master server.
+    MariaDBServer* root_master = find_root_master();
+
+    if (m_master != NULL && m_master->is_master())
+    {
+        // Update cluster-wide values dependant on the current master.
+        update_gtid_domain();
+        update_external_master();
+    }
+
+    // Assign relay masters, clear SERVER_SLAVE from binlog relays
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        assign_relay_master(**iter);
+
+        /* Remove SLAVE status if this server is a Binlog Server relay */
+        if ((*iter)->m_version == MariaDBServer::version::BINLOG_ROUTER)
+        {
+            monitor_clear_pending_status((*iter)->m_server_base, SERVER_SLAVE);
+        }
+    }
+
+    /* Update server status from monitor pending status on that server*/
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        update_server_states(**iter, root_master);
+    }
+
+    /** Now that all servers have their status correctly set, we can check
+        if we need to use standalone master. */
+    if (m_detect_standalone_master)
+    {
+        if (standalone_master_required())
+        {
+            // Other servers have died, set last remaining server as master
+            if (set_standalone_master())
+            {
+                // Update the root_master to point to the standalone master
+                root_master = m_master;
+            }
+        }
+        else
+        {
+            m_warn_set_standalone_master = true;
+        }
+    }
+
+    if (root_master && root_master->is_master())
+    {
+        // Clear slave and stale slave status bits from current master
+        root_master->clear_status(SERVER_SLAVE | SERVER_WAS_SLAVE);
+
+        /**
+         * Clear external slave status from master if configured to do so.
+         * This allows parts of a multi-tiered replication setup to be used
+         * in MaxScale.
+         */
+        if (m_ignore_external_masters)
+        {
+            root_master->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
+        }
+    }
+
+    ss_dassert(root_master == NULL || root_master == m_master);
+    ss_dassert(root_master == NULL ||
+               ((root_master->m_server_base->pending_status & (SERVER_SLAVE | SERVER_MASTER)) !=
+                (SERVER_SLAVE | SERVER_MASTER)));
+
+    /* Generate the replication heartbeat event by performing an update */
+    if (m_detect_replication_lag && root_master &&
+        (root_master->is_master() || root_master->is_relay_server()))
+    {
+        measure_replication_lag(root_master);
+    }
+
+    // Update shared status. The next functions read the shared status. TODO: change the following
+    // functions to read "pending_status" instead.
+    for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+    {
+        mon_srv->server->status = mon_srv->pending_status;
+    }
+
+    /* log master detection failure of first master becomes available after failure */
+    log_master_changes(root_master);
 }
 
 void MariaDBMonitor::process_state_changes()
@@ -350,113 +457,8 @@ void MariaDBMonitor::main()
 
         /* Read any admin status changes from SERVER->status_pending. */
         monitor_check_maintenance_requests(m_monitor);
-        /* Update MXS_MONITORED_SERVER->pending_status. This is where the monitor loop writes it's findings.
-         * Also, backup current status so that it can be compared to any deduced state. */
-        for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
-        {
-            auto status = mon_srv->server->status;
-            mon_srv->pending_status = status;
-            mon_srv->mon_prev_status = status;
-        }
 
-        // Query all servers for their status. Update the server id array.
-        m_servers_by_id.clear();
-        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-        {
-            MariaDBServer* server = *iter;
-            update_server_status(server->m_server_base);
-
-            if (server->m_server_id != SERVER_ID_UNKNOWN)
-            {
-                IdToServerMap::value_type new_val(server->m_server_id, server);
-                m_servers_by_id.insert(new_val);
-            }
-        }
-
-        // Use the information to find the so far best master server.
-        MariaDBServer* root_master = find_root_master();
-
-        if (m_master != NULL && m_master->is_master())
-        {
-            // Update cluster-wide values dependant on the current master.
-            update_gtid_domain();
-            update_external_master();
-        }
-
-        // Assign relay masters, clear SERVER_SLAVE from binlog relays
-        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-        {
-            assign_relay_master(**iter);
-
-            /* Remove SLAVE status if this server is a Binlog Server relay */
-            if ((*iter)->m_version == MariaDBServer::version::BINLOG_ROUTER)
-            {
-                monitor_clear_pending_status((*iter)->m_server_base, SERVER_SLAVE);
-            }
-        }
-
-        /* Update server status from monitor pending status on that server*/
-        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-        {
-            update_server_states(**iter, root_master);
-        }
-
-        /** Now that all servers have their status correctly set, we can check
-            if we need to use standalone master. */
-        if (m_detect_standalone_master)
-        {
-            if (standalone_master_required())
-            {
-                // Other servers have died, set last remaining server as master
-                if (set_standalone_master())
-                {
-                    // Update the root_master to point to the standalone master
-                    root_master = m_master;
-                }
-            }
-            else
-            {
-                m_warn_set_standalone_master = true;
-            }
-        }
-
-        if (root_master && root_master->is_master())
-        {
-            // Clear slave and stale slave status bits from current master
-            root_master->clear_status(SERVER_SLAVE | SERVER_WAS_SLAVE);
-
-            /**
-             * Clear external slave status from master if configured to do so.
-             * This allows parts of a multi-tiered replication setup to be used
-             * in MaxScale.
-             */
-            if (m_ignore_external_masters)
-            {
-                root_master->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
-            }
-        }
-
-        ss_dassert(root_master == NULL || root_master == m_master);
-        ss_dassert(root_master == NULL ||
-                   ((root_master->m_server_base->pending_status & (SERVER_SLAVE | SERVER_MASTER)) !=
-                    (SERVER_SLAVE | SERVER_MASTER)));
-
-        /* Generate the replication heartbeat event by performing an update */
-        if (m_detect_replication_lag && root_master &&
-            (root_master->is_master() || root_master->is_relay_server()))
-        {
-            measure_replication_lag(root_master);
-        }
-
-        // Update shared status. The next functions read the shared status. TODO: change the following
-        // functions to read "pending_status" instead.
-        for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
-        {
-            mon_srv->server->status = mon_srv->pending_status;
-        }
-
-        /* log master detection failure of first master becomes available after failure */
-        log_master_changes(root_master);
+        tick();
 
         /* Check if monitor events need to be launched. */
         process_state_changes();
