@@ -444,49 +444,6 @@ void MariaDBMonitor::process_state_changes()
     }
 }
 
-void MariaDBMonitor::main()
-{
-    pre_loop();
-
-    while (!should_shutdown())
-    {
-        atomic_add_uint64(&m_monitor->ticks, 1);
-        timespec loop_start;
-        /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
-        clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);
-
-        /* Read any admin status changes from SERVER->status_pending. */
-        monitor_check_maintenance_requests(m_monitor);
-
-        tick();
-
-        /* Check if monitor events need to be launched. */
-        process_state_changes();
-
-        mon_hangup_failed_servers(m_monitor);
-        store_server_journal(m_monitor, m_master ? m_master->m_server_base : NULL);
-
-        // Check how much the monitor should sleep to get one full monitor interval.
-        timespec loop_end;
-        clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_end);
-        int64_t time_elapsed_ms = (loop_end.tv_sec - loop_start.tv_sec) * 1000 +
-                                  (loop_end.tv_nsec - loop_start.tv_nsec) / 1000000;
-        int64_t sleep_time_remaining = m_monitor->interval - time_elapsed_ms;
-        // Sleep at least one full interval.
-        sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
-        /* Sleep in small increments to react faster to some events. This should ideally use some type of
-         * notification mechanism. */
-        while (sleep_time_remaining > 0 && !should_shutdown() &&
-               atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_NOCHECK)
-        {
-            int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
-                MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
-            thread_millisleep(small_sleep_ms);
-            sleep_time_remaining -= small_sleep_ms;
-        }
-    }
-}
-
 void MariaDBMonitor::update_gtid_domain()
 {
     int64_t domain = m_master->m_gtid_domain_id;

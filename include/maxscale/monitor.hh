@@ -182,11 +182,6 @@ protected:
     virtual void tick();
 
     /**
-     * TODO: Temporarily virtual so that MariaDBMonitor can override.
-     */
-    virtual void main();
-
-    /**
      * @brief Called before the monitor loop is started
      *
      * The default implementation will load the journal and update @c m_master.
@@ -219,6 +214,7 @@ private:
     uint64_t    m_events;    /**< Enabled monitor events. */
     Semaphore   m_semaphore; /**< Semaphore for synchronizing with monitor thread. */
 
+    void main();
     static void main(void* pArg);
 };
 
