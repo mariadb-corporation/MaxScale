@@ -5,29 +5,28 @@
 This document describes how git branches and tags are used in the MaxScale
 development.
 
-## Releases
+## Release Numbering
 
-The releases of MaxScale are numbered as `X.Y.Z` where `X` denotes the
-major version (currently is `2` and changes very rarely), where `Y` denotes
-the minor version (when changed, implies the introduction of new features),
-and where `Z` denotes the maintenance version (when changed, implies that
-bugs have been fixed).
+The releases of MaxScale are numbered as `X.Y.Z` where `X` is the major
+version, `Y` is the minor version, and `Z` is the maintenance version.
+
+`X` changes very rarely and is currently `2`. `Y` is incremented when new
+features are introduced and `Z` is incremented in conjunction with bug
+fixes.
 
 When `X` changes, `Y` is reset to 0 and when `Y` changes, `Z` is reset to
 0.
 
 ## Branches
 
-## Two kinds
-
 There are two kinds of minor branches in MaxScale; branches named as
 `X.Y`, such as `2.1` and `2.2` and the branch `develop`.
 
 The development of the _next_ minor release takes place in `develop`.
 
-The only development that takes place in an `X.Z` branch are development
-related to bug fixes. Occasionally, due to explicit customer demand,
-feature development may also take place.
+The only development that takes place in an `X.Z` branch is related to bug
+fixes. Occasionally, due to explicit customer demand, feature development
+may also take place.
 
 ## Maintenance Releases
 
