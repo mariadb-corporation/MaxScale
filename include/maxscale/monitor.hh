@@ -200,6 +200,13 @@ protected:
      */
     virtual void post_loop();
 
+    /**
+     * @brief Called after tick returns
+     *
+     * The default implementation will call @mon_process_state_changes.
+     */
+    virtual void process_state_changes();
+
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 

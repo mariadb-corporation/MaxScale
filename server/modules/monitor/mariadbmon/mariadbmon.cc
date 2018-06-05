@@ -305,6 +305,38 @@ void MariaDBMonitor::pre_loop()
     m_log_no_master = true;
 }
 
+void MariaDBMonitor::tick()
+{
+}
+
+void MariaDBMonitor::process_state_changes()
+{
+    MonitorInstance::process_state_changes();
+
+    m_cluster_modified = false;
+    if (m_auto_failover)
+    {
+        m_cluster_modified = handle_auto_failover();
+    }
+
+    // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+    // has been performed, as server states have not been updated yet. It will happen next iteration.
+    if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
+        cluster_can_be_joined())
+    {
+        // Check if any servers should be autojoined to the cluster and try to join them.
+        handle_auto_rejoin();
+    }
+
+    /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+     * perform this if cluster has been modified this loop since it may not be clear which server
+     * should be a slave. */
+    if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+    {
+        enforce_read_only_on_slaves();
+    }
+}
+
 void MariaDBMonitor::main()
 {
     pre_loop();
@@ -423,33 +455,11 @@ void MariaDBMonitor::main()
             mon_srv->server->status = mon_srv->pending_status;
         }
 
-        /* Check if monitor events need to be launched. */
-        mon_process_state_changes(m_monitor, m_script.c_str(), m_events);
-        m_cluster_modified = false;
-        if (m_auto_failover)
-        {
-            m_cluster_modified = handle_auto_failover();
-        }
-
-         /* log master detection failure of first master becomes available after failure */
+        /* log master detection failure of first master becomes available after failure */
         log_master_changes(root_master);
 
-        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-        // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
-            cluster_can_be_joined())
-        {
-            // Check if any servers should be autojoined to the cluster and try to join them.
-            handle_auto_rejoin();
-        }
-
-        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-         * perform this if cluster has been modified this loop since it may not be clear which server
-         * should be a slave. */
-        if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
-        {
-            enforce_read_only_on_slaves();
-        }
+        /* Check if monitor events need to be launched. */
+        process_state_changes();
 
         mon_hangup_failed_servers(m_monitor);
         store_server_journal(m_monitor, m_master ? m_master->m_server_base : NULL);

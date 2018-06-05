@@ -102,6 +102,8 @@ protected:
     void update_server_status(MXS_MONITORED_SERVER* pMonitored_server);
     void pre_loop();
     void main();
+    void tick();
+    void process_state_changes();
 
 private:
     unsigned long m_id;              /**< Monitor ID */
