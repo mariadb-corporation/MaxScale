@@ -211,7 +211,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     std::set<int> used_cycle_ids;
     for (auto iter = 0; iter < MAX_CYCLES; iter++)
     {
-        int cycle_id = 0;
+        int cycle_id = NodeData::CYCLE_NONE;
         CycleMembers cycle_member_ids = expected_cycles.cycles[iter];
         for (auto iter2 = 0; iter2 < MAX_CYCLE_SIZE; iter2++)
         {
@@ -221,13 +221,13 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
                 break;
             }
             auto cycle_server = m_monitor->get_server(search_id);
-            if (cycle_server->m_node.cycle == 0)
+            if (cycle_server->m_node.cycle == NodeData::CYCLE_NONE)
             {
                 cout << test_name << cycle_server->name() << " is not in a cycle when it should.\n";
                 errors++;
             }
             // If this is the first element, check what the cycle id should be for all members of the cycle.
-            else if (cycle_id == 0)
+            else if (cycle_id == NodeData::CYCLE_NONE)
             {
                 cycle_id = cycle_server->m_node.cycle;
                 if (used_cycle_ids.count(cycle_id) > 0)
@@ -255,7 +255,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     for (auto iter = no_cycle_servers.begin(); iter != no_cycle_servers.end(); iter++)
     {
         MariaDBServer* server = (*iter).second;
-        if (server->m_node.cycle != 0)
+        if (server->m_node.cycle != NodeData::CYCLE_NONE)
         {
             cout << server->name() << " is in cycle " << server->m_node.cycle << " when none was expected.\n";
             errors++;

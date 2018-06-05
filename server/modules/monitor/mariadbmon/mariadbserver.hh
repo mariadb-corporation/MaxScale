@@ -71,16 +71,28 @@ public:
 };
 
 /**
- * Data required for checking replication topology cycles. Not all of the listed data is used yet.
+ * Data required for checking replication topology cycles and other graph algorithms. This data is mostly
+ * used by the monitor object, as the data only makes sense in relation to other nodes.
  */
 struct NodeData
 {
+    // Default values for index parameters
     static const int INDEX_NOT_VISITED = 0;
+    static const int INDEX_FIRST = 1;
+    // Default values for the cycle
+    static const int CYCLE_NONE = 0;
+    static const int CYCLE_FIRST = 1;
+    // Default value for reach
+    static const int REACH_UNKNOWN = 0;
 
+    // Bookkeeping for graph searches. May be overwritten by multiple algorithms.
     int index;           /* Marks the order in which this node was visited. */
     int lowest_index;    /* The lowest index node this node has in its subtree. */
-    int cycle;           /* Which cycle is this node part of, if any. */
     bool in_stack;       /* Is this node currently is the search stack. */
+
+    // Results from algorithm runs. Should only be overwritten when server data has been queried.
+    int cycle;           /* Which cycle is this node part of, if any. */
+    int reach;           /* How many servers replicate from this server or its children. */
     ServerArray parents; /* Which nodes is this node replicating from. External masters excluded. */
     ServerArray children;/* Which nodes are replicating from this node. */
     std::vector<int64_t> external_masters; /* Server id:s of external masters. */
@@ -88,9 +100,14 @@ struct NodeData
     NodeData();
 
     /**
-     * Reset the data to default values
+     * Reset result data to default values. Should be ran when starting an iteration.
      */
-    void reset();
+    void reset_results();
+
+    /**
+     * Reset index data. Should be ran before an algorithm run.
+     */
+    void reset_indexes();
 };
 
 /**

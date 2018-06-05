@@ -56,19 +56,25 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
 NodeData::NodeData()
     : index(INDEX_NOT_VISITED)
     , lowest_index(INDEX_NOT_VISITED)
-    , cycle(INDEX_NOT_VISITED)
     , in_stack(false)
+    , cycle(CYCLE_NONE)
+    , reach(REACH_UNKNOWN)
 {}
 
-void NodeData::reset()
+void NodeData::reset_results()
 {
-    index = INDEX_NOT_VISITED;
-    lowest_index = INDEX_NOT_VISITED;
-    cycle = INDEX_NOT_VISITED;
-    in_stack = false;
+    cycle = CYCLE_NONE;
+    reach = REACH_UNKNOWN;
     parents.clear();
     children.clear();
     external_masters.clear();
+}
+
+void NodeData::reset_indexes()
+{
+    index = INDEX_NOT_VISITED;
+    lowest_index = INDEX_NOT_VISITED;
+    in_stack = false;
 }
 
 int64_t MariaDBServer::relay_log_events()

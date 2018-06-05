@@ -147,6 +147,9 @@ private:
     uint64_t m_events;                   /**< enabled events */
     bool m_warn_set_standalone_master;   /**< Log a warning when setting standalone master */
     bool m_log_no_master;                /**< Should it be logged that there is no master */
+    bool m_warn_no_valid_in_cycle;       /**< Log a warning when a replication cycle has no valid master */
+    bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master
+                                          *   outside of a cycle. */
 
     enum slave_down_setting_t
     {
@@ -183,9 +186,13 @@ private:
     MXS_MONITORED_SERVER* getServerByNodeId(long);
     MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
     void build_replication_graph();
-    void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index,
-                               int *cycle);
+    void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index, int *cycle);
     void assign_cycle_roles(int cycle);
+    MariaDBServer* find_topology_master_server();
+    MariaDBServer* find_best_reach_server(const ServerArray& candidates);
+    void calculate_node_reach(MariaDBServer* node);
+    int calc_reach_visit_node(MariaDBServer* node);
+    MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
 
     // Switchover methods
     bool switchover_check(SERVER* new_master, SERVER* current_master,

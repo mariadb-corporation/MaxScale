@@ -13,8 +13,11 @@
 
 #include "mariadbmon.hh"
 #include <inttypes.h>
+#include <string>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+
+using std::string;
 
 static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_do_table(MXS_MONITORED_SERVER* database);
@@ -22,6 +25,8 @@ static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 
 static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
+static const char SERVER_DISQUALIFIED[] = "Server '%s' was disqualified from new master selection because "
+                                          "it is %s.";
 
 /**
  * This function computes the replication tree from a set of monitored servers and returns the root server
@@ -317,7 +322,8 @@ void MariaDBMonitor::build_replication_graph()
     // First, reset all node data.
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        (*iter)->m_node.reset();
+        (*iter)->m_node.reset_indexes();
+        (*iter)->m_node.reset_results();
     }
 
     /* Here, all slave connections are added to the graph, even if the IO thread cannot connect. Strictly
@@ -382,8 +388,9 @@ void MariaDBMonitor::find_graph_cycles()
     m_cycles.clear();
     // The next items need to be passed around in the recursive calls to keep track of algorithm state.
     ServerArray stack;
-    int index = 1; // Node visit index.
-    int cycle = 1; // If cycles are found, the nodes in the cycle are given an identical cycle index.
+    int index = NodeData::INDEX_FIRST; /* Node visit index */
+    int cycle = NodeData::CYCLE_FIRST; /* If cycles are found, the nodes in the cycle are given an identical
+                                        * cycle index. */
 
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -404,7 +411,7 @@ void MariaDBMonitor::assign_cycle_roles(int cycle)
     {
         MariaDBServer& server = **iter;
         MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
-        if (server.m_node.cycle > 0)
+        if (server.m_node.cycle != NodeData::CYCLE_NONE)
         {
             /** We have at least one cycle in the graph */
             if (server.m_read_only)
@@ -791,7 +798,7 @@ void MariaDBMonitor::assign_relay_master(MariaDBServer& candidate)
     if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
         getSlaveOfNodeId(ptr->server->node_id, REJECT_DOWN) &&
         getServerByNodeId(ptr->server->master_id) &&
-        (!m_detect_multimaster || candidate.m_node.cycle == 0))
+        (!m_detect_multimaster || candidate.m_node.cycle == NodeData::CYCLE_NONE))
     {
         /** This server is both a slave and a master i.e. a relay master */
         monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
@@ -877,4 +884,193 @@ void MariaDBMonitor::update_server_states(MariaDBServer& db_server, MariaDBServe
             }
         }
     }
+}
+
+/**
+ * Find the server with the best reach in the candidates-array. Running state or 'read_only' is ignored by
+ * this method.
+ *
+ * @param candidates Which servers to check. All servers in the array will have their 'reach' calculated
+ * @return The best server out of the candidates
+ */
+MariaDBServer* MariaDBMonitor::find_best_reach_server(const ServerArray& candidates)
+{
+    ss_dassert(!candidates.empty());
+    MariaDBServer* best_reach = NULL;
+    /* Search for the server with the best reach. */
+    for (auto iter = candidates.begin(); iter != candidates.end(); iter++)
+    {
+        MariaDBServer* candidate = *iter;
+        calculate_node_reach(candidate);
+        // This is the first valid node or this node has better reach than the so far best found ...
+        if (best_reach == NULL || (candidate->m_node.reach > best_reach->m_node.reach))
+        {
+            best_reach = candidate;
+        }
+    }
+
+    return best_reach;
+}
+
+static string disqualify_reasons_to_string(MariaDBServer* disqualified)
+{
+    string reasons;
+    string separator;
+    const string word_and = " and ";
+    if (disqualified->is_in_maintenance())
+    {
+        reasons += separator + "in maintenance";
+        separator = word_and;
+    }
+    if (disqualified->is_down())
+    {
+        reasons += separator + "down";
+        separator = word_and;
+    }
+    if (disqualified->m_read_only)
+    {
+        reasons += separator + "in read_only mode";
+    }
+    return reasons;
+}
+
+/**
+ * Find the best master server in the cluster. This method should only be called when the monitor
+ * is starting, a cluster operation (e.g. failover) has occurred or the user has changed something on
+ * the current master making it unsuitable. Because of this, the method can be quite vocal and not
+ * consider the previous master.
+ *
+ * @return The master with most slaves
+ */
+MariaDBServer* MariaDBMonitor::find_topology_master_server()
+{
+    /* Finding the best master server may get somewhat tricky if the graph is complicated. The general
+     * criteria for the best master is that it reaches the most slaves (possibly in multiple layers and
+     * cycles). To avoid having to calculate this reachability (doable by a recursive search) to all nodes,
+     * let's use the knowledge that the best master is either a server with no masters (external ones don't
+     * count) or is part of a cycle. The server must be running and writable to be eligible. */
+    ServerArray master_candidates;
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        if (server->m_node.parents.empty())
+        {
+            if (server->is_running() && server->m_read_only)
+            {
+                master_candidates.push_back(server);
+            }
+            else
+            {
+                string reasons = disqualify_reasons_to_string(server);
+                MXS_WARNING(SERVER_DISQUALIFIED, server->name(), reasons.c_str());
+            }
+        }
+    }
+
+    // For each cycle, it's enough to take one sample server, as all members of a cycle have the same reach.
+    for (auto iter = m_cycles.begin(); iter != m_cycles.end(); iter++)
+    {
+        ServerArray& cycle_members = m_cycles[(*iter).first];
+        MariaDBServer* sample_server = find_master_inside_cycle(cycle_members);
+        if (sample_server)
+        {
+            master_candidates.push_back(sample_server);
+        }
+        else
+        {
+            // No single server in the cycle was viable.
+            const char WARN_MSG[] = "No valid master server could be found  in the cycle with servers '%s'.";
+            string server_names = monitored_servers_to_string(cycle_members);
+            MXS_WARNING(WARN_MSG, server_names.c_str());
+
+            for (auto iter2 = cycle_members.begin(); iter2 != cycle_members.end(); iter2++)
+            {
+                MariaDBServer* disqualified_server = *iter2;
+                string reasons = disqualify_reasons_to_string(disqualified_server);
+                MXS_WARNING(SERVER_DISQUALIFIED, disqualified_server->name(), reasons.c_str());
+            }
+        }
+    }
+
+    MariaDBServer* found_master = NULL;
+    if (!master_candidates.empty())
+    {
+        found_master = find_best_reach_server(master_candidates);
+    }
+    else
+    {
+        MXS_WARNING("No valid master servers in the cluster.");
+    }
+    return found_master;
+}
+
+/**
+ * Calculate the total number of reachable child nodes for the given node. A node can always reach itself.
+ * The result is saved into the node data.
+ */
+void MariaDBMonitor::calculate_node_reach(MariaDBServer* node)
+{
+    ss_dassert(node && node->m_node.reach == NodeData::REACH_UNKNOWN);
+    // Reset indexes since they will be reused.
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        (*iter)->m_node.reset_indexes();
+    }
+
+    int reach = 1; // The starting node can reach itself.
+    for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
+    {
+        MariaDBServer* slave = *iter;
+        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+        { // TODO: Think if is_down() should be checked here. Could cause weird behaviour.
+            reach += calc_reach_visit_node(slave);
+        }
+    }
+
+    node->m_node.reach = reach;
+}
+
+/**
+ * Handle a node for the "reach" calculation.
+ *
+ * @param node Node to visit
+ * @return Total number of children without counting already visited nodes.
+ */
+int MariaDBMonitor::calc_reach_visit_node(MariaDBServer* node)
+{
+    node->m_node.index = NodeData::INDEX_FIRST; // Indexing is not required other than preventing extra visits
+
+    int reachables = 1;
+    for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
+    {
+        MariaDBServer* slave = *iter;
+        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+        {
+            reachables += calc_reach_visit_node(slave);
+        }
+    }
+
+    return reachables;
+}
+
+/**
+ * Check which node in a cycle should be the master. The node must be running without read_only.
+ *
+ * @param cycle The cycle index
+ * @return The selected node
+ */
+MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_members)
+{
+    /* For a cycle, all servers are equally good in a sense. The question is just if the server is up
+     * and writable. */
+    for (auto iter = cycle_members.begin(); iter != cycle_members.end(); iter++)
+    {
+        MariaDBServer* server = *iter;
+        ss_dassert(server->m_node.cycle != NodeData::CYCLE_NONE);
+        if (server->is_running() && !server->m_read_only)
+        {
+            return server;
+        }
+    }
+    return NULL;
 }
