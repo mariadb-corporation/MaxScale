@@ -56,6 +56,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_modified(true)
     , m_warn_set_standalone_master(true)
+    , m_log_no_master(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -280,12 +281,11 @@ void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server
     (*i).second->update_server(m_monitor);
 }
 
-void MariaDBMonitor::main()
+void MariaDBMonitor::pre_loop()
 {
-    MariaDBServer* root_master = NULL;
-    int log_no_master = 1;
+    MonitorInstance::pre_loop();
 
-    load_journal();
+    m_master = MonitorInstance::m_master ? get_server_info(MonitorInstance::m_master) : NULL;
 
     if (m_detect_replication_lag)
     {
@@ -301,6 +301,13 @@ void MariaDBMonitor::main()
         mysql_close((*iter)->m_server_base->con);
         (*iter)->m_server_base->con = NULL;
     }
+
+    m_log_no_master = true;
+}
+
+void MariaDBMonitor::main()
+{
+    pre_loop();
 
     while (!should_shutdown())
     {
@@ -335,7 +342,7 @@ void MariaDBMonitor::main()
         }
 
         // Use the information to find the so far best master server.
-        root_master = find_root_master();
+        MariaDBServer* root_master = find_root_master();
 
         if (m_master != NULL && m_master->is_master())
         {
@@ -425,7 +432,7 @@ void MariaDBMonitor::main()
         }
 
          /* log master detection failure of first master becomes available after failure */
-        log_master_changes(root_master, &log_no_master);
+        log_master_changes(root_master);
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
@@ -537,7 +544,7 @@ void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
     }
 }
 
-void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* log_no_master)
+void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server)
 {
     MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
     if (root_master && mon_status_changed(root_master) &&
@@ -559,14 +566,14 @@ void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server, int* 
                       root_master->server->address,
                       root_master->server->port);
         }
-        *log_no_master = 1;
+        m_log_no_master = true;
     }
     else
     {
-        if (!root_master && *log_no_master)
+        if (!root_master && m_log_no_master)
         {
             MXS_ERROR("No Master can be determined");
-            *log_no_master = 0;
+            m_log_no_master = false;
         }
     }
 }
@@ -855,17 +862,6 @@ void MariaDBMonitor::disable_setting(const char* setting)
     p.name = const_cast<char*>(setting);
     p.value = const_cast<char*>("false");
     monitor_add_parameters(m_monitor, &p);
-}
-
-/**
- * Loads saved server states. Should only be called once at the beginning of the main loop after server
- * creation.
- */
-void MariaDBMonitor::load_journal()
-{
-    MXS_MONITORED_SERVER* master_output = NULL;
-    load_server_journal(m_monitor, &master_output);
-    m_master = master_output ? get_server_info(master_output) : NULL;
 }
 
 /**

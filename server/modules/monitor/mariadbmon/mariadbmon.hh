@@ -100,6 +100,7 @@ public:
 
 protected:
     void update_server_status(MXS_MONITORED_SERVER* pMonitored_server);
+    void pre_loop();
     void main();
 
 private:
@@ -146,6 +147,7 @@ private:
     std::string m_script;            /**< Script to call when state changes occur on servers */
     uint64_t m_events;               /**< enabled events */
     bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
+    bool m_log_no_master;            /**< Should it be logged that there is no master */
 
     enum slave_down_setting_t
     {
@@ -171,7 +173,7 @@ private:
     bool standalone_master_required();
     bool set_standalone_master();
     void assign_relay_master(MariaDBServer& serv_info);
-    void log_master_changes(MariaDBServer* root_master, int* log_no_master);
+    void log_master_changes(MariaDBServer* root_master);
     void update_gtid_domain();
     void update_external_master();
     void set_master_heartbeat(MariaDBServer*);
@@ -229,7 +231,6 @@ private:
 
     // Other methods
     void disable_setting(const char* setting);
-    void load_journal();
     bool check_sql_files();
     void enforce_read_only_on_slaves();
 };

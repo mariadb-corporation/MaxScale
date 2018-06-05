@@ -186,6 +186,20 @@ protected:
      */
     virtual void main();
 
+    /**
+     * @brief Called before the monitor loop is started
+     *
+     * The default implementation will load the journal and update @c m_master.
+     */
+    virtual void pre_loop();
+
+    /**
+     * @brief Called after the monitor loop has ended.
+     *
+     * The default implementation does nothing.
+     */
+    virtual void post_loop();
+
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 

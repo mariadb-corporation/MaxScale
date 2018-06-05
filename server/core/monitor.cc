@@ -2897,9 +2897,18 @@ void MonitorInstance::tick()
     atomic_add_uint64(&m_monitor->ticks, 1);
 }
 
-void MonitorInstance::main()
+void MonitorInstance::pre_loop()
 {
     load_server_journal(m_monitor, &m_master);
+}
+
+void MonitorInstance::post_loop()
+{
+}
+
+void MonitorInstance::main()
+{
+    pre_loop();
 
     while (!m_shutdown)
     {
@@ -2929,6 +2938,8 @@ void MonitorInstance::main()
             ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
+
+    post_loop();
 }
 
 //static
