@@ -230,6 +230,7 @@ typedef struct monitored_server
     uint64_t mon_prev_status;       /**< Status before starting the current monitor loop */
     uint64_t pending_status;        /**< Status during current monitor loop */
     bool new_event;                 /**< Whether an action was taken on the last event */
+    int64_t disk_space_checked;     /**< When was the disk space checked the last time */
     struct monitored_server *next;  /**< The next server in the list */
 } MXS_MONITORED_SERVER;
 

@@ -113,6 +113,12 @@ protected:
         return atomic_load_int32(&m_shutdown) != 0;
     }
 
+    bool should_check_disk_space(const MXS_MONITORED_SERVER* pMonitored_server) const;
+
+    void check_disk_space(MXS_MONITORED_SERVER* pMonitored_server);
+
+    static int64_t get_time_ms();
+
     /**
      * @brief Configure the monitor.
      *

@@ -1284,7 +1284,8 @@ how full the corresponding disk may be, before action is taken. E.g. an entry li
 specifies that the disk that has been mounted on `/data` may be used until 80%
 of the total space has been consumed. Multiple entries can be specified by
 separating them by a comma. If the path is specified using `*`, then the limit
-applies to all disks.
+applies to all disks. However, the value of `*` is only applied if there is not
+an exact match.
 
 Note that if a particular disk has been mounted on several paths, only one path
 need to be specified. If several are specified, then the one with the smallest
@@ -1294,8 +1295,12 @@ Examples:
 ```
 disk_space_threshold=*:80
 disk_space_threshold=/data:80
-disk_space_threshold=/data1:80,/data2:70,/data3:30
+disk_space_threshold=/data1:80,/data2:60,*:90
 ```
+The last line means that the disk mounted at `/data1` may be used up to
+80%, the disk mounted at `/data2` may be used up to 60% and all other disks
+mounted at any paths may be used up until 90% of maximum capacity, before
+MaxScale starts to warn to take action.
 
 Note that the path to be used, is one of the paths returned by:
 ```

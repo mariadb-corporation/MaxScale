@@ -31,6 +31,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/mariadb.hh>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
@@ -2652,6 +2653,159 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     return started;
 }
 
+//static
+int64_t MonitorInstance::get_time_ms()
+{
+    timespec t;
+
+    ss_debug(int rv = )clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    ss_dassert(rv == 0);
+
+    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
+}
+
+bool MonitorInstance::should_check_disk_space(const MXS_MONITORED_SERVER* pMs) const
+{
+    bool should_check = false;
+
+    if (m_monitor->disk_space_check_interval &&
+        (m_monitor->disk_space_threshold || pMs->server->disk_space_threshold) &&
+        (pMs->disk_space_checked != -1)) // -1 means disabled
+    {
+        int64_t now = get_time_ms();
+
+        if (now - pMs->disk_space_checked > m_monitor->disk_space_check_interval)
+        {
+            should_check = true;
+        }
+    }
+
+    return should_check;
+}
+
+namespace
+{
+
+bool check_disk_space_exhausted(MXS_MONITORED_SERVER*               pMs,
+                                const std::string&                  path,
+                                const maxscale::disk::SizesAndName& san,
+                                int32_t                             max_percentage)
+{
+    bool disk_space_exhausted = false;
+
+    int32_t used_percentage = ((san.total() - san.available()) / (double)san.total()) * 100;
+
+    if (used_percentage >= max_percentage)
+    {
+        MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
+                  "mounted on the path %s has been used, and the limit it %d%%.",
+                  pMs->server->name, pMs->server->address,
+                  used_percentage, path.c_str(), max_percentage);
+        disk_space_exhausted = true;
+    }
+
+    return disk_space_exhausted;
+}
+
+}
+
+void MonitorInstance::check_disk_space(MXS_MONITORED_SERVER* pMs)
+{
+    std::map<std::string, disk::SizesAndName> info;
+
+    int rv = disk::get_info_by_path(pMs->con, &info);
+
+    if (rv == 0)
+    {
+        bool disk_space_exhausted = false;
+
+        MxsDiskSpaceThreshold* pDst =
+            pMs->server->disk_space_threshold ?
+            pMs->server->disk_space_threshold : m_monitor->disk_space_threshold;
+        ss_dassert(pDst);
+
+        int32_t star_max_percentage = -1;
+
+        std::set<std::string> checked_paths;
+
+        for (auto i = pDst->begin(); i != pDst->end(); ++i)
+        {
+            string path = i->first;
+            int32_t max_percentage = i->second;
+
+            if (path == "*")
+            {
+                star_max_percentage = max_percentage;
+            }
+            else
+            {
+                auto j = info.find(path);
+
+                if (j != info.end())
+                {
+                    const disk::SizesAndName& san = j->second;
+
+                    disk_space_exhausted = check_disk_space_exhausted(pMs, path, san, max_percentage);
+                    checked_paths.insert(path);
+                }
+                else
+                {
+                    MXS_WARNING("Disk space threshold specified for %s even though server %s at %s"
+                                "does not have that.",
+                                path.c_str(), pMs->server->name, pMs->server->address);
+                }
+            }
+        }
+
+        if (star_max_percentage != -1)
+        {
+            for (auto j = info.begin(); j != info.end(); ++j)
+            {
+                string path = j->first;
+
+                if (checked_paths.find(path) == checked_paths.end())
+                {
+                    const disk::SizesAndName& san = j->second;
+
+                    disk_space_exhausted = check_disk_space_exhausted(pMs, path, san, star_max_percentage);
+                }
+            }
+        }
+
+        if (disk_space_exhausted)
+        {
+            pMs->pending_status |= SERVER_DISK_SPACE_EXHAUSTED;
+        }
+        else
+        {
+            pMs->pending_status &= ~SERVER_DISK_SPACE_EXHAUSTED;
+        }
+
+        pMs->disk_space_checked = get_time_ms();
+    }
+    else
+    {
+        SERVER* pServer = pMs->server;
+
+        if (mysql_errno(pMs->con) == ER_UNKNOWN_TABLE)
+        {
+            // Disable disk space checking for this server.
+            pMs->disk_space_checked = -1;
+
+            MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
+                      "version %s is too old, or the DISKS information schema plugin "
+                      "has not been installed. Disk space checking has been disabled.",
+                      pServer->name, pServer->address, pServer->version_string);
+        }
+        else
+        {
+            MXS_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
+                      pServer->name, pServer->address,
+                      mysql_errno(pMs->con), mysql_error(pMs->con));
+        }
+    }
+}
+
 bool MonitorInstance::configure(const MXS_CONFIG_PARAMETER* pParams)
 {
     return true;
@@ -2688,6 +2842,11 @@ void MonitorInstance::tick()
             {
                 monitor_clear_pending_status(pMs, SERVER_AUTH_ERROR);
                 monitor_set_pending_status(pMs, SERVER_RUNNING);
+
+                if (should_check_disk_space(pMs))
+                {
+                    check_disk_space(pMs);
+                }
 
                 update_server_status(pMs);
             }
