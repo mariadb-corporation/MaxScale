@@ -33,7 +33,7 @@ any other names or paths.
 ## 2. Build and upgrade test
 
 The Jenkins
-[Build_all](http://localhost:8089/job/build_all/)
+[build_for_release](http://127.0.0.1:8089/job/build_for_release/)
 job should be used for building the packages.
 
 Note that the above will not work unless you have set up an
@@ -42,57 +42,34 @@ ssh tunnel to Jenkins:
 $ ssh -f -N -L 8089:127.0.0.1:8089 vagrant@max-tst-01.mariadb.com
 ```
 
-Usually two runs are done: one for _release_ and one for _debug_ packages.
-
 ### Parameters to define
 
-Use defaults for all other parameters.
+#### `scm_source`
 
-#### source
+This is the tag that is used to build the release.
+
 ```
 refs/tags/maxscale-x.y.z-ttN
 ```
+#### `version_number`
 
-#### target
-Debug build:
-```
-maxscale-x.y.z-debug
-```
-
-Release build:
-```
-maxscale-x.y.z-release
-```
-
-#### cmake_flags
-
-Debug build:
-```
--DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DBUILD_MMMON=Y -DBUILD_CDC=Y
-```
-
-Release build:
-```
--DBUILD_TESTS=N -DBUILD_MMMON=Y -DBUILD_CDC=Y
-```
-
-#### run_upgrade_test
+The version number of this release in x.y.z format. This will create two packages; maxscale-x.y.z-release and maxscale-x.y.z-debug.
 
 ```
-yes
+x.y.z
 ```
 
-#### old_target
+#### `old_target`
 
-Name of some existing Maxscale repository
-(please check http://max-tst-01.mariadb.com/ci-repository/
-before build).
+The previous released version, used by upgrade tests.
 
 ```
-maxscale-x'.y'.z'-release
+x.y.z
 ```
 
-### Options for 1.4.x build
+### 1.4.x build
+
+Use the [build_all](http://127.0.0.1:8089/job/build_all/) job.
 
 For `1.4` builds the default values of the following parameters
 should be changed:
