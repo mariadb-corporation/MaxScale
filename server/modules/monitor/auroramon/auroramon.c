@@ -123,6 +123,7 @@ monitorMain(void *arg)
 
     while (!handle->shutdown)
     {
+        atomic_add_uint64(&monitor->ticks, 1);
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 

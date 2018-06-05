@@ -2204,6 +2204,7 @@ monitorMain(void *arg)
         /* reset num_servers */
         num_servers = 0;
 
+        atomic_add_uint64(&mon->ticks, 1);
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 

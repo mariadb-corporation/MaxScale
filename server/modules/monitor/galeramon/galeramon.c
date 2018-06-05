@@ -545,6 +545,7 @@ monitorMain(void *arg)
         /* reset cluster members counter */
         is_cluster = 0;
 
+        atomic_add_uint64(&mon->ticks, 1);
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 

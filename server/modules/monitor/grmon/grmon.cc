@@ -270,6 +270,7 @@ void GRMon::main()
 
     while (!m_shutdown)
     {
+        atomic_add_uint64(&m_monitor->ticks, 1);
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 

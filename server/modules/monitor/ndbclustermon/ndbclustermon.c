@@ -347,6 +347,7 @@ monitorMain(void *arg)
         }
         nrounds += 1;
 
+        atomic_add_uint64(&mon->ticks, 1);
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 

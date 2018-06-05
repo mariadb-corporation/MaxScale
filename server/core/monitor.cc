@@ -137,6 +137,7 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
+    mon->ticks = 0;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
@@ -518,6 +519,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
     dcb_printf(dcb, "Name:                   %s\n", monitor->name);
     dcb_printf(dcb, "State:                  %s\n", state);
+    dcb_printf(dcb, "Times monitored:        %lu\n", monitor->ticks);
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
     dcb_printf(dcb, "Read Timeout:           %i seconds\n", monitor->read_timeout);
@@ -1860,6 +1862,7 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 
     json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name));
     json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
+    json_object_set_new(attr, CN_TICKS, json_integer(monitor->ticks));
 
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));

@@ -148,6 +148,7 @@ const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
 const char CN_SUBSTITUTE_VARIABLES[]          = "substitute_variables";
 const char CN_THREADS[]                       = "threads";
 const char CN_THREAD_STACK_SIZE[]             = "thread_stack_size";
+const char CN_TICKS[]                         = "ticks";
 const char CN_TYPE[]                          = "type";
 const char CN_UNIX[]                          = "unix";
 const char CN_USER[]                          = "user";
