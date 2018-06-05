@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     cout << "Stopping master, should auto-failover." << endl;
     int master_id_old = get_master_server_id(test);
     test.repl->stop_node(0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id_new = get_master_server_id(test);
     cout << "Master server id is " << master_id_new << endl;
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     }
     // Restart old master. Then add some events to it.
     test.repl->start_node(0, (char*)"");
-    sleep(3);
+    test.maxscales->wait_for_monitor();
     test.repl->connect();
     cout << "Adding more events to node 0. It should not join the cluster." << endl;
     generate_traffic_and_check(test, test.repl->nodes[0], 5);
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
         test.assert(false, "Could not start MaxScale.");
         return test.global_result;
     }
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
 
     expect(test, "server1", "Running");
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     MYSQL** nodes = test.repl->nodes;
     mysql_query(nodes[ind], cmd);
     mysql_query(nodes[ind], "START SLAVE;");
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
 
     expect(test, "server1", "Running");

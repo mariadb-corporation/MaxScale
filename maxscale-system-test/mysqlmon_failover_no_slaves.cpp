@@ -44,13 +44,13 @@ int main(int argc, char** argv)
     test.try_query(nodes[3], CHANGE_CMD);
     test.try_query(nodes[3], "START SLAVE;");
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
 
     test.tprintf(LINE);
     test.tprintf("Stopping master. Failover should not happen.");
     test.repl->block_node(0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.assert(master_id == -1, "Master was promoted even when no slave was eligible.");

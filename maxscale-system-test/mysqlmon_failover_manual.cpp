@@ -23,7 +23,6 @@ int main(int argc, char** argv)
     test.repl->connect();
     delete_slave_binlogs(test);
 
-    sleep(2);
     basic_test(test);
     print_gtids(test);
 
@@ -32,10 +31,9 @@ int main(int argc, char** argv)
 
     // Part 1
     node0_id = prepare_test_1(test);
-    sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD , true, &ec);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     check_test_1(test, node0_id);
     if (test.global_result != 0)
@@ -45,10 +43,9 @@ int main(int argc, char** argv)
 
     // Part 2
     prepare_test_2(test);
-    sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     check_test_2(test);
     if (test.global_result != 0)
@@ -58,10 +55,9 @@ int main(int argc, char** argv)
 
     // Part 3
     prepare_test_3(test);
-    sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     check_test_3(test);
     return test.global_result;

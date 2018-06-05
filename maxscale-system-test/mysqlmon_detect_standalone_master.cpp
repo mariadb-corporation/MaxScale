@@ -63,10 +63,10 @@ void restore_servers(TestConnections& test, bool events_added)
         replicate_from(test, 0, 3);
         replicate_from(test, 1, 3);
         replicate_from(test, 2, 3);
-        sleep(10);
+        test.maxscales->wait_for_monitor();
         o1 = test.maxscales->ssh_node_output(0,
             "maxadmin call command mariadbmon switchover MySQL-Monitor server1 server4", true, &dummy);
-        sleep(10);
+        test.maxscales->wait_for_monitor();
         int master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Switchover failed to set server1 as master.");
     }
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     test.try_query(test.repl->nodes[3], "STOP SLAVE;RESET SLAVE ALL;");
 
     test.tprintf(" Wait for the monitor to detect it ");
-    sleep(10);
+    test.maxscales->wait_for_monitor(3);
 
     test.tprintf(" Connect and insert should work ");
     get_output(test);
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     test.repl->unblock_node(2);
 
     test.tprintf(" Wait for the monitor to detect it ");
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     test.tprintf("Check that we are still using the last node to which we failed over "
                  "to and that the old nodes are in maintenance mode");

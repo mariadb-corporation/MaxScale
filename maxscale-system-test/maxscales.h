@@ -262,6 +262,16 @@ public:
      */
     StringSet get_server_status(const char* name, int m = 0);
 
+    /**
+     * Wait until the monitors have performed at least one monitoring operation
+     *
+     * The function waits until all monitors have performed at least one monitoring cycle.
+     *
+     * @param intervals The number of monitor intervals to wait
+     * @param m Number of Maxscale node
+     */
+    void wait_for_monitor(int intervals = 1, int m = 0);
+
 };
 
 #endif // MAXSCALES_H

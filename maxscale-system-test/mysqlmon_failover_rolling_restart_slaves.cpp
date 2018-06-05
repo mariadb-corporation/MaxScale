@@ -157,7 +157,7 @@ void check_server_status(TestConnections& test, int N, int down = -1)
 
 void run(TestConnections& test)
 {
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     int N = test.repl->N;
     cout << "Nodes: " << N << endl;
@@ -183,14 +183,14 @@ void run(TestConnections& test)
         cout << "\nStopping slave " << slave << endl;
         test.repl->stop_node(i);
 
-        sleep(10);
+        test.maxscales->wait_for_monitor();
 
         check_server_status(test, N, i);
 
         cout << "\nStarting slave " << slave << endl;
         test.repl->start_node(i, (char*)"");
 
-        sleep(10);
+        test.maxscales->wait_for_monitor();
 
         check_server_status(test, N);
     }
