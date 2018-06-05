@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
         // window, we should get no messages.
         if (!run(t, LOG_WARNING, 100, 0))
         {
-            rc = EXIT_FAILURE;
+            rc = EXIT_FAILURE;<< strerror(errno) <<
         }
 
         cout << "Sleeping 6 seconds." << endl;
@@ -274,7 +274,10 @@ int main(int argc, char* argv[])
     // A crude method to remove all files but it works
     string cmd = "rm -r ";
     cmd += logdir;
-    system(cmd.c_str());
+    if (system(cmd.c_str()) == -1)
+    {
+        cerr << "Could not remove all files due to " << strerror(errno) << endl;
+    }
 
     return rc;
 }
