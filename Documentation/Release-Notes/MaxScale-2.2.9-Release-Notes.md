@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.2.9 Release Notes -- 2018-06
+# MariaDB MaxScale 2.2.9 Release Notes -- 2018-06-06
 
 Release 2.2.9 is a GA release.
 
