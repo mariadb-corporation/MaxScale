@@ -2892,9 +2892,6 @@ void MonitorInstance::tick()
             }
         }
     }
-
-    flush_server_status();
-    atomic_add_uint64(&m_monitor->ticks, 1);
 }
 
 void MonitorInstance::pre_loop()
@@ -2921,6 +2918,9 @@ void MonitorInstance::main()
         monitor_check_maintenance_requests(m_monitor);
 
         tick();
+        atomic_add_uint64(&m_monitor->ticks, 1);
+
+        flush_server_status();
 
         process_state_changes();
 
