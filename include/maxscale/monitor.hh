@@ -62,6 +62,18 @@ public:
      * - Calls @c configure().
      * - Starts the monitor thread.
      *
+     * - Once the monitor thread starts, it will
+     *   - Load the server journal and update @c m_master.
+     *   - Call @c pre_loop().
+     *   - Enter a loop where it, until told to shut down, will
+     *     - Check whether there are maintenance requests.
+     *     - Call @c tick().
+     *     - Call @c process_state_changes()
+     *     - Hang up failed servers.
+     *     - Store the server journal (@c m_master assumed to reflect the current situation).
+     *     - Sleep until time for next @c tick().
+     *   - Call @c post_loop().
+     *
      * @param param  The parameters of the monitor.
      *
      * @return True, if the monitor started, false otherwise.
@@ -198,7 +210,7 @@ protected:
     /**
      * @brief Called before the monitor loop is started
      *
-     * The default implementation will load the journal and update @c m_master.
+     * The default implementation does nothing.
      */
     virtual void pre_loop();
 

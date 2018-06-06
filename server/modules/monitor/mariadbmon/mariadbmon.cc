@@ -283,8 +283,9 @@ void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server
 
 void MariaDBMonitor::pre_loop()
 {
-    MonitorInstance::pre_loop();
-
+    // MonitorInstance loaded from the journal the current master into its
+    // m_master member variable, we want the corresponding MariaDBServer into
+    // our own m_master varaible.
     m_master = MonitorInstance::m_master ? get_server_info(MonitorInstance::m_master) : NULL;
 
     if (m_detect_replication_lag)
@@ -414,6 +415,12 @@ void MariaDBMonitor::tick()
 
     /* log master detection failure of first master becomes available after failure */
     log_master_changes(root_master);
+
+    // Before exiting we need to store the current master into the m_master
+    // member variable of MonitorInstance so tga loaded from the journal the current master into its
+    // m_master member variable, we want the corresponding MariaDBServer into
+    // our own m_master varaible.
+    MonitorInstance::m_master = m_master ? m_master->m_server_base : NULL;
 }
 
 void MariaDBMonitor::process_state_changes()

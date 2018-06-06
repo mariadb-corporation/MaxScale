@@ -2899,7 +2899,6 @@ void MonitorInstance::tick()
 
 void MonitorInstance::pre_loop()
 {
-    load_server_journal(m_monitor, &m_master);
 }
 
 void MonitorInstance::post_loop()
@@ -2913,6 +2912,8 @@ void MonitorInstance::process_state_changes()
 
 void MonitorInstance::main()
 {
+    load_server_journal(m_monitor, &m_master);
+
     pre_loop();
 
     while (!m_shutdown)
