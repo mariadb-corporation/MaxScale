@@ -19,7 +19,6 @@
 #include <sstream>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/thread.h>
-#include "mariadbmon.hh"
 
 using std::string;
 
@@ -698,65 +697,11 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     return !error;
 }
 
-void MariaDBServer::update_server(MariaDBMonitor& monitor)
-{
-    /* Monitor current node if not in maintenance. */
-    bool in_maintenance = m_server_base->pending_status & SERVER_MAINT;
-    if (!in_maintenance)
-    {
-        monitor_server(monitor);
-    }
-    /** Increase or reset the error count of the server. */
-    bool is_running = m_server_base->pending_status & SERVER_RUNNING;
-    m_server_base->mon_err_count = (is_running || in_maintenance) ? 0 : m_server_base->mon_err_count + 1;
-}
-
 /**
- * Connect to and query this server.
- *
- * @param base_monitor The cluster monitor.
+ * Query this server.
  */
-void MariaDBServer::monitor_server(MariaDBMonitor& monitor)
+void MariaDBServer::monitor_server()
 {
-    MXS_MONITORED_SERVER* mon_srv = m_server_base;
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor.m_monitor, mon_srv);
-
-    MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
-    if (mon_connection_is_ok(rval))
-    {
-        clear_status(SERVER_AUTH_ERROR);
-        set_status(SERVER_RUNNING);
-
-        if (rval == MONITOR_CONN_NEWCONN_OK)
-        {
-            update_server_info();
-        }
-    }
-    else
-    {
-        /* The current server is not running. Clear all but the stale master bit as it is used to detect
-         * masters that went down but came up. */
-        clear_status(~SERVER_WAS_MASTER);
-        auto conn_errno = mysql_errno(conn);
-        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
-        {
-            set_status(SERVER_AUTH_ERROR);
-        }
-
-        /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
-         * iteration. */
-        if (m_server_base->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
-        {
-            mon_log_connect_error(mon_srv, rval);
-        }
-        return;
-    }
-
-    if (monitor.should_update_disk_space_status(m_server_base))
-    {
-        monitor.update_disk_space_status(m_server_base);
-    }
-
     string errmsg;
     bool query_ok = false;
     /* Query different things depending on server version/type. */

@@ -26,8 +26,6 @@ extern const char * const CN_AUTO_FAILOVER;
 extern const char * const CN_PROMOTION_SQL_FILE;
 extern const char * const CN_DEMOTION_SQL_FILE;
 
-class MariaDBMonitor;
-
 // Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
 typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
@@ -99,8 +97,6 @@ public:
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
 
 protected:
-    friend class MariaDBServer;
-    void update_server_status(MXS_MONITORED_SERVER* pMonitored_server);
     void pre_loop();
     void tick();
     void process_state_changes();
@@ -166,6 +162,8 @@ private:
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
+    void update_server(MariaDBServer& server);
+    void update_server_status(MXS_MONITORED_SERVER* pMonitored_server); // Not used
 
     // Cluster discovery and status assignment methods
     MariaDBServer* find_root_master();

@@ -276,12 +276,67 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return rval;
 }
 
+/**
+ * Connect to and query/update a server.
+ *
+ * @param server The server to update
+ */
+void MariaDBMonitor::update_server(MariaDBServer& server)
+{
+    MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
+    /* Monitor server if not in maintenance. */
+    bool in_maintenance = server.is_in_maintenance();
+    if (!in_maintenance)
+    {
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, mon_srv);
+
+        MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
+        if (mon_connection_is_ok(rval))
+        {
+            server.clear_status(SERVER_AUTH_ERROR);
+            server.set_status(SERVER_RUNNING);
+
+            if (rval == MONITOR_CONN_NEWCONN_OK)
+            {
+                server.update_server_info();
+            }
+            if (should_update_disk_space_status(mon_srv))
+            {
+                update_disk_space_status(mon_srv);
+            }
+            // Query MariaDBServer specific data
+            server.monitor_server();
+        }
+        else
+        {
+            /* The current server is not running. Clear all but the stale master bit as it is used to detect
+             * masters that went down but came up. */
+            server.clear_status(~SERVER_WAS_MASTER);
+            auto conn_errno = mysql_errno(conn);
+            if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+            {
+                server.set_status(SERVER_AUTH_ERROR);
+            }
+
+            /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
+             * iteration. */
+            if (mon_srv->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
+            {
+                mon_log_connect_error(mon_srv, rval);
+            }
+        }
+    }
+
+    /** Increase or reset the error count of the server. */
+    bool is_running = server.is_running();
+    mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
+}
+
 void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
-    auto i = m_server_info.find(monitored_server);
-    ss_dassert(i != m_server_info.end());
-
-    (*i).second->update_server(*this);
+    // Not used and should not be called. Is there a way to check this "statically" (without
+    // template magic)?
+    ss_dassert(!true);
 }
 
 void MariaDBMonitor::pre_loop()
@@ -325,7 +380,7 @@ void MariaDBMonitor::tick()
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        update_server_status(server->m_server_base);
+        update_server(*server);
 
         if (server->m_server_id != SERVER_ID_UNKNOWN)
         {

@@ -25,7 +25,6 @@ enum print_repl_warnings_t
 };
 
 class QueryResult;
-class MariaDBMonitor;
 class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
@@ -133,6 +132,9 @@ public:
 
     NodeData        m_node;                 /**< Replication topology data */
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
+
+    void monitor_server();
+    void update_server_info();
 
     /**
      * Calculate how many events are left in the relay log.
@@ -329,14 +331,6 @@ public:
     bool run_sql_from_file(const std::string& path, json_t** error_out);
 
     /**
-     * Query and update information of this server. Sets some values for status bits,
-     * but these may be added or overridden by later methods.
-     *
-     * @param base_monitor The base monitor object monitoring this server. Required for connection settings.
-     */
-    void update_server(MariaDBMonitor& monitor);
-
-    /**
      * Clear server pending status flags.
      *
      * @param bits Which flags to clear
@@ -351,9 +345,7 @@ public:
     void set_status(uint64_t bits);
 
 private:
-    void monitor_server(MariaDBMonitor& monitor);
     bool update_slave_status(std::string* errmsg_out = NULL);
-    void update_server_info();
 };
 
 /**
