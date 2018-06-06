@@ -196,7 +196,6 @@ server_free(SERVER *tofreeserver)
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->authenticator);
-    MXS_FREE(tofreeserver->persistent);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
@@ -207,6 +206,7 @@ server_free(SERVER *tofreeserver)
         {
             dcb_persistent_clean_count(tofreeserver->persistent[i], i, true);
         }
+        MXS_FREE(tofreeserver->persistent);
     }
     MXS_FREE(tofreeserver);
     return 1;
