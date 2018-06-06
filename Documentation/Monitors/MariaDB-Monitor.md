@@ -243,6 +243,25 @@ users with the SUPER-privilege can write to the backend server. If temporary
 write access is required, this feature should be disabled before attempting to
 disable `read_only`. Otherwise the monitor would quickly re-enable it.
 
+### `switchover_on_low_disk_space`
+
+This feature is disabled by default. If set to `on`, when the disk space of a
+server is exhausted, it will cause the server to be put in maintenance mode.
+If the server is the current master, then a switchover will also be triggered.
+
+In order for this parameter to have any effect, `disk_space_threshold` must
+have been specified for the
+[server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
+or the [monitor](./Monitor-Common.md#disk_space_threshold), and
+[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+for the monitor.
+```
+switchover_on_low_disk_space=true
+```
+Note that once the server has been put in maintenance mode, the disk space
+situation will no longer be monitored and the server will thus not automatically
+be taken out of maintanance mode even if disk space again would become available.
+
 ## Failover, switchover and auto-rejoin
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster

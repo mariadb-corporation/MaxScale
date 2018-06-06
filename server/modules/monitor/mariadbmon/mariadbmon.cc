@@ -416,10 +416,9 @@ void MariaDBMonitor::tick()
     /* log master detection failure of first master becomes available after failure */
     log_master_changes(root_master);
 
-    // Before exiting we need to store the current master into the m_master
-    // member variable of MonitorInstance so tga loaded from the journal the current master into its
-    // m_master member variable, we want the corresponding MariaDBServer into
-    // our own m_master varaible.
+    // Before exiting, we need to store the current master into the m_master
+    // member variable of MonitorInstance so that the right server will be
+    // stored to the journal.
     MonitorInstance::m_master = m_master ? m_master->m_server_base : NULL;
 }
 
