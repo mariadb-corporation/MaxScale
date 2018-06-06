@@ -626,14 +626,20 @@ int ntfw_cb(const char*        filename,
             int                fileflags,
             struct FTW*        pfwt)
 {
-    int rc = remove(filename);
+    int rc = 0;
+    int datadir_len = strlen(get_datadir());
+    std::string filename_string(filename + datadir_len);
 
-    if (rc != 0)
+    if (strncmp(filename_string.c_str(), "/data", 5) == 0)
     {
-        int eno = errno;
-        errno = 0;
-        MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
-                  datadir, eno, mxs_strerror(eno));
+        rc = remove(filename);
+        if (rc != 0)
+        {
+            int eno = errno;
+            errno = 0;
+            MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
+                      filename_string.c_str(), eno, mxs_strerror(eno));
+        }
     }
     return rc;
 }
@@ -655,6 +661,13 @@ void cleanup_process_datadir()
     {
         nftw(proc_datadir, ntfw_cb, depth, flags);
     }
+}
+
+void cleanup_old_process_datadirs()
+{
+    int depth = 1;
+    int flags = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
+    nftw(get_datadir(), ntfw_cb, depth, flags);
 }
 
 static void write_footer(void)
@@ -1981,7 +1994,7 @@ int main(int argc, char **argv)
 #ifdef SS_DEBUG
     MXS_NOTICE("Commit: %s", MAXSCALE_COMMIT);
 #endif
-
+    cleanup_old_process_datadirs();
     if (!cnf->config_check)
     {
         /*

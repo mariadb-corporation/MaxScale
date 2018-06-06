@@ -266,6 +266,7 @@ struct mxs_monitor
     uint8_t journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
     int64_t disk_space_check_interval; /**< How often should a disk space check be made at most. */
+    uint64_t ticks; /**< Number of performed monitoring intervals */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 

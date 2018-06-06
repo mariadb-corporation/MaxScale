@@ -122,7 +122,7 @@ void insert_data(TestConnections& test)
 
 void run(TestConnections& test)
 {
-    sleep(5);
+    sleep(10);
 
     cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);
@@ -162,7 +162,7 @@ void run(TestConnections& test)
     cout << "\nClosing connection to MaxScale." << endl;
     test.maxscales->close_maxscale_connections(0);
 
-    sleep(5);
+    sleep(10);
 
     cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);

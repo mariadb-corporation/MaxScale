@@ -204,7 +204,7 @@ void stop_node(XTestConnections& test, int index)
 
 void run(XTestConnections& test)
 {
-    sleep(5);
+    sleep(10);
 
     int N = test.repl->N;
     cout << "Nodes: " << N << endl;
@@ -236,7 +236,7 @@ void run(XTestConnections& test)
         cout << "\nClosing connection to MaxScale." << endl;
         test.maxscales->close_maxscale_connections(0);
 
-        sleep(5);
+        sleep(10);
 
         list_servers(test);
 

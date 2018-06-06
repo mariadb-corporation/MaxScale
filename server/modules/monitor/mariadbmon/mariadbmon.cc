@@ -304,6 +304,7 @@ void MariaDBMonitor::main()
 
     while (!should_shutdown())
     {
+        atomic_add_uint64(&m_monitor->ticks, 1);
         timespec loop_start;
         /* Coarse time has resolution ~1ms (as opposed to 1ns) but this is enough. */
         clock_gettime(CLOCK_MONOTONIC_COARSE, &loop_start);

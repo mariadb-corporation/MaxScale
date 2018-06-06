@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     test.try_query(nodes[3], CHANGE_CMD);
     test.try_query(nodes[3], "START SLAVE;");
 
-    sleep(4);
+    sleep(10);
     get_output(test);
 
     test.tprintf(LINE);
@@ -56,7 +56,6 @@ int main(int argc, char** argv)
     test.assert(master_id == -1, "Master was promoted even when no slave was eligible.");
 
     test.repl->unblock_node(0);
-    sleep(1);
 
     // Restore normal settings.
     test.try_query(nodes[1], "START SLAVE;");

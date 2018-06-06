@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD , true, &ec);
-    sleep(5);
+    sleep(10);
 
     check_test_1(test, node0_id);
     if (test.global_result != 0)
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
-    sleep(5);
+    sleep(10);
 
     check_test_2(test);
     if (test.global_result != 0)
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     sleep(3);
 
     test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
-    sleep(5);
+    sleep(10);
 
     check_test_3(test);
     return test.global_result;

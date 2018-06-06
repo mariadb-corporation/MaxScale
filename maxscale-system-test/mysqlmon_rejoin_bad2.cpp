@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     cout << "Stopping master, should auto-failover." << endl;
     int master_id_old = get_master_server_id(test);
     test.repl->stop_node(0);
-    sleep(5);
+    sleep(10);
     get_output(test);
     int master_id_new = get_master_server_id(test);
     cout << "Master server id is " << master_id_new << endl;
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
         test.assert(false, "Could not start MaxScale.");
         return test.global_result;
     }
-    sleep(5);
+    sleep(10);
     get_output(test);
 
     expect(test, "server1", "Running");
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     MYSQL** nodes = test.repl->nodes;
     mysql_query(nodes[ind], cmd);
     mysql_query(nodes[ind], "START SLAVE;");
-    sleep(5);
+    sleep(10);
     get_output(test);
 
     expect(test, "server1", "Running");

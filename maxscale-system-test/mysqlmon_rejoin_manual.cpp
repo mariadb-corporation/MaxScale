@@ -32,7 +32,6 @@ int main(int argc, char** argv)
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
-    sleep(1);
     test.tprintf(LINE);
     print_gtids(test);
     get_input();
@@ -55,7 +54,6 @@ int main(int argc, char** argv)
     {
         cout << "Sending more inserts." << endl;
         generate_traffic_and_check(test, maxconn, 5);
-        sleep(1);
         if (find_field(maxconn, GTID_QUERY, GTID_FIELD, result_tmp) == 0)
         {
             gtid_final = result_tmp;
@@ -63,13 +61,13 @@ int main(int argc, char** argv)
         print_gtids(test);
         cout << "Bringing old master back online..." << endl;
         test.repl->start_node(master_index, (char*) "");
-        sleep(5);
+        sleep(10);
         test.repl->connect();
         get_output(test);
         test.tprintf("and manually rejoining it to cluster.");
         const char REJOIN_CMD[] = "maxadmin call command mariadbmon rejoin MySQL-Monitor server1";
         test.maxscales->ssh_node_output(0, REJOIN_CMD , true, &ec);
-        sleep(2);
+        sleep(10);
         get_output(test);
 
         string gtid_old_master;
@@ -85,7 +83,7 @@ int main(int argc, char** argv)
         int ec;
         test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
                                         "MySQL-Monitor server1 server2" , true, &ec);
-        sleep(5); // Wait for monitor to update status
+        sleep(10); // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
         test.assert(master_id == old_master_id, "Switchover back to server1 failed.");

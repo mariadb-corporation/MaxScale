@@ -177,6 +177,7 @@ extern const char CN_STRIP_DB_ESC[];
 extern const char CN_SUBSTITUTE_VARIABLES[];
 extern const char CN_THREADS[];
 extern const char CN_THREAD_STACK_SIZE[];
+extern const char CN_TICKS[];
 extern const char CN_TYPE[];
 extern const char CN_UNIX[];
 extern const char CN_USER[];
