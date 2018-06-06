@@ -1158,6 +1158,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer)
                   "Query: %s", mxs_mysql_get_command(buffer), backend->name(),
                   backend->current_command(), sql ? sql : "<not available>");
         MXS_FREE(sql);
+        session_dump_statements(backend->dcb()->session);
 
         ss_dassert(false);
     }
