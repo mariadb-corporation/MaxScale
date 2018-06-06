@@ -106,50 +106,51 @@ protected:
     void process_state_changes();
 
 private:
-    unsigned long m_id;              /**< Monitor ID */
-    ServerArray m_servers;           /**< Servers of the monitor */
-    ServerInfoMap m_server_info;     /**< Map from server base struct to MariaDBServer */
-    CycleMap m_cycles;               /**< Map from cycle number to cycle member servers */
+    unsigned long m_id;                  /**< Monitor ID */
+    ServerArray m_servers;               /**< Servers of the monitor */
+    ServerInfoMap m_server_info;         /**< Map from server base struct to MariaDBServer */
+    CycleMap m_cycles;                   /**< Map from cycle number to cycle member servers */
 
     // Values updated by monitor
-    MariaDBServer* m_master;         /**< Master server for Master/Slave replication */
-    IdToServerMap m_servers_by_id;   /**< Map from server id:s to MariaDBServer */
-    int64_t m_master_gtid_domain;    /**< gtid_domain_id most recently seen on the master  */
-    std::string m_external_master_host; /**< External master host, for fail/switchover */
-    int m_external_master_port;      /**< External master port */
-    bool m_cluster_modified;         /**< Has an automatic failover/rejoin been performed this loop? */
+    MariaDBServer* m_master;             /**< Master server for Master/Slave replication */
+    IdToServerMap m_servers_by_id;       /**< Map from server id:s to MariaDBServer */
+    int64_t m_master_gtid_domain;        /**< gtid_domain_id most recently seen on the master  */
+    std::string m_external_master_host;  /**< External master host, for fail/switchover */
+    int m_external_master_port;          /**< External master port */
+    bool m_cluster_modified;             /**< Has an automatic failover/rejoin been performed this loop? */
 
     // Replication topology detection settings
-    bool m_allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
-    bool m_detect_replication_lag;   /**< Monitor flag for MySQL replication heartbeat */
-    bool m_detect_multimaster;       /**< Detect and handle multi-master topologies */
-    bool m_detect_stale_master;      /**< Monitor flag for MySQL replication Stale Master detection */
-    bool m_detect_stale_slave;       /**< Monitor flag for MySQL replication Stale Slave detection */
-    bool m_detect_standalone_master; /**< If standalone master are detected */
-    bool m_ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
-    bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
+    bool m_allow_cluster_recovery;       /**< Allow failed servers to rejoin the cluster */
+    bool m_detect_replication_lag;       /**< Monitor flag for MySQL replication heartbeat */
+    bool m_detect_multimaster;           /**< Detect and handle multi-master topologies */
+    bool m_detect_stale_master;          /**< Monitor flag for MySQL replication Stale Master detection */
+    bool m_detect_stale_slave;           /**< Monitor flag for MySQL replication Stale Slave detection */
+    bool m_detect_standalone_master;     /**< If standalone master are detected */
+    bool m_ignore_external_masters;      /**< Ignore masters outside of the monitor configuration */
+    bool m_mysql51_replication;          /**< Use MySQL 5.1 replication */
 
     // Failover, switchover and rejoin settings
-    bool m_auto_failover;            /**< Is automatic master failover is enabled? */
-    bool m_auto_rejoin;              /**< Is automatic rejoin enabled? */
-    int m_failcount;                 /**< Numer of cycles master must be down before auto-failover begins */
-    std::string m_replication_user;  /**< Replication user for CHANGE MASTER TO-commands */
-    std::string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
-    uint32_t m_failover_timeout;     /**< Time limit in seconds for master failover */
-    uint32_t m_switchover_timeout;   /**< Time limit in seconds for master switchover */
-    bool m_verify_master_failure;    /**< Is master failure is verified via slaves? */
-    int m_master_failure_timeout;    /**< Master failure verification (via slaves) time in seconds */
-    ServerArray m_excluded_servers;  /**< Servers banned for master promotion during auto-failover or
-                                      *   autoselect switchover. */
-    std::string m_promote_sql_file;  /**< File with sql commands which are ran to a server being promoted. */
-    std::string m_demote_sql_file;   /**< File with sql commands which are ran to a server being demoted. */
-    bool m_enforce_read_only_slaves; /**< Should the monitor set read-only=1 on any slave servers. */
+    bool m_auto_failover;                /**< Is automatic master failover is enabled? */
+    bool m_auto_rejoin;                  /**< Is automatic rejoin enabled? */
+    int m_failcount;                     /**< Numer of cycles master must be down before auto-failover begins */
+    std::string m_replication_user;      /**< Replication user for CHANGE MASTER TO-commands */
+    std::string m_replication_password;  /**< Replication password for CHANGE MASTER TO-commands */
+    uint32_t m_failover_timeout;         /**< Time limit in seconds for master failover */
+    uint32_t m_switchover_timeout;       /**< Time limit in seconds for master switchover */
+    bool m_verify_master_failure;        /**< Is master failure is verified via slaves? */
+    int m_master_failure_timeout;        /**< Master failure verification (via slaves) time in seconds */
+    ServerArray m_excluded_servers;      /**< Servers banned for master promotion during auto-failover or
+                                          *   autoselect switchover. */
+    std::string m_promote_sql_file;      /**< File with sql commands which are ran to a server being promoted. */
+    std::string m_demote_sql_file;       /**< File with sql commands which are ran to a server being demoted. */
+    bool m_enforce_read_only_slaves;     /**< Should the monitor set read-only=1 on any slave servers. */
+    bool m_switchover_on_low_disk_space; /**< Should the monitor do a switchover on low disk space. */
 
     // Other settings
-    std::string m_script;            /**< Script to call when state changes occur on servers */
-    uint64_t m_events;               /**< enabled events */
-    bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
-    bool m_log_no_master;            /**< Should it be logged that there is no master */
+    std::string m_script;                /**< Script to call when state changes occur on servers */
+    uint64_t m_events;                   /**< enabled events */
+    bool m_warn_set_standalone_master;   /**< Log a warning when setting standalone master */
+    bool m_log_no_master;                /**< Should it be logged that there is no master */
 
     enum slave_down_setting_t
     {

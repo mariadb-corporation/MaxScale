@@ -35,12 +35,13 @@ const char * const CN_AUTO_FAILOVER       = "auto_failover";
 const char * const CN_PROMOTION_SQL_FILE  = "promotion_sql_file";
 const char * const CN_DEMOTION_SQL_FILE   = "demotion_sql_file";
 
-static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
-static const char CN_FAILCOUNT[]          = "failcount";
-static const char CN_ENFORCE_READONLY[]   = "enforce_read_only_slaves";
-static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
-static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
-static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
+static const char CN_AUTO_REJOIN[]                  = "auto_rejoin";
+static const char CN_FAILCOUNT[]                    = "failcount";
+static const char CN_ENFORCE_READONLY[]             = "enforce_read_only_slaves";
+static const char CN_NO_PROMOTE_SERVERS[]           = "servers_no_promotion";
+static const char CN_FAILOVER_TIMEOUT[]             = "failover_timeout";
+static const char CN_SWITCHOVER_ON_LOW_DISK_SPACE[] = "switchover_on_low_disk_space";
+static const char CN_SWITCHOVER_TIMEOUT[]           = "switchover_timeout";
 
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
@@ -55,6 +56,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_modified(true)
+    , m_switchover_on_low_disk_space(false)
     , m_warn_set_standalone_master(true)
     , m_log_no_master(true)
 {}
@@ -183,6 +185,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
     m_promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
     m_demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
+    m_switchover_on_low_disk_space = config_get_bool(params, CN_SWITCHOVER_ON_LOW_DISK_SPACE);
 
     m_excluded_servers.clear();
     MXS_MONITORED_SERVER** excluded_array = NULL;
@@ -1077,6 +1080,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
             {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
             {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
+            {CN_SWITCHOVER_ON_LOW_DISK_SPACE, MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
