@@ -125,7 +125,7 @@ int test(StorageFactory& factory, istream& in)
 int main(int argc, char* argv[])
 {
     int rv = EXIT_FAILURE;
-
+    StorageFactory* pFactory;
     if ((argc == 2) || (argc == 3))
     {
         char* libdir = MXS_STRDUP("../../../../../query_classifier/qc_sqlite/");
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
                 libdir = MXS_STRDUP("../storage/storage_inmemory/");
                 set_libdir(libdir);
 
-                StorageFactory* pFactory = StorageFactory::Open(zModule);
+                pFactory = StorageFactory::Open(zModule);
 
                 if (pFactory)
                 {
@@ -182,6 +182,7 @@ int main(int argc, char* argv[])
 
         // TODO: Remove this once globally allocated memory is freed
         MXS_FREE(libdir);
+        delete pFactory;
     }
     else
     {
