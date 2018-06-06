@@ -36,7 +36,7 @@ The main tutorial for MariaDB MaxScale consist of setting up MariaDB MaxScale fo
 These tutorials are for specific use cases and module combinations.
 
  - [Connection Routing Tutorial](Tutorials/Connection-Routing-Tutorial.md)
- - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial
+ - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Avro Router Tutorial](Tutorials/Avrorouter-Tutorial.md)
  - [MaxScale Failover with Keepalived and MaxCtrl](Tutorials/MaxScale-Failover-with-Keepalived-and-MaxCtrl.md)
