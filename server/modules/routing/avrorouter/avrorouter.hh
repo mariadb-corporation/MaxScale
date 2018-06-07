@@ -35,6 +35,8 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>
 
+#include "rpl_events.hh"
+
 MXS_BEGIN_DECLS
 
 /**
@@ -121,75 +123,6 @@ typedef enum avro_binlog_end
 /** How many bytes each thread tries to send */
 #define AVRO_DATA_BURST_SIZE (32 * 1024)
 
-/** A single column in a CREATE TABLE statement */
-struct Column
-{
-    Column(std::string name, std::string type = "unknown", int length = -1):
-        name(name),
-        type(type),
-        length(length)
-    {
-    }
-
-    std::string name;
-    std::string type;
-    int         length;
-};
-
-/** A CREATE TABLE abstraction */
-struct TableCreateEvent
-{
-    TableCreateEvent(std::string db, std::string table, int version, std::vector<Column>& cols):
-        table(table),
-        database(db),
-        version(version),
-        was_used(false)
-
-    {
-        columns.swap(cols);
-    }
-
-    std::vector<Column>        columns;
-    std::string                table;
-    std::string                database;
-    int                        version;  /**< How many versions of this table have been used */
-    bool                       was_used; /**< Has this schema been persisted to disk */
-};
-
-typedef std::vector<uint8_t> Bytes;
-
-/** A representation of a table map event read from a binary log. A table map
- * maps a table to a unique ID which can be used to match row events to table map
- * events. The table map event tells us how the table is laid out and gives us
- * some meta information on the columns. */
-struct TableMapEvent
-{
-    TableMapEvent(const std::string& db, const std::string& table, uint64_t id,
-                  int version, Bytes&& cols, Bytes&& nulls, Bytes&& metadata):
-        database(db),
-        table(table),
-        id(id),
-        version(version),
-        column_types(cols),
-        null_bitmap(nulls),
-        column_metadata(metadata)
-    {
-    }
-
-    uint64_t columns() const
-    {
-        return column_types.size();
-    }
-
-    std::string database;
-    std::string table;
-    uint64_t    id;
-    int         version;
-    Bytes       column_types;
-    Bytes       null_bitmap;
-    Bytes       column_metadata;
-};
-
 struct AvroTable
 {
     AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
@@ -227,30 +160,7 @@ enum mxs_avro_codec_type
     MXS_AVRO_CODEC_SNAPPY,      /**< Not yet implemented */
 };
 
-struct gtid_pos_t
-{
-    gtid_pos_t():
-        timestamp(0),
-        domain(0),
-        server_id(0),
-        seq(0),
-        event_num(0)
-    {
-    }
-
-    uint32_t timestamp;         /*< GTID event timestamp */
-    uint64_t domain;            /*< Replication domain */
-    uint64_t server_id;         /*< Server ID */
-    uint64_t seq;               /*< Sequence number */
-    uint64_t event_num; /*< Subsequence number, increases monotonically. This
-                         * is an internal representation of the position of
-                         * an event inside a GTID event and it is used to
-                         * rebuild GTID events in the correct order. */
-};
-
-typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
 typedef std::tr1::shared_ptr<AvroTable>        SAvroTable;
-typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
 
 typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
 typedef std::tr1::unordered_map<std::string, SAvroTable>        AvroTables;

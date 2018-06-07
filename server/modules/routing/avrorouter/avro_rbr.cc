@@ -33,58 +33,12 @@ static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET va
 void notify_all_clients(Avro *router);
 void add_used_table(Avro* router, const char* table);
 
-
-class EventConverter
-{
-public:
-    EventConverter(const STableMapEvent& map, const STableCreateEvent& create):
-        m_map(map),
-        m_create(create)
-    {
-    }
-
-    virtual ~EventConverter()
-    {
-    }
-
-    // Prepare a new row for processing
-    virtual void prepare(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type) = 0;
-
-    // Called once all columns are processed
-    virtual bool commit() = 0;
-
-    // 32-bit integer handler
-    virtual void column(int i, int32_t value) = 0;
-
-    // 64-bit integer handler
-    virtual void column(int i, int64_t value) = 0;
-
-    // Float handler
-    virtual void column(int i, float value) = 0;
-
-    // Double handler
-    virtual void column(int i, double value) = 0;
-
-    // String handler
-    virtual void column(int i, std::string value) = 0;
-
-    // Bytes handler
-    virtual void column(int i, uint8_t* value, int len) = 0;
-
-    // Empty (NULL) value type handler
-    virtual void column(int i) = 0;
-
-protected:
-    const STableMapEvent&    m_map;
-    const STableCreateEvent& m_create;
-};
-
-class AvroConverter : public EventConverter
+class AvroConverter : public RowEventHandler
 {
 public:
 
     AvroConverter(const STableMapEvent& map, const STableCreateEvent& create, SAvroTable table):
-        EventConverter(map, create),
+        RowEventHandler(map, create),
         m_writer_iface(table->avro_writer_iface),
         m_avro_file(table->avro_file)
     {
@@ -117,8 +71,6 @@ public:
         avro_value_set_enum(&m_field, event_type);
     }
 
-    // Called once all columns are processed
-
     bool commit()
     {
         bool rval = true;
@@ -132,15 +84,11 @@ public:
         return rval;
     }
 
-    // 32-bit integer handler
-
     void column(int i, int32_t value)
     {
         set_active(i);
         avro_value_set_int(&m_field, value);
     }
-
-    // 64-bit integer handler
 
     void column(int i, int64_t value)
     {
@@ -148,15 +96,11 @@ public:
         avro_value_set_long(&m_field, value);
     }
 
-    // Float handler
-
     void column(int i, float value)
     {
         set_active(i);
         avro_value_set_float(&m_field, value);
     }
-
-    // Double handler
 
     void column(int i, double value)
     {
@@ -164,23 +108,17 @@ public:
         avro_value_set_double(&m_field, value);
     }
 
-    // String handler
-
     void column(int i, std::string value)
     {
         set_active(i);
         avro_value_set_string(&m_field, value.c_str());
     }
 
-    // Bytes handler
-
     void column(int i, uint8_t* value, int len)
     {
         set_active(i);
         avro_value_set_bytes(&m_field, value, len);
     }
-
-    // Empty (NULL) value type handler
 
     void column(int i)
     {
@@ -212,8 +150,9 @@ private:
 };
 
 
-uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create, EventConverter* conv,
-                                uint8_t *ptr, uint8_t *columns_present, uint8_t *end);
+uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
+                                RowEventHandler* conv, uint8_t *ptr,
+                                uint8_t *columns_present, uint8_t *end);
 
 /**
  * @brief Get row event name
@@ -532,7 +471,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
  * @param metadata Field metadata
  * @param value    Pointer to the start of the in-memory representation of the data
  */
-void set_numeric_field_value(EventConverter* conv, int idx, uint8_t type,
+void set_numeric_field_value(RowEventHandler* conv, int idx, uint8_t type,
                              uint8_t *metadata, uint8_t *value)
 {
     switch (type)
@@ -692,7 +631,7 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create, EventConverter* conv,
+uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create, RowEventHandler* conv,
                                 uint8_t *ptr, uint8_t *columns_present, uint8_t *end)
 {
     int npresent = 0;

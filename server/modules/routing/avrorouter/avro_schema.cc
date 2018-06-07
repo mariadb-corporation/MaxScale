@@ -618,7 +618,7 @@ TableCreateEvent* table_create_from_schema(const char* file, const char* db,
 
     if (json_extract_field_names(file, columns))
     {
-        newtable = new (std::nothrow)TableCreateEvent(db, table, version, columns);
+        newtable = new (std::nothrow)TableCreateEvent(db, table, version, std::move(columns));
     }
 
     return newtable;
@@ -672,7 +672,7 @@ TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len)
     if (!columns.empty())
     {
         int version = resolve_table_version(database, table);
-        rval = new (std::nothrow) TableCreateEvent(database, table, version, columns);
+        rval = new (std::nothrow) TableCreateEvent(database, table, version, std::move(columns));
     }
     else
     {
