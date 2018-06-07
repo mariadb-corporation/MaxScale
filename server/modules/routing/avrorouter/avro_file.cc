@@ -614,7 +614,7 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
         {
             int len = hdr.event_size - BINLOG_EVENT_HDR_LEN - 8;
 
-            if (found_chksum)
+            if (found_chksum || router->binlog_checksum)
             {
                 len -= 4;
             }
@@ -634,7 +634,8 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
         else if (hdr.event_type == MARIADB_ANNOTATE_ROWS_EVENT)
         {
             // This appears to need special handling
-            MXS_INFO("Annotate_rows_event: %.*s", hdr.event_size - BINLOG_EVENT_HDR_LEN, ptr);
+            int annotate_len = hdr.event_size - BINLOG_EVENT_HDR_LEN - (found_chksum || router->binlog_checksum ? 4 : 0);
+            MXS_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
             pos += hdr.event_size;
             router->current_pos = pos;
             gwbuf_free(result);
