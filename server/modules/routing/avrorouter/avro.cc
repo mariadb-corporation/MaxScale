@@ -50,30 +50,6 @@
 
 using namespace maxscale;
 
-#ifndef BINLOG_NAMEFMT
-#define BINLOG_NAMEFMT      "%s.%06d"
-#endif
-
-/** For detection of CREATE/ALTER TABLE statements */
-static const char* create_table_regex =
-    "(?i)create[a-z0-9[:space:]_]+table";
-static const char* alter_table_regex =
-    "(?i)alter[[:space:]]+table";
-
-extern void avro_get_used_tables(Avro *router, DCB *dcb);
-bool converter_func(Worker::Call::action_t action, Avro* router);
-bool binlog_next_file_exists(const char* binlogdir, const char* binlog);
-int blr_file_get_next_binlogname(const char *router);
-bool avro_load_conversion_state(Avro *router);
-void avro_load_metadata_from_schemas(Avro *router);
-int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata);
-static bool ensure_dir_ok(std::string path, int mode);
-static void stats_func(void *);
-void avro_index_file(Avro *router, const char* path);
-
-static SPINLOCK instlock;
-static Avro *instances;
-
 /**
  * Create the required tables in the sqlite database
  *
@@ -117,30 +93,6 @@ bool create_tables(sqlite3* handle)
     if (rc != SQLITE_OK)
     {
         MXS_ERROR("Failed to create indexing progress table '" INDEX_TABLE_NAME "': %s",
-                  sqlite3_errmsg(handle));
-        sqlite3_free(errmsg);
-        return false;
-    }
-
-    rc = sqlite3_exec(handle, "ATTACH DATABASE ':memory:' AS " MEMORY_DATABASE_NAME,
-                      NULL, NULL, &errmsg);
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to attach in-memory database '" MEMORY_DATABASE_NAME "': %s",
-                  sqlite3_errmsg(handle));
-        sqlite3_free(errmsg);
-        return false;
-    }
-
-    rc = sqlite3_exec(handle, "CREATE TABLE " MEMORY_TABLE_NAME
-                      "(domain int, server_id int, "
-                      "sequence bigint, binlog_timestamp bigint, "
-                      "table_name varchar(255), primary key (domain, server_id, sequence, table_name));",
-                      NULL, NULL, &errmsg);
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create in-memory used tables table '" MEMORY_DATABASE_NAME
-                  "." MEMORY_TABLE_NAME "': %s",
                   sqlite3_errmsg(handle));
         sqlite3_free(errmsg);
         return false;
@@ -286,6 +238,9 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERV
     // TODO: pass this as a parameter or something
     event_hander = new AvroConverter(avrodir, block_size, codec);
 
+    /** For detection of CREATE/ALTER TABLE statements */
+    static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
+    static const char* alter_table_regex = "(?i)alter[[:space:]]+table";
     int pcreerr;
     size_t erroff;
     create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex, PCRE2_ZERO_TERMINATED,

@@ -163,13 +163,6 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                router_inst->gtid.timestamp);
     dcb_printf(dcb, "\tCurrent GTID #events:                %lu\n",
                router_inst->gtid.event_num);
-
-    dcb_printf(dcb, "\tCurrent GTID affected tables: ");
-    dcb_printf(dcb, "\n");
-
-    dcb_printf(dcb, "\tNumber of AVRO clients:              %u\n",
-               router_inst->stats.n_clients);
-
 }
 
 /**
@@ -197,7 +190,6 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
     json_object_set_new(rval, "gtid", json_string(pathbuf));
     json_object_set_new(rval, "gtid_timestamp", json_integer(router_inst->gtid.timestamp));
     json_object_set_new(rval, "gtid_event_number", json_integer(router_inst->gtid.event_num));
-    json_object_set_new(rval, "clients", json_integer(router_inst->stats.n_clients));
 
     return rval;
 }

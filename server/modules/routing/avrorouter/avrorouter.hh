@@ -52,8 +52,6 @@ MXS_BEGIN_DECLS
 
 #define GTID_TABLE_NAME        "gtid"
 #define USED_TABLES_TABLE_NAME "used_tables"
-#define MEMORY_DATABASE_NAME   "memory"
-#define MEMORY_TABLE_NAME      MEMORY_DATABASE_NAME".mem_used_tables"
 #define INDEX_TABLE_NAME       "indexing_progress"
 
 /** Name of the file where the binlog to Avro conversion progress is stored */
@@ -246,37 +244,29 @@ private:
     void rotate_avro_file(std::string fullname);
 };
 
-extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,
-                            char* dest, size_t len);
-extern TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create);
-extern TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len);
-extern TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
-extern bool table_create_save(TableCreateEvent *create, const char *filename);
-extern bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end);
-extern void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size);
-extern int avro_client_handle_request(Avro *, AvroSession *, GWBUF *);
-extern void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
-extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
-extern void avro_close_binlog(int fd);
-extern avro_binlog_end_t avro_read_all_events(Avro *router);
-extern char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
-extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
-extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
+void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id, char* dest, size_t len);
+TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create);
+TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len);
+TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
+bool table_create_save(TableCreateEvent *create, const char *filename);
+bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end);
+TableCreateEvent* table_create_from_schema(const char* file, const char* db, const char* table,
+                                           int version);
+void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size);
+int avro_client_handle_request(Avro *, AvroSession *, GWBUF *);
+void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
+bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
+void avro_close_binlog(int fd);
+avro_binlog_end_t avro_read_all_events(Avro *router);
+char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
+bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
+bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER construct_header(uint8_t* ptr);
 bool avro_save_conversion_state(Avro *router);
 void avro_update_index(Avro* router);
-
-#define AVRO_CLIENT_UNREGISTERED 0x0000
-#define AVRO_CLIENT_REGISTERED   0x0001
-#define AVRO_CLIENT_REQUEST_DATA 0x0002
-#define AVRO_CLIENT_ERRORED      0x0003
-#define AVRO_CLIENT_MAXSTATE     0x0003
-
-/**
- * Client catch-up status
- */
-#define AVRO_CS_BUSY             0x0001
-#define AVRO_WAIT_DATA           0x0002
+bool avro_load_conversion_state(Avro *router);
+void avro_load_metadata_from_schemas(Avro *router);
+void notify_all_clients(Avro *router);
 
 MXS_END_DECLS

@@ -30,10 +30,6 @@ static bool warn_bit = false; /**< Remove when support for BIT is added */
 static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET values
                                          * larger than 255 is added */
 
-void notify_all_clients(Avro *router);
-void add_used_table(Avro* router, const char* table);
-
-
 uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
                                 RowEventHandler* conv, uint8_t *ptr,
                                 uint8_t *columns_present, uint8_t *end);
@@ -262,7 +258,6 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                 rows++;
             }
 
-            add_used_table(router, table_ident);
             rval = true;
         }
         else if (!ok)

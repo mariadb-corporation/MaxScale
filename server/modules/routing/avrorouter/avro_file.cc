@@ -40,11 +40,6 @@
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";
 void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
-bool is_create_table_statement(Avro *router, char* ptr, size_t len);
-void avro_notify_client(AvroSession *client);
-void update_used_tables(Avro* router);
-TableCreateEvent* table_create_from_schema(const char* file, const char* db,
-                                           const char* table, int version);
 
 /**
  * Open a binlog file for reading
@@ -385,7 +380,6 @@ void notify_all_clients(Avro *router)
 
 void do_checkpoint(Avro *router)
 {
-    update_used_tables(router);
     router->event_hander->flush_tables();
     avro_save_conversion_state(router);
     notify_all_clients(router);

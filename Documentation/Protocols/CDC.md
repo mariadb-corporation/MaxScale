@@ -100,32 +100,6 @@ REQUEST-DATA dbi1.table1.000003
 REQUEST-DATA db2.table4 0-11-345
 ```
 
-#### QUERY-LAST-TRANSACTION
-
-`QUERY-LAST-TRANSACTION`
-
-Returns JSON with last GTID, timestamp and affected tables.
-
-Example output:
-
-```
-{"GTID": "0-1-178", "events": 2, "timestamp": 1462290084, "tables": ["db1.tb1", “db2.tb2”]}
-```
-
-Last GTID could then be used in a REQUEST-DATA query.
-
-#### QUERY-TRANSACTION
-
-`QUERY-TRANSACTION GTID`
-
-Returns JSON from specified GTID, the commit timestamp and affected tables.
-
-Example:
-
-```
-QUERY-TRANSACTION 0-14-1245
-```
-
 ## Example Client
 
 MaxScale includes an example CDC client application written in Python 3. You can

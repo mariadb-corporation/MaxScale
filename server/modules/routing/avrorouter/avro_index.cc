@@ -29,8 +29,6 @@
 #include <maxscale/debug.h>
 #include <glob.h>
 
-void* safe_key_free(void *data);
-
 static const char insert_template[] = "INSERT INTO gtid(domain, server_id, "
                                       "sequence, avrofile, position) values (%lu, %lu, %lu, \"%s\", %ld);";
 
@@ -193,60 +191,4 @@ void avro_update_index(Avro* router)
     }
 
     globfree(&files);
-}
-
-/** The SQL for the in-memory used_tables table */
-static const char *insert_sql = "INSERT OR IGNORE INTO " MEMORY_TABLE_NAME
-                                "(domain, server_id, sequence, binlog_timestamp, table_name)"
-                                " VALUES (%lu, %lu, %lu, %u, \"%s\")";
-
-/**
- * @brief Add a used table to the current transaction
- *
- * This adds a table to the in-memory table used to store tables used by
- * transactions. These are later flushed to disk with the Avro records.
- *
- * @param router Avro router instance
- * @param table Table to add
- */
-void add_used_table(Avro* router, const char* table)
-{
-    char sql[AVRO_SQL_BUFFER_SIZE], *errmsg;
-    snprintf(sql, sizeof(sql), insert_sql, router->gtid.domain, router->gtid.server_id,
-             router->gtid.seq, router->gtid.timestamp, table);
-
-    if (sqlite3_exec(router->sqlite_handle, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to add used table %s for GTID %lu-%lu-%lu: %s",
-                  table, router->gtid.domain, router->gtid.server_id,
-                  router->gtid.seq, errmsg);
-    }
-    sqlite3_free(errmsg);
-}
-
-/**
- * @brief Update the tables used in a transaction
- *
- * This flushes the in-memory table to disk and should be called after the
- * Avro records have been flushed to disk.
- *
- * @param router Avro router instance
- */
-void update_used_tables(Avro* router)
-{
-    char *errmsg;
-
-    if (sqlite3_exec(router->sqlite_handle, "INSERT INTO " USED_TABLES_TABLE_NAME
-                     " SELECT * FROM " MEMORY_TABLE_NAME, NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to transfer used table data from memory to disk: %s", errmsg);
-    }
-    sqlite3_free(errmsg);
-
-    if (sqlite3_exec(router->sqlite_handle, "DELETE FROM " MEMORY_TABLE_NAME,
-                     NULL, NULL, &errmsg) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to transfer used table data from memory to disk: %s", errmsg);
-    }
-    sqlite3_free(errmsg);
 }
