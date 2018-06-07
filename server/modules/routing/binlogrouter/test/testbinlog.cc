@@ -54,6 +54,7 @@
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
+static void master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 extern int blr_test_parse_change_master_command(char *input, char *error_string,
                                                 CHANGE_MASTER_OPTIONS *config);
 extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
@@ -76,6 +77,12 @@ int main(int argc, char **argv)
     int rc;
     char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
     CHANGE_MASTER_OPTIONS change_master;
+    change_master.host = NULL;
+    change_master.port = NULL;
+    change_master.user = NULL;
+    change_master.password = NULL;
+    change_master.binlog_file = NULL;
+    change_master.binlog_pos = NULL;
     char query[512 + 1] = "";
     char saved_query[512 + 1] = "";
     int command_offset = strlen("CHANGE MASTER TO");
@@ -330,7 +337,7 @@ int main(int argc, char **argv)
     }
 
     tests++;
-
+    master_free_parsed_options(&change_master);
     /**
      * Test 9: 1 valid option with value
      *
@@ -349,7 +356,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -370,7 +377,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -391,7 +398,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -412,7 +419,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -434,7 +441,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -456,7 +463,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -479,7 +486,7 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
     }
-
+    master_free_parsed_options(&change_master);
     tests++;
 
     /**
@@ -503,6 +510,16 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
     }
+    MXS_FREE(change_master.host);
+    change_master.host = NULL;
+    MXS_FREE(change_master.port);
+    change_master.port = NULL;
+    MXS_FREE(change_master.user);
+    change_master.user = NULL;
+    MXS_FREE(change_master.password);
+    change_master.password = NULL;
+    MXS_FREE(change_master.binlog_pos);
+    change_master.binlog_pos = NULL;
 
     tests++;
 
@@ -510,7 +527,7 @@ int main(int argc, char **argv)
 
     /**
      * Test 17: use current binlog filename in master_state != BLRM_UNCONFIGURED
-     * and try to set a new filename with wront format from previous test
+     * and try to set a new filename with wrong format from previous test
      *
      * Expected master_log_file is NULL and error_string is not empty
      */
@@ -540,7 +557,8 @@ int main(int argc, char **argv)
     }
 
     tests++;
-
+    MXS_FREE(change_master.binlog_file);
+    change_master.binlog_file = NULL;
     printf("--- MASTER_LOG_POS and MASTER_LOG_FILE rule/constraints checks ---\n");
 
     /********************************************
@@ -846,8 +864,48 @@ int main(int argc, char **argv)
 
     mxs_log_flush_sync();
     mxs_log_finish();
-
+    MXS_FREE(inst->user);
+    MXS_FREE(inst->password);
+    MXS_FREE(inst->fileroot);
     MXS_FREE(inst);
     MXS_FREE(roptions);
     return 0;
+}
+
+static void
+master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
+{
+    if (options->host)
+    {
+        MXS_FREE(options->host);
+        options->host = NULL;
+    }
+    if (options->port)
+    {
+        MXS_FREE(options->port);
+        options->port = NULL;
+    }
+    if (options->user)
+    {
+        MXS_FREE(options->user);
+        options->user = NULL;
+    }
+
+    if (options->password)
+    {
+        MXS_FREE(options->password);
+        options->password = NULL;
+    }
+
+    if (options->binlog_file)
+    {
+        MXS_FREE(options->binlog_file);
+        options->binlog_file = NULL;
+    }
+
+    if (options->binlog_pos)
+    {
+        MXS_FREE(options->binlog_pos);
+        options->binlog_pos = NULL;
+    }
 }

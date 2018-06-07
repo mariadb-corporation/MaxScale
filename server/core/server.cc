@@ -191,6 +191,7 @@ server_free(SERVER *tofreeserver)
     /* Clean up session and free the memory */
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->name);
+    MXS_FREE(tofreeserver->authenticator);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
@@ -201,6 +202,7 @@ server_free(SERVER *tofreeserver)
         {
             dcb_persistent_clean_count(tofreeserver->persistent[i], i, true);
         }
+        MXS_FREE(tofreeserver->persistent);
     }
     delete tofreeserver->disk_space_threshold;
     MXS_FREE(tofreeserver);

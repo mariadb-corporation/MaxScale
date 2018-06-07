@@ -131,6 +131,8 @@ bool test_load_config(const char *input, SERVER *server)
                  "Server authenticators differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
             TEST(create_new_server(obj) == 0, "Failed to create server from loaded config");
+            duplicate_context_finish(&dcontext);
+            config_context_free(obj);
         }
     }
 
