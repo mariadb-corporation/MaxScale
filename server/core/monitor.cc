@@ -2927,6 +2927,9 @@ void MonitorInstance::main()
 
     while (!m_shutdown)
     {
+        /* Measure the time of monitor loop execution. */
+        int64_t loop_start_ms = get_time_ms();
+
         monitor_check_maintenance_requests(m_monitor);
 
         tick();
@@ -2938,22 +2941,32 @@ void MonitorInstance::main()
 
         mon_hangup_failed_servers(m_monitor);
         store_server_journal(m_monitor, m_master);
-
-        /** Sleep until the next monitoring interval */
-        unsigned int ms = 0;
-        while (ms < m_monitor->interval && !m_shutdown)
-        {
-            if (atomic_load_int(&m_monitor->check_maintenance_flag) != MAINTENANCE_FLAG_NOCHECK)
-            {
-                // Admin has changed something, skip sleep
-                break;
-            }
-            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
-            ms += MXS_MON_BASE_INTERVAL_MS;
-        }
+        sleep_until_next_tick(loop_start_ms);
     }
 
     post_loop();
+}
+
+/**
+ * Sleep until the next monitor tick
+ *
+ * @param tick_start_ms When was the latest tick started
+ */
+void MonitorInstance::sleep_until_next_tick(int64_t tick_start_ms)
+{
+    // Check how much the monitor should sleep to get one full monitor interval.
+    int64_t sleep_time_remaining = m_monitor->interval - (get_time_ms() - tick_start_ms);
+    // Sleep at least one base interval.
+    sleep_time_remaining = MXS_MAX(MXS_MON_BASE_INTERVAL_MS, sleep_time_remaining);
+    /* Sleep in small increments to react fast to changes. */
+    while (sleep_time_remaining > 0 && !should_shutdown() &&
+           atomic_load_int(&m_monitor->check_maintenance_flag) == MAINTENANCE_FLAG_NOCHECK)
+    {
+        int small_sleep_ms = (sleep_time_remaining >= MXS_MON_BASE_INTERVAL_MS) ?
+            MXS_MON_BASE_INTERVAL_MS : sleep_time_remaining;
+        thread_millisleep(small_sleep_ms);
+        sleep_time_remaining -= small_sleep_ms;
+    }
 }
 
 //static

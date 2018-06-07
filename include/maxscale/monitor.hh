@@ -220,6 +220,7 @@ private:
 
     void main();
     static void main(void* pArg);
+    void sleep_until_next_tick(int64_t tick_start_ms);
 };
 
 class MonitorInstanceSimple : public MonitorInstance

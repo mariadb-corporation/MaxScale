@@ -16,12 +16,13 @@ the `monitorpw` parameter, that value will be used instead.
 
 ### `monitor_interval`
 
-This is the time the monitor waits between each cycle of monitoring. The default
-value of 2000 milliseconds (2 seconds) should be lowered if you want a faster
-response to changes in the server states. The value is defined in milliseconds
-and the smallest possible value is 100 milliseconds.
+Defines, in milliseconds, how often the monitor updates the status of the
+servers. The default value is 2000 (2 seconds). Choose a lower value if servers
+should be queried more often. The smallest possible value is 100. If querying
+the servers takes longer than `monitor_interval`, the effective update rate is
+reduced.
 
-The default value of _monitor_interval_ was updated from 10000 milliseconds to
+The default value of `monitor_interval` was updated from 10000 milliseconds to
 2000 milliseconds in MaxScale 2.2.0.
 
 ```
