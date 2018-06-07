@@ -287,6 +287,11 @@ public:
     bool replicate_from_master(int m = 0);
 
     /**
+     * @brief Stop binlogrouter replication from master
+     */
+    void revert_replicate_from_master(int m = 0);
+
+    /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it
      * @return 0
      */

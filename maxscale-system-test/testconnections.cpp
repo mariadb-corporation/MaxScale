@@ -1026,13 +1026,9 @@ bool TestConnections::replicate_from_master(int m)
     bool rval = true;
 
     /** Stop the binlogrouter */
-    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password,
-                                  ssl);
-
-    if (execute_query(conn, "stop slave"))
-    {
-        rval = false;
-    }
+    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m],
+                                  repl->user_name, repl->password, ssl);
+    execute_query_silent(conn, "stop slave");
     mysql_close(conn);
 
     repl->execute_query_all_nodes("STOP SLAVE");
@@ -1060,6 +1056,21 @@ bool TestConnections::replicate_from_master(int m)
     mysql_close(conn);
 
     return rval;
+}
+
+void TestConnections::revert_replicate_from_master(int m)
+{
+    char log_file[256] = "";
+
+    repl->connect();
+    execute_query(repl->nodes[0], "RESET MASTER");
+    find_field(repl->nodes[0], "show master status", "File", log_file);
+
+    for (int i = 1; i < repl->N; i++)
+    {
+        repl->set_slave(repl->nodes[i], repl->IP[0], repl->port[0], log_file, (char*)"4");
+        execute_query(repl->nodes[i], "start slave");
+    }
 }
 
 int TestConnections::start_mm(int m)

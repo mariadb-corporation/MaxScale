@@ -28,5 +28,7 @@ int main(int argc, char** argv)
     sleep(10);
     test.check_log_err(0, "Possible STATEMENT or MIXED", true);
 
+    test.revert_replicate_from_master();
+
     return test.global_result;
 }

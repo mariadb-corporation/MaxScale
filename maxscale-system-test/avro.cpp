@@ -24,15 +24,14 @@ using std::endl;
 int main(int argc, char *argv[])
 {
     int exit_code;
+    TestConnections::skip_maxscale_start(true);
+    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
     test.set_timeout(600);
     test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
-    if (!test.replicate_from_master(0))
-    {
-        return 1;
-    }
+    test.replicate_from_master();
 
     test.set_timeout(120);
     test.repl->connect();
@@ -85,9 +84,9 @@ int main(int argc, char *argv[])
         test.add_result(1, "not enough lines in avrocheck output");
     }
 
-    execute_query(test.repl->nodes[0], "DROP TABLE test.t1;RESET MASTER");
+    execute_query(test.repl->nodes[0], "DROP TABLE test.t1");
     test.stop_timeout();
-    test.repl->fix_replication();
+    test.revert_replicate_from_master();
 
     return test.global_result;
 }

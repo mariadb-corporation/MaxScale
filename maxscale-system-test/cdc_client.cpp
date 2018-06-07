@@ -179,29 +179,14 @@ static TestConnections *Test;
 
 int main(int argc, char *argv[])
 {
-
+    TestConnections::skip_maxscale_start(true);
+    TestConnections::check_nodes(false);
     Test = new TestConnections(argc, argv);
 
     Test->set_timeout(600);
-    Test->maxscales->stop_maxscale(0);
-
     // Remove old data files
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/avro;");
-
-    Test->repl->connect();
-    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
-    Test->repl->close_connections();
-    sleep(5);
-
-    Test->start_binlog(0);
-
-    Test->set_timeout(120);
-    Test->maxscales->stop_maxscale(0);
-
-    Test->maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/avro", true);
-
-    Test->set_timeout(120);
-    Test->maxscales->start_maxscale(0);
+    Test->replicate_from_master();
 
     Test->set_timeout(60);
     Test->repl->connect();
@@ -225,6 +210,7 @@ int main(int argc, char *argv[])
     pthread_join(thread, NULL);
 
     int rval = Test->global_result;
+    Test->revert_replicate_from_master();
     delete Test;
     return rval;
 }

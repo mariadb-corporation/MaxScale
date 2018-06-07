@@ -36,5 +36,6 @@ int main(int argc, char** argv)
            "o-------------------------------------------------------------------o\n"
            "\n");
 
+    test.revert_replicate_from_master();
     return test.global_result;
 }

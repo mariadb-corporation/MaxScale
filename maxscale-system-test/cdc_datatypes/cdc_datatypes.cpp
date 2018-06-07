@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master(0);
+    test.replicate_from_master();
 
     if (!run_test(test))
     {
@@ -291,5 +291,7 @@ int main(int argc, char *argv[])
     }
 
     test.check_maxscale_processes(0, 1);
+    test.revert_replicate_from_master();
+
     return test.global_result;
 }
