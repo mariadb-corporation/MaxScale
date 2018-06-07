@@ -541,6 +541,7 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERV
     binlog_fd(-1),
     event_types(0),
     event_type_hdr_lens{0},
+    binlog_checksum(0),
     trx_count(0),
     trx_target(config_get_integer(params, "group_trx")),
     row_count(0),
