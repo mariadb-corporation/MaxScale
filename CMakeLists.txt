@@ -178,6 +178,7 @@ if (BUILD_CDC)
   add_subdirectory(avro)
 endif()
 
+add_subdirectory(maxutils)
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
