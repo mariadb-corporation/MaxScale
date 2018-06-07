@@ -225,7 +225,7 @@ typedef struct start_encryption_event
     uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
                                        * These bytes + the binlog event current pos
                                        * form the encrryption IV for the event */
-} START_ENCRYPTION_EVENT;
+} MXS_START_ENCRYPTION_EVENT;
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -766,7 +766,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router,
     /* Check whether adding the Start Encryption event into current binlog */
     if (router->encryption.enabled && write_start_encryption_event)
     {
-        uint64_t event_size = sizeof(START_ENCRYPTION_EVENT);
+        uint64_t event_size = sizeof(MXS_START_ENCRYPTION_EVENT);
         uint64_t file_offset = router->current_pos;
         if (router->master_chksum)
         {
@@ -2391,7 +2391,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
             char nonce_hex[AES_BLOCK_SIZE * 2 + 1] = "";
-            START_ENCRYPTION_EVENT ste_event = {};
+            MXS_START_ENCRYPTION_EVENT ste_event = {};
             void *mem = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
             BINLOG_ENCRYPTION_CTX *new_encryption_ctx =
                 static_cast<BINLOG_ENCRYPTION_CTX*>(mem);
@@ -3460,7 +3460,7 @@ blr_write_special_event(ROUTER_INSTANCE *router,
     return 1;
 }
 
-/** Create the START_ENCRYPTION_EVENT
+/** Create the MXS_START_ENCRYPTION_EVENT
  *
  * This is a New Event added in MariaDB 10.1.7
  * Type is 0xa4 and size 36 (crc32 not included)
@@ -3477,7 +3477,7 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router,
                                   bool do_checksum)
 {
     uint8_t *new_event;
-    uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
+    uint8_t event_size = sizeof(MXS_START_ENCRYPTION_EVENT);
     BINLOG_ENCRYPTION_CTX *new_encryption_ctx =
         static_cast<BINLOG_ENCRYPTION_CTX*>(MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX)));
 
@@ -3683,7 +3683,7 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
  * @buf             The binlog event
  * @size            The event size (CRC32 four bytes included)
  * @pos             The position of the event in binlog file
- * @nonce           The binlog nonce 12 bytes as in START_ENCRYPTION_EVENT
+ * @nonce           The binlog nonce 12 bytes as in MXS_START_ENCRYPTION_EVENT
  *                  of requested or current binlog file
  *                  If nonce is NULL the one from current binlog file is used.
  * @action          Encryption action: 1 Encryp, 0 Decryot

@@ -1111,12 +1111,12 @@ createInstance(SERVICE *service, char **options)
         }
 
         /**
-         *  Don't start replication if binlog has START_ENCRYPTION_EVENT
+         *  Don't start replication if binlog has MXS_START_ENCRYPTION_EVENT
          *  but binlog encryption is off
          */
         if (!inst->encryption.enabled && inst->encryption_ctx)
         {
-            MXS_ERROR("Found START_ENCRYPTION_EVENT but "
+            MXS_ERROR("Found MXS_START_ENCRYPTION_EVENT but "
                       "binlog encryption option is currently Off. Replication can't start right now. "
                       "Please restart MaxScale with option set to On");
 
@@ -1126,7 +1126,7 @@ createInstance(SERVICE *service, char **options)
             inst->m_errno = BINLOG_FATAL_ERROR_READING;
             inst->m_errmsg = MXS_STRDUP_A("HY000 Binlog encryption is Off"
                                           " but current binlog file has"
-                                          " the START_ENCRYPTION_EVENT");
+                                          " the MXS_START_ENCRYPTION_EVENT");
 
             return (MXS_ROUTER *)inst;
         }

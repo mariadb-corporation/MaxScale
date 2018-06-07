@@ -2121,7 +2121,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     slave->lastEventReceived = FORMAT_DESCRIPTION_EVENT;
 
     /**
-     * Check for START_ENCRYPTION_EVENT (after FDE) if
+     * Check for MXS_START_ENCRYPTION_EVENT (after FDE) if
      * client request pos is greater than 4
      *
      * TODO: If router has binlog encryption take it
@@ -2423,7 +2423,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             /* In case of file rotation or pos = 4 the events
              * are sent from position 4 and the new FDE at pos 4 is read.
              * We need to check whether the first event after FDE
-             * is the MARIADB10_START_ENCRYPTION_EVENT of the new file.
+             * is the MARIADB10_MXS_START_ENCRYPTION_EVENT of the new file.
              *
              * Read it if slave->encryption_ctx is NULL and
              * set the slave->encryption_ctx accordingly
@@ -6377,11 +6377,11 @@ bool blr_notify_waiting_slave(ROUTER_SLAVE *slave)
 }
 
 /**
- * Read START_ENCRYPTION_EVENT, after FDE
+ * Read MXS_START_ENCRYPTION_EVENT, after FDE
  *
  * @param router         The router instance
  * @param slave          The connected slave server
- * @param fde_end_pos    The position of START_ENCRYPTION_EVENT, after FDE
+ * @param fde_end_pos    The position of MXS_START_ENCRYPTION_EVENT, after FDE
  * @return               Non zero on success
  */
 static int
@@ -6434,7 +6434,7 @@ blr_slave_read_ste(ROUTER_INSTANCE *router,
 
     blr_close_binlog(router, file);
 
-    /* check for START_ENCRYPTION_EVENT */
+    /* check for MXS_START_ENCRYPTION_EVENT */
     if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
     {
         uint8_t *record_ptr = GWBUF_DATA(record);
@@ -6477,7 +6477,7 @@ blr_slave_read_ste(ROUTER_INSTANCE *router,
                  slave->binlogfile,
                  (unsigned long)fde_end_pos + hdr.event_size);
         /**
-          * Note: if the requested pos is equal to START_ENCRYPTION_EVENT pos
+          * Note: if the requested pos is equal to MXS_START_ENCRYPTION_EVENT pos
           * the event will be skipped by blr_read_binlog() routine
           */
         return 1;
