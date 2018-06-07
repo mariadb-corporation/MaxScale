@@ -34,6 +34,7 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>
 #include <blr_constants.h>
+
 #include "rpl_events.hh"
 
 MXS_BEGIN_DECLS
@@ -290,10 +291,11 @@ extern avro_binlog_end_t avro_read_all_events(Avro *router);
 extern AvroTable* avro_table_alloc(const char* filepath, const char* json_schema,
                                    const char *codec, size_t block_size);
 extern char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
-extern void save_avro_schema(const char *path, const char* schema, STableMapEvent& map,
-                             STableCreateEvent& create);
+extern void save_avro_schema(const char *path, const char* schema, STableMapEvent& map, STableCreateEvent& create);
 extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
+void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
+REP_HEADER construct_header(uint8_t* ptr);
 bool avro_save_conversion_state(Avro *router);
 void avro_update_index(Avro* router);
 

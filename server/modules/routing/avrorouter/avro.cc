@@ -67,10 +67,8 @@ bool avro_load_conversion_state(Avro *router);
 void avro_load_metadata_from_schemas(Avro *router);
 int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 static bool ensure_dir_ok(std::string path, int mode);
-bool avro_save_conversion_state(Avro *router);
 static void stats_func(void *);
 void avro_index_file(Avro *router, const char* path);
-void avro_update_index(Avro* router);
 
 static SPINLOCK instlock;
 static Avro *instances;
@@ -149,7 +147,6 @@ bool create_tables(sqlite3* handle)
 
     return true;
 }
-
 
 /**
  * @brief Read router options from an external binlogrouter service
