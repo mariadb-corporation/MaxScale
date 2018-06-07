@@ -18,7 +18,6 @@
 
 #include "avrorouter.hh"
 
-#include <avro/errors.h>
 #include <ctype.h>
 #include <ini.h>
 #include <stdio.h>
@@ -46,6 +45,8 @@
 #include <maxscale/routingworker.h>
 #include <maxscale/worker.hh>
 #include <binlog_common.h>
+
+#include "avro_converter.hh"
 
 using namespace maxscale;
 
@@ -275,12 +276,16 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERV
     trx_target(config_get_integer(params, "group_trx")),
     row_count(0),
     row_target(config_get_integer(params, "group_rows")),
-    block_size(config_get_size(params, "block_size")),
-    codec(static_cast<mxs_avro_codec_type>(config_get_enum(params, "codec", codec_values))),
     sqlite_handle(handle),
     task_handle(0),
     stats{0}
 {
+    uint64_t block_size = config_get_size(params, "block_size");
+    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(params, "codec", codec_values));
+
+    // TODO: pass this as a parameter or something
+    event_hander = new AvroConverter(avrodir, block_size, codec);
+
     int pcreerr;
     size_t erroff;
     create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex, PCRE2_ZERO_TERMINATED,

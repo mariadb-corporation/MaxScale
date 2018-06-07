@@ -13,7 +13,6 @@
 
 #include "avrorouter.hh"
 
-#include <avro/errors.h>
 #include <ctype.h>
 #include <ini.h>
 #include <stdio.h>
@@ -24,7 +23,6 @@
 #include <glob.h>
 #include <ini.h>
 #include <sys/stat.h>
-#include <avro/errors.h>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/dcb.h>
@@ -286,7 +284,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     /** We reached end of file, flush unwritten records to disk */
     if (progress)
     {
-        avro_flush_all_tables(router, AVROROUTER_FLUSH);
+        router->event_hander->flush_tables();
         avro_save_conversion_state(router);
         logged = false;
     }

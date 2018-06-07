@@ -92,68 +92,6 @@ void avro_close_binlog(int fd)
 }
 
 /**
- * @brief Allocate an Avro table
- *
- * Create an Aro table and prepare it for writing.
- * @param filepath Path to the created file
- * @param json_schema The schema of the table in JSON format
- */
-AvroTable* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
-                            size_t block_size)
-{
-    avro_file_writer_t avro_file;
-    avro_value_iface_t* avro_writer_iface;
-    avro_schema_t avro_schema;
-
-    if (avro_schema_from_json_length(json_schema, strlen(json_schema),
-                                     &avro_schema))
-    {
-        MXS_ERROR("Avro error: %s", avro_strerror());
-        MXS_INFO("Avro schema: %s", json_schema);
-        return NULL;
-    }
-
-    int rc = 0;
-
-    if (access(filepath, F_OK) == 0)
-    {
-        rc = avro_file_writer_open_bs(filepath, &avro_file, block_size);
-    }
-    else
-    {
-        rc = avro_file_writer_create_with_codec(filepath, avro_schema,
-                                                &avro_file, codec, block_size);
-    }
-
-    if (rc)
-    {
-        MXS_ERROR("Avro error: %s", avro_strerror());
-        avro_schema_decref(avro_schema);
-        return NULL;
-    }
-
-    if ((avro_writer_iface = avro_generic_class_from_schema(avro_schema)) == NULL)
-    {
-        MXS_ERROR("Avro error: %s", avro_strerror());
-        avro_schema_decref(avro_schema);
-        avro_file_writer_close(avro_file);
-        return NULL;
-    }
-
-    AvroTable* table = new (std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
-
-    if (!table)
-    {
-        avro_file_writer_close(avro_file);
-        avro_value_iface_decref(avro_writer_iface);
-        avro_schema_decref(avro_schema);
-        MXS_OOM();
-    }
-
-    return table;
-}
-
-/**
  * @brief Write a new ini file with current conversion status
  *
  * The file is stored in the cache directory as 'avro-conversion.ini'.
@@ -448,7 +386,7 @@ void notify_all_clients(Avro *router)
 void do_checkpoint(Avro *router)
 {
     update_used_tables(router);
-    avro_flush_all_tables(router, AVROROUTER_FLUSH);
+    router->event_hander->flush_tables();
     avro_save_conversion_state(router);
     notify_all_clients(router);
     router->row_count = router->trx_count = 0;
@@ -585,13 +523,9 @@ void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos
     }
     else if (hdr.event_type == MARIADB10_GTID_EVENT)
     {
-        uint64_t n_sequence; /* 8 bytes */
-        uint32_t domainid; /* 4 bytes */
-        n_sequence = extract_field(ptr, 64);
-        domainid = extract_field(ptr + 8, 32);
-        router->gtid.domain = domainid;
+        router->gtid.domain = extract_field(ptr + 8, 32);
         router->gtid.server_id = hdr.serverid;
-        router->gtid.seq = n_sequence;
+        router->gtid.seq = extract_field(ptr, 64);
         router->gtid.event_num = 0;
         router->gtid.timestamp = hdr.timestamp;
     }
@@ -786,26 +720,6 @@ void avro_load_metadata_from_schemas(Avro *router)
     }
 
     globfree(&files);
-}
-
-/**
- * @brief Flush all Avro records to disk
- * @param router Avro router instance
- */
-void avro_flush_all_tables(Avro *router, enum avrorouter_file_op flush)
-{
-    for (auto it = router->open_tables.begin(); it != router->open_tables.end(); it++)
-    {
-        if (flush == AVROROUTER_FLUSH)
-        {
-            avro_file_writer_flush(it->second->avro_file);
-        }
-        else
-        {
-            ss_dassert(flush == AVROROUTER_SYNC);
-            avro_file_writer_sync(it->second->avro_file);
-        }
-    }
 }
 
 /**

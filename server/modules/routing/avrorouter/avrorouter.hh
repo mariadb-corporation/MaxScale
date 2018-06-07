@@ -19,14 +19,12 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <tr1/memory>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
-#include <avro.h>
 #include <cdc.h>
 #include <maxscale/pcre2.h>
 #include <maxavro.h>
@@ -123,28 +121,6 @@ typedef enum avro_binlog_end
 /** How many bytes each thread tries to send */
 #define AVRO_DATA_BURST_SIZE (32 * 1024)
 
-struct AvroTable
-{
-    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
-        avro_file(file),
-        avro_writer_iface(iface),
-        avro_schema(schema)
-    {
-    }
-
-    ~AvroTable()
-    {
-        avro_file_writer_flush(avro_file);
-        avro_file_writer_close(avro_file);
-        avro_value_iface_decref(avro_writer_iface);
-        avro_schema_decref(avro_schema);
-    }
-
-    avro_file_writer_t  avro_file; /*< Current Avro data file */
-    avro_value_iface_t* avro_writer_iface; /*< Avro C API writer interface */
-    avro_schema_t       avro_schema; /*< Native Avro schema of the table */
-};
-
 /** Data format used when streaming data to the clients */
 enum avro_data_format
 {
@@ -169,10 +145,7 @@ static const MXS_ENUM_VALUE codec_values[] =
     {NULL}
 };
 
-typedef std::tr1::shared_ptr<AvroTable>        SAvroTable;
-
 typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
-typedef std::tr1::unordered_map<std::string, SAvroTable>        AvroTables;
 typedef std::tr1::unordered_map<std::string, STableMapEvent>    MappedTables;
 typedef std::tr1::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
 
@@ -199,7 +172,6 @@ public:
     gtid_pos_t               gtid;
     ActiveMaps               active_maps;
     MappedTables             table_maps;
-    AvroTables               open_tables;
     CreatedTables            created_tables;
     uint64_t                 trx_count; /*< Transactions processed */
     uint64_t                 trx_target; /*< Minimum about of transactions that will trigger
@@ -207,10 +179,9 @@ public:
     uint64_t                 row_count; /*< Row events processed */
     uint64_t                 row_target; /*< Minimum about of row events that will trigger
                                           * a flush of all tables */
-    uint64_t                 block_size; /**< Avro datablock size */
-    enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
     sqlite3*                 sqlite_handle;
     uint32_t                 task_handle; /**< Delayed task handle */
+    RowEventHandler*         event_hander;
 
     struct
     {
@@ -288,30 +259,13 @@ extern void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
 extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(Avro *router);
-extern AvroTable* avro_table_alloc(const char* filepath, const char* json_schema,
-                                   const char *codec, size_t block_size);
 extern char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
-extern void save_avro_schema(const char *path, const char* schema, STableMapEvent& map, STableCreateEvent& create);
 extern bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER construct_header(uint8_t* ptr);
 bool avro_save_conversion_state(Avro *router);
 void avro_update_index(Avro* router);
-
-enum avrorouter_file_op
-{
-    AVROROUTER_SYNC,
-    AVROROUTER_FLUSH
-};
-
-/**
- * @brief Flush or sync all tables
- *
- * @param router Router instance
- * @param flush AVROROUTER_SYNC for sync only or AVROROUTER_FLUSH for full flush
- */
-extern void avro_flush_all_tables(Avro *router, enum avrorouter_file_op flush);
 
 #define AVRO_CLIENT_UNREGISTERED 0x0000
 #define AVRO_CLIENT_REGISTERED   0x0001

@@ -15,6 +15,10 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <tr1/memory>
+#include <tr1/unordered_map>
+
+#include <binlog_common.h>
 
 typedef std::vector<uint8_t> Bytes;
 
@@ -113,21 +117,32 @@ typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
 class RowEventHandler
 {
 public:
-    RowEventHandler(const STableMapEvent& map, const STableCreateEvent& create):
-        m_map(map),
-        m_create(create)
-    {
-    }
-
     virtual ~RowEventHandler()
     {
     }
 
+    // A table was opened
+    virtual bool open_table(const STableMapEvent& map, const STableCreateEvent& create)
+    {
+        return true;
+    }
+
     // Prepare a new row for processing
-    virtual void prepare(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type) = 0;
+    virtual bool prepare_table(std::string database, std::string table)
+    {
+        return true;
+    }
+
+    // Flush open tables
+    virtual void flush_tables()
+    {
+    }
+
+    // Prepare a new row for processing
+    virtual void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type) = 0;
 
     // Called once all columns are processed
-    virtual bool commit() = 0;
+    virtual bool commit(const gtid_pos_t& gtid) = 0;
 
     // 32-bit integer handler
     virtual void column(int i, int32_t value) = 0;
@@ -149,8 +164,4 @@ public:
 
     // Empty (NULL) value type handler
     virtual void column(int i) = 0;
-
-protected:
-    const STableMapEvent&    m_map; // The table map event for this row
-    const STableCreateEvent& m_create; // The CREATE TABLE statement for this row
 };

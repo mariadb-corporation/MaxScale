@@ -33,122 +33,6 @@ static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET va
 void notify_all_clients(Avro *router);
 void add_used_table(Avro* router, const char* table);
 
-class AvroConverter : public RowEventHandler
-{
-public:
-
-    AvroConverter(const STableMapEvent& map, const STableCreateEvent& create, SAvroTable table):
-        RowEventHandler(map, create),
-        m_writer_iface(table->avro_writer_iface),
-        m_avro_file(table->avro_file)
-    {
-        avro_generic_value_new(m_writer_iface, &m_record);
-    }
-
-    ~AvroConverter()
-    {
-        avro_value_decref(&m_record);
-    }
-
-    void prepare(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type)
-    {
-        avro_value_get_by_name(&m_record, avro_domain, &m_field, NULL);
-        avro_value_set_int(&m_field, gtid.domain);
-
-        avro_value_get_by_name(&m_record, avro_server_id, &m_field, NULL);
-        avro_value_set_int(&m_field, gtid.server_id);
-
-        avro_value_get_by_name(&m_record, avro_sequence, &m_field, NULL);
-        avro_value_set_int(&m_field, gtid.seq);
-
-        avro_value_get_by_name(&m_record, avro_event_number, &m_field, NULL);
-        avro_value_set_int(&m_field, gtid.event_num);
-
-        avro_value_get_by_name(&m_record, avro_timestamp, &m_field, NULL);
-        avro_value_set_int(&m_field, hdr.timestamp);
-
-        avro_value_get_by_name(&m_record, avro_event_type, &m_field, NULL);
-        avro_value_set_enum(&m_field, event_type);
-    }
-
-    bool commit()
-    {
-        bool rval = true;
-
-        if (avro_file_writer_append_value(m_avro_file, &m_record))
-        {
-            MXS_ERROR("Failed to write value: %s", avro_strerror());
-            rval = false;
-        }
-
-        return rval;
-    }
-
-    void column(int i, int32_t value)
-    {
-        set_active(i);
-        avro_value_set_int(&m_field, value);
-    }
-
-    void column(int i, int64_t value)
-    {
-        set_active(i);
-        avro_value_set_long(&m_field, value);
-    }
-
-    void column(int i, float value)
-    {
-        set_active(i);
-        avro_value_set_float(&m_field, value);
-    }
-
-    void column(int i, double value)
-    {
-        set_active(i);
-        avro_value_set_double(&m_field, value);
-    }
-
-    void column(int i, std::string value)
-    {
-        set_active(i);
-        avro_value_set_string(&m_field, value.c_str());
-    }
-
-    void column(int i, uint8_t* value, int len)
-    {
-        set_active(i);
-        avro_value_set_bytes(&m_field, value, len);
-    }
-
-    void column(int i)
-    {
-        set_active(i);
-
-        if (column_is_blob(m_map->column_types[i]))
-        {
-            uint8_t nullvalue = 0;
-            avro_value_set_bytes(&m_field, &nullvalue, 1);
-        }
-        else
-        {
-            avro_value_set_null(&m_field);
-        }
-    }
-
-private:
-    avro_value_iface_t* m_writer_iface;
-    avro_file_writer_t& m_avro_file;
-    avro_value_t m_record;
-    avro_value_t m_field;
-
-    void set_active(int i)
-    {
-        ss_debug(int rc =)avro_value_get_by_name(&m_record, m_create->columns[i].name.c_str(),
-                                                 &m_field, NULL);
-        ss_dassert(rc == 0);
-    }
-};
-
 
 uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
                                 RowEventHandler* conv, uint8_t *ptr,
@@ -182,22 +66,6 @@ static int get_event_type(uint8_t event)
     default:
         MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
         return -1;
-    }
-}
-
-static const char* codec_to_string(enum mxs_avro_codec_type type)
-{
-    switch (type)
-    {
-    case MXS_AVRO_CODEC_NULL:
-        return "null";
-    case MXS_AVRO_CODEC_DEFLATE:
-        return "deflate";
-    case MXS_AVRO_CODEC_SNAPPY:
-        return "snappy";
-    default:
-        ss_dassert(false);
-        return "null";
     }
 }
 
@@ -238,50 +106,28 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             }
         }
 
-        char* json_schema = json_new_schema_from_table(map, create->second);
-
-        if (json_schema)
+        if (router->event_hander->open_table(map, create->second))
         {
-            char filepath[PATH_MAX + 1];
-            snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
-                     router->avrodir.c_str(), table_ident, map->version);
+            create->second->was_used = true;
 
-            SAvroTable avro_table(avro_table_alloc(filepath, json_schema,
-                                                   codec_to_string(router->codec),
-                                                   router->block_size));
+            auto old = router->table_maps.find(table_ident);
+            bool notify = old != router->table_maps.end();
 
-            if (avro_table)
+            if (notify)
             {
-                auto old = router->table_maps.find(table_ident);
-                bool notify = old != router->table_maps.end();
-
-                if (notify)
-                {
-                    router->active_maps.erase(old->second->id);
-                }
-
-                router->table_maps[table_ident] = map;
-                router->open_tables[table_ident] = avro_table;
-                save_avro_schema(router->avrodir.c_str(), json_schema, map, create->second);
-                router->active_maps[map->id] = map;
-                ss_dassert(router->active_maps[id] == map);
-                MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
-                rval = true;
-
-                if (notify)
-                {
-                    notify_all_clients(router);
-                }
+                router->active_maps.erase(old->second->id);
             }
-            else
+
+            router->table_maps[table_ident] = map;
+            router->active_maps[map->id] = map;
+            ss_dassert(router->active_maps[id] == map);
+            MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
+            rval = true;
+
+            if (notify)
             {
-                MXS_ERROR("Failed to open new Avro file for writing.");
+                notify_all_clients(router);
             }
-            MXS_FREE(json_schema);
-        }
-        else
-        {
-            MXS_ERROR("Failed to create JSON schema.");
         }
     }
     else
@@ -378,21 +224,13 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         STableMapEvent map = it->second;
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
-        SAvroTable table;
-        auto it = router->open_tables.find(table_ident);
 
-        if (it != router->open_tables.end())
-        {
-            table = it->second;
-        }
-
+        bool ok = router->event_hander->prepare_table(map->database, map->table);
         auto create = router->created_tables.find(table_ident);
 
-        if (table && create != router->created_tables.end() &&
+        if (ok && create != router->created_tables.end() &&
             ncolumns == map->columns() && create->second->columns.size() == map->columns())
         {
-            AvroConverter conv(map, create->second, table);
-
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
@@ -407,18 +245,18 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                 // Increment the event count for this transaction
                 router->gtid.event_num++;
 
-                conv.prepare(router->gtid, *hdr, event_type);
-                ptr = process_row_event_data(map, create->second, &conv, ptr, col_present, end);
-                conv.commit();
+                router->event_hander->prepare_row(router->gtid, *hdr, event_type);
+                ptr = process_row_event_data(map, create->second, router->event_hander, ptr, col_present, end);
+                router->event_hander->commit(router->gtid);
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
                  * a different type */
                 if (event_type == UPDATE_EVENT)
                 {
-                    conv.prepare(router->gtid, *hdr, UPDATE_EVENT_AFTER);
-                    ptr = process_row_event_data(map, create->second, &conv, ptr, col_present, end);
-                    conv.commit();
+                    router->event_hander->prepare_row(router->gtid, *hdr, UPDATE_EVENT_AFTER);
+                    ptr = process_row_event_data(map, create->second, router->event_hander, ptr, col_present, end);
+                    router->event_hander->commit(router->gtid);
                 }
 
                 rows++;
@@ -427,7 +265,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             add_used_table(router, table_ident);
             rval = true;
         }
-        else if (!table)
+        else if (!ok)
         {
             MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
                       " errors for more details.", map->database.c_str(), map->table.c_str());
