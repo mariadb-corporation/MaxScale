@@ -169,14 +169,6 @@ protected:
     virtual bool has_sufficient_permissions() const;
 
     /**
-     * @brief Update server information
-     *
-     * The implementation should probe the server in question and update
-     * the server status bits.
-     */
-    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
-
-    /**
      * @brief Flush pending server status to each server.
      *
      * This function is expected to flush the pending status to each server.
@@ -189,23 +181,9 @@ protected:
      * @brief Monitor the servers
      *
      * This function is called once per monitor round, and the concrete
-     * implementation should probe all servers, i.e. call @c update_server_status
-     * on each server.
-     *
-     * The default implementation will for each server:
-     *   - Do nothing, if the server is in maintenance.
-     *   - Before calling, store the previous status of the server.
-     *   - Before calling, set the pending status of the monitored server object
-     *     to the status of the corresponding server object.
-     *   - Ensure that there is a connection to the server.
-     *     If there is, @c update_server_status is called.
-     *     If there is not, the pending status will be updated accordingly and
-     *     @c update_server_status will *not* be called.
-     *   - After the call, update the error count of the server if it is down.
-     *
-     * Finally, it will call @c flush_server_status.
+     * implementation should probe all servers and set server status bits.
      */
-    virtual void tick();
+    virtual void tick() = 0;
 
     /**
      * @brief Called before the monitor loop is started
@@ -242,6 +220,59 @@ private:
 
     void main();
     static void main(void* pArg);
+};
+
+class MonitorInstanceSimple : public MonitorInstance
+{
+public:
+    MonitorInstanceSimple(const MonitorInstanceSimple&) = delete;
+    MonitorInstanceSimple& operator = (const MonitorInstanceSimple&) = delete;
+
+protected:
+    MonitorInstanceSimple(MXS_MONITOR* pMonitor)
+        : MonitorInstance(pMonitor)
+    {
+    }
+
+    /**
+     * @brief Update server information
+     *
+     * The implementation should probe the server in question and update
+     * the server status bits.
+     */
+    virtual void update_server_status(MXS_MONITORED_SERVER* pMonitored_server) = 0;
+
+    /**
+     * @brief Called right at the beginning of @c tick().
+     *
+     * The default implementation does nothing.
+     */
+    virtual void pre_tick();
+
+    /**
+     * @brief Called right before the end of @c tick().
+     *
+     * The default implementation does nothing.
+     */
+    virtual void post_tick();
+
+private:
+    /**
+     * @brief Monitor the servers
+     *
+     * This function is called once per monitor round and will for each server:
+     *
+     *   - Do nothing, if the server is in maintenance.
+     *   - Store the previous status of the server.
+     *   - Set the pending status of the monitored server object
+     *     to the status of the corresponding server object.
+     *   - Ensure that there is a connection to the server.
+     *     If there is, @c update_server_status() is called.
+     *     If there is not, the pending status will be updated accordingly and
+     *     @c update_server_status() will *not* be called.
+     *   - After the call, update the error count of the server if it is down.
+     */
+    void tick(); // final
 };
 
 /**

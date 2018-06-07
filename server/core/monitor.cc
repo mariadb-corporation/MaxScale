@@ -2827,8 +2827,18 @@ void MonitorInstance::flush_server_status()
     }
 }
 
-void MonitorInstance::tick()
+void MonitorInstanceSimple::pre_tick()
 {
+}
+
+void MonitorInstanceSimple::post_tick()
+{
+}
+
+void MonitorInstanceSimple::tick()
+{
+    pre_tick();
+
     for (MXS_MONITORED_SERVER *pMs = m_monitor->monitored_servers; pMs; pMs = pMs->next)
     {
         if (!SERVER_IN_MAINT(pMs->server))
@@ -2892,6 +2902,8 @@ void MonitorInstance::tick()
             }
         }
     }
+
+    post_tick();
 }
 
 void MonitorInstance::pre_loop()

@@ -27,7 +27,7 @@
 
 
 GRMon::GRMon(MXS_MONITOR* monitor)
-    : MonitorInstance(monitor)
+    : MonitorInstanceSimple(monitor)
 {
 }
 

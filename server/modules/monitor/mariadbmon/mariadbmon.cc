@@ -332,13 +332,6 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
     mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
 }
 
-void MariaDBMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
-{
-    // Not used and should not be called. Is there a way to check this "statically" (without
-    // template magic)?
-    ss_dassert(!true);
-}
-
 void MariaDBMonitor::pre_loop()
 {
     // MonitorInstance loaded from the journal the current master into its

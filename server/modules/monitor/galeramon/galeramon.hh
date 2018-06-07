@@ -52,7 +52,7 @@ typedef struct galera_cluster_info
 } GALERA_CLUSTER_INFO;
 
 
-class GaleraMonitor : public maxscale::MonitorInstance
+class GaleraMonitor : public maxscale::MonitorInstanceSimple
 {
 public:
     GaleraMonitor(const GaleraMonitor&) = delete;
@@ -67,7 +67,7 @@ protected:
     bool configure(const MXS_CONFIG_PARAMETER* param);
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
-    void tick();
+    void post_tick();
 
 private:
     unsigned long m_id;                 /**< Monitor ID */

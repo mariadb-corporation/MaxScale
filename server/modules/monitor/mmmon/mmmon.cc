@@ -36,7 +36,7 @@ static void detectStaleMaster(void *, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
 MMMonitor::MMMonitor(MXS_MONITOR *monitor)
-    : maxscale::MonitorInstance(monitor)
+    : maxscale::MonitorInstanceSimple(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_detectStaleMaster(false)
 {
@@ -318,10 +318,8 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 }
 
-void MMMonitor::tick()
+void MMMonitor::post_tick()
 {
-    MonitorInstance::tick();
-
     /* Get Master server pointer */
     MXS_MONITORED_SERVER *root_master = get_current_master();
 

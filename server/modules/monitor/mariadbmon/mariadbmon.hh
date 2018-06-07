@@ -163,7 +163,6 @@ private:
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
     void update_server(MariaDBServer& server);
-    void update_server_status(MXS_MONITORED_SERVER* pMonitored_server); // Not used
 
     // Cluster discovery and status assignment methods
     MariaDBServer* find_root_master();

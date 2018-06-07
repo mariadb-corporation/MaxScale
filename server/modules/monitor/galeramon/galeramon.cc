@@ -47,7 +47,7 @@ static void nodeval_free(GALERA_NODE_INFO *);
 static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
-    : maxscale::MonitorInstance(mon)
+    : maxscale::MonitorInstanceSimple(mon)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_disableMasterFailback(0)
     , m_availableWhenDonor(0)
@@ -293,10 +293,8 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 }
 
-void GaleraMonitor::tick()
+void GaleraMonitor::post_tick()
 {
-    MonitorInstance::tick();
-
     int is_cluster = 0;
 
     /* Try to set a Galera cluster based on

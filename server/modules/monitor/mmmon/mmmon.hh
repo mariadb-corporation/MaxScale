@@ -20,7 +20,7 @@
  * @file mmmon.hh - The Multi-Master monitor
  */
 
-class MMMonitor : public maxscale::MonitorInstance
+class MMMonitor : public maxscale::MonitorInstanceSimple
 {
 public:
     MMMonitor(const MMMonitor&) = delete;
@@ -35,7 +35,7 @@ protected:
     bool configure(const MXS_CONFIG_PARAMETER* params);
     bool has_sufficient_permissions() const;
     void update_server_status(MXS_MONITORED_SERVER* monitored_server);
-    void tick();
+    void post_tick();
 
 private:
     unsigned long m_id;      /**< Monitor ID */

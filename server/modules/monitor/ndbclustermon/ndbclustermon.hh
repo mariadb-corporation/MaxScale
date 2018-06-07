@@ -20,7 +20,7 @@
  * @file ndbcclustermon.hh A NDBC cluster monitor
  */
 
-class NDBCMonitor : public maxscale::MonitorInstance
+class NDBCMonitor : public maxscale::MonitorInstanceSimple
 {
 public:
     NDBCMonitor(const NDBCMonitor&) = delete;
