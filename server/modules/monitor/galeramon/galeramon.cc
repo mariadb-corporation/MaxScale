@@ -320,7 +320,7 @@ void GaleraMonitor::post_tick()
     while (ptr)
     {
         const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
-        if (SERVER_IS_JOINED(ptr->server) && !m_disableMasterRoleSetting)
+        if ((ptr->pending_status & SERVER_JOINED) && !m_disableMasterRoleSetting)
         {
             if (ptr != m_master)
             {
