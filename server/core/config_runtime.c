@@ -206,7 +206,8 @@ bool runtime_destroy_server(SERVER *server)
 }
 
 static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *cert,
-                                const char *ca, const char *version, const char *depth)
+                                const char *ca, const char *version, const char *depth,
+                                const char *verify)
 {
     SSL_LISTENER *rval = NULL;
     CONFIG_CONTEXT *obj = config_context_create(name);
@@ -218,7 +219,8 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
             config_add_param(obj, "ssl_cert", cert) &&
             config_add_param(obj, "ssl_ca_cert", ca) &&
             (!version || config_add_param(obj, "ssl_version", version)) &&
-            (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)))
+            (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)) &&
+            (!verify || config_add_param(obj, "ssl_verify_peer_certificate", verify)))
         {
             int err = 0;
             SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
@@ -236,14 +238,15 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
 }
 
 bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
-                               const char *ca, const char *version, const char *depth)
+                               const char *ca, const char *version, const char *depth,
+                               const char *verify)
 {
     bool rval = false;
 
     if (key && cert && ca)
     {
         spinlock_acquire(&crt_lock);
-        SSL_LISTENER *ssl = create_ssl(server->unique_name, key, cert, ca, version, depth);
+        SSL_LISTENER *ssl = create_ssl(server->unique_name, key, cert, ca, version, depth, verify);
 
         if (ssl)
         {
@@ -494,7 +497,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth)
+                             const char *ssl_version, const char *ssl_depth,
+                             const char *verify_ssl)
 {
 
     if (addr == NULL || strcasecmp(addr, "default") == 0)
@@ -535,7 +539,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
         if (ssl_key && ssl_cert && ssl_ca)
         {
-            ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth);
+            ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth, verify_ssl);
 
             if (ssl == NULL)
             {
