@@ -29,7 +29,6 @@
 #include <maxscale/pcre2.h>
 #include <maxavro.h>
 #include <binlog_common.h>
-#include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>
 #include <blr_constants.h>
 
@@ -37,37 +36,8 @@
 
 MXS_BEGIN_DECLS
 
-/**
- * How often to call the router status function (seconds)
- */
-#define AVRO_NSTATS_MINUTES 30
-
-/**
- * Avro block grouping defaults
- */
-#define AVRO_DEFAULT_BLOCK_TRX_COUNT 1
-#define AVRO_DEFAULT_BLOCK_ROW_COUNT 1000
-
-#define MAX_MAPPED_TABLES 1024
-
-#define GTID_TABLE_NAME        "gtid"
-#define USED_TABLES_TABLE_NAME "used_tables"
-#define INDEX_TABLE_NAME       "indexing_progress"
-
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"
-
-static const char* avro_index_name = "avro.index";
-
-/** Buffer limits */
-#define AVRO_SQL_BUFFER_SIZE 2048
-
-/** Avro filename maxlen */
-#ifdef NAME_MAX
-#define AVRO_MAX_FILENAME_LEN NAME_MAX
-#else
-#define AVRO_MAX_FILENAME_LEN 255
-#endif
 
 static const char *avro_client_states[]      = { "Unregistered", "Registered", "Processing", "Errored" };
 static const char *avro_client_client_mode[] = { "Catch-up", "Busy", "Wait_for_data" };
@@ -177,7 +147,6 @@ public:
     uint64_t                 row_count; /*< Row events processed */
     uint64_t                 row_target; /*< Minimum about of row events that will trigger
                                           * a flush of all tables */
-    sqlite3*                 sqlite_handle;
     uint32_t                 task_handle; /**< Delayed task handle */
     RowEventHandler*         event_hander;
 
@@ -187,7 +156,7 @@ public:
     } stats; /*< Statistics for this router */
 
 private:
-    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERVICE* source);
+    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source);
     void read_source_service_options(SERVICE* source);
 };
 
@@ -213,7 +182,6 @@ public:
     bool                  requested_gtid; /*< If the client requested */
     gtid_pos_t            gtid; /*< Current/requested GTID */
     gtid_pos_t            gtid_start; /*< First sent GTID */
-    sqlite3*              sqlite_handle;
 
     /**
      * Process a client request
@@ -230,7 +198,7 @@ public:
     void client_callback();
 
 private:
-    AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle);
+    AvroSession(Avro* instance, MXS_SESSION* session);
 
     int do_registration(GWBUF *data);
     void process_command(GWBUF *queue);
@@ -238,7 +206,6 @@ private:
     void set_current_gtid(json_t *row);
     bool stream_json();
     bool stream_binary();
-    bool seek_to_index_pos();
     bool seek_to_gtid();
     bool stream_data();
     void rotate_avro_file(std::string fullname);
@@ -264,7 +231,6 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER construct_header(uint8_t* ptr);
 bool avro_save_conversion_state(Avro *router);
-void avro_update_index(Avro* router);
 bool avro_load_conversion_state(Avro *router);
 void avro_load_metadata_from_schemas(Avro *router);
 void notify_all_clients(Avro *router);

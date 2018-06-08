@@ -467,39 +467,6 @@ static int sqlite_cb(void* data, int rows, char** values, char** names)
     return 0;
 }
 
-static const char select_template[] = "SELECT max(position) FROM gtid WHERE domain=%lu "
-                                      "AND server_id=%lu AND sequence <= %lu AND avrofile=\"%s\";";
-
-bool AvroSession::seek_to_index_pos()
-{
-    char *name = strrchr(file_handle->filename, '/');
-    ss_dassert(name);
-    name++;
-
-    char sql[sizeof(select_template) + NAME_MAX + 80];
-    snprintf(sql, sizeof(sql), select_template, gtid.domain, gtid.server_id, gtid.seq, name);
-
-    long offset = -1;
-    char *errmsg = NULL;
-    bool rval = false;
-
-    if (sqlite3_exec(sqlite_handle, sql, sqlite_cb, &offset, &errmsg) == SQLITE_OK)
-    {
-        rval = true;
-        if (offset > 0 && !maxavro_record_set_pos(file_handle, offset))
-        {
-            rval = false;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Failed to query index position for GTID %lu-%lu-%lu: %s",
-                  gtid.domain, gtid.server_id, gtid.seq, errmsg);
-    }
-    sqlite3_free(errmsg);
-    return rval;
-}
-
 bool AvroSession::seek_to_gtid()
 {
     bool seeking = true;
@@ -575,7 +542,7 @@ bool AvroSession::stream_data()
             {
             case AVRO_FORMAT_JSON:
                 /** Currently only JSON format supports seeking to a GTID */
-                if (requested_gtid && seek_to_index_pos() && seek_to_gtid())
+                if (requested_gtid && seek_to_gtid())
                 {
                     requested_gtid = false;
                 }
@@ -759,27 +726,10 @@ void AvroSession::client_callback()
 // static
 AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 {
-    AvroSession* client = NULL;
-    sqlite3* handle;
-    char dbpath[PATH_MAX + 1];
-    snprintf(dbpath, sizeof(dbpath), "/%s/%s", inst->avrodir.c_str(), avro_index_name);
-
-    if (sqlite3_open_v2(dbpath, &handle,
-                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open SQLite database '%s': %s", dbpath, sqlite3_errmsg(handle));
-        sqlite3_close_v2(handle);
-    }
-    else if ((client = new (std::nothrow) AvroSession(inst, session, handle)) == NULL)
-    {
-        MXS_OOM();
-        sqlite3_close_v2(handle);
-    }
-
-    return client;
+    return new (std::nothrow) AvroSession(inst, session);
 }
 
-AvroSession::AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle):
+AvroSession::AvroSession(Avro* instance, MXS_SESSION* session):
     dcb(session->client_dcb),
     state(AVRO_CLIENT_UNREGISTERED),
     format(AVRO_FORMAT_UNDEFINED),
@@ -788,13 +738,11 @@ AvroSession::AvroSession(Avro* instance, MXS_SESSION* session, sqlite3* handle):
     file_handle(NULL),
     last_sent_pos(0),
     connect_time(time(NULL)),
-    requested_gtid(false),
-    sqlite_handle(handle)
+    requested_gtid(false)
 {
 }
 
 AvroSession::~AvroSession()
 {
     maxavro_file_close(file_handle);
-    sqlite3_close_v2(sqlite_handle);
 }

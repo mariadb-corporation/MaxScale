@@ -38,7 +38,7 @@
 #include <maxscale/utils.h>
 
 static const char *statefile_section = "avro-conversion";
-static const char *ddl_list_name = "table-ddl.list";
+
 void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 
 /**

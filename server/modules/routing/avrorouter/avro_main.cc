@@ -263,8 +263,6 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
 
         if (router->current_pos != start_pos || binlog_name != router->binlog_name)
         {
-            /** Update the GTID index */
-            avro_update_index(router);
             progress = true;
         }
 
@@ -419,7 +417,6 @@ static bool avro_handle_purge(const MODULECMD_ARG *args, json_t** output)
 
     // Then delete the files
     return do_unlink("%s/%s", inst->avrodir.c_str(), AVRO_PROGRESS_FILE) && // State file
-           do_unlink("/%s/%s", inst->avrodir.c_str(), avro_index_name) &&   // Index database
            do_unlink_with_pattern("/%s/*.avro", inst->avrodir.c_str()) &&   // .avro files
            do_unlink_with_pattern("/%s/*.avsc", inst->avrodir.c_str());     // .avsc files
 }

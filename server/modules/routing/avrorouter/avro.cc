@@ -27,7 +27,6 @@
 #include <time.h>
 #include <glob.h>
 #include <ini.h>
-#include <sys/stat.h>
 #include <avro/errors.h>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -49,57 +48,6 @@
 #include "avro_converter.hh"
 
 using namespace maxscale;
-
-/**
- * Create the required tables in the sqlite database
- *
- * @param handle SQLite handle
- * @return True on success, false on error
- */
-bool create_tables(sqlite3* handle)
-{
-    char* errmsg;
-    int rc = sqlite3_exec(handle, "CREATE TABLE IF NOT EXISTS "
-                          GTID_TABLE_NAME"(domain int, server_id int, "
-                          "sequence bigint, "
-                          "avrofile varchar(255), "
-                          "position bigint, "
-                          "primary key(domain, server_id, sequence, avrofile));",
-                          NULL, NULL, &errmsg);
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create GTID index table '" GTID_TABLE_NAME "': %s",
-                  sqlite3_errmsg(handle));
-        sqlite3_free(errmsg);
-        return false;
-    }
-
-    rc = sqlite3_exec(handle, "CREATE TABLE IF NOT EXISTS "
-                      USED_TABLES_TABLE_NAME"(domain int, server_id int, "
-                      "sequence bigint, binlog_timestamp bigint, "
-                      "table_name varchar(255));",
-                      NULL, NULL, &errmsg);
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create used tables table '" USED_TABLES_TABLE_NAME "': %s",
-                  sqlite3_errmsg(handle));
-        sqlite3_free(errmsg);
-        return false;
-    }
-
-    rc = sqlite3_exec(handle, "CREATE TABLE IF NOT EXISTS "
-                      INDEX_TABLE_NAME"(position bigint, filename varchar(255));",
-                      NULL, NULL, &errmsg);
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create indexing progress table '" INDEX_TABLE_NAME "': %s",
-                  sqlite3_errmsg(handle));
-        sqlite3_free(errmsg);
-        return false;
-    }
-
-    return true;
-}
 
 /**
  * @brief Read router options from an external binlogrouter service
@@ -158,7 +106,6 @@ void Avro::read_source_service_options(SERVICE* source)
 //static
 Avro* Avro::create(SERVICE* service)
 {
-    bool err = false;
     SERVICE* source_service = NULL;
     MXS_CONFIG_PARAMETER *param = config_get_param(service->svc_config_param, "source");
 
@@ -178,43 +125,20 @@ Avro* Avro::create(SERVICE* service)
             {
                 MXS_ERROR("Service '%s' uses router module '%s' instead of "
                           "'binlogrouter'.", source->name, source->routerModule);
-                err = true;
+                return NULL;
             }
         }
         else
         {
             MXS_ERROR("Service '%s' not found.", param->value);
-            err = true;
+            return NULL;
         }
     }
 
-    const int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
-    sqlite3* sqlite_handle;
-    const char* avrodir = config_get_string(service->svc_config_param, "avrodir");
-    char dbpath[PATH_MAX + 1];
-    snprintf(dbpath, sizeof(dbpath), "/%s/%s", avrodir, avro_index_name);
-
-    if (sqlite3_open_v2(dbpath, &sqlite_handle, flags, NULL) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open SQLite database '%s': %s", dbpath, sqlite3_errmsg(sqlite_handle));
-        err = true;
-    }
-    else if (!create_tables(sqlite_handle))
-    {
-        err = true;
-    }
-
-    if (err)
-    {
-        sqlite3_close_v2(sqlite_handle);
-        return NULL;
-    }
-
-    return new (std::nothrow) Avro(service, service->svc_config_param,
-                                   sqlite_handle, source_service);
+    return new (std::nothrow) Avro(service, service->svc_config_param, source_service);
 }
 
-Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERVICE* source):
+Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source):
     service(service),
     filestem(config_get_string(params, "filestem")),
     binlogdir(config_get_string(params, "binlogdir")),
@@ -228,7 +152,6 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, sqlite3* handle, SERV
     trx_target(config_get_integer(params, "group_trx")),
     row_count(0),
     row_target(config_get_integer(params, "group_rows")),
-    sqlite_handle(handle),
     task_handle(0),
     stats{0}
 {
