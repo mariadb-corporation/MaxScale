@@ -432,7 +432,8 @@ MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
     /* set min_id to the lowest value of moitor_servers->server->node_id */
     while (moitor_servers)
     {
-        if (!SERVER_IN_MAINT(moitor_servers->server) && SERVER_IS_JOINED(moitor_servers->server))
+        if (!SERVER_IN_MAINT(moitor_servers->server) &&
+            (moitor_servers->pending_status & SERVER_JOINED))
         {
 
             moitor_servers->server->depth = 0;
@@ -512,7 +513,8 @@ static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *current_ma
          * if current_master is still a cluster member use it
          *
          */
-        if (SERVER_IS_JOINED(current_master->server) && (!SERVER_IN_MAINT(current_master->server)))
+        if ((current_master->pending_status & SERVER_JOINED) &&
+            (!SERVER_IN_MAINT(current_master->server)))
         {
             return current_master;
         }
@@ -576,7 +578,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     /* Create an array of slave nodes */
     while (ptr)
     {
-        if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
+        if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {
             node_list[found_slaves] = (MXS_MONITORED_SERVER *)ptr;
             found_slaves++;
@@ -981,7 +983,7 @@ void GaleraMonitor::set_cluster_members()
         }
 
         /* Clear bits for non member nodes */
-        if (!SERVER_IN_MAINT(ptr->server) && (!SERVER_IS_JOINED(ptr->server)))
+        if (!SERVER_IN_MAINT(ptr->server) && !(ptr->pending_status & SERVER_JOINED))
         {
             ptr->server->depth = -1;
             ptr->server->node_id = -1;
