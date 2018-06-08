@@ -1455,6 +1455,8 @@ static json_t* server_json_attributes(const SERVER* server)
         json_object_set_new(params, CN_SSL_CA_CERT, json_string(server->server_ssl->ssl_ca_cert));
         json_object_set_new(params, CN_SSL_CERT_VERIFY_DEPTH,
                             json_integer(server->server_ssl->ssl_cert_verify_depth));
+        json_object_set_new(params, CN_SSL_VERIFY_PEER_CERTIFICATE,
+                            json_boolean(server->server_ssl->ssl_verify_peer_certificate));
         json_object_set_new(params, CN_SSL_VERSION,
                             json_string(ssl_method_type_to_string(server->server_ssl->ssl_method_type)));
     }

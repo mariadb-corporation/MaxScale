@@ -106,10 +106,13 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value);
  * @param ca Path to certificate authority
  * @param version Required SSL Version
  * @param depth Certificate verification depth
+ * @param verify Verify peer certificate
+ *
  * @return True if SSL was successfully enabled
  */
 bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
-                               const char *ca, const char *version, const char *depth);
+                               const char *ca, const char *version, const char *depth,
+                               const char *verify);
 
 /**
  * @brief Alter monitor parameters
@@ -159,6 +162,7 @@ bool runtime_alter_maxscale(const char* name, const char* value);
  * @param ssl_ca      SSL CA cert, NULL for no CA cert
  * @param ssl_version SSL version, NULL for default of "MAX"
  * @param ssl_depth   SSL cert verification depth, NULL for default
+ * @param verify_ssl  SSL peer certificate verification, NULL for default
  *
  * @return True if the listener was successfully created and started
  */
@@ -166,7 +170,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth);
+                             const char *ssl_version, const char *ssl_depth,
+                             const char *verify_ssl);
 
 /**
  * @brief Destroy a listener
