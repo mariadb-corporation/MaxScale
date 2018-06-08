@@ -27,6 +27,35 @@ static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
 static const char SERVER_DISQUALIFIED[] = "Server '%s' was disqualified from new master selection because "
                                           "it is %s.";
+static const int64_t MASTER_BITS = SERVER_MASTER | SERVER_WAS_MASTER;
+static const int64_t SLAVE_BITS = SERVER_SLAVE | SERVER_WAS_SLAVE;
+
+
+/**
+ * Generic depth-first search. Iterates through child nodes (slaves) and runs the 'visit_func' on the nodes.
+ * Isn't flexible enough for all uses.
+ *
+ * @param node Starting server. The server and all its slaves are visited.
+ * @param data Caller-specific data, which is given to the 'visit_func'.
+ * @param visit_func Function to run on a node when visiting it
+ */
+template <typename T>
+void topology_DFS(MariaDBServer* node, T* data, void (*visit_func)(MariaDBServer* node, T* data))
+{
+   node->m_node.index = NodeData::INDEX_FIRST;
+   if (visit_func)
+   {
+        visit_func(node, data);
+   }
+   for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
+   {
+       MariaDBServer* slave = *iter;
+       if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+       {
+           topology_DFS<T>(slave, data, visit_func);
+       }
+   }
+}
 
 /**
  * This function computes the replication tree from a set of monitored servers and returns the root server
@@ -384,7 +413,6 @@ void MariaDBMonitor::build_replication_graph()
  */
 void MariaDBMonitor::find_graph_cycles()
 {
-    build_replication_graph();
     m_cycles.clear();
     // The next items need to be passed around in the recursive calls to keep track of algorithm state.
     ServerArray stack;
@@ -927,7 +955,7 @@ static string disqualify_reasons_to_string(MariaDBServer* disqualified)
         reasons += separator + "down";
         separator = word_and;
     }
-    if (disqualified->m_read_only)
+    if (disqualified->is_read_only())
     {
         reasons += separator + "in read_only mode";
     }
@@ -955,7 +983,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server()
         MariaDBServer* server = *iter;
         if (server->m_node.parents.empty())
         {
-            if (server->is_running() && server->m_read_only)
+            if (server->is_running() && !server->is_read_only())
             {
                 master_candidates.push_back(server);
             }
@@ -1004,6 +1032,11 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server()
     return found_master;
 }
 
+static void node_reach_visit(MariaDBServer* node, int* reach)
+{
+    *reach = *reach + 1;
+}
+
 /**
  * Calculate the total number of reachable child nodes for the given node. A node can always reach itself.
  * The result is saved into the node data.
@@ -1012,21 +1045,10 @@ void MariaDBMonitor::calculate_node_reach(MariaDBServer* node)
 {
     ss_dassert(node && node->m_node.reach == NodeData::REACH_UNKNOWN);
     // Reset indexes since they will be reused.
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        (*iter)->m_node.reset_indexes();
-    }
+    reset_node_index_info();
 
-    int reach = 1; // The starting node can reach itself.
-    for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
-    {
-        MariaDBServer* slave = *iter;
-        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-        { // TODO: Think if is_down() should be checked here. Could cause weird behaviour.
-            reach += calc_reach_visit_node(slave);
-        }
-    }
-
+    int reach = 0;
+    topology_DFS<int>(node, &reach, node_reach_visit);
     node->m_node.reach = reach;
 }
 
@@ -1067,10 +1089,117 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
     {
         MariaDBServer* server = *iter;
         ss_dassert(server->m_node.cycle != NodeData::CYCLE_NONE);
-        if (server->is_running() && !server->m_read_only)
+        if (server->is_running() && !server->is_read_only())
         {
             return server;
         }
     }
     return NULL;
+}
+
+/**
+ * Assign replication role status bits to the servers in the cluster. Starts from the cluster master server.
+ */
+void MariaDBMonitor::assign_master_and_slave()
+{
+    // Remove any existing [Master], [Slave] etc flags.
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY_MASTER |
+                                 SERVER_SLAVE_OF_EXT_MASTER;
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        (*iter)->clear_status(remove_bits);
+    }
+
+    // Check the the master node, label it as the [Master] if...
+    if (m_master)
+    {
+        // the node has slaves, even if their slave sql threads are stopped ...
+        if (!m_master->m_node.children.empty() ||
+            // or detect standalone master is on ...
+            m_detect_standalone_master ||
+            // or "detect_stale_master" is on and the server was a master before.
+            (m_detect_stale_master && (m_master->m_server_base->pending_status & SERVER_WAS_MASTER)))
+        {
+            m_master->clear_status(SLAVE_BITS | SERVER_RELAY_MASTER);
+            m_master->set_status(MASTER_BITS);
+        }
+
+        // Run another DFS, this time assigning slaves.
+        reset_node_index_info();
+        assign_slave_and_relay_master(m_master);
+    }
+}
+
+/**
+ * Check if the servers replicating from the given node qualify for [Slave] and mark them. Continue the
+ * search to any found slaves.
+ *
+ * @param node The node to process. The node itself is not marked [Slave].
+ */
+void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
+{
+    ss_dassert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
+    node->m_node.index = NodeData::INDEX_FIRST;
+    bool require_was_slave = false;
+
+    if (node->is_down())
+    {
+        // If 'detect_stale_slave' is off, this node can only have slaves if the node is running.
+        if (m_detect_stale_slave)
+        {
+            require_was_slave = true;
+        }
+        else
+        {
+            return;
+        }
+    }
+
+    int slaves = 0;
+    for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
+    {
+        MariaDBServer* slave = *iter;
+        // If the node has an index, it has already been labeled master/slave and visited. Even when this
+        // is the case, the slave has to be checked to get correct [Relay Master] labels.
+        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+        {
+            slave->clear_status(MASTER_BITS);
+        }
+        // The slave node may have several slave connections, need to find the right one.
+        bool found_slave_conn = false;
+        for (auto iter2 = slave->m_slave_status.begin(); iter2 != slave->m_slave_status.end(); iter2++)
+        {
+            SlaveStatus& ss = *iter2;
+            auto master_id = ss.master_server_id;
+            auto io_running = ss.slave_io_running;
+            // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
+            if (master_id > 0 && master_id == node->m_server_id && ss.slave_sql_running &&
+                (io_running == SlaveStatus::SLAVE_IO_YES ||
+                 io_running == SlaveStatus::SLAVE_IO_CONNECTING) &&
+                // Can in theory cause a 'SERVER_WAS_SLAVE' bit from another master to affect the result.
+                (!require_was_slave || (slave->m_server_base->pending_status & SERVER_WAS_SLAVE)))
+            {
+                found_slave_conn = true;
+                break;
+            }
+        }
+
+        // If the slave had a valid connection, label it as a slave and recurse.
+        if (found_slave_conn)
+        {
+            slaves++;
+            if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+            {
+                slave->clear_status(MASTER_BITS);
+                slave->set_status(SLAVE_BITS);
+                assign_slave_and_relay_master(slave);
+            }
+        }
+    }
+
+    // Finally, if the node itself is a slave and has slaves of its own, label it as relay slave.
+    if ((node->m_server_base->pending_status & SERVER_SLAVE) && slaves > 0)
+    {
+        node->set_status(SERVER_RELAY_MASTER);
+    }
 }

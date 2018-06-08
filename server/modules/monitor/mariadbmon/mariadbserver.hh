@@ -262,6 +262,13 @@ public:
     bool is_relay_server() const;
 
     /**
+     * Getter for m_read_only.
+     *
+     * @return True if server is in read_only mode
+     */
+    bool is_read_only() const;
+
+    /**
      * Returns the server name.
      *
      * @return Server unique name

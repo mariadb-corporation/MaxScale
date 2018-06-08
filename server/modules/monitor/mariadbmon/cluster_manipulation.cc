@@ -1561,7 +1561,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        if (server->is_slave() && !server->m_read_only &&
+        if (server->is_slave() && !server->is_read_only() &&
             (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
         {
             MYSQL* conn = server->m_server_base->con;

@@ -448,6 +448,11 @@ bool MariaDBServer::is_relay_server() const
            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
 }
 
+bool MariaDBServer::is_read_only() const
+{
+    return m_read_only;
+}
+
 const char* MariaDBServer::name() const
 {
     return m_server_base->server->name;

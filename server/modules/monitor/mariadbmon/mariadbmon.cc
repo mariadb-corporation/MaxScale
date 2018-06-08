@@ -105,6 +105,14 @@ void MariaDBMonitor::clear_server_info()
     m_external_master_port = PORT_UNKNOWN;
 }
 
+void MariaDBMonitor::reset_node_index_info()
+{
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        (*iter)->m_node.reset_indexes();
+    }
+}
+
 /**
  * Get monitor-specific server info for the monitored server.
  *
@@ -382,8 +390,40 @@ void MariaDBMonitor::tick()
         }
     }
 
+    build_replication_graph();
+    find_graph_cycles();
     // Use the information to find the so far best master server.
-    MariaDBServer* root_master = find_root_master();
+    MariaDBServer* root_master = find_topology_master_server();
+    if (root_master)
+    {
+        MXS_DEBUG("Server '%s' is the best master candidate with %d slaves.",
+                  root_master->name(), root_master->m_node.reach);
+        m_master = root_master;
+    }
+#ifdef SS_DEBUG
+    else
+    {
+        MXS_DEBUG("No valid master server found in the cluster.");
+    }
+#endif
+    assign_master_and_slave();
+
+    if (!m_ignore_external_masters)
+    {
+        // Do a sweep through all the nodes in the cluster (even the master) and mark other states.
+        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+        {
+            MariaDBServer* server = *iter;
+            if (!server->m_node.external_masters.empty())
+            {
+                server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
+            }
+            else
+            {
+                server->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
+            }
+        }
+    }
 
     if (m_master != NULL && m_master->is_master())
     {
@@ -392,11 +432,9 @@ void MariaDBMonitor::tick()
         update_external_master();
     }
 
-    // Assign relay masters, clear SERVER_SLAVE from binlog relays
+    // Clear SERVER_SLAVE from binlog relays
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        assign_relay_master(**iter);
-
         /* Remove SLAVE status if this server is a Binlog Server relay */
         if ((*iter)->m_version == MariaDBServer::version::BINLOG_ROUTER)
         {

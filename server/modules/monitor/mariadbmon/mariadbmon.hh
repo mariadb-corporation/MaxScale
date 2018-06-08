@@ -161,13 +161,14 @@ private:
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     void reset_server_info();
     void clear_server_info();
+    void reset_node_index_info();
     bool configure(const MXS_CONFIG_PARAMETER* params);
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
-    void update_server(MariaDBServer& server);
 
     // Cluster discovery and status assignment methods
+    void update_server(MariaDBServer& server);
     MariaDBServer* find_root_master();
     MXS_MONITORED_SERVER* get_replication_tree();
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();
@@ -193,6 +194,8 @@ private:
     void calculate_node_reach(MariaDBServer* node);
     int calc_reach_visit_node(MariaDBServer* node);
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
+    void assign_master_and_slave();
+    void assign_slave_and_relay_master(MariaDBServer* node);
 
     // Switchover methods
     bool switchover_check(SERVER* new_master, SERVER* current_master,
