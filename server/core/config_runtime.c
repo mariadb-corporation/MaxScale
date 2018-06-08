@@ -215,8 +215,8 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
     if (obj)
     {
         if (config_add_param(obj, "ssl", "required") &&
-            config_add_param(obj, "ssl_key", key) &&
-            config_add_param(obj, "ssl_cert", cert) &&
+            (!key || config_add_param(obj, "ssl_key", key)) &&
+            (!cert || config_add_param(obj, "ssl_cert", cert)) &&
             config_add_param(obj, "ssl_ca_cert", ca) &&
             (!version || config_add_param(obj, "ssl_version", version)) &&
             (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)) &&
