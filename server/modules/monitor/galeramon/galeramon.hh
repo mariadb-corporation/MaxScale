@@ -17,40 +17,24 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <maxscale/hashtable.h>
+
+#include <tr1/unordered_map>
+
 #include <maxscale/monitor.hh>
-#include <maxscale/thread.h>
 
 /**
- *  Galera Variables and server reference for each
- *  monitored node that could be part of cluster.
- *
- *  This struct is added to the HASHTABLE *galera_nodes_info
+ *  Galera status variables
  */
-typedef struct galera_node_info
+struct GaleraNode
 {
-    int          joined; /**< The node claims to be "Synced" */
-    int     local_index; /**< wsrep_local_index Galera variable:
-                           * the node index vlaue in the cluster */
-    int     local_state; /**< wsrep_local_state Galera variable:
-                           * the node state in the cluster */
-    int    cluster_size; /**< wsrep_cluster_size Galera variable:
-                           * the cluster size the node sees */
-    char  *cluster_uuid; /**< wsrep_cluster_uuid Galera variable:
-                           * the cluster UUID the node sees */
-    const SERVER  *node; /**< The reference to nodes' SERVER struct */
-} GALERA_NODE_INFO;
+    int         joined;       /**< Node is in sync with the cluster */
+    int         local_index;  /**< Node index */
+    int         local_state;  /**< Node state */
+    int         cluster_size; /**< The cluster size*/
+    std::string cluster_uuid; /**< Cluster UUID */
+};
 
-/**
- * Information of the current detected
- * Galera Cluster
- */
-typedef struct galera_cluster_info
-{
-    int   c_size; /**< How many nodes in the cluster */
-    char *c_uuid; /**< The Cluster UUID */
-} GALERA_CLUSTER_INFO;
-
+typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, GaleraNode> NodeMap;
 
 class GaleraMonitor : public maxscale::MonitorInstanceSimple
 {
@@ -79,9 +63,10 @@ private:
     bool m_use_priority;                /**< Use server priorities */
     bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
                                          * ordered list of nodes */
-    HASHTABLE *m_galera_nodes_info;     /**< Contains Galera Cluster variables of all nodes */
-    GALERA_CLUSTER_INFO m_cluster_info; /**< Contains Galera cluster info */
+    std::string m_cluster_uuid;         /**< The Cluster UUID */
     bool m_log_no_members;              /**< Should we log if no member are found. */
+    NodeMap m_info;                     /**< Contains Galera Cluster variables of all nodes */
+    int m_cluster_size;                 /**< How many nodes in the cluster */
 
     GaleraMonitor(MXS_MONITOR* monitor);
 
@@ -89,8 +74,6 @@ private:
                              const char *candidate_uuid,
                              const int candidate_size);
     MXS_MONITORED_SERVER *get_candidate_master();
-    void reset_cluster_info();
-    void set_cluster_members();
     void set_galera_cluster();
     void update_sst_donor_nodes(int is_cluster);
 };

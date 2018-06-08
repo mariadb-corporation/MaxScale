@@ -42,8 +42,6 @@ static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONI
 static void disableMasterFailback(void *, int);
 static int compare_node_index(const void*, const void*);
 static int compare_node_priority(const void*, const void*);
-static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *);
-static void nodeval_free(GALERA_NODE_INFO *);
 static bool using_xtrabackup(MXS_MONITORED_SERVER *database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
@@ -55,32 +53,13 @@ GaleraMonitor::GaleraMonitor(MXS_MONITOR *mon)
     , m_root_node_as_master(false)
     , m_use_priority(false)
     , m_set_donor_nodes(false)
-    , m_galera_nodes_info(NULL)
     , m_log_no_members(false)
+    , m_cluster_size(0)
 {
-    HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES,
-                                            hashtable_item_strhash,
-                                            hashtable_item_strcmp);
-    ss_dassert(nodes_info);
-    if (!nodes_info)
-    {
-        throw std::bad_alloc();
-    }
-
-    hashtable_memory_fns(nodes_info,
-                         hashtable_item_strdup,
-                         (HASHCOPYFN)nodeval_dup,
-                         hashtable_item_free,
-                         (HASHFREEFN)nodeval_free);
-
-    m_galera_nodes_info = nodes_info;
-    m_cluster_info.c_size = 0;
-    m_cluster_info.c_uuid = NULL;
 }
 
 GaleraMonitor::~GaleraMonitor()
 {
-    hashtable_free(m_galera_nodes_info);
 }
 
 // static
@@ -96,10 +75,10 @@ void GaleraMonitor::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
                m_disableMasterRoleSetting ? "on" : "off");
     dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (m_set_donor_nodes == 1) ? "on" : "off");
-    if (m_cluster_info.c_uuid)
+    if (!m_cluster_uuid.empty())
     {
-        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", m_cluster_info.c_uuid);
-        dcb_printf(dcb, "Galera Cluster size:\t%d\n", m_cluster_info.c_size);
+        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", m_cluster_uuid.c_str());
+        dcb_printf(dcb, "Galera Cluster size:\t%d\n", m_cluster_size);
     }
     else
     {
@@ -116,10 +95,10 @@ json_t* GaleraMonitor::diagnostics_json() const
     json_object_set_new(rval, "use_priority", json_boolean(m_use_priority));
     json_object_set_new(rval, "set_donor_nodes", json_boolean(m_set_donor_nodes));
 
-    if (m_cluster_info.c_uuid)
+    if (!m_cluster_uuid.empty())
     {
-        json_object_set_new(rval, "cluster_uuid", json_string(m_cluster_info.c_uuid));
-        json_object_set_new(rval, "cluster_size", json_integer(m_cluster_info.c_size));
+        json_object_set_new(rval, "cluster_uuid", json_string(m_cluster_uuid.c_str()));
+        json_object_set_new(rval, "cluster_size", json_integer(m_cluster_size));
     }
 
     return rval;
@@ -136,7 +115,7 @@ bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_log_no_members = true;
 
     /* Reset all data in the hashtable */
-    reset_cluster_info();
+    m_info.clear();
 
     return true;
 }
@@ -175,7 +154,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                       cluster_member, server_string);
             return;
         }
-        GALERA_NODE_INFO info = {};
+        GaleraNode info = {};
         while ((row = mysql_fetch_row(result)))
         {
             if (strcmp(row[0], "wsrep_cluster_size") == 0)
@@ -236,9 +215,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             {
                 if (row[1] == NULL || !strlen(row[1]))
                 {
-                    MXS_DEBUG("Node %s is not running Galera Cluster",
-                              monitored_server->server->name);
-                    info.cluster_uuid = NULL;
+                    info.cluster_uuid.clear();
                     info.joined = 0;
                 }
                 else
@@ -250,40 +227,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 
         monitored_server->server->node_id = info.joined ? info.local_index : -1;
 
-        /* Add server pointer */
-        info.node = monitored_server->server;
-
-        /* Galera Cluster vars fetch */
-        HASHTABLE *table = m_galera_nodes_info;
-        GALERA_NODE_INFO *node =
-            static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, monitored_server->server->name));
-        if (node)
-        {
-            MXS_DEBUG("Node %s is present in galera_nodes_info, updtating info",
-                      monitored_server->server->name);
-
-            MXS_FREE(node->cluster_uuid);
-            /* Update node data */
-            memcpy(node, &info, sizeof(GALERA_NODE_INFO));
-        }
-        else
-        {
-            if (hashtable_add(table, monitored_server->server->name, &info))
-            {
-                MXS_DEBUG("Added %s to galera_nodes_info",
-                          monitored_server->server->name);
-            }
-            /* Free the info.cluster_uuid as it's been added to the table */
-            MXS_FREE(info.cluster_uuid);
-        }
-
-        MXS_DEBUG("Server %s: local_state %d, local_index %d, UUID %s, size %d, possible member %d",
-                  monitored_server->server->name,
-                  info.local_state,
-                  info.local_index,
-                  info.cluster_uuid ? info.cluster_uuid : "_none_",
-                  info.cluster_size,
-                  info.joined);
+        m_info[monitored_server] = info;
 
         mysql_free_result(result);
     }
@@ -553,8 +497,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
     if (is_cluster == 1)
     {
-        MXS_DEBUG("Only one server in the cluster: update_sst_donor_nodes is not performed");
-        return;
+        return; //Only one server in the cluster: update_sst_donor_nodes is not performed
     }
 
     unsigned int found_slaves = 0;
@@ -596,12 +539,6 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         ptr = ptr->next;
     }
 
-    if (ignore_priority && m_use_priority)
-    {
-        MXS_DEBUG("Use priority is set but no server has priority parameter. "
-                  "Donor server list will be ordered by 'wsrep_local_index'");
-    }
-
     /* Set order type */
     bool sort_order = (!ignore_priority) && (int)m_use_priority;
 
@@ -630,10 +567,6 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
             while ((row = mysql_fetch_row(result)))
             {
-                MXS_DEBUG("wsrep_node_name name for %s is [%s]",
-                          ptr->server->name,
-                          row[1]);
-
                 strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
                 strcat(donor_list, ",");
             }
@@ -654,20 +587,11 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
     strcat(donor_list, "\"");
 
-    MXS_DEBUG("Sending %s to all slave nodes",
-              donor_list);
-
     /* Set now rep_sst_donor in each slave node */
     for (unsigned int k = 0; k < found_slaves; k++)
     {
         MXS_MONITORED_SERVER *ptr = node_list[k];
-        /* Set the Galera SST donor node list */
-        if (mxs_mysql_query(ptr->con, donor_list) == 0)
-        {
-            MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
-                      ptr->server->name);
-        }
-        else
+        if (mxs_mysql_query(ptr->con, donor_list) != 0)
         {
             mon_report_query_error(ptr);
         }
@@ -774,323 +698,34 @@ static int compare_node_priority (const void *a, const void *b)
 }
 
 /**
- * When monitor starts all entries in hashable are deleted
- *
- * @param handle    The Galera specific data
- */
-void GaleraMonitor::reset_cluster_info()
-{
-    int n_nodes = 0;
-    HASHITERATOR *iterator;
-    HASHTABLE *table = m_galera_nodes_info;
-    void *key;
-
-    /* Delete all entries in the hashtable */
-    while ((iterator = hashtable_iterator(table)))
-    {
-        key = hashtable_next(iterator);
-        if (!key)
-        {
-            break;
-        }
-        else
-        {
-            hashtable_iterator_free(iterator);
-            hashtable_delete(table, key);
-        }
-    }
-}
-
-/**
- * Copy routine for hashtable values
- *
- * @param in    The nut data
- * @return      The copied data or NULL
- */
-static GALERA_NODE_INFO *nodeval_dup(const GALERA_NODE_INFO *in)
-{
-    if (in == NULL ||
-        in->cluster_size == 0 ||
-        in->cluster_uuid == NULL ||
-        in->node == NULL)
-    {
-        return NULL;
-    }
-
-    GALERA_NODE_INFO *rval = (GALERA_NODE_INFO *) MXS_CALLOC(1, sizeof(GALERA_NODE_INFO));
-    char* uuid = MXS_STRDUP(in->cluster_uuid);
-
-    if (!uuid || !rval)
-    {
-        MXS_FREE(rval);
-        MXS_FREE(uuid);
-        return NULL;
-    }
-
-    rval->cluster_uuid = uuid;
-    rval->cluster_size = in->cluster_size;
-    rval->local_index = in->local_index;
-    rval->local_state = in->local_state;
-    rval->node = in->node;
-    rval->joined = in->joined;
-
-    return rval;
-}
-
-/**
- * Free routine for hashtable values
- *
- * @param in    The data to be freed
- */
-static void nodeval_free(GALERA_NODE_INFO *in)
-{
-    if (in)
-    {
-        MXS_FREE(in->cluster_uuid);
-        MXS_FREE(in);
-    }
-}
-
-/**
- * Detect possible cluster_uuid and cluster_size
- * in monitored nodes.
- * Set the cluster memebership in nodes
- * if a cluster can be set.
- *
- * @param mon The Monitor Instance
+ * Only set the servers as joined if they are a part of the largest cluster
  */
 void GaleraMonitor::set_galera_cluster()
 {
-    int ret = false;
-    int n_nodes = 0;
-    HASHITERATOR *iterator;
-    HASHTABLE *table = m_galera_nodes_info;
-    char *key;
-    GALERA_NODE_INFO *value;
     int cluster_size = 0;
-    char *cluster_uuid = NULL;
+    std::string cluster_uuid;
 
-    /* Fetch all entries in the hashtable */
-    if ((iterator = hashtable_iterator(table)) != NULL)
+    for (auto it = m_info.begin(); it != m_info.end(); it++)
     {
-        /* Get the Key */
-        while ((key = static_cast<char*>(hashtable_next(iterator))) != NULL)
+        if (it->second.joined && it->second.cluster_size > cluster_size)
         {
-            /* fetch the Value for the Key */
-            value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(table, key));
-            if (value)
-            {
-                if (!SERVER_IN_MAINT(value->node) &&
-                    SERVER_IS_RUNNING(value->node) &&
-                    value->joined)
-                {
-                    /* This server can be part of a cluster */
-                    n_nodes++;
-
-                    /* Set cluster_uuid for nodes that report
-                     * highest value of cluster_size
-                     */
-                    if (value->cluster_size > cluster_size)
-                    {
-                        cluster_size = value->cluster_size;
-                        cluster_uuid = value->cluster_uuid;
-                    }
-
-                    MXS_DEBUG("Candidate cluster member %s: UUID %s, joined nodes %d",
-                              value->node->name,
-                              value->cluster_uuid,
-                              value->cluster_size);
-                }
-            }
+            // Use the UUID of the largest cluster
+            cluster_size = it->second.cluster_size;
+            cluster_uuid = it->second.cluster_uuid;
         }
-
-        hashtable_iterator_free(iterator);
     }
 
-    /**
-     * Detect if a possible cluster can
-     * be set with n_nodes and cluster_size
-     *
-     * Special cases for n_nodes = 0 or 1.
-     * If cluster_size > 1 there is rule
-     */
-    ret = detect_cluster_size(n_nodes,
-                              cluster_uuid,
-                              cluster_size);
-    /**
-     * Free && set the new cluster_uuid:
-     * Handling the special case n_nodes == 1
-     */
-    if (ret || (!ret && n_nodes != 1))
+    for (auto it = m_info.begin(); it != m_info.end(); it++)
     {
-        /* Set the new cluster_uuid */
-        MXS_FREE(m_cluster_info.c_uuid);
-        m_cluster_info.c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
-        m_cluster_info.c_size = cluster_size;
-    }
-
-    /**
-     * Set the JOINED status in cluster members only, if any.
-     */
-    set_cluster_members();
-}
-
-/**
- * Set the SERVER_JOINED in member nodes only
- *
- * Status bits SERVER_JOINED, SERVER_SLAVE, SERVER_MASTER
- * and SERVER_MASTER_STICKINESS are removed
- * in non member nodes.
- *
- * @param mon   The Monitor Instance
- */
-void GaleraMonitor::set_cluster_members()
-{
-    GALERA_NODE_INFO *value;
-    MXS_MONITORED_SERVER *ptr;
-    char *c_uuid = m_cluster_info.c_uuid;
-    int c_size = m_cluster_info.c_size;
-
-    ptr = m_monitor->monitored_servers;
-    while (ptr)
-    {
-        /* Fetch cluster info for this server, if any */
-        value = static_cast<GALERA_NODE_INFO*>(hashtable_fetch(m_galera_nodes_info,
-                                                               ptr->server->name));
-
-        if (value && m_cluster_info.c_uuid)
+        if (it->second.joined)
         {
-            /* Check whether this server is a candidate member */
-            if (!SERVER_IN_MAINT(ptr->server) &&
-                SERVER_IS_RUNNING(ptr->server) &&
-                value->joined &&
-                strcmp(value->cluster_uuid, c_uuid) == 0 &&
-                value->cluster_size == c_size)
-            {
-                /* Server is member of current cluster */
-                monitor_set_pending_status(ptr, SERVER_JOINED);
-            }
-            else
-            {
-                /* This server is not part of current cluster */
-                monitor_clear_pending_status(ptr, SERVER_JOINED);
-            }
+            monitor_set_pending_status(it->first, SERVER_JOINED);
         }
         else
         {
-            /* This server is not member of any cluster */
-            monitor_clear_pending_status(ptr, SERVER_JOINED);
-        }
-
-        /* Clear bits for non member nodes */
-        if (!SERVER_IN_MAINT(ptr->server) && !(ptr->pending_status & SERVER_JOINED))
-        {
-            ptr->server->depth = -1;
-            ptr->server->node_id = -1;
-
-            /* clear M/S status */
-            monitor_clear_pending_status(ptr, SERVER_SLAVE);
-            monitor_clear_pending_status(ptr, SERVER_MASTER);
-
-            /* clear master sticky status */
-            monitor_clear_pending_status(ptr, SERVER_MASTER_STICKINESS);
-        }
-
-        ptr = ptr->next;
-    }
-}
-
-/**
- * Detect whether a Galer cluster can be set.
- *
- * @param handle          The Galera specific data
- * @param n_nodes         Nodes configured for this monitor
- * @param cluster_uuid    Possible cluster_uuid in nodes
- * @param cluster_size    Possible cluster_size in nodes
- * @return                True is a cluster can be set
- */
-bool GaleraMonitor::detect_cluster_size(const int n_nodes,
-                                        const char *candidate_uuid,
-                                        const int candidate_size)
-{
-    bool ret = false;
-    char *c_uuid = m_cluster_info.c_uuid;
-    int c_size = m_cluster_info.c_size;
-
-    /**
-     * Decide whether we have a cluster
-     */
-    if (n_nodes == 0)
-    {
-        /* Log change if a previous UUID was set */
-        if (c_uuid != NULL)
-        {
-            MXS_INFO("No nodes found to be part of a Galera cluster right now: aborting");
+            monitor_clear_pending_status(it->first, SERVER_JOINED);
         }
     }
-    else if (n_nodes == 1)
-    {
-        const char *msg = "Galera cluster with 1 node only";
-
-        /* If 1 node only:
-         * ifc_uuid is not set, return value will be true.
-         * if c_uuid is equal to candidate_uuid, return value will be true.
-         */
-        if (c_uuid == NULL ||
-            (c_uuid && strcmp(c_uuid, candidate_uuid) == 0))
-        {
-            ret = true;
-        }
-
-        /* Log change if no previous UUID was set */
-        if (c_uuid == NULL)
-        {
-            if (ret)
-            {
-                MXS_INFO("%s has UUID %s: continue", msg, candidate_uuid);
-            }
-        }
-        else
-        {
-            if (strcmp(c_uuid, candidate_uuid) && c_size != 1)
-            {
-                /* This error should be logged once */
-                MXS_ERROR("%s and its UUID %s is different from previous set one %s: aborting",
-                          msg,
-                          candidate_uuid,
-                          c_uuid);
-            }
-        }
-    }
-    else
-    {
-        int min_cluster_size = (n_nodes / 2) + 1;
-
-        /* Return true if there are enough members */
-        if (candidate_size >= min_cluster_size)
-        {
-            ret = true;
-            /* Log the successful change once */
-            if (c_uuid == NULL ||
-                (c_uuid && strcmp(c_uuid, candidate_uuid)))
-            {
-                MXS_INFO("Galera cluster UUID is now %s with %d members of %d nodes",
-                         candidate_uuid, candidate_size, n_nodes);
-            }
-        }
-        else
-        {
-            if (!ret && c_uuid)
-            {
-                /* This error is being logged at every monitor cycle */
-                MXS_ERROR("Galera cluster cannot be set with %d members of %d:"
-                          " not enough nodes (%d at least)",
-                          candidate_size, n_nodes, min_cluster_size);
-            }
-        }
-    }
-
-    return ret;
 }
 
 /**
