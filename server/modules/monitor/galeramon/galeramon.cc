@@ -437,7 +437,7 @@ MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
 
             moitor_servers->server->depth = 0;
             char buf[50]; // Enough to hold most numbers
-            if (m_use_priority && server_get_parameter_nolock(moitor_servers->server, "priority", buf, sizeof(buf)))
+            if (m_use_priority && server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf)))
             {
                 /** The server has a priority  */
                 if ((currval = atoi(buf)) > 0)
@@ -586,8 +586,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
              * the server list will be order by default method.
              */
 
-            if (m_use_priority &&
-                server_get_parameter_nolock(ptr->server, "priority", NULL, 0))
+            if (m_use_priority && server_get_parameter(ptr->server, "priority", NULL, 0))
             {
                 ignore_priority = false;
             }
@@ -722,8 +721,8 @@ static int compare_node_priority (const void *a, const void *b)
     const MXS_MONITORED_SERVER *s_b = *(MXS_MONITORED_SERVER * const *)b;
     char pri_a[50];
     char pri_b[50];
-    bool have_a = server_get_parameter_nolock(s_a->server, "priority", pri_a, sizeof(pri_a));
-    bool have_b = server_get_parameter_nolock(s_b->server, "priority", pri_b, sizeof(pri_b));
+    bool have_a = server_get_parameter(s_a->server, "priority", pri_a, sizeof(pri_a));
+    bool have_b = server_get_parameter(s_b->server, "priority", pri_b, sizeof(pri_b));
 
     /**
      * Check priority parameter:
