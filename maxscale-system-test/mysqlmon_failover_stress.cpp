@@ -525,7 +525,7 @@ void run(TestConnections& test)
 
         while (time(NULL) - start < TEST_DURATION)
         {
-            sleep(FAILOVER_DURATION);
+            test.maxscales->wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
@@ -534,20 +534,20 @@ void run(TestConnections& test)
                 cout << "\nStopping node: " << master_id << endl;
                 test.repl->stop_node(master_id - 1);
 
-                sleep(2 * MONITOR_INTERVAL);
+                test.maxscales->wait_for_monitor();
                 list_servers(test);
 
-                sleep(FAILOVER_DURATION);
+                test.maxscales->wait_for_monitor();
                 list_servers(test);
 
-                sleep(FAILOVER_DURATION);
+                test.maxscales->wait_for_monitor();
                 cout << "\nStarting node: " << master_id << endl;
                 test.repl->start_node(master_id - 1);
 
-                sleep(2 * MONITOR_INTERVAL);
+                test.maxscales->wait_for_monitor();
                 list_servers(test);
 
-                sleep(FAILOVER_DURATION);
+                test.maxscales->wait_for_monitor();
                 list_servers(test);
             }
             else
@@ -556,7 +556,7 @@ void run(TestConnections& test)
             }
         }
 
-        sleep(FAILOVER_DURATION);
+        test.maxscales->wait_for_monitor();
 
         cout << "\nStopping clients.\n" << flush;
         Client::stop();

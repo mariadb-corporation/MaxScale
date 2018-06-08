@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
-    sleep(1);
+    test.maxscales->wait_for_monitor();
     test.tprintf(LINE);
     print_gtids(test);
     get_input();
@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     const int old_master_id = get_master_server_id(test); // Read master id now before shutdown.
     const int master_index = test.repl->master;
     test.repl->stop_node(master_index);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     // Recreate maxscale session
     mysql_close(maxconn);
     maxconn = test.maxscales->open_rwsplit_connection(0);
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     {
         test.tprintf("Sending more inserts.");
         generate_traffic_and_check(test, maxconn, 5);
-        sleep(1);
+        test.maxscales->wait_for_monitor();
         if (find_field(maxconn, GTID_QUERY, GTID_FIELD, result_tmp) == 0)
         {
             gtid_final = result_tmp;
@@ -63,11 +63,11 @@ int main(int argc, char** argv)
         test.tprintf(LINE);
 
         test.repl->start_node(master_index, (char*) "");
-        sleep(10);
+        test.maxscales->wait_for_monitor();
         get_output(test);
 
         test.repl->connect();
-        sleep(1);
+        test.maxscales->wait_for_monitor();
         string gtid_old_master;
         if (find_field(test.repl->nodes[master_index], GTID_QUERY, GTID_FIELD, result_tmp) == 0)
         {
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
         int ec;
         test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
                                         "MySQL-Monitor server1 server2" , true, &ec);
-        sleep(10); // Wait for monitor to update status
+        test.maxscales->wait_for_monitor(); // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
         test.assert(master_id == old_master_id, "Switchover back to server1 failed.");
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
     else
     {
         test.repl->start_node(master_index, (char*) "");
-        sleep(10);
+        test.maxscales->wait_for_monitor();
     }
 
     test.repl->fix_replication();

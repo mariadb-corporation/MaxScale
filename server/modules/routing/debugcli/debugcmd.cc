@@ -64,7 +64,7 @@
 #include "../../../core/internal/poll.h"
 #include "../../../core/internal/session.h"
 
-#define MAXARGS 12
+#define MAXARGS 14
 
 #define ARG_TYPE_NONE           0
 #define ARG_TYPE_ADDRESS        1
@@ -1168,11 +1168,11 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 static void createListener(DCB *dcb, SERVICE *service, char *name, char *address,
                            char *port, char *protocol, char *authenticator,
                            char *authenticator_options, char *key, char *cert,
-                           char *ca, char *version, char *depth)
+                           char *ca, char *version, char *depth, char *verify)
 {
     if (runtime_create_listener(service, name, address, port, protocol,
                                 authenticator, authenticator_options,
-                                key, cert, ca, version, depth))
+                                key, cert, ca, version, depth, verify))
     {
         dcb_printf(dcb, "Listener '%s' created\n", name);
     }
@@ -1380,6 +1380,7 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     char *ssl_ca = NULL;
     char *ssl_version = NULL;
     char *ssl_depth = NULL;
+    char *ssl_verify = NULL;
     bool enable = false;
 
     for (int i = 0; i < items && values[i]; i++)
@@ -1413,6 +1414,10 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                 {
                     ssl_depth = value;
                 }
+                else if (strcmp("ssl_verify_peer_certificate", key) == 0)
+                {
+                    ssl_verify = value;
+                }
                 else
                 {
                     enable = strcmp("ssl", key) == 0 && strcmp(value, "required") == 0;
@@ -1436,7 +1441,7 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         {
             /** We have SSL parameters, try to process them */
             if (!runtime_enable_server_ssl(server, ssl_key, ssl_cert, ssl_ca,
-                                           ssl_version, ssl_depth))
+                                           ssl_version, ssl_depth, ssl_verify))
             {
                 dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
                            "for more details.\n", server->name);
@@ -1538,7 +1543,7 @@ static void alterMaxScale(DCB *dcb, char *v1, char *v2, char *v3,
 struct subcommand alteroptions[] =
 {
     {
-        "server", 2, 12, (FN)alterServer,
+        "server", 2, 14, (FN)alterServer,
         "Alter server parameters",
         "Usage: alter server NAME KEY=VALUE ...\n"
         "\n"
@@ -1548,18 +1553,19 @@ struct subcommand alteroptions[] =
         "\n"
         "This will alter an existing parameter of a server. The accepted values for KEY are:\n"
         "\n"
-        "address               Server address\n"
-        "port                  Server port\n"
-        "monitoruser           Monitor user for this server\n"
-        "monitorpw             Monitor password for this server\n"
-        "ssl                   Enable SSL, value must be 'required'\n"
-        "ssl_key               Path to SSL private key\n"
-        "ssl_cert              Path to SSL certificate\n"
-        "ssl_ca_cert           Path to SSL CA certificate\n"
-        "ssl_version           SSL version\n"
-        "ssl_cert_verify_depth Certificate verification depth\n"
-        "persistpoolmax        Persisted connection pool size\n"
-        "persistmaxtime        Persisted connection maximum idle time\n"
+        "address                     Server address\n"
+        "port                        Server port\n"
+        "monitoruser                 Monitor user for this server\n"
+        "monitorpw                   Monitor password for this server\n"
+        "ssl                         Enable SSL, value must be 'required'\n"
+        "ssl_key                     Path to SSL private key\n"
+        "ssl_cert                    Path to SSL certificate\n"
+        "ssl_ca_cert                 Path to SSL CA certificate\n"
+        "ssl_version                 SSL version\n"
+        "ssl_cert_verify_depth       Certificate verification depth\n"
+        "ssl_verify_peer_certificate Peer certificate verification\n"
+        "persistpoolmax              Persisted connection pool size\n"
+        "persistmaxtime              Persisted connection maximum idle time\n"
         "\n"
         "To configure SSL for a newly created server, the 'ssl', 'ssl_cert',\n"
         "'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.\n"

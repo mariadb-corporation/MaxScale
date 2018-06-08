@@ -98,7 +98,7 @@ int main(int argc, char** argv)
         test.assert(false, "Could not start MaxScale.");
         return test.global_result;
     }
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
 
     StringSet node2_states = test.get_server_status("server3");
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
     snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP[3], test.repl->port[3]);
     mysql_query(nodes[0], cmd);
     mysql_query(nodes[0], "START SLAVE;");
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.assert(master_id == 4, "Server 4 should be the cluster master.");
@@ -132,7 +132,7 @@ int main(int argc, char** argv)
         int ec;
         test.maxscales->ssh_node_output(0,
             "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4" , true, &ec);
-        sleep(10);
+        test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Server 1 should be the cluster master.");
         get_output(test);

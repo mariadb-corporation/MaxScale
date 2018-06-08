@@ -24,13 +24,13 @@ void reset_replication(TestConnections& test)
     {
         int ind = master_id - 1;
         replicate_from(test, 0, ind);
-        sleep(3);
+        test.maxscales->wait_for_monitor();
         get_output(test);
         int ec;
         stringstream switchover;
         switchover << "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
         test.maxscales->ssh_node_output(0, switchover.str().c_str() , true, &ec);
-        sleep(3);
+        test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         cout << "Master server id is now back to " << master_id << endl;
         test.assert(master_id == 1, "Switchover back to server1 failed");
@@ -80,11 +80,9 @@ void prepare_test_2(TestConnections& test)
     cout << LINE << endl;
     test.repl->connect();
     check(test);
-    sleep(1);
     print_gtids(test);
     test.try_query(test.repl->nodes[1], "STOP SLAVE;");
     test.try_query(test.repl->nodes[1], "RESET SLAVE ALL;");
-    sleep(1);
     get_output(test);
     if (test.global_result == 0)
     {
@@ -108,7 +106,7 @@ void check_test_2(TestConnections& test)
 
     // Reset state
     replicate_from(test, 1, master_id - 1);
-    sleep(3);
+    test.maxscales->wait_for_monitor();
     get_output(test);
     StringSet node_states = test.get_server_status("server2");
     test.assert(node_states.find("Slave") != node_states.end(), "Server 2 is not replicating.");
@@ -145,7 +143,7 @@ void prepare_test_3(TestConnections& test)
     test.repl->start_node(2, (char *) "");
     test.repl->start_node(3, (char *) "");
     test.maxscales->start_maxscale(0);
-    sleep(2);
+    test.maxscales->wait_for_monitor();
 
     test.repl->connect();
     test.tprintf("Settings changed.");
@@ -182,7 +180,6 @@ void check_test_3(TestConnections& test)
     test.repl->stop_node(1);
     test.repl->stop_node(2);
     test.repl->stop_node(3);
-    sleep(4);
 
     test.repl->restore_server_settings(1);
     test.repl->restore_server_settings(2);
@@ -191,6 +188,5 @@ void check_test_3(TestConnections& test)
     test.repl->start_node(1, (char *) "");
     test.repl->start_node(2, (char *) "");
     test.repl->start_node(3, (char *) "");
-    sleep(2);
     test.maxscales->start_maxscale(0);
 }

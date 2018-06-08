@@ -122,7 +122,7 @@ void expect(TestConnections& test, const char* zServer, const char* zState1, con
 
 void run(TestConnections& test)
 {
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     int N = test.repl->N;
     cout << "Nodes: " << N << endl;
@@ -147,7 +147,7 @@ void run(TestConnections& test)
     cout << "\nStopping slave " << N - 1 << endl;
     test.repl->stop_node(N - 1);
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     // server4 was stopped, so we expect the state of it to be /Down/,
     // and the states of the other ones not to have changed.
@@ -171,7 +171,7 @@ void run(TestConnections& test)
     cout << "\nStopping master." << endl;
     test.repl->stop_node(0);
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     // server1 (previous master) was taken down, so its state should be /Down/.
     // server2 should have been made into master, and server4 should still be down.
@@ -183,7 +183,7 @@ void run(TestConnections& test)
     cout << "\nBringing up slave " << N - 1 << endl;
     test.repl->start_node(N - 1, (char*)"");
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     // server1 should still be down, server2 still master, and server3 still
     // a slave. server4 was brought up, so it should have been rejoined and

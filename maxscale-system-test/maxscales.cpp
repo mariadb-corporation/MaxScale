@@ -1,4 +1,6 @@
 #include "maxscales.h"
+#include <sstream>
+#include <unordered_map>
 
 Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose)
 {
@@ -430,4 +432,57 @@ int Maxscales::port(enum service type, int m) const
         return readconn_slave_port[m];
     }
     return -1;
+}
+
+void Maxscales::wait_for_monitor(int intervals, int m)
+{
+    //Helper for getting number of monitor ticks
+    auto get_ticks = [&](std::string name)
+    {
+        int rc;
+        char* ticks = ssh_node_output_f(m, false, &rc,  "maxctrl api get monitors/%s data.attributes.ticks", name.c_str());
+        char* ptr;
+        int rval = strtol(ticks, &ptr, 10);
+
+        if (ptr == ticks || (*ptr != '\0' && !isspace(*ptr)))
+        {
+            printf("ERROR, invalid monitor tick value: %s\n", ticks);
+            rval = -1;
+        }
+
+        free(ticks);
+        return rval;
+    };
+
+    int rc = 0;
+
+    // Get a list of monitor names that are running
+    char* monitors = ssh_node_output_f(m, false, &rc,  "maxctrl --tsv list monitors|grep Running|cut -f 1");
+    std::istringstream is;
+    is.str(monitors);
+    free(monitors);
+    std::string name;
+    std::unordered_map<std::string, int> ticks;
+
+    // For each monitor, store the current monitor tick
+    while (std::getline(is, name))
+    {
+        ticks[name] = get_ticks(name);
+    }
+
+    for (auto a: ticks)
+    {
+        // Wait a maximum of 60 seconds for a single monitor interval
+        for (int i = 0; i < 60; i++)
+        {
+            int start = a.second;
+            int end = get_ticks(a.first);
+
+            if (start == -1 || end == -1 || end - start >= intervals)
+            {
+                break;
+            }
+            sleep(1);
+        }
+    }
 }

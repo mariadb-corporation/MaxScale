@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     string rejoin_s4 = REJOIN_CMD + " server4";
     test.maxscales->ssh_node_output(0, rejoin_s3.c_str() , true, &ec);
     test.maxscales->ssh_node_output(0, rejoin_s4.c_str() , true, &ec);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
 
     StringSet node2_states = test.get_server_status("server3");
@@ -115,11 +115,11 @@ int main(int argc, char** argv)
     snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP[3], test.repl->port[3]);
     mysql_query(nodes[0], cmd);
     mysql_query(nodes[0], "START SLAVE;");
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     string rejoin_s2 = REJOIN_CMD + " server2";
     test.maxscales->ssh_node_output(0, rejoin_s2.c_str() , true, &ec);
     test.maxscales->ssh_node_output(0, rejoin_s3.c_str() , true, &ec);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.assert(master_id == 4, "Server 4 should be the cluster master.");
@@ -132,7 +132,7 @@ int main(int argc, char** argv)
         int ec;
         test.maxscales->ssh_node_output(0,
             "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4" , true, &ec);
-        sleep(10);
+        test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Server 1 should be the cluster master.");
         get_output(test);

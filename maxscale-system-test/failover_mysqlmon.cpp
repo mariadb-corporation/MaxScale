@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     execute_query(test->repl->nodes[3], "STOP SLAVE;RESET SLAVE ALL;");
 
     test->tprintf("Wait for the monitor to detect it ");
-    sleep(15);
+    test.maxscales->wait_for_monitor();
 
     test->tprintf("Connect and insert should work ");
     char *output = test->ssh_maxscale_output(true, "maxadmin list servers");
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     test->repl->unblock_node(2);
 
     test->tprintf("Wait for the monitor to detect it ");
-    sleep(15);
+    test.maxscales->wait_for_monitor();
 
     test->tprintf("Check that we are still using the last node to which we failed over "
                   "to and that the old nodes are in maintenance mode");

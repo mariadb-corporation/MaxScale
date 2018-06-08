@@ -245,7 +245,8 @@ bool runtime_destroy_server(SERVER *server)
 }
 
 static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *cert,
-                                const char *ca, const char *version, const char *depth)
+                                const char *ca, const char *version, const char *depth,
+                                const char *verify)
 {
     SSL_LISTENER *rval = NULL;
     CONFIG_CONTEXT *obj = config_context_create(name);
@@ -257,7 +258,8 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
             config_add_param(obj, CN_SSL_CERT, cert) &&
             config_add_param(obj, CN_SSL_CA_CERT, ca) &&
             (!version || config_add_param(obj, CN_SSL_VERSION, version)) &&
-            (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth)))
+            (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth)) &&
+            (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
         {
             int err = 0;
             SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
@@ -275,14 +277,15 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
 }
 
 bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
-                               const char *ca, const char *version, const char *depth)
+                               const char *ca, const char *version, const char *depth,
+                               const char *verify)
 {
     bool rval = false;
 
     if (key && cert && ca)
     {
         spinlock_acquire(&crt_lock);
-        SSL_LISTENER *ssl = create_ssl(server->name, key, cert, ca, version, depth);
+        SSL_LISTENER *ssl = create_ssl(server->name, key, cert, ca, version, depth, verify);
 
         if (ssl)
         {
@@ -792,7 +795,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth)
+                             const char *ssl_version, const char *ssl_depth,
+                             const char *verify_ssl)
 {
 
     if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
@@ -830,7 +834,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
         SSL_LISTENER *ssl = NULL;
 
         if (ssl_key && ssl_cert && ssl_ca &&
-            (ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth)) == NULL)
+            (ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth, verify_ssl)) == NULL)
         {
             MXS_ERROR("SSL initialization for listener '%s' failed.", name);
             runtime_error("SSL initialization for listener '%s' failed.", name);
@@ -1267,6 +1271,7 @@ static bool process_ssl_parameters(SERVER* server, json_t* params)
         if (validate_ssl_json(params))
         {
             char buf[20]; // Enough to hold the string form of the ssl_cert_verify_depth
+            char buf_verify[20]; // Enough to hold the string form of the ssl_verify_peer_certificate
             const char* key = json_string_value(mxs_json_pointer(params, CN_SSL_KEY));
             const char* cert = json_string_value(mxs_json_pointer(params, CN_SSL_CERT));
             const char* ca = json_string_value(mxs_json_pointer(params, CN_SSL_CA_CERT));
@@ -1280,7 +1285,16 @@ static bool process_ssl_parameters(SERVER* server, json_t* params)
                 depth = buf;
             }
 
-            if (!runtime_enable_server_ssl(server, key, cert, ca, version, depth))
+            const char* verify = NULL;
+            json_t* verify_json = mxs_json_pointer(params, CN_SSL_VERIFY_PEER_CERTIFICATE);
+
+            if (verify_json)
+            {
+                snprintf(buf_verify, sizeof(buf), "%s", json_boolean_value(verify_json) ? "true" : "false");
+                verify = buf_verify;
+            }
+
+            if (!runtime_enable_server_ssl(server, key, cert, ca, version, depth, verify))
             {
                 runtime_error("Failed to initialize SSL for server '%s'. See "
                               "error log for more details.", server->name);
@@ -1957,11 +1971,12 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
         const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
         const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
         const char* ssl_cert_verify_depth = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+        const char* ssl_verify_peer_certificate = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
 
         rval = runtime_create_listener(service, id, address, port.c_str(), protocol,
                                        authenticator, authenticator_options,
                                        ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
-                                       ssl_cert_verify_depth);
+                                       ssl_cert_verify_depth, ssl_verify_peer_certificate);
     }
 
     return rval;

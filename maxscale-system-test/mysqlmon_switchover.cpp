@@ -122,7 +122,7 @@ void expect(TestConnections& test, const char* zServer, const char* zState1, con
 
 void run(TestConnections& test)
 {
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     int N = test.repl->N;
     cout << "Nodes: " << N << endl;
@@ -149,7 +149,7 @@ void run(TestConnections& test)
     zCommand = "call command mysqlmon switchover MySQL-Monitor server2 server1";
     test.maxscales->execute_maxadmin_command_print(0, (char*)zCommand);
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     expect(test, "server1", "Slave",  "Running");
     expect(test, "server2", "Master", "Running");
@@ -162,7 +162,7 @@ void run(TestConnections& test)
     zCommand = "call command mysqlmon switchover MySQL-Monitor server1 server2";
     test.maxscales->execute_maxadmin_command_print(0, (char*)zCommand);
 
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     expect(test, "server1", "Master", "Running");
     expect(test, "server2", "Slave",  "Running");

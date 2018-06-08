@@ -353,6 +353,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
                   "server '%s' when no response was expected. Command: 0x%02hhx "
                   "Query: %s", mxs_mysql_get_command(buffer), backend->name(),
                   backend->current_command(), sql.c_str());
+        session_dump_statements(backend->dcb()->session);
         ss_dassert(false);
     }
 }
