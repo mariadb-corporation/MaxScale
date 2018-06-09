@@ -104,7 +104,7 @@ void Avro::read_source_service_options(SERVICE* source)
 }
 
 //static
-Avro* Avro::create(SERVICE* service)
+Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 {
     SERVICE* source_service = NULL;
     MXS_CONFIG_PARAMETER *param = config_get_param(service->svc_config_param, "source");
@@ -135,10 +135,10 @@ Avro* Avro::create(SERVICE* service)
         }
     }
 
-    return new (std::nothrow) Avro(service, service->svc_config_param, source_service);
+    return new (std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
 }
 
-Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source):
+Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler):
     service(service),
     filestem(config_get_string(params, "filestem")),
     binlogdir(config_get_string(params, "binlogdir")),
@@ -153,14 +153,8 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source):
     row_count(0),
     row_target(config_get_integer(params, "group_rows")),
     task_handle(0),
-    stats{0}
+    event_handler(handler)
 {
-    uint64_t block_size = config_get_size(params, "block_size");
-    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(params, "codec", codec_values));
-
-    // TODO: pass this as a parameter or something
-    event_hander = new AvroConverter(avrodir, block_size, codec);
-
     /** For detection of CREATE/ALTER TABLE statements */
     static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
     static const char* alter_table_regex = "(?i)alter[[:space:]]+table";

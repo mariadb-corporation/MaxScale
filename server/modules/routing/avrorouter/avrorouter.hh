@@ -123,7 +123,7 @@ class Avro: public MXS_ROUTER
     Avro& operator=(const Avro&) = delete;
 
 public:
-    static Avro* create(SERVICE* service);
+    static Avro* create(SERVICE* service, SRowEventHandler handler);
 
     SERVICE*                 service; /*< Pointer to the service using this router */
     std::string              filestem; /*< Root of binlog filename */
@@ -148,15 +148,10 @@ public:
     uint64_t                 row_target; /*< Minimum about of row events that will trigger
                                           * a flush of all tables */
     uint32_t                 task_handle; /**< Delayed task handle */
-    RowEventHandler*         event_hander;
-
-    struct
-    {
-        int n_clients; /*< Number client sessions created */
-    } stats; /*< Statistics for this router */
+    SRowEventHandler         event_handler;
 
 private:
-    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source);
+    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler);
     void read_source_service_options(SERVICE* source);
 };
 

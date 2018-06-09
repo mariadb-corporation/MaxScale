@@ -380,7 +380,7 @@ void notify_all_clients(Avro *router)
 
 void do_checkpoint(Avro *router)
 {
-    router->event_hander->flush_tables();
+    router->event_handler->flush_tables();
     avro_save_conversion_state(router);
     notify_all_clients(router);
     router->row_count = router->trx_count = 0;

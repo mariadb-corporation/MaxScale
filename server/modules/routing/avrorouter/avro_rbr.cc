@@ -31,7 +31,7 @@ static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET va
                                          * larger than 255 is added */
 
 uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
-                                RowEventHandler* conv, uint8_t *ptr,
+                                SRowEventHandler& conv, uint8_t *ptr,
                                 uint8_t *columns_present, uint8_t *end);
 
 /**
@@ -102,7 +102,7 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             }
         }
 
-        if (router->event_hander->open_table(map, create->second))
+        if (router->event_handler->open_table(map, create->second))
         {
             create->second->was_used = true;
 
@@ -221,7 +221,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
 
-        bool ok = router->event_hander->prepare_table(map->database, map->table);
+        bool ok = router->event_handler->prepare_table(map->database, map->table);
         auto create = router->created_tables.find(table_ident);
 
         if (ok && create != router->created_tables.end() &&
@@ -241,18 +241,18 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
                 // Increment the event count for this transaction
                 router->gtid.event_num++;
 
-                router->event_hander->prepare_row(router->gtid, *hdr, event_type);
-                ptr = process_row_event_data(map, create->second, router->event_hander, ptr, col_present, end);
-                router->event_hander->commit(router->gtid);
+                router->event_handler->prepare_row(router->gtid, *hdr, event_type);
+                ptr = process_row_event_data(map, create->second, router->event_handler, ptr, col_present, end);
+                router->event_handler->commit(router->gtid);
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
                  * a different type */
                 if (event_type == UPDATE_EVENT)
                 {
-                    router->event_hander->prepare_row(router->gtid, *hdr, UPDATE_EVENT_AFTER);
-                    ptr = process_row_event_data(map, create->second, router->event_hander, ptr, col_present, end);
-                    router->event_hander->commit(router->gtid);
+                    router->event_handler->prepare_row(router->gtid, *hdr, UPDATE_EVENT_AFTER);
+                    ptr = process_row_event_data(map, create->second, router->event_handler, ptr, col_present, end);
+                    router->event_handler->commit(router->gtid);
                 }
 
                 rows++;
@@ -304,7 +304,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
  * @param metadata Field metadata
  * @param value    Pointer to the start of the in-memory representation of the data
  */
-void set_numeric_field_value(RowEventHandler* conv, int idx, uint8_t type,
+void set_numeric_field_value(SRowEventHandler& conv, int idx, uint8_t type,
                              uint8_t *metadata, uint8_t *value)
 {
     switch (type)
@@ -464,8 +464,9 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create, RowEventHandler* conv,
-                                uint8_t *ptr, uint8_t *columns_present, uint8_t *end)
+uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
+                                SRowEventHandler& conv, uint8_t *ptr,
+                                uint8_t *columns_present, uint8_t *end)
 {
     int npresent = 0;
     long ncolumns = map->columns();

@@ -40,6 +40,8 @@
 #include <maxscale/worker.hh>
 #include <binlog_common.h>
 
+#include "avro_converter.hh"
+
 using namespace mxs;
 
 static bool conversion_task_ctl(Avro *inst, bool start);
@@ -59,7 +61,12 @@ static bool conversion_task_ctl(Avro *inst, bool start);
  */
 MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
-    Avro* router = Avro::create(service);
+    uint64_t block_size = config_get_size(service->svc_config_param, "block_size");
+    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(service->svc_config_param, "codec", codec_values));
+    std::string avrodir = config_get_string(service->svc_config_param, "avrodir");
+    SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
+
+    Avro* router = Avro::create(service, handler);
 
     if (router)
     {
@@ -274,7 +281,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     /** We reached end of file, flush unwritten records to disk */
     if (progress)
     {
-        router->event_hander->flush_tables();
+        router->event_handler->flush_tables();
         avro_save_conversion_state(router);
         logged = false;
     }

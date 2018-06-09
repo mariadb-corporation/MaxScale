@@ -165,3 +165,5 @@ public:
     // Empty (NULL) value type handler
     virtual void column(int i) = 0;
 };
+
+typedef std::auto_ptr<RowEventHandler> SRowEventHandler;
