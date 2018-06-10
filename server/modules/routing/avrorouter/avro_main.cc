@@ -62,7 +62,8 @@ static bool conversion_task_ctl(Avro *inst, bool start);
 MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
     uint64_t block_size = config_get_size(service->svc_config_param, "block_size");
-    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(service->svc_config_param, "codec", codec_values));
+    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(service->svc_config_param,
+                                                                                 "codec", codec_values));
     std::string avrodir = config_get_string(service->svc_config_param, "avrodir");
     SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
 
@@ -153,6 +154,7 @@ static void
 diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     Avro *router_inst = (Avro *) router;
+    gtid_pos_t gtid = router_inst->handler.get_gtid();
 
     dcb_printf(dcb, "\tAVRO files directory:                %s\n",
                router_inst->avrodir.c_str());
@@ -164,12 +166,9 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
     dcb_printf(dcb, "\tCurrent binlog position:             %lu\n",
                router_inst->current_pos);
     dcb_printf(dcb, "\tCurrent GTID value:                  %lu-%lu-%lu\n",
-               router_inst->gtid.domain, router_inst->gtid.server_id,
-               router_inst->gtid.seq);
-    dcb_printf(dcb, "\tCurrent GTID timestamp:              %u\n",
-               router_inst->gtid.timestamp);
-    dcb_printf(dcb, "\tCurrent GTID #events:                %lu\n",
-               router_inst->gtid.event_num);
+               gtid.domain, gtid.server_id, gtid.seq);
+    dcb_printf(dcb, "\tCurrent GTID timestamp:              %u\n", gtid.timestamp);
+    dcb_printf(dcb, "\tCurrent GTID #events:                %lu\n", gtid.event_num);
 }
 
 /**
@@ -192,11 +191,11 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
     json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
     json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
 
-    snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", router_inst->gtid.domain,
-             router_inst->gtid.server_id, router_inst->gtid.seq);
+    gtid_pos_t gtid = router_inst->handler.get_gtid();
+    snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
     json_object_set_new(rval, "gtid", json_string(pathbuf));
-    json_object_set_new(rval, "gtid_timestamp", json_integer(router_inst->gtid.timestamp));
-    json_object_set_new(rval, "gtid_event_number", json_integer(router_inst->gtid.event_num));
+    json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
+    json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
 
     return rval;
 }
@@ -281,7 +280,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     /** We reached end of file, flush unwritten records to disk */
     if (progress)
     {
-        router->event_handler->flush_tables();
+        router->handler.flush();
         avro_save_conversion_state(router);
         logged = false;
     }

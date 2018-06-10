@@ -145,28 +145,13 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     avrodir(config_get_string(params, "avrodir")),
     current_pos(4),
     binlog_fd(-1),
-    event_types(0),
-    event_type_hdr_lens{0},
-    binlog_checksum(0),
     trx_count(0),
     trx_target(config_get_integer(params, "group_trx")),
     row_count(0),
     row_target(config_get_integer(params, "group_rows")),
     task_handle(0),
-    event_handler(handler)
+    handler(service, handler)
 {
-    /** For detection of CREATE/ALTER TABLE statements */
-    static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
-    static const char* alter_table_regex = "(?i)alter[[:space:]]+table";
-    int pcreerr;
-    size_t erroff;
-    create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex, PCRE2_ZERO_TERMINATED,
-                                    0, &pcreerr, &erroff, NULL);
-    ss_dassert(create_table_re); // This should never fail
-    alter_table_re = pcre2_compile((PCRE2_SPTR) alter_table_regex, PCRE2_ZERO_TERMINATED,
-                                   0, &pcreerr, &erroff, NULL);
-    ss_dassert(alter_table_re); // This should never fail
-
     if (source)
     {
         read_source_service_options(source);

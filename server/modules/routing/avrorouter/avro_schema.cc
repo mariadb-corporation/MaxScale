@@ -514,7 +514,7 @@ int resolve_table_version(const char* db, const char* table)
  *
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len)
+STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
@@ -533,12 +533,12 @@ TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len)
     std::vector<Column> columns;
     process_column_definition(statement_sql, columns);
 
-    TableCreateEvent *rval = NULL;
+    STableCreateEvent rval;
 
     if (!columns.empty())
     {
         int version = resolve_table_version(database, table);
-        rval = new (std::nothrow) TableCreateEvent(database, table, version, std::move(columns));
+        rval.reset(new (std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
     }
     else
     {
@@ -730,9 +730,9 @@ static bool extract_create_like_identifier(const char* sql, size_t len, char* ta
 /**
  * Create a table from another table
  */
-TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db)
+STableCreateEvent Rpl::table_create_copy(const char* sql, size_t len, const char* db)
 {
-    TableCreateEvent* rval = NULL;
+    STableCreateEvent rval;
     char target[MYSQL_TABLE_MAXLEN + 1] = "";
     char source[MYSQL_TABLE_MAXLEN + 1] = "";
 
@@ -748,11 +748,11 @@ TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, c
 
         strcat(table_ident, source);
 
-        auto it = router->created_tables.find(table_ident);
+        auto it = m_created_tables.find(table_ident);
 
-        if (it != router->created_tables.end())
+        if (it != m_created_tables.end())
         {
-            rval = new (std::nothrow) TableCreateEvent(*it->second);
+            rval.reset(new (std::nothrow) TableCreateEvent(*it->second));
             char* table = strchr(target, '.');
             table = table ? table + 1 : target;
             rval->table = table;

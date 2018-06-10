@@ -74,23 +74,23 @@ static int get_event_type(uint8_t event)
  * @param hdr Replication header
  * @param ptr Pointer to event payload
  */
-bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
+bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
 {
     bool rval = false;
     uint64_t id;
     char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-    int ev_len = router->event_type_hdr_lens[hdr->event_type];
+    int ev_len = m_event_type_hdr_lens[hdr->event_type];
 
     read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
-    auto create = router->created_tables.find(table_ident);
+    auto create = m_created_tables.find(table_ident);
 
-    if (create != router->created_tables.end())
+    if (create != m_created_tables.end())
     {
         ss_dassert(create->second->columns.size() > 0);
-        auto it = router->table_maps.find(table_ident);
+        auto it = m_table_maps.find(table_ident);
         STableMapEvent map(table_map_alloc(ptr, ev_len, create->second.get()));
 
-        if (it != router->table_maps.end())
+        if (it != m_table_maps.end())
         {
             auto old = it->second;
 
@@ -102,28 +102,23 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             }
         }
 
-        if (router->event_handler->open_table(map, create->second))
+        if (m_handler->open_table(map, create->second))
         {
             create->second->was_used = true;
 
-            auto old = router->table_maps.find(table_ident);
-            bool notify = old != router->table_maps.end();
+            auto old = m_table_maps.find(table_ident);
+            bool notify = old != m_table_maps.end();
 
             if (notify)
             {
-                router->active_maps.erase(old->second->id);
+                m_active_maps.erase(old->second->id);
             }
 
-            router->table_maps[table_ident] = map;
-            router->active_maps[map->id] = map;
-            ss_dassert(router->active_maps[id] == map);
+            m_table_maps[table_ident] = map;
+            m_active_maps[map->id] = map;
+            ss_dassert(m_active_maps[id] == map);
             MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
             rval = true;
-
-            if (notify)
-            {
-                notify_all_clients(router);
-            }
         }
     }
     else
@@ -131,11 +126,6 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
         MXS_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
                     "table until a DDL statement for it is read.", table_ident);
-    }
-
-    if (rval)
-    {
-        MXS_INFO("Table Map for '%s' at %lu", table_ident, router->current_pos);
     }
 
     return rval;
@@ -152,12 +142,11 @@ bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
  * @param ptr Pointer to the start of the event
  * @return True on succcess, false on error
  */
-bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
+bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
 {
     bool rval = false;
-    uint8_t *start = ptr;
     uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
-    uint8_t table_id_size = router->event_type_hdr_lens[hdr->event_type] == 6 ? 4 : 6;
+    uint8_t table_id_size = m_event_type_hdr_lens[hdr->event_type] == 6 ? 4 : 6;
     uint64_t table_id = 0;
 
     /** The first value is the ID where the table was mapped. This should be
@@ -213,46 +202,45 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
 
     // There should always be a table map event prior to a row event.
 
-    auto it = router->active_maps.find(table_id);
+    auto it = m_active_maps.find(table_id);
 
-    if (it != router->active_maps.end())
+    if (it != m_active_maps.end())
     {
         STableMapEvent map = it->second;
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
 
-        bool ok = router->event_handler->prepare_table(map->database, map->table);
-        auto create = router->created_tables.find(table_ident);
+        bool ok = m_handler->prepare_table(map->database, map->table);
+        auto create = m_created_tables.find(table_ident);
 
-        if (ok && create != router->created_tables.end() &&
+        if (ok && create != m_created_tables.end() &&
             ncolumns == map->columns() && create->second->columns.size() == map->columns())
         {
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
-            MXS_INFO("Row Event for '%s' at %lu", table_ident, router->current_pos);
+            MXS_INFO("Row Event for '%s' at %u", table_ident, hdr->next_pos - hdr->event_size);
 
             while (ptr < end)
             {
-                static uint64_t total_row_count = 1;
                 int event_type = get_event_type(hdr->event_type);
 
                 // Increment the event count for this transaction
-                router->gtid.event_num++;
+                m_gtid.event_num++;
 
-                router->event_handler->prepare_row(router->gtid, *hdr, event_type);
-                ptr = process_row_event_data(map, create->second, router->event_handler, ptr, col_present, end);
-                router->event_handler->commit(router->gtid);
+                m_handler->prepare_row(m_gtid, *hdr, event_type);
+                ptr = process_row_event_data(map, create->second, m_handler, ptr, col_present, end);
+                m_handler->commit(m_gtid);
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
                  * a different type */
                 if (event_type == UPDATE_EVENT)
                 {
-                    router->event_handler->prepare_row(router->gtid, *hdr, UPDATE_EVENT_AFTER);
-                    ptr = process_row_event_data(map, create->second, router->event_handler, ptr, col_present, end);
-                    router->event_handler->commit(router->gtid);
+                    m_handler->prepare_row(m_gtid, *hdr, UPDATE_EVENT_AFTER);
+                    ptr = process_row_event_data(map, create->second, m_handler, ptr, col_present, end);
+                    m_handler->commit(m_gtid);
                 }
 
                 rows++;
@@ -265,7 +253,7 @@ bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
                       " errors for more details.", map->database.c_str(), map->table.c_str());
         }
-        else if (create == router->created_tables.end())
+        else if (create == m_created_tables.end())
         {
             MXS_ERROR("Create table statement for %s.%s was not found from the "
                       "binary logs or the stored schema was not correct.",

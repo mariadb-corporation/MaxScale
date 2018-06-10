@@ -12,8 +12,8 @@
  * Public License.
  */
 
-#include "rpl_events.hh"
 #include "avrorouter.hh"
+#include "rpl.hh"
 
 #include <avro.h>
 

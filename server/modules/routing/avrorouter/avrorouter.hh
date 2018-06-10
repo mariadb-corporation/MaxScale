@@ -26,13 +26,12 @@
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
 #include <cdc.h>
-#include <maxscale/pcre2.h>
 #include <maxavro.h>
 #include <binlog_common.h>
 #include <maxscale/protocol/mysql.h>
 #include <blr_constants.h>
 
-#include "rpl_events.hh"
+#include "rpl.hh"
 
 MXS_BEGIN_DECLS
 
@@ -113,9 +112,6 @@ static const MXS_ENUM_VALUE codec_values[] =
     {NULL}
 };
 
-typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
-typedef std::tr1::unordered_map<std::string, STableMapEvent>    MappedTables;
-typedef std::tr1::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
 
 class Avro: public MXS_ROUTER
 {
@@ -132,23 +128,12 @@ public:
     std::string              binlog_name; /*< Name of the current binlog file */
     uint64_t                 current_pos; /*< Current binlog position */
     int                      binlog_fd; /*< File descriptor of the binlog file being read */
-    pcre2_code*              create_table_re;
-    pcre2_code*              alter_table_re;
-    uint8_t                  event_types;
-    uint8_t                  event_type_hdr_lens[MAX_EVENT_TYPE_END];
-    uint8_t                  binlog_checksum;
-    gtid_pos_t               gtid;
-    ActiveMaps               active_maps;
-    MappedTables             table_maps;
-    CreatedTables            created_tables;
-    uint64_t                 trx_count; /*< Transactions processed */
-    uint64_t                 trx_target; /*< Minimum about of transactions that will trigger
-                                          * a flush of all tables */
-    uint64_t                 row_count; /*< Row events processed */
-    uint64_t                 row_target; /*< Minimum about of row events that will trigger
-                                          * a flush of all tables */
+    uint64_t                 trx_count;  /*< Transactions processed */
+    uint64_t                 trx_target; /*< Number of transactions that trigger a flush */
+    uint64_t                 row_count;  /*< Row events processed */
+    uint64_t                 row_target; /*< Number of row events that trigger a flush */
     uint32_t                 task_handle; /**< Delayed task handle */
-    SRowEventHandler         event_handler;
+    Rpl                      handler;
 
 private:
     Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler);
@@ -208,8 +193,7 @@ private:
 
 void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id, char* dest, size_t len);
 TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create);
-TableCreateEvent* table_create_alloc(char* ident, const char* sql, int len);
-TableCreateEvent* table_create_copy(Avro *router, const char* sql, size_t len, const char* db);
+STableCreateEvent table_create_alloc(char* ident, const char* sql, int len);
 bool table_create_save(TableCreateEvent *create, const char *filename);
 bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end);
 TableCreateEvent* table_create_from_schema(const char* file, const char* db, const char* table,
@@ -221,7 +205,6 @@ bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 void avro_close_binlog(int fd);
 avro_binlog_end_t avro_read_all_events(Avro *router);
 char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
-bool handle_table_map_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER construct_header(uint8_t* ptr);

@@ -39,7 +39,6 @@
 
 static const char *statefile_section = "avro-conversion";
 
-void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
 
 /**
  * Open a binlog file for reading
@@ -111,10 +110,11 @@ bool avro_save_conversion_state(Avro *router)
         return false;
     }
 
+    gtid_pos_t gtid = router->handler.get_gtid();
     fprintf(config_file, "[%s]\n", statefile_section);
     fprintf(config_file, "position=%lu\n", router->current_pos);
-    fprintf(config_file, "gtid=%lu-%lu-%lu:%lu\n", router->gtid.domain,
-            router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
+    fprintf(config_file, "gtid=%lu-%lu-%lu:%lu\n", gtid.domain,
+            gtid.server_id, gtid.seq, gtid.event_num);
     fprintf(config_file, "file=%s\n", router->binlog_name.c_str());
     fclose(config_file);
 
@@ -159,10 +159,12 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
 
             if (domain && serv_id && seq && subseq)
             {
-                router->gtid.domain = strtol(domain, NULL, 10);
-                router->gtid.server_id = strtol(serv_id, NULL, 10);
-                router->gtid.seq = strtol(seq, NULL, 10);
-                router->gtid.event_num = strtol(subseq, NULL, 10);
+                gtid_pos_t gtid;
+                gtid.domain = strtol(domain, NULL, 10);
+                gtid.server_id = strtol(serv_id, NULL, 10);
+                gtid.seq = strtol(seq, NULL, 10);
+                gtid.event_num = strtol(subseq, NULL, 10);
+                router->handler.set_gtid(gtid);
             }
         }
         else if (strcmp(key, "position") == 0)
@@ -217,10 +219,13 @@ bool avro_load_conversion_state(Avro *router)
     switch (rc)
     {
     case 0:
-        rval = true;
-        MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
-                   router->binlog_name.c_str(), router->current_pos, router->gtid.domain,
-                   router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
+        {
+            rval = true;
+            gtid_pos_t gtid = router->handler.get_gtid();
+            MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
+                       router->binlog_name.c_str(), router->current_pos, gtid.domain,
+                       gtid.server_id, gtid.seq, gtid.event_num);
+        }
         break;
 
     case -1:
@@ -356,17 +361,32 @@ bool notify_cb(DCB* dcb, void* data)
     return true;
 }
 
-void notify_all_clients(Avro *router)
+void notify_all_clients(SERVICE* service)
 {
-    dcb_foreach(notify_cb, router->service);
+    dcb_foreach(notify_cb, service);
 }
 
 void do_checkpoint(Avro *router)
 {
-    router->event_handler->flush_tables();
+    router->handler.flush();
     avro_save_conversion_state(router);
-    notify_all_clients(router);
+    notify_all_clients(router->service);
     router->row_count = router->trx_count = 0;
+}
+
+void Rpl::flush()
+{
+    m_handler->flush_tables();
+}
+
+void Rpl::add_create(STableCreateEvent create)
+{
+    auto it = m_created_tables.find(create->id());
+
+    if (it == m_created_tables.end() || create->version > it->second->version)
+    {
+        m_created_tables[create->id()] = create;
+    }
 }
 
 REP_HEADER construct_header(uint8_t* ptr)
@@ -465,8 +485,14 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
     return rval;
 }
 
-void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr)
+void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
 {
+    if (m_binlog_checksum)
+    {
+        // We don't care about the checksum at this point so we ignore it
+        hdr.event_size -= 4;
+    }
+
     // The following events are related to the actual data
     if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
     {
@@ -475,45 +501,26 @@ void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr)
         int event_header_length = ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
         int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET - FDE_EXTRA_BYTES;
         uint8_t* checksum = ptr + hdr.event_size - event_header_length - FDE_EXTRA_BYTES;
-
-        // Precaution to prevent writing too much in case new events are added
-        int real_len = MXS_MIN(n_events, (int)sizeof(router->event_type_hdr_lens));
-        memcpy(router->event_type_hdr_lens, ptr + BLRM_FDE_EVENT_TYPES_OFFSET, real_len);
-
-        router->event_types = n_events;
-        router->binlog_checksum = checksum[0];
+        m_event_type_hdr_lens.assign(ptr, ptr + n_events);
+        m_event_types = n_events;
+        m_binlog_checksum = checksum[0];
     }
     else if (hdr.event_type == TABLE_MAP_EVENT)
     {
-        handle_table_map_event(router, &hdr, ptr);
+        handle_table_map_event(&hdr, ptr);
     }
     else if ((hdr.event_type >= WRITE_ROWS_EVENTv0 && hdr.event_type <= DELETE_ROWS_EVENTv1) ||
              (hdr.event_type >= WRITE_ROWS_EVENTv2 && hdr.event_type <= DELETE_ROWS_EVENTv2))
     {
-        router->row_count++;
-        handle_row_event(router, &hdr, ptr);
+        handle_row_event(&hdr, ptr);
     }
     else if (hdr.event_type == MARIADB10_GTID_EVENT)
     {
-        router->gtid.domain = extract_field(ptr + 8, 32);
-        router->gtid.server_id = hdr.serverid;
-        router->gtid.seq = extract_field(ptr, 64);
-        router->gtid.event_num = 0;
-        router->gtid.timestamp = hdr.timestamp;
+        m_gtid.extract(hdr, ptr);
     }
     else if (hdr.event_type == QUERY_EVENT)
     {
-        handle_query_event(router, &hdr, ptr);
-    }
-    else if (hdr.event_type == XID_EVENT)
-    {
-        router->trx_count++;
-
-        if (router->row_count >= router->row_target ||
-            router->trx_count >= router->trx_target)
-        {
-            do_checkpoint(router);
-        }
+        handle_query_event(&hdr, ptr);
     }
 }
 
@@ -573,14 +580,14 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
         // These events are only related to binary log files
         if (hdr.event_type == ROTATE_EVENT)
         {
-            int len = hdr.event_size - BINLOG_EVENT_HDR_LEN - 8 - (router->binlog_checksum ? 4 : 0);
+            int len = hdr.event_size - BINLOG_EVENT_HDR_LEN - 8 - (router->handler.have_checksums() ? 4 : 0);
             next_binlog.assign((char*)ptr + 8, len);
             rotate_seen = true;
         }
         else if (hdr.event_type == MARIADB_ANNOTATE_ROWS_EVENT)
         {
             // This appears to need special handling
-            int annotate_len = hdr.event_size - BINLOG_EVENT_HDR_LEN - (router->binlog_checksum ? 4 : 0);
+            int annotate_len = hdr.event_size - BINLOG_EVENT_HDR_LEN - (router->handler.have_checksums() ? 4 : 0);
             MXS_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
             pos += hdr.event_size;
             router->current_pos = pos;
@@ -589,20 +596,26 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
         }
         else
         {
-            uint32_t orig_size = hdr.event_size;
-
-            if (router->binlog_checksum)
+            if ((hdr.event_type >= WRITE_ROWS_EVENTv0 && hdr.event_type <= DELETE_ROWS_EVENTv1) ||
+                (hdr.event_type >= WRITE_ROWS_EVENTv2 && hdr.event_type <= DELETE_ROWS_EVENTv2))
             {
-                // We don't care about the checksum at this point so we ignore it
-                hdr.event_size -= 4;
+                router->row_count++;
+            }
+            else if (hdr.event_type == XID_EVENT)
+            {
+                router->trx_count++;
             }
 
-            handle_one_event(router, ptr, hdr);
-
-            hdr.event_size = orig_size;
+            router->handler.handle_event(hdr, ptr);
         }
 
         gwbuf_free(result);
+
+        if (router->row_count >= router->row_target ||
+            router->trx_count >= router->trx_target)
+        {
+            do_checkpoint(router);
+        }
 
         if (pos_is_ok(router, hdr, pos))
         {
@@ -662,14 +675,9 @@ void avro_load_metadata_from_schemas(Avro *router)
             if (versionend == suffix)
             {
                 snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-                auto it = router->created_tables.find(table_ident);
-
-                if (it == router->created_tables.end() || version > it->second->version)
-                {
-                    STableCreateEvent created(table_create_from_schema(files.gl_pathv[i],
-                                                                       db, table, version));
-                    router->created_tables[table_ident] = created;
-                }
+                STableCreateEvent created(table_create_from_schema(files.gl_pathv[i],
+                                                                   db, table, version));
+                router->handler.add_create(created);
             }
             else
             {
@@ -688,14 +696,14 @@ void avro_load_metadata_from_schemas(Avro *router)
  * @param len Statement length
  * @return True if the statement creates a new table
  */
-bool is_create_table_statement(Avro *router, char* ptr, size_t len)
+bool is_create_table_statement(pcre2_code* create_table_re, char* ptr, size_t len)
 {
     int rc = 0;
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(router->create_table_re, NULL);
+    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(create_table_re, NULL);
 
     if (mdata)
     {
-        rc = pcre2_match(router->create_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
+        rc = pcre2_match(create_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
         pcre2_match_data_free(mdata);
     }
 
@@ -740,14 +748,14 @@ bool is_create_as_statement(const char* ptr, size_t len)
  * @param len Statement length
  * @return True if the statement alters a table
  */
-bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
+bool is_alter_table_statement(pcre2_code* alter_table_re, char* ptr, size_t len)
 {
     int rc = 0;
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(router->alter_table_re, NULL);
+    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(alter_table_re, NULL);
 
     if (mdata)
     {
-        rc = pcre2_match(router->alter_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
+        rc = pcre2_match(alter_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
         pcre2_match_data_free(mdata);
     }
 
@@ -770,23 +778,23 @@ bool is_alter_table_statement(Avro *router, char* ptr, size_t len)
  * @param created Created table
  * @return False if an error occurred and true if successful
  */
-bool save_and_replace_table_create(Avro *router, TableCreateEvent *created)
+bool Rpl::save_and_replace_table_create(STableCreateEvent created)
 {
     std::string table_ident = created->database + "." + created->table;
-    auto it = router->created_tables.find(table_ident);
+    auto it = m_created_tables.find(table_ident);
 
-    if (it != router->created_tables.end())
+    if (it != m_created_tables.end())
     {
-        auto tm_it = router->table_maps.find(table_ident);
+        auto tm_it = m_table_maps.find(table_ident);
 
-        if (tm_it != router->table_maps.end())
+        if (tm_it != m_table_maps.end())
         {
-            router->active_maps.erase(tm_it->second->id);
-            router->table_maps.erase(tm_it);
+            m_active_maps.erase(tm_it->second->id);
+            m_table_maps.erase(tm_it);
         }
     }
 
-    router->created_tables[table_ident] = STableCreateEvent(created);
+    m_created_tables[table_ident] = created;
     ss_dassert(created->columns.size() > 0);
     return true;
 }
@@ -844,7 +852,7 @@ static void strip_executable_comments(char *sql, int* len)
  * @param pending_transaction Pointer where status of pending transaction is stored
  * @param ptr Pointer to the start of the event payload
  */
-void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
+void Rpl::handle_query_event(REP_HEADER *hdr, uint8_t *ptr)
 {
     int dblen = ptr[DBNM_OFF];
     int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
@@ -892,13 +900,13 @@ void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
     char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
     read_table_identifier(db, sql, sql + len, ident, sizeof(ident));
 
-    if (is_create_table_statement(router, sql, len))
+    if (is_create_table_statement(m_create_table_re, sql, len))
     {
-        TableCreateEvent *created = NULL;
+        STableCreateEvent created;
 
         if (is_create_like_statement(sql, len))
         {
-            created = table_create_copy(router, sql, len, db);
+            created = table_create_copy(sql, len, db);
         }
         else if (is_create_as_statement(sql, len))
         {
@@ -914,16 +922,16 @@ void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             created = table_create_alloc(ident, sql, len);
         }
 
-        if (created && !save_and_replace_table_create(router, created))
+        if (created && !save_and_replace_table_create(created))
         {
             MXS_ERROR("Failed to save statement to disk: %.*s", len, sql);
         }
     }
-    else if (is_alter_table_statement(router, sql, len))
+    else if (is_alter_table_statement(m_alter_table_re, sql, len))
     {
-        auto it = router->created_tables.find(ident);
+        auto it = m_created_tables.find(ident);
 
-        if (it != router->created_tables.end())
+        if (it != m_created_tables.end())
         {
             table_create_alter(it->second.get(), sql, sql + len);
         }
@@ -932,11 +940,7 @@ void handle_query_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr)
             MXS_ERROR("Alter statement to table '%s' has no preceding create statement.", ident);
         }
     }
-    /* Commit received for non transactional tables, i.e. MyISAM */
-    else if (strncmp(sql, "COMMIT", 6) == 0)
-    {
-        router->trx_count++;
-    }
+    // TODO: Add COMMIT handling for non-transactional tables
 
     MXS_FREE(tmp);
 }

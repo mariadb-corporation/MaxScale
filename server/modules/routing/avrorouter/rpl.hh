@@ -18,6 +18,8 @@
 #include <tr1/memory>
 #include <tr1/unordered_map>
 
+#include <maxscale/pcre2.h>
+#include <maxscale/service.h>
 #include <binlog_common.h>
 
 typedef std::vector<uint8_t> Bytes;
@@ -42,6 +44,15 @@ struct gtid_pos_t
                          * is an internal representation of the position of
                          * an event inside a GTID event and it is used to
                          * rebuild GTID events in the correct order. */
+
+    void extract(const REP_HEADER& hdr, uint8_t* ptr)
+    {
+        domain = extract_field(ptr + 8, 32);
+        server_id = hdr.serverid;
+        seq = extract_field(ptr, 64);
+        event_num = 0;
+        timestamp = hdr.timestamp;
+    }
 };
 
 /** A single column in a CREATE TABLE statement */
@@ -69,6 +80,11 @@ struct TableCreateEvent
         version(version),
         was_used(false)
     {
+    }
+
+    std::string id() const
+    {
+        return database + '.' + table;
     }
 
     std::vector<Column>        columns;
@@ -112,6 +128,11 @@ struct TableMapEvent
 
 typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
 typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
+
+// Containers for the replication events
+typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
+typedef std::tr1::unordered_map<std::string, STableMapEvent>    MappedTables;
+typedef std::tr1::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
 
 // Handler class for row based replication events
 class RowEventHandler
@@ -167,3 +188,59 @@ public:
 };
 
 typedef std::auto_ptr<RowEventHandler> SRowEventHandler;
+
+class Rpl
+{
+public:
+    Rpl(const Rpl&) = delete;
+    Rpl& operator=(const Rpl&) = delete;
+
+    // Construct a new replication stream transformer
+    Rpl(SERVICE* service, SRowEventHandler event_handler);
+
+    // Add a stored TableCreateEvent
+    void add_create(STableCreateEvent create);
+
+    // Handle a replicated binary log event
+    void handle_event(REP_HEADER hdr, uint8_t* ptr);
+
+    // Called when processed events need to be persisted to disk
+    void flush();
+
+    // Check if binlog checksums are enabled
+    bool have_checksums() const
+    {
+        return m_binlog_checksum;
+    }
+
+    // Set current GTID
+    void set_gtid(gtid_pos_t gtid)
+    {
+        m_gtid = gtid;
+    }
+
+    // Get current GTID
+    const gtid_pos_t& get_gtid() const
+    {
+        return m_gtid;
+    }
+
+private:
+    SRowEventHandler m_handler;
+    SERVICE*         m_service;
+    pcre2_code*      m_create_table_re;
+    pcre2_code*      m_alter_table_re;
+    uint8_t          m_binlog_checksum;
+    uint8_t          m_event_types;
+    Bytes            m_event_type_hdr_lens;
+    gtid_pos_t       m_gtid;
+    ActiveMaps       m_active_maps;
+    MappedTables     m_table_maps;
+    CreatedTables    m_created_tables;
+
+    void handle_query_event(REP_HEADER *hdr, uint8_t *ptr);
+    bool handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr);
+    bool handle_row_event(REP_HEADER *hdr, uint8_t *ptr);
+    STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
+    bool save_and_replace_table_create(STableCreateEvent created);
+};
