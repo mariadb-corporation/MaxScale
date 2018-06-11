@@ -217,7 +217,7 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
     return mysql;
 }
 
-static bool is_connection_error(int errcode)
+bool mxs_mysql_is_net_error(int errcode)
 {
     switch (errcode)
     {
@@ -242,7 +242,7 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
     int rc = mysql_query(conn, query);
 
     for (int n = 0; rc != 0 && n < cnf->query_retries &&
-         is_connection_error(mysql_errno(conn)) &&
+         mxs_mysql_is_net_error(mysql_errno(conn)) &&
          time(NULL) - start < cnf->query_retry_timeout; n++)
     {
         rc = mysql_query(conn, query);

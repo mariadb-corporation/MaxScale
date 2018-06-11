@@ -42,6 +42,13 @@ char* mxs_lestr_consume(uint8_t** c, size_t *size);
 MYSQL* mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
 
 /**
+ * Check if the MYSQL error number is a connection error
+ *
+ * @return True if the MYSQL error number is a connection error
+ */
+bool mxs_mysql_is_net_error(int errcode);
+
+/**
  * Execute a query
  *
  * This function wraps mysql_query in a way that automatic query retry is possible.
