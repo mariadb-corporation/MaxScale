@@ -5,15 +5,13 @@ if(AVRO_FOUND AND JANSSON_FOUND)
   # The common avrorouter functionality
   add_library(avro-common SHARED avro.cc ../binlogrouter/binlog_common.cc avro_client.cc
               avro_schema.cc avro_rbr.cc avro_file.cc avro_index.cc avro_converter.cc)
-  set_target_properties(avro-common PROPERTIES VERSION "1.0.0")
-  set_target_properties(avro-common PROPERTIES LINK_FLAGS -Wl,-z,defs)
+  set_target_properties(avro-common PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
   target_link_libraries(avro-common maxscale-common ${JANSSON_LIBRARIES} ${AVRO_LIBRARIES} maxavro lzma)
   install_module(avro-common core)
 
   # The actual avrorouter implementation
   add_library(avrorouter SHARED avro_main.cc)
-  set_target_properties(avrorouter PROPERTIES VERSION "1.0.0")
-  set_target_properties(avrorouter PROPERTIES LINK_FLAGS -Wl,-z,defs)
+  set_target_properties(avrorouter PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
   target_link_libraries(avrorouter avro-common)
   install_module(avrorouter core)
 
