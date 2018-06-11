@@ -30,11 +30,10 @@
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/debug.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/json_api.h>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include <maxscale/utils.h>
 #include "internal/mlist.h"
 
@@ -159,7 +158,13 @@ static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
-static HASHTABLE* message_stats;
+namespace
+{
+
+class MessageStats;
+
+}
+static MessageStats* message_stats;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -200,9 +205,6 @@ typedef struct lm_message_stats
     size_t   count;    /** How many times the error has been reported within this window. */
 } LM_MESSAGE_STATS;
 
-static const int LM_MESSAGE_HASH_SIZE = 293; /** A prime, and roughly a quarter of current
-                                                 number of MXS_{ERROR|WARNING|NOTICE} calls. */
-
 /**
  * Returns the current time.
  *
@@ -216,111 +218,108 @@ static uint64_t time_monotonic_ms()
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
 
-/**
- * Hash-function for lm_message_key.
- *
- * This is an implementation of the Jenkin's one-at-a-time hash function.
- * https://en.wikipedia.org/wiki/Jenkins_hash_function
- *
- * @param v A pointer to a LM_MESSAGE_KEY
- * @return Hash for the contents of the LM_MESSAGE_KEY structure.
- */
-int lm_message_key_hash(const void *v)
+namespace std
 {
-    const LM_MESSAGE_KEY* key = (const LM_MESSAGE_KEY*)v;
 
-    uint64_t key1 = (uint64_t)key->filename;
-    uint16_t key2 = (uint16_t)key->linenumber; // The first 48 bits are likely to be 0.
+namespace tr1
+{
 
-    uint32_t hash = 0;
-    size_t i;
+template<>
+struct hash<LM_MESSAGE_KEY>
+{
+    typedef LM_MESSAGE_KEY Key;
+    typedef size_t         result_type;
 
-    for (i = 0; i < sizeof(key1); ++i)
+    size_t operator()(const LM_MESSAGE_KEY& key) const
     {
-        hash += (key1 >> i * 8) & 0xff;
-        hash += (hash << 10);
-        hash ^= (hash >> 6);
-    }
+        /*
+         * This is an implementation of the Jenkin's one-at-a-time hash function.
+         * https://en.wikipedia.org/wiki/Jenkins_hash_function
+         */
+        uint64_t key1 = (uint64_t)key.filename;
+        uint16_t key2 = (uint16_t)key.linenumber; // The first 48 bits are likely to be 0.
 
-    for (i = 0; i < sizeof(key2); ++i)
-    {
-        hash += (key1 >> i * 8) & 0xff;
-        hash += (hash << 10);
-        hash ^= (hash >> 6);
-    }
+        uint32_t hash = 0;
+        size_t i;
 
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
-    return hash;
+        for (i = 0; i < sizeof(key1); ++i)
+        {
+            hash += (key1 >> i * 8) & 0xff;
+            hash += (hash << 10);
+            hash ^= (hash >> 6);
+        }
+
+        for (i = 0; i < sizeof(key2); ++i)
+        {
+            hash += (key1 >> i * 8) & 0xff;
+            hash += (hash << 10);
+            hash ^= (hash >> 6);
+        }
+
+        hash += (hash << 3);
+        hash ^= (hash >> 11);
+        hash += (hash << 15);
+        return hash;
+    }
+};
+
 }
 
-/**
- * Compares two LM_MESSAGE_KEY structures
- *
- * @param v1 Pointer to a LM_MESSAGE_KEY struct.
- * @param v2 Pointer to a LM_MESSAGE_KEY struct.
- * @return  0 if the structures are equal.
- *         -1 if v1 is less than v2
- *          1 if v1 is greater than v2
- */
-static int lm_message_key_cmp(const void* v1, const void* v2)
+template<>
+struct equal_to<LM_MESSAGE_KEY>
 {
-    const LM_MESSAGE_KEY* key1 = (const LM_MESSAGE_KEY*)v1;
-    const LM_MESSAGE_KEY* key2 = (const LM_MESSAGE_KEY*)v2;
+    typedef bool           result_type;
+    typedef LM_MESSAGE_KEY first_argument_type;
+    typedef LM_MESSAGE_KEY second_argument_type;
 
-    int cmp = (int64_t)key1->filename - (int64_t)key2->filename;
-
-    if (cmp == 0)
+    bool operator()(const LM_MESSAGE_KEY& lhs, const LM_MESSAGE_KEY& rhs) const
     {
-        cmp = key1->linenumber - key2->linenumber;
+        return
+            (lhs.filename == rhs.filename) &&
+            (lhs.linenumber == rhs.linenumber);
     }
+};
 
-    return cmp == 0 ? 0 : (cmp < 0 ? -1 : 1);
 }
 
-/**
- * Clone a LM_MESSAGE_KEY
- *
- * @param v Pointer to a LM_MESSAGE_KEY structure
- * @return A copy of v or NULL if memory allocation fails.
- */
-static void* lm_message_key_clone(const void* v)
+namespace
 {
-    const LM_MESSAGE_KEY* src = (const LM_MESSAGE_KEY*)v;
-    LM_MESSAGE_KEY* dst = (LM_MESSAGE_KEY*)MXS_MALLOC(sizeof(LM_MESSAGE_KEY));
 
-    if (dst)
+class MessageStats
+{
+public:
+    MessageStats(const MessageStats&) = delete;
+    MessageStats& operator=(const MessageStats&) = delete;
+
+    MessageStats()
     {
-        dst->filename = src->filename;
-        dst->linenumber = src->linenumber;
     }
 
-    return dst;
-}
-
-/**
- * Clone a LM_MESSAGE_STATS
- *
- * @param v Pointer to a LM_MESSAGE_STATS structure
- * @return A copy of v or NULL if memory allocation fails.
- */
-static void* lm_message_stats_clone(const void* v)
-{
-    const LM_MESSAGE_STATS* src = (const LM_MESSAGE_STATS*)v;
-    LM_MESSAGE_STATS* dst = (LM_MESSAGE_STATS*)MXS_MALLOC(sizeof(LM_MESSAGE_STATS));
-
-    if (dst)
+    LM_MESSAGE_STATS& get(const LM_MESSAGE_KEY& key)
     {
-        // Somewhat questionable to copy a lock, but in this context we
-        // know that src is stack allocated and will not be used after this.
-        dst->lock = src->lock;
-        dst->first_ms = src->first_ms;
-        dst->last_ms = src->last_ms;
-        dst->count = src->count;
+        mxs::SpinLockGuard guard(m_lock);
+
+        auto i = m_registry.find(key);
+
+        if (i == m_registry.end())
+        {
+            LM_MESSAGE_STATS stats;
+            spinlock_init(&stats.lock);
+            stats.first_ms = time_monotonic_ms();
+            stats.last_ms = 0;
+            stats.count = 0;
+
+            i = m_registry.insert(std::make_pair(key, stats)).first;
+        }
+
+        return i->second;
     }
 
-    return dst;
+private:
+    mxs::SpinLock                                             m_lock;
+    std::tr1::unordered_map<LM_MESSAGE_KEY, LM_MESSAGE_STATS> m_registry;
+};
+
 }
 
 /**
@@ -605,24 +604,15 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
     {
         ss_dassert(!message_stats);
 
-        message_stats = hashtable_alloc(LM_MESSAGE_HASH_SIZE,
-                                        lm_message_key_hash,
-                                        lm_message_key_cmp);
+        message_stats = new (std::nothrow) MessageStats;
+
         if (message_stats)
         {
-            // As entries are added to the hashtable they will be cloned,
-            // so stack allocated keys and values are ok.
-            hashtable_memory_fns(message_stats,
-                                 lm_message_key_clone,
-                                 lm_message_stats_clone,
-                                 hashtable_item_free,
-                                 hashtable_item_free);
-
             succ = logmanager_init_nomutex(ident, logdir, target, log_config.do_maxlog);
 
             if (!succ)
             {
-                hashtable_free(message_stats);
+                delete message_stats;
                 message_stats = NULL;
             }
         }
@@ -681,7 +671,7 @@ static void logmanager_done_nomutex(void)
     MXS_FREE(lm);
     lm = NULL;
 
-    hashtable_free(message_stats);
+    delete message_stats;
     message_stats = NULL;
 }
 
@@ -2776,93 +2766,65 @@ static message_suppression_t message_status(const char* file, int line)
     if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
     {
         LM_MESSAGE_KEY key = { file, line };
-        LM_MESSAGE_STATS *value;
+        LM_MESSAGE_STATS& value = message_stats->get(key);
 
-        errno = 0;
+        uint64_t now_ms = time_monotonic_ms();
 
-        // Since the hashtable can not be externally locked, the lookup/creation
-        // must be done in a loop to ensure that everything works even if two
-        // threads logs the same message at the very same time.
-        do
+        spinlock_acquire(&value.lock);
+
+        ++value.count;
+
+        // Less that t.window_ms milliseconds since the message was logged
+        // the last time. May have to be throttled.
+        if (value.count < t.count)
         {
-            value = (LM_MESSAGE_STATS*) hashtable_fetch(message_stats, &key);
-
-            if (!value)
-            {
-                LM_MESSAGE_STATS stats;
-                spinlock_init(&stats.lock);
-                stats.first_ms = time_monotonic_ms();
-                stats.last_ms = 0;
-                stats.count = 0;
-
-                // hashtable_add may fail for two reasons; the key exists
-                // already or it runs out of memory. In the latter case
-                // errno is set.
-                hashtable_add(message_stats, &key, &stats);
-            }
+            // t.count times has not been reached, still ok to log.
         }
-        while (!value && (errno == 0));
-
-        if (value)
+        else if (value.count == t.count)
         {
-            uint64_t now_ms = time_monotonic_ms();
-
-            spinlock_acquire(&value->lock);
-
-            ++value->count;
-
-            // Less that t.window_ms milliseconds since the message was logged
-            // the last time. May have to be throttled.
-            if (value->count < t.count)
+            // t.count times has been reached. Was it within the window?
+            if (now_ms - value.first_ms < t.window_ms)
             {
-                // t.count times has not been reached, still ok to log.
-            }
-            else if (value->count == t.count)
-            {
-                // t.count times has been reached. Was it within the window?
-                if (now_ms - value->first_ms < t.window_ms)
-                {
-                    // Within the window, suppress the message.
-                    rv = MESSAGE_SUPPRESSED;
-                }
-                else
-                {
-                    // Not within the window, reset the situation.
-
-                    // The flooding situation is analyzed window by window.
-                    // That means that if there in each of two consequtive
-                    // windows are not enough messages for throttling to take
-                    // effect, but there would be if the window was placed at a
-                    // slightly different position (e.g. starting in the middle
-                    // of the first and ending in the middle of the second) it
-                    // will go undetected and no throttling will be made.
-                    // However, if that's the case, it was a spike so the
-                    // flooding will stop anyway.
-
-                    value->first_ms = now_ms;
-                    value->count = 1;
-                }
+                // Within the window, suppress the message.
+                rv = MESSAGE_SUPPRESSED;
             }
             else
             {
-                // In suppression mode.
-                if (now_ms - value->first_ms < (t.window_ms + t.suppress_ms))
-                {
-                    // Still in the suppression window.
-                    rv = MESSAGE_STILL_SUPPRESSED;
-                }
-                else
-                {
-                    // We have exited the suppression window, reset the situation.
-                    value->first_ms = now_ms;
-                    value->count = 1;
-                }
+                // Not within the window, reset the situation.
+
+                // The flooding situation is analyzed window by window.
+                // That means that if there in each of two consequtive
+                // windows are not enough messages for throttling to take
+                // effect, but there would be if the window was placed at a
+                // slightly different position (e.g. starting in the middle
+                // of the first and ending in the middle of the second) it
+                // will go undetected and no throttling will be made.
+                // However, if that's the case, it was a spike so the
+                // flooding will stop anyway.
+
+                value.first_ms = now_ms;
+                value.count = 1;
             }
-
-            value->last_ms = now_ms;
-
-            spinlock_release(&value->lock);
         }
+        else
+        {
+            // In suppression mode.
+            if (now_ms - value.first_ms < (t.window_ms + t.suppress_ms))
+            {
+                // Still in the suppression window.
+                rv = MESSAGE_STILL_SUPPRESSED;
+            }
+            else
+            {
+                // We have exited the suppression window, reset the situation.
+                value.first_ms = now_ms;
+                value.count = 1;
+            }
+        }
+
+        value.last_ms = now_ms;
+
+        spinlock_release(&value.lock);
     }
 
     return rv;
