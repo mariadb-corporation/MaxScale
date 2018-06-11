@@ -1433,9 +1433,9 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         }
     }
 
-    if (enable || ssl_key || ssl_cert || ssl_ca)
+    if (enable || ssl_ca)
     {
-        if (enable && ssl_key && ssl_cert && ssl_ca)
+        if (enable && ssl_ca)
         {
             /** We have SSL parameters, try to process them */
             if (!runtime_enable_server_ssl(server, ssl_key, ssl_cert, ssl_ca,
@@ -1448,7 +1448,7 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         else
         {
             dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
-                       "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
+                       "ssl=required ssl_ca_cert=PATH\n");
         }
     }
 }
