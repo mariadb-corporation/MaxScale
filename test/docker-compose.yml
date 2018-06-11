@@ -1,7 +1,7 @@
 version: '2'
 services:
     server1:
-        image: mariadb:10.1
+        image: mariadb:10.2
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
@@ -10,7 +10,7 @@ services:
         command: mysqld --log-bin=binlog --binlog-format=ROW --server-id=3000 --port=3000 --log-slave-updates
 
     server2:
-        image: mariadb:10.1
+        image: mariadb:10.2
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
@@ -19,7 +19,7 @@ services:
         command: mysqld --log-bin=binlog --binlog-format=ROW --server-id=3001 --port=3001 --log-slave-updates
 
     server3:
-        image: mariadb:10.1
+        image: mariadb:10.2
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
@@ -28,7 +28,7 @@ services:
         command: mysqld --log-bin=binlog --binlog-format=ROW --server-id=3002 --port=3002 --log-slave-updates
 
     server4:
-        image: mariadb:10.1
+        image: mariadb:10.2
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y

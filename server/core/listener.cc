@@ -337,6 +337,15 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         ss_dassert(rsa_512 && rsa_1024);
         SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
 
+        ss_dassert(ssl_listener->ssl_ca_cert);
+
+        /* Load the CA certificate into the SSL_CTX structure */
+        if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
+        {
+            MXS_ERROR("Failed to set Certificate Authority file");
+            return -1;
+        }
+
         if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
         {
             /** Load the server certificate */
@@ -357,13 +366,6 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
             if (!SSL_CTX_check_private_key(ssl_listener->ctx))
             {
                 MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
-                return -1;
-            }
-
-            /* Load the RSA CA certificate into the SSL_CTX structure */
-            if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
-            {
-                MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
                 return -1;
             }
         }
