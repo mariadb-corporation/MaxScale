@@ -71,10 +71,16 @@ else
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
 
-    cat /etc/redhat-release | grep "release 5"
+    grep "release 6" /etc/redhat-release
     if [ $? == 0 ]
     then
-      sudo yum remove -y libedit-devel libedit
+        # Enable the devtoolkit to get a newer compiler
+        sudo yum -y install centos-release-scl
+        sudo yum -y install devtoolset-4-gcc-c++
+        source /opt/rh/devtoolset-4/enable
+
+        # Enable it by default
+        echo "source /opt/rh/devtoolset-4/enable" >> ~/.bashrc
     fi
   fi
 
