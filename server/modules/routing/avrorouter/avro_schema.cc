@@ -1131,7 +1131,7 @@ static bool not_column_operation(const char* tok, int len)
     return false;
 }
 
-bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end)
+bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const char *end)
 {
     const char *tbl = strcasestr(sql, "table"), *def;
 
@@ -1250,6 +1250,15 @@ bool table_create_alter(TableCreateEvent *create, const char *sql, const char *e
         {
             create->version++;
             create->was_used = false;
+
+            /**
+             * Although the table was only altered, we can treat it like it
+             * would have been just created. This allows for a minimal API that
+             * only creates and replaces tables.
+             *
+             * TODO: Add DROP TABLE entry point for pruning old tables
+             */
+            m_handler->create_table(create);
         }
     }
 

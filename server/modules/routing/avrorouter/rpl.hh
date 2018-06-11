@@ -140,6 +140,12 @@ public:
     {
     }
 
+    // A table was created
+    virtual bool create_table(const STableCreateEvent& create)
+    {
+        return true;
+    }
+
     // A table was opened
     virtual bool open_table(const STableMapEvent& map, const STableCreateEvent& create)
     {
@@ -241,4 +247,5 @@ private:
     bool handle_row_event(REP_HEADER *hdr, uint8_t *ptr);
     STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
     bool save_and_replace_table_create(STableCreateEvent created);
+    bool table_create_alter(STableCreateEvent create, const char *sql, const char *end);
 };

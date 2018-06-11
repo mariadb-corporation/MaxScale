@@ -756,7 +756,7 @@ bool is_alter_table_statement(pcre2_code* alter_table_re, char* ptr, size_t len)
  */
 bool Rpl::save_and_replace_table_create(STableCreateEvent created)
 {
-    std::string table_ident = created->database + "." + created->table;
+    std::string table_ident = created->id();
     auto it = m_created_tables.find(table_ident);
 
     if (it != m_created_tables.end())
@@ -772,7 +772,7 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
 
     m_created_tables[table_ident] = created;
     ss_dassert(created->columns.size() > 0);
-    return true;
+    return m_handler->create_table(created);
 }
 
 void unify_whitespace(char *sql, int len)
@@ -909,7 +909,7 @@ void Rpl::handle_query_event(REP_HEADER *hdr, uint8_t *ptr)
 
         if (it != m_created_tables.end())
         {
-            table_create_alter(it->second.get(), sql, sql + len);
+            table_create_alter(it->second, sql, sql + len);
         }
         else
         {
