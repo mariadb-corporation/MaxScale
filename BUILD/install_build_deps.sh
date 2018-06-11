@@ -75,7 +75,12 @@ else
     if [ $? == 0 ]
     then
         # Enable the devtoolkit to get a newer compiler
-        sudo yum -y install centos-release-scl
+
+        # CentOS: install the centos-release-scl repo
+        # RHEL: enable the existing repo (seems to be rhui-REGION-rhel-server-rhscl on AWS)
+        sudo yum -y install centos-release-scl || \
+            sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
+
         sudo yum -y install devtoolset-4-gcc-c++
         source /opt/rh/devtoolset-4/enable
 
