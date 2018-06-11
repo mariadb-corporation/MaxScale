@@ -150,22 +150,10 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
     {
         if (strcmp(key, "gtid") == 0)
         {
-            char tempval[strlen(value) + 1];
-            memcpy(tempval, value, sizeof(tempval));
-            char *saved, *domain = strtok_r(tempval, ":-\n", &saved);
-            char *serv_id = strtok_r(NULL, ":-\n", &saved);
-            char *seq = strtok_r(NULL, ":-\n", &saved);
-            char *subseq = strtok_r(NULL, ":-\n", &saved);
-
-            if (domain && serv_id && seq && subseq)
-            {
-                gtid_pos_t gtid;
-                gtid.domain = strtol(domain, NULL, 10);
-                gtid.server_id = strtol(serv_id, NULL, 10);
-                gtid.seq = strtol(seq, NULL, 10);
-                gtid.event_num = strtol(subseq, NULL, 10);
-                router->handler.set_gtid(gtid);
-            }
+            gtid_pos_t gtid;
+            ss_debug(bool rval = )gtid.parse(value);
+            ss_dassert(rval);
+            router->handler.set_gtid(gtid);
         }
         else if (strcmp(key, "position") == 0)
         {

@@ -15,6 +15,7 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <sstream>
 #include <tr1/memory>
 #include <tr1/unordered_map>
 
@@ -45,14 +46,11 @@ struct gtid_pos_t
                          * an event inside a GTID event and it is used to
                          * rebuild GTID events in the correct order. */
 
-    void extract(const REP_HEADER& hdr, uint8_t* ptr)
-    {
-        domain = extract_field(ptr + 8, 32);
-        server_id = hdr.serverid;
-        seq = extract_field(ptr, 64);
-        event_num = 0;
-        timestamp = hdr.timestamp;
-    }
+    void extract(const REP_HEADER& hdr, uint8_t* ptr);
+    bool parse(const char* str);
+    static gtid_pos_t from_string(std::string str);
+    std::string to_string() const;
+    bool empty() const;
 };
 
 /** A single column in a CREATE TABLE statement */
@@ -196,7 +194,7 @@ public:
     Rpl& operator=(const Rpl&) = delete;
 
     // Construct a new replication stream transformer
-    Rpl(SERVICE* service, SRowEventHandler event_handler);
+    Rpl(SERVICE* service, SRowEventHandler event_handler, gtid_pos_t = {});
 
     // Add a stored TableCreateEvent
     void add_create(STableCreateEvent create);
