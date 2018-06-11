@@ -66,7 +66,13 @@ struct Column
     std::string name;
     std::string type;
     int         length;
+
+    json_t* to_json() const;
+    static Column from_json(json_t* json);
 };
+
+struct TableCreateEvent;
+typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
 
 /** A CREATE TABLE abstraction */
 struct TableCreateEvent
@@ -80,10 +86,31 @@ struct TableCreateEvent
     {
     }
 
+    /**
+     * Get the table identifier i.e. `database.table`
+     *
+     * @return The table identifier
+     */
     std::string id() const
     {
         return database + '.' + table;
     }
+
+    /**
+     * Convert to JSON
+     *
+     * @return JSON representation of this object
+     */
+    json_t* to_json() const;
+
+    /**
+     * Convert from JSON
+     *
+     * @param json JSON to convert from
+     *
+     * @return Object representation of JSON if it is valid or empty pointer if invalid.
+     */
+    static STableCreateEvent from_json(json_t* json);
 
     std::vector<Column>        columns;
     std::string                table;
@@ -124,7 +151,6 @@ struct TableMapEvent
     Bytes       column_metadata;
 };
 
-typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
 typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
 
 // Containers for the replication events

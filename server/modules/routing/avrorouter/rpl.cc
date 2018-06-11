@@ -15,6 +15,89 @@
 
 #include <maxscale/debug.h>
 #include <sstream>
+#include <algorithm>
+
+json_t* Column::to_json() const
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, "name", json_string(name.c_str()));
+    json_object_set_new(obj, "type", json_string(type.c_str()));
+    json_object_set_new(obj, "length", json_integer(length));
+    return obj;
+}
+
+Column Column::from_json(json_t* json)
+{
+    json_t* name = json_object_get(json, "name");
+    json_t* type = json_object_get(json, "type");
+    json_t* length = json_object_get(json, "length");
+
+    if (name && json_is_string(name) &&
+        type && json_is_string(type) &&
+        length && json_is_integer(length))
+    {
+        return Column(json_string_value(name), json_string_value(type),
+                      json_integer_value(length));
+    }
+
+    // Invalid JSON, return empty Column
+    return Column("");
+}
+
+json_t* TableCreateEvent::to_json() const
+{
+    json_t* arr = json_array();
+
+    for (auto it = columns.begin(); it != columns.end(); it++)
+    {
+        json_array_append_new(arr, it->to_json());
+    }
+
+    json_t* obj = json_object();
+    json_object_set_new(obj, "table", json_string(table.c_str()));
+    json_object_set_new(obj, "database", json_string(database.c_str()));
+    json_object_set_new(obj, "version", json_integer(version));
+    json_object_set_new(obj, "columns", arr);
+
+    return obj;
+}
+
+STableCreateEvent TableCreateEvent::from_json(json_t* obj)
+{
+    STableCreateEvent rval;
+    json_t* table = json_object_get(obj, "table");
+    json_t* database = json_object_get(obj, "database");
+    json_t* version = json_object_get(obj, "version");
+    json_t* columns = json_object_get(obj, "columns");
+
+    if (json_is_string(table) && json_is_string(database) &&
+        json_is_integer(version) && json_is_array(columns))
+    {
+        std::string tbl = json_string_value(table);
+        std::string db = json_string_value(database);
+        int ver = json_integer_value(version);
+        std::vector<Column> cols;
+        size_t i = 0;
+        json_t* val;
+
+        json_array_foreach(columns, i, val)
+        {
+            cols.emplace_back(Column::from_json(val));
+        }
+
+        auto is_empty = [](const Column & col)
+        {
+            return col.name.empty();
+        };
+
+        if (std::none_of(cols.begin(), cols.end(), is_empty))
+        {
+            rval.reset(new TableCreateEvent(db, tbl, ver, std::move(cols)));
+        }
+    }
+
+    return rval;
+}
 
 Rpl::Rpl(SERVICE* service, SRowEventHandler handler, gtid_pos_t gtid):
     m_handler(handler),
