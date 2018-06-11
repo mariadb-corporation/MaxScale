@@ -290,14 +290,17 @@ void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
     // As the PS handles map to explicit IDs, we must retain all COM_STMT_PREPARE commands
     if (sescmd->get_command() != MXS_COM_STMT_PREPARE)
     {
-        auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(),
-                                  mxs::equal_pointees(sescmd));
+        auto eq = [&](mxs::SSessionCommand& scmd)
+        {
+            return scmd->eq(*sescmd);
+        };
+
+        auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
 
         if (first != m_sescmd_list.end())
         {
             // We have at least one of these commands. See if we have a second one
-            auto second = std::find_if(std::next(first), m_sescmd_list.end(),
-                                       mxs::equal_pointees(sescmd));
+            auto second = std::find_if(std::next(first), m_sescmd_list.end(), eq);
 
             if (second != m_sescmd_list.end())
             {
