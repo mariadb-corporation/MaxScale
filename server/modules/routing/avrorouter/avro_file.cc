@@ -389,19 +389,7 @@ void Rpl::add_create(STableCreateEvent create)
     }
 }
 
-REP_HEADER construct_header(uint8_t* ptr)
-{
-    REP_HEADER hdr;
 
-    hdr.timestamp = EXTRACT32(ptr);
-    hdr.event_type = ptr[4];
-    hdr.serverid = EXTRACT32(&ptr[5]);
-    hdr.event_size = extract_field(&ptr[9], 32);
-    hdr.next_pos = EXTRACT32(&ptr[13]);
-    hdr.flags = EXTRACT16(&ptr[17]);
-
-    return hdr;
-}
 
 bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_binlog_end_t* rc)
 {

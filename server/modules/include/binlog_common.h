@@ -42,6 +42,20 @@ bool binlog_next_file_exists(const char* binlogdir, const char* binlog);
 uint32_t extract_field(uint8_t *src, int bits);
 const char* binlog_event_name(int type);
 
+static inline REP_HEADER construct_header(uint8_t* ptr)
+{
+    REP_HEADER hdr;
+
+    hdr.timestamp = extract_field(ptr, 32);
+    hdr.event_type = ptr[4];
+    hdr.serverid = extract_field(&ptr[5], 32);
+    hdr.event_size = extract_field(&ptr[9], 32);
+    hdr.next_pos = extract_field(&ptr[13], 32);
+    hdr.flags = extract_field(&ptr[17], 16);
+
+    return hdr;
+}
+
 MXS_END_DECLS
 
 #endif /* BINLOG_COMMON_H */

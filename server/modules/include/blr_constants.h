@@ -175,36 +175,6 @@ MXS_BEGIN_DECLS
 #define MARIADB_FL_DDL        32
 #define MARIADB_FL_STANDALONE 1
 
-/**
- * Some useful macros for examining the MySQL Response packets
- */
-#define MYSQL_RESPONSE_OK(buf)  (*((uint8_t *)GWBUF_DATA(buf) + 4) == 0x00)
-#define MYSQL_RESPONSE_EOF(buf) (*((uint8_t *)GWBUF_DATA(buf) + 4) == 0xfe)
-#define MYSQL_RESPONSE_ERR(buf) (*((uint8_t *)GWBUF_DATA(buf) + 4) == 0xff)
-#define MYSQL_ERROR_CODE(buf)   ((uint8_t *)GWBUF_DATA(buf) + 5)
-#define MYSQL_ERROR_MSG(buf)    ((uint8_t *)GWBUF_DATA(buf) + 7)
-#define MYSQL_COMMAND(buf)      (*((uint8_t *)GWBUF_DATA(buf) + 4))
-
-/**
- * Macros to extract common fields
- */
-#define INLINE_EXTRACT 1        /* Set to 0 for debug purposes */
-
-#if INLINE_EXTRACT
-#define EXTRACT16(x) (*(uint8_t *)(x) | (*((uint8_t *)(x) + 1) << 8))
-#define EXTRACT24(x) (*(uint8_t *)(x) |         \
-                    (*((uint8_t *)(x) + 1) << 8) | \
-                    (*((uint8_t *)(x) + 2) << 16))
-#define EXTRACT32(x)        (*(uint8_t *)(x) |  \
-                    (*((uint8_t *)(x) + 1) << 8) | \
-                    (*((uint8_t *)(x) + 2) << 16) | \
-                    (*((uint8_t *)(x) + 3) << 24))
-#else
-#define EXTRACT16(x) extract_field((x), 16)
-#define EXTRACT24(x) extract_field((x), 24)
-#define EXTRACT32(x) extract_field((x), 32)
-#endif
-
 MXS_END_DECLS
 
 #endif
