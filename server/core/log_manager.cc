@@ -190,12 +190,69 @@ struct filewriter
 #endif
 };
 
-typedef struct lm_message_key
+namespace
 {
-    const char* filename; /** The filename where the error was reported. Must be a
-                              statically allocated buffer, e.g. __FILE__ */
-    int linenumber;       /** The linenumber where the error was reported. */
-} LM_MESSAGE_KEY;
+
+class MessageStatsKey
+{
+public:
+    const char* filename;
+    const int   linenumber;
+
+    /**
+     * @brief Constructs a message stats key
+     *
+     * @param filename    The filename where the message was reported. Must be a
+     *                    statically allocated buffer, e.g. __FILE__.
+     * @param linenumber  The linenumber where the message was reported.
+     */
+    MessageStatsKey(const char* filename, int linenumber)
+        : filename(filename)
+        , linenumber(linenumber)
+    {
+    }
+
+    bool eq(const MessageStatsKey& other) const
+    {
+        return
+            filename == other.filename && // Yes, we compare the pointer values and not the strings.
+            linenumber == other.linenumber;
+    }
+
+    size_t hash() const
+    {
+        /*
+         * This is an implementation of the Jenkin's one-at-a-time hash function.
+         * https://en.wikipedia.org/wiki/Jenkins_hash_function
+         */
+        uint64_t key1 = (uint64_t)filename;
+        uint16_t key2 = (uint16_t)linenumber; // The first 48 bits are likely to be 0.
+
+        uint32_t hash_value = 0;
+        size_t i;
+
+        for (i = 0; i < sizeof(key1); ++i)
+        {
+            hash_value += (key1 >> i * 8) & 0xff;
+            hash_value += (hash_value << 10);
+            hash_value ^= (hash_value >> 6);
+        }
+
+        for (i = 0; i < sizeof(key2); ++i)
+        {
+            hash_value += (key1 >> i * 8) & 0xff;
+            hash_value += (hash_value << 10);
+            hash_value ^= (hash_value >> 6);
+        }
+
+        hash_value += (hash_value << 3);
+        hash_value ^= (hash_value >> 11);
+        hash_value += (hash_value << 15);
+        return hash_value;
+    }
+};
+
+}
 
 typedef struct lm_message_stats
 {
@@ -225,58 +282,29 @@ namespace tr1
 {
 
 template<>
-struct hash<LM_MESSAGE_KEY>
+struct hash<MessageStatsKey>
 {
-    typedef LM_MESSAGE_KEY Key;
-    typedef size_t         result_type;
+    typedef MessageStatsKey Key;
+    typedef size_t          result_type;
 
-    size_t operator()(const LM_MESSAGE_KEY& key) const
+    size_t operator()(const MessageStatsKey& key) const
     {
-        /*
-         * This is an implementation of the Jenkin's one-at-a-time hash function.
-         * https://en.wikipedia.org/wiki/Jenkins_hash_function
-         */
-        uint64_t key1 = (uint64_t)key.filename;
-        uint16_t key2 = (uint16_t)key.linenumber; // The first 48 bits are likely to be 0.
-
-        uint32_t hash = 0;
-        size_t i;
-
-        for (i = 0; i < sizeof(key1); ++i)
-        {
-            hash += (key1 >> i * 8) & 0xff;
-            hash += (hash << 10);
-            hash ^= (hash >> 6);
-        }
-
-        for (i = 0; i < sizeof(key2); ++i)
-        {
-            hash += (key1 >> i * 8) & 0xff;
-            hash += (hash << 10);
-            hash ^= (hash >> 6);
-        }
-
-        hash += (hash << 3);
-        hash ^= (hash >> 11);
-        hash += (hash << 15);
-        return hash;
+        return key.hash();
     }
 };
 
 }
 
 template<>
-struct equal_to<LM_MESSAGE_KEY>
+struct equal_to<MessageStatsKey>
 {
-    typedef bool           result_type;
-    typedef LM_MESSAGE_KEY first_argument_type;
-    typedef LM_MESSAGE_KEY second_argument_type;
+    typedef bool            result_type;
+    typedef MessageStatsKey first_argument_type;
+    typedef MessageStatsKey second_argument_type;
 
-    bool operator()(const LM_MESSAGE_KEY& lhs, const LM_MESSAGE_KEY& rhs) const
+    bool operator()(const MessageStatsKey& lhs, const MessageStatsKey& rhs) const
     {
-        return
-            (lhs.filename == rhs.filename) &&
-            (lhs.linenumber == rhs.linenumber);
+        return lhs.eq(rhs);
     }
 };
 
@@ -288,6 +316,8 @@ namespace
 class MessageStats
 {
 public:
+    typedef MessageStatsKey Key;
+
     MessageStats(const MessageStats&) = delete;
     MessageStats& operator=(const MessageStats&) = delete;
 
@@ -295,7 +325,7 @@ public:
     {
     }
 
-    LM_MESSAGE_STATS& get(const LM_MESSAGE_KEY& key)
+    LM_MESSAGE_STATS& get(const Key& key)
     {
         mxs::SpinLockGuard guard(m_lock);
 
@@ -316,8 +346,8 @@ public:
     }
 
 private:
-    mxs::SpinLock                                             m_lock;
-    std::tr1::unordered_map<LM_MESSAGE_KEY, LM_MESSAGE_STATS> m_registry;
+    mxs::SpinLock                                  m_lock;
+    std::tr1::unordered_map<Key, LM_MESSAGE_STATS> m_registry;
 };
 
 }
@@ -2765,7 +2795,7 @@ static message_suppression_t message_status(const char* file, int line)
 
     if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
     {
-        LM_MESSAGE_KEY key = { file, line };
+        MessageStats::Key key(file, line);
         LM_MESSAGE_STATS& value = message_stats->get(key);
 
         uint64_t now_ms = time_monotonic_ms();
