@@ -34,7 +34,6 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.h>
@@ -182,9 +181,9 @@ extern const char CN_LOG_TO_SHM[] = "log_to_shm";
 
 typedef struct duplicate_context
 {
-    HASHTABLE        *hash;
-    pcre2_code       *re;
-    pcre2_match_data *mdata;
+    std::set<std::string> *sections;
+    pcre2_code            *re;
+    pcre2_match_data      *mdata;
 } DUPLICATE_CONTEXT;
 
 static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
@@ -210,7 +209,7 @@ static int config_get_release_string(char* release);
 bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
-int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
+int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers);
 int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
@@ -361,18 +360,16 @@ static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
     bool rv = false;
 
     const int table_size = 10;
-    HASHTABLE *hash = hashtable_alloc(table_size, hashtable_item_strhash, hashtable_item_strcmp);
+    std::set<std::string> *sections = new (std::nothrow) std::set<std::string>;
     int errcode;
     PCRE2_SIZE erroffset;
     pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
                                    0, &errcode, &erroffset, NULL);
     pcre2_match_data *mdata = NULL;
 
-    if (hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    if (sections && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
     {
-        hashtable_memory_fns(hash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
-
-        context->hash = hash;
+        context->sections = sections;
         context->re = re;
         context->mdata = mdata;
         rv = true;
@@ -381,7 +378,7 @@ static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
     {
         pcre2_match_data_free(mdata);
         pcre2_code_free(re);
-        hashtable_free(hash);
+        delete sections;
     }
 
     return rv;
@@ -396,11 +393,11 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context)
 {
     pcre2_match_data_free(context->mdata);
     pcre2_code_free(context->re);
-    hashtable_free(context->hash);
+    delete context->sections;
 
     context->mdata = NULL;
     context->re = NULL;
-    context->hash = NULL;
+    context->sections = NULL;
 }
 
 
@@ -1043,14 +1040,7 @@ process_config_context(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT  *obj;
     int             error_count = 0;
-    HASHTABLE*      monitorhash;
-
-    if ((monitorhash = hashtable_alloc(5, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
-    {
-        MXS_ERROR("Failed to allocate, monitor configuration check hashtable.");
-        return 0;
-    }
-    hashtable_memory_fns(monitorhash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
+    std::set<std::string> monitored_servers;
 
     /**
      * Process the data and create the services and servers defined
@@ -1106,7 +1096,7 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (!strcmp(type, CN_MONITOR))
                 {
-                    error_count += create_new_monitor(context, obj, monitorhash);
+                    error_count += create_new_monitor(context, obj, monitored_servers);
                 }
                 else if (strcmp(type, CN_SERVER) != 0 && strcmp(type, CN_FILTER) != 0)
                 {
@@ -1120,7 +1110,6 @@ process_config_context(CONFIG_CONTEXT *context)
     }
     /** TODO: consistency check function */
 
-    hashtable_free(monitorhash);
     /**
      * error_count += consistency_checks();
      */
@@ -2858,7 +2847,8 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
                     PCRE2_UCHAR section[len];
                     pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
 
-                    if (hashtable_add(context->hash, section, (char*)"") == 0)
+                    string key(reinterpret_cast<char*>(section), len);
+                    if (context->sections->insert(key).second == false)
                     {
                         MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
@@ -3501,10 +3491,10 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
  * Create a new monitor
  * @param context The complete configuration context
  * @param obj Monitor configuration context
- * @param monitorhash Hashtable containing the servers that are already monitored
+ * @param monitored_servers Set containing the servers that are already monitored
  * @return Number of errors
  */
-int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash)
+int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers)
 {
     int error_count = 0;
 
@@ -3701,7 +3691,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                     if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
                     {
                         found = 1;
-                        if (hashtable_add(monitorhash, obj1->object, (char*)"") == 0)
+                        if (monitored_servers.insert(obj1->object).second == false)
                         {
                             MXS_WARNING("Multiple monitors are monitoring server [%s]. "
                                         "This will cause undefined behavior.",
