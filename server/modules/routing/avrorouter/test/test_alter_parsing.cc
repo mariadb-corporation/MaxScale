@@ -1,4 +1,5 @@
 #include "../avro_schema.cc"
+#include "../rpl.cc"
 
 static struct
 {
