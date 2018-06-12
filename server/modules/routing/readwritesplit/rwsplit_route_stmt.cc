@@ -226,7 +226,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
             else if (target->has_session_commands())
             {
                 // We need to wait until the session commands are executed
-                m_expected_responses++;
                 m_query_queue = gwbuf_append(m_query_queue, gwbuf_clone(querybuf));
                 MXS_INFO("Queuing query until '%s' completes session command", target->name());
             }
