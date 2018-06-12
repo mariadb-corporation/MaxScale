@@ -76,7 +76,6 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
             if (expect_error)
             {
                 base::Duration dur = sw.lap();
-                std::cout << "\r             \r";
                 return {true, dur, i / std::chrono::duration<float>(dur).count()};
             }
             else
@@ -113,16 +112,9 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
         {
             THROW(Whoopsy, "Extra row index = " << index << " name = " << row[0] << " in resultset.");
         }
-
-        std::cout << "\r" <<  num_rows - i - 1 << ' ';
-        if (i % 117 == 0)
-        {
-            std::cout.flush();
-        }
     }
 
     base::Duration dur = sw.lap();
-    std::cout << "\r             \r";
     return ReadSpeed {false, dur, num_rows / std::chrono::duration<float>(dur).count()};
 }
 
@@ -200,24 +192,29 @@ int main(int argc, char *argv[])
 
     try
     {
-        test.print_env();
         test.maxscales->connect_maxscale(0);
 
         std::cout << "Create table\n";
+        test.set_timeout(120);
         create_table(test.maxscales->conn_master[0]);
 
         std::cout << "Insert rows\n";
+        test.set_timeout(120);
         insert_rows(test.maxscales->conn_master[0]);
 
+        test.set_timeout(120);
         gauge_raw_speed(test);
 
+        test.stop_timeout();
         test.repl->sync_slaves();
 
+        test.set_timeout(120);
         verify_throttling_performace(test);
 
         test.maxscales->close_maxscale_connections(0);
         test.maxscales->connect_maxscale(0);
 
+        test.set_timeout(120);
         verify_throttling_disconnect(test);
 
         std::cout << "\n\n";

@@ -993,7 +993,7 @@ add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication 
 add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_show_eventTimes LABELS REPL_BACKEND)
 
 # MXS-173 throttling filter
-add_test_executable(mxs173.cpp mxs173_throttle_filter mxs173_throttle_filter LABELS REPL_BACKEND)
+add_test_executable(mxs173_throttle_filter.cpp mxs173_throttle_filter mxs173_throttle_filter LABELS REPL_BACKEND)
 
  # MXS-1889: A single remaining master is valid for readconnroute configured with 'router_options=slave'
  # https://jira.mariadb.org/browse/MXS-1889
