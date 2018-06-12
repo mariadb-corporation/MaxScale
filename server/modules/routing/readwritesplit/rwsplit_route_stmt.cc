@@ -63,6 +63,19 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
         return a;
     }
 
+    // Prefer servers that are not busy executing session commands
+    bool a_busy = a->has_session_commands();
+    bool b_busy = b->has_session_commands();
+
+    if (a_busy && !b_busy)
+    {
+        return b;
+    }
+    else if (!a_busy && b_busy)
+    {
+        return a;
+    }
+
     return p(a, b) <= 0 ? a : b;
 }
 
