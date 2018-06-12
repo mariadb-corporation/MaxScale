@@ -41,7 +41,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/atomic.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.h>
@@ -1738,37 +1737,6 @@ dcb_printf(DCB *dcb, const char *fmt, ...)
 
     buf->end = (void *)((char *)GWBUF_DATA(buf) + strlen((char*)GWBUF_DATA(buf)));
     dcb->func.write(dcb, buf);
-}
-
-/**
- * Print hash table statistics to a DCB
- *
- * @param dcb           The DCB to send the information to
- * @param table         The hash table
- */
-void dcb_hashtable_stats(
-    DCB     *dcb,
-    void    *table)
-{
-    int total;
-    int longest;
-    int hashsize;
-
-    total = 0;
-    longest = 0;
-
-    hashtable_get_stats(table, &hashsize, &total, &longest);
-
-    dcb_printf(dcb,
-               "Hashtable: %p, size %d\n",
-               table,
-               hashsize);
-
-    dcb_printf(dcb, "\tNo. of entries:      %d\n", total);
-    dcb_printf(dcb,
-               "\tAverage chain length:        %.1f\n",
-               (hashsize == 0 ? (float)hashsize : (float)total / hashsize));
-    dcb_printf(dcb, "\tLongest chain length:        %d\n", longest);
 }
 
 /**

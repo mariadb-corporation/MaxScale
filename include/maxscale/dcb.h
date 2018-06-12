@@ -245,7 +245,6 @@ void dListDCBs(DCB *);                       /* List all DCBs in the system */
 void dListClients(DCB *);                    /* List al the client DCBs */
 const char *gw_dcb_state2string(dcb_state_t);              /* DCB state to string */
 void dcb_printf(DCB *, const char *, ...) __attribute__((format(printf, 2, 3))); /* DCB version of printf */
-void dcb_hashtable_stats(DCB *, void *);     /**< Print statisitics */
 int dcb_add_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
 int dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
 int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
