@@ -1,5 +1,11 @@
 # Changelog
 
+## MariaDB MaxScale 2.3
+
+For more details, please refer to:
+
+* [MariaDB MaxScale 2.3.0 Release Notes](Release-Notes/MaxScale-2.3.0-Release-Notes.md)
+
 ## MariaDB MaxScale 2.2
 
 * Limited support from Pluggable Authentication Modules (PAM).
