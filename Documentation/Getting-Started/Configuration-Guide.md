@@ -763,6 +763,48 @@ be completely disabled to prevent access to it.
 Log authentication failures for the admin interface. This parameter expects a
 boolean value and is enabled by default.
 
+#### _events_
+
+MaxScale logs warnings and errors for various reasons and often it is self-
+evident and generally applicable whether some occurence should warrant a
+warning or an error, or perhaps just an info-level message.
+
+However, there are events whose seriousness is not self-evident. For
+instance, in some environments an authentication failure may simply indicate
+that someone has made a typo, while in some other environment that can only
+happen in case there has been a security breech.
+
+To handle events like these, MaxScale defines _events_ whose logging
+facility and level can be controlled by the administrator. Given an event
+`X`, its facility and level are controlled in the following manner:
+```
+event.X.facility=LOG_LOCAL0
+event.X.level=LOG_ERR
+```
+The above means that if event _X_ occurs, then that is logged using the
+facility `LOG_LOCAL0` and the level `LOG_ERR`.
+
+The valid values of facility` are the facility values reported by `man
+syslog`, e.g. `LOG_AUTH`, `LOG_LOCAL0` and `LOG_USER`. Likewise, the valid
+values for `level` are the ones also reported by `man syslog`,
+e.g. `LOG_WARNING`, `LOG_ERR` and `LOG_CRIT`.
+
+Note that MaxScale does not act upon the level, that is, even if the level
+of a particular event is defined to be `LOG_EMERG`, MaxScale will not shut
+down if that event occurs.
+
+The default facility is `LOG_USER` and the default level is `LOG_WARNING`.
+
+The available events are:
+
+#### 'authentication_failure'
+
+This event occurs when there is an authentication failure.
+```
+event.authentication_failure.facility=LOG_AUTH
+event.authentication_failure.level=LOG_CRIT
+```
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the
