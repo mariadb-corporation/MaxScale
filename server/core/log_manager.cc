@@ -254,14 +254,6 @@ public:
 
 }
 
-typedef struct lm_message_stats
-{
-    SPINLOCK lock;
-    uint64_t first_ms; /** The time when the error was logged the first time in this window. */
-    uint64_t last_ms;  /** The time when the error was logged the last time. */
-    size_t   count;    /** How many times the error has been reported within this window. */
-} LM_MESSAGE_STATS;
-
 /**
  * Returns the current time.
  *
@@ -273,6 +265,101 @@ static uint64_t time_monotonic_ms()
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+namespace
+{
+
+typedef enum message_suppression
+{
+    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
+    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
+    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
+} message_suppression_t;
+
+class MessageStatsValue
+{
+public:
+    MessageStatsValue()
+        : m_lock(SPINLOCK_INIT)
+        , m_first_ms(time_monotonic_ms())
+        , m_last_ms(0)
+        , m_count(0)
+    {
+    }
+
+    message_suppression_t update_suppression(const MXS_LOG_THROTTLING& t)
+    {
+        message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
+
+        uint64_t now_ms = time_monotonic_ms();
+
+        spinlock_acquire(&m_lock);
+
+        ++m_count;
+
+        // Less that t.window_ms milliseconds since the message was logged
+        // the last time. May have to be throttled.
+        if (m_count < t.count)
+        {
+            // t.count times has not been reached, still ok to log.
+        }
+        else if (m_count == t.count)
+        {
+            // t.count times has been reached. Was it within the window?
+            if (now_ms - m_first_ms < t.window_ms)
+            {
+                // Within the window, suppress the message.
+                rv = MESSAGE_SUPPRESSED;
+            }
+            else
+            {
+                // Not within the window, reset the situation.
+
+                // The flooding situation is analyzed window by window.
+                // That means that if there in each of two consequtive
+                // windows are not enough messages for throttling to take
+                // effect, but there would be if the window was placed at a
+                // slightly different position (e.g. starting in the middle
+                // of the first and ending in the middle of the second) it
+                // will go undetected and no throttling will be made.
+                // However, if that's the case, it was a spike so the
+                // flooding will stop anyway.
+
+                m_first_ms = now_ms;
+                m_count = 1;
+            }
+        }
+        else
+        {
+            // In suppression mode.
+            if (now_ms - m_first_ms < (t.window_ms + t.suppress_ms))
+            {
+                // Still in the suppression window.
+                rv = MESSAGE_STILL_SUPPRESSED;
+            }
+            else
+            {
+                // We have exited the suppression window, reset the situation.
+                m_first_ms = now_ms;
+                m_count = 1;
+            }
+        }
+
+        m_last_ms = now_ms;
+
+        spinlock_release(&m_lock);
+
+        return rv;
+    }
+
+private:
+    SPINLOCK m_lock;
+    uint64_t m_first_ms; /** The time when the error was logged the first time in this window. */
+    uint64_t m_last_ms;  /** The time when the error was logged the last time. */
+    size_t   m_count;    /** How many times the error has been reported within this window. */
+};
+
 }
 
 namespace std
@@ -316,7 +403,8 @@ namespace
 class MessageStats
 {
 public:
-    typedef MessageStatsKey Key;
+    typedef MessageStatsKey   Key;
+    typedef MessageStatsValue Value;
 
     MessageStats(const MessageStats&) = delete;
     MessageStats& operator=(const MessageStats&) = delete;
@@ -325,7 +413,7 @@ public:
     {
     }
 
-    LM_MESSAGE_STATS& get(const Key& key)
+    Value& get(const Key& key)
     {
         mxs::SpinLockGuard guard(m_lock);
 
@@ -333,21 +421,17 @@ public:
 
         if (i == m_registry.end())
         {
-            LM_MESSAGE_STATS stats;
-            spinlock_init(&stats.lock);
-            stats.first_ms = time_monotonic_ms();
-            stats.last_ms = 0;
-            stats.count = 0;
+            Value value;
 
-            i = m_registry.insert(std::make_pair(key, stats)).first;
+            i = m_registry.insert(std::make_pair(key, value)).first;
         }
 
         return i->second;
     }
 
 private:
-    mxs::SpinLock                                  m_lock;
-    std::tr1::unordered_map<Key, LM_MESSAGE_STATS> m_registry;
+    mxs::SpinLock                       m_lock;
+    std::tr1::unordered_map<Key, Value> m_registry;
 };
 
 }
@@ -2777,13 +2861,6 @@ static enum log_flush priority_to_flush(int priority)
     }
 }
 
-typedef enum message_suppression
-{
-    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
-    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
-    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
-} message_suppression_t;
-
 static message_suppression_t message_status(const char* file, int line)
 {
     message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
@@ -2796,65 +2873,9 @@ static message_suppression_t message_status(const char* file, int line)
     if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
     {
         MessageStats::Key key(file, line);
-        LM_MESSAGE_STATS& value = message_stats->get(key);
+        MessageStats::Value& value = message_stats->get(key);
 
-        uint64_t now_ms = time_monotonic_ms();
-
-        spinlock_acquire(&value.lock);
-
-        ++value.count;
-
-        // Less that t.window_ms milliseconds since the message was logged
-        // the last time. May have to be throttled.
-        if (value.count < t.count)
-        {
-            // t.count times has not been reached, still ok to log.
-        }
-        else if (value.count == t.count)
-        {
-            // t.count times has been reached. Was it within the window?
-            if (now_ms - value.first_ms < t.window_ms)
-            {
-                // Within the window, suppress the message.
-                rv = MESSAGE_SUPPRESSED;
-            }
-            else
-            {
-                // Not within the window, reset the situation.
-
-                // The flooding situation is analyzed window by window.
-                // That means that if there in each of two consequtive
-                // windows are not enough messages for throttling to take
-                // effect, but there would be if the window was placed at a
-                // slightly different position (e.g. starting in the middle
-                // of the first and ending in the middle of the second) it
-                // will go undetected and no throttling will be made.
-                // However, if that's the case, it was a spike so the
-                // flooding will stop anyway.
-
-                value.first_ms = now_ms;
-                value.count = 1;
-            }
-        }
-        else
-        {
-            // In suppression mode.
-            if (now_ms - value.first_ms < (t.window_ms + t.suppress_ms))
-            {
-                // Still in the suppression window.
-                rv = MESSAGE_STILL_SUPPRESSED;
-            }
-            else
-            {
-                // We have exited the suppression window, reset the situation.
-                value.first_ms = now_ms;
-                value.count = 1;
-            }
-        }
-
-        value.last_ms = now_ms;
-
-        spinlock_release(&value.lock);
+        rv = value.update_suppression(t);
     }
 
     return rv;
