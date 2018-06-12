@@ -14,8 +14,6 @@ int main(int argc, char** argv)
 {
     vector<string> commands(
     {
-        "SET SERVER server1 master",
-        "CLEAR SERVER server1 master",
         "FLUSH LOGS",
         "SHOW VARIABLES",
         "SHOW VARIABLES LIKE '%version%'",
