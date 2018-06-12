@@ -17,11 +17,14 @@ For more details about the standard service parameters, refer to the
 
 ### Router Options
 
-**`router_options`** can contain a list of valid server roles. These roles
-are used as the valid types of servers the router will form connections to
-when new sessions are created.
+**`router_options`** can contain a comma separated list of valid server
+roles. These roles are used as the valid types of servers the router will
+form connections to when new sessions are created.
+
+Examples:
 ```
-	router_options=slave
+router_options=slave
+router_options=master,slave
 ```
 Here is a list of all possible values for the `router_options`.
 
