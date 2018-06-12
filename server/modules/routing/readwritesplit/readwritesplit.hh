@@ -26,7 +26,6 @@
 #include <string>
 
 #include <maxscale/dcb.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>

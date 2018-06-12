@@ -19,7 +19,6 @@
 #include <list>
 
 #include <maxscale/service.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/spinlock.hh>
 
 using namespace maxscale;
