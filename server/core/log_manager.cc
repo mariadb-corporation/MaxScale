@@ -190,8 +190,28 @@ struct filewriter
 #endif
 };
 
+/**
+ * Returns the current time.
+ *
+ * @return Current monotonic raw time in milliseconds.
+ */
+static uint64_t time_monotonic_ms()
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
 namespace
 {
+
+typedef enum message_suppression
+{
+    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
+    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
+    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
+} message_suppression_t;
 
 class MessageRegistryKey
 {
@@ -251,31 +271,6 @@ public:
         return hash_value;
     }
 };
-
-}
-
-/**
- * Returns the current time.
- *
- * @return Current monotonic raw time in milliseconds.
- */
-static uint64_t time_monotonic_ms()
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    return now.tv_sec * 1000 + now.tv_nsec / 1000000;
-}
-
-namespace
-{
-
-typedef enum message_suppression
-{
-    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
-    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
-    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
-} message_suppression_t;
 
 class MessageRegistryStats
 {
