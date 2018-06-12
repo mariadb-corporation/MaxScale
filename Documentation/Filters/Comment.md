@@ -11,7 +11,7 @@ comments when they are received by the server.
 [MyComment]
 type=filter
 module=comment
-inject=Comment to be injected
+inject="Comment to be injected"
 
 [MyService]
 type=service
@@ -40,15 +40,13 @@ Variables must be written in all caps.
 ### Example 1 - Inject IP address of the connected client into statements
 as comment.
 
-You want to see the IP addresses of the clients with the server so you
-define filter to comment the into the statements they send.
-
+The following configuration adds the IP address of the client to the comment.
 
 ```
 [IPComment]
 type=filter
 module=comment
-inject=IP=$IP
+inject="IP=$IP"
 
 [MyService]
 type=service

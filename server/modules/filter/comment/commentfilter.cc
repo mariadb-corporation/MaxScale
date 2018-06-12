@@ -42,7 +42,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
-            { CN_INJECT, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
+            { CN_INJECT, MXS_MODULE_PARAM_QUOTEDSTRING, NULL, MXS_MODULE_OPT_REQUIRED },
             { MXS_END_MODULE_PARAMS }
         }
     };
