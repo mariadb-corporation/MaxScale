@@ -142,7 +142,7 @@ void MariaDBMonitor::Test::init_servers(int count)
         base_server->name = MXS_STRDUP(server_name.str().c_str());
         MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER; // Contents mostly undefined
         mon_server->server = base_server;
-        MariaDBServer* new_server = new MariaDBServer(mon_server);
+        MariaDBServer* new_server = new MariaDBServer(mon_server, i - 1);
         new_server->m_server_id = i;
         m_monitor->m_servers.push_back(new_server);
         m_monitor->m_server_info[mon_server] = new_server;

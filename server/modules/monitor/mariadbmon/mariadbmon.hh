@@ -102,10 +102,16 @@ protected:
     void process_state_changes();
 
 private:
+
+    struct CycleInfo
+    {
+        int cycle_id = NodeData::CYCLE_NONE;
+        ServerArray cycle_members;
+    };
+
     unsigned long m_id;                  /**< Monitor ID */
     ServerArray m_servers;               /**< Servers of the monitor */
     ServerInfoMap m_server_info;         /**< Map from server base struct to MariaDBServer */
-    CycleMap m_cycles;                   /**< Map from cycle number to cycle member servers */
 
     // Values updated by monitor
     MariaDBServer* m_master;             /**< Master server for Master/Slave replication */
@@ -114,6 +120,8 @@ private:
     std::string m_external_master_host;  /**< External master host, for fail/switchover */
     int m_external_master_port;          /**< External master port */
     bool m_cluster_modified;             /**< Has an automatic failover/rejoin been performed this loop? */
+    CycleMap m_cycles;                   /**< Map from cycle number to cycle member servers */
+    CycleInfo m_master_cycle_status;     /**< Info about master server cycle from previous round */
 
     // Replication topology detection settings
     bool m_allow_cluster_recovery;       /**< Allow failed servers to rejoin the cluster */
@@ -196,6 +204,8 @@ private:
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
     void assign_master_and_slave();
     void assign_slave_and_relay_master(MariaDBServer* node);
+    bool master_no_longer_valid(std::string* reason_out);
+    bool cycle_has_master_server(ServerArray& cycle_servers);
 
     // Switchover methods
     bool switchover_check(SERVER* new_master, SERVER* current_master,

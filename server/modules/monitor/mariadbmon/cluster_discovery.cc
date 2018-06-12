@@ -14,8 +14,10 @@
 #include "mariadbmon.hh"
 #include <inttypes.h>
 #include <string>
+#include <sstream>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <algorithm>
 
 using std::string;
 
@@ -55,6 +57,11 @@ void topology_DFS(MariaDBServer* node, T* data, void (*visit_func)(MariaDBServer
            topology_DFS<T>(slave, data, visit_func);
        }
    }
+}
+
+static bool server_config_compare(const MariaDBServer* lhs, const MariaDBServer* rhs)
+{
+    return lhs->m_config_index < rhs->m_config_index;
 }
 
 /**
@@ -330,6 +337,8 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* sta
                         cycle_node.cycle = cycle_ind;
                         ServerArray& members = m_cycles[cycle_ind]; // Creates array if didn't exist
                         members.push_back(cycle_server);
+                        // Sort the cycle members according to monitor config order.
+                        std::sort(members.begin(), members.end(), server_config_compare);
                         // All cycle elements popped. Next cycle...
                         *next_cycle = cycle_ind + 1;
                     }
@@ -998,24 +1007,31 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server()
     // For each cycle, it's enough to take one sample server, as all members of a cycle have the same reach.
     for (auto iter = m_cycles.begin(); iter != m_cycles.end(); iter++)
     {
-        ServerArray& cycle_members = m_cycles[(*iter).first];
-        MariaDBServer* sample_server = find_master_inside_cycle(cycle_members);
-        if (sample_server)
+        int cycle_id = iter->first;
+        ServerArray& cycle_members = m_cycles[cycle_id];
+        // Check that no server in the cycle is replicating from outside the cycle. This requirement is
+        // analogous with the same requirement for non-cycle servers.
+        if (!cycle_has_master_server(cycle_members))
         {
-            master_candidates.push_back(sample_server);
-        }
-        else
-        {
-            // No single server in the cycle was viable.
-            const char WARN_MSG[] = "No valid master server could be found  in the cycle with servers '%s'.";
-            string server_names = monitored_servers_to_string(cycle_members);
-            MXS_WARNING(WARN_MSG, server_names.c_str());
-
-            for (auto iter2 = cycle_members.begin(); iter2 != cycle_members.end(); iter2++)
+            MariaDBServer* sample_server = find_master_inside_cycle(cycle_members);
+            if (sample_server)
             {
-                MariaDBServer* disqualified_server = *iter2;
-                string reasons = disqualify_reasons_to_string(disqualified_server);
-                MXS_WARNING(SERVER_DISQUALIFIED, disqualified_server->name(), reasons.c_str());
+                master_candidates.push_back(sample_server);
+            }
+            else
+            {
+                // No single server in the cycle was viable.
+                const char WARN_MSG[] = "No valid master server could be found  in the cycle with "
+                                        "servers '%s'.";
+                string server_names = monitored_servers_to_string(cycle_members);
+                MXS_WARNING(WARN_MSG, server_names.c_str());
+
+                for (auto iter2 = cycle_members.begin(); iter2 != cycle_members.end(); iter2++)
+                {
+                    MariaDBServer* disqualified_server = *iter2;
+                    string reasons = disqualify_reasons_to_string(disqualified_server);
+                    MXS_WARNING(SERVER_DISQUALIFIED, disqualified_server->name(), reasons.c_str());
+                }
             }
         }
     }
@@ -1202,4 +1218,99 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
     {
         node->set_status(SERVER_RELAY_MASTER);
     }
+}
+
+/**
+ * Should a new master server be selected?
+ *
+ * @param reason_out Output for a text description
+ * @return True, if the current master has changed in a way that a new master should be selected.
+ */
+bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
+{
+    // The master server of the cluster needs to be re-calculated in the following four cases:
+    bool rval = false;
+    // 1) There is no master.
+    if (m_master == NULL)
+    {
+        rval = true;
+    }
+    // 2) read_only has been activated on the master.
+    else if (m_master->is_read_only())
+    {
+        rval = true;
+        *reason_out = "it is in read-only mode";
+    }
+    // 3) The master was a non-replicating master (not in a cycle) but now has a slave connection.
+    else if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
+    {
+        // The master should not have a master of its own.
+        if (!m_master->m_node.parents.empty())
+        {
+            rval = true;
+            *reason_out = "it has started replicating from another server in the cluster.";
+        }
+    }
+    // 4) The master was part of a cycle but is no longer, or one of the servers in the cycle is
+    //    replicating from a server outside the cycle.
+    else
+    {
+        /* The master was previously in a cycle. Compare the current cycle to the previous data and see
+         * if the cycle is still the best multimaster group. */
+        int current_cycle_id = m_master->m_node.cycle;
+
+        // 4a) The master is no longer in a cycle.
+        if (current_cycle_id == NodeData::CYCLE_NONE)
+        {
+            rval = true;
+            ServerArray& old_members = m_master_cycle_status.cycle_members;
+            string server_names_old = monitored_servers_to_string(old_members);
+            *reason_out = "it is no longer in the multimaster group (" + server_names_old + ").";
+        }
+        // 4b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
+        else
+        {
+            ServerArray& current_members = m_cycles[current_cycle_id];
+            if (cycle_has_master_server(current_members))
+            {
+                rval = true;
+                string server_names_current = monitored_servers_to_string(current_members);
+                *reason_out = "a server in the master's multimaster group (" + server_names_current +
+                    ") is replicating from a server not in the group.";
+            }
+        }
+    }
+    return rval;
+}
+
+/**
+ * Check if any of the servers in the cycle is replicating from a server not in the cycle. External masters
+ * do not count.
+ *
+ * @param cycle The cycle to check
+ * @return True if a server is replicating from a master not in the same cycle
+ */
+bool MariaDBMonitor::cycle_has_master_server(ServerArray& cycle_servers)
+{
+    bool outside_replication = false;
+    int cycle_id = cycle_servers.front()->m_node.cycle;
+    // Looks good, check that no cycle server is replicating from elsewhere.
+    for (auto iter = cycle_servers.begin(); iter != cycle_servers.end() && !outside_replication; iter++)
+    {
+        MariaDBServer* server = *iter;
+        for (auto iter_master = server->m_node.parents.begin();
+             iter_master != server->m_node.parents.end();
+             iter_master++)
+        {
+            if ((*iter_master)->m_node.cycle != cycle_id)
+            {
+                // Cycle member is replicating from a server that is not in the current cycle. The
+                // cycle is not a valid "master" cycle.
+                outside_replication = true;
+                break;
+            }
+        }
+    }
+
+    return outside_replication;
 }

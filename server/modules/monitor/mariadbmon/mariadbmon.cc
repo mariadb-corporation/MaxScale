@@ -77,7 +77,7 @@ void MariaDBMonitor::reset_server_info()
     // Next, initialize the data.
     for (auto mon_server = m_monitor->monitored_servers; mon_server; mon_server = mon_server->next)
     {
-        m_servers.push_back(new MariaDBServer(mon_server));
+        m_servers.push_back(new MariaDBServer(mon_server, m_servers.size()));
     }
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -392,20 +392,36 @@ void MariaDBMonitor::tick()
 
     build_replication_graph();
     find_graph_cycles();
-    // Use the information to find the so far best master server.
-    MariaDBServer* root_master = find_topology_master_server();
-    if (root_master)
+    string reason;
+    MariaDBServer* root_master = m_master; // TODO: Refactor this out by reducing use of root_master
+    if (master_no_longer_valid(&reason))
     {
-        MXS_DEBUG("Server '%s' is the best master candidate with %d slaves.",
-                  root_master->name(), root_master->m_node.reach);
-        m_master = root_master;
+        if (m_master && !reason.empty())
+        {
+            MXS_WARNING("The previous master server '%s' is no longer a valid master because %s",
+                        m_master->name(), reason.c_str());
+        }
+
+        // The current master is no longer ok (or it never was). Find another. Master changes are logged
+        // by the log_master_changes()-method.
+        root_master = find_topology_master_server();
+        if (root_master)
+        {
+            m_master = root_master;
+            // A new master has been set. Save some data regarding the type of the master.
+            int new_cycle_id = m_master->m_node.cycle;
+            m_master_cycle_status.cycle_id = new_cycle_id;
+            if (new_cycle_id == NodeData::CYCLE_NONE)
+            {
+                m_master_cycle_status.cycle_members.clear();
+            }
+            else
+            {
+                m_master_cycle_status.cycle_members = m_cycles[new_cycle_id];
+            }
+        }
     }
-#ifdef SS_DEBUG
-    else
-    {
-        MXS_DEBUG("No valid master server found in the cluster.");
-    }
-#endif
+
     assign_master_and_slave();
 
     if (!m_ignore_external_masters)
@@ -1049,7 +1065,7 @@ string monitored_servers_to_string(const ServerArray& servers)
         {
             rval += separator;
             rval += servers[i]->name();
-            separator = ",";
+            separator = ", ";
         }
     }
     return rval;

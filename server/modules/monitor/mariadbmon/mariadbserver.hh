@@ -131,10 +131,10 @@ public:
     MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
+    int             m_config_index;         /**< What position this server has in the monitor config */
     bool            m_print_update_errormsg;/**< Should an update error be printed. */
     version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
-
     bool            m_read_only;            /**< Value of @@read_only */
     size_t          m_n_slaves_running;     /**< Number of running slave connections */
     int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
@@ -146,9 +146,9 @@ public:
     GtidList        m_gtid_binlog_pos;      /**< Gtid of latest event written to binlog. */
     SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
-
     NodeData        m_node;                 /**< Replication topology data */
-    MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
+
+    MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
 
     void monitor_server();
     void update_server_info();

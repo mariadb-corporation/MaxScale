@@ -38,8 +38,9 @@ SlaveStatus::SlaveStatus()
     , slave_sql_running(false)
 {}
 
-MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
+MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
+    , m_config_index(config_index)
     , m_print_update_errormsg(true)
     , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
