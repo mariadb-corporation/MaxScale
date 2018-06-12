@@ -344,6 +344,10 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     {
         rses->ps_manager.store(querybuf, id);
     }
+    else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+    {
+        rses->ps_manager.erase(get_text_ps_id(querybuf));
+    }
 
     MXS_INFO("Session write, routing to all servers.");
 
@@ -624,6 +628,7 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
      */
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE) ||
         command == MXS_COM_STMT_CLOSE ||
         command == MXS_COM_STMT_RESET)
     {
