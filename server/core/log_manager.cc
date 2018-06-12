@@ -161,10 +161,10 @@ static bool flushall_done_flag;
 namespace
 {
 
-class MessageStats;
+class MessageRegistry;
 
 }
-static MessageStats* message_stats;
+static MessageRegistry* message_registry;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -193,7 +193,7 @@ struct filewriter
 namespace
 {
 
-class MessageStatsKey
+class MessageRegistryKey
 {
 public:
     const char* filename;
@@ -206,13 +206,13 @@ public:
      *                    statically allocated buffer, e.g. __FILE__.
      * @param linenumber  The linenumber where the message was reported.
      */
-    MessageStatsKey(const char* filename, int linenumber)
+    MessageRegistryKey(const char* filename, int linenumber)
         : filename(filename)
         , linenumber(linenumber)
     {
     }
 
-    bool eq(const MessageStatsKey& other) const
+    bool eq(const MessageRegistryKey& other) const
     {
         return
             filename == other.filename && // Yes, we compare the pointer values and not the strings.
@@ -277,10 +277,10 @@ typedef enum message_suppression
     MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
 } message_suppression_t;
 
-class MessageStatsValue
+class MessageRegistryStats
 {
 public:
-    MessageStatsValue()
+    MessageRegistryStats()
         : m_lock(SPINLOCK_INIT)
         , m_first_ms(time_monotonic_ms())
         , m_last_ms(0)
@@ -369,12 +369,12 @@ namespace tr1
 {
 
 template<>
-struct hash<MessageStatsKey>
+struct hash<MessageRegistryKey>
 {
-    typedef MessageStatsKey Key;
-    typedef size_t          result_type;
+    typedef MessageRegistryKey Key;
+    typedef size_t             result_type;
 
-    size_t operator()(const MessageStatsKey& key) const
+    size_t operator()(const MessageRegistryKey& key) const
     {
         return key.hash();
     }
@@ -383,13 +383,13 @@ struct hash<MessageStatsKey>
 }
 
 template<>
-struct equal_to<MessageStatsKey>
+struct equal_to<MessageRegistryKey>
 {
-    typedef bool            result_type;
-    typedef MessageStatsKey first_argument_type;
-    typedef MessageStatsKey second_argument_type;
+    typedef bool               result_type;
+    typedef MessageRegistryKey first_argument_type;
+    typedef MessageRegistryKey second_argument_type;
 
-    bool operator()(const MessageStatsKey& lhs, const MessageStatsKey& rhs) const
+    bool operator()(const MessageRegistryKey& lhs, const MessageRegistryKey& rhs) const
     {
         return lhs.eq(rhs);
     }
@@ -400,20 +400,20 @@ struct equal_to<MessageStatsKey>
 namespace
 {
 
-class MessageStats
+class MessageRegistry
 {
 public:
-    typedef MessageStatsKey   Key;
-    typedef MessageStatsValue Value;
+    typedef MessageRegistryKey   Key;
+    typedef MessageRegistryStats Stats;
 
-    MessageStats(const MessageStats&) = delete;
-    MessageStats& operator=(const MessageStats&) = delete;
+    MessageRegistry(const MessageRegistry&) = delete;
+    MessageRegistry& operator=(const MessageRegistry&) = delete;
 
-    MessageStats()
+    MessageRegistry()
     {
     }
 
-    Value& get(const Key& key)
+    Stats& get_stats(const Key& key)
     {
         mxs::SpinLockGuard guard(m_lock);
 
@@ -421,9 +421,9 @@ public:
 
         if (i == m_registry.end())
         {
-            Value value;
+            Stats stats;
 
-            i = m_registry.insert(std::make_pair(key, value)).first;
+            i = m_registry.insert(std::make_pair(key, stats)).first;
         }
 
         return i->second;
@@ -431,7 +431,7 @@ public:
 
 private:
     mxs::SpinLock                       m_lock;
-    std::tr1::unordered_map<Key, Value> m_registry;
+    std::tr1::unordered_map<Key, Stats> m_registry;
 };
 
 }
@@ -716,18 +716,18 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
 
     if (!lm)
     {
-        ss_dassert(!message_stats);
+        ss_dassert(!message_registry);
 
-        message_stats = new (std::nothrow) MessageStats;
+        message_registry = new (std::nothrow) MessageRegistry;
 
-        if (message_stats)
+        if (message_registry)
         {
             succ = logmanager_init_nomutex(ident, logdir, target, log_config.do_maxlog);
 
             if (!succ)
             {
-                delete message_stats;
-                message_stats = NULL;
+                delete message_registry;
+                message_registry = NULL;
             }
         }
     }
@@ -785,8 +785,8 @@ static void logmanager_done_nomutex(void)
     MXS_FREE(lm);
     lm = NULL;
 
-    delete message_stats;
-    message_stats = NULL;
+    delete message_registry;
+    message_registry = NULL;
 }
 
 /**
@@ -2872,10 +2872,10 @@ static message_suppression_t message_status(const char* file, int line)
 
     if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
     {
-        MessageStats::Key key(file, line);
-        MessageStats::Value& value = message_stats->get(key);
+        MessageRegistry::Key key(file, line);
+        MessageRegistry::Stats& stats = message_registry->get_stats(key);
 
-        rv = value.update_suppression(t);
+        rv = stats.update_suppression(t);
     }
 
     return rv;
