@@ -14,7 +14,6 @@
 
 #include <maxscale/cppdefs.hh>
 #include <tr1/unordered_map>
-#include <maxscale/hashtable.h>
 #include "cache.hh"
 #include "cache_storage_api.hh"
 

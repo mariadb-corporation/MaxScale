@@ -17,7 +17,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
 #include <maxscale/service.h>

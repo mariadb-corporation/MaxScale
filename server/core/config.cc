@@ -34,6 +34,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
+#include <maxscale/hashtable.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.h>

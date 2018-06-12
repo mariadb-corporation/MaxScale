@@ -32,7 +32,6 @@
 #include <maxscale/server.h>
 #include <maxscale/listener.h>
 #include <maxscale/filter.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
 #include <maxscale/jansson.h>

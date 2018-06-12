@@ -19,7 +19,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
