@@ -2110,15 +2110,25 @@ public:
         update_names(zDatabase, table, NULL, NULL);
     }
 
-    void maxscaleComment()
+    int maxscaleComment()
     {
-        ss_dassert(this_thread.initialized);
+        // We are regularily parsing if the thread has been initialized.
+        // In that case # should be interpreted as the start of a comment,
+        // otherwise it should not.
+        int regular_parsing = false;
 
-        if (m_status == QC_QUERY_INVALID)
+        if (this_thread.initialized)
         {
-            m_status = QC_QUERY_PARSED;
-            m_type_mask = QUERY_TYPE_READ;
+            regular_parsing = true;
+
+            if (m_status == QC_QUERY_INVALID)
+            {
+                m_status = QC_QUERY_PARSED;
+                m_type_mask = QUERY_TYPE_READ;
+            }
         }
+
+        return regular_parsing;
     }
 
     void maxscaleDeclare(Parse* pParse)
@@ -2136,7 +2146,7 @@ public:
         ss_dassert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_type_mask = QUERY_TYPE_WRITE;
+        m_type_mask = QUERY_TYPE_DEALLOC_PREPARE;
 
         // If information is collected in several passes, then we may
         // this information already.

@@ -360,6 +360,10 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
     {
         m_qc.ps_store(querybuf, id);
     }
+    else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+    {
+        m_qc.ps_erase(querybuf);
+    }
 
     MXS_INFO("Session write, routing to all servers.");
 

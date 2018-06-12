@@ -84,7 +84,8 @@ typedef enum qc_query_type
     QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000, /*< Create temporary table:master (could be all) */
     QUERY_TYPE_READ_TMP_TABLE     = 0x100000, /*< Read temporary table:master (could be any) */
     QUERY_TYPE_SHOW_DATABASES     = 0x200000, /*< Show list of databases */
-    QUERY_TYPE_SHOW_TABLES        = 0x400000  /*< Show list of tables */
+    QUERY_TYPE_SHOW_TABLES        = 0x400000, /*< Show list of tables */
+    QUERY_TYPE_DEALLOC_PREPARE    = 0x1000000 /*< Dealloc named prepare stmt:all */
 } qc_query_type_t;
 
 /**

@@ -218,6 +218,13 @@ public:
     void ps_store(GWBUF* buffer, uint32_t id);
 
     /**
+     * @brief Remove a prepared statement
+     *
+     * @param buffer Buffer containing a DEALLOCATE statement or a binary protocol command
+     */
+    void ps_erase(GWBUF* buffer);
+
+    /**
      * @brief Store a mapping from an external id to the corresponding internal id
      *
      * @param external_id  The external id as seen by the client.
@@ -296,14 +303,6 @@ private:
      */
     uint32_t ps_get_type(uint32_t id) const;
     uint32_t ps_get_type(std::string id) const;
-
-    /**
-     * @brief Remove a prepared statement
-     *
-     * @param id Statement identifier to remove
-     */
-    void ps_erase(std::string id);
-    void ps_erase(uint32_t id);
 
     /**
      * @brief Get the internal ID for the given binary prepared statement

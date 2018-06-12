@@ -26,6 +26,22 @@ using namespace maxscale;
 const int QC_TRACE_MSG_LEN = 1000;
 
 
+// Copy of mxs_mysql_extract_ps_id() in modules/protocol/MySQL/mysql_common.cc,
+// but we do not want to create a dependency from maxscale-common to that.
+
+uint32_t mysql_extract_ps_id(GWBUF* buffer)
+{
+    uint32_t rval = 0;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    {
+        rval = gw_mysql_get_byte4(id);
+    }
+
+    return rval;
+}
+
 // Copied from mysql_common.c
 // TODO: The current database should somehow be available in a generic fashion.
 const char* qc_mysql_get_current_db(MXS_SESSION* session)
@@ -285,6 +301,24 @@ public:
         }
     }
 
+    void erase(GWBUF* buffer)
+    {
+        uint8_t cmd = mxs_mysql_get_command(buffer);
+
+        if (cmd == MXS_COM_QUERY)
+        {
+            erase(get_text_ps_id(buffer));
+        }
+        else if (qc_mysql_is_ps_command(cmd))
+        {
+            erase(mysql_extract_ps_id(buffer));
+        }
+        else
+        {
+            ss_info_dassert(!true, "QueryClassifier::PSManager::erase called with invalid query");
+        }
+    }
+
 private:
     typedef std::tr1::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
     typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
@@ -328,14 +362,9 @@ uint32_t QueryClassifier::ps_get_type(std::string id) const
     return m_sPs_manager->get_type(id);
 }
 
-void QueryClassifier::ps_erase(std::string id)
+void QueryClassifier::ps_erase(GWBUF* buffer)
 {
-    return m_sPs_manager->erase(id);
-}
-
-void QueryClassifier::ps_erase(uint32_t id)
-{
-    return m_sPs_manager->erase(id);
+    return m_sPs_manager->erase(buffer);
 }
 
 uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT* pHints)
@@ -523,27 +552,6 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
     }
 
     return target;
-}
-
-namespace
-{
-
-// Copy of mxs_mysql_extract_ps_id() in modules/protocol/MySQL/mysql_common.cc,
-// but we do not want to create a dependency from maxscale-common to that.
-
-uint32_t mysql_extract_ps_id(GWBUF* buffer)
-{
-    uint32_t rval = 0;
-    uint8_t id[MYSQL_PS_ID_SIZE];
-
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
-    {
-        rval = gw_mysql_get_byte4(id);
-    }
-
-    return rval;
-}
-
 }
 
 uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)

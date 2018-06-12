@@ -2915,10 +2915,15 @@ public:
              dcb && atomic_load_int32(&m_more);
              dcb = dcb->thread.next)
         {
-            if (!m_func(dcb, m_data))
+            ss_dassert(dcb->session);
+
+            if (dcb->session->state != SESSION_STATE_DUMMY)
             {
-                atomic_store_int32(&m_more, 0);
-                break;
+                if (!m_func(dcb, m_data))
+                {
+                    atomic_store_int32(&m_more, 0);
+                    break;
+                }
             }
         }
     }

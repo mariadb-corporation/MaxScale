@@ -1631,7 +1631,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
  */
 static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
 {
-    int rc;
+    int rc = 1;
     GWBUF* packetbuf;
     do
     {
@@ -1738,6 +1738,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                 // Store the original COM_CHANGE_USER for later
                 proto->stored_query = packetbuf;
                 packetbuf = NULL;
+                rc = 1;
             }
             else if (proto->changing_user)
             {

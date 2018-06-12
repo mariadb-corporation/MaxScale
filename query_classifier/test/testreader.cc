@@ -37,6 +37,7 @@ enum skip_action_t
 typedef std::map<std::string, skip_action_t> KeywordActionMapping;
 
 static KeywordActionMapping mtl_keywords;
+static KeywordActionMapping plsql_keywords;
 
 void init_keywords()
 {
@@ -46,7 +47,7 @@ void init_keywords()
         skip_action_t action;
     };
 
-    static const Keyword KEYWORDS[] =
+    static const Keyword MTL_KEYWORDS[] =
     {
         { "append_file",                SKIP_LINE },
         { "cat_file",                   SKIP_LINE },
@@ -91,10 +92,8 @@ void init_keywords()
         { "error",                      SKIP_NEXT_STATEMENT },
         { "eval",                       SKIP_STATEMENT },
         { "exec",                       SKIP_LINE },
-        { "exit",                       SKIP_LINE },
         { "file_exists",                SKIP_LINE },
         { "horizontal_results",         SKIP_LINE },
-        { "if",                         SKIP_BLOCK },
         { "inc",                        SKIP_LINE },
         { "let",                        SKIP_LINE },
         { "let",                        SKIP_LINE },
@@ -138,15 +137,28 @@ void init_keywords()
         { "sync_with_master",           SKIP_LINE },
         { "system",                     SKIP_LINE },
         { "vertical_results",           SKIP_LINE },
-        { "while",                      SKIP_BLOCK },
         { "write_file",                 SKIP_LINE },
     };
 
-    const size_t N_KEYWORDS = sizeof(KEYWORDS)/sizeof(KEYWORDS[0]);
+    const size_t N_MTL_KEYWORDS = sizeof(MTL_KEYWORDS)/sizeof(MTL_KEYWORDS[0]);
 
-    for (size_t i = 0; i < N_KEYWORDS; ++i)
+    for (size_t i = 0; i < N_MTL_KEYWORDS; ++i)
     {
-        mtl_keywords[KEYWORDS[i].z_keyword] = KEYWORDS[i].action;
+        mtl_keywords[MTL_KEYWORDS[i].z_keyword] = MTL_KEYWORDS[i].action;
+    }
+
+    static const Keyword PLSQL_KEYWORDS[] =
+    {
+        { "exit",                       SKIP_LINE },
+        { "if",                         SKIP_BLOCK },
+        { "while",                      SKIP_BLOCK },
+    };
+
+    const size_t N_PLSQL_KEYWORDS = sizeof(PLSQL_KEYWORDS)/sizeof(PLSQL_KEYWORDS[0]);
+
+    for (size_t i = 0; i < N_PLSQL_KEYWORDS; ++i)
+    {
+        plsql_keywords[PLSQL_KEYWORDS[i].z_keyword] = PLSQL_KEYWORDS[i].action;
     }
 }
 
@@ -163,18 +175,24 @@ skip_action_t get_action(const string& keyword, const string& delimiter)
         // be handled explicitly.
         action = SKIP_DELIMITER;
     }
-    else if (delimiter == ";")
+    else
+    {
+        KeywordActionMapping::iterator i = mtl_keywords.find(key);
+
+        if (i != mtl_keywords.end())
+        {
+            action = i->second;
+        }
+    }
+
+    if ((action == SKIP_NOTHING) && (delimiter == ";"))
     {
         // Some mysqltest keywords, such as "while", "exit" and "if" are also
         // PL/SQL keywords. We assume they can only be used in the former role,
         // if the delimiter is ";".
-        string key(keyword);
+        KeywordActionMapping::iterator i = plsql_keywords.find(key);
 
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-        KeywordActionMapping::iterator i = mtl_keywords.find(key);
-
-        if (i != mtl_keywords.end())
+        if (i != plsql_keywords.end())
         {
             action = i->second;
         }
