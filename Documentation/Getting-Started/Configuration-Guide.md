@@ -708,6 +708,26 @@ Note that you need to specify with `retain_last_statements` how many statements
 MaxScale should retain for each session. Unless it has been set to another value
 than `0`, this configuration setting will not have an effect.
 
+#### `writeq_high_water`
+
+High water mark for network write buffer. Controls when network traffic
+throtting is started.
+
+More specifically, if the client side write queue is above this value, it will
+block traffic coming from backend servers. If the backend side write queue is
+above this value, it will block traffic from client. the minimum allowed size is
+4096 bytes.
+
+Only when both `writeq_high_water` and `writeq_low_water` are set, traffic
+throtting is enabled. By default, traffic throttling is disabled.
+
+#### `writeq_low_water`
+
+Low water mark for network write buffer. Once the traffic throttling is enabled,
+it will only be disabled when the write queue is below `writeq_high_water`. The
+minimum allowed size is 512 bytes. `writeq_high_water` must always be greater
+than `writeq_low_water`.
+
 ### REST API Configuration
 
 The MaxScale REST API is an HTTP interface that provides JSON format data
