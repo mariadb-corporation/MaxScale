@@ -117,6 +117,15 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
         ss_dassert(target->can_connect() && can_recover_servers());
         ss_dassert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
         rval = target->connect(m_client->session, &m_sescmd_list);
+        MXS_INFO("Connected to '%s'", target->name());
+
+        if (rval && target->is_waiting_result())
+        {
+            ss_info_dassert(!m_sescmd_list.empty() && target->has_session_commands(),
+                            "Session command list must not be empty and target "
+                            "should have unfinished session commands.");
+            m_expected_responses++;
+        }
     }
 
     return rval;
@@ -402,10 +411,6 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
                 if (expecting_response)
                 {
                     m_expected_responses++;
-                }
-                else
-                {
-                    backend->ack_write();
                 }
 
                 MXS_INFO("Route query to %s: %s \t%s",
@@ -1027,11 +1032,6 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
                     ss_dassert(gwbuf_length(querybuf) == 4);
                     m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
                 }
-            }
-            else
-            {
-                // The server won't respond, mark it as done
-                target->ack_write();
             }
         }
 

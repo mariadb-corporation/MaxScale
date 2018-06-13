@@ -92,7 +92,7 @@ public:
      */
     bool continue_write(GWBUF* buffer)
     {
-        return mxs::Backend::write(buffer);
+        return mxs::Backend::write(buffer, Backend::NO_RESPONSE);
     }
 
     void close(close_type type = CLOSE_NORMAL);

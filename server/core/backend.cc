@@ -96,6 +96,7 @@ bool Backend::execute_session_command()
     {
     case MXS_COM_QUIT:
     case MXS_COM_STMT_CLOSE:
+    case MXS_COM_STMT_SEND_LONG_DATA:
         /** These commands do not generate responses */
         rval = write(buffer, NO_RESPONSE);
         complete_session_command();

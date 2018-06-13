@@ -553,7 +553,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (backend->has_session_commands())
     {
-        if (backend->execute_session_command())
+        if (backend->execute_session_command() && backend->is_waiting_result())
         {
             m_expected_responses++;
         }
