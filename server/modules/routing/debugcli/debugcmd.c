@@ -1197,10 +1197,11 @@ struct subcommand createoptions[] =
         }
     },
     {
-        "listener", 2, 12, createListener,
+        "listener", 2, 13, createListener,
         "Create a new listener for a service",
         "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n"
+        "                       [SSL_VERIFY_PEER_CERTIFICATE]\n"
         "\n"
         "Parameters\n"
         "SERVICE       Service where this listener is added\n"
@@ -1215,6 +1216,7 @@ struct subcommand createoptions[] =
         "SSL_CA        Path to CA certificate\n"
         "SSL_VERSION   SSL version (default MAX)\n"
         "SSL_VERIFY_DEPTH Certificate verification depth\n"
+        "SSL_VERIFY_PEER_CERTIFICATE Verify peer certificate\n"
         "\n"
         "The first two parameters are required, the others are optional.\n"
         "Any of the optional parameters can also have the value 'default'\n"
@@ -1225,6 +1227,7 @@ struct subcommand createoptions[] =
             ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING,
         }
     },
     {
@@ -1500,7 +1503,8 @@ struct subcommand alteroptions[] =
         {
             ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING
         }
     },
     {
