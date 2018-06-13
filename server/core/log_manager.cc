@@ -870,8 +870,8 @@ static int logmanager_write_log(int            priority,
     int do_maxlog = log_config.do_maxlog;
     int do_syslog = log_config.do_syslog;
 
-    assert(str);
-    assert((priority & ~LOG_PRIMASK) == 0);
+    ss_dassert(str);
+    ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
     CHK_LOGMANAGER(lm);
 
     // All messages are now logged to the error log file.
@@ -987,7 +987,7 @@ static int logmanager_write_log(int            priority,
         // Strip away the timestamp and the prefix (e.g. "error : ").
         const char *message = wp + timestamp_len + prefix_len;
 
-        switch (priority)
+        switch (priority & LOG_PRIMASK)
         {
         case LOG_EMERG:
         case LOG_ALERT:
@@ -2116,8 +2116,8 @@ static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw, bool wri
     bool succ = false;
 
     CHK_LOGMANAGER(logmanager);
-    assert(logmanager->lm_clientmes);
-    assert(logmanager->lm_logmes);
+    ss_dassert(logmanager->lm_clientmes);
+    ss_dassert(logmanager->lm_logmes);
 
     fw->fwr_state = INIT;
 #if defined(SS_DEBUG)
@@ -2696,12 +2696,12 @@ int mxs_log_rotate()
     return err;
 }
 
-static const char* priority_name(int priority)
+static const char* level_name(int level)
 {
-    switch (priority)
+    switch (level)
     {
     case LOG_EMERG:
-        return "emercency";
+        return "emergency";
     case LOG_ALERT:
         return "alert";
     case LOG_CRIT:
@@ -2717,7 +2717,7 @@ static const char* priority_name(int priority)
     case LOG_DEBUG:
         return "debug";
     default:
-        assert(!true);
+        ss_dassert(!true);
         return "unknown";
     }
 }
@@ -2730,14 +2730,14 @@ static const char* priority_name(int priority)
  *
  * @return 0 if the priority was valid, -1 otherwise.
  */
-int mxs_log_set_priority_enabled(int priority, bool enable)
+int mxs_log_set_priority_enabled(int level, bool enable)
 {
     int rv = -1;
     const char* text = (enable ? "enable" : "disable");
 
-    if ((priority & ~LOG_PRIMASK) == 0)
+    if ((level & ~LOG_PRIMASK) == 0)
     {
-        int bit = (1 << priority);
+        int bit = (1 << level);
 
         if (enable)
         {
@@ -2749,11 +2749,11 @@ int mxs_log_set_priority_enabled(int priority, bool enable)
             mxs_log_enabled_priorities &= ~bit;
         }
 
-        MXS_NOTICE("The logging of %s messages has been %sd.", priority_name(priority), text);
+        MXS_NOTICE("The logging of %s messages has been %sd.", level_name(level), text);
     }
     else
     {
-        MXS_ERROR("Attempt to %s unknown syslog priority %d.", text, priority);
+        MXS_ERROR("Attempt to %s unknown syslog priority %d.", text, level);
     }
 
     return rv;
@@ -2774,13 +2774,13 @@ static const char PREFIX_NOTICE[]  = "notice : ";
 static const char PREFIX_INFO[]    = "info   : ";
 static const char PREFIX_DEBUG[]   = "debug  : ";
 
-static log_prefix_t priority_to_prefix(int priority)
+static log_prefix_t level_to_prefix(int level)
 {
-    assert((priority & ~LOG_PRIMASK) == 0);
+    ss_dassert((level & ~LOG_PRIMASK) == 0);
 
     log_prefix_t prefix;
 
-    switch (priority)
+    switch (level)
     {
     case LOG_EMERG:
         prefix.text = PREFIX_EMERG;
@@ -2823,7 +2823,7 @@ static log_prefix_t priority_to_prefix(int priority)
         break;
 
     default:
-        assert(!true);
+        ss_dassert(!true);
         prefix.text = PREFIX_ERROR;
         prefix.len = sizeof(PREFIX_ERROR);
         break;
@@ -2834,11 +2834,11 @@ static log_prefix_t priority_to_prefix(int priority)
     return prefix;
 }
 
-static enum log_flush priority_to_flush(int priority)
+static enum log_flush level_to_flush(int level)
 {
-    assert((priority & ~LOG_PRIMASK) == 0);
+    ss_dassert((level & ~LOG_PRIMASK) == 0);
 
-    switch (priority)
+    switch (level)
     {
     case LOG_EMERG:
     case LOG_ALERT:
@@ -2847,7 +2847,7 @@ static enum log_flush priority_to_flush(int priority)
         return LOG_FLUSH_YES;
 
     default:
-        assert(!true);
+        ss_dassert(!true);
     case LOG_WARNING:
     case LOG_NOTICE:
     case LOG_INFO:
@@ -2894,9 +2894,11 @@ int mxs_log_message(int priority,
 {
     int err = 0;
 
-    assert((priority & ~LOG_PRIMASK) == 0);
+    ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
-    if ((priority & ~LOG_PRIMASK) == 0) // Check that the priority is ok,
+    int level = priority & LOG_PRIMASK;
+
+    if ((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0) // Check that the priority is ok,
     {
         message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
 
@@ -2905,7 +2907,7 @@ int mxs_log_message(int priority,
         // we are presumably debugging something. Notice messages are
         // assumed to be logged for a reason and always in a context where
         // flooding cannot be caused.
-        if ((priority == LOG_ERR) || (priority == LOG_WARNING))
+        if ((level == LOG_ERR) || (level == LOG_WARNING))
         {
             status = message_status(file, line);
         }
@@ -2952,7 +2954,7 @@ int mxs_log_message(int priority,
 
             if (message_len >= 0)
             {
-                log_prefix_t prefix = priority_to_prefix(priority);
+                log_prefix_t prefix = level_to_prefix(level);
 
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 
@@ -3026,7 +3028,7 @@ int mxs_log_message(int priority,
                         break;
 
                     default:
-                        assert(!true);
+                        ss_dassert(!true);
                     }
 
                     (void)len;
@@ -3042,7 +3044,7 @@ int mxs_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
-                enum log_flush flush = priority_to_flush(priority);
+                enum log_flush flush = level_to_flush(level);
 
                 err = log_write(priority, file, line, function, prefix.len, buffer_len, buffer, flush);
             }
