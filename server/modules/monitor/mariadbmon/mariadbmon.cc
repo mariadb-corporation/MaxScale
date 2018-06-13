@@ -125,7 +125,8 @@ static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
 static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
 static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
-                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info);
+                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info,
+                               string* err_msg);
 static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
                                        const ServerVector& slaves, int seconds_remaining);
 static string get_connection_errors(const ServerVector& servers);
@@ -761,7 +762,9 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
             {
                 if (update_gtids(handle, master, master_info))
                 {
-                    if (can_replicate_from(handle, mon_server, server_info, master, master_info))
+                    string no_rejoin_reason;
+                    if (can_replicate_from(handle, mon_server, server_info, master, master_info,
+                                           &no_rejoin_reason))
                     {
                         ServerVector joinable_server;
                         joinable_server.push_back(mon_server);
@@ -777,8 +780,8 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
-                                             "or it could not be queried.", rejoin_serv_name, master_name);
+                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s': "
+                                             "%s", rejoin_serv_name, master_name, no_rejoin_reason.c_str());
                     }
                 }
                 else
@@ -1101,6 +1104,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
         handle->warn_failover_precond = true;
+        handle->warn_cannot_rejoin = true;
         handle->master_gtid_domain = -1;
         handle->external_master_host[0] = '\0';
         handle->external_master_port = PORT_UNKNOWN;
@@ -2635,14 +2639,6 @@ monitorMain(void *arg)
                 {
                     MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
                     cluster_modified = true;
-                }
-                if (joins < joinable_servers.size())
-                {
-                    MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
-                              "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                              "the REST API.", CN_AUTO_REJOIN, mon->name);
-                    handle->auto_rejoin = false;
-                    disable_setting(handle, CN_AUTO_REJOIN);
                 }
             }
             else
@@ -4697,13 +4693,19 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
  * @param slave_info Slave info
  * @param master Replication master
  * @param master_info Master info
+ * @param err_msg Error output. Details the reason for invalid replication.
  * @return True if slave can replicate from master
  */
 static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
-                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info)
+                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info,
+                               string* err_msg)
 {
+    ss_dassert(err_msg);
     bool rval = false;
+    const char* master_name = master->server->unique_name;
+    const char* slave_name = slave->server->unique_name;
+
     if (update_gtids(mon, slave, slave_info))
     {
         Gtid slave_gtid = slave_info->gtid_current_pos;
@@ -4711,12 +4713,29 @@ static bool can_replicate_from(MYSQL_MONITOR* mon,
         // The following are not sufficient requirements for replication to work, they only cover the basics.
         // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
         // thread will stop in error.
-        if (slave_gtid.server_id != SERVER_ID_UNKNOWN && master_gtid.server_id != SERVER_ID_UNKNOWN &&
-            slave_gtid.domain == master_gtid.domain &&
-            slave_gtid.sequence <= master_info->gtid_current_pos.sequence)
+        if (slave_gtid.server_id == SERVER_ID_UNKNOWN)
+        {
+            *err_msg = string("'") + slave_name + "' does not have a valid 'gtid_current_pos'.";
+        }
+        else if (master_gtid.server_id == SERVER_ID_UNKNOWN)
+        {
+            *err_msg = string("'") + master_name + "' does not have a valid 'gtid_binlog_pos'.";
+        }
+        else if (slave_gtid.domain != master_gtid.domain ||
+                 slave_gtid.sequence > master_info->gtid_current_pos.sequence)
+        {
+            *err_msg = string("gtid_current_pos of '") + slave_name + "' (" + slave_gtid.to_string() +
+                ") is incompatible with gtid_binlog_pos of '" + master_name + "' (" +
+                master_gtid.to_string() + ").";
+        }
+        else
         {
             rval = true;
         }
+    }
+    else
+    {
+        *err_msg = string("Server '") + slave_name + "' could not be queried.";
     }
     return rval;
 }
@@ -4809,9 +4828,19 @@ static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
             {
                 MXS_MONITORED_SERVER* suspect = suspects[i];
                 MySqlServerInfo* suspect_info = get_server_info(mon, suspect);
-                if (can_replicate_from(mon, suspect, suspect_info, master, master_info))
+                string rejoin_err_msg;
+                if (can_replicate_from(mon, suspect, suspect_info, master, master_info, &rejoin_err_msg))
                 {
                     output->push_back(suspect);
+                }
+                else if (mon->warn_cannot_rejoin)
+                {
+                    // Print a message explaining why an auto-rejoin is not done. Suppress printing.
+                    MXS_WARNING("Automatic rejoin was not attempted on server '%s' even though it is a "
+                                "valid candidate. Will keep retrying with this message suppressed for all "
+                                "servers. Errors: \n%s",
+                                suspect->server->unique_name, rejoin_err_msg.c_str());
+                    mon->warn_cannot_rejoin = false;
                 }
             }
         }
@@ -4819,6 +4848,10 @@ static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
         {
             comm_ok = false;
         }
+    }
+    else
+    {
+        mon->warn_cannot_rejoin = true;
     }
     return comm_ok;
 }
