@@ -113,6 +113,14 @@ typedef void (*FN12)(DCB*,
                      unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
                      unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
                      unsigned long, unsigned long);
+typedef void (*FN13)(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long);
+typedef void (*FN14)(DCB*,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+                     unsigned long, unsigned long, unsigned long, unsigned long);
 
 struct subcommand
 {
@@ -1221,10 +1229,11 @@ struct subcommand createoptions[] =
         }
     },
     {
-        "listener", 2, 12, (FN)createListener,
+        "listener", 2, 13, (FN)createListener,
         "Create a new listener for a service",
         "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n"
+        "                       [SSL_VERIFY_PEER_CERTIFICATE]\n"
         "\n"
         "Parameters\n"
         "SERVICE       Service where this listener is added\n"
@@ -1239,6 +1248,7 @@ struct subcommand createoptions[] =
         "SSL_CA        Path to CA certificate\n"
         "SSL_VERSION   SSL version (default MAX)\n"
         "SSL_VERIFY_DEPTH Certificate verification depth\n"
+        "SSL_VERIFY_PEER_CERTIFICATE Verify peer certificate\n"
         "\n"
         "The first two parameters are required, the others are optional.\n"
         "Any of the optional parameters can also have the value 'default'\n"
@@ -1250,6 +1260,7 @@ struct subcommand createoptions[] =
             ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
             ARG_TYPE_STRING, // Rest of the arguments are paths which can contain spaces
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING,
         }
     },
     {
@@ -1370,9 +1381,9 @@ struct subcommand destroyoptions[] =
  */
 static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                        char *v10, char *v11)
+                        char *v10, char *v11, char *v12, char *v13)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char *values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT *obj = NULL;
     char *ssl_key = NULL;
@@ -1574,7 +1585,8 @@ struct subcommand alteroptions[] =
         {
             ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING
         }
     },
     {
@@ -2154,8 +2166,23 @@ execute_cmd(CLI_SESSION *cli)
                                                                    arg_list[6], arg_list[7], arg_list[8],
                                                                    arg_list[9], arg_list[10], arg_list[11]);
                                     break;
+                                case 13:
+                                    ((FN13)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5],
+                                                                  arg_list[6], arg_list[7], arg_list[8],
+                                                                  arg_list[9], arg_list[10], arg_list[11],
+                                                                  arg_list[12]);
+                                    break;
+                                case 14:
+                                    ((FN14)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                                  arg_list[3], arg_list[4], arg_list[5],
+                                                                  arg_list[6], arg_list[7], arg_list[8],
+                                                                  arg_list[9], arg_list[10], arg_list[11],
+                                                                  arg_list[12], arg_list[13]);
+                                    break;
                                 default:
                                     dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
+                                    ss_info_dassert(!true, "Command has too many arguments");
                                     break;
                                 }
                             }
