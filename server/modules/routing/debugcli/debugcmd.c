@@ -1368,9 +1368,9 @@ struct subcommand destroyoptions[] =
  */
 static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                        char *v10, char *v11)
+                        char *v10, char *v11, char *v12, char *v13)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char *values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT *obj = NULL;
     char *ssl_key = NULL;
@@ -2152,8 +2152,23 @@ execute_cmd(CLI_SESSION *cli)
                                                           arg_list[6], arg_list[7], arg_list[8],
                                                           arg_list[9], arg_list[10], arg_list[11]);
                                     break;
+                                case 13:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10], arg_list[11],
+                                                          arg_list[12]);
+                                    break;
+                                case 14:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10], arg_list[11],
+                                                          arg_list[12], arg_list[13]);
+                                    break;
                                 default:
                                     dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
+                                    ss_info_dassert(!true, "Command has too many arguments");
                                     break;
                                 }
                             }
