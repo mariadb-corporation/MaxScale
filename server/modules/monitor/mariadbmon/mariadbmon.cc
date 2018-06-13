@@ -134,6 +134,7 @@ static string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& maste
 static bool run_sql_from_file(MXS_MONITORED_SERVER* server, const string& path, json_t** error_out);
 static bool check_sql_files(MYSQL_MONITOR* mon);
 static void enforce_read_only_on_slaves(MYSQL_MONITOR* mon);
+static bool server_is_excluded(const MYSQL_MONITOR *handle, const MXS_MONITORED_SERVER* server);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -343,15 +344,14 @@ public:
     }
 };
 
-bool uses_gtid(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* mon_server, json_t** error_out)
+bool uses_gtid(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* mon_server, std::string* error_out)
 {
     bool rval = false;
     const MySqlServerInfo* info = get_server_info(mon, mon_server);
     if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
     {
-        string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
-                                    " is not using gtid replication.";
-        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+        *error_out = string("Slave server ") + mon_server->server->unique_name +
+                     " is not using gtid replication.";
     }
     else
     {
@@ -438,15 +438,25 @@ bool mysql_switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, js
  * Check that preconditions for a failover are met.
  *
  * @param mon Cluster monitor
- * @param error_out JSON error out
+ * @param error_out Error text output
  * @return True if failover may proceed
  */
-bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
+bool failover_check(MYSQL_MONITOR* mon, string* error_out)
 {
-    // Check that there is no running master and that there is at least one running server in the cluster.
-    // Also, all slaves must be using gtid-replication.
+    // Check that there is no running master and that there is at least one running slave in the cluster.
+    // Also, all slaves must be using gtid-replication and the gtid-domain of the cluster must be known.
     int slaves = 0;
     bool error = false;
+    string err_msg;
+    string separator;
+    // Topology has already been tested to be simple.
+    if (mon->master_gtid_domain < 0)
+    {
+        *error_out += "Cluster gtid domain is unknown. This is usually caused by the cluster never having "
+            "a master server while MaxScale was running.";
+        separator = "\n";
+        error = true;
+    }
 
     for (MXS_MONITORED_SERVER* mon_server = mon->monitor->monitored_servers;
          mon_server != NULL;
@@ -463,31 +473,33 @@ bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
                 master_up_msg += ", although in maintenance mode";
             }
             master_up_msg += ".";
-            PRINT_MXS_JSON_ERROR(error_out, "%s", master_up_msg.c_str());
+            *error_out += separator + master_up_msg;
+            separator = "\n";
             error = true;
         }
-        else if (SERVER_IS_SLAVE(mon_server->server))
+        else if (SERVER_IS_SLAVE(mon_server->server) && !server_is_excluded(mon, mon_server))
         {
-            if (uses_gtid(mon, mon_server, error_out))
+            string gtid_error;
+            if (uses_gtid(mon, mon_server, &gtid_error))
             {
-                 slaves++;
+                slaves++;
             }
             else
             {
-                 error = true;
+                *error_out += separator + gtid_error;
+                separator = "\n";
+                error = true;
             }
         }
     }
 
-    if (error)
+    if (slaves == 0)
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Failover not allowed due to errors.");
+        *error_out += separator + "No valid slaves to promote.";
+        error = true;
     }
-    else if (slaves == 0)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
-    }
-    return !error && slaves > 0;
+
+    return !error;
 }
 
 /**
@@ -500,7 +512,8 @@ bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
  *
  * @return True, if switchover was performed, false otherwise.
  */
-bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out)
+bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
+                      MXS_MONITORED_SERVER* current_master, json_t** error_out)
 {
     bool stopped = stop_monitor(mon);
     if (stopped)
@@ -523,9 +536,11 @@ bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MO
     {
         if (SERVER_IS_SLAVE(mon_serv->server))
         {
-            if (!uses_gtid(handle, mon_serv, error_out))
+            string gtid_error_msg;
+            if (!uses_gtid(handle, mon_serv, &gtid_error_msg))
             {
-                 gtid_ok = false;
+                gtid_ok = false;
+                PRINT_MXS_JSON_ERROR(error_out, "%s", gtid_error_msg.c_str());
             }
         }
     }
@@ -656,7 +671,8 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
 
     bool rv = true;
     MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
-    rv = failover_check(handle, output);
+    string failover_error;
+    rv = failover_check(handle, &failover_error);
     if (rv)
     {
         rv = do_failover(handle, output);
@@ -668,6 +684,11 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
         {
             PRINT_MXS_JSON_ERROR(output, "Failover failed.");
         }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(output, "Failover not performed due to the following errors: \n%s",
+            failover_error.c_str());
     }
 
     if (stopped)
@@ -1079,6 +1100,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
+        handle->warn_failover_precond = true;
         handle->master_gtid_domain = -1;
         handle->external_master_host[0] = '\0';
         handle->external_master_port = PORT_UNKNOWN;
@@ -3366,9 +3388,8 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
     {
         return true;
     }
-    bool rval = true;
-    MXS_MONITORED_SERVER* failed_master = NULL;
 
+    MXS_MONITORED_SERVER* failed_master = NULL;
     for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
@@ -3409,6 +3430,7 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         }
     }
 
+    bool rval = true;
     if (failed_master)
     {
         int failcount = monitor->failcount;
@@ -3419,15 +3441,37 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         }
         else if (failed_master->mon_err_count >= failcount)
         {
-            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                       failed_master->server->unique_name);
-            failed_master->new_event = false;
-            rval = failover_check(monitor, NULL) && do_failover(monitor, NULL);
-            if (rval)
+            // Failover is required, but first we should check if preconditions are met.
+            string error_msg;
+            if (failover_check(monitor, &error_msg))
             {
-                *cluster_modified_out = true;
+                monitor->warn_failover_precond = true;
+                MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                           failed_master->server->unique_name);
+                failed_master->new_event = false;
+                // If this fails, auto_failover is disabled.
+                rval = do_failover(monitor, NULL);
+                if (rval)
+                {
+                    *cluster_modified_out = true;
+                }
+            }
+            else
+            {
+                // Failover was not attempted because of errors, however these errors are not permanent.
+                // Servers were not modified, so it's ok to try this again.
+                if (monitor->warn_failover_precond)
+                {
+                    MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
+                                "suppressed. Errors: \n%s", error_msg.c_str());
+                    monitor->warn_failover_precond = false;
+                }
             }
         }
+    }
+    else
+    {
+        monitor->warn_failover_precond = true;
     }
 
     return rval;
@@ -3913,12 +3957,6 @@ void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVecto
  */
 static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
 {
-    // Topology has already been tested to be simple.
-    if (mon->master_gtid_domain < 0)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
-        return false;
-    }
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
     int seconds_remaining = mon->failover_timeout;

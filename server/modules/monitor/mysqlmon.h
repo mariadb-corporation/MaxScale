@@ -64,6 +64,7 @@ typedef struct
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
     bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
     bool auto_failover;            /**< If automatic master failover is enabled */
+    bool warn_failover_precond;    /**< Print failover preconditions error message? */
     uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
     uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */
     char* replication_user;        /**< Replication user for failover */
