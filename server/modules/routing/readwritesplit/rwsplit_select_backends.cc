@@ -343,24 +343,35 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     int slaves_connected = counts.second;
     int max_nslaves = max_slave_count();
 
-    ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
+    ss_dassert(slaves_connected <= max_nslaves || max_nslaves == 0);
 
-    /** Connect to all possible slaves */
-    for (SRWBackend backend(get_slave_candidate(backends, master, cmpfun));
-         backend && slaves_connected < max_nslaves;
-         backend = get_slave_candidate(backends, master, cmpfun))
+    if (slaves_connected < max_nslaves)
     {
-        if (backend->can_connect() && backend->connect(session, sescmd_list))
+        /** Connect to all possible slaves */
+        for (SRWBackend backend(get_slave_candidate(backends, master, cmpfun));
+             backend && slaves_connected < max_nslaves;
+             backend = get_slave_candidate(backends, master, cmpfun))
         {
-            MXS_INFO("Selected Slave: %s", backend->name());
-
-            if (sescmd_list && sescmd_list->size() && expected_responses)
+            if (backend->can_connect() && backend->connect(session, sescmd_list))
             {
-                (*expected_responses)++;
-            }
+                MXS_INFO("Selected Slave: %s", backend->name());
 
-            slaves_connected++;
+                if (sescmd_list && sescmd_list->size() && expected_responses)
+                {
+                    (*expected_responses)++;
+                }
+
+                slaves_connected++;
+            }
         }
+    }
+    else
+    {
+        /**
+         * We are already connected to all possible slaves. Currently this can
+         * only happen if this function is called by handle_error_new_connection
+         * and the routing of queued queries created new connections.
+         */
     }
 
     return true;

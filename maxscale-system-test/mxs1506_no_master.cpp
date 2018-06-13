@@ -19,7 +19,7 @@ bool query(TestConnections& test)
     sleep(5);
     Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @a");
     test.maxscales->disconnect();
-    return row[0] == "1";
+    return !row.empty() && row[0] == "1";
 }
 
 void block(TestConnections& test, std::vector<int> nodes)

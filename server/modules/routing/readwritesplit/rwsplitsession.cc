@@ -681,6 +681,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
 
             if (m_current_master && m_current_master->in_use() && m_current_master == backend)
             {
+                MXS_INFO("Master '%s' failed", backend->name());
                 /** The connection to the master has failed */
 
                 if (!backend->is_waiting_result())
@@ -739,6 +740,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
             }
             else
             {
+                MXS_INFO("Slave '%s' failed", backend->name());
                 if (m_target_node && m_target_node == backend &&
                     session_trx_is_read_only(problem_dcb->session))
                 {

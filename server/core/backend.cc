@@ -179,6 +179,7 @@ void Backend::set_state(backend_state state)
 
 bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 {
+    ss_dassert(!in_use());
     bool rval = false;
 
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol)))
