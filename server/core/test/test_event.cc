@@ -12,11 +12,16 @@
  */
 
 #include "../internal/event.hh"
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
 #include <algorithm>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <maxscale/debug.h>
+#include <maxscale/log_manager.h>
 
 using namespace maxscale;
 using namespace std;
@@ -457,15 +462,73 @@ int test_events()
     return errors;
 }
 
+int test_logging()
+{
+    event::set_log_facility(event::AUTHENTICATION_FAILURE, LOG_AUTH);
+    event::set_log_level(event::AUTHENTICATION_FAILURE, LOG_ERR);
+
+    stringstream ss;
+    ss << "test_event_";
+    ss << getpid();
+    ss << "_";
+
+    for (int i = 0; i < 2; ++i)
+    {
+        ss << random();
+    }
+
+    string id = ss.str();
+
+    MXS_LOG_EVENT(event::AUTHENTICATION_FAILURE, "%s", id.c_str());
+
+    // Short sleep to increase the likelyhood that the logged message ends
+    // ends up where we expect it to be.
+    sleep(1);
+
+    bool found = false;
+
+    ifstream in("/var/log/auth.log");
+
+    if (in)
+    {
+        string line;
+        while (std::getline(in, line))
+        {
+            if (line.find(id) != string::npos)
+            {
+                found = true;
+                cout << "notice: Found '" << id << "' in line '" << line << "'." << endl;
+            }
+        }
+    }
+
+    return found ? 1 : 0;
+}
+
 }
 
 int main()
 {
     int errors = 0;
 
-    errors += test_levels();
-    errors += test_facilities();
-    errors += test_events();
+    srandom(time(NULL));
+
+    mxs_log_set_syslog_enabled(true);
+
+    if (mxs_log_init("TEST_EVENT", ".", MXS_LOG_TARGET_DEFAULT))
+    {
+        errors += test_levels();
+        errors += test_facilities();
+        errors += test_events();
+        errors += test_logging();
+
+        mxs_log_finish();
+    }
+    else
+    {
+        ++errors;
+        cerr << "error: Could not initialize log manager." << endl;
+    }
 
     return errors;
 }
