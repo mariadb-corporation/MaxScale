@@ -129,6 +129,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
     session->qualifies_for_pooling = false;
+    session->close_reason = SESSION_CLOSE_NONE;
 
     MXS_CONFIG *config = config_get_global_options();
     // If MaxScale is running in Oracle mode, then autocommit needs to
@@ -1209,5 +1210,33 @@ void session_dump_statements(MXS_SESSION* pSession)
 
             --n;
         }
+    }
+}
+
+const char* session_get_close_reason(const MXS_SESSION* session)
+{
+    switch (session->close_reason)
+    {
+        case SESSION_CLOSE_NONE:
+            return "";
+
+        case SESSION_CLOSE_TIMEOUT:
+            return "Timed out by MaxScale";
+
+        case SESSION_CLOSE_HANDLEERROR_FAILED:
+            return "Router could not recover from connection errors";
+
+        case SESSION_CLOSE_ROUTING_FAILED:
+            return "Router could not route query";
+
+        case SESSION_CLOSE_KILLED:
+            return "Killed by another connection";
+
+        case SESSION_CLOSE_TOO_MANY_CONNECTIONS:
+            return "Too many connections";
+
+        default:
+            ss_dassert(!true);
+            return "Internal error";
     }
 }

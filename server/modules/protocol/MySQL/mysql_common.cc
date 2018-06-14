@@ -1704,6 +1704,7 @@ static bool kill_func(DCB *dcb, void *data)
         else
         {
             // DCB is not yet connected, send a hangup to forcibly close it
+            dcb->session->close_reason = SESSION_CLOSE_KILLED;
             poll_fake_hangup_event(dcb);
         }
     }
