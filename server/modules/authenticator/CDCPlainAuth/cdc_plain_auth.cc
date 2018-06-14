@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <cdc.h>
 #include <maxscale/alloc.h>
+#include <maxscale/event.hh>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/paths.h>
@@ -267,8 +268,9 @@ cdc_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            MXS_NOTICE("%s: login attempt for user '%s', authentication failed.",
-                       dcb->service->name, client_data->user);
+            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                          "%s: login attempt for user '%s', authentication failed.",
+                          dcb->service->name, client_data->user);
         }
     }
 

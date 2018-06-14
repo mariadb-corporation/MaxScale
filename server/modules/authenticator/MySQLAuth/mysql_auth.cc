@@ -30,6 +30,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
+#include <maxscale/event.hh>
 #include <maxscale/poll.h>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
@@ -312,13 +313,15 @@ mysql_auth_authenticate(DCB *dcb)
         {
             if (dcb->path)
             {
-                MXS_WARNING("%s: login attempt for user '%s'@[%s]:%s, authentication failed.",
-                            dcb->service->name, client_data->user, dcb->remote, dcb->path);
+                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                              "%s: login attempt for user '%s'@[%s]:%s, authentication failed.",
+                              dcb->service->name, client_data->user, dcb->remote, dcb->path);
             }
             else
             {
-                MXS_WARNING("%s: login attempt for user '%s'@[%s]:%d, authentication failed.",
-                            dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
+                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed.",
+                              dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
             }
 
             if (is_localhost_address(&dcb->ip) &&

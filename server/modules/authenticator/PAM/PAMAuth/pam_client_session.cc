@@ -15,6 +15,7 @@
 
 #include <sstream>
 #include <security/pam_appl.h>
+#include <maxscale/event.hh>
 
 using maxscale::Buffer;
 using std::string;
@@ -169,11 +170,13 @@ bool validate_pam_password(const string& user, const string& password, const str
         case PAM_USER_UNKNOWN:
         case PAM_AUTH_ERR:
             // Normal failure, username or password was wrong.
-            MXS_WARNING(PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
+            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                          PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
             break;
         default:
-            // More exotic error, log as error.
-            MXS_ERROR(PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
+            // More exotic error
+            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                          PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
             break;
         }
     }
