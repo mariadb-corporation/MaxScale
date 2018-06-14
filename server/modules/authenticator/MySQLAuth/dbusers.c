@@ -776,8 +776,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
 
             if (result)
             {
-                start_sqlite_transaction(instance->handle);
-
                 MYSQL_ROW row;
 
                 while ((row = mysql_fetch_row(result)))
@@ -803,8 +801,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
                         anon_user = true;
                     }
                 }
-
-                commit_sqlite_transaction(instance->handle);
 
                 mysql_free_result(result);
             }
@@ -874,6 +870,7 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
 
     /** Delete the old users */
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    start_sqlite_transaction(instance->handle);
     delete_mysql_users(instance->handle);
 
     SERVER_REF *server = service->dbref;
@@ -920,6 +917,8 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
             }
         }
     }
+
+    commit_sqlite_transaction(instance->handle);
 
     MXS_FREE(dpwd);
 

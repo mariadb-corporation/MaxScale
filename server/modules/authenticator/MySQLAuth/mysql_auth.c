@@ -129,25 +129,41 @@ static void get_database_path(SERV_LISTENER *port, char *dest, size_t size)
 
 static bool open_instance_database(const char *path, sqlite3 **handle)
 {
+    bool rval = true;
+
     if (sqlite3_open_v2(path, handle, db_flags, NULL) != SQLITE_OK)
     {
         MXS_ERROR("Failed to open SQLite3 handle.");
-        return false;
+        rval = false;
     }
-
-    char *err;
-
-    if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+    else
     {
-        MXS_ERROR("Failed to create database: %s", err);
-        sqlite3_free(err);
-        sqlite3_close_v2(*handle);
-        return false;
+        char *err;
+
+        if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+            sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to create database: %s", err);
+            sqlite3_free(err);
+            sqlite3_close_v2(*handle);
+            rval = false;
+        }
+        else if (sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+        {
+            sqlite3_free(err);
+            MXS_NOTICE("Could not open SQLite database in WAL mode, using in-memory mode");
+
+            if (sqlite3_exec(*handle, old_pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+            {
+                MXS_ERROR("Failed to set in-memory mode: %s", err);
+                sqlite3_free(err);
+                sqlite3_close_v2(*handle);
+                rval = false;
+            }
+        }
     }
 
-    return true;
+    return rval;
 }
 
 static bool open_client_database(const char *path, sqlite3 **handle)

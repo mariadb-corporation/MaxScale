@@ -58,7 +58,8 @@ static const char databases_create_sql[] =
     "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_DATABASES_TABLE_NAME "(db varchar(255))";
 
 /** PRAGMA configuration options for SQLite */
-static const char pragma_sql[] = "PRAGMA JOURNAL_MODE=MEMORY";
+static const char pragma_sql[]     = "PRAGMA journal_mode=WAL";
+static const char old_pragma_sql[] = "PRAGMA journal_mode=MEMORY";
 
 /** Query that checks if there's a grant for the user being authenticated */
 static const char mysqlauth_validate_user_query[] =
