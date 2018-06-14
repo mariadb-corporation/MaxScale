@@ -49,6 +49,7 @@
 #include <maxscale/version.h>
 
 #include "internal/config.h"
+#include "internal/event.hh"
 #include "internal/filter.h"
 #include "internal/modules.h"
 #include "internal/monitor.h"
@@ -1967,26 +1968,45 @@ handle_global_item(const char *name, const char *value)
     }
     else
     {
+        bool found = false;
 #ifndef SS_DEBUG
         if (strcmp(name, "log_debug") == 0)
         {
             MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+            found = true;
         }
+        else
 #endif
-        bool found = false;
-        for (i = 0; lognames[i].name; i++)
         {
-            if (strcasecmp(name, lognames[i].name) == 0)
-            {
-                found = true;
-                if (lognames[i].replacement)
-                {
-                    MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
-                                "use '%s' instead.",
-                                lognames[i].name, lognames[i].replacement);
-                }
+            maxscale::event::result_t result = maxscale::event::configure(name, value);
 
-                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
+            switch (result)
+            {
+            case maxscale::event::ACCEPTED:
+                found = true;
+                break;
+
+            case maxscale::event::IGNORED:
+                for (i = 0; lognames[i].name; i++)
+                {
+                    if (strcasecmp(name, lognames[i].name) == 0)
+                    {
+                        found = true;
+                        if (lognames[i].replacement)
+                        {
+                            MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
+                                        "use '%s' instead.",
+                                        lognames[i].name, lognames[i].replacement);
+                        }
+
+                        mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
+                    }
+                }
+                break;
+
+            case maxscale::event::INVALID:
+                // TODO: Should we bail out?
+                break;
             }
         }
 

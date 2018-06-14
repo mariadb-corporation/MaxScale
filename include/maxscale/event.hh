@@ -92,7 +92,7 @@ const char* to_string(id_t id);
  * @return True, if the string could be converted, false otherwise.
  */
 bool from_string(id_t* pId, const char* zValue);
-bool from_string(id_t* pId, const std::string& value)
+inline bool from_string(id_t* pId, const std::string& value)
 {
     return from_string(pId, value.c_str());
 }
