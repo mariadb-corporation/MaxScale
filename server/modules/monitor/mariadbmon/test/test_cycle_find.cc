@@ -191,6 +191,8 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
         ss.slave_io_running = SlaveStatus::SLAVE_IO_YES;
         (*iter2).second->m_slave_status.push_back(ss);
     }
+
+    m_monitor->build_replication_graph();
     m_monitor->find_graph_cycles();
 }
 
