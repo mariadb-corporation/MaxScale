@@ -1071,6 +1071,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
     /* Select a new master candidate. Selects the one with the latest event in relay log.
      * If multiple slaves have same number of events, select the one with most processed events. */
     MariaDBServer* current_best = NULL;
+    string current_best_reason;
     // Servers that cannot be selected because of exclusion, but seem otherwise ok.
     ServerArray valid_but_excluded;
     // Index of the current best candidate in slaves_out
@@ -1097,7 +1098,8 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
             else if (cand->check_replication_settings())
             {
                 // If no new master yet, accept any valid candidate. Otherwise check.
-                if (current_best == NULL || is_candidate_better(current_best, cand, m_master_gtid_domain))
+                if (current_best == NULL ||
+                    is_candidate_better(current_best, cand, m_master_gtid_domain, &current_best_reason))
                 {
                     // The server has been selected for promotion, for now.
                     current_best = cand;
@@ -1142,6 +1144,12 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
     {
         PRINT_MXS_JSON_ERROR(err_out, "No suitable promotion candidate found.");
     }
+    else if (!current_best_reason.empty())
+    {
+        // If there was a specific reason this server was selected, print it now. It's possible that all
+        // were equally good, in that case no need to print.
+        MXS_NOTICE("%s", current_best_reason.c_str());
+    }
     return current_best;
 }
 
@@ -1169,36 +1177,63 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
  * @param current_best_info Server info of current best choice
  * @param candidate_info Server info of new candidate
  * @param gtid_domain Which domain to compare
+ * @param reason_out Why is the candidate better than current_best
  * @return True if candidate is better
  */
 bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
-                                         uint32_t gtid_domain)
+                                         uint32_t gtid_domain, std::string* reason_out)
 {
-    uint64_t cand_io = candidate->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
-    uint64_t cand_processed = candidate->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
-    uint64_t curr_io = current_best->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
-    uint64_t curr_processed = current_best->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
+    string reason = string("'") + candidate->name() + "' is the best candidate because it ";
 
-    bool cand_updates = candidate->m_rpl_settings.log_slave_updates;
-    bool curr_updates = current_best->m_rpl_settings.log_slave_updates;
     bool is_better = false;
-    // Accept a slave with a later event in relay log.
+    uint64_t cand_io = candidate->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
+    uint64_t curr_io = current_best->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
+    // A slave with a later event in relay log is always preferred.
     if (cand_io > curr_io)
     {
         is_better = true;
+        reason += "has received more events.";
     }
-    // If io sequences are identical, the slave with more events processed wins.
+    // If io sequences are identical ...
     else if (cand_io == curr_io)
     {
+        uint64_t cand_processed = candidate->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
+        uint64_t curr_processed = current_best->m_gtid_current_pos.get_gtid(gtid_domain).m_sequence;
+        // ... the slave with more events processed wins.
         if (cand_processed > curr_processed)
         {
             is_better = true;
+            reason += "has processed more events.";
         }
-        // Finally, if binlog positions are identical, prefer a slave with log_slave_updates.
-        else if (cand_processed == curr_processed && cand_updates && !curr_updates)
+        // If gtid positions are identical ...
+        else if (cand_processed == curr_processed)
         {
-            is_better = true;
+            bool cand_updates = candidate->m_rpl_settings.log_slave_updates;
+            bool curr_updates = current_best->m_rpl_settings.log_slave_updates;
+            // ... prefer a slave with log_slave_updates.
+            if (cand_updates && !curr_updates)
+            {
+                is_better = true;
+                reason += "has 'log_slave_updates' on.";
+            }
+            // If both have log_slave_updates on ...
+            else if (cand_updates && curr_updates)
+            {
+                bool cand_disk_ok = !SERVER_IS_DISK_SPACE_EXHAUSTED(candidate->m_server_base->server);
+                bool curr_disk_ok = !SERVER_IS_DISK_SPACE_EXHAUSTED(current_best->m_server_base->server);
+                // ... prefer a slave without disk space issues.
+                if (cand_disk_ok && !curr_disk_ok)
+                {
+                    is_better = true;
+                    reason += "is not low on disk space.";
+                }
+            }
         }
+    }
+
+    if (reason_out && is_better)
+    {
+        *reason_out = reason;
     }
     return is_better;
 }

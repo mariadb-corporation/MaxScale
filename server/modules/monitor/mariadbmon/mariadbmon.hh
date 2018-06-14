@@ -242,7 +242,7 @@ private:
     MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
     bool server_is_excluded(const MariaDBServer* server);
     bool is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
-                             uint32_t gtid_domain);
+                             uint32_t gtid_domain, std::string* reason_out = NULL);
     bool promote_new_master(MariaDBServer* new_master, json_t** err_out);
     int redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
                         ServerArray* redirected_slaves);
