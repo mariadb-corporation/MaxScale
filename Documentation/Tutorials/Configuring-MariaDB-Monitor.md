@@ -27,7 +27,13 @@ the monitor waits between each monitoring loop.
 The monitor user requires the REPLICATION CLIENT privileges to do basic
 monitoring. To create a user with the proper grants, execute the following SQL.
 
-```
+```sql
 CREATE USER 'monitor_user'@'%' IDENTIFIED BY 'my_password';
 GRANT REPLICATION CLIENT on *.* to 'monitor_user'@'%';
+```
+
+**Note:** If the automatic failover of the MariaDB Monitor will used, the user
+will require additional grants. Execute the following SQL to grant them.
+```sql
+GRANT SUPER on *.* to 'monitor_user'@'%';
 ```
