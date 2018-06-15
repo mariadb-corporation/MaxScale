@@ -35,5 +35,5 @@ GRANT REPLICATION CLIENT on *.* to 'monitor_user'@'%';
 **Note:** If the automatic failover of the MariaDB Monitor will used, the user
 will require additional grants. Execute the following SQL to grant them.
 ```sql
-GRANT SUPER on *.* to 'monitor_user'@'%';
+GRANT SUPER, RELOAD on *.* to 'monitor_user'@'%';
 ```
