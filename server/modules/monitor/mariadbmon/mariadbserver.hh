@@ -313,9 +313,10 @@ public:
      * The non-detected errors will mostly be detected once the slave tries to start replicating.
      *
      * @param master_info Master server
+     * @param error_out Details the reason for a negative result
      * @return True if slave can replicate from master
      */
-    bool can_replicate_from(MariaDBServer* master);
+    bool can_replicate_from(MariaDBServer* master, std::string* error_out);
 
     /**
      * Redirect one slave server to another master

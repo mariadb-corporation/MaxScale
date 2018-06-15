@@ -159,6 +159,7 @@ private:
     bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master
                                           *   outside of a cycle. */
     bool m_warn_failover_precond;        /**< Print failover preconditions error message? */
+    bool m_warn_cannot_rejoin;           /**< Print warning if auto_rejoin fails because of invalid gtid:s? */
 
     enum slave_down_setting_t
     {

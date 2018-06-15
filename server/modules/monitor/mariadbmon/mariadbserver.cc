@@ -537,12 +537,33 @@ bool MariaDBServer::update_slave_info()
             update_gtids() && do_show_slave_status());
 }
 
-bool MariaDBServer::can_replicate_from(MariaDBServer* master)
+bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* error_out)
 {
     bool rval = false;
     if (update_gtids())
     {
-        rval = m_gtid_current_pos.can_replicate_from(master->m_gtid_binlog_pos);
+        if (m_gtid_current_pos.empty())
+        {
+            *error_out = string("'") + name() + "' does not have a valid 'gtid_current_pos'.";
+        }
+        else if (master->m_gtid_binlog_pos.empty())
+        {
+            *error_out = string("'") + master->name() + "' does not have a valid 'gtid_binlog_pos'.";
+        }
+        else
+        {
+            rval = m_gtid_current_pos.can_replicate_from(master->m_gtid_binlog_pos);
+            if (!rval)
+            {
+                *error_out = string("gtid_current_pos of '") + name() + "' (" +
+                    m_gtid_current_pos.to_string() + ") is incompatible with gtid_binlog_pos of '" +
+                    master->name() + "' (" + master->m_gtid_binlog_pos.to_string() + ").";
+            }
+        }
+    }
+    else
+    {
+        *error_out = string("Server '") + name() + "' could not be queried.";
     }
     return rval;
 }

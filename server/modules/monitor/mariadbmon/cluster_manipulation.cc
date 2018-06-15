@@ -146,7 +146,8 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
             {
                 if (m_master->update_gtids())
                 {
-                    if (slave_cand->can_replicate_from(m_master))
+                    string no_rejoin_reason;
+                    if (slave_cand->can_replicate_from(m_master, &no_rejoin_reason))
                     {
                         ServerArray joinable_server;
                         joinable_server.push_back(slave_cand);
@@ -162,9 +163,9 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
-                                             "or it could not be queried.", rejoin_serv_name,
-                                             m_master->name());
+                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s': "
+                                             "%s.", rejoin_serv_name, m_master->name(),
+                                             no_rejoin_reason.c_str());
                     }
                 }
                 else
@@ -398,9 +399,19 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
-                if (suspects[i]->can_replicate_from(m_master))
+                string rejoin_err_msg;
+                if (suspects[i]->can_replicate_from(m_master, &rejoin_err_msg))
                 {
                     output->push_back(suspects[i]);
+                }
+                else if (m_warn_cannot_rejoin)
+                {
+                    // Print a message explaining why an auto-rejoin is not done. Suppress printing.
+                    MXS_WARNING("Automatic rejoin was not attempted on server '%s' even though it is a "
+                                "valid candidate. Will keep retrying with this message suppressed for all "
+                                "servers. Errors: \n%s",
+                                suspects[i]->name(), rejoin_err_msg.c_str());
+                    m_warn_cannot_rejoin = false;
                 }
             }
         }
@@ -408,6 +419,10 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
         {
             comm_ok = false;
         }
+    }
+    else
+    {
+        m_warn_cannot_rejoin = true;
     }
     return comm_ok;
 }

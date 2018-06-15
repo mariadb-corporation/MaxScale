@@ -60,6 +60,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_warn_set_standalone_master(true)
     , m_log_no_master(true)
     , m_warn_failover_precond(true)
+    , m_warn_cannot_rejoin(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -669,14 +670,6 @@ void MariaDBMonitor::handle_auto_rejoin()
         {
             MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
             m_cluster_modified = true;
-        }
-        if (joins < joinable_servers.size())
-        {
-            MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
-                      "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                      "the REST API.", CN_AUTO_REJOIN, m_monitor->name);
-            m_auto_rejoin = false;
-            disable_setting(CN_AUTO_REJOIN);
         }
     }
     else
