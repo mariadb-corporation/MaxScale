@@ -999,6 +999,9 @@ add_test_executable(mxs173_throttle_filter.cpp mxs173_throttle_filter mxs173_thr
  # https://jira.mariadb.org/browse/MXS-1889
 add_test_executable(mxs1889.cpp mxs1889 mxs1889 LABELS REPL_BACKEND)
 
+# MXS-421 Improved log facility
+add_test_executable(mxs421_events.cpp mxs421_events mxs421_events LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
