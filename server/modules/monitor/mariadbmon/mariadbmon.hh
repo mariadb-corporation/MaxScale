@@ -158,6 +158,7 @@ private:
     bool m_warn_no_valid_in_cycle;       /**< Log a warning when a replication cycle has no valid master */
     bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master
                                           *   outside of a cycle. */
+    bool m_warn_failover_precond;        /**< Print failover preconditions error message? */
 
     enum slave_down_setting_t
     {
@@ -226,7 +227,7 @@ private:
     bool handle_auto_failover();
     bool failover_not_possible();
     bool slave_receiving_events();
-    bool failover_check(json_t** error_out);
+    bool failover_check(std::string* error_out);
     bool do_failover(json_t** err_out);
 
     // Rejoin methods

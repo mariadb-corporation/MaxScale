@@ -59,6 +59,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_switchover_on_low_disk_space(false)
     , m_warn_set_standalone_master(true)
     , m_log_no_master(true)
+    , m_warn_failover_precond(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()

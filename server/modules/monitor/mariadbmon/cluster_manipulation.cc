@@ -92,7 +92,8 @@ bool MariaDBMonitor::manual_failover(json_t** output)
     }
 
     bool rv = true;
-    rv = failover_check(output);
+    string failover_error;
+    rv = failover_check(&failover_error);
     if (rv)
     {
         rv = do_failover(output);
@@ -104,6 +105,11 @@ bool MariaDBMonitor::manual_failover(json_t** output)
         {
             PRINT_MXS_JSON_ERROR(output, "Failover failed.");
         }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(output, "Failover not performed due to the following errors: \n%s",
+            failover_error.c_str());
     }
 
     if (running)
@@ -659,12 +665,6 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
  */
 bool MariaDBMonitor::do_failover(json_t** err_out)
 {
-    // Topology has already been tested to be simple.
-    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
-        return false;
-    }
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
     int seconds_remaining = m_failover_timeout;
@@ -1262,15 +1262,24 @@ bool MariaDBMonitor::switchover_check_new(const MariaDBServer* new_master_cand, 
 /**
  * Check that preconditions for a failover are met.
  *
- * @param error_out JSON error out
+ * @param error_out Error output
  * @return True if failover may proceed
  */
-bool MariaDBMonitor::failover_check(json_t** error_out)
+bool MariaDBMonitor::failover_check(string* error_out)
 {
-    // Check that there is no running master and that there is at least one running server in the cluster.
-    // Also, all slaves must be using gtid-replication.
+    // Check that there is no running master and that there is at least one running slave in the cluster.
+    // Also, all slaves must be using gtid-replication and the gtid-domain of the cluster must be known.
     int slaves = 0;
     bool error = false;
+    string separator;
+    // Topology has already been tested to be simple.
+    if (m_master_gtid_domain < 0)
+    {
+        *error_out += "Cluster gtid domain is unknown. This is usually caused by the cluster never having "
+                      "a master server while MaxScale was running.";
+        separator = "\n";
+        error = true;
+    }
 
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -1285,31 +1294,32 @@ bool MariaDBMonitor::failover_check(json_t** error_out)
                 master_up_msg += ", although in maintenance mode";
             }
             master_up_msg += ".";
-            PRINT_MXS_JSON_ERROR(error_out, "%s", master_up_msg.c_str());
+            *error_out += separator + master_up_msg;
+            separator = "\n";
             error = true;
         }
-        else if (server->is_slave())
+        else if (server->is_slave() && !server_is_excluded(server))
         {
-            if (server->uses_gtid(error_out))
+            string gtid_error;
+            if (server->uses_gtid(&gtid_error))
             {
                 slaves++;
             }
             else
             {
+                *error_out += separator + gtid_error;
+                separator = "\n";
                 error = true;
             }
         }
     }
 
-    if (error)
+    if (slaves == 0)
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Failover not allowed due to errors.");
+        *error_out += separator + "No valid slaves to promote.";
+        error = true;
     }
-    else if (slaves == 0)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
-    }
-    return !error && slaves > 0;
+    return !error;
 }
 
 /**
@@ -1388,10 +1398,14 @@ bool MariaDBMonitor::handle_auto_failover()
         }
         else if (failed_master->m_server_base->mon_err_count >= m_failcount)
         {
-            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", failed_master->name());
-            failed_master->m_server_base->new_event = false;
-            if (failover_check(NULL))
+            // Failover is required, but first we should check if preconditions are met.
+            string error_msg;
+            if (failover_check(&error_msg))
             {
+                m_warn_failover_precond = true;
+                MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                    failed_master->name());
+                failed_master->m_server_base->new_event = false;
                 if (!do_failover(NULL))
                 {
                     const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
@@ -1401,7 +1415,22 @@ bool MariaDBMonitor::handle_auto_failover()
                 }
                 cluster_modified = true;
             }
+            else
+            {
+                // Failover was not attempted because of errors, however these errors are not permanent.
+                // Servers were not modified, so it's ok to try this again.
+                if (m_warn_failover_precond)
+                {
+                    MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
+                        "suppressed. Errors: \n%s", error_msg.c_str());
+                    m_warn_failover_precond = false;
+                }
+            }
         }
+    }
+    else
+    {
+        m_warn_failover_precond = true;
     }
 
     return cluster_modified;
@@ -1546,9 +1575,12 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
     bool gtid_ok = true;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        if ((*iter)->is_slave() && !(*iter)->uses_gtid(error_out))
+        MariaDBServer* server = *iter;
+        string gtid_error;
+        if (server->is_slave() && !server->uses_gtid(&gtid_error))
         {
             gtid_ok = false;
+            PRINT_MXS_JSON_ERROR(error_out, "%s", gtid_error.c_str());
         }
     }
 

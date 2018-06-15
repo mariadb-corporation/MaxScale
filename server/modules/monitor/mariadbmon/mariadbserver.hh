@@ -298,7 +298,7 @@ public:
      * @return True if using gtid-replication. False if not, or if server is not a slave or otherwise does
      * not have a gtid_IO_Pos.
      */
-    bool uses_gtid(json_t** error_out);
+    bool uses_gtid(std::string* error_out);
 
     /**
      * Update replication settings, gtid:s and slave status of the server.

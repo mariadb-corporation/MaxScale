@@ -520,13 +520,12 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
     return srv;
 }
 
-bool MariaDBServer::uses_gtid(json_t** error_out)
+bool MariaDBServer::uses_gtid(std::string* error_out)
 {
     bool using_gtid = !m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty();
     if (!using_gtid)
     {
-        string slave_not_gtid_msg = string("Slave server ") + name() + " is not using gtid replication.";
-        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+        *error_out = string("Slave server ") + name() + " is not using gtid replication.";
     }
     return using_gtid;
 }
