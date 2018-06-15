@@ -147,6 +147,13 @@ private:
     void                 synchronize_shards();
     void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
 
+    /** Table mapping functions */
+    void                 query_tables();
+    bool                 send_tables();
+    enum showdb_response parse_table_mapping_response(SSRBackend& bref, GWBUF** buffer);
+
+
+
     /** Member variables */
     bool                   m_closed;         /**< True if session closed */
     DCB*                   m_client;         /**< The client DCB */

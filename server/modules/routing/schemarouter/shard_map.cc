@@ -32,6 +32,12 @@ bool Shard::add_location(std::string db, SERVER* target)
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
+bool Shard::add_table_location(std::string table, SERVER* target)
+{
+    std::transform(table.begin(), table.end(), table.begin(), ::tolower);
+    return m_table_map.insert(std::make_pair(table, target)).second;
+}
+
 void Shard::replace_location(std::string db, SERVER* target)
 {
     std::transform(db.begin(), db.end(), db.begin(), ::tolower);
@@ -52,6 +58,24 @@ SERVER* Shard::get_location(std::string db)
     return rval;
 }
 
+SERVER* Shard::get_table_location(std::string table)
+{
+    SERVER* rval = NULL;
+    std::transform(table.begin(), table.end(), table.begin(), ::tolower);
+    std::size_t pos = table.find(".");
+    if(pos != std::string::npos)
+    {
+        table = table.substr(pos + 1);
+    }
+    ServerMap::iterator iter = m_table_map.find(table);
+    if (iter != m_table_map.end())
+    {
+        rval = iter->second;
+    }
+    return rval;
+}
+
+
 bool Shard::stale(double max_interval) const
 {
     time_t now = time(NULL);
@@ -62,6 +86,11 @@ bool Shard::stale(double max_interval) const
 bool Shard::empty() const
 {
     return m_map.size() == 0;
+}
+
+bool Shard::tables_empty() const
+{
+    return m_table_map.size() == 0;
 }
 
 void Shard::get_content(ServerMap& dest)

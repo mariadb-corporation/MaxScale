@@ -43,6 +43,16 @@ public:
     bool add_location(std::string db, SERVER* target);
 
     /**
+     * @brief Add a table location
+     *
+     * @param table     table to add
+     * @param target Target where database is located
+     *
+     * @return True if location was added
+     */
+    bool add_table_location(std::string table, SERVER* target);
+
+    /**
      * @brief Retrieve the location of a database
      *
      * @param db Database to locate
@@ -50,6 +60,16 @@ public:
      * @return The database or NULL if no server contains the database
      */
     SERVER* get_location(std::string db);
+
+    /**
+     * @brief Retrieve the location of a table
+     *
+     * @param table table to locate
+     *
+     * @return The server or NULL if no server contains the database
+     */
+    SERVER* get_table_location(std::string table);
+
 
     /**
      * @brief Change the location of a database
@@ -75,6 +95,8 @@ public:
      */
     bool empty() const;
 
+    bool tables_empty() const;
+
     /**
      * @brief Retrieve all database to server mappings
      *
@@ -93,6 +115,7 @@ public:
 
 private:
     ServerMap m_map;
+    ServerMap m_table_map;
     time_t    m_last_updated;
 };
 

@@ -1368,6 +1368,112 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
     return rval;
 }
 
+enum showdb_response SchemaRouterSession::parse_table_mapping_response(SSRBackend& bref, GWBUF** buffer)
+{
+    unsigned char* ptr;
+    SERVER* target = bref->backend()->server;
+    GWBUF* buf;
+    bool duplicate_found = false;
+    enum showdb_response rval = SHOWDB_PARTIAL_RESPONSE;
+    if (buffer == NULL || *buffer == NULL)
+    {
+        return SHOWDB_FATAL_ERROR;
+    }
+
+    /** TODO: Don't make the buffer contiguous but process it as a buffer chain */
+    *buffer = gwbuf_make_contiguous(*buffer);
+    buf = modutil_get_complete_packets(buffer);
+
+    if (buf == NULL)
+    {
+        return SHOWDB_PARTIAL_RESPONSE;
+    }
+    int n_eof = 0;
+
+    ptr = (unsigned char*) buf->start;
+
+    if (PTR_IS_ERR(ptr))
+    {
+        MXS_INFO("Selecting tables returned an error.");
+        gwbuf_free(buf);
+        return SHOWDB_FATAL_ERROR;
+    }
+
+    if (n_eof == 0)
+    {
+        /** Skip column definitions */
+        while (ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
+        {
+            ptr += gw_mysql_get_byte3(ptr) + 4;
+        }
+
+        if (ptr >= (unsigned char*) buf->end)
+        {
+            MXS_INFO("Malformed packet for select tables query.");
+            *buffer = gwbuf_append(buf, *buffer);
+            return SHOWDB_FATAL_ERROR;
+        }
+
+        n_eof++;
+        /** Skip first EOF packet */
+        ptr += gw_mysql_get_byte3(ptr) + 4;
+    }
+
+    while (ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
+    {
+        int payloadlen = gw_mysql_get_byte3(ptr);
+        int packetlen = payloadlen + 4;
+        char* data = get_lenenc_str(ptr + 4);
+        MXS_INFO("<%s, %s>", target->name, data);
+
+        if (data)
+        {
+            if (m_shard.add_table_location(data, target))
+            {
+                MXS_INFO("<%s, %s>", target->name, data);
+            }
+            else
+            {
+                duplicate_found = true;
+                SERVER *duplicate = m_shard.get_table_location(data);
+
+                MXS_ERROR("Table '%s' found on servers '%s' and '%s' for user %s@%s.",
+                          data, target->name, duplicate->name,
+                          m_client->user, m_client->remote);
+
+            }
+            MXS_FREE(data);
+        }
+        ptr += packetlen;
+    }
+
+    if (ptr < (unsigned char*) buf->end && PTR_IS_EOF(ptr) && n_eof == 1)
+    {
+        n_eof++;
+        MXS_INFO("Select tables query fully received from %s.",
+                 bref->backend()->server->name);
+    }
+    else
+    {
+        MXS_INFO("Select tables query partially received from %s.",
+                 bref->backend()->server->name);
+    }
+
+    gwbuf_free(buf);
+
+    if (duplicate_found)
+    {
+        rval = SHOWDB_DUPLICATE_DATABASES;
+    }
+    else if (n_eof == 2)
+    {
+        rval = SHOWDB_FULL_RESPONSE;
+    }
+
+    return rval;
+}
+
+
 /**
  * Initiate the generation of the database hash table by sending a
  * SHOW DATABASES query to each valid backend server. This sets the session
@@ -1402,6 +1508,39 @@ void SchemaRouterSession::query_databases()
             if (!(*it)->write(clone))
             {
                 MXS_ERROR("Failed to write SHOW DATABASES to '%s'",
+                          (*it)->backend()->server->name);
+            }
+        }
+    }
+    gwbuf_free(buffer);
+}
+
+void SchemaRouterSession::query_tables()
+{
+
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    {
+        (*it)->set_mapped(false);
+    }
+
+    m_state |= INIT_MAPPING;
+    m_state &= ~INIT_UNINT;
+
+    GWBUF *buffer = modutil_create_query
+                    ("SELECT table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql');");
+    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    {
+        if ((*it)->in_use() && !(*it)->is_closed() &
+                SERVER_IS_RUNNING((*it)->backend()->server))
+        {
+            GWBUF* clone = gwbuf_clone(buffer);
+            MXS_ABORT_IF_NULL(clone);
+
+            if (!(*it)->write(clone))
+            {
+                MXS_ERROR("Failed to select tables from '%s'",
                           (*it)->backend()->server->name);
             }
         }
