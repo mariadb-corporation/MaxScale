@@ -2479,6 +2479,7 @@ dcb_accept(DCB *dcb)
                 {
                     client_dcb->func.connlimit(client_dcb, client_dcb->service->max_connections);
                 }
+                dcb->session->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
                 dcb_close(client_dcb);
                 client_dcb = NULL;
             }
@@ -2887,6 +2888,7 @@ void dcb_process_idle_sessions(int thr)
                                     dcb->user ? dcb->user : "<unknown>",
                                     dcb->remote ? dcb->remote : "<unknown>",
                                     (float)idle / 10.f);
+                        dcb->session->close_reason = SESSION_CLOSE_TIMEOUT;
                         poll_fake_hangup_event(dcb);
                     }
                 }

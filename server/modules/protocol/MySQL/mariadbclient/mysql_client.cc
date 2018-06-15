@@ -1193,12 +1193,14 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     if (return_code != 0)
     {
         /** Routing failed, close the client connection */
+        dcb->session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
         dcb_close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (proto->current_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
+        ss_info_dassert(session_valid_for_pool(dcb->session), "Session should qualify for pooling");
         dcb_close(dcb);
     }
 
@@ -1527,7 +1529,15 @@ static int gw_client_hangup_event(DCB *dcb)
             }
 
             // The client did not send a COM_QUIT packet
-            modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
+            std::string errmsg{"Connection killed by MaxScale"};
+            std::string extra{session_get_close_reason(dcb->session)};
+
+            if (!extra.empty())
+            {
+                errmsg += ": " + extra;
+            }
+
+            modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", errmsg.c_str());
         }
         dcb_close(dcb);
     }

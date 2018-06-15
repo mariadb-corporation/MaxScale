@@ -143,6 +143,17 @@ typedef struct mxs_upstream
     UPSTREAMFUNC clientReply;
 } MXS_UPSTREAM;
 
+/* Specific reasons why a session was closed */
+typedef enum
+{
+    SESSION_CLOSE_NONE = 0,             // No special reason
+    SESSION_CLOSE_TIMEOUT,              // Connection timed out
+    SESSION_CLOSE_HANDLEERROR_FAILED,   // Router returned an error from handleError
+    SESSION_CLOSE_ROUTING_FAILED,       // Router closed DCB
+    SESSION_CLOSE_KILLED,               // Killed by another connection
+    SESSION_CLOSE_TOO_MANY_CONNECTIONS, // Too many connections
+} session_close_t;
+
 /**
  * Handler function for MaxScale specific session variables.
  *
@@ -215,6 +226,7 @@ typedef struct session
     } response;                               /*< Shortcircuited response */
     SessionStmtQueue*      last_statements;   /*< The N last statements by the client */
     DCBSet*                dcb_set;           /*< Set of associated backend DCBs */
+    session_close_t        close_reason;      /*< Reason why the session was closed */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
@@ -651,5 +663,15 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
  * @return The router cast as MXS_DOWNSTREAM
  */
 MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session);
+
+/**
+ * Get the reason why a session was closed
+ *
+ * @param session Session to inspect
+ *
+ * @return String representation of the reason why the session was closed. If
+ *         the session was closed normally, an empty string is returned.
+ */
+const char* session_get_close_reason(const MXS_SESSION* session);
 
 MXS_END_DECLS
