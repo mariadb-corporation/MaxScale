@@ -483,6 +483,10 @@ add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxsc
 # Do only SELECTS during time > wait_timeout and then do INSERT
 add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout mxs827_write_timeout LABELS readwritesplit REPL_BACKEND)
 
+# MXS-872: MaxScale doesn't understand roles
+# https://jira.mariadb.org/browse/MXS-872
+add_test_executable(mxs872_roles.cpp mxs872_roles replication LABELS REPL_BACKEND)
+
 # Block and unblock first and second slaves and check that they are recovered
 add_test_executable(mxs874_slave_recovery.cpp mxs874_slave_recovery mxs874 LABELS readwritesplit REPL_BACKEND)
 
