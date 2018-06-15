@@ -25,34 +25,10 @@
  * - Global constants applicable across the line can be defined here.
  */
 
-#ifdef  __cplusplus
-# define MXS_BEGIN_DECLS extern "C" {
-# define MXS_END_DECLS   }
-#else
-# define MXS_BEGIN_DECLS
-# define MXS_END_DECLS
-#endif
+#include <maxbase/cdefs.h>
 
-#undef _GNU_SOURCE
-#define _GNU_SOURCE 1
-
-#undef OPENSSL_THREAD_DEFINES
-#define OPENSSL_THREAD_DEFINES 1
-
-/**
- * Fix compile errors for PRId64
- * in Centos 6
- */
-#ifndef __STDC_FORMAT_MACROS
-# define __STDC_FORMAT_MACROS
-#endif
-
-/**
- * Needs to be defined for INT32_MAX and others
- */
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
+#define MXS_BEGIN_DECLS MXB_BEGIN_DECLS
+#define MXS_END_DECLS   MXB_END_DECLS
 
 /**
  * Define intended for use with strerror.
@@ -91,15 +67,4 @@
  *
  * The function attributes are compiler specific.
  */
-#ifdef __GNUC__
-#define mxs_attribute(a) __attribute__(a)
-#else
-#define mxs_attribute(a)
-#endif
-
-/**
- * COMMON INCLUDE FILES
- */
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#define mxs_attribute mxb_attribute

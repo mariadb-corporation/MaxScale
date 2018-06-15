@@ -23,8 +23,7 @@
 #endif
 
 #include <maxscale/cdefs.h>
-#include <exception>
-#include <new>
+#include <maxbase/ccdefs.hh>
 #include <maxscale/log_manager.h>
 
 /**
