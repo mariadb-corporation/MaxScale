@@ -25,7 +25,8 @@ when you select the distribution you are downloading from.
 
 After installation, we need to create a database user. We do this as we need to
 connect to the backend databases to retrieve the user authentication
-information. To create this user, execute the following SQL commands.
+information. To create this user, execute the following SQL commands on
+the master server of your database cluster.
 
 ```
 CREATE USER 'maxscale'@'%' IDENTIFIED BY 'maxscale_pw';
