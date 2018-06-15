@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include <maxbase/ccdefs.hh>
 #include <chrono>
 #include <iosfwd>
 #include <string>

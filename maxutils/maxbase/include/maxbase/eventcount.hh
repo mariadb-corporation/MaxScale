@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <maxbase/ccdefs.hh>
 #include <maxbase/stopwatch.hh>
 #include <iosfwd>
 #include <vector>
