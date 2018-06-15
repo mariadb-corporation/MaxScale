@@ -110,7 +110,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     mxs_log_set_throttling(&throttling); // Causes message to be logged.
     mxs_log_flush_sync();
 
-    ifstream in(logfile);
+    ifstream in(logfile.c_str());
     in.seekg(0, ios_base::end);
 
     THREAD_ARG args[N_THREADS];
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
     char tmpbuf[] = "/tmp/maxscale_test_logthrottling_XXXXXX";
     char* logdir = mkdtemp(tmpbuf);
     ensure(logdir);
-    logfile.assign(string{logdir} + '/' + LOGNAME);
+    logfile.assign(string(logdir) + '/' + LOGNAME);
 
     if (mxs_log_init(NULL, logdir, MXS_LOG_TARGET_FS))
     {
