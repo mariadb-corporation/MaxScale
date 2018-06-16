@@ -14,7 +14,7 @@
 
 #include <maxscale/filter.hh>
 #include <maxscale/worker.hh>
-#include "eventcount.hh"
+#include <maxbase/eventcount.hh>
 
 namespace throttle
 {
@@ -35,10 +35,10 @@ private:
                             GWBUF* buffer);
     int real_routeQuery(GWBUF* buffer, bool is_delayed);
     ThrottleFilter& m_filter;
-    EventCount      m_query_count;
-    StopWatch       m_first_sample;
-    StopWatch       m_last_sample;
-    uint32_t        m_delayed_call_id; // there can be only one in flight
+    maxbase::EventCount m_query_count;
+    maxbase::StopWatch  m_first_sample;
+    maxbase::StopWatch  m_last_sample;
+    uint32_t m_delayed_call_id; // there can be only one in flight
 
     enum class State {MEASURING, THROTTLING};
     State m_state;

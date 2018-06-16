@@ -14,8 +14,8 @@
 
 #include <maxscale/filter.hh>
 #include "throttlesession.hh"
-#include "eventcount.hh"
-#include "stopwatch.hh"
+#include <maxbase/eventcount.hh>
+#include <maxbase/stopwatch.hh>
 #include <iostream>
 #include <thread>
 #include <memory>
@@ -27,9 +27,9 @@ struct ThrottleConfig
 {
 
     int         max_qps;             // if this many queries per second is exceeded..
-    Duration    sampling_duration;   // .. in this time window, then cap qps to max_qps ..
-    Duration    throttling_duration; // .. for this long before disconnect.
-    Duration    continuous_duration;  // What time window is considered continuous meddling.
+    maxbase::Duration sampling_duration;   // .. in this time window, then cap qps to max_qps ..
+    maxbase::Duration throttling_duration; // .. for this long before disconnect.
+    maxbase::Duration continuous_duration;  // What time window is considered continuous meddling.
 
     // Example: max 100qps and sampling 5s. As soon as more than 500 queries are made in less
     // then any 5s period throttling is triggered (because 501 > 100qps * 5 s). But also note

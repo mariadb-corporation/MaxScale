@@ -96,9 +96,9 @@ ThrottleFilter * ThrottleFilter::create(const char* zName, char * * pzOptions, M
     ThrottleFilter* filter {NULL};
     if (config_ok)
     {
-        Duration sampling_duration {std::chrono::milliseconds(sample_msecs)};
-        Duration throttling_duration {std::chrono::milliseconds(throttle_msecs)};
-        Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
+        maxbase::Duration sampling_duration {std::chrono::milliseconds(sample_msecs)};
+        maxbase::Duration throttling_duration {std::chrono::milliseconds(throttle_msecs)};
+        maxbase::Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
 
         ThrottleConfig config = {max_qps, sampling_duration,
                                  throttling_duration, continuous_duration
