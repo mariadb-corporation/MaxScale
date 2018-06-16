@@ -91,11 +91,6 @@ static char     pidfile[PATH_MAX + 1] = "";
 static int pidfd = PIDFD_CLOSED;
 
 /**
- * exit flag for log flusher.
- */
-static bool do_exit = false;
-
-/**
  * If MaxScale is started to run in daemon process the value is true.
  */
 static bool     daemon_mode = true;
@@ -146,8 +141,6 @@ static bool unload_modules_at_exit = true;
 static std::string redirect_output_to;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
-static void log_flush_shutdown(void);
-static void log_flush_cb(void* arg);
 static int write_pid_file(); /* write MaxScale pidfile */
 static void unlink_pidfile(void); /* remove pidfile */
 static void unlock_pidfile();
@@ -1420,7 +1413,6 @@ int main(int argc, char **argv)
     int      child_status;
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
-    THREAD    log_flush_thr;
     char*    tmp_path;
     int      option_index;
     MXS_CONFIG* cnf = config_get_global_options();
@@ -1428,7 +1420,6 @@ int main(int argc, char **argv)
     int      *syslog_enabled = &cnf->syslog; /** Log to syslog */
     int      *maxlog_enabled = &cnf->maxlog; /** Log with MaxScale */
     int      *log_to_shm = &cnf->log_to_shm; /** Log to shared memory */
-    ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
     bool to_stdout = false;
@@ -2185,12 +2176,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    /*<
-     * Start periodic log flusher thread.
-     */
-    log_flush_timeout_ms = 1000;
-
-    if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms, 0) == NULL)
+    if (!mxs_log_start_flush_thr())
     {
         const char* logerr = "Failed to start log flushing thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
@@ -2283,10 +2269,7 @@ int main(int argc, char **argv)
     Worker::finish();
     MessageQueue::finish();
 
-    /*<
-     * Wait the flush thread.
-     */
-    thread_wait(log_flush_thr);
+    mxs_log_stop_flush_thr();
 
     /*< Call finish on all modules. */
     modules_process_finish();
@@ -2335,57 +2318,6 @@ return_main:
 
     return rc;
 } /*< End of main */
-
-/*<
- * Shutdown MaxScale server
- */
-int maxscale_shutdown()
-{
-    static int n_shutdowns = 0;
-
-    int n = atomic_add(&n_shutdowns, 1);
-
-    if (n == 0)
-    {
-        service_shutdown();
-        Worker::shutdown_all();
-        log_flush_shutdown();
-    }
-
-    return n + 1;
-}
-
-static void log_flush_shutdown(void)
-{
-    do_exit = true;
-}
-
-
-/**
- * Periodic log flusher to ensure that log buffers are
- * written to log even if block buffer used for temporarily
- * storing log contents are not full.
- *
- * @param arg - Flush frequency in milliseconds
- *
- *
- */
-static void log_flush_cb(void* arg)
-{
-    ssize_t timeout_ms = *(ssize_t *)arg;
-    struct timespec ts1;
-
-    ts1.tv_sec = timeout_ms / 1000;
-    ts1.tv_nsec = (timeout_ms % 1000) * 1000000;
-
-    MXS_NOTICE("Started MaxScale log flusher.");
-    while (!do_exit)
-    {
-        mxs_log_flush();
-        nanosleep(&ts1, NULL);
-    }
-    MXS_NOTICE("Finished MaxScale log flusher.");
-}
 
 static void unlock_pidfile()
 {

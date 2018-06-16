@@ -96,6 +96,18 @@ typedef struct mxs_log_throttling
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
 void mxs_log_finish(void);
 
+/**
+ * Start log flushing thread
+ *
+ * @return True if log flusher thread was started
+ */
+bool mxs_log_start_flush_thr();
+
+/**
+ * Stop log flushing thread
+ */
+void mxs_log_stop_flush_thr();
+
 int mxs_log_flush();
 int mxs_log_flush_sync();
 int mxs_log_rotate();

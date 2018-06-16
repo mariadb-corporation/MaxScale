@@ -14,7 +14,11 @@
 #include <maxscale/maxscale.h>
 
 #include <time.h>
+
+#include <maxscale/worker.hh>
+
 #include "internal/maxscale.h"
+#include "internal/service.h"
 
 static time_t started;
 
@@ -31,4 +35,19 @@ time_t maxscale_started(void)
 int maxscale_uptime()
 {
     return time(0) - started;
+}
+
+int maxscale_shutdown()
+{
+    static int n_shutdowns = 0;
+
+    int n = atomic_add(&n_shutdowns, 1);
+
+    if (n == 0)
+    {
+        service_shutdown();
+        mxs::Worker::shutdown_all();
+    }
+
+    return n + 1;
 }

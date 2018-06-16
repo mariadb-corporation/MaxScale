@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <atomic>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -34,6 +35,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.hh>
+#include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include "internal/mlist.h"
 
@@ -819,6 +821,32 @@ void mxs_log_finish(void)
     }
 
     spinlock_release(&lmlock);
+}
+
+static struct
+{
+    THREAD thr;
+    std::atomic<bool> running{true};
+} log_flusher;
+
+static void log_flush_cb(void* arg)
+{
+    while (log_flusher.running)
+    {
+        mxs_log_flush();
+        sleep(1);
+    }
+}
+
+bool mxs_log_start_flush_thr()
+{
+    return thread_start(&log_flusher.thr, log_flush_cb, NULL, 0);
+}
+
+void mxs_log_stop_flush_thr()
+{
+    log_flusher.running = false;
+    thread_wait(log_flusher.thr);
 }
 
 static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
