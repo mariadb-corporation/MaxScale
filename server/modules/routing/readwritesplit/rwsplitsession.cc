@@ -547,12 +547,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (backend->has_session_commands())
     {
-        /** Reply to an executed session command */
+        /** Process the reply to an executed session command. This function can
+         * close the backend if it's a slave. */
         process_sescmd_response(backend, &writebuf);
     }
 
-    if (backend->has_session_commands())
+    if (backend->in_use() && backend->has_session_commands())
     {
+        // Backend is still in use and has more session commands to execute
         if (backend->execute_session_command() && backend->is_waiting_result())
         {
             m_expected_responses++;
@@ -560,12 +562,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (m_expected_responses == 0 && m_query_queue)
     {
+        // All replies received, route any stored queries
         route_stored_query();
     }
 
     if (writebuf)
     {
         ss_dassert(client_dcb);
+        ss_info_dassert(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }

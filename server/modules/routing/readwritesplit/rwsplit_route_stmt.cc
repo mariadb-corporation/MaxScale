@@ -64,8 +64,8 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
     }
 
     // Prefer servers that are not busy executing session commands
-    bool a_busy = a->has_session_commands();
-    bool b_busy = b->has_session_commands();
+    bool a_busy = a->in_use() && a->has_session_commands();
+    bool b_busy = b->in_use() && b->has_session_commands();
 
     if (a_busy && !b_busy)
     {

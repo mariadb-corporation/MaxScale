@@ -100,6 +100,7 @@ public:
      */
     inline bool has_session_commands() const
     {
+        ss_dassert(in_use());
         return !m_session_commands.empty();
     }
 
