@@ -16,52 +16,43 @@ get_dcb now searches master if slaves are not available.
 // also relates to bug594
 // all slaves in MaxScale config have wrong IP
 
-
-#include <iostream>
-#include <unistd.h>
 #include "testconnections.h"
-
-using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
-    int i;
+    TestConnections test(argc, argv);
 
-    for (i = 1; i < Test->repl->N; i++)
+    for (int i = 1; i < test.repl->N; i++)
     {
-        Test->set_timeout(20);
-        Test->repl->block_node(i);
+        test.set_timeout(20);
+        test.repl->block_node(i);
     }
 
-    Test->set_timeout(30);
-    sleep(5);
+    test.set_timeout(30);
+    test.maxscales->wait_for_monitor();
 
-    Test->set_timeout(30);
-    Test->tprintf("Connecting to all MaxScale services, expecting error\n");
-    Test->add_result(Test->maxscales->connect_maxscale(0) == 0, "Connection should fail");
+    test.set_timeout(30);
+    test.tprintf("Connecting to all MaxScale services, expecting no errors");
+    test.assert(test.maxscales->connect_maxscale(0) == 0, "Connection should not fail");
 
-    Test->set_timeout(30);
-    Test->tprintf("Trying some queries, expecting failure, but not a crash\n");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "select * from t1");
-    execute_query(Test->maxscales->conn_master[0], "select * from t1");
-    execute_query(Test->maxscales->conn_slave[0], "select * from t1");
+    test.set_timeout(30);
+    test.tprintf("Trying some queries, expecting no failures");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
+    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
+    test.try_query(test.maxscales->conn_rwsplit[0], "select * from t1");
+    test.try_query(test.maxscales->conn_master[0], "select * from t1");
+    test.try_query(test.maxscales->conn_slave[0], "select * from t1");
 
-    Test->set_timeout(10);
-    Test->maxscales->close_maxscale_connections(0);
+    test.set_timeout(10);
+    test.maxscales->close_maxscale_connections(0);
 
-    Test->set_timeout(30);
-    Test->repl->unblock_all_nodes();
+    test.set_timeout(30);
+    test.repl->unblock_all_nodes();
 
-    Test->stop_timeout();
-    Test->check_log_err(0, "fatal signal 11", false);
-    Test->check_log_err(0, "Failed to create new router session for service", true);
+    test.stop_timeout();
+    test.check_log_err(0, "fatal signal 11", false);
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }
 
