@@ -2862,7 +2862,14 @@ void MonitorInstanceSimple::tick()
             }
             else
             {
-                monitor_clear_pending_status(pMs, SERVER_RUNNING);
+                /**
+                 * TODO: Move the bits that do not represent a state out of
+                 * the server state bits. This would allow clearing the state by
+                 * zeroing it out.
+                 */
+                const uint64_t bits_to_clear = ~SERVER_WAS_MASTER;
+
+                monitor_clear_pending_status(pMs, bits_to_clear);
 
                 if (mysql_errno(pMs->con) == ER_ACCESS_DENIED_ERROR)
                 {
