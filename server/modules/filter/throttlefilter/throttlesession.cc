@@ -105,7 +105,10 @@ bool ThrottleSession::delayed_routeQuery(maxscale::Worker::Call::action_t action
     switch (action)
     {
     case maxscale::Worker::Call::EXECUTE:
-        real_routeQuery(buffer, true);
+        if (!real_routeQuery(buffer, true))
+        {
+            poll_fake_hangup_event(m_pSession->client_dcb);
+        }
         break;
 
     case maxscale::Worker::Call::CANCEL:
