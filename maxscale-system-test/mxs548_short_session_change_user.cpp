@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     Test->repl->sync_slaves();
 
     Test->tprintf("Creating user 'user' \n");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%'");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER IF EXISTS user@'%%'");
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "GRANT SELECT ON test.* TO user@'%%'");
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS test.t1");
