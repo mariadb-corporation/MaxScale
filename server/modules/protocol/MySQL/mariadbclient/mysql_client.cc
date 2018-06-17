@@ -1012,9 +1012,17 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
 
-        // Update the current command, required by KILL command processing
+        /**
+         * Update the current command, required by KILL command processing.
+         * If a COM_CHANGE_USER is in progress, this must not be done as the client
+         * is sending authentication data that does not have the command byte.
+         */
         MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-        proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+
+        if (!proto->changing_user)
+        {
+            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+        }
 
         set_qc_mode(session, &read_buffer);
 
@@ -1696,6 +1704,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             }
             else if (proto->changing_user)
             {
+                ss_dassert(proto->current_command == MXS_COM_CHANGE_USER);
                 proto->changing_user = false;
                 bool ok = reauthenticate_client(session, packetbuf);
                 gwbuf_free(packetbuf);
