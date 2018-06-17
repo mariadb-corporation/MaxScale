@@ -237,6 +237,12 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     }
 }
 
+void GaleraMonitor::pre_tick()
+{
+    // Clear the info before monitoring to make sure it's up to date
+    m_info.clear();
+}
+
 void GaleraMonitor::post_tick()
 {
     int is_cluster = 0;
