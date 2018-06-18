@@ -298,24 +298,38 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
     bool in_maintenance = server.is_in_maintenance();
     if (!in_maintenance)
     {
-        mxs_connect_result_t rval = mon_ping_or_connect_to_db(m_monitor, mon_srv);
-
+        mxs_connect_result_t conn_status = mon_ping_or_connect_to_db(m_monitor, mon_srv);
         MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
-        if (mon_connection_is_ok(rval))
-        {
-            server.clear_status(SERVER_AUTH_ERROR);
-            server.set_status(SERVER_RUNNING);
 
-            if (rval == MONITOR_CONN_NEWCONN_OK)
+        if (mon_connection_is_ok(conn_status))
+        {
+            server.set_status(SERVER_RUNNING);
+            if (conn_status == MONITOR_CONN_NEWCONN_OK)
             {
-                server.update_server_info();
+                // Is a new connection or a reconnection. Check server version.
+                server.update_server_version();
             }
-            if (should_update_disk_space_status(mon_srv))
+
+            if (server.m_version != MariaDBServer::version::UNKNOWN)
             {
-                update_disk_space_status(mon_srv);
+                // Check permissions if permissions failed last time or if this is a new connection.
+                if (server.had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
+                {
+                    server.check_permissions();
+                }
+
+                // If permissions are ok, continue.
+                if (!server.has_status(SERVER_AUTH_ERROR))
+                {
+                    if (should_update_disk_space_status(mon_srv))
+                    {
+                        update_disk_space_status(mon_srv);
+                    }
+
+                    // Query MariaDBServer specific data
+                    server.monitor_server();
+                }
             }
-            // Query MariaDBServer specific data
-            server.monitor_server();
         }
         else
         {
@@ -332,7 +346,7 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
              * iteration. */
             if (mon_srv->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
             {
-                mon_log_connect_error(mon_srv, rval);
+                mon_log_connect_error(mon_srv, conn_status);
             }
         }
     }
@@ -352,16 +366,6 @@ void MariaDBMonitor::pre_loop()
     if (m_detect_replication_lag)
     {
         check_maxscale_schema_replication();
-    }
-
-    /* Check monitor permissions. Failure won't cause the monitor to stop. Afterwards, close connections so
-     * that update_server() reconnects and checks server version. TODO: check permissions when checking
-     * server version. */
-    check_monitor_permissions(m_monitor, "SHOW SLAVE STATUS");
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        mysql_close((*iter)->m_server_base->con);
-        (*iter)->m_server_base->con = NULL;
     }
 
     m_log_no_master = true;

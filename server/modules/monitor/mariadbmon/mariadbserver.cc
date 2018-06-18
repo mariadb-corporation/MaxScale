@@ -449,6 +449,16 @@ bool MariaDBServer::is_relay_server() const
            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
 }
 
+bool MariaDBServer::has_status(uint64_t bits) const
+{
+    return (m_server_base->pending_status & bits) == bits;
+}
+
+bool MariaDBServer::had_status(uint64_t bits) const
+{
+    return (m_server_base->mon_prev_status & bits) == bits;
+}
+
 bool MariaDBServer::is_read_only() const
 {
     return m_read_only;
@@ -803,7 +813,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
  * Update information which changes rarely. This method should be called after (re)connecting to a backend.
  * Calling this every monitoring loop is overkill.
  */
-void MariaDBServer::update_server_info()
+void MariaDBServer::update_server_version()
 {
     m_version = version::UNKNOWN;
     auto conn = m_server_base->con;
@@ -838,6 +848,38 @@ void MariaDBServer::update_server_info()
             MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
                       "The server is ignored by the monitor. Server version: '%s'.", name(),
                       srv->version_string);
+        }
+    }
+}
+
+/**
+ * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
+ */
+void MariaDBServer::check_permissions()
+{
+    MYSQL* conn = m_server_base->con;
+    // Test with a typical query to make sure the monitor has sufficient permissions.
+    const char* query = "SHOW SLAVE STATUS;";
+    if (mxs_mysql_query(conn, query) != 0)
+    {
+        /* In theory, this could be due to other errors as well, but that is quite unlikely since the
+         * connection was just checked. The end result is in any case that the server is not updated,
+         * and that this test is retried next round. */
+        set_status(SERVER_AUTH_ERROR);
+        // Only print error if last round was ok.
+        if (!had_status(SERVER_AUTH_ERROR))
+        {
+            MXS_WARNING("Query '%s' to server '%s' failed when checking monitor permissions: '%s'. ",
+                        query, name(), mysql_error(conn));
+        }
+    }
+    else
+    {
+        clear_status(SERVER_AUTH_ERROR);
+        MYSQL_RES* result = mysql_store_result(conn);
+        if (result)
+        {
+            mysql_free_result(result);
         }
     }
 }

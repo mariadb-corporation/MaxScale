@@ -151,7 +151,8 @@ public:
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
 
     void monitor_server();
-    void update_server_info();
+    void update_server_version();
+    void check_permissions();
 
     /**
      * Calculate how many events are left in the relay log.
@@ -260,6 +261,22 @@ public:
      * Convenience method for SERVER_IS_RELAY_SERVER
      */
     bool is_relay_server() const;
+
+    /**
+     * Check if server has the given bits on in 'pending_status'.
+     *
+     * @param bits Bits to check
+     * @return True if all given bits are on
+     */
+    bool has_status(uint64_t bits) const;
+
+    /**
+     * Check if server has the given bits on in 'mon_prev_status'.
+     *
+     * @param bits Bits to check
+     * @return True if all given bits are on
+     */
+    bool had_status(uint64_t bits) const;
 
     /**
      * Getter for m_read_only.
