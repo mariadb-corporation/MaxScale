@@ -75,6 +75,7 @@ int main(int argc, char* argv[])
     {
         if (test.maxscales->start() == 0)
         {
+            sleep(10);
             test.maxscales->wait_for_monitor();
 
             if (test.maxscales->connect_rwsplit() == 0)
