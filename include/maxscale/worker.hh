@@ -475,6 +475,11 @@ private:
     Worker* m_pWorker; /**< The worker in whose context the timer runs. */
 };
 
+/**
+ * A Worker is a class capable of asynchronously processing events
+ * associated with file descriptors. Internally Worker has a thread
+ * and an epoll-instance of its own.
+ */
 class Worker : public MXS_WORKER
              , private MessageQueue::Handler
 {
@@ -569,6 +574,9 @@ public:
      * running anymore.
      */
     static void finish();
+
+    Worker();
+    virtual ~Worker();
 
     /**
      * Returns the id of the worker
@@ -1026,25 +1034,28 @@ public:
     bool cancel_delayed_call(uint32_t id);
 
 protected:
-    Worker();
-    virtual ~Worker();
-
     /**
      * Called by Worker::run() before starting the epoll loop.
      *
+     * Default implementation returns True.
+     *
      * @return True, if the epoll loop should be started, false otherwise.
      */
-    virtual bool pre_run() = 0;
+    virtual bool pre_run();
 
     /**
      * Called by Worker::run() after the epoll loop has finished.
+     *
+     * Default implementation does nothing.
      */
-    virtual void post_run() = 0;
+    virtual void post_run();
 
     /**
      * Called by Worker::run() once per epoll loop.
+     *
+     * Default implementation does nothing.
      */
-    virtual void epoll_tick() = 0;
+    virtual void epoll_tick();
 
     /**
      * Helper for resolving epoll-errors. In case of fatal ones, SIGABRT

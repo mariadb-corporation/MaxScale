@@ -935,6 +935,19 @@ void Worker::thread_main(void* pArg)
     pWorker->run();
 }
 
+bool Worker::pre_run()
+{
+    return true;
+}
+
+void Worker::post_run()
+{
+}
+
+void Worker::epoll_tick()
+{
+}
+
 // static
 void Worker::resolve_poll_error(int fd, int errornum, int op)
 {
