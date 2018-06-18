@@ -238,7 +238,8 @@ int MySQLSendHandshake(DCB* dcb)
         mysql_server_language = dcb->service->dbref->server->charset;
 
         if (dcb->service->dbref->server->server_string &&
-            strstr(dcb->service->dbref->server->server_string, "10.2."))
+            (strstr(dcb->service->dbref->server->server_string, "10.2.") ||
+             strstr(dcb->service->dbref->server->server_string, "10.3.")))
         {
             /** The backend servers support the extended capabilities */
             is_maria = true;
