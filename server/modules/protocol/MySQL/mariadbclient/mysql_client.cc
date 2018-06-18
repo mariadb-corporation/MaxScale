@@ -229,7 +229,7 @@ int MySQLSendHandshake(DCB* dcb)
     {
         mysql_server_language = dcb->service->dbref->server->charset;
 
-        if (strstr(dcb->service->dbref->server->version_string, "10.2."))
+        if (dcb->service->dbref->server->version >= 100200)
         {
             /** The backend servers support the extended capabilities */
             is_maria = true;
