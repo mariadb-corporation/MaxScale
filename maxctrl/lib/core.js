@@ -74,6 +74,10 @@ program
         describe: 'Path to TLS public certificate',
         type: 'string'
     })
+    .option('tls-passphrase', {
+        describe: 'Password for the TLS private key',
+        type: 'string'
+    })
     .option('tls-ca-cert', {
         describe: 'Path to TLS CA certificate',
         type: 'string'
