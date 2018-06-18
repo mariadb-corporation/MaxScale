@@ -309,11 +309,15 @@ int CacheFilterSession::clientReply(GWBUF* pData)
     if (m_res.pData)
     {
         gwbuf_append(m_res.pData, pData);
+        m_res.pData_last = pData;
+        m_res.offset_last = m_res.length;
         m_res.length += gwbuf_length(pData); // pData may be a chain, so not GWBUF_LENGTH().
     }
     else
     {
         m_res.pData = pData;
+        m_res.pData_last = pData;
+        m_res.offset_last = 0;
         m_res.length = gwbuf_length(pData);
     }
 
@@ -406,7 +410,7 @@ int CacheFilterSession::handle_expecting_fields()
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
         uint8_t header[MYSQL_HEADER_LEN + 1];
-        gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
+        copy_command_header_at_offset(header);
 
         size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
@@ -491,7 +495,7 @@ int CacheFilterSession::handle_expecting_response()
         // Reserve enough space to accomodate for the largest length encoded integer,
         // which is type field + 8 bytes.
         uint8_t header[MYSQL_HEADER_LEN + 1 + 8];
-        gwbuf_copy_data(m_res.pData, 0, MYSQL_HEADER_LEN + 1, header);
+        copy_data(0, MYSQL_HEADER_LEN + 1, header);
 
         switch ((int)MYSQL_GET_COMMAND(header))
         {
@@ -524,8 +528,7 @@ int CacheFilterSession::handle_expecting_response()
                 {
                     // Now we can figure out how many fields there are, but first we
                     // need to copy some more data.
-                    gwbuf_copy_data(m_res.pData,
-                                    MYSQL_HEADER_LEN + 1, n_bytes - 1, &header[MYSQL_HEADER_LEN + 1]);
+                    copy_data(MYSQL_HEADER_LEN + 1, n_bytes - 1, &header[MYSQL_HEADER_LEN + 1]);
 
                     m_res.nTotalFields = mxs_leint_value(&header[4]);
                     m_res.offset = MYSQL_HEADER_LEN + n_bytes;
@@ -563,7 +566,7 @@ int CacheFilterSession::handle_expecting_rows()
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
         uint8_t header[MYSQL_HEADER_LEN + 1];
-        gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
+        copy_command_header_at_offset(header);
 
         size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
@@ -624,8 +627,7 @@ int CacheFilterSession::handle_expecting_use_response()
     if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
     {
         uint8_t command;
-
-        gwbuf_copy_data(m_res.pData, MYSQL_HEADER_LEN, 1, &command);
+        copy_data(MYSQL_HEADER_LEN, 1, &command);
 
         switch (command)
         {
@@ -692,6 +694,8 @@ void CacheFilterSession::reset_response_state()
 {
     m_res.pData = NULL;
     m_res.length = 0;
+    m_res.pData_last = NULL;
+    m_res.offset_last = 0;
     m_res.nTotalFields = 0;
     m_res.nFields = 0;
     m_res.nRows = 0;
@@ -1042,3 +1046,24 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
     return routing_action;
 }
+
+void CacheFilterSession::copy_data(size_t offset, size_t nBytes, uint8_t* pTo) const
+{
+    if (offset >= m_res.offset_last)
+    {
+        gwbuf_copy_data(m_res.pData_last,
+                        offset - m_res.offset_last, nBytes, pTo);
+    }
+    else
+    {
+        // We do not expect this to happen.
+        ss_dassert(!true);
+        gwbuf_copy_data(m_res.pData, offset, nBytes, pTo);
+    }
+}
+
+void CacheFilterSession::copy_command_header_at_offset(uint8_t* pHeader) const
+{
+    copy_data(m_res.offset, MYSQL_HEADER_LEN + 1, pHeader);
+}
+
