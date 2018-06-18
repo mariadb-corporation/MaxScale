@@ -17,6 +17,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <future>
 
 namespace
 {
@@ -978,6 +979,65 @@ std::string Mariadb_nodes::get_server_id_str(int index)
     return ss.str();
 }
 
+bool do_flush_hosts(MYSQL* conn)
+{
+    int local_result = 0;
+
+    if (mysql_query(conn, "FLUSH HOSTS"))
+    {
+        local_result++;
+    }
+
+    if (mysql_query(conn, "SET GLOBAL max_connections=10000"))
+    {
+        local_result++;
+    }
+
+    if (mysql_query(conn, "SET GLOBAL max_connect_errors=10000000"))
+    {
+        local_result++;
+    }
+
+    if (mysql_query(conn,
+                    "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''") == 0)
+    {
+        MYSQL_RES *res = mysql_store_result(conn);
+
+        if (res)
+        {
+            std::vector<std::string> users;
+            MYSQL_ROW row;
+
+            while ((row = mysql_fetch_row(res)))
+            {
+                users.push_back(row[0]);
+            }
+
+            mysql_free_result(res);
+
+            if (users.size() > 0)
+            {
+                printf("Detected anonymous users, dropping them.\n");
+
+                for (auto& s : users)
+                {
+                    std::string query = "DROP USER ";
+                    query += s;
+                    printf("%s\n", query.c_str());
+                    mysql_query(conn, query.c_str());
+                }
+            }
+        }
+    }
+    else
+    {
+        printf("Failed to query for anonymous users: %s\n", mysql_error(conn));
+        local_result++;
+    }
+
+    return local_result == 0;
+}
+
 int Mariadb_nodes::flush_hosts()
 {
 
@@ -986,59 +1046,26 @@ int Mariadb_nodes::flush_hosts()
         return 1;
     }
 
-    int local_result = 0;
+    bool all_ok = true;
+    std::vector<std::future<bool>> futures;
 
     for (int i = 0; i < N; i++)
     {
-        if (mysql_query(nodes[i], "FLUSH HOSTS"))
+        std::packaged_task<bool (MYSQL*)> task(do_flush_hosts);
+        futures.push_back(task.get_future());
+        std::thread(std::move(task), nodes[i]).detach();
+    }
+
+    for (auto& f: futures)
+    {
+        f.wait();
+        if (!f.get())
         {
-            local_result++;
-        }
-
-        if (mysql_query(nodes[i], "SET GLOBAL max_connections=10000"))
-        {
-            local_result++;
-        }
-
-        if (mysql_query(nodes[i],
-                        "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''") == 0)
-        {
-            MYSQL_RES *res = mysql_store_result(nodes[i]);
-
-            if (res)
-            {
-                std::vector<std::string> users;
-                MYSQL_ROW row;
-
-                while ((row = mysql_fetch_row(res)))
-                {
-                    users.push_back(row[0]);
-                }
-
-                mysql_free_result(res);
-
-                if (users.size() > 0)
-                {
-                    printf("Detected anonymous users, dropping them.\n");
-
-                    for (auto& s : users)
-                    {
-                        std::string query = "DROP USER ";
-                        query += s;
-                        printf("%s\n", query.c_str());
-                        mysql_query(nodes[i], query.c_str());
-                    }
-                }
-            }
-        }
-        else
-        {
-            printf("Failed to query for anonymous users: %s\n", mysql_error(nodes[i]));
-            local_result++;
+            all_ok = false;
         }
     }
 
-    return local_result;
+    return all_ok;
 }
 
 int Mariadb_nodes::execute_query_all_nodes(const char* sql)
