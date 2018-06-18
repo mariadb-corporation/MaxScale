@@ -464,8 +464,6 @@ int mysql_send_custom_error(DCB *dcb, int sequence, int affected_rows, const cha
 int mysql_send_standard_error(DCB *dcb, int sequence, int errnum, const char *msg);
 int mysql_send_auth_error(DCB *dcb, int sequence, int affected_rows, const char* msg);
 
-GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
-GWBUF* gw_MySQL_get_packets(GWBUF** p_readbuf, int* npackets);
 void   protocol_add_srv_command(MySQLProtocol* p, mxs_mysql_cmd_t cmd);
 void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
