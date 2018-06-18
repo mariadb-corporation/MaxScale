@@ -9,6 +9,8 @@
 #include <sys/time.h>
 #include <set>
 #include <string>
+#include <vector>
+#include <thread>
 
 typedef std::set<std::string> StringSet;
 
@@ -128,7 +130,7 @@ public:
      * @param prefix file name prefix
      * @return 0 if success
      */
-    int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
+    int copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, std::vector<std::thread>& threads);
 
     /**
      * @brief no_backend_log_copy if true logs from backends are not copied
@@ -524,6 +526,7 @@ public:
 
 private:
     void report_result(const char *format, va_list argp);
+    void copy_one_mariadb_log(int i, std::string filename);
 };
 
 /**

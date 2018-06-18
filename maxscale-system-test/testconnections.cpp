@@ -698,43 +698,38 @@ void TestConnections::init_maxscale(int m)
     }
 }
 
+void TestConnections::copy_one_mariadb_log(int i, std::string filename)
+{
+    int exit_code;
+    char* mariadb_log = repl->ssh_node_output(i, "cat /var/lib/mysql/*.err 2>/dev/null", true, &exit_code);
+    FILE* f = fopen(filename.c_str(), "w");
 
-int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
+    if (f != NULL)
+    {
+        fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
+        fclose(f);
+    }
+
+    free(mariadb_log);
+}
+
+int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, std::vector<std::thread>& threads)
 {
     int local_result = 0;
-    char * mariadb_log;
-    FILE * f;
-    int i;
-    int exit_code;
-    char str[4096];
 
-    if (repl == NULL)
+    if (repl)
     {
-        return local_result;
-    }
-
-    sprintf(str, "mkdir -p LOGS/%s", test_name);
-    system(str);
-    for (i = 0; i < repl->N; i++)
-    {
-        if (strcmp(repl->IP[i], "127.0.0.1") != 0) // Do not copy MariaDB logs in case of local backend
+        for (int i = 0; i < repl->N; i++)
         {
-            mariadb_log = repl->ssh_node_output(i, (char *) "cat /var/lib/mysql/*.err", true, &exit_code);
-            sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
-            f = fopen(str, "w");
-            if (f != NULL)
+            if (strcmp(repl->IP[i], "127.0.0.1") != 0) // Do not copy MariaDB logs in case of local backend
             {
-                fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
-                fclose(f);
+                char str[4096];
+                sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
+                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, i, str);
             }
-            else
-            {
-                printf("Error writing MariaDB log");
-                local_result = 1;
-            }
-            free(mariadb_log);
         }
     }
+
     return local_result;
 }
 
@@ -742,10 +737,16 @@ int TestConnections::copy_all_logs()
 {
     set_timeout(300);
 
+    char str[PATH_MAX + 1];
+    sprintf(str, "mkdir -p LOGS/%s", test_name);
+    system(str);
+
+    std::vector<std::thread> threads;
+
     if (!no_backend_log_copy)
     {
-        copy_mariadb_logs(repl, (char *) "node");
-        copy_mariadb_logs(galera, (char *) "galera");
+        copy_mariadb_logs(repl, "node", threads);
+        copy_mariadb_logs(galera, "galera", threads);
     }
 
     int rv = 0;
@@ -753,6 +754,11 @@ int TestConnections::copy_all_logs()
     if (!no_maxscale_log_copy)
     {
         rv = copy_maxscale_logs(0);
+    }
+
+    for (auto& a: threads)
+    {
+        a.join();
     }
 
     return rv;
