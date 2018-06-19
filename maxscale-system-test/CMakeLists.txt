@@ -31,6 +31,7 @@ enable_testing()
 include(utilities.cmake)
 
 include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${MAXUTILS_INCLUDE_DIR})
 
 # The core library
 include_directories(${CMAKE_BINARY_DIR})
@@ -41,9 +42,9 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
-target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt)
+target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} ${MAXUTILS_LIBRARIES} z m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c jansson)
+add_dependencies(testcore connector-c jansson maxutils)
 
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
