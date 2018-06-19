@@ -1123,6 +1123,22 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
     return rval;
 }
 
+static bool connection_was_killed(GWBUF* buffer)
+{
+    bool rval = false;
+
+    if (mxs_mysql_is_err_packet(buffer))
+    {
+        uint8_t buf[2];
+        // First two bytes after the 0xff byte are the error code
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
+        uint16_t errcode = gw_mysql_get_byte2(buf);
+        rval = errcode == ER_CONNECTION_KILLED;
+    }
+
+    return rval;
+}
+
 static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer)
 {
     if (mxs_mysql_is_err_packet(buffer))
@@ -1135,18 +1151,9 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer)
         uint16_t errcode = MYSQL_GET_ERRCODE(data);
         std::string errstr((char*)data + 7, (char*)data + 7 + len - 3);
 
-        if (errcode == ER_CONNECTION_KILLED)
-        {
-            MXS_INFO("Connection from '%s'@'%s' to '%s' was killed",
-                     backend->dcb()->session->client_dcb->user,
-                     backend->dcb()->session->client_dcb->remote,
-                     backend->name());
-        }
-        else
-        {
-            MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
-                        backend->name(), errcode, errstr.c_str());
-        }
+        ss_dassert(errcode != ER_CONNECTION_KILLED);
+        MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
+                    backend->name(), errcode, errstr.c_str());
     }
     else
     {
@@ -1192,11 +1199,20 @@ static void clientReply(MXS_ROUTER *instance,
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
-        /** If we receive an unexpected response from the server, the internal
-         * logic cannot handle this situation. Routing the reply straight to
-         * the client should be the safest thing to do at this point. */
-        log_unexpected_response(backend, writebuf);
-        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+        if (connection_was_killed(writebuf))
+        {
+            // The connection was killed, we can safely ignore it. When the TCP connection is
+            // closed, the router's error handling will sort it out.
+            gwbuf_free(writebuf);
+        }
+        else
+        {
+            /** If we receive an unexpected response from the server, the internal
+             * logic cannot handle this situation. Routing the reply straight to
+             * the client should be the safest thing to do at this point. */
+            log_unexpected_response(backend, writebuf);
+            MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+        }
         return;
     }
 
