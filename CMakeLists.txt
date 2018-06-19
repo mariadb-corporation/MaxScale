@@ -57,6 +57,10 @@ include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
 
+# Build the MaxUtils libraries
+include(cmake/BuildMaxUtils.cmake)
+include_directories(${MAXUTILS_INCLUDE_DIR})
+
 include_directories(${JANSSON_INCLUDE_DIR})
 
 if(NOT OPENSSL_FOUND)
@@ -166,7 +170,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -D
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-deprecated-declarations -Wno-uninitialized -std=c++11")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -ggdb  -Wno-deprecated-declarations -Wno-uninitialized -std=c++11")
 
-include_directories(maxutils/maxbase/include)
 include_directories(include)
 include_directories(server/inih)
 include_directories(server/modules/include)
@@ -178,7 +181,6 @@ if (BUILD_CDC)
   add_subdirectory(avro)
 endif()
 
-add_subdirectory(maxutils)
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)

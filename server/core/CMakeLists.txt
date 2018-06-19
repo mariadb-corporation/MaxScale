@@ -66,6 +66,7 @@ endif()
 
 target_link_libraries(maxscale-common
   ${MARIADB_CONNECTOR_LIBRARIES}
+  ${MAXUTILS_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}
   ${JANSSON_LIBRARIES}
