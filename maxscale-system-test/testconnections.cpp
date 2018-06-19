@@ -8,11 +8,14 @@
 #include <execinfo.h>
 #include <sys/stat.h>
 #include <sstream>
+#include <maxbase/stacktrace.hh>
 
 #include "mariadb_func.h"
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
 #include "testconnections.h"
+
+using namespace mxb;
 
 namespace maxscale
 {
@@ -37,9 +40,7 @@ static void signal_set(int sig, void (*handler)(int))
 
 void sigfatal_handler(int i)
 {
-    void *addrs[128];
-    int count = backtrace(addrs, 128);
-    backtrace_symbols_fd(addrs, count, STDERR_FILENO);
+    dump_stacktrace();
     signal_set(i, SIG_DFL);
     raise(i);
 }
