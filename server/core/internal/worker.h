@@ -16,13 +16,4 @@
 
 MXS_BEGIN_DECLS
 
-/**
- * Query whether worker should shutdown.
- *
- * @param worker  The worker in question.
- *
- * @return True, if the worker should shut down, false otherwise.
- */
-bool mxs_worker_should_shutdown(MXS_WORKER* worker);
-
 MXS_END_DECLS

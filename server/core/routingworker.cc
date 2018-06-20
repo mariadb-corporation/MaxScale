@@ -333,11 +333,6 @@ bool RoutingWorker::remove_shared_fd(int fd)
     return rv;
 }
 
-int mxs_worker_id(MXS_WORKER* pWorker)
-{
-    return static_cast<RoutingWorker*>(pWorker)->id();
-}
-
 bool mxs_worker_should_shutdown(MXS_WORKER* pWorker)
 {
     return static_cast<RoutingWorker*>(pWorker)->should_shutdown();

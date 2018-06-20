@@ -1395,34 +1395,9 @@ json_t* mxs_worker_list_to_json(const char* host)
     return task.resource();
 }
 
-size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
-{
-    return Worker::broadcast_message(msg_id, arg1, arg2);
-}
-
-MXS_WORKER* mxs_worker_get(int worker_id)
-{
-    return Worker::get(worker_id);
-}
-
 MXS_WORKER* mxs_worker_get_current()
 {
     return Worker::get_current();
-}
-
-int mxs_worker_get_current_id()
-{
-    return Worker::get_current_id();
-}
-
-int mxs_worker_id(MXS_WORKER* pWorker)
-{
-    return static_cast<Worker*>(pWorker)->id();
-}
-
-bool mxs_worker_should_shutdown(MXS_WORKER* pWorker)
-{
-    return static_cast<Worker*>(pWorker)->should_shutdown();
 }
 
 bool mxs_worker_post_message(MXS_WORKER* pWorker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)

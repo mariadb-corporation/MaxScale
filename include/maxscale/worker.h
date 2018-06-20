@@ -52,37 +52,11 @@ enum mxs_worker_msg_id
 };
 
 /**
- * Return the worker associated with the provided worker id.
- *
- * @param worker_id  A worker id.
- *
- * @return The corresponding worker instance, or NULL if the id does
- *         not correspond to a worker.
- */
-MXS_WORKER* mxs_worker_get(int worker_id);
-
-/**
- * Return the id of the worker.
- *
- * @param worker  A worker.
- *
- * @return The id of the worker.
- */
-int mxs_worker_id(MXS_WORKER* pWorker);
-
-/**
  * Return the current worker.
  *
  * @return A worker, or NULL if there is no current worker.
  */
 MXS_WORKER* mxs_worker_get_current();
-
-/**
- * Return the id of the worker.
- *
- * @return The id of the worker, or -1 if there is no current worker.
- */
-int mxs_worker_get_current_id();
 
 /**
  * Post a message to a worker.
@@ -101,26 +75,6 @@ int mxs_worker_get_current_id();
  * @attention This function is signal safe.
  */
 bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
-
-/**
- * Broadcast a message to all worker.
- *
- * @param msg_id  The message id.
- * @param arg1    Message specific first argument.
- * @param arg2    Message specific second argument.
- *
- * @return The number of messages posted; if less that ne number of workers
- *         then some postings failed.
- *
- * @attention The return value tells *only* whether message could be posted,
- *            *not* that it has reached the worker.
- *
- * @attentsion Exactly the same arguments are passed to all workers. Take that
- *             into account if the passed data must be freed.
- *
- * @attention This function is signal safe.
- */
-size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
 /**
  * @brief Convert a worker to JSON format
