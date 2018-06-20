@@ -67,30 +67,30 @@ static bool add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* da
 static bool add_fd_to_routing_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 {
     bool rv = true;
-    int thread_id = data->thread.id;
+    void* previous_owner = data->owner;
 
     rv = RoutingWorker::add_shared_fd(fd, events, data);
 
     if (rv)
     {
         // The DCB will appear on the list of the calling thread.
-        int wid = RoutingWorker::get_current_id();
+        RoutingWorker* worker = RoutingWorker::get_current();
 
-        if (wid == -1)
+        if (!worker)
         {
             // TODO: Listeners are created before the workers have been started.
             // TODO: Hence the returned id will be -1. We change it to 0, which in
             // TODO: practice will mean that they will end up on the Worker running
             // TODO: in the main thread. This needs to be sorted out.
-            wid = 0;
+            worker = RoutingWorker::get(RoutingWorker::MAIN);
         }
 
-        data->thread.id = wid;
+        data->owner = worker;
     }
     else
     {
         // Restore the situation.
-        data->thread.id = thread_id;
+        data->owner = previous_owner;
     }
 
     return rv;

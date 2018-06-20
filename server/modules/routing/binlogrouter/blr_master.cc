@@ -211,7 +211,7 @@ static void blr_start_master(void* data)
      * 'client' is the fake DCB that emulates a client session:
      * we need to set the poll.thread.id for the "dummy client"
      */
-    client->session->client_dcb->poll.thread.id = mxs_rworker_get_current_id();
+    client->session->client_dcb->poll.owner = mxs_rworker_get_current();
 
     /* Connect to configured master server */
     if ((router->master = dcb_connect(router->service->dbref->server,

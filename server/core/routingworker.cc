@@ -163,7 +163,7 @@ namespace maxscale
 RoutingWorker::RoutingWorker()
 {
     MXS_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
-    MXS_POLL_DATA::thread.id = m_id;
+    MXS_POLL_DATA::owner = this;
 }
 
 RoutingWorker::~RoutingWorker()
@@ -306,7 +306,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
     ev.events = events;
     ev.data.ptr = pData;
 
-    pData->thread.id = 0; // TODO: Remove the thread id altogether.
+    pData->owner = RoutingWorker::get(RoutingWorker::MAIN);
 
     if (epoll_ctl(this_unit.epoll_listener_fd, EPOLL_CTL_ADD, fd, &ev) != 0)
     {
@@ -431,7 +431,7 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
 
 void RoutingWorker::register_zombie(DCB* pDcb)
 {
-    ss_dassert(pDcb->poll.thread.id == m_id);
+    ss_dassert(pDcb->poll.owner == this);
 
     m_zombies.push_back(pDcb);
 }

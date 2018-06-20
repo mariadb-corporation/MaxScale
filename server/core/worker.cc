@@ -204,7 +204,7 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     , m_pWorker(pWorker)
 {
     MXS_POLL_DATA::handler = handler;
-    MXS_POLL_DATA::thread.id = m_pWorker->id();
+    MXS_POLL_DATA::owner = m_pWorker;
 
     if (m_fd != -1)
     {
@@ -571,7 +571,7 @@ bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
     ev.events = events;
     ev.data.ptr = pData;
 
-    pData->thread.id = m_id;
+    pData->owner = this;
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0)
     {

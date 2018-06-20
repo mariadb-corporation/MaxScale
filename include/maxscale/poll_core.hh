@@ -23,13 +23,13 @@ struct MxsPollData : MXS_POLL_DATA
     MxsPollData()
     {
         handler = NULL;
-        thread.id = 0;
+        owner = nullptr;
     }
 
     MxsPollData(mxs_poll_handler_t h)
     {
         handler = h;
-        thread.id = 0;
+        owner = nullptr;
     }
 };
 

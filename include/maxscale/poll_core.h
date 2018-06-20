@@ -49,10 +49,7 @@ typedef uint32_t (*mxs_poll_handler_t)(struct mxs_poll_data* data, int wid, uint
 typedef struct mxs_poll_data
 {
     mxs_poll_handler_t handler; /*< Handler for this particular kind of mxs_poll_data. */
-    struct
-    {
-        int id;                 /*< The id of the worker thread. */
-    } thread;
+    void*              owner;   /*< Owning worker. */
 } MXS_POLL_DATA;
 
 /**

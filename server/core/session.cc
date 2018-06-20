@@ -281,7 +281,7 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
     dcb->session = session;
     dcb->service = session->service;
     /** Move this DCB under the same thread */
-    dcb->poll.thread.id = session->client_dcb->poll.thread.id;
+    dcb->poll.owner = session->client_dcb->poll.owner;
     session->dcb_set->insert(dcb);
 }
 
@@ -1410,7 +1410,7 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
     try
     {
         Worker* worker = Worker::get_current();
-        ss_dassert(worker == Worker::get(session->client_dcb->poll.thread.id));
+        ss_dassert(worker == session->client_dcb->poll.owner);
         std::auto_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
 
         // Delay the routing for at least a millisecond
