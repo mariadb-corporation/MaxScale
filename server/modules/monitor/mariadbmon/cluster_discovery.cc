@@ -27,8 +27,6 @@ static bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 
 static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
-static const char SERVER_DISQUALIFIED[] = "Server '%s' was disqualified from new master selection because "
-                                          "it is %s.";
 static const int64_t MASTER_BITS = SERVER_MASTER | SERVER_WAS_MASTER;
 static const int64_t SLAVE_BITS = SERVER_SLAVE | SERVER_WAS_SLAVE;
 
@@ -383,6 +381,9 @@ void MariaDBMonitor::build_replication_graph()
              * an old "Master_Server_Id"- value is read from a slave which is still trying to connect to
              * a new master. However, a server is only designated [Slave] if both IO- and SQL-threads are
              * running fine, so the faulty graph does not cause wrong status settings. */
+
+            /* IF THIS PART IS CHANGED, CHANGE THE COMPARISON IN 'sstatus_arrays_topology_equal'
+             * (in MariaDBServer) accordingly so that any possible topology changes are detected. */
             auto master_id = slave_conn.master_server_id;
             if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && master_id > 0)
             {
@@ -977,15 +978,20 @@ static string disqualify_reasons_to_string(MariaDBServer* disqualified)
  * the current master making it unsuitable. Because of this, the method can be quite vocal and not
  * consider the previous master.
  *
+ * @param msg_out Message output. Includes explanations on why potential candidates were not selected.
  * @return The master with most slaves
  */
-MariaDBServer* MariaDBMonitor::find_topology_master_server()
+MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
 {
     /* Finding the best master server may get somewhat tricky if the graph is complicated. The general
      * criteria for the best master is that it reaches the most slaves (possibly in multiple layers and
      * cycles). To avoid having to calculate this reachability (doable by a recursive search) to all nodes,
      * let's use the knowledge that the best master is either a server with no masters (external ones don't
-     * count) or is part of a cycle. The server must be running and writable to be eligible. */
+     * count) or is part of a cycle with no out-cycle masters. The server must be running and writable
+     * to be eligible. */
+    string messages;
+    string separator;
+    const char disq[] = "is not a valid master candidate because it is ";
     ServerArray master_candidates;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
@@ -999,7 +1005,8 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server()
             else
             {
                 string reasons = disqualify_reasons_to_string(server);
-                MXS_WARNING(SERVER_DISQUALIFIED, server->name(), reasons.c_str());
+                messages += separator + "'" + server->name() + "' " + disq + reasons + ".";
+                separator = "\n";
             }
         }
     }
@@ -1021,31 +1028,25 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server()
             else
             {
                 // No single server in the cycle was viable.
-                const char WARN_MSG[] = "No valid master server could be found  in the cycle with "
-                                        "servers '%s'.";
+                const char no_valid_servers[] = "No valid master server could be found in the cycle with "
+                                                "servers";
                 string server_names = monitored_servers_to_string(cycle_members);
-                MXS_WARNING(WARN_MSG, server_names.c_str());
+                messages += separator + no_valid_servers + " '" + server_names + "'.";
+                separator = "\n";
 
                 for (auto iter2 = cycle_members.begin(); iter2 != cycle_members.end(); iter2++)
                 {
                     MariaDBServer* disqualified_server = *iter2;
                     string reasons = disqualify_reasons_to_string(disqualified_server);
-                    MXS_WARNING(SERVER_DISQUALIFIED, disqualified_server->name(), reasons.c_str());
+                    messages += separator + "'" + disqualified_server->name() + "' " + disq + reasons + ".";
+                    separator = "\n";
                 }
             }
         }
     }
 
-    MariaDBServer* found_master = NULL;
-    if (!master_candidates.empty())
-    {
-        found_master = find_best_reach_server(master_candidates);
-    }
-    else
-    {
-        MXS_WARNING("No valid master servers in the cluster.");
-    }
-    return found_master;
+    *msg_out = messages;
+    return master_candidates.empty() ? NULL : find_best_reach_server(master_candidates);
 }
 
 static void node_reach_visit(MariaDBServer* node, int* reach)
@@ -1176,7 +1177,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
     {
         MariaDBServer* slave = *iter;
         // If the node has an index, it has already been labeled master/slave and visited. Even when this
-        // is the case, the slave has to be checked to get correct [Relay Master] labels.
+        // is the case, the node has to be checked to get correct [Relay Master] labels.
         if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
         {
             slave->clear_status(MASTER_BITS);
@@ -1214,9 +1215,14 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
     }
 
     // Finally, if the node itself is a slave and has slaves of its own, label it as relay slave.
-    if ((node->m_server_base->pending_status & SERVER_SLAVE) && slaves > 0)
+    if (node->has_status(SERVER_SLAVE) && slaves > 0)
     {
         node->set_status(SERVER_RELAY_MASTER);
+    }
+    // If the node is a binlog relay, remove any slave bits that may have been set. Relay master bit can stay.
+    if (node->m_version == MariaDBServer::version::BINLOG_ROUTER)
+    {
+        node->clear_status(SERVER_SLAVE);
     }
 }
 
@@ -1248,7 +1254,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
         if (!m_master->m_node.parents.empty())
         {
             rval = true;
-            *reason_out = "it has started replicating from another server in the cluster.";
+            *reason_out = "it has started replicating from another server in the cluster";
         }
     }
     // 4) The master was part of a cycle but is no longer, or one of the servers in the cycle is
@@ -1265,7 +1271,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
             rval = true;
             ServerArray& old_members = m_master_cycle_status.cycle_members;
             string server_names_old = monitored_servers_to_string(old_members);
-            *reason_out = "it is no longer in the multimaster group (" + server_names_old + ").";
+            *reason_out = "it is no longer in the multimaster group (" + server_names_old + ")";
         }
         // 4b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
         else
@@ -1276,7 +1282,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
                 rval = true;
                 string server_names_current = monitored_servers_to_string(current_members);
                 *reason_out = "a server in the master's multimaster group (" + server_names_current +
-                    ") is replicating from a server not in the group.";
+                    ") is replicating from a server not in the group";
             }
         }
     }

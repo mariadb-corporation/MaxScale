@@ -41,7 +41,6 @@ SlaveStatus::SlaveStatus()
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
-    , m_print_update_errormsg(true)
     , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_read_only(false)
@@ -50,6 +49,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_
     , m_heartbeat_period(0)
     , m_latest_event(0)
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
+    , m_print_update_errormsg(true)
 {
     ss_dassert(monitored_server);
 }
@@ -174,34 +174,31 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         }
     }
 
-    m_slave_status.clear();
+    SlaveStatusArray slave_status_new;
     int nrunning = 0;
     while (result->next_row())
     {
-        SlaveStatus sstatus;
-        sstatus.master_host = result->get_string(i_master_host);
-        sstatus.master_port = result->get_uint(i_master_port);
+        SlaveStatus sstatus_row;
+        sstatus_row.master_host = result->get_string(i_master_host);
+        sstatus_row.master_port = result->get_uint(i_master_port);
         string last_io_error = result->get_string(i_last_io_error);
         string last_sql_error = result->get_string(i_last_sql_error);
-        sstatus.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
+        sstatus_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-        sstatus.slave_io_running =
+        sstatus_row.slave_io_running =
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
-        sstatus.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
+        sstatus_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
+        sstatus_row.master_server_id = result->get_uint(i_master_server_id);
 
-        if (sstatus.slave_io_running == SlaveStatus::SLAVE_IO_YES)
+        if (sstatus_row.slave_io_running == SlaveStatus::SLAVE_IO_YES && sstatus_row.slave_sql_running)
         {
+            nrunning++;
             // TODO: Fix for multisource replication, check changes to IO_Pos here and save somewhere.
-            sstatus.master_server_id = result->get_uint(i_master_server_id);
-            if (sstatus.slave_sql_running)
-            {
-                nrunning++;
-            }
         }
 
         if (all_slaves_status)
         {
-            sstatus.name = result->get_string(i_connection_name);
+            sstatus_row.name = result->get_string(i_connection_name);
             auto heartbeats = result->get_uint(i_slave_rec_hbs);
             if (m_n_slave_heartbeats < heartbeats) // TODO: Fix for multisource replication
             {
@@ -214,11 +211,20 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             if (!gtid_io_pos.empty() &&
                 (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
-                sstatus.gtid_io_pos = GtidList::from_string(gtid_io_pos);
+                sstatus_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
         }
-        m_slave_status.push_back(sstatus);
+        slave_status_new.push_back(sstatus_row);
     }
+
+    if (!sstatus_arrays_topology_equal(slave_status_new, m_slave_status))
+    {
+        m_topology_changed = true;
+    }
+
+    // Always write to m_slave_status. Even if the new status is equal by topology,
+    // gtid:s etc may have changed.
+    m_slave_status = std::move(slave_status_new);
 
     if (m_slave_status.empty())
     {
@@ -308,9 +314,20 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             server_id_parsed = SERVER_ID_UNKNOWN;
             rval = false;
         }
+        if (server_id_parsed != m_server_id)
+        {
+            m_server_id = server_id_parsed;
+            m_topology_changed = true;
+        }
         database->server->node_id = server_id_parsed;
-        m_server_id = server_id_parsed;
-        m_read_only = result->get_bool(i_ro);
+
+        bool read_only_parsed = result->get_bool(i_ro);
+        if (read_only_parsed != m_read_only)
+        {
+            m_read_only = read_only_parsed;
+            m_topology_changed = true;
+        }
+
         if (columns == 3)
         {
             int64_t domain_id_parsed = result->get_uint(i_domain);
@@ -892,6 +909,38 @@ void MariaDBServer::clear_status(uint64_t bits)
 void MariaDBServer::set_status(uint64_t bits)
 {
     monitor_set_pending_status(m_server_base, bits);
+}
+
+/**
+ * Compare if two slave status arrays are equal. Only compares the parts relevant for building replication
+ * topology: master server id:s and slave connection io states.
+ *
+ * @param lhs Left hand side
+ * @param rhs Right hand side
+ * @return True if equal
+ */
+bool MariaDBServer::sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, const SlaveStatusArray& rhs)
+{
+    bool rval = true;
+    if (lhs.size() != rhs.size())
+    {
+        rval = false;
+    }
+    else
+    {
+        for (size_t i = 0; i < lhs.size(); i++)
+        {
+            // It's enough to check just the following two items, as these are used in
+            // 'build_replication_graph'.
+            if (lhs[i].slave_io_running != rhs[i].slave_io_running ||
+                lhs[i].master_server_id != rhs[i].master_server_id)
+            {
+                rval = false;
+                break;
+            }
+        }
+    }
+    return rval;
 }
 
 string SlaveStatus::to_string() const

@@ -132,7 +132,7 @@ public:
                                               *  own the struct, it is not freed (or connection closed) when
                                               *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
     int             m_config_index;         /**< What position this server has in the monitor config */
-    bool            m_print_update_errormsg;/**< Should an update error be printed. */
+
     version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     bool            m_read_only;            /**< Value of @@read_only */
@@ -144,9 +144,13 @@ public:
                                               *  new non-replicated events. */
     GtidList        m_gtid_current_pos;     /**< Gtid of latest event. */
     GtidList        m_gtid_binlog_pos;      /**< Gtid of latest event written to binlog. */
+    bool            m_topology_changed;     /**< Has anything that could affect replication topology changed
+                                              *  this iteration? Causes: server id, slave connections,
+                                              *  read-only. */
+    NodeData        m_node;                 /**< Replication topology data */
     SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
-    NodeData        m_node;                 /**< Replication topology data */
+    bool            m_print_update_errormsg;/**< Should an update error be printed. */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
 
@@ -388,6 +392,7 @@ public:
 
 private:
     bool update_slave_status(std::string* errmsg_out = NULL);
+    static bool sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, const SlaveStatusArray& rhs);
 };
 
 /**

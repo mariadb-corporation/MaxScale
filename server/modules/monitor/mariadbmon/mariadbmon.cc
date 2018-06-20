@@ -293,6 +293,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
  */
 void MariaDBMonitor::update_server(MariaDBServer& server)
 {
+    server.m_topology_changed = false;
     MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
     /* Monitor server if not in maintenance. */
     bool in_maintenance = server.is_in_maintenance();
@@ -358,10 +359,21 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
 
 void MariaDBMonitor::pre_loop()
 {
-    // MonitorInstance loaded from the journal the current master into its
-    // m_master member variable, we want the corresponding MariaDBServer into
-    // our own m_master varaible.
+    // MonitorInstance read the journal and has the last known master in its m_master member variable.
+    // Write the corresponding MariaDBServer into the class-specific m_master variable.
     m_master = MonitorInstance::m_master ? get_server_info(MonitorInstance::m_master) : NULL;
+
+    /* It's possible (e.g. after switchover) that the MXS_MONITORED_SERVER-objects have live connections
+     * from last time the monitor was active. These should be closed to avoid confusing the monitor and
+     * making it clear this is a new start. This can be removed once monitor pause/resume is implemented. */
+    for (MariaDBServer* server : m_servers)
+    {
+        if (server->m_server_base->con)
+        {
+            mysql_close(server->m_server_base->con);
+            server->m_server_base->con = NULL;
+        }
+    }
 
     if (m_detect_replication_lag)
     {
@@ -382,68 +394,115 @@ void MariaDBMonitor::tick()
         mon_srv->mon_prev_status = status;
     }
 
-    // Query all servers for their status. Update the server id array.
-    m_servers_by_id.clear();
+    // Query all servers for their status.
+    bool topology_changed = false;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
         update_server(*server);
-
-        if (server->m_server_id != SERVER_ID_UNKNOWN)
+        if (server->m_topology_changed)
         {
-            IdToServerMap::value_type new_val(server->m_server_id, server);
-            m_servers_by_id.insert(new_val);
+            topology_changed = true;
         }
     }
 
-    build_replication_graph();
-    find_graph_cycles();
-    string reason;
-    MariaDBServer* root_master = m_master; // TODO: Refactor this out by reducing use of root_master
-    if (master_no_longer_valid(&reason))
+    if (topology_changed)
     {
-        if (m_master && !reason.empty())
+        // This means that a server id or a slave connection has changed, or read_only was set.
+        // Update the server id array and check various things.
+        m_servers_by_id.clear();
+        for (auto server : m_servers)
         {
-            MXS_WARNING("The previous master server '%s' is no longer a valid master because %s",
-                        m_master->name(), reason.c_str());
+            m_servers_by_id[server->m_server_id] = server;
         }
+        build_replication_graph();
+        find_graph_cycles();
+        // Find the server that looks like it would be the best master. It does not yet overwrite the
+        // current master.
+        string topology_messages;
+        MariaDBServer* root_master = find_topology_master_server(&topology_messages);
 
-        // The current master is no longer ok (or it never was). Find another. Master changes are logged
-        // by the log_master_changes()-method.
-        root_master = find_topology_master_server();
-        if (root_master)
+        // Check if current master is still valid.
+        string reason;
+        if (master_no_longer_valid(&reason))
         {
-            m_master = root_master;
-            // A new master has been set. Save some data regarding the type of the master.
-            int new_cycle_id = m_master->m_node.cycle;
-            m_master_cycle_status.cycle_id = new_cycle_id;
-            if (new_cycle_id == NodeData::CYCLE_NONE)
+            if (m_master && !reason.empty())
             {
-                m_master_cycle_status.cycle_members.clear();
+                MXS_WARNING("The previous master server '%s' is no longer a valid master because %s. "
+                            "Selecting new master.", m_master->name(), reason.c_str());
             }
             else
             {
-                m_master_cycle_status.cycle_members = m_cycles[new_cycle_id];
+                MXS_NOTICE("Selecting master server.");
             }
+
+            // The current master is no longer ok (or it never was). Change the master, even though this may
+            // break replication. Master changes are logged by the log_master_changes()-method.
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+
+            m_master = root_master;
+            if (m_master)
+            {
+                // A new master has been set. Save some data regarding the type of the master.
+                int new_cycle_id = m_master->m_node.cycle;
+                m_master_cycle_status.cycle_id = new_cycle_id;
+                if (new_cycle_id == NodeData::CYCLE_NONE)
+                {
+                    m_master_cycle_status.cycle_members.clear();
+                }
+                else
+                {
+                    m_master_cycle_status.cycle_members = m_cycles[new_cycle_id];
+                }
+                MXS_NOTICE("'%s' is the best master candidate.", m_master->name());
+            }
+            else
+            {
+                // The current master cannot be used and no proper candidate exists.
+                m_master_cycle_status.cycle_id = NodeData::CYCLE_NONE;
+                m_master_cycle_status.cycle_members.clear();
+                MXS_WARNING("No valid master servers found.");
+            }
+        }
+        else if (root_master && m_master != root_master)
+        {
+            // Master is still valid but it is no longer the best master. Print a warning.
+            MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
+                        "Master will change if '%s' is no longer a valid master.",
+                        root_master->name(), m_master->name(), m_master->name());
         }
     }
 
+    // Always re-assign master, slave etc bits as these depend on other factors outside topology
+    // (e.g. slave sql state).
     assign_master_and_slave();
 
     if (!m_ignore_external_masters)
     {
-        // Do a sweep through all the nodes in the cluster (even the master) and mark other states.
-        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+        // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
+        for (MariaDBServer* server : m_servers)
         {
-            MariaDBServer* server = *iter;
             if (!server->m_node.external_masters.empty())
             {
                 server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
             }
-            else
-            {
-                server->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
-            }
+        }
+    }
+
+    /* Check if need to use standalone master. TODO: Rewrite these methods. */
+    if (m_detect_standalone_master)
+    {
+        if (standalone_master_required())
+        {
+            // Other servers have died, set last remaining server as master
+            set_standalone_master();
+        }
+        else
+        {
+            m_warn_set_standalone_master = true;
         }
     }
 
@@ -454,67 +513,13 @@ void MariaDBMonitor::tick()
         update_external_master();
     }
 
-    // Clear SERVER_SLAVE from binlog relays
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        /* Remove SLAVE status if this server is a Binlog Server relay */
-        if ((*iter)->m_version == MariaDBServer::version::BINLOG_ROUTER)
-        {
-            monitor_clear_pending_status((*iter)->m_server_base, SERVER_SLAVE);
-        }
-    }
-
-    /* Update server status from monitor pending status on that server*/
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        update_server_states(**iter, root_master);
-    }
-
-    /** Now that all servers have their status correctly set, we can check
-        if we need to use standalone master. */
-    if (m_detect_standalone_master)
-    {
-        if (standalone_master_required())
-        {
-            // Other servers have died, set last remaining server as master
-            if (set_standalone_master())
-            {
-                // Update the root_master to point to the standalone master
-                root_master = m_master;
-            }
-        }
-        else
-        {
-            m_warn_set_standalone_master = true;
-        }
-    }
-
-    if (root_master && root_master->is_master())
-    {
-        // Clear slave and stale slave status bits from current master
-        root_master->clear_status(SERVER_SLAVE | SERVER_WAS_SLAVE);
-
-        /**
-         * Clear external slave status from master if configured to do so.
-         * This allows parts of a multi-tiered replication setup to be used
-         * in MaxScale.
-         */
-        if (m_ignore_external_masters)
-        {
-            root_master->clear_status(SERVER_SLAVE_OF_EXT_MASTER);
-        }
-    }
-
-    ss_dassert(root_master == NULL || root_master == m_master);
-    ss_dassert(root_master == NULL ||
-               ((root_master->m_server_base->pending_status & (SERVER_SLAVE | SERVER_MASTER)) !=
-                (SERVER_SLAVE | SERVER_MASTER)));
+    // Sanity check. Master may not be both slave and master.
+    ss_dassert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
     /* Generate the replication heartbeat event by performing an update */
-    if (m_detect_replication_lag && root_master &&
-        (root_master->is_master() || root_master->is_relay_server()))
+    if (m_detect_replication_lag && m_master && m_master->is_master())
     {
-        measure_replication_lag(root_master);
+        measure_replication_lag();
     }
 
     // Update shared status. The next functions read the shared status. TODO: change the following
@@ -524,8 +529,7 @@ void MariaDBMonitor::tick()
         mon_srv->server->status = mon_srv->pending_status;
     }
 
-    /* log master detection failure of first master becomes available after failure */
-    log_master_changes(root_master);
+    log_master_changes();
 
     // Before exiting, we need to store the current master into the m_master
     // member variable of MonitorInstance so that the right server will be
@@ -540,7 +544,11 @@ void MariaDBMonitor::process_state_changes()
     m_cluster_modified = false;
     if (m_auto_failover)
     {
-        m_cluster_modified = handle_auto_failover();
+        if ((m_cluster_modified = handle_auto_failover()))
+        {
+            // Force a master selection on next monitor loop, otherwise the old master would stay.
+            m_master = NULL;
+        }
     }
 
     // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
@@ -608,35 +616,29 @@ void MariaDBMonitor::update_external_master()
     }
 }
 
-void MariaDBMonitor::measure_replication_lag(MariaDBServer* root_master)
+void MariaDBMonitor::measure_replication_lag()
 {
-    ss_dassert(root_master);
-    MXS_MONITORED_SERVER* mon_root_master = root_master->m_server_base;
-    set_master_heartbeat(root_master);
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    ss_dassert(m_master && m_master->is_master());
+    set_master_heartbeat(m_master);
+    for (MariaDBServer* slave : m_servers)
     {
-        MariaDBServer* server = *iter;
-        MXS_MONITORED_SERVER* ptr = server->m_server_base;
-        if ((!server->is_in_maintenance()) && server->is_running())
+        // No lag measurement for Binlog Server
+        if (slave->is_slave() &&
+            (slave->m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
+             slave->m_version == MariaDBServer::version::MARIADB_100))
         {
-            if (ptr->server->node_id != mon_root_master->server->node_id &&
-                (server->is_slave() || server->is_relay_server()) &&
-                (server->m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
-                 server->m_version == MariaDBServer::version::MARIADB_100)) // No select lag for Binlog Server
-            {
-                set_slave_heartbeat(server);
-            }
+            set_slave_heartbeat(slave);
         }
     }
 }
 
-void MariaDBMonitor::log_master_changes(MariaDBServer* root_master_server)
+void MariaDBMonitor::log_master_changes()
 {
-    MXS_MONITORED_SERVER* root_master = root_master_server ? root_master_server->m_server_base : NULL;
+    MXS_MONITORED_SERVER* root_master = m_master ? m_master->m_server_base : NULL;
     if (root_master && mon_status_changed(root_master) &&
         !(root_master->pending_status & SERVER_WAS_MASTER))
     {
-        if ((root_master->pending_status & SERVER_MASTER) && root_master_server->is_running())
+        if ((root_master->pending_status & SERVER_MASTER) && m_master->is_running())
         {
             if (!(root_master->mon_prev_status & SERVER_WAS_MASTER) &&
                 !(root_master->pending_status & SERVER_MAINT))
