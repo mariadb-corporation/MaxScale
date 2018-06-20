@@ -695,7 +695,7 @@ int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW
         const char* filename = fpath + ftwbuf->base;
         const char* dot = strrchr(filename, '.');
 
-        if (dot) // that must have a suffix,
+        if (dot && *filename != '.') // that have a suffix and are not hidden,
         {
             const char* suffix = dot + 1;
 
