@@ -483,7 +483,7 @@ int test_logging()
 
     // Short sleep to increase the likelyhood that the logged message ends
     // ends up where we expect it to be.
-    sleep(1);
+    sleep(2);
 
     bool found = false;
 
@@ -502,7 +502,7 @@ int test_logging()
         }
     }
 
-    return found ? 1 : 0;
+    return found ? 0 : 1;
 }
 
 }
