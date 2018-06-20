@@ -897,6 +897,7 @@ name and grants suitable for database name authorization.
 GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.roles_mapping TO 'maxscale'@'maxscalehost';
 GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
 ```
 
