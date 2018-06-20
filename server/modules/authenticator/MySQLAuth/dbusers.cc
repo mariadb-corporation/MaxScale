@@ -50,14 +50,77 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
 
+ // Query used with MariaDB 10.1 and newer, supports roles
+const char* mariadb_users_query =
+    // First, select all users
+    "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS t "
+    // Discard any users that are roles
+    "WHERE t.is_role <> 'Y' %s "
+    "UNION "
+    // Then select all users again
+    "SELECT r.user, r.host, u.db, u.select_priv, t.password FROM "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.default_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.default_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS t "
+    // Join it to the roles_mapping table to only have users with roles
+    "JOIN mysql.roles_mapping AS r "
+    "ON (r.user = t.user AND r.host = t.host) "
+    // Then join it into itself to get the privileges of the role with the name of the user
+    "JOIN "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS u "
+    "ON (u.user = r.role AND u.is_role = 'Y') "
+    // We only care about users that have a default role assigned
+    "WHERE t.default_role = u.user %s;";
+
 static int get_users(SERV_LISTENER *listener, bool skip_local);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
 static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
 
-static char* get_new_users_query(const char *server_version, bool include_root)
+static char* get_mariadb_users_query(bool include_root)
 {
+    const char *root = include_root ? "" : " AND t.user NOT IN ('root')";
+
+    size_t n_bytes = snprintf(NULL, 0, mariadb_users_query, root, root);
+    char *rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    MXS_ABORT_IF_NULL(rval);
+    snprintf(rval, n_bytes + 1, mariadb_users_query, root, root);
+
+    return rval;
+}
+
+static char* get_users_query(const char *server_version, uint64_t version, bool include_root)
+{
+    if (version >= 100101) // 10.1.1 or newer, supports default roles
+    {
+        return get_mariadb_users_query(include_root);
+    }
+
+    // Either an older MariaDB version or a MySQL variant, use the legacy query
     const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.")
                            ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
     const char *with_root = include_root ? "" : " AND u.user NOT IN ('root')";
@@ -738,7 +801,9 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
         mxs_mysql_set_server_version(con, server_ref->server);
     }
 
-    char *query = get_new_users_query(server_ref->server->version_string, service->enable_root);
+    char *query = get_users_query(server_ref->server->version_string,
+                                  server_ref->server->version,
+                                  service->enable_root);
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
     sqlite3* handle = get_handle(instance);
     bool anon_user = false;

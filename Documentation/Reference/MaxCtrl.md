@@ -59,8 +59,9 @@ HTTPS/TLS Options:
                                                        [boolean] [default: true]
 
 Options:
-  --version  Show version number                                       [boolean]
-  --help     Show help                                                 [boolean]
+  --version         Show version number                                [boolean]
+  --tls-passphrase  Password for the TLS private key                    [string]
+  --help            Show help                                          [boolean]
 ```
 
 ## list
@@ -679,6 +680,11 @@ Usage: api <command>
 
 Commands:
   get <resource> [path]  Get raw JSON
+
+API options:
+  --sum  Calculate sum of API result. Only works for arrays of numbers e.g. `api
+         get --sum servers data[].attributes.statistics.connections`.
+                                                      [boolean] [default: false]
 
 ```
 

@@ -1056,9 +1056,17 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
 
-        // Update the current command, required by KILL command processing
+        /**
+         * Update the current command, required by KILL command processing.
+         * If a COM_CHANGE_USER is in progress, this must not be done as the client
+         * is sending authentication data that does not have the command byte.
+         */
         MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-        proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+
+        if (!proto->changing_user)
+        {
+            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+        }
 
         char* message = handle_variables(session, &read_buffer);
 
@@ -1624,6 +1632,17 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     return rval;
 }
 
+// Helper function for debug assertions
+static bool only_one_packet(GWBUF* buffer)
+{
+    ss_dassert(buffer);
+    uint8_t header[4] = {};
+    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
+    size_t packet_len = gw_mysql_get_byte3(header);
+    size_t buffer_len = gwbuf_length(buffer);
+    return packet_len + MYSQL_HEADER_LEN == buffer_len;
+}
+
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
  * Store partial packet to dcb_readqueue. Send complete packets one by one
@@ -1645,15 +1664,15 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
     GWBUF* packetbuf;
     do
     {
-        /**
-         * Collect incoming bytes to a buffer until complete packet has
-         * arrived and then return the buffer.
-         */
-        // TODO: This should be replaced with modutil_get_next_MySQL_packet.
-        packetbuf = gw_MySQL_get_next_packet(p_readbuf);
+        // Process client request one packet at a time
+        packetbuf = modutil_get_next_MySQL_packet(p_readbuf);
+
+        // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+        packetbuf = gwbuf_make_contiguous(packetbuf);
 
         if (packetbuf != NULL)
         {
+            ss_dassert(only_one_packet(packetbuf));
             CHK_GWBUF(packetbuf);
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
@@ -1667,25 +1686,9 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
-                if (!GWBUF_IS_CONTIGUOUS(packetbuf))
-                {
-                    // TODO: As long as gw_MySQL_get_next_packet is used above, the buffer
-                    // TODO: will be contiguous. That function should be replaced with
-                    // TODO: modutil_get_next_MySQL_packet.
-                    GWBUF* tmp = gwbuf_make_contiguous(packetbuf);
-                    if (tmp)
-                    {
-                        packetbuf = tmp;
-                    }
-                    else
-                    {
-                        // TODO: A memory allocation failure. We should close the dcb
-                        // TODO: and terminate the session.
-                        rc = 0;
-                        goto return_rc;
-                    }
-                }
+                ss_dassert(GWBUF_IS_CONTIGUOUS(packetbuf));
                 SERVICE *service = session->client_dcb->service;
+
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !service->session_track_trx_state)
                 {
                     if (session_trx_is_ending(session))
@@ -1752,6 +1755,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             }
             else if (proto->changing_user)
             {
+                ss_dassert(proto->current_command == MXS_COM_CHANGE_USER);
                 proto->changing_user = false;
                 bool ok = reauthenticate_client(session, packetbuf);
                 gwbuf_free(packetbuf);
