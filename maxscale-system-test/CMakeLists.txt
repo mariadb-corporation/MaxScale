@@ -941,6 +941,10 @@ add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_
  # https://jira.mariadb.org/browse/MXS-1889
 add_test_executable(mxs1889.cpp mxs1889 mxs1889 LABELS REPL_BACKEND)
 
+# MXS-1932: Hidden files are not ignored
+# https://jira.mariadb.org/browse/MXS-1932
+add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
