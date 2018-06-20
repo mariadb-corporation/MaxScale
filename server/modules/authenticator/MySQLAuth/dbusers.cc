@@ -113,9 +113,9 @@ static char* get_mariadb_users_query(bool include_root)
     return rval;
 }
 
-static char* get_users_query(const char *server_version, uint64_t version, bool include_root)
+static char* get_users_query(const char *server_version, bool include_root, bool is_mariadb)
 {
-    if (version >= 100101) // 10.1.1 or newer, supports default roles
+    if (is_mariadb) // 10.1.1 or newer, supports default roles
     {
         return get_mariadb_users_query(include_root);
     }
@@ -794,6 +794,31 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
     return lookup_result == 0;
 }
 
+static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
+{
+    bool rval = false;
+
+    if (server->version >= 100101)
+    {
+        static bool log_missing_privs = true;
+
+        if (mxs_mysql_query(conn, "SELECT 1 FROM mysql.roles_mapping LIMIT 1") == 0)
+        {
+            mysql_free_result(mysql_store_result(conn));
+            rval = true;
+        }
+        else if (log_missing_privs)
+        {
+            log_missing_privs = false;
+            MXS_WARNING("The user for service '%s' is missing the SELECT grant on "
+                        "`mysql.roles_mapping`. Use of default roles is disabled "
+                        "until the missing privileges are added.", service->name);
+        }
+    }
+
+    return rval;
+}
+
 int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, SERV_LISTENER *listener)
 {
     if (server_ref->server->version_string[0] == 0)
@@ -801,9 +826,9 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
         mxs_mysql_set_server_version(con, server_ref->server);
     }
 
-    char *query = get_users_query(server_ref->server->version_string,
-                                  server_ref->server->version,
-                                  service->enable_root);
+    char *query = get_users_query(server_ref->server->version_string, service->enable_root,
+                                  roles_are_available(con, service, server_ref->server));
+
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
     sqlite3* handle = get_handle(instance);
     bool anon_user = false;
