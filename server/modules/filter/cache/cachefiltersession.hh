@@ -38,11 +38,13 @@ public:
     struct CACHE_RESPONSE_STATE
     {
         GWBUF* pData;        /**< Response data, possibly incomplete. */
+        size_t offset;       /**< Where we are in the response buffer. */
         size_t length;       /**< Length of pData. */
+        GWBUF* pData_last;   /**< Last data received. */
+        size_t offset_last;  /**< Offset of last data. */
         size_t nTotalFields; /**< The number of fields a resultset contains. */
         size_t nFields;      /**< How many fields we have received, <= n_totalfields. */
         size_t nRows;        /**< How many rows we have received. */
-        size_t offset;       /**< Where we are in the response buffer. */
     };
 
     /**
@@ -170,6 +172,10 @@ private:
                                     const char* zName,
                                     const char* pValue_begin,
                                     const char* pValue_end);
+
+    void copy_data(size_t offset, size_t nBytes, uint8_t* pTo) const;
+
+    void copy_command_header_at_offset(uint8_t* pHeader) const;
 
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
