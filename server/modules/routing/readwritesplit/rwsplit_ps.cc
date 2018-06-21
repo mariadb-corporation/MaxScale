@@ -21,7 +21,7 @@
 
 uint32_t get_prepare_type(GWBUF* buffer)
 {
-    uint32_t type;
+    uint32_t type = QUERY_TYPE_UNKNOWN;
 
     if (mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE)
     {
@@ -48,9 +48,11 @@ uint32_t get_prepare_type(GWBUF* buffer)
     else
     {
         GWBUF* stmt = qc_get_preparable_stmt(buffer);
-        ss_dassert(stmt);
 
-        type = qc_get_type_mask(stmt);
+        if (stmt)
+        {
+            type = qc_get_type_mask(stmt);
+        }
     }
 
     ss_dassert((type & (QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_PREPARE_NAMED_STMT)) == 0);
