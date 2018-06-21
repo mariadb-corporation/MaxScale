@@ -27,25 +27,6 @@ using std::stringstream;
 namespace
 {
 
-void sleep(int s)
-{
-    cout << "Sleeping " << s << " times 1 second" << flush;
-    do
-    {
-        ::sleep(1);
-        cout << "." << flush;
-        --s;
-    }
-    while (s > 0);
-
-    cout << endl;
-}
-
-}
-
-namespace
-{
-
 void create_table(TestConnections& test)
 {
     MYSQL* pConn = test.maxscales->conn_rwsplit[0];
