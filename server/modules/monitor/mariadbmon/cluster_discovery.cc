@@ -1227,24 +1227,25 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
 }
 
 /**
- * Should a new master server be selected?
+ * Is the current master server still valid or should a new one be selected?
  *
  * @param reason_out Output for a text description
- * @return True, if the current master has changed in a way that a new master should be selected.
+ * @return True, if master is ok. False if the current master has changed in a way that
+ * a new master should be selected.
  */
-bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
+bool MariaDBMonitor::master_is_valid(std::string* reason_out)
 {
     // The master server of the cluster needs to be re-calculated in the following four cases:
-    bool rval = false;
+    bool rval = true;
     // 1) There is no master.
     if (m_master == NULL)
     {
-        rval = true;
+        rval = false;
     }
     // 2) read_only has been activated on the master.
     else if (m_master->is_read_only())
     {
-        rval = true;
+        rval = false;
         *reason_out = "it is in read-only mode";
     }
     // 3) The master was a non-replicating master (not in a cycle) but now has a slave connection.
@@ -1253,7 +1254,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
         // The master should not have a master of its own.
         if (!m_master->m_node.parents.empty())
         {
-            rval = true;
+            rval = false;
             *reason_out = "it has started replicating from another server in the cluster";
         }
     }
@@ -1268,7 +1269,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
         // 4a) The master is no longer in a cycle.
         if (current_cycle_id == NodeData::CYCLE_NONE)
         {
-            rval = true;
+            rval = false;
             ServerArray& old_members = m_master_cycle_status.cycle_members;
             string server_names_old = monitored_servers_to_string(old_members);
             *reason_out = "it is no longer in the multimaster group (" + server_names_old + ")";
@@ -1279,7 +1280,7 @@ bool MariaDBMonitor::master_no_longer_valid(std::string* reason_out)
             ServerArray& current_members = m_cycles[current_cycle_id];
             if (cycle_has_master_server(current_members))
             {
-                rval = true;
+                rval = false;
                 string server_names_current = monitored_servers_to_string(current_members);
                 *reason_out = "a server in the master's multimaster group (" + server_names_current +
                     ") is replicating from a server not in the group";

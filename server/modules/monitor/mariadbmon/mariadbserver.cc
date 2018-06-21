@@ -49,6 +49,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_
     , m_heartbeat_period(0)
     , m_latest_event(0)
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
+    , m_topology_changed(true)
     , m_print_update_errormsg(true)
 {
     ss_dassert(monitored_server);

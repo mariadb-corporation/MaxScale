@@ -25,17 +25,6 @@ static void print_redirect_errors(MariaDBServer* first_server, const ServerArray
 
 bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
-    bool running = is_running();
-    if (running)
-    {
-        stop();
-        MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", m_monitor->name);
-    }
-    else
-    {
-        MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor->name);
-    }
-
     /* It's possible for either current_master, or both new_master & current_master to be NULL, which means
      * autoselect. Only autoselecting new_master is not possible. Autoselection will happen at the actual
      * switchover function. */
@@ -70,27 +59,11 @@ bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_maste
         }
     }
 
-    if (running)
-    {
-        // TODO: What if this fails?
-        start(m_monitor->parameters);
-    }
     return rval;
 }
 
 bool MariaDBMonitor::manual_failover(json_t** output)
 {
-    bool running = is_running();
-    if (running)
-    {
-        stop();
-        MXS_NOTICE("Stopped monitor %s for the duration of failover.", m_monitor->name);
-    }
-    else
-    {
-        MXS_NOTICE("Monitor %s already stopped, failover can proceed.", m_monitor->name);
-    }
-
     bool rv = true;
     string failover_error;
     rv = failover_check(&failover_error);
@@ -112,27 +85,11 @@ bool MariaDBMonitor::manual_failover(json_t** output)
             failover_error.c_str());
     }
 
-    if (running)
-    {
-        // TODO: What if this fails?
-        start(m_monitor->parameters);
-    }
     return rv;
 }
 
 bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
 {
-    bool running = is_running();
-    if (running)
-    {
-        stop();
-        MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", m_monitor->name);
-    }
-    else
-    {
-        MXS_NOTICE("Monitor %s already stopped, rejoin can proceed.", m_monitor->name);
-    }
-
     bool rval = false;
     if (cluster_can_be_joined())
     {
@@ -188,11 +145,6 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor->name);
     }
 
-    if (running)
-    {
-        // TODO: What if this fails?
-        start(m_monitor->parameters);
-    }
     return rval;
 }
 
@@ -351,6 +303,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             if (op_success)
             {
                 servers_joined++;
+                m_cluster_modified = true;
             }
         }
     }
@@ -587,6 +540,7 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
     // Step 2: Set read-only to on, flush logs, update master gtid:s
     if (switchover_demote_master(demotion_target, err_out))
     {
+        m_cluster_modified = true;
         bool catchup_and_promote_success = false;
         time_t step2_time = time(NULL);
         seconds_remaining -= difftime(step2_time, start_time);
@@ -606,6 +560,8 @@ bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer
             if (promote_new_master(promotion_target, err_out))
             {
                 catchup_and_promote_success = true;
+                m_next_master = promotion_target;
+
                 // Step 5: Redirect slaves and start replication on old master.
                 ServerArray redirected_slaves;
                 bool start_ok = switchover_start_slave(demotion_target, promotion_target);
@@ -706,6 +662,8 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
         // Step 3: Stop and reset slave, set read-only to 0.
         if (promote_new_master(new_master, err_out))
         {
+            m_next_master = new_master;
+            m_cluster_modified = true;
             // Step 4: Redirect slaves.
             ServerArray redirected_slaves;
             int redirects = redirect_slaves(new_master, redirectable_slaves, &redirected_slaves);
@@ -1378,17 +1336,14 @@ bool MariaDBMonitor::failover_check(string* error_out)
  * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
  * executes failover to select and promote a new master server. This function should be called immediately
  * after @c mon_process_state_changes. If an error occurs, this method disables automatic failover.
- *
- * @return True if failover was performed, or at least attempted
 */
-bool MariaDBMonitor::handle_auto_failover()
+void MariaDBMonitor::handle_auto_failover()
 {
     const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
                                  "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-    bool cluster_modified = false;
-    if (config_get_global_options()->passive || (m_master && m_master->is_master()))
+    if (m_master && m_master->is_master())
     {
-        return cluster_modified;
+        return;
     }
 
     if (failover_not_possible())
@@ -1400,14 +1355,14 @@ bool MariaDBMonitor::handle_auto_failover()
         MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor->name);
         m_auto_failover = false;
         disable_setting(CN_AUTO_FAILOVER);
-        return cluster_modified;
+        return;
     }
 
     // If master seems to be down, check if slaves are receiving events.
     if (m_verify_master_failure && m_master && m_master->is_down() && slave_receiving_events())
     {
         MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
-        return cluster_modified;
+        return;
     }
 
     MariaDBServer* failed_master = NULL;
@@ -1463,7 +1418,6 @@ bool MariaDBMonitor::handle_auto_failover()
                     m_auto_failover = false;
                     disable_setting(CN_AUTO_FAILOVER);
                 }
-                cluster_modified = true;
             }
             else
             {
@@ -1482,8 +1436,6 @@ bool MariaDBMonitor::handle_auto_failover()
     {
         m_warn_failover_precond = true;
     }
-
-    return cluster_modified;
 }
 
 bool MariaDBMonitor::failover_not_possible()

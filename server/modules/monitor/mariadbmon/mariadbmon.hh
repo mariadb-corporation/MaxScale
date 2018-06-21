@@ -13,6 +13,8 @@
  * Public License.
  */
 #include "mariadbmon_common.hh"
+#include <condition_variable>
+#include <functional>
 #include <string>
 #include <tr1/unordered_map>
 #include <vector>
@@ -69,32 +71,31 @@ public:
     static MariaDBMonitor* create(MXS_MONITOR *monitor);
 
     /**
-     * Handle switchover
+     * Perform user-activated switchover.
      *
-     * @new_master      The specified new master
-     * @current_master  The specified current master. If NULL, monitor will autoselect.
-     * @output          Pointer where to place output object
-     *
-     * @return True, if switchover was performed, false otherwise.
+     * @param new_master      The specified new master. If NULL, monitor will autoselect.
+     * @param current_master  The specified current master. If NULL, monitor will autoselect.
+     * @param error_out       Json error output
+     * @return True if switchover was performed
      */
-    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
+    bool run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
 
     /**
      * Perform user-activated failover.
      *
-     * @param output  Json error output
-     * @return True on success
+     * @param error_out Json error output
+     * @return True if failover was performed
      */
-    bool manual_failover(json_t** output);
+    bool run_manual_failover(json_t** error_out);
 
     /**
      * Perform user-activated rejoin
      *
-     * @param rejoin_server     Server to join
-     * @param output            Json error output
-     * @return True on success
+     * @param rejoin_server Server to join
+     * @param error_out Json error output
+     * @return True if rejoin was performed
      */
-    bool manual_rejoin(SERVER* rejoin_server, json_t** output);
+    bool run_manual_rejoin(SERVER* rejoin_server, json_t** error_out);
 
 protected:
     void pre_loop();
@@ -109,17 +110,35 @@ private:
         ServerArray cycle_members;
     };
 
+    /* Structure used to communicate commands and results between the MaxAdmin and monitor threads.
+     * The monitor can only process one manual command at a time, which is already enforced by
+     * the admin thread. */
+    struct ManualCommand
+    {
+    public:
+        std::mutex mutex;                    /**< Mutex used by the condition variables */
+        std::condition_variable has_command; /**< Notified when a command is waiting execution */
+        bool command_waiting_exec = false;   /**< Guard variable for the above */
+        std::function<void (void)> method;   /**< The method to run when executing the command */
+        std::condition_variable has_result;  /**< Notified when the command has ran */
+        bool result_waiting = false;         /**< Guard variable for the above */
+    };
+
     unsigned long m_id;                  /**< Monitor ID */
     ServerArray m_servers;               /**< Servers of the monitor */
     ServerInfoMap m_server_info;         /**< Map from server base struct to MariaDBServer */
+    ManualCommand m_manual_cmd;          /**< Communicates manual commands and results */
 
     // Values updated by monitor
     MariaDBServer* m_master;             /**< Master server for Master/Slave replication */
+    MariaDBServer* m_next_master;        /**< When master changes because of a failover/switchover, the new
+                                           *  master is written here so the next monitor loop picks it up. */
     IdToServerMap m_servers_by_id;       /**< Map from server id:s to MariaDBServer */
     int64_t m_master_gtid_domain;        /**< gtid_domain_id most recently seen on the master  */
     std::string m_external_master_host;  /**< External master host, for fail/switchover */
     int m_external_master_port;          /**< External master port */
-    bool m_cluster_modified;             /**< Has an automatic failover/rejoin been performed this loop? */
+    bool m_cluster_topology_changed;     /**< Has cluster topology changed since last monitor loop? */
+    bool m_cluster_modified;             /**< Has a failover/switchover/rejoin been performed this loop? */
     CycleMap m_cycles;                   /**< Map from cycle number to cycle member servers */
     CycleInfo m_master_cycle_status;     /**< Info about master server cycle from previous round */
 
@@ -176,6 +195,7 @@ private:
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
+    bool execute_manual_command(std::function<void (void)> command, json_t** error_out);
 
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer& server);
@@ -206,10 +226,12 @@ private:
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
     void assign_master_and_slave();
     void assign_slave_and_relay_master(MariaDBServer* node);
-    bool master_no_longer_valid(std::string* reason_out);
+    bool master_is_valid(std::string* reason_out);
     bool cycle_has_master_server(ServerArray& cycle_servers);
+    void update_master_cycle_info();
 
     // Switchover methods
+    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     bool switchover_check(SERVER* new_master, SERVER* current_master,
                           MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                           json_t** error_out);
@@ -225,13 +247,15 @@ private:
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
 
     // Failover methods
-    bool handle_auto_failover();
+    bool manual_failover(json_t** output);
+    void handle_auto_failover();
     bool failover_not_possible();
     bool slave_receiving_events();
     bool failover_check(std::string* error_out);
     bool do_failover(json_t** err_out);
 
     // Rejoin methods
+    bool manual_rejoin(SERVER* rejoin_server, json_t** output);
     bool cluster_can_be_joined();
     void handle_auto_rejoin();
     bool get_joinable_servers(ServerArray* output);

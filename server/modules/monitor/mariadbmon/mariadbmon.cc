@@ -55,7 +55,8 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_id(config_get_global_options()->id)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
-    , m_cluster_modified(true)
+    , m_cluster_topology_changed(true)
+    , m_cluster_modified(false)
     , m_switchover_on_low_disk_space(false)
     , m_warn_set_standalone_master(true)
     , m_log_no_master(true)
@@ -102,6 +103,7 @@ void MariaDBMonitor::clear_server_info()
     m_servers_by_id.clear();
     m_excluded_servers.clear();
     m_master = NULL;
+    m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
     m_external_master_host.clear();
     m_external_master_port = PORT_UNKNOWN;
@@ -293,7 +295,6 @@ json_t* MariaDBMonitor::diagnostics_json() const
  */
 void MariaDBMonitor::update_server(MariaDBServer& server)
 {
-    server.m_topology_changed = false;
     MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
     /* Monitor server if not in maintenance. */
     bool in_maintenance = server.is_in_maintenance();
@@ -395,18 +396,18 @@ void MariaDBMonitor::tick()
     }
 
     // Query all servers for their status.
-    bool topology_changed = false;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
         update_server(*server);
         if (server->m_topology_changed)
         {
-            topology_changed = true;
+            m_cluster_topology_changed = true;
+            server->m_topology_changed = false;
         }
     }
 
-    if (topology_changed)
+    if (m_cluster_topology_changed)
     {
         // This means that a server id or a slave connection has changed, or read_only was set.
         // Update the server id array and check various things.
@@ -417,6 +418,16 @@ void MariaDBMonitor::tick()
         }
         build_replication_graph();
         find_graph_cycles();
+
+        /* Check if a failover/switchover was performed last loop and the master should change.
+         * In this case, update the master and its cycle info here. */
+        if (m_next_master)
+        {
+            m_master = m_next_master;
+            update_master_cycle_info();
+            m_next_master = NULL;
+        }
+
         // Find the server that looks like it would be the best master. It does not yet overwrite the
         // current master.
         string topology_messages;
@@ -424,7 +435,19 @@ void MariaDBMonitor::tick()
 
         // Check if current master is still valid.
         string reason;
-        if (master_no_longer_valid(&reason))
+        if (master_is_valid(&reason))
+        {
+            // Update master cycle info in case it has changed
+            update_master_cycle_info();
+            if (root_master && m_master != root_master)
+            {
+                // Master is still valid but it is no longer the best master. Print a warning.
+                MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
+                            "Master will change if '%s' is no longer a valid master.",
+                            root_master->name(), m_master->name(), m_master->name());
+            }
+        }
+        else
         {
             if (m_master && !reason.empty())
             {
@@ -444,36 +467,17 @@ void MariaDBMonitor::tick()
             }
 
             m_master = root_master;
+            update_master_cycle_info();
             if (m_master)
             {
-                // A new master has been set. Save some data regarding the type of the master.
-                int new_cycle_id = m_master->m_node.cycle;
-                m_master_cycle_status.cycle_id = new_cycle_id;
-                if (new_cycle_id == NodeData::CYCLE_NONE)
-                {
-                    m_master_cycle_status.cycle_members.clear();
-                }
-                else
-                {
-                    m_master_cycle_status.cycle_members = m_cycles[new_cycle_id];
-                }
                 MXS_NOTICE("'%s' is the best master candidate.", m_master->name());
             }
             else
             {
-                // The current master cannot be used and no proper candidate exists.
-                m_master_cycle_status.cycle_id = NodeData::CYCLE_NONE;
-                m_master_cycle_status.cycle_members.clear();
                 MXS_WARNING("No valid master servers found.");
             }
         }
-        else if (root_master && m_master != root_master)
-        {
-            // Master is still valid but it is no longer the best master. Print a warning.
-            MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
-                        "Master will change if '%s' is no longer a valid master.",
-                        root_master->name(), m_master->name(), m_master->name());
-        }
+        m_cluster_topology_changed = false;
     }
 
     // Always re-assign master, slave etc bits as these depend on other factors outside topology
@@ -542,30 +546,76 @@ void MariaDBMonitor::process_state_changes()
     MonitorInstance::process_state_changes();
 
     m_cluster_modified = false;
-    if (m_auto_failover)
+    // Check for manual commands
+    if (m_manual_cmd.command_waiting_exec)
     {
-        if ((m_cluster_modified = handle_auto_failover()))
+        // Looks like a command is waiting. Lock mutex, check again and wait for the condition variable.
+        std::unique_lock<std::mutex> lock(m_manual_cmd.mutex);
+        if (m_manual_cmd.command_waiting_exec)
         {
-            // Force a master selection on next monitor loop, otherwise the old master would stay.
-            m_master = NULL;
+            m_manual_cmd.has_command.wait(lock, [this]{return m_manual_cmd.command_waiting_exec;});
+            m_manual_cmd.method();
+            m_manual_cmd.command_waiting_exec = false;
+            m_manual_cmd.result_waiting = true;
+            // Manual command ran, signal the sender to continue.
+            lock.unlock();
+            m_manual_cmd.has_result.notify_one();
+        }
+        else
+        {
+            // There was no command after all.
+            lock.unlock();
         }
     }
 
-    // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-    // has been performed, as server states have not been updated yet. It will happen next iteration.
-    if (!config_get_global_options()->passive && m_auto_rejoin && !m_cluster_modified &&
-        cluster_can_be_joined())
+    if (!config_get_global_options()->passive)
     {
-        // Check if any servers should be autojoined to the cluster and try to join them.
-        handle_auto_rejoin();
-    }
+        if (m_auto_failover && !m_cluster_modified)
+        {
+            handle_auto_failover();
+        }
 
-    /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-     * perform this if cluster has been modified this loop since it may not be clear which server
-     * should be a slave. */
-    if (!config_get_global_options()->passive && m_enforce_read_only_slaves && !m_cluster_modified)
+        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+        // has been performed, as server states have not been updated yet. It will happen next iteration.
+        if (m_auto_rejoin && !m_cluster_modified && cluster_can_be_joined())
+        {
+            // Check if any servers should be autojoined to the cluster and try to join them.
+            handle_auto_rejoin();
+        }
+
+        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+         * perform this if cluster has been modified this loop since it may not be clear which server
+         * should be a slave. */
+        if (m_enforce_read_only_slaves && !m_cluster_modified)
+        {
+            enforce_read_only_on_slaves();
+        }
+    }
+}
+
+/**
+ * Save info on the master server's multimaster group, if any. This is required when checking for changes
+ * in the topology.
+ */
+void MariaDBMonitor::update_master_cycle_info()
+{
+    if (m_master)
     {
-        enforce_read_only_on_slaves();
+        int new_cycle_id = m_master->m_node.cycle;
+        m_master_cycle_status.cycle_id = new_cycle_id;
+        if (new_cycle_id == NodeData::CYCLE_NONE)
+        {
+            m_master_cycle_status.cycle_members.clear();
+        }
+        else
+        {
+            m_master_cycle_status.cycle_members = m_cycles[new_cycle_id];
+        }
+    }
+    else
+    {
+        m_master_cycle_status.cycle_id = NodeData::CYCLE_NONE;
+        m_master_cycle_status.cycle_members.clear();
     }
 }
 
@@ -675,7 +725,6 @@ void MariaDBMonitor::handle_auto_rejoin()
         if (joins > 0)
         {
             MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
-            m_cluster_modified = true;
         }
     }
     else
@@ -969,6 +1018,78 @@ bool MariaDBMonitor::check_sql_files()
 }
 
 /**
+ * Schedule a manual command for execution. It will be ran during the next monitor loop. This method waits
+ * for the command to have finished running.
+ *
+ * @param command Function object containing the method the monitor should execute: switchover, failover or
+ * rejoin.
+ * @param error_out Json error output
+ * @return True if command execution was attempted. False if monitor was in an invalid state
+ * to run the command.
+ */
+bool MariaDBMonitor::execute_manual_command(std::function<void (void)> command, json_t** error_out)
+{
+    bool rval = false;
+    if (state() != MXS_MONITOR_RUNNING)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "The monitor is not running, cannot execute manual command.");
+    }
+    else if (m_manual_cmd.command_waiting_exec)
+    {
+        PRINT_MXS_JSON_ERROR(error_out,
+                             "Previous command has not been executed, cannot send another command.");
+        ss_dassert(!true);
+    }
+    else
+    {
+        rval = true;
+        // Write the command.
+        std::unique_lock<std::mutex> lock(m_manual_cmd.mutex);
+        m_manual_cmd.method = command;
+        m_manual_cmd.command_waiting_exec = true;
+        // Signal the monitor thread to start running the command.
+        lock.unlock();
+        m_manual_cmd.has_command.notify_one();
+
+        // Wait for the result.
+        lock.lock();
+        m_manual_cmd.has_result.wait(lock, [this]{return m_manual_cmd.result_waiting;});
+        m_manual_cmd.result_waiting = false;
+    }
+    return rval;
+}
+
+bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+{
+    bool rval = false;
+    bool send_ok = execute_manual_command([this, &rval, new_master, current_master, error_out]()
+    {
+        rval = manual_switchover(new_master, current_master, error_out);
+    }, error_out);
+    return send_ok && rval;
+}
+
+bool MariaDBMonitor::run_manual_failover(json_t** error_out)
+{
+    bool rval = false;
+    bool send_ok = execute_manual_command([this, &rval, error_out]()
+    {
+        rval = manual_failover(error_out);
+    }, error_out);
+    return send_ok && rval;
+}
+
+bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out)
+{
+    bool rval = false;
+    bool send_ok = execute_manual_command([this, &rval, rejoin_server, error_out]()
+    {
+        rval = manual_rejoin(rejoin_server, error_out);
+    }, error_out);
+    return send_ok && rval;
+}
+
+/**
  * Command handler for 'switchover'
  *
  * @param args    The provided arguments.
@@ -995,7 +1116,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
         auto handle = static_cast<MariaDBMonitor*>(mon->instance);
         SERVER* new_master = (args->argc >= 2) ? args->argv[1].value.server : NULL;
         SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        rval = handle->manual_switchover(new_master, current_master, error_out);
+        rval = handle->run_manual_switchover(new_master, current_master, error_out);
     }
     return rval;
 }
@@ -1021,7 +1142,7 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon->instance);
-        rv = handle->manual_failover(output);
+        rv = handle->run_manual_failover(output);
     }
     return rv;
 }
@@ -1049,7 +1170,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         SERVER* server = args->argv[1].value.server;
         auto handle = static_cast<MariaDBMonitor*>(mon->instance);
-        rv = handle->manual_rejoin(server, output);
+        rv = handle->run_manual_rejoin(server, output);
     }
     return rv;
 }
