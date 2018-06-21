@@ -481,26 +481,41 @@ int test_logging()
 
     MXS_LOG_EVENT(event::AUTHENTICATION_FAILURE, "%s", id.c_str());
 
-    // Short sleep to increase the likelyhood that the logged message ends
-    // ends up where we expect it to be.
-    sleep(2);
+    // We have no control over how quickly syslog messages are flushed
+    // to the file. So, we try a few times before giving up.
 
     bool found = false;
+    int attempts = 0;
+    const int MAX_ATTEMPTS = 10;
 
-    ifstream in("/var/log/auth.log");
-
-    if (in)
+    do
     {
-        string line;
-        while (std::getline(in, line))
+        ++attempts;
+
+        sleep(1);
+
+        const char* zName = "/var/log/auth.log";
+        ifstream in(zName);
+
+        if (in)
         {
-            if (line.find(id) != string::npos)
+            string line;
+            while (std::getline(in, line))
             {
-                found = true;
-                cout << "notice: Found '" << id << "' in line '" << line << "'." << endl;
+                if (line.find(id) != string::npos)
+                {
+                    found = true;
+                    cout << "notice: Found '" << id << "' in line '" << line << "'." << endl;
+                }
             }
         }
+        else
+        {
+            cerr << "error: Could not open '" << zName << "'." << endl;
+            attempts = MAX_ATTEMPTS;
+        }
     }
+    while (!found && (attempts < MAX_ATTEMPTS));
 
     return found ? 0 : 1;
 }
