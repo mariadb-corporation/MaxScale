@@ -87,18 +87,18 @@ bool Backend::execute_session_command()
 
     CHK_DCB(m_dcb);
 
-    SessionCommandList::iterator iter = m_session_commands.begin();
-    SessionCommand& sescmd = *(*iter);
-    GWBUF *buffer = sescmd.deep_copy_buffer();
+    SSessionCommand& sescmd = m_session_commands.front();
+    GWBUF *buffer = sescmd->deep_copy_buffer();
     bool rval = false;
 
-    switch (sescmd.get_command())
+    switch (sescmd->get_command())
     {
     case MXS_COM_QUIT:
     case MXS_COM_STMT_CLOSE:
         /** These commands do not generate responses */
-        rval = write(buffer, NO_RESPONSE);
+        rval = Backend::write(buffer, NO_RESPONSE);
         complete_session_command();
+        ss_dassert(!is_waiting_result());
         break;
 
     case MXS_COM_CHANGE_USER:
@@ -109,12 +109,11 @@ bool Backend::execute_session_command()
 
     case MXS_COM_QUERY:
     default:
-        /**
-         * Mark session command buffer, it triggers writing
-         * MySQL command to protocol
-         */
+        // TODO: Remove use of GWBUF_TYPE_SESCMD
+        //Mark session command buffer, it triggers writing MySQL command to protocol
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
-        rval = write(buffer);
+        rval = Backend::write(buffer);
+        ss_dassert(is_waiting_result());
         break;
     }
 

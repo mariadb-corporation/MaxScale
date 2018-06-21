@@ -96,7 +96,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
         }
     }
 
-    return mxs::Backend::write(buffer);
+    return mxs::Backend::write(buffer, type);
 }
 
 bool RWBackend::consume_fetched_rows(GWBUF* buffer)
