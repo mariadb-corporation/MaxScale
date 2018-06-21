@@ -16,11 +16,13 @@
 #include <maxscale/monitor.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/thread.h>
+#include <maxscale/worker.hh>
 
 namespace maxscale
 {
 
 class MonitorInstance : public  MXS_MONITOR_INSTANCE
+                      , private maxscale::Worker
 {
 public:
     MonitorInstance(const MonitorInstance&) = delete;
@@ -210,17 +212,19 @@ protected:
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
-    int32_t     m_state;     /**< The current state of the monitor. */
-    THREAD      m_thread;    /**< The thread handle of the monitoring thread. */
-    int32_t     m_shutdown;  /**< Non-zero if the monitor should shut down. */
-    bool        m_checked;   /**< Whether server access has been checked. */
-    std::string m_script;    /**< Launchable script. */
-    uint64_t    m_events;    /**< Enabled monitor events. */
-    Semaphore   m_semaphore; /**< Semaphore for synchronizing with monitor thread. */
+    int32_t     m_state;       /**< The current state of the monitor. */
+    int32_t     m_shutdown;    /**< Non-zero if the monitor should shut down. */
+    bool        m_checked;     /**< Whether server access has been checked. */
+    std::string m_script;      /**< Launchable script. */
+    uint64_t    m_events;      /**< Enabled monitor events. */
+    Semaphore   m_semaphore;   /**< Semaphore for synchronizing with monitor thread. */
+    int64_t     m_loop_called; /**< When was the loop called the last time. */
 
-    void main();
-    static void main(void* pArg);
-    void sleep_until_next_tick(int64_t tick_start_ms);
+    bool pre_run() final;
+    void post_run() final;
+
+    bool call_run_one_tick(Worker::Call::action_t action);
+    void run_one_tick();
 };
 
 class MonitorInstanceSimple : public MonitorInstance

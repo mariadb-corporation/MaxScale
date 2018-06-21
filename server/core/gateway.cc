@@ -1927,6 +1927,20 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
+    if (!MessageQueue::init())
+    {
+        MXS_ERROR("Failed to initialize message queue.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    if (!Worker::init())
+    {
+        MXS_ERROR("Failed to initialize workers.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     if (!config_load(cnf_file_path))
     {
         const char* fprerr =
@@ -2009,20 +2023,6 @@ int main(int argc, char **argv)
     if (!qc_process_init(QC_INIT_SELF))
     {
         MXS_ERROR("Failed to initialize the internal query classifier.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    if (!MessageQueue::init())
-    {
-        MXS_ERROR("Failed to initialize message queue.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    if (!Worker::init())
-    {
-        MXS_ERROR("Failed to initialize workers.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
