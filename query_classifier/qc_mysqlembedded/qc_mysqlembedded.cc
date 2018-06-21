@@ -922,7 +922,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         break;
 
     case SQLCOM_DEALLOCATE_PREPARE:
-        type |= QUERY_TYPE_WRITE;
+        type |= QUERY_TYPE_DEALLOC_PREPARE;
         break;
 
     case SQLCOM_SELECT:

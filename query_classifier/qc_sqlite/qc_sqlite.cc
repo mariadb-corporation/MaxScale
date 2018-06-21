@@ -781,36 +781,6 @@ public:
         return type_mask;
     }
 
-    /**
-     * Returns some string from an expression.
-     *
-     * @param pExpr An expression.
-     *
-     * @return Some string referred to in pExpr.
-     */
-    static const char* find_one_string(Expr* pExpr)
-    {
-        const char* z = NULL;
-
-        if (pExpr->op == TK_STRING)
-        {
-            ss_dassert(pExpr->u.zToken);
-            z = pExpr->u.zToken;
-        }
-
-        if (!z && pExpr->pLeft)
-        {
-            z = find_one_string(pExpr->pLeft);
-        }
-
-        if (!z && pExpr->pRight)
-        {
-            z = find_one_string(pExpr->pRight);
-        }
-
-        return z;
-    }
-
     static int string_to_truth(const char* s)
     {
         int truth = -1;
@@ -2660,33 +2630,16 @@ public:
     {
         ss_dassert(this_thread.initialized);
 
-        // If the mode is MODE_ORACLE then if expression contains simply a string
-        // we can conclude that the statement has been fully parsed, because it will
-        // be sensible to parse the preparable statement. Otherwise we mark the
-        // statement as having been partially parsed, since the preparable statement
-        // will not contain the full statement.
-        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        switch (pStmt->op)
         {
-            if (pStmt->op == TK_STRING)
-            {
-                m_status = QC_QUERY_PARSED;
-            }
-            else
-            {
-                m_status = QC_QUERY_PARTIALLY_PARSED;
-            }
-        }
-        else
-        {
-            // If the mode is not MODE_ORACLE, then only a string is acceptable.
-            if (pStmt->op == TK_STRING)
-            {
-                m_status = QC_QUERY_PARSED;
-            }
-            else
-            {
-                m_status = QC_QUERY_INVALID;
-            }
+        case TK_STRING:
+        case TK_VARIABLE:
+            m_status = QC_QUERY_PARSED;
+            break;
+
+        default:
+            m_status = QC_QUERY_PARTIALLY_PARSED;
+            break;
         }
 
         m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
@@ -2702,14 +2655,11 @@ public:
                 m_zPrepare_name[pName->n] = 0;
             }
 
-            // If the expression just contains a string, then zStmt will
-            // be that string. Otherwise it will be _some_ string from the
-            // expression. In the latter case we've already marked the result
-            // to have been partially parsed.
-            const char* zStmt = find_one_string(pStmt);
-
-            if (zStmt)
+            if (pStmt->op == TK_STRING)
             {
+                const char* zStmt = pStmt->u.zToken;
+                ss_dassert(zStmt);
+
                 size_t preparable_stmt_len = zStmt ? strlen(zStmt) : 0;
                 size_t payload_len = 1 + preparable_stmt_len;
                 size_t packet_len = MYSQL_HEADER_LEN + payload_len;
@@ -2730,10 +2680,6 @@ public:
 
                     memcpy(ptr, zStmt, preparable_stmt_len);
                 }
-            }
-            else
-            {
-                m_status = QC_QUERY_INVALID;
             }
         }
         else

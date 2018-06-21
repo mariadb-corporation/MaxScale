@@ -1302,19 +1302,20 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
     {
         GWBUF* pPreparable1;
         pClassifier1->qc_get_preparable_stmt(pBuf1, &pPreparable1);
-        ss_dassert(pPreparable1);
 
         GWBUF* pPreparable2;
         pClassifier2->qc_get_preparable_stmt(pBuf2, &pPreparable2);
-        ss_dassert(pPreparable2);
 
-        string indent = global.indent;
-        global.indent += string(4, ' ');
+        if (pPreparable1 && pPreparable2)
+        {
+            string indent = global.indent;
+            global.indent += string(4, ' ');
 
-        success = compare(pClassifier1, pPreparable1,
-                          pClassifier2, pPreparable2);
+            success = compare(pClassifier1, pPreparable1,
+                              pClassifier2, pPreparable2);
 
-        global.indent = indent;
+            global.indent = indent;
+        }
     }
 
     return success;
