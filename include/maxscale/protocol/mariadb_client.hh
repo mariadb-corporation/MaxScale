@@ -59,7 +59,7 @@ public:
 private:
     static LocalClient* create(MXS_SESSION* session, const char* ip, uint64_t port);
     LocalClient(MXS_SESSION* session, int fd);
-    static uint32_t poll_handler(struct mxs_poll_data* data, int wid, uint32_t events);
+    static uint32_t poll_handler(struct mxs_poll_data* data, void* worker, uint32_t events);
     void   process(uint32_t events);
     GWBUF* read_complete_packet();
     void   drain_queue();

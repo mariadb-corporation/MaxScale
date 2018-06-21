@@ -47,6 +47,7 @@
 
 
 using maxscale::Semaphore;
+using maxscale::RoutingWorker;
 using maxscale::Worker;
 using maxscale::WorkerTask;
 
@@ -466,7 +467,10 @@ public:
 
     void execute(Worker& worker)
     {
-        int thread_id = worker.get_current_id();
+        RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
+        ss_dassert(&rworker == RoutingWorker::get_current());
+
+        int thread_id = rworker.id();
         dcb_persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
     }
 
@@ -484,7 +488,7 @@ private:
 static void cleanup_persistent_connections(const SERVER* server)
 {
     CleanupTask task(server);
-    Worker::execute_concurrently(task);
+    RoutingWorker::execute_concurrently(task);
 }
 
 /**

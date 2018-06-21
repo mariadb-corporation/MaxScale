@@ -109,7 +109,7 @@ extern int blr_write_special_event(ROUTER_INSTANCE *router,
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
                                      char *new_file);
-static void worker_cb_start_master(int worker_id, void* data);
+static void worker_cb_start_master(MXS_WORKER*, void* data);
 extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 static int blr_check_connect_retry(ROUTER_INSTANCE *router);
 
@@ -284,13 +284,13 @@ static void blr_start_master(void* data)
 /**
  * Callback start function to be called in the context of the main worker.
  *
- * @param worker_id  The id of the worker in whose context the function is called.
- * @param data       The data to be passed to `blr_start_master`
+ * @param worker  The worker in whose context the function is called.
+ * @param data    The data to be passed to `blr_start_master`
  */
-static void worker_cb_start_master(int worker_id, void* data)
+static void worker_cb_start_master(MXS_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
-    ss_dassert(worker_id == 0);
+    ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     blr_start_master(data);
 }
@@ -325,10 +325,10 @@ bool blr_start_master_in_main(void* data)
  * @param worker_id  The id of the worker in whose context the function is called.
  * @param data       The data to be passed to `blr_start_master`
  */
-static void worker_cb_close_master(int worker_id, void* data)
+static void worker_cb_close_master(MXS_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
-    ss_dassert(worker_id == 0);
+    ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     blr_master_close(static_cast<ROUTER_INSTANCE*>(data));
 }

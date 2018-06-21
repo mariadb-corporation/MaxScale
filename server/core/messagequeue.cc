@@ -220,9 +220,11 @@ Worker* MessageQueue::remove_from_worker()
     return pWorker;
 }
 
-uint32_t MessageQueue::handle_poll_events(int thread_id, uint32_t events)
+uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 {
     uint32_t rc = MXS_POLL_NOP;
+
+    ss_dassert(pWorker == m_pWorker);
 
     // We only expect EPOLLIN events.
     ss_dassert(((events & EPOLLIN) != 0) && ((events & ~EPOLLIN) == 0));
@@ -268,11 +270,11 @@ uint32_t MessageQueue::handle_poll_events(int thread_id, uint32_t events)
 }
 
 //static
-uint32_t MessageQueue::poll_handler(MXS_POLL_DATA* pData, int thread_id, uint32_t events)
+uint32_t MessageQueue::poll_handler(MXS_POLL_DATA* pData, void* pWorker, uint32_t events)
 {
     MessageQueue* pThis = static_cast<MessageQueue*>(pData);
 
-    return pThis->handle_poll_events(thread_id, events);
+    return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
 }
 
 }

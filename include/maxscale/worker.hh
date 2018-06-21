@@ -466,9 +466,9 @@ protected:
     virtual void tick() = 0;
 
 private:
-    uint32_t handle(int wid, uint32_t events);
+    uint32_t handle(Worker* pWorker, uint32_t events);
 
-    static uint32_t handler(MXS_POLL_DATA* pThis, int wid, uint32_t events);
+    static uint32_t handler(MXS_POLL_DATA* pThis, void* pWorker, uint32_t events);
 
 private:
     int     m_fd;      /**< The timerfd descriptor. */
@@ -578,16 +578,6 @@ public:
     Worker();
     virtual ~Worker();
 
-    /**
-     * Returns the id of the worker
-     *
-     * @return The id of the worker.
-     */
-    int id() const
-    {
-        return m_id;
-    }
-
     int load(Load::counter_t counter)
     {
         return m_load.percentage(counter);
@@ -616,26 +606,6 @@ public:
     {
         return m_statistics;
     }
-
-    /**
-     * Returns statistics for all workers.
-     *
-     * @return Combined statistics.
-     *
-     * @attentions The statistics may no longer be accurate by the time it has
-     *             been returned. The returned values may also not represent a
-     *             100% consistent set.
-     */
-    static STATISTICS get_statistics();
-
-    /**
-     * Return a specific combined statistic value.
-     *
-     * @param what  What to return.
-     *
-     * @return The corresponding value.
-     */
-    static int64_t get_one_statistic(POLL_STAT what);
 
     /**
      * Return this worker's statistics.
@@ -776,71 +746,6 @@ public:
     }
 
     /**
-     * Posts a task to all workers for execution.
-     *
-     * @param pTask  The task to be executed.
-     * @param pSem   If non-NULL, will be posted once per worker when the task's
-     *               `execute` return.
-     *
-     * @return How many workers the task was posted to.
-     *
-     * @attention The very same task will be posted to all workers. The task
-     *            should either not have any sharable data or then it should
-     *            have data specific to each worker that can be accessed
-     *            without locks.
-     */
-    static size_t broadcast(Task* pTask, Semaphore* pSem = NULL);
-
-    /**
-     * Posts a task to all workers for execution.
-     *
-     * @param pTask  The task to be executed.
-     *
-     * @return How many workers the task was posted to.
-     *
-     * @attention The very same task will be posted to all workers. The task
-     *            should either not have any sharable data or then it should
-     *            have data specific to each worker that can be accessed
-     *            without locks.
-     *
-     * @attention Once the task has been executed by all workers, it will
-     *            be deleted.
-     */
-    static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
-
-    template<class T>
-    static size_t broadcast(std::auto_ptr<T> sTask)
-    {
-        return broadcast(std::auto_ptr<DisposableTask>(sTask.release()));
-    }
-
-    /**
-     * Executes a task on all workers in serial mode (the task is executed
-     * on at most one worker thread at a time). When the function returns
-     * the task has been executed on all workers.
-     *
-     * @param task  The task to be executed.
-     *
-     * @return How many workers the task was posted to.
-     *
-     * @warning This function is extremely inefficient and will be slow compared
-     * to the other functions. Only use this function when printing thread-specific
-     * data to stdout.
-     */
-    static size_t execute_serially(Task& task);
-
-    /**
-     * Executes a task on all workers concurrently and waits until all workers
-     * are done. That is, when the function returns the task has been executed
-     * by all workers.
-     *
-     * @param task  The task to be executed.
-     *
-     * @return How many workers the task was posted to.
-     */
-    static size_t execute_concurrently(Task& task);
-
-    /**
      * Post a message to a worker.
      *
      * @param msg_id  The message id.
@@ -858,58 +763,11 @@ public:
     bool post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
     /**
-     * Broadcast a message to all worker.
-     *
-     * @param msg_id  The message id.
-     * @param arg1    Message specific first argument.
-     * @param arg2    Message specific second argument.
-     *
-     * @return The number of messages posted; if less that ne number of workers
-     *         then some postings failed.
-     *
-     * @attention The return value tells *only* whether message could be posted,
-     *            *not* that it has reached the worker.
-     *
-     * @attentsion Exactly the same arguments are passed to all workers. Take that
-     *             into account if the passed data must be freed.
-     *
-     * @attention This function is signal safe.
-     */
-    static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
-
-    /**
-     * Initate shutdown of all workers.
-     *
-     * @attention A call to this function will only initiate the shutdowm,
-     *            the workers will not have shut down when the function returns.
-     *
-     * @attention This function is signal safe.
-     */
-    static void shutdown_all();
-
-    /**
-     * Return the worker associated with the provided worker id.
-     *
-     * @param worker_id  A worker id.
-     *
-     * @return The corresponding worker instance, or NULL if the id does
-     *         not correspond to a worker.
-     */
-    static Worker* get(int worker_id);
-
-    /**
      * Return the worker associated with the current thread.
      *
      * @return The worker instance, or NULL if the current thread does not have a worker.
      */
     static Worker* get_current();
-
-    /**
-     * Return the worker id associated with the current thread.
-     *
-     * @return A worker instance, or -1 if the current thread does not have a worker.
-     */
-    static int get_current_id();
 
     /**
      * Push a function for delayed execution.
@@ -1034,6 +892,21 @@ public:
     bool cancel_delayed_call(uint32_t id);
 
 protected:
+    const int m_epoll_fd;             /*< The epoll file descriptor. */
+    state_t   m_state;                /*< The state of the worker */
+
+    static void inc_ref(WorkerDisposableTask* pTask)
+    {
+        pTask->inc_ref();
+    }
+
+    static void dec_ref(WorkerDisposableTask* pTask)
+    {
+        pTask->dec_ref();
+    }
+
+    bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
+
     /**
      * Called by Worker::run() before starting the epoll loop.
      *
@@ -1066,11 +939,6 @@ protected:
      * @param op      Either EPOLL_CTL_ADD or EPOLL_CTL_DEL.
      */
     static void resolve_poll_error(int fd, int err, int op);
-
-protected:
-    const int m_id;                   /*< The id of the worker. */
-    const int m_epoll_fd;             /*< The epoll file descriptor. */
-    state_t   m_state;                /*< The state of the worker */
 
 private:
     class DelayedCall;
@@ -1258,8 +1126,6 @@ private:
 
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);
     void adjust_timer();
-
-    bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 

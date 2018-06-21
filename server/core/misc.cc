@@ -15,9 +15,8 @@
 
 #include <time.h>
 
-#include <maxscale/worker.hh>
-
 #include "internal/maxscale.h"
+#include "internal/routingworker.hh"
 #include "internal/service.h"
 
 static time_t started;
@@ -46,7 +45,7 @@ int maxscale_shutdown()
     if (n == 0)
     {
         service_shutdown();
-        mxs::Worker::shutdown_all();
+        mxs::RoutingWorker::shutdown_all();
     }
 
     return n + 1;

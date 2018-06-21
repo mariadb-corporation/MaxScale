@@ -54,97 +54,6 @@ poll_init()
     n_threads = config_threadcount();
 }
 
-static bool add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
-{
-    ss_dassert((wid >= 0) && (wid <= n_threads));
-
-    Worker* worker = Worker::get(wid);
-    ss_dassert(worker);
-
-    return worker->add_fd(fd, events, data);
-}
-
-static bool add_fd_to_routing_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
-{
-    bool rv = true;
-    void* previous_owner = data->owner;
-
-    rv = RoutingWorker::add_shared_fd(fd, events, data);
-
-    if (rv)
-    {
-        // The DCB will appear on the list of the calling thread.
-        RoutingWorker* worker = RoutingWorker::get_current();
-
-        if (!worker)
-        {
-            // TODO: Listeners are created before the workers have been started.
-            // TODO: Hence the returned id will be -1. We change it to 0, which in
-            // TODO: practice will mean that they will end up on the Worker running
-            // TODO: in the main thread. This needs to be sorted out.
-            worker = RoutingWorker::get(RoutingWorker::MAIN);
-        }
-
-        data->owner = worker;
-    }
-    else
-    {
-        // Restore the situation.
-        data->owner = previous_owner;
-    }
-
-    return rv;
-}
-
-bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
-{
-    bool rv;
-
-    if (wid == MXS_WORKER_ALL)
-    {
-        rv = add_fd_to_routing_workers(fd, events, data);
-    }
-    else
-    {
-        ss_dassert((wid >= 0) && (wid < n_threads));
-
-        rv = add_fd_to_worker(wid, fd, events, data);
-    }
-
-    return rv;
-}
-
-static bool remove_fd_from_worker(int wid, int fd)
-{
-    ss_dassert((wid >= 0) && (wid < n_threads));
-
-    Worker* worker = Worker::get(wid);
-    ss_dassert(worker);
-
-    return worker->remove_fd(fd);
-}
-
-static bool remove_fd_from_routing_workers(int fd)
-{
-    return RoutingWorker::remove_shared_fd(fd);
-}
-
-bool poll_remove_fd_from_worker(int wid, int fd)
-{
-    bool rv;
-
-    if (wid == MXS_WORKER_ALL)
-    {
-        rv = remove_fd_from_routing_workers(fd);
-    }
-    else
-    {
-        rv = remove_fd_from_worker(wid, fd);
-    }
-
-    return rv;
-}
-
 /**
  * Set the number of non-blocking poll cycles that will be done before
  * a blocking poll will take place. Whenever an event arrives on a thread
@@ -196,7 +105,7 @@ dprintPollStats(DCB *dcb)
 {
     int i;
 
-    Worker::STATISTICS s = Worker::get_statistics();
+    Worker::STATISTICS s = RoutingWorker::get_statistics();
 
     dcb_printf(dcb, "\nPoll Statistics.\n\n");
     dcb_printf(dcb, "No. of epoll cycles:                           %" PRId64 "\n", s.n_polls);
@@ -238,7 +147,7 @@ dShowThreads(DCB *dcb)
     dcb_printf(dcb, "----+------------+---------------------+---------------------+-----------+-----------+-----------+\n");
     for (int i = 0; i < n_threads; i++)
     {
-        Worker* worker = Worker::get(i);
+        Worker* worker = RoutingWorker::get(i);
         ss_dassert(worker);
 
         const char *state = "Unknown";
@@ -288,7 +197,7 @@ dShowEventStats(DCB *pdcb)
 {
     int i;
 
-    Worker::STATISTICS s = Worker::get_statistics();
+    Worker::STATISTICS s = RoutingWorker::get_statistics();
 
     dcb_printf(pdcb, "\nEvent statistics.\n");
     dcb_printf(pdcb, "Maximum queue time:           %3" PRId64 "00ms\n", s.maxqtime);
@@ -320,7 +229,7 @@ dShowEventStats(DCB *pdcb)
 int64_t
 poll_get_stat(POLL_STAT what)
 {
-    return Worker::get_one_statistic(what);
+    return RoutingWorker::get_one_statistic(what);
 }
 
 namespace
@@ -399,7 +308,7 @@ eventTimesGetList()
     }
 
     data->rowno = 0;
-    data->stats = Worker::get_statistics();
+    data->stats = RoutingWorker::get_statistics();
 
     if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
     {

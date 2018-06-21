@@ -574,13 +574,13 @@ HttpResponse cb_flush(const HttpRequest& request)
 
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, mxs_worker_list_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
 }
 
 HttpResponse cb_thread(const HttpRequest& request)
 {
     int id = atoi(request.last_uri_part().c_str());
-    return HttpResponse(MHD_HTTP_OK, mxs_worker_to_json(request.host(), id));
+    return HttpResponse(MHD_HTTP_OK, mxs_rworker_to_json(request.host(), id));
 }
 
 HttpResponse cb_tasks(const HttpRequest& request)
@@ -1187,7 +1187,7 @@ private:
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    mxs::Worker* worker = mxs::Worker::get(0);
+    mxs::Worker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
     mxs::Semaphore sem;
     ResourceTask task(request);
 

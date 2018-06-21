@@ -45,7 +45,7 @@ enum mxs_worker_msg_id
     /**
      * Function call message.
      *
-     * arg1: Pointer to function with the prototype: void (*)(int thread_id, void* arg2);
+     * arg1: Pointer to function with the prototype: void (*)(MXS_WORKER*, void* arg2);
      * arg2: Second argument for the function passed in arg1.
      */
     MXS_WORKER_MSG_CALL
@@ -75,26 +75,5 @@ MXS_WORKER* mxs_worker_get_current();
  * @attention This function is signal safe.
  */
 bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
-
-/**
- * @brief Convert a worker to JSON format
- *
- * @param host Hostname of this server
- * @param id   ID of the worker
- *
- * @return JSON resource representing the worker
- */
-json_t* mxs_worker_to_json(const char* host, int id);
-
-/**
- * Convert workers into JSON format
- *
- * @param host Hostname of this server
- *
- * @return A JSON resource collection of workers
- *
- * @see mxs_json_resource()
- */
-json_t* mxs_worker_list_to_json(const char* host);
 
 MXS_END_DECLS

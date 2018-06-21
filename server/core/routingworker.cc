@@ -60,6 +60,7 @@ struct this_unit
     bool            initialized;       // Whether the initialization has been performed.
     int             nWorkers;          // How many routing workers there are.
     RoutingWorker** ppWorkers;         // Array of routing worker instances.
+    int             next_worker_id;    // Next worker id
     // DEPRECATED in 2.3, remove in 2.4.
     int             number_poll_spins; // Maximum non-block polls
     // DEPRECATED in 2.3, remove in 2.4.
@@ -73,6 +74,7 @@ struct this_unit
     false,            // initialized
     0,                // nWorkers
     NULL,             // ppWorkers
+    0,                // next_worker_id
     0,                // number_poll_spins
     0,                // max_poll_sleep
     -1,               // epoll_listener_fd
@@ -80,6 +82,11 @@ struct this_unit
     WORKER_ABSENT_ID, // id_min_worker
     WORKER_ABSENT_ID, // id_max_worker
 };
+
+int next_worker_id()
+{
+    return atomic_add(&this_unit.next_worker_id, 1);
+}
 
 thread_local struct this_thread
 {
@@ -161,6 +168,7 @@ namespace maxscale
 {
 
 RoutingWorker::RoutingWorker()
+    : m_id(next_worker_id())
 {
     MXS_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
     MXS_POLL_DATA::owner = this;
@@ -541,12 +549,12 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 //static
-uint32_t RoutingWorker::epoll_instance_handler(struct mxs_poll_data* pData, int wid, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(struct mxs_poll_data* pData, void* pWorker, uint32_t events)
 {
-    RoutingWorker* pWorker = static_cast<RoutingWorker*>(pData);
-    ss_dassert(pWorker->m_id == wid);
+    RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
+    ss_dassert(pThis == pWorker);
 
-    return pWorker->handle_epoll_events(events);
+    return pThis->handle_epoll_events(events);
 }
 
 /**
@@ -578,10 +586,286 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
         MXS_DEBUG("1 event for worker %d.", m_id);
         MXS_POLL_DATA* pData = static_cast<MXS_POLL_DATA*>(epoll_events[0].data.ptr);
 
-        actions = pData->handler(pData, m_id, epoll_events[0].events);
+        actions = pData->handler(pData, this, epoll_events[0].events);
     }
 
     return actions;
+}
+
+//static
+size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
+{
+    // No logging here, function must be signal safe.
+    size_t n = 0;
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
+
+        if (pWorker->post(pTask, pSem))
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
+
+//static
+size_t RoutingWorker::broadcast(std::auto_ptr<DisposableTask> sTask)
+{
+    DisposableTask* pTask = sTask.release();
+    Worker::inc_ref(pTask);
+
+    size_t n = 0;
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
+
+        if (pWorker->post_disposable(pTask))
+        {
+            ++n;
+        }
+    }
+
+    Worker::dec_ref(pTask);
+
+    return n;
+}
+
+//static
+size_t RoutingWorker::execute_serially(Task& task)
+{
+    Semaphore sem;
+    size_t n = 0;
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
+
+        if (pWorker->post(&task, &sem))
+        {
+            sem.wait();
+            ++n;
+        }
+    }
+
+    return n;
+}
+
+//static
+size_t RoutingWorker::execute_concurrently(Task& task)
+{
+    Semaphore sem;
+    return sem.wait_n(RoutingWorker::broadcast(&task, &sem));
+}
+
+// static
+size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
+{
+    // NOTE: No logging here, this function must be signal safe.
+
+    size_t n = 0;
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
+
+        if (pWorker->post_message(msg_id, arg1, arg2))
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
+
+// static
+void RoutingWorker::shutdown_all()
+{
+    // NOTE: No logging here, this function must be signal safe.
+    ss_dassert((this_unit.next_worker_id == 0) || (this_unit.ppWorkers != NULL));
+
+    int nWorkers = this_unit.next_worker_id;
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
+
+        pWorker->shutdown();
+    }
+}
+
+namespace
+{
+
+int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type)
+{
+    int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
+
+    int nWorkers = this_unit.next_worker_id;
+
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = RoutingWorker::get(i);
+        ss_dassert(pWorker);
+
+        const Worker::STATISTICS& s = pWorker->statistics();
+
+        int64_t value = s.*what;
+
+        switch (type)
+        {
+        case TS_STATS_MAX:
+            if (value > best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_MIX:
+            if (value < best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_AVG:
+        case TS_STATS_SUM:
+            best += value;
+            break;
+        }
+    }
+
+    return type == TS_STATS_AVG ? best / (nWorkers != 0 ? nWorkers : 1) : best;
+}
+
+}
+
+//static
+Worker::STATISTICS RoutingWorker::get_statistics()
+{
+    STATISTICS cs;
+
+    cs.n_read        = one_stats_get(&STATISTICS::n_read, TS_STATS_SUM);
+    cs.n_write       = one_stats_get(&STATISTICS::n_write, TS_STATS_SUM);
+    cs.n_error       = one_stats_get(&STATISTICS::n_error, TS_STATS_SUM);
+    cs.n_hup         = one_stats_get(&STATISTICS::n_hup, TS_STATS_SUM);
+    cs.n_accept      = one_stats_get(&STATISTICS::n_accept, TS_STATS_SUM);
+    cs.n_polls       = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
+    cs.n_pollev      = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
+    cs.n_nbpollev    = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
+    cs.evq_length    = one_stats_get(&STATISTICS::evq_length, TS_STATS_AVG);
+    cs.evq_max       = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
+    cs.blockingpolls = one_stats_get(&STATISTICS::blockingpolls, TS_STATS_SUM);
+    cs.maxqtime      = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
+    cs.maxexectime   = one_stats_get(&STATISTICS::maxexectime, TS_STATS_MAX);
+
+    for (int i = 0; i < Worker::STATISTICS::MAXNFDS - 1; i++)
+    {
+        for (int j = 0; j < this_unit.next_worker_id; ++j)
+        {
+            Worker* pWorker = RoutingWorker::get(j);
+            ss_dassert(pWorker);
+
+            cs.n_fds[i] += pWorker->statistics().n_fds[i];
+        }
+    }
+
+    for (int i = 0; i <= Worker::STATISTICS::N_QUEUE_TIMES; ++i)
+    {
+        int nWorkers = this_unit.next_worker_id;
+
+        for (int j = 0; j < nWorkers; ++j)
+        {
+            Worker* pWorker = RoutingWorker::get(j);
+            ss_dassert(pWorker);
+
+            cs.qtimes[i] += pWorker->statistics().qtimes[i];
+            cs.exectimes[i] += pWorker->statistics().exectimes[i];
+        }
+
+        cs.qtimes[i] /= (nWorkers != 0 ? nWorkers : 1);
+        cs.exectimes[i] /= (nWorkers != 0 ? nWorkers : 1);
+    }
+
+    return cs;
+}
+
+//static
+int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
+{
+    int64_t rv = 0;
+
+    int64_t Worker::STATISTICS::*member = NULL;
+    enum ts_stats_type approach;
+
+    switch (what)
+    {
+    case POLL_STAT_READ:
+        member = &Worker::STATISTICS::n_read;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_WRITE:
+        member = &Worker::STATISTICS::n_write;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_ERROR:
+        member = &Worker::STATISTICS::n_error;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_HANGUP:
+        member = &Worker::STATISTICS::n_hup;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_ACCEPT:
+        member = &Worker::STATISTICS::n_accept;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_EVQ_LEN:
+        member = &Worker::STATISTICS::evq_length;
+        approach = TS_STATS_AVG;
+        break;
+
+    case POLL_STAT_EVQ_MAX:
+        member = &Worker::STATISTICS::evq_max;
+        approach = TS_STATS_MAX;
+        break;
+
+    case POLL_STAT_MAX_QTIME:
+        member = &Worker::STATISTICS::maxqtime;
+        approach = TS_STATS_MAX;
+        break;
+
+    case POLL_STAT_MAX_EXECTIME:
+        member = &Worker::STATISTICS::maxexectime;
+        approach = TS_STATS_MAX;
+        break;
+
+    default:
+        ss_dassert(!true);
+    }
+
+    if (member)
+    {
+        rv = one_stats_get(member, approach);
+    }
+
+    return rv;
 }
 
 }
@@ -625,4 +909,108 @@ MXS_WORKER* mxs_rworker_get_current()
 int mxs_rworker_get_current_id()
 {
     return RoutingWorker::get_current_id();
+}
+
+namespace
+{
+
+using namespace maxscale;
+
+class WorkerInfoTask: public maxscale::WorkerTask
+{
+public:
+    WorkerInfoTask(const char* zHost, uint32_t nThreads)
+        : m_zHost(zHost)
+    {
+        m_data.resize(nThreads);
+    }
+
+    void execute(Worker& worker)
+    {
+        RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
+
+        json_t* pStats = json_object();
+        const Worker::STATISTICS& s = rworker.get_local_statistics();
+        json_object_set_new(pStats, "reads", json_integer(s.n_read));
+        json_object_set_new(pStats, "writes", json_integer(s.n_write));
+        json_object_set_new(pStats, "errors", json_integer(s.n_error));
+        json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
+        json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
+        json_object_set_new(pStats, "blocking_polls", json_integer(s.blockingpolls));
+        json_object_set_new(pStats, "event_queue_length", json_integer(s.evq_length));
+        json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
+        json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
+        json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
+
+        uint32_t nCurrent;
+        uint64_t nTotal;
+        rworker.get_descriptor_counts(&nCurrent, &nTotal);
+        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
+        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
+
+        json_t* load = json_object();
+        json_object_set_new(load, "last_second", json_integer(rworker.load(Worker::Load::ONE_SECOND)));
+        json_object_set_new(load, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
+        json_object_set_new(load, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
+        json_object_set_new(pStats, "load", load);
+
+        json_t* pAttr = json_object();
+        json_object_set_new(pAttr, "stats", pStats);
+
+        int idx = rworker.id();
+        stringstream ss;
+        ss << idx;
+
+        json_t* pJson = json_object();
+        json_object_set_new(pJson, CN_TYPE, json_string(CN_THREADS));
+        json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
+        json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
+
+        ss_dassert((size_t)idx < m_data.size());
+        m_data[idx] = pJson;
+    }
+
+    json_t* resource()
+    {
+        json_t* pArr = json_array();
+
+        for (auto it = m_data.begin(); it != m_data.end(); it++)
+        {
+            json_array_append_new(pArr, *it);
+        }
+
+        return mxs_json_resource(m_zHost, MXS_JSON_API_THREADS, pArr);
+    }
+
+    json_t* resource(int id)
+    {
+        stringstream self;
+        self << MXS_JSON_API_THREADS << id;
+        return mxs_json_resource(m_zHost, self.str().c_str(), m_data[id]);
+    }
+
+private:
+    vector<json_t*> m_data;
+    const char*     m_zHost;
+};
+
+}
+
+json_t* mxs_rworker_to_json(const char* zHost, int id)
+{
+    Worker* target = RoutingWorker::get(id);
+    WorkerInfoTask task(zHost, id + 1);
+    mxs::Semaphore sem;
+
+    target->post(&task, &sem);
+    sem.wait();
+
+    return task.resource(id);
+}
+
+json_t* mxs_rworker_list_to_json(const char* host)
+{
+    WorkerInfoTask task(host, config_threadcount());
+    RoutingWorker::execute_concurrently(task);
+    return task.resource();
 }

@@ -15,6 +15,7 @@
 #include <maxscale/worker.hh>
 #include "../internal/poll.h"
 
+using namespace maxscale;
 using namespace std;
 
 namespace
@@ -30,44 +31,14 @@ int64_t get_monotonic_time_ms()
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-class TestWorker : public maxscale::Worker
-{
-    TestWorker(const TestWorker&);
-    TestWorker& operator = (const TestWorker&);
-
-public:
-    TestWorker()
-    {
-    }
-
-    ~TestWorker()
-    {
-    }
-
-private:
-    // TODO: Perhaps these could have default implementations, so that
-    // TODO: Worker could be used as such.
-    bool pre_run() // override
-    {
-        return true;
-    }
-
-    void post_run() // override
-    {
-    }
-
-    void epoll_tick() // override
-    {
-    }
-};
-
 class TimerTest
 {
 public:
     static int s_ticks;
 
-    TimerTest(int* pRv, int32_t delay)
+    TimerTest(Worker* pWorker, int* pRv, int32_t delay)
         : m_id(s_id++)
+        , m_worker(*pWorker)
         , m_delay(delay)
         , m_at(get_monotonic_time_ms() + delay)
         , m_rv(*pRv)
@@ -100,7 +71,7 @@ public:
 
             if (--s_ticks < 0)
             {
-                maxscale::Worker::shutdown_all();
+                m_worker.shutdown();
             }
 
             rv = true;
@@ -113,6 +84,7 @@ private:
     static int s_id;
 
     int     m_id;
+    Worker& m_worker;
     int32_t m_delay;
     int64_t m_at;
     int&    m_rv;
@@ -127,13 +99,13 @@ int run()
 
     TimerTest::s_ticks = 100;
 
-    TestWorker w;
+    Worker w;
 
-    TimerTest t1(&rv, 200);
-    TimerTest t2(&rv, 300);
-    TimerTest t3(&rv, 400);
-    TimerTest t4(&rv, 500);
-    TimerTest t5(&rv, 600);
+    TimerTest t1(&w, &rv, 200);
+    TimerTest t2(&w, &rv, 300);
+    TimerTest t3(&w, &rv, 400);
+    TimerTest t4(&w, &rv, 500);
+    TimerTest t5(&w, &rv, 600);
 
     w.delayed_call(t1.delay(), &TimerTest::tick, &t1);
     w.delayed_call(t2.delay(), &TimerTest::tick, &t2);

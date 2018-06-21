@@ -193,9 +193,9 @@ public:
 private:
     MessageQueue(Handler* pHandler, int read_fd, int write_fd);
 
-    uint32_t handle_poll_events(int thread_id, uint32_t events);
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
 
-    static uint32_t poll_handler(MXS_POLL_DATA* pData, int thread_id, uint32_t events);
+    static uint32_t poll_handler(MXS_POLL_DATA* pData, void* worker, uint32_t events);
 
 private:
     Handler& m_handler;
