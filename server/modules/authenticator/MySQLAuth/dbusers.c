@@ -802,17 +802,18 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     {
         static bool log_missing_privs = true;
 
-        if (mxs_mysql_query(conn, "SELECT 1 FROM mysql.roles_mapping LIMIT 1") == 0)
+        if (mxs_mysql_query(conn, "SET @roles_are_available=(SELECT 1 FROM mysql.roles_mapping LIMIT 1)") == 0 &&
+            mxs_mysql_query(conn, "SET @roles_are_available=(SELECT default_role FROM mysql.user LIMIT 1)") == 0)
         {
-            mysql_free_result(mysql_store_result(conn));
             rval = true;
         }
         else if (log_missing_privs)
         {
             log_missing_privs = false;
-            MXS_WARNING("The user for service '%s' is missing the SELECT grant on "
-                        "`mysql.roles_mapping`. Use of default roles is disabled "
-                        "until the missing privileges are added.", service->name);
+            MXS_WARNING("The user for service '%s' might be missing the SELECT grant on "
+                        "`mysql.roles_mapping` or `mysql.user`. Use of default roles is disabled "
+                        "until the missing privileges are added. Error was: %s",
+                        service->name, mysql_error(conn));
         }
     }
 
