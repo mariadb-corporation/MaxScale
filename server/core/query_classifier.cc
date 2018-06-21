@@ -604,6 +604,14 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
         }
         break;
 
+    case QUERY_TYPE_DEALLOC_PREPARE:
+        {
+            static const char name[] = "QUERY_TYPE_DEALLOC_PREPARE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+        }
+        break;
+
     default:
         {
             static const char name[] = "UNKNOWN_QUERY_TYPE";
@@ -650,6 +658,7 @@ static const qc_query_type_t QUERY_TYPES[] =
     QUERY_TYPE_READ_TMP_TABLE,
     QUERY_TYPE_SHOW_DATABASES,
     QUERY_TYPE_SHOW_TABLES,
+    QUERY_TYPE_DEALLOC_PREPARE,
 };
 
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);

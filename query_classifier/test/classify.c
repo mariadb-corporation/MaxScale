@@ -140,6 +140,10 @@ char* get_types_as_string(uint32_t types)
     {
         s = append(s, "QUERY_TYPE_SHOW_TABLES", &len);
     }
+    if (types & QUERY_TYPE_DEALLOC_PREPARE)
+    {
+        s = append(s, "QUERY_TYPE_DEALLOC_PREPARE", &len);
+    }
 
     if (!s)
     {
