@@ -48,7 +48,7 @@ void tune_rowcount(TestConnections& test)
                        filename.c_str());
         auto end = Clock::now();
         dur = duration_cast<milliseconds>(end - start);
-        test.try_query(test.maxscales->conn_rwsplit[0], "TRUNCATE TABLE test.t1", filename.c_str());
+        test.try_query(test.maxscales->conn_rwsplit[0], "TRUNCATE TABLE test.t1");
 
         remove(filename.c_str());
 

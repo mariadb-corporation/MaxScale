@@ -26,6 +26,8 @@
 #include <string>
 #include <vector>
 
+#include <maxbase/ccdefs.hh>
+
 typedef std::vector<std::string> Row;
 typedef std::vector<Row> Result;
 
@@ -119,7 +121,7 @@ static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::s
  * @param ...       Parameters for @c format
  * @return 0 in case of success
  */
-int execute_query(MYSQL* conn, const char* format, ...);
+int execute_query(MYSQL* conn, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
 /**
  * @brief execute_query_from_file Read a line from a file, trim leading and trailing whitespace and execute it.

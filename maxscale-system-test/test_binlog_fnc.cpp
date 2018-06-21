@@ -26,7 +26,7 @@ int check_sha1(TestConnections* Test)
         Test->set_timeout(50);
         Test->tprintf("ls before FLUSH LOGS");
         Test->tprintf("Maxscale");
-        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir[0]);
         Test->tprintf("Master");
         Test->set_timeout(50);
         Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
@@ -40,7 +40,7 @@ int check_sha1(TestConnections* Test)
         Test->tprintf("ls after first FLUSH LOGS");
         Test->tprintf("Maxscale");
         Test->set_timeout(50);
-        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir[0]);
 
         Test->tprintf("Master");
         Test->set_timeout(50);
@@ -57,7 +57,7 @@ int check_sha1(TestConnections* Test)
         Test->tprintf("ls before FLUSH LOGS");
         Test->tprintf("Maxscale");
 
-        Test->maxscales->ssh_node_f(0, true,  "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+        Test->maxscales->ssh_node_f(0, true,  "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir[0]);
 
         Test->tprintf("Master");
         Test->set_timeout(50);
@@ -69,7 +69,7 @@ int check_sha1(TestConnections* Test)
             Test->tprintf("FILE: 000000%d", i);
             Test->set_timeout(50);
             s_maxscale = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "sha1sum %s/mar-bin.00000%d",
-                                                            Test->maxscales->maxscale_binlog_dir, i);
+                                                            Test->maxscales->maxscale_binlog_dir[0], i);
             if (s_maxscale != NULL)
             {
                 x = strchr(s_maxscale, ' ');

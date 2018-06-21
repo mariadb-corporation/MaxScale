@@ -12,6 +12,8 @@
 #include <vector>
 #include <thread>
 
+#include <maxbase/ccdefs.hh>
+
 typedef std::set<std::string> StringSet;
 
 /**
@@ -456,7 +458,7 @@ public:
      * @param sql SQL string
      * @return 0 if ok
      */
-    int try_query(MYSQL *conn, const char *sql, ...);
+    int try_query(MYSQL *conn, const char *sql, ...) mxb_attribute((format(printf, 3, 4)));
 
     /**
      * @brief try_query_all Executes SQL query on all MaxScale connections

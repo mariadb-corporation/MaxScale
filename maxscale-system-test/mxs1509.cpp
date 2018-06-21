@@ -22,7 +22,7 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   "SET GLOBAL gtid_slave_pos='0-1-0';"
                   "CHANGE MASTER %s TO master_host='%s', master_port=3306, master_user='%s', master_password='%s', master_use_gtid=slave_pos;"
                   "START ALL SLAVES",
-                  source.c_str(), test.repl->IP[master], test.repl->user_name, test.repl->password, source.c_str());
+                  source.c_str(), test.repl->IP[master], test.repl->user_name, test.repl->password);
 }
 
 void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)

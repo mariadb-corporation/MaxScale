@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
                        "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5", true);
 
     Test->maxscales->ssh_node_f(0, true, (char *)
-                                "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5", true);
+                                "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5");
 
     Test->tprintf("Configuring Kerberos server\n");
     Test->maxscales->ssh_node(0, (char *)

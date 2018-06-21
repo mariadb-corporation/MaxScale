@@ -23,7 +23,7 @@ void client_thr(TestConnections* test, int id)
         test->try_query(conn, "INSERT INTO test.t1 (a) VALUES (%d)", id);
         int last_id = mysql_insert_id(conn);
         test->try_query(conn, "UPDATE test.t1 SET a = -1 WHERE id = %d", last_id);
-        test->try_query(conn, "COMMIT", id);
+        test->try_query(conn, "COMMIT");
         test->try_query(conn, "DELETE FROM test.t1 WHERE id = %d", last_id);
         sleep(1);
     }

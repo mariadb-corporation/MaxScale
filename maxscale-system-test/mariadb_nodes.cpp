@@ -1231,7 +1231,7 @@ int Mariadb_nodes::disable_ssl()
     local_result += connect();
     sprintf(str, "DROP USER %s;  grant all privileges on *.*  to '%s'@'%%' identified by '%s';", user_name,
             user_name, password);
-    local_result += execute_query(nodes[0], (char *) "");
+    local_result += execute_query(nodes[0], "%s", "");
     close_connections();
 
     for (int i = 0; i < N; i++)
@@ -1363,7 +1363,7 @@ void Mariadb_nodes::disable_server_setting(int node, const char* setting)
 
 void Mariadb_nodes::add_server_setting(int node, const char* setting)
 {
-    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server*.cnf", setting);
+    ssh_node_f(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server*.cnf");
     ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server*.cnf", setting);
 }
 

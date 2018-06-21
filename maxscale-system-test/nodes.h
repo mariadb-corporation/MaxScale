@@ -7,6 +7,8 @@
 #include <set>
 #include <string>
 
+#include <maxbase/ccdefs.hh>
+
 typedef std::set<std::string> StringSet;
 
 
@@ -112,7 +114,7 @@ public:
      * @param pointer to variable to store process exit code
      * @return output of the command
      */
-    char *ssh_node_output_f(int node, bool sudo, int * exit_code, const char* format, ...);
+    char *ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...) mxb_attribute((format(printf, 5, 6)));
     char *ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code);
 
     /**
@@ -123,7 +125,7 @@ public:
      * @return exit code of the coomand
      */
     int ssh_node(int node, const char *ssh, bool sudo);
-    int ssh_node_f(int node, bool sudo, const char* format, ...);
+    int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
 
     /**
      * @brief Copy a local file to the Node i machine
