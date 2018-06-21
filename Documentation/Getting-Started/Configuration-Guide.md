@@ -82,6 +82,14 @@ The values of the parameter that are not on the first line need to have at least
 one whitespace character before them in order for them to be recognized as a
 part of the multi-line parameter.
 
+Comments are defined by prefixing a row with a hash (`#`). Trailing comments are
+not supported.
+
+```
+# This is a comment before a parameter
+some_parameter=123
+```
+
 ### Special Parameter Types
 
 #### Sizes
