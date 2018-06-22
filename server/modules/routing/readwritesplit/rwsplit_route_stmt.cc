@@ -893,8 +893,10 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
                 m_current_master->close();
             }
         }
-        else if (!can_retry_query())
+        else if (!m_config.delayed_retry ||
+                 m_retry_duration >= m_config.delayed_retry_timeout)
         {
+            // Cannot retry the query, log a message that routing has failed
             log_master_routing_failure(succp, m_current_master, target);
         }
     }
