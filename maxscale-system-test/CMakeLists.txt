@@ -712,9 +712,6 @@ add_test_executable(mxs1808_long_data.cpp mxs1808_long_data replication LABELS r
 # https://jira.mariadb.org/browse/MXS-1824
 add_test_executable(mxs1824_double_cursor.cpp mxs1824_double_cursor replication LABELS readwritesplit REPL_BACKEND)
 
-# TODO: Remove this once the problem with the connector is resolved
-set_tests_properties(mxs1824_double_cursor PROPERTIES WILL_FAIL TRUE)
-
 # MXS-1828: Multiple LOAD DATA LOCAL INFILE commands in one query cause a hang
 # https://jira.mariadb.org/browse/MXS-1828
 add_test_executable(mxs1828_double_local_infile.cpp mxs1828_double_local_infile replication LABELS readwritesplit REPL_BACKEND)
@@ -1008,6 +1005,10 @@ add_test_executable(mxs1889.cpp mxs1889 mxs1889 LABELS REPL_BACKEND)
 
 # MXS-421 Improved log facility
 add_test_executable(mxs421_events.cpp mxs421_events mxs421_events LABELS REPL_BACKEND)
+
+# MXS-1926: LOAD DATA LOCAL INFILE interrupted by server shutdown
+# https://jira.mariadb.org/browse/MXS-1926
+add_test_executable(mxs1926_killed_server.cpp mxs1926_killed_server mxs1926_killed_server LABELS readwritesplit REPL_BACKEND)
 
 # MXS-1932: Hidden files are not ignored
 # https://jira.mariadb.org/browse/MXS-1932

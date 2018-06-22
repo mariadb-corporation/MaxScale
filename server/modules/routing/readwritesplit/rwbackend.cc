@@ -95,7 +95,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
         }
     }
 
-    return mxs::Backend::write(buffer);
+    return mxs::Backend::write(buffer, type);
 }
 
 void RWBackend::close(close_type type)
