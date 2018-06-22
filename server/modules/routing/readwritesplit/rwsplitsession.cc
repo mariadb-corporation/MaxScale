@@ -481,21 +481,35 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     if (m_config.transaction_replay && m_can_replay_trx &&
         session_trx_is_active(m_client->session))
     {
-        size_t size{m_trx.size() + m_current_query.length()};
-        // A transaction is open and it is eligible for replaying
-        if (size < m_config.trx_max_size)
+        if (!backend->has_session_commands())
         {
-            /** Transaction size is OK, store the statement for replaying and
-             * update the checksum of the result */
-            m_trx.add_stmt(m_current_query.release());
-            m_trx.add_result(writebuf);
-        }
-        else
-        {
-            MXS_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
-            m_current_query.reset();
-            m_trx.close();
-            m_can_replay_trx = false;
+            /**
+             * Session commands are tracked separately from the transaction.
+             * We must not put any response to a session command into
+             * the transaction as they are tracked separately.
+             *
+             * TODO: It might be wise to include the session commands to guarantee
+             * that the session state during the transaction replay remains
+             * consistent if the state change in the middle of the transaction
+             * is intentional.
+             */
+
+            size_t size{m_trx.size() + m_current_query.length()};
+            // A transaction is open and it is eligible for replaying
+            if (size < m_config.trx_max_size)
+            {
+                /** Transaction size is OK, store the statement for replaying and
+                 * update the checksum of the result */
+                m_trx.add_stmt(m_current_query.release());
+                m_trx.add_result(writebuf);
+            }
+            else
+            {
+                MXS_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
+                m_current_query.reset();
+                m_trx.close();
+                m_can_replay_trx = false;
+            }
         }
     }
     else
@@ -531,7 +545,13 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
                  m_expected_responses, backend->name());
     }
 
-    if (m_is_replay_active)
+    if (backend->has_session_commands())
+    {
+        /** Process the reply to an executed session command. This function can
+         * close the backend if it's a slave. */
+        process_sescmd_response(backend, &writebuf);
+    }
+    else if (m_is_replay_active)
     {
         ss_dassert(m_config.transaction_replay);
         handle_trx_replay();
@@ -559,13 +579,6 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     {
         m_trx.close();
         m_can_replay_trx = true;
-    }
-
-    if (backend->has_session_commands())
-    {
-        /** Process the reply to an executed session command. This function can
-         * close the backend if it's a slave. */
-        process_sescmd_response(backend, &writebuf);
     }
 
     if (backend->in_use() && backend->has_session_commands())

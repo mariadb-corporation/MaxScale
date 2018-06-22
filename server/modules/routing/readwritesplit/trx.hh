@@ -18,6 +18,7 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/modutil.hh>
 
 // A transaction
 class Trx
@@ -38,6 +39,13 @@ public:
      */
     void add_stmt(GWBUF* buf)
     {
+        ss_info_dassert(buf, "Trx::add_stmt: Buffer must not be empty");
+
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            MXS_INFO("Adding to trx: %s", mxs::extract_sql(buf, 512).c_str());
+        }
+
         m_size += gwbuf_length(buf);
         m_log.emplace_back(buf);
     }
@@ -123,6 +131,7 @@ public:
      */
     void close()
     {
+        MXS_INFO("Transaction is complete");
         m_checksum.reset();
         m_log.clear();
         m_size = 0;
