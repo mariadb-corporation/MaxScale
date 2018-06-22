@@ -29,10 +29,12 @@ int main(int argc, char** argv)
         test.assert(!query(q), "Query should not work: %s", q.c_str());
     };
 
-    auto check = [&](string q)
+    auto check = [&](string q, string res)
     {
         Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
-        test.assert(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
+        test.assert(!row.empty() && row[0] == res, "Query '%s' should return 1: %s (%s)",
+                    q.c_str(), row.empty() ? "<empty>": row[0].c_str(),
+                    mysql_error(test.maxscales->conn_rwsplit[0]));
     };
 
     struct TrxTest
@@ -66,7 +68,7 @@ int main(int argc, char** argv)
                 bind(ok, "COMMIT"),
             },
             {
-                bind(check, "SELECT COUNT(*) = 2 FROM test.t1 WHERE id IN (1, 2)"),
+                bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id IN (1, 2)", "2"),
             }
         },
         {
@@ -171,6 +173,26 @@ int main(int argc, char** argv)
                 bind(ok, "COMMIT"),
             }
         },
+        {
+            "Session command inside transaction",
+            {
+                bind(ok, "BEGIN"),
+                bind(ok, "SET @a = 1"),
+            },
+            {
+                bind(check, "SELECT @a", "1"),
+                bind(ok, "COMMIT"),
+            },
+        },
+        {
+            "Empty transaction",
+            {
+                bind(ok, "BEGIN"),
+            },
+            {
+                bind(ok, "COMMIT"),
+            },
+        },
     };
 
     // Create a table for testing
@@ -182,7 +204,7 @@ int main(int argc, char** argv)
 
     for (auto& a : tests)
     {
-        cout << i++ << ": " << a.description << endl;
+        test.tprintf("%d: %s", i++, a.description.c_str());
 
         test.maxscales->connect();
         for (auto& f : a.pre)
@@ -192,9 +214,9 @@ int main(int argc, char** argv)
 
         // Block and unblock the master
         test.repl->block_node(0);
-        sleep(8);
+        test.maxscales->wait_for_monitor();
         test.repl->unblock_node(0);
-        sleep(8);
+        test.maxscales->wait_for_monitor();
 
         for (auto& f : a.post)
         {
