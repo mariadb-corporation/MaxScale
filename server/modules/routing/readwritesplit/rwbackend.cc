@@ -10,7 +10,7 @@ namespace maxscale
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
-    m_modutil_state({}),
+    m_modutil_state{0},
     m_command(0),
     m_opening_cursor(false),
     m_expected_rows(0),
@@ -145,7 +145,7 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         set_reply_state(REPLY_STATE_DONE);
     }
     else if (get_reply_state() == REPLY_STATE_START &&
-        (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
+             (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
         m_local_infile_requested = false;
 

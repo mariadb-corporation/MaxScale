@@ -43,7 +43,7 @@ typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
  * The client session of a RWSplit instance
  */
 class RWSplitSession: public mxs::RouterSession,
-                      private mxs::QueryClassifier::Handler
+    private mxs::QueryClassifier::Handler
 {
     RWSplitSession(const RWSplitSession&) = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;

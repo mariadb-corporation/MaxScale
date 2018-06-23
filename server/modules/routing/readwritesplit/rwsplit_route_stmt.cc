@@ -427,7 +427,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
             else
             {
                 MXS_ERROR("Failed to execute session command in %s (%s)",
-                          backend->name(),backend->uri());
+                          backend->name(), backend->uri());
             }
         }
     }
