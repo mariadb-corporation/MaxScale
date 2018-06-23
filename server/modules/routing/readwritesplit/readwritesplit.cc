@@ -370,6 +370,10 @@ void RWSplit::diagnostics(DCB *dcb)
                stats().n_slave, slave_pct);
     dcb_printf(dcb, "\tNumber of queries forwarded to all:     %" PRIu64 " (%.2f%%)\n",
                stats().n_all, all_pct);
+    dcb_printf(dcb, "\tNumber of read-write transactions:        %" PRIu64 "\n",
+               stats().n_rw_trx);
+    dcb_printf(dcb, "\tNumber of read-only transactions:        %" PRIu64 "\n",
+               stats().n_ro_trx);
     dcb_printf(dcb, "\tNumber of replayed transactions:        %" PRIu64 "\n",
                stats().n_trx_replay);
 
@@ -401,6 +405,8 @@ json_t* RWSplit::diagnostics_json() const
     json_object_set_new(rval, "route_master", json_integer(stats().n_master));
     json_object_set_new(rval, "route_slave", json_integer(stats().n_slave));
     json_object_set_new(rval, "route_all", json_integer(stats().n_all));
+    json_object_set_new(rval, "rw_transactions", json_integer(stats().n_rw_trx));
+    json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
 
     const char *weightby = serviceGetWeightingParameter(service());

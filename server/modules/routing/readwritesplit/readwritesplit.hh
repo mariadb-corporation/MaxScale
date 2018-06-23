@@ -203,24 +203,14 @@ struct Config
  */
 struct Stats
 {
-public:
-
-    Stats():
-        n_sessions(0),
-        n_queries(0),
-        n_master(0),
-        n_slave(0),
-        n_all(0),
-        n_trx_replay(0)
-    {
-    }
-
-    uint64_t n_sessions;        /**< Number sessions created */
-    uint64_t n_queries;         /**< Number of queries forwarded */
-    uint64_t n_master;          /**< Number of stmts sent to master */
-    uint64_t n_slave;           /**< Number of stmts sent to slave */
-    uint64_t n_all;             /**< Number of stmts sent to all */
-    uint64_t n_trx_replay;      /**< Number of replayed transactions */
+    uint64_t n_sessions = 0;        /**< Number sessions created */
+    uint64_t n_queries = 0;         /**< Number of queries forwarded */
+    uint64_t n_master = 0;          /**< Number of stmts sent to master */
+    uint64_t n_slave = 0;           /**< Number of stmts sent to slave */
+    uint64_t n_all = 0;             /**< Number of stmts sent to all */
+    uint64_t n_trx_replay = 0;      /**< Number of replayed transactions */
+    uint64_t n_ro_trx = 0;          /**< Read-only transaction count */
+    uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
 };
 
 class RWSplitSession;
