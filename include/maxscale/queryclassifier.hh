@@ -209,6 +209,16 @@ public:
     }
 
     /**
+     * Check if current transaction is still a read-only transaction
+     *
+     * @return True if no statements have been executed that modify data
+     */
+    bool is_trx_still_read_only() const
+    {
+        return m_trx_is_read_only;
+    }
+
+    /**
      * @brief Store and process a prepared statement
      *
      * @param buffer Buffer containing either a text or a binary protocol
@@ -313,6 +323,15 @@ private:
      */
     uint32_t ps_id_internal_get(GWBUF* pBuffer);
 
+    /**
+     * Check if the query type is that of a read-only query
+     *
+     * @param qtype Query type mask
+     *
+     * @return True if the query type is that of a read-only query
+     */
+    bool query_type_is_read_only(uint32_t qtype) const;
+
     uint32_t get_route_target(uint8_t command, uint32_t qtype, HINT* pHints);
 
     MXS_SESSION* session() const
@@ -361,6 +380,7 @@ private:
     SPSManager        m_sPs_manager;
     HandleMap         m_ps_handles;               /** External ID to internal ID */
     RouteInfo         m_route_info;
+    bool              m_trx_is_read_only;
 };
 
 }

@@ -346,6 +346,7 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     , m_large_query(false)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager)
+    , m_trx_is_read_only(true)
 {
 }
 
@@ -367,6 +368,34 @@ uint32_t QueryClassifier::ps_get_type(std::string id) const
 void QueryClassifier::ps_erase(GWBUF* buffer)
 {
     return m_sPs_manager->erase(buffer);
+}
+
+bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
+{
+    bool rval = false;
+
+    if (!qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
+        !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
+        (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+         qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) ||
+         qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+         qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+         qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))
+    {
+        if (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ))
+        {
+            if (m_use_sql_variables_in == TYPE_ALL)
+            {
+                rval = true;
+            }
+        }
+        else
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT* pHints)
@@ -430,35 +459,9 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
     /**
      * Hints may affect on routing of the following queries
      */
-    else if (!trx_active && !load_active &&
-             !qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
-             !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
-             (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) ||
-              qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-              qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))
+    else if (!trx_active && !load_active && query_type_is_read_only(qtype))
     {
-        if (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ))
-        {
-            if (m_use_sql_variables_in == TYPE_ALL)
-            {
-                target = TARGET_SLAVE;
-            }
-        }
-        else if (qc_query_is_type(qtype, QUERY_TYPE_READ) || // Normal read
-                 qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || // SHOW TABLES
-                 qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) || // System variable
-                 qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)) // Global system variable
-        {
-            target = TARGET_SLAVE;
-        }
-
-        /** If nothing matches then choose the master */
-        if ((target & (TARGET_ALL | TARGET_SLAVE | TARGET_MASTER)) == 0)
-        {
-            target = TARGET_MASTER;
-        }
+        target = TARGET_SLAVE;
     }
     else if (session_trx_is_read_only(m_pSession))
     {
@@ -928,6 +931,19 @@ QueryClassifier::update_route_info(QueryClassifier::current_target_t current_tar
             }
 
             route_target = get_route_target(command, type_mask, pBuffer->hint);
+        }
+
+        if (session_trx_is_ending(m_pSession) ||
+            qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+        {
+            // Transaction is ending or starting
+            m_trx_is_read_only = true;
+        }
+        else if (session_trx_is_active(m_pSession) &&
+                 !query_type_is_read_only(type_mask))
+        {
+            // Transaction is no longer read-only
+            m_trx_is_read_only = false;
         }
     }
     else if (load_data_state() == QueryClassifier::LOAD_DATA_ACTIVE)
