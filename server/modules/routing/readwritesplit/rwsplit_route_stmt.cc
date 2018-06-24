@@ -1054,16 +1054,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
 
         m_qc.set_large_query(large_query);
 
-        if (large_query)
-        {
-            /** Store the previous target as we're processing a multi-packet query */
-            m_prev_target = target;
-        }
-        else
-        {
-            /** Otherwise reset it so we know the query is complete */
-            m_prev_target.reset();
-        }
+        // Store the current target
+        m_prev_target = target;
 
         /**
          * If a READ ONLY transaction is ending set forced_node to NULL

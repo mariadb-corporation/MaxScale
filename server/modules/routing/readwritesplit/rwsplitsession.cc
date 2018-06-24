@@ -514,6 +514,9 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else
     {
+        /** Normal response, reset the currently active query. This is done before
+         * the whole response is complete to prevent it from being retried
+         * in case the connection breaks in the middle of a resultset. */
         m_current_query.reset();
     }
 
