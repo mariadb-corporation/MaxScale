@@ -204,6 +204,9 @@ private:
 
     void handle_trx_replay();
 
+    // Do we have at least one open slave connection
+    bool have_connected_slaves() const;
+
     /**
      * Start the replaying of the latest transaction
      *
