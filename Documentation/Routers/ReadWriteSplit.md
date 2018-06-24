@@ -391,6 +391,29 @@ that exceeds this limit will not be replayed. The default size limit is 1
 MiB. Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
 
+### `optimistic_trx`
+
+Enable optimistic transaction execution. This parameter controls whether normal
+transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
+slaves. This feature is disabled by default and enabling it implicitly enables
+`transaction_replay`, `delayed_retry` and `master_reconnection` parameters.
+
+When this mode is enabled, all transactions are first attempted on slave
+servers. If the transaction contains no statements that modify data, it is
+completed on the slave. If the transaction contains statements that modify data,
+it is rolled back on the slave server and restarted on the master. The rollback
+is initiated the moment a data modifying statement is intercepted by
+readwritesplit so only read-only statements are executed on slave servers.
+
+As with `transaction_replay` and transactions that are replayed, if the results
+returned by the master server are not identical to the ones returned by the
+slave up to the point where the first data modifying statement was executed, the
+connection is closed. If the execution of ROLLBACK statement on the slave fails,
+the connection to that slave is closed.
+
+All limitations that apply to `transaction_replay` also apply to
+`optimistic_trx`.
+
 ### `causal_reads`
 
 Enable causal reads. This parameter is disabled by default and was introduced in
