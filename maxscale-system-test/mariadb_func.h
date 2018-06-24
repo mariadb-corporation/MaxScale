@@ -290,6 +290,11 @@ public:
         return !row.empty() && row[0] == res;
     }
 
+    Row row(std::string q)
+    {
+        return get_row(m_conn, q);
+    }
+
     const char* error() const
     {
         return mysql_error(m_conn);

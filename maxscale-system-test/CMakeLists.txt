@@ -630,6 +630,10 @@ add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS mysqlmon REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1516
 add_test_executable(mxs1516.cpp mxs1516 replication LABELS readconnroute REPL_BACKEND)
 
+# MXS-1549: Optimistic transaction tests
+# https://jira.mariadb.org/browse/MXS-1549
+add_test_executable(mxs1549_optimistic_trx.cpp mxs1549_optimistic_trx mxs1549_optimistic_trx LABELS readwritesplit REPL_BACKEND)
+
  # MXS-1542: Check that UTF16 strings work
  # https://jira.mariadb.org/browse/MXS-1542
 add_test_executable(mxs1542.cpp mxs1542 avro LABELS avrorouter REPL_BACKEND)
