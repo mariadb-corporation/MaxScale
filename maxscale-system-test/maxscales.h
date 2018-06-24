@@ -157,6 +157,14 @@ public:
     }
 
     /**
+     * Get a readwritesplit Connection
+     */
+    Connection rwsplit(int m = 0)
+    {
+        return Connection(IP[m], rwsplit_port[m], user_name, password, "test", ssl);
+    }
+
+    /**
      * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
@@ -168,6 +176,14 @@ public:
     }
 
     /**
+     * Get a readconnroute master Connection
+     */
+    Connection readconn_master(int m = 0)
+    {
+        return Connection(IP[m], readconn_master_port[m], user_name, password, "test", ssl);
+    }
+
+    /**
      * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return  MYSQL struct
@@ -176,6 +192,14 @@ public:
     {
         return open_conn(readconn_slave_port[m], IP[m], user_name,
                          password, ssl);
+    }
+
+    /**
+     * Get a readconnroute slave Connection
+     */
+    Connection readconn_slave(int m = 0)
+    {
+        return Connection(IP[m], readconn_slave_port[m], user_name, password, "test", ssl);
     }
 
     /**

@@ -232,4 +232,77 @@ Result get_result(MYSQL* conn, std::string sql);
 
 int get_int_version(std::string version);
 
+// Helper class for performing queries
+class Connection
+{
+public:
+    Connection(Connection&) = delete;
+    Connection& operator=(Connection&) = delete;
+
+    Connection(std::string host, int port, std::string user, std::string password, std::string db = "", bool ssl = false):
+        m_host(host),
+        m_port(port),
+        m_user(user),
+        m_pw(password),
+        m_db(db),
+        m_ssl(ssl)
+    {
+    }
+
+    Connection(Connection&& rhs):
+        m_host(rhs.m_host),
+        m_port(rhs.m_port),
+        m_user(rhs.m_user),
+        m_pw(rhs.m_pw),
+        m_db(rhs.m_db),
+        m_ssl(rhs.m_ssl),
+        m_conn(rhs.m_conn)
+    {
+        rhs.m_conn = nullptr;
+    }
+
+    virtual ~Connection()
+    {
+        mysql_close(m_conn);
+    }
+
+    bool connect()
+    {
+        mysql_close(m_conn);
+        m_conn = open_conn_db(m_port, m_host, m_db, m_user, m_pw, m_ssl);
+        return m_conn != nullptr;
+    }
+
+    void disconnect()
+    {
+        mysql_close(m_conn);
+        m_conn = nullptr;
+    }
+
+    bool query(std::string q)
+    {
+        return execute_query_silent(m_conn, q.c_str()) == 0;
+    }
+
+    bool check(std::string q, std::string res)
+    {
+        Row row = get_row(m_conn, q);
+        return !row.empty() && row[0] == res;
+    }
+
+    const char* error() const
+    {
+        return mysql_error(m_conn);
+    }
+
+private:
+    std::string m_host;
+    int         m_port;
+    std::string m_user;
+    std::string m_pw;
+    std::string m_db;
+    bool        m_ssl;
+    MYSQL*      m_conn = nullptr;
+};
+
 #endif // MARIADB_FUNC_H
