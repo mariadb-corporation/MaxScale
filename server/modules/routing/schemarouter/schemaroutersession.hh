@@ -140,19 +140,13 @@ private:
     /** Shard mapping functions */
     bool                 send_databases();
     bool                 send_shards();
+    bool                 send_tables(std::string db);
     void                 query_databases();
     int                  inspect_mapping_states(SSRBackend& bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SSRBackend& bref, GWBUF** buffer);
     void                 route_queued_query();
     void                 synchronize_shards();
     void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
-
-    /** Table mapping functions */
-    void                 query_tables();
-    bool                 send_tables();
-    enum showdb_response parse_table_mapping_response(SSRBackend& bref, GWBUF** buffer);
-
-
 
     /** Member variables */
     bool                   m_closed;         /**< True if session closed */
