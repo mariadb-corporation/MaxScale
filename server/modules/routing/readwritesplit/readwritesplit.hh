@@ -164,7 +164,8 @@ struct Config
         delayed_retry(config_get_bool(params, "delayed_retry")),
         delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout")),
         transaction_replay(config_get_bool(params, "transaction_replay")),
-        trx_max_size(config_get_size(params, "transaction_replay_max_size"))
+        trx_max_size(config_get_size(params, "transaction_replay_max_size")),
+        optimistic_trx(config_get_bool(params, "optimistic_trx"))
     {
         if (causal_reads)
         {
@@ -196,6 +197,7 @@ struct Config
     uint64_t          delayed_retry_timeout;     /**< How long to delay until an error is returned */
     bool              transaction_replay;        /**< Replay failed transactions */
     size_t            trx_max_size;              /**< Max transaction size for replaying */
+    bool              optimistic_trx;            /**< Enable optimistic transactions */
 };
 
 /**

@@ -290,6 +290,12 @@ RWSplit* RWSplit::create(SERVICE *service, char **options)
         config.max_sescmd_history = 0;
     }
 
+    if (config.optimistic_trx)
+    {
+        // Optimistic transaction routing requires transaction replay
+        config.transaction_replay = true;
+    }
+
     if (config.transaction_replay)
     {
         /**
@@ -482,6 +488,7 @@ extern "C" MXS_MODULE *MXS_CREATE_MODULE()
             {"delayed_retry_timeout", MXS_MODULE_PARAM_COUNT, "10"},
             {"transaction_replay", MXS_MODULE_PARAM_BOOL, "false"},
             {"transaction_replay_max_size", MXS_MODULE_PARAM_COUNT, "1Mi"},
+            {"optimistic_trx", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
