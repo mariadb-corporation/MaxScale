@@ -151,6 +151,44 @@ void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
 
 }
 
+bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
+{
+    return m_config.optimistic_trx &&       // Optimistic transactions are enabled
+           !is_locked_to_master() &&        // Not locked to master
+           !m_is_replay_active &&           // Not replaying a transaction
+           m_otrx_state == OTRX_INACTIVE && // Not yet in optimistic mode
+           TARGET_IS_MASTER(route_target);  // The target type is master
+}
+
+bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
+{
+    bool store_stmt = true;
+
+    if (session_trx_is_ending(m_client->session))
+    {
+        m_otrx_state = OTRX_INACTIVE;
+    }
+    else if (!m_qc.is_trx_still_read_only())
+    {
+        // Not a plain SELECT, roll it back on the slave and start it on the master
+        MXS_INFO("Rolling back current optimistic transaction");
+
+        // Note: This clone is here because routeQuery will always free the buffer
+        m_current_query.reset(gwbuf_clone(*buffer));
+
+        /**
+         * Store the actual statement we were attempting to execute and
+         * replace it with a ROLLBACK. The storing of the statement is
+         * done here to avoid storage of the ROLLBACK.
+         */
+        *buffer = modutil_create_query("ROLLBACK");
+        store_stmt = false;
+        m_otrx_state = OTRX_ROLLBACK;
+    }
+
+    return store_stmt;
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -161,8 +199,9 @@ void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
  */
 bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
 {
+    ss_info_dassert(m_otrx_state != OTRX_ROLLBACK,
+                    "OTRX_ROLLBACK should never happen when routing queries");
     bool succp = false;
-
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     uint32_t stmt_id = info.stmt_id();
     uint8_t command = info.command();
@@ -192,6 +231,20 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
                               &m_router->stats().n_rw_trx, 1);
         }
 
+        if (m_qc.is_trx_starting() && // A transaction is starting
+            !session_trx_is_read_only(m_client->session) && // Not explicitly read-only
+            should_try_trx_on_slave(route_target)) // Qualifies for speculative routing
+        {
+            // Speculatively start routing the transaction to a slave
+            m_otrx_state = OTRX_STARTING;
+            route_target = TARGET_SLAVE;
+        }
+        else if (m_otrx_state == OTRX_STARTING)
+        {
+            // Transaction was started, begin active tracking of its progress
+            m_otrx_state = OTRX_ACTIVE;
+        }
+
         // If delayed query retry is enabled, we need to store the current statement
         bool store_stmt = m_config.delayed_retry;
 
@@ -200,6 +253,15 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
             /** We're processing a large query that's split across multiple packets.
              * Route it to the same backend where we routed the previous packet. */
             ss_dassert(m_prev_target);
+            target = m_prev_target;
+            succp = true;
+        }
+        else if (m_otrx_state == OTRX_ACTIVE)
+        {
+            /** We are speculatively executing a transaction to the slave, keep
+             * routing queries to the same server. If the query modifies data,
+             * a rollback is initiated on the slave server. */
+            store_stmt = track_optimistic_trx(&querybuf);
             target = m_prev_target;
             succp = true;
         }

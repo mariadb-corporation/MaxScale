@@ -59,6 +59,14 @@ public:
         TARGET_RLAG_MAX     = maxscale::QueryClassifier::TARGET_RLAG_MAX,
     };
 
+    enum otrx_state
+    {
+        OTRX_INACTIVE, // No open transactions
+        OTRX_STARTING, // Transaction starting on slave
+        OTRX_ACTIVE,   // Transaction open on a slave server
+        OTRX_ROLLBACK  // Transaction being rolled back on the slave server
+    };
+
     enum wait_gtid_state
     {
         NONE,
@@ -149,6 +157,7 @@ public:
     bool                    m_can_replay_trx; /**< Whether the transaction can be replayed */
     Trx                     m_replayed_trx; /**< The transaction we are replaying */
     mxs::Buffer             m_interrupted_query; /**< Query that was interrupted mid-transaction. */
+    otrx_state              m_otrx_state = OTRX_INACTIVE; /**< Optimistic trx state*/
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session,
@@ -201,6 +210,27 @@ private:
      * @return True if the session can continue. False if the session must be closed.
      */
     bool start_trx_replay();
+
+    /**
+     * See if the transaction could be done on a slave
+     *
+     * @param route_target Target where the query is routed
+     *
+     * @return True if the query can be attempted on a slave
+     */
+    bool should_try_trx_on_slave(route_target_t route_target) const;
+
+    /**
+     * Track optimistic transaction status
+     *
+     * Tracks the progress of the optimistic transaction and starts the rollback
+     * procedure if the transaction turns out to be one that modifies data.
+     *
+     * @param buffer     Current query
+     *
+     * @return Whether the current statement should be stored for the duration of the query
+     */
+    bool track_optimistic_trx(GWBUF** buffer);
 
 private:
     // QueryClassifier::Handler

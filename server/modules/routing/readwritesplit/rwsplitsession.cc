@@ -478,8 +478,20 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         return; // Nothing to route, return
     }
 
-    if (m_config.transaction_replay && m_can_replay_trx &&
-        session_trx_is_active(m_client->session))
+    if (m_otrx_state == OTRX_ROLLBACK)
+    {
+        /** This is the response to the ROLLBACK. If it fails, we must close
+         * the connection. The replaying of the transaction can continue
+         * regardless of the ROLLBACK result. */
+        ss_dassert(backend == m_prev_target);
+
+        if (!mxs_mysql_is_ok_packet(writebuf))
+        {
+            poll_fake_hangup_event(backend_dcb);
+        }
+    }
+    else if (m_config.transaction_replay && m_can_replay_trx &&
+             session_trx_is_active(m_client->session))
     {
         if (!backend->has_session_commands())
         {
@@ -540,6 +552,15 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         {
             // Server requested a local file, go into data streaming mode
             m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+        }
+
+        if (m_otrx_state == OTRX_ROLLBACK)
+        {
+            // Transaction rolled back, start replaying it on the master
+            m_otrx_state = OTRX_INACTIVE;
+            start_trx_replay();
+            gwbuf_free(writebuf);
+            return;
         }
     }
     else
@@ -784,6 +805,20 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                     m_target_node.reset();
 
                     // Try to replay the transaction on another node
+                    can_continue = start_trx_replay();
+                    backend->close();
+                }
+                else if (m_otrx_state != OTRX_INACTIVE)
+                {
+                    /**
+                     * The connection was closed mid-transaction or while we were
+                     * executing the ROLLBACK. In both cases the transaction will
+                     * be closed. We can safely start retrying the transaction
+                     * on the master.
+                     */
+
+                    ss_dassert(session_trx_is_active(session));
+                    m_otrx_state = OTRX_INACTIVE;
                     can_continue = start_trx_replay();
                     backend->close();
                 }

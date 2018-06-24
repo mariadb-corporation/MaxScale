@@ -219,6 +219,16 @@ public:
     }
 
     /**
+     * Check if current transaction is still a read-only transaction
+     *
+     * @return True if no statements have been executed that modify data
+     */
+    bool is_trx_starting() const
+    {
+        return qc_query_is_type(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
+    }
+
+    /**
      * @brief Store and process a prepared statement
      *
      * @param buffer Buffer containing either a text or a binary protocol
