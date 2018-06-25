@@ -307,7 +307,6 @@ struct ARRAY_TEST_CASE
 const int n_array_test_cases = sizeof(array_test_cases) / sizeof(array_test_cases[0]);
 
 typedef CacheRules::SCacheRules SCacheRules;
-std::vector<SCacheRules> rules;
 
 struct ShouldStore
 {
@@ -328,6 +327,8 @@ int test_array_store()
 {
     int errors = 0;
 
+    std::vector<SCacheRules> rules;
+
     if (CacheRules::parse(ARRAY_RULES, 0, &rules))
     {
         for (int i = 0; i < n_array_test_cases; ++i)
@@ -338,6 +339,7 @@ int test_array_store()
 
             GWBUF* pStmt = create_gwbuf(tc.zStmt);
             auto it = std::find_if(rules.begin(), rules.end(), ShouldStore(pStmt));
+            gwbuf_free(pStmt);
 
             int index = (it == rules.end()) ? -1 : std::distance(rules.begin(), it);
 
