@@ -703,7 +703,7 @@ Default is `0`.
 
 With this configuration item it is specified in what circumstances MaxScale
 should dump the last statements that a client sent. The allowed values are
-`never, `on_error` and `on_close`. With `never` the statements are never
+`never`, `on_error` and `on_close`. With `never` the statements are never
 logged, with `on_error` they are logged if the client closes the connection
 improperly, and with `on_close` they are always logged when a client session
 is closed.
