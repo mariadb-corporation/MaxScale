@@ -214,6 +214,7 @@ private:
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
 {
     qc_query_op_t op = qc_get_operation(pStatement);
+    gwbuf_free(pStatement);
 
     if (op == QUERY_OP_SELECT)
     {
@@ -223,6 +224,7 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
         ResultSetDCB dcb;
 
         resultset_stream_mysql(pResult_set, &dcb);
+        resultset_free(pResult_set);
 
         enqueue_response(pSession, dcb.create_response());
     }
