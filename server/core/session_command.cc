@@ -77,6 +77,11 @@ std::string SessionCommand::to_string()
     /** TODO: Create C++ versions of modutil functions  */
     GWBUF *buf = m_buffer.release();
 
+    if (!GWBUF_IS_CONTIGUOUS(buf))
+    {
+        buf = gwbuf_make_contiguous(buf);
+    }
+
     if (modutil_extract_SQL(buf, &sql, &sql_len))
     {
         str.append(sql, sql_len);

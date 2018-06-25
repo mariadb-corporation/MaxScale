@@ -8,6 +8,7 @@
 
 int main(int argc, char *argv[])
 {
+    Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
 
     test.tprintf("Blocking master and checking that master failure is delayed at least once.");

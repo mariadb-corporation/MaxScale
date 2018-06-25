@@ -55,14 +55,18 @@ static std::string extract_error(GWBUF* buffer)
  * @param master_cmd Master's reply
  * @param slave_cmd  Slave's reply
  */
-static void discard_if_response_differs(SRWBackend backend, uint8_t master_cmd, uint8_t slave_cmd)
+static void discard_if_response_differs(SRWBackend backend, uint8_t master_response,
+                                        uint8_t slave_response, SSessionCommand sescmd)
 {
-    if (master_cmd != slave_cmd)
+    if (master_response != slave_response)
     {
+        uint8_t cmd = sescmd->get_command();
+        std::string query = sescmd->to_string();
         MXS_WARNING("Slave server '%s': response (0x%02hhx) differs "
-                    "from master's response(0x%02hhx). Closing slave "
-                    "connection due to inconsistent session state.",
-                    backend->name(), slave_cmd, master_cmd);
+                    "from master's response (0x%02hhx) to %s: `%s`. "
+                    "Closing slave connection due to inconsistent session state.",
+                    backend->name(), slave_response, master_response, STRPACKETTYPE(cmd),
+                    query.empty() ? "<no query>" : query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
     }
 }
@@ -77,6 +81,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
             uint8_t cmd;
             gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
             uint8_t command = backend->next_session_command()->get_command();
+            mxs::SSessionCommand sescmd = backend->next_session_command();
             uint64_t id = backend->complete_session_command();
             MXS_PS_RESPONSE resp = {};
             bool discard = true;
@@ -118,7 +123,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
                     for (SlaveResponseList::iterator it = m_slave_responses.begin();
                          it != m_slave_responses.end(); it++)
                     {
-                        discard_if_response_differs(it->first, cmd, it->second);
+                        discard_if_response_differs(it->first, cmd, it->second, sescmd);
                     }
 
                     m_slave_responses.clear();
@@ -132,7 +137,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
             }
             else
             {
-                discard_if_response_differs(backend, m_sescmd_responses[id], cmd);
+                discard_if_response_differs(backend, m_sescmd_responses[id], cmd, sescmd);
             }
 
             if (discard)
