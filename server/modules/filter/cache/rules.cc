@@ -2020,6 +2020,11 @@ static bool cache_rules_create_from_json(json_t* pRoot, uint32_t debug,
                 if (pRules)
                 {
                     ppRules[i] = pRules;
+                    // The array element reference was borrowed, so now that we
+                    // know a rule could be created, we must increase the reference
+                    // count. Otherwise bad things will happen when the reference of
+                    // the root object is decreased.
+                    json_incref(pObject);
                 }
                 else
                 {
@@ -2031,6 +2036,10 @@ static bool cache_rules_create_from_json(json_t* pRoot, uint32_t debug,
             {
                 *pppRules = ppRules;
                 *pnRules = nRules;
+
+                // We only store the objects in the array, so now we must get rid
+                // of the array so that it does not leak.
+                json_decref(pRoot);
 
                 rv = true;
             }
