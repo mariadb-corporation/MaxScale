@@ -96,7 +96,7 @@ bool Backend::execute_session_command()
     case MXS_COM_QUIT:
     case MXS_COM_STMT_CLOSE:
         /** These commands do not generate responses */
-        rval = Backend::write(buffer, NO_RESPONSE);
+        rval = write(buffer, NO_RESPONSE);
         complete_session_command();
         ss_dassert(!is_waiting_result());
         break;
@@ -112,7 +112,7 @@ bool Backend::execute_session_command()
         // TODO: Remove use of GWBUF_TYPE_SESCMD
         //Mark session command buffer, it triggers writing MySQL command to protocol
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
-        rval = Backend::write(buffer);
+        rval = write(buffer, EXPECT_RESPONSE);
         ss_dassert(is_waiting_result());
         break;
     }
