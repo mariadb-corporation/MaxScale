@@ -825,7 +825,7 @@ The default facility is `LOG_USER` and the default level is `LOG_WARNING`.
 
 The available events are:
 
-#### 'authentication_failure'
+##### 'authentication_failure'
 
 This event occurs when there is an authentication failure.
 ```

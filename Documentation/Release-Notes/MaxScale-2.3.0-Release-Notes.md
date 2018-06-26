@@ -51,9 +51,17 @@ API that provides the same information in a more easy to process format.
 ## New Features
 
 ### Runtime Configuration of the Cache
+
 With the variable `@maxscale.cache.enabled` it is now possible for a
 client to specify whether the cache should be used. Please see the
 [Cache](../Filters/Cache.md) documentation for details.
+
+### User Specified Syslog Facility and Level for Authentication Errors
+
+It is now possible for the end user to specify the syslog facility and level
+for authentication errors. Please see
+[the configuration guide](../Getting-Started/Configuration-Guide.md#events)
+for details.
 
 ## Bug fixes
 

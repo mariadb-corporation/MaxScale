@@ -2,6 +2,9 @@
 
 ## MariaDB MaxScale 2.3
 
+* Runtime Configuration of the Cache
+* User Specified Syslog Facility and Level for Authentication Errors
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 2.3.0 Release Notes](Release-Notes/MaxScale-2.3.0-Release-Notes.md)
