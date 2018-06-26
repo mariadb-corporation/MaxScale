@@ -196,6 +196,7 @@ bool Backend::connect(MXS_SESSION* session)
 
 bool Backend::write(GWBUF* buffer, response_type type)
 {
+    ss_dassert(in_use());
     bool rval = m_dcb->func.write(m_dcb, buffer) != 0;
 
     if (rval && type == EXPECT_RESPONSE)
@@ -208,6 +209,7 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
 bool Backend::auth(GWBUF* buffer)
 {
+    ss_dassert(in_use());
     bool rval = false;
 
     if (m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer) == 1)
@@ -232,6 +234,7 @@ void Backend::store_command(GWBUF* buffer)
 
 bool Backend::write_stored_command()
 {
+    ss_dassert(in_use());
     bool rval = false;
 
     if (m_pending_cmd.length())

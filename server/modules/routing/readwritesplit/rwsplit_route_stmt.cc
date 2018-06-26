@@ -999,8 +999,15 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
 
         if (it != rses->exec_map.end())
         {
-            target = it->second;
-            MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+            if (it->second->in_use())
+            {
+                target = it->second;
+                MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+            }
+            else
+            {
+                MXS_INFO("Old target not in use, cannot proceed");
+            }
         }
         else
         {
@@ -1016,6 +1023,7 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
     if (target)
     {
         atomic_add_uint64(&inst->stats().n_slave, 1);
+        ss_dassert(target->in_use());
     }
     else
     {
