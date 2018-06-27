@@ -856,40 +856,26 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
     return RCAP_TYPE_NONE;
 }
 
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
+/*
+ * This routine returns the master server from a MariaDB replication tree. The server must be
+ * running, not in maintenance and have the master bit set. If multiple masters are found,
+ * the one with the highest weight is chosen.
  *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param servers   The list of servers
- * @return      The Master found
+ * @param servers The list of servers
+ * @return The Master server
  *
  */
 
 static SERVER_REF *get_root_master(SERVER_REF *servers)
 {
-    int i = 0;
     SERVER_REF *master_host = NULL;
-
     for (SERVER_REF *ref = servers; ref; ref = ref->next)
     {
         if (ref->active && SERVER_IS_MASTER(ref->server))
         {
-            if (master_host == NULL)
+            // No master found yet or this one has higher weight.
+            if (master_host == NULL || ref->weight > master_host->weight)
             {
-                master_host = ref;
-            }
-            else if (ref->server->depth < master_host->server->depth ||
-                     (ref->server->depth == master_host->server->depth &&
-                      ref->weight > master_host->weight))
-            {
-                /**
-                 * This master has a lower depth than the candidate master or
-                 * the depths are equal but this master has a higher weight
-                 */
                 master_host = ref;
             }
         }

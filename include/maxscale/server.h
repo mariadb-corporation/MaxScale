@@ -156,7 +156,6 @@ typedef struct server
     int            rlag;           /**< Replication Lag for Master/Slave replication */
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
     long           master_id;      /**< Master server id of this node */
-    int            depth;          /**< Replication level in the tree */
     // Misc fields
     bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
                                           *   by rwsplit. TODO: Move to rwsplit */

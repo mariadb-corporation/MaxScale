@@ -128,7 +128,6 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->node_id = -1;
     server->rlag = MAX_RLAG_UNDEFINED;
     server->master_id = -1;
-    server->depth = -1;
     server->parameters = NULL;
     spinlock_init(&server->lock);
     server->persistent = persistent;
@@ -519,7 +518,6 @@ dprintServer(DCB *dcb, const SERVER *server)
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
-    dcb_printf(dcb, "\tRepl Depth:                          %d\n", server->depth);
     if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
     {
         if (server->rlag >= 0)
@@ -1481,7 +1479,6 @@ static json_t* server_json_attributes(const SERVER* server)
 
     json_object_set_new(attr, "node_id", json_integer(server->node_id));
     json_object_set_new(attr, "master_id", json_integer(server->master_id));
-    json_object_set_new(attr, "replication_depth", json_integer(server->depth));
 
     const char* event_name = mon_get_event_name((mxs_monitor_event_t)server->last_event);
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);

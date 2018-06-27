@@ -386,7 +386,6 @@ MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
             (moitor_servers->pending_status & SERVER_JOINED))
         {
 
-            moitor_servers->server->depth = 0;
             char buf[50]; // Enough to hold most numbers
             if (m_use_priority && server_get_parameter(moitor_servers->server, "priority", buf, sizeof(buf)))
             {

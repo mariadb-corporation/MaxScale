@@ -244,14 +244,12 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
 SRWBackend get_root_master(const SRWBackendList& backends)
 {
     SRWBackend master;
-
-    for (auto it = backends.begin(); it != backends.end(); it++)
+    for (auto candidate : backends)
     {
-        auto b = *it;
-
-        if (b->is_master() && (!master || b->server()->depth < master->server()->depth))
+        if (candidate->is_master())
         {
-            master = b;
+            master = candidate;
+            break;
         }
     }
 

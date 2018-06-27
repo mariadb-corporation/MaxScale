@@ -297,18 +297,12 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     {
         monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
         monitor_set_pending_status(monitored_server, SERVER_MASTER);
-
-        /* Set replication depth to 0 */
-        monitored_server->server->depth = 0;
     }
     else if (isslave)
     {
         monitor_set_pending_status(monitored_server, SERVER_SLAVE);
         /* Avoid any possible stale Master state */
         monitor_clear_pending_status(monitored_server, SERVER_MASTER);
-
-        /* Set replication depth to 1 */
-        monitored_server->server->depth = 1;
     }
     /* Avoid any possible Master/Slave stale state */
     else
@@ -382,7 +376,7 @@ MXS_MONITORED_SERVER *MMMonitor::get_current_master()
             continue;
         }
 
-        if (ptr->server->depth == 0)
+        if (ptr->pending_status & SERVER_MASTER)
         {
             m_master = ptr;
         }
