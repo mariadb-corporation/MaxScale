@@ -180,12 +180,6 @@ private:
     bool m_warn_failover_precond;        /**< Print failover preconditions error message? */
     bool m_warn_cannot_rejoin;           /**< Print warning if auto_rejoin fails because of invalid gtid:s? */
 
-    enum slave_down_setting_t
-    {
-        ACCEPT_DOWN,
-        REJECT_DOWN
-    };
-
     // Base methods
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     void reset_server_info();
@@ -199,14 +193,9 @@ private:
 
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer& server);
-    MariaDBServer* find_root_master();
-    MXS_MONITORED_SERVER* get_replication_tree();
-    MXS_MONITORED_SERVER* build_mysql51_replication_tree();
     void find_graph_cycles();
-    void update_server_states(MariaDBServer& db_server, MariaDBServer* root_master);
     bool standalone_master_required();
     bool set_standalone_master();
-    void assign_relay_master(MariaDBServer& serv_info);
     void log_master_changes();
     void update_gtid_domain();
     void update_external_master();
@@ -214,15 +203,12 @@ private:
     void set_slave_heartbeat(MariaDBServer*);
     void measure_replication_lag();
     void check_maxscale_schema_replication();
-    MXS_MONITORED_SERVER* getServerByNodeId(long);
-    MXS_MONITORED_SERVER* getSlaveOfNodeId(long, slave_down_setting_t);
     void build_replication_graph();
     void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index, int *cycle);
     void assign_cycle_roles(int cycle);
     MariaDBServer* find_topology_master_server(std::string* msg_out);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
     void calculate_node_reach(MariaDBServer* node);
-    int calc_reach_visit_node(MariaDBServer* node);
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
     void assign_master_and_slave();
     void assign_slave_and_relay_master(MariaDBServer* node);
