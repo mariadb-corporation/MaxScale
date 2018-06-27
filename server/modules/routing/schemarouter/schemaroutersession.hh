@@ -140,7 +140,7 @@ private:
     /** Shard mapping functions */
     bool                 send_databases();
     bool                 send_shards();
-    bool                 send_tables(std::string db);
+    bool                 send_tables(GWBUF* pPacket);
     void                 query_databases();
     int                  inspect_mapping_states(SSRBackend& bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SSRBackend& bref, GWBUF** buffer);

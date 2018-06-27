@@ -341,6 +341,14 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             gwbuf_free(pPacket);
             return ret;
         }
+        else if (qc_query_is_type(type, QUERY_TYPE_SHOW_TABLES))
+        {
+            if (send_tables(pPacket))
+            {
+                gwbuf_free(pPacket);
+                return 1;
+            }
+        }
         else if (detect_show_shards(pPacket))
         {
             if (send_shards())
@@ -1482,26 +1490,7 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
         MXS_FREE(databases);
     }
 
-    /* Check if the query is a show tables query with a specific database */
-    if (qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES))
-    {
-        char *query = modutil_get_SQL(buffer);
-        char *tmp;
-
-        if ((tmp = strcasestr(query, "from")))
-        {
-            const char *delim = "` \n\t;";
-            char *saved, *tok = strtok_r(tmp, delim, &saved);
-            tok = strtok_r(NULL, delim, &saved);
-
-            if (tok)
-            {
-                send_tables(tok);
-            }
-        }
-        MXS_FREE(query);
-    }
-    else if (buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+    if (buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
     {
         for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
@@ -1673,9 +1662,26 @@ bool SchemaRouterSession::send_databases()
     return rval;
 }
 
-bool SchemaRouterSession::send_tables(std::string database)
+bool SchemaRouterSession::send_tables(GWBUF* pPacket)
 {
+    char *query = modutil_get_SQL(pPacket);
+    char *tmp;
     bool rval = false;
+    std::string database;
+
+    if ((tmp = strcasestr(query, "from")))
+    {
+        const char *delim = "` \n\t;";
+        char *saved, *tok = strtok_r(tmp, delim, &saved);
+        tok = strtok_r(NULL, delim, &saved);
+        database = tok;
+    }
+
+    if (database.empty())
+    {
+        MXS_FREE(query);
+        return rval;
+    }
     ServerMap tablelist;
     std::list<std::string> list;
     m_shard.get_content(tablelist);
@@ -1695,16 +1701,19 @@ bool SchemaRouterSession::send_tables(std::string database)
             list.push_back(table);
         }
     }
-    RESULTSET* resultset = resultset_create(result_set_cb, &list);
-
-    if (resultset_add_column(resultset, "Table", MYSQL_DATABASE_MAXLEN,
-                             COL_TYPE_VARCHAR))
+    if (!list.empty())
     {
-        resultset_stream_mysql(resultset, m_client);
-        rval = true;
-    }
-    resultset_free(resultset);
+        RESULTSET* resultset = resultset_create(result_set_cb, &list);
 
+        if (resultset_add_column(resultset, "Table", MYSQL_DATABASE_MAXLEN,
+                                 COL_TYPE_VARCHAR))
+        {
+            resultset_stream_mysql(resultset, m_client);
+            rval = true;
+        }
+        resultset_free(resultset);
+    }
+    MXS_FREE(query);
     return rval;
 }
 
