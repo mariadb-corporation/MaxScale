@@ -1610,3 +1610,16 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
         }
     }
 }
+
+void MariaDBMonitor::set_low_disk_slaves_maintenance()
+{
+    // Only set pure slave and standalone servers to maintenance.
+    for (MariaDBServer* server : m_servers)
+    {
+        if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_running() &&
+            !server->is_master() && !server->is_relay_server())
+        {
+            server->set_status(SERVER_MAINT);
+        }
+    }
+}

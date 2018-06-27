@@ -168,6 +168,8 @@ private:
     std::string m_demote_sql_file;       /**< File with sql commands which are ran to a server being demoted. */
     bool m_enforce_read_only_slaves;     /**< Should the monitor set read-only=1 on any slave servers. */
     bool m_switchover_on_low_disk_space; /**< Should the monitor do a switchover on low disk space. */
+    bool m_maintenance_on_low_disk_space; /**< Set slave and unreplicating servers with low disk space to
+                                           *   maintenance. */
 
     // Other settings
     std::string m_script;                /**< Script to call when state changes occur on servers */
@@ -215,6 +217,7 @@ private:
     bool master_is_valid(std::string* reason_out);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_master_cycle_info();
+    void set_low_disk_slaves_maintenance();
 
     // Switchover methods
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);

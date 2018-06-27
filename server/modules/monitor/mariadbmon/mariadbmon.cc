@@ -42,7 +42,7 @@ static const char CN_NO_PROMOTE_SERVERS[]           = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[]             = "failover_timeout";
 static const char CN_SWITCHOVER_ON_LOW_DISK_SPACE[] = "switchover_on_low_disk_space";
 static const char CN_SWITCHOVER_TIMEOUT[]           = "switchover_timeout";
-
+static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
@@ -198,6 +198,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_promote_sql_file = config_get_string(params, CN_PROMOTION_SQL_FILE);
     m_demote_sql_file = config_get_string(params, CN_DEMOTION_SQL_FILE);
     m_switchover_on_low_disk_space = config_get_bool(params, CN_SWITCHOVER_ON_LOW_DISK_SPACE);
+    m_maintenance_on_low_disk_space = config_get_bool(params, CN_MAINTENANCE_ON_LOW_DISK_SPACE);
 
     m_excluded_servers.clear();
     MXS_MONITORED_SERVER** excluded_array = NULL;
@@ -296,65 +297,61 @@ json_t* MariaDBMonitor::diagnostics_json() const
 void MariaDBMonitor::update_server(MariaDBServer& server)
 {
     MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
-    /* Monitor server if not in maintenance. */
-    bool in_maintenance = server.is_in_maintenance();
-    if (!in_maintenance)
-    {
-        mxs_connect_result_t conn_status = mon_ping_or_connect_to_db(m_monitor, mon_srv);
-        MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
+    mxs_connect_result_t conn_status = mon_ping_or_connect_to_db(m_monitor, mon_srv);
+    MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
-        if (mon_connection_is_ok(conn_status))
+    if (mon_connection_is_ok(conn_status))
+    {
+        server.set_status(SERVER_RUNNING);
+        if (conn_status == MONITOR_CONN_NEWCONN_OK)
         {
-            server.set_status(SERVER_RUNNING);
-            if (conn_status == MONITOR_CONN_NEWCONN_OK)
+            // Is a new connection or a reconnection. Check server version.
+            server.update_server_version();
+        }
+
+        if (server.m_version != MariaDBServer::version::UNKNOWN)
+        {
+            // Check permissions if permissions failed last time or if this is a new connection.
+            if (server.had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
             {
-                // Is a new connection or a reconnection. Check server version.
-                server.update_server_version();
+                server.check_permissions();
             }
 
-            if (server.m_version != MariaDBServer::version::UNKNOWN)
+            // If permissions are ok, continue.
+            if (!server.has_status(SERVER_AUTH_ERROR))
             {
-                // Check permissions if permissions failed last time or if this is a new connection.
-                if (server.had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
+                if (should_update_disk_space_status(mon_srv))
                 {
-                    server.check_permissions();
+                    update_disk_space_status(mon_srv);
                 }
 
-                // If permissions are ok, continue.
-                if (!server.has_status(SERVER_AUTH_ERROR))
-                {
-                    if (should_update_disk_space_status(mon_srv))
-                    {
-                        update_disk_space_status(mon_srv);
-                    }
-
-                    // Query MariaDBServer specific data
-                    server.monitor_server();
-                }
+                // Query MariaDBServer specific data
+                server.monitor_server();
             }
         }
-        else
+    }
+    else
+    {
+        /* The current server is not running. Clear all but the stale master bit as it is used to detect
+         * masters that went down but came up. */
+        server.clear_status(~SERVER_WAS_MASTER);
+        auto conn_errno = mysql_errno(conn);
+        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
-            /* The current server is not running. Clear all but the stale master bit as it is used to detect
-             * masters that went down but came up. */
-            server.clear_status(~SERVER_WAS_MASTER);
-            auto conn_errno = mysql_errno(conn);
-            if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
-            {
-                server.set_status(SERVER_AUTH_ERROR);
-            }
+            server.set_status(SERVER_AUTH_ERROR);
+        }
 
-            /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
-             * iteration. */
-            if (mon_srv->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
-            {
-                mon_log_connect_error(mon_srv, conn_status);
-            }
+        /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
+         * iteration. */
+        if (mon_srv->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
+        {
+            mon_log_connect_error(mon_srv, conn_status);
         }
     }
 
     /** Increase or reset the error count of the server. */
     bool is_running = server.is_running();
+    bool in_maintenance = server.is_in_maintenance();
     mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
 }
 
@@ -524,6 +521,11 @@ void MariaDBMonitor::tick()
     if (m_detect_replication_lag && m_master && m_master->is_master())
     {
         measure_replication_lag();
+    }
+
+    if (m_maintenance_on_low_disk_space)
+    {
+        set_low_disk_slaves_maintenance();
     }
 
     // Update shared status. The next functions read the shared status. TODO: change the following
@@ -1304,6 +1306,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {CN_PROMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
             {CN_DEMOTION_SQL_FILE, MXS_MODULE_PARAM_PATH},
             {CN_SWITCHOVER_ON_LOW_DISK_SPACE, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_MAINTENANCE_ON_LOW_DISK_SPACE, MXS_MODULE_PARAM_BOOL, "true"},
             {MXS_END_MODULE_PARAMS}
         }
     };

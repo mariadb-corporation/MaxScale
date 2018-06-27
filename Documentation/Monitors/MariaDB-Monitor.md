@@ -262,6 +262,14 @@ Note that once the server has been put in maintenance mode, the disk space
 situation will no longer be monitored and the server will thus not automatically
 be taken out of maintanance mode even if disk space again would become available.
 
+### `maintenance_on_low_disk_space`
+
+This feature is enabled by default. If a running server that is not the master
+or a relay master is out of disk space (as defined by the general monitor
+setting `disk_space_threshold`) the server is set to maintenance mode. Such
+servers are not used for router sessions and are ignored when performing a
+failover or other cluster modification operation.
+
 ## Failover, switchover and auto-rejoin
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
