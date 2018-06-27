@@ -462,8 +462,35 @@ int test_events()
     return errors;
 }
 
+string get_auth_log()
+{
+    string name;
+
+    const char DEBIAN_AUTH_LOG[] = "/var/log/auth.log";
+    const char REDHAT_AUTH_LOG[] = "/var/log/secure";
+
+    if (access(DEBIAN_AUTH_LOG, F_OK) == 0)
+    {
+        cout << "notice: " << DEBIAN_AUTH_LOG << " exists, assuming a Debian system." << endl;
+        name = DEBIAN_AUTH_LOG;
+    }
+    else if (access(REDHAT_AUTH_LOG, F_OK) == 0)
+    {
+        cout << "notice: " << REDHAT_AUTH_LOG << " exists, assuming a RedHat system." << endl;
+        name = REDHAT_AUTH_LOG;
+    }
+    else
+    {
+        cout << "warning: Neither " << DEBIAN_AUTH_LOG << ", nor " << REDHAT_AUTH_LOG << " exists." << endl;
+    }
+
+    return name;
+}
+
 int test_logging()
 {
+    int errors = 0;
+
     event::set_log_facility(event::AUTHENTICATION_FAILURE, LOG_AUTH);
     event::set_log_level(event::AUTHENTICATION_FAILURE, LOG_ERR);
 
@@ -481,43 +508,62 @@ int test_logging()
 
     MXS_LOG_EVENT(event::AUTHENTICATION_FAILURE, "%s", id.c_str());
 
-    // We have no control over how quickly syslog messages are flushed
-    // to the file. So, we try a few times before giving up.
+    string name = get_auth_log();
 
-    bool found = false;
-    int attempts = 0;
-    const int MAX_ATTEMPTS = 10;
-
-    do
+    if (name.empty())
     {
-        ++attempts;
-
-        sleep(1);
-
-        const char* zName = "/var/log/auth.log";
-        ifstream in(zName);
-
-        if (in)
+        cout << "warning: Don't know where to look for authentication errors. Ignoring test." << endl;
+    }
+    else
+    {
+        if (access(name.c_str(), R_OK) != 0)
         {
-            string line;
-            while (std::getline(in, line))
-            {
-                if (line.find(id) != string::npos)
-                {
-                    found = true;
-                    cout << "notice: Found '" << id << "' in line '" << line << "'." << endl;
-                }
-            }
-        }
-        else
-        {
-            cerr << "error: Could not open '" << zName << "'." << endl;
-            attempts = MAX_ATTEMPTS;
+            cout << "warning: Cannot read " << name << ", ignoring test." << endl;
+            name.clear();
         }
     }
-    while (!found && (attempts < MAX_ATTEMPTS));
 
-    return found ? 0 : 1;
+    if (!name.empty())
+    {
+        // We have no control over how quickly syslog messages are flushed
+        // to the file. So, we try a few times before giving up.
+
+        bool found = false;
+        int attempts = 0;
+        const int MAX_ATTEMPTS = 10;
+
+        do
+        {
+            ++attempts;
+
+            sleep(1);
+
+            ifstream in(name);
+
+            if (in)
+            {
+                string line;
+                while (std::getline(in, line))
+                {
+                    if (line.find(id) != string::npos)
+                    {
+                        found = true;
+                        cout << "notice: Found '" << id << "' in line '" << line << "'." << endl;
+                    }
+                }
+            }
+            else
+            {
+                cerr << "error: Could not open '" << name << "'." << endl;
+                attempts = MAX_ATTEMPTS;
+            }
+        }
+        while (!found && (attempts < MAX_ATTEMPTS));
+
+        errors = found ? 0 : 1;
+    }
+
+    return errors;
 }
 
 }
