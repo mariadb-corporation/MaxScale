@@ -746,8 +746,15 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
         if (it != m_exec_map.end())
         {
-            target = it->second;
-            MXS_INFO("COM_STMT_FETCH on %s (%s)", target->name(), target->uri());
+            if (it->second->in_use())
+            {
+                target = it->second;
+                MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+            }
+            else
+            {
+                MXS_INFO("Old target not in use, cannot proceed");
+            }
         }
         else
         {
@@ -763,6 +770,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         atomic_add_uint64(&m_router->stats().n_slave, 1);
+        ss_dassert(target->in_use());
     }
     else
     {

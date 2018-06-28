@@ -97,7 +97,7 @@ bool Backend::execute_session_command()
     case MXS_COM_STMT_CLOSE:
     case MXS_COM_STMT_SEND_LONG_DATA:
         /** These commands do not generate responses */
-        rval = Backend::write(buffer, NO_RESPONSE);
+        rval = write(buffer, NO_RESPONSE);
         complete_session_command();
         ss_dassert(!is_waiting_result());
         break;
@@ -113,7 +113,7 @@ bool Backend::execute_session_command()
         // TODO: Remove use of GWBUF_TYPE_SESCMD
         //Mark session command buffer, it triggers writing MySQL command to protocol
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
-        rval = Backend::write(buffer);
+        rval = write(buffer, EXPECT_RESPONSE);
         ss_dassert(is_waiting_result());
         break;
     }
@@ -221,6 +221,7 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
 bool Backend::auth(GWBUF* buffer)
 {
+    ss_dassert(in_use());
     bool rval = false;
 
     if (m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer) == 1)
@@ -245,6 +246,7 @@ void Backend::store_command(GWBUF* buffer)
 
 bool Backend::write_stored_command()
 {
+    ss_dassert(in_use());
     bool rval = false;
 
     if (m_pending_cmd.length())

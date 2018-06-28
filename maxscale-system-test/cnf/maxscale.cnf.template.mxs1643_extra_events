@@ -8,16 +8,6 @@ servers= server1,server2,server3,server4
 user=maxskysql
 passwd= skysql
 monitor_interval=1000
-detect_standalone_master=true
-failcount=1
-allow_cluster_recovery=true
-replication_user=repl
-replication_password=repl
-backend_connect_timeout=3
-backend_read_timeout=3
-backend_write_timeout=3
-auto_failover=true
-auto_rejoin=true
 
 [RW Split Router]
 type=service
