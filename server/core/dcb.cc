@@ -122,6 +122,8 @@ static void dcb_remove_from_list(DCB *dcb);
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
+static int nthreads;
+static int next_thread_id = 0;
 
 void dcb_global_init()
 {
@@ -132,7 +134,7 @@ void dcb_global_init()
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
-    int nthreads = config_threadcount();
+    nthreads = config_threadcount();
 
     if ((this_unit.all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL)
     {
@@ -3545,10 +3547,15 @@ int poll_add_dcb(DCB *dcb)
         dcb->poll.thread.id = 0;
         worker_id = dcb->poll.thread.id;
     }
+    else if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        dcb->poll.thread.id = (int)atomic_add(&next_thread_id, 1) % nthreads;
+        new_state = DCB_STATE_POLLING;
+        worker_id = dcb->poll.thread.id;
+    }
     else
     {
-        ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
-                   dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+        ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
         ss_dassert(Worker::get_current_id() != -1);
         ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
 
