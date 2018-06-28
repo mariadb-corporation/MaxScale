@@ -1039,7 +1039,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                 {
                     if (rc == SHOWDB_DUPLICATE_DATABASES)
                     {
-                        MXS_ERROR("Duplicate databases found, closing session.");
+                        MXS_ERROR("Duplicate tables found, closing session.");
                     }
                     else
                     {
@@ -1059,7 +1059,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                         GWBUF* error = modutil_create_mysql_err_msg(1, 0,
                                                                     SCHEMA_ERR_DUPLICATEDB,
                                                                     SCHEMA_ERRSTR_DUPLICATEDB,
-                                                                    "Error: duplicate databases "
+                                                                    "Error: duplicate tables "
                                                                     "found on two different shards.");
 
                         if (error)
@@ -1318,12 +1318,12 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
             }
             else
             {
-                if (!ignore_duplicate_database(data))
+                if (!ignore_duplicate_database(data) && strchr(data, '.') != NULL)
                 {
                     duplicate_found = true;
                     SERVER *duplicate = m_shard.get_location(data);
 
-                    MXS_ERROR("Database '%s' found on servers '%s' and '%s' for user %s@%s.",
+                    MXS_ERROR("Table '%s' found on servers '%s' and '%s' for user %s@%s.",
                               data, target->name, duplicate->name,
                               m_client->user, m_client->remote);
                 }
@@ -1388,7 +1388,12 @@ void SchemaRouterSession::query_databases()
     m_state &= ~INIT_UNINT;
 
     GWBUF *buffer = modutil_create_query
-                    ("SELECT LOWER(CONCAT(table_schema, '.', table_name)) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql');");
+                    ("SELECT LOWER(schema_name) FROM information_schema.schemata AS s "
+            "LEFT JOIN information_schema.tables AS t ON s.schema_name = t.table_schema "
+            "WHERE t.table_name IS NULL "
+            "UNION "
+            "SELECT LOWER(CONCAT(table_schema, '.', table_name)) FROM information_schema.tables "
+            "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql');");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
@@ -1677,10 +1682,16 @@ bool SchemaRouterSession::send_tables(std::string database)
 
     for (ServerMap::iterator it = tablelist.begin(); it != tablelist.end(); it++)
     {
-        std::string db = it->first.substr(0, it->first.find("."));
+        std::size_t pos;
+        // If the database is empty ignore it
+        if ((pos = it->first.find(".") == std::string::npos))
+        {
+            continue;
+        }
+        std::string db = it->first.substr(0, pos);
         if (db.compare(database) == 0)
         {
-            std::string table = it->first.substr(it->first.find(".")+1);
+            std::string table = it->first.substr(pos + 1);
             list.push_back(table);
         }
     }
