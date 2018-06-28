@@ -689,6 +689,9 @@ void Worker::poll_waitevents()
 
     m_load.reset();
 
+    int64_t nFds_total = 0;
+    int64_t nPolls_effective = 0;
+
     while (!should_shutdown())
     {
         int nfds;
@@ -724,7 +727,18 @@ void Worker::poll_waitevents()
 
         if (nfds > 0)
         {
-            m_statistics.evq_length = nfds;
+            nPolls_effective += 1;
+            nFds_total += nfds;
+
+            if (nFds_total <= 0)
+            {
+                // Wrapped, so we reset the situation.
+                nFds_total = nfds;
+                nPolls_effective = 1;
+            }
+
+            m_statistics.evq_avg = nFds_total / nPolls_effective;
+
             if (nfds > m_statistics.evq_max)
             {
                 m_statistics.evq_max = nfds;

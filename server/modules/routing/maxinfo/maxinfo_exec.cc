@@ -1057,9 +1057,9 @@ maxinfo_accept_events()
  * Interface to poll stats for event queue length
  */
 static int64_t
-maxinfo_event_queue_length()
+maxinfo_avg_event_queue_length()
 {
-    return poll_get_stat(POLL_STAT_EVQ_LEN);
+    return poll_get_stat(POLL_STAT_EVQ_AVG);
 }
 
 /**
@@ -1115,7 +1115,7 @@ static struct
     { "Hangup_events", VT_INT, (STATSFUNC)maxinfo_hangup_events },
     { "Error_events", VT_INT, (STATSFUNC)maxinfo_error_events },
     { "Accept_events", VT_INT, (STATSFUNC)maxinfo_accept_events },
-    { "Event_queue_length", VT_INT, (STATSFUNC)maxinfo_event_queue_length },
+    { "Avg_event_queue_length", VT_INT, (STATSFUNC)maxinfo_avg_event_queue_length },
     { "Max_event_queue_length", VT_INT, (STATSFUNC)maxinfo_max_event_queue_length },
     { "Max_event_queue_time", VT_INT, (STATSFUNC)maxinfo_max_event_queue_time },
     { "Max_event_execution_time", VT_INT, (STATSFUNC)maxinfo_max_event_exec_time },

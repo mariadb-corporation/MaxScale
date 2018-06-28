@@ -50,7 +50,7 @@ struct WORKER_STATISTICS
     int64_t  n_pollev;                    /*< Number of polls returning events */
     int64_t  n_nbpollev;                  /*< Number of polls returning events */
     int64_t  n_fds[MAXNFDS];              /*< Number of wakeups with particular n_fds value */
-    int64_t  evq_length;                  /*< Event queue length */
+    int64_t  evq_avg;                     /*< Average event queue length */
     int64_t  evq_max;                     /*< Maximum event queue length */
     int64_t  blockingpolls;               /*< Number of epoll_waits with a timeout specified */
     uint32_t qtimes[N_QUEUE_TIMES + 1];

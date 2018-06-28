@@ -117,8 +117,7 @@ dprintPollStats(DCB *dcb)
     dcb_printf(dcb, "No. of error events:                           %" PRId64 "\n", s.n_error);
     dcb_printf(dcb, "No. of hangup events:                          %" PRId64 "\n", s.n_hup);
     dcb_printf(dcb, "No. of accept events:                          %" PRId64 "\n", s.n_accept);
-    dcb_printf(dcb, "Total event queue length:                      %" PRId64 "\n", s.evq_length);
-    dcb_printf(dcb, "Average event queue length:                    %" PRId64 "\n", s.evq_length);
+    dcb_printf(dcb, "Average event queue length:                    %" PRId64 "\n", s.evq_avg);
     dcb_printf(dcb, "Maximum event queue length:                    %" PRId64 "\n", s.evq_max);
 
     dcb_printf(dcb, "No of poll completions with descriptors\n");
@@ -203,7 +202,7 @@ dShowEventStats(DCB *pdcb)
     dcb_printf(pdcb, "Maximum queue time:           %3" PRId64 "00ms\n", s.maxqtime);
     dcb_printf(pdcb, "Maximum execution time:       %3" PRId64 "00ms\n", s.maxexectime);
     dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n", s.evq_max);
-    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n", s.evq_length);
+    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n", s.evq_avg);
     dcb_printf(pdcb, "\n");
     dcb_printf(pdcb, "               |    Number of events\n");
     dcb_printf(pdcb, "Duration       | Queued     | Executed\n");

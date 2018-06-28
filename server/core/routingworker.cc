@@ -764,7 +764,7 @@ Worker::STATISTICS RoutingWorker::get_statistics()
     cs.n_polls       = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
     cs.n_pollev      = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
     cs.n_nbpollev    = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
-    cs.evq_length    = one_stats_get(&STATISTICS::evq_length, TS_STATS_AVG);
+    cs.evq_avg       = one_stats_get(&STATISTICS::evq_avg, TS_STATS_AVG);
     cs.evq_max       = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
     cs.blockingpolls = one_stats_get(&STATISTICS::blockingpolls, TS_STATS_SUM);
     cs.maxqtime      = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
@@ -836,8 +836,8 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
         approach = TS_STATS_SUM;
         break;
 
-    case POLL_STAT_EVQ_LEN:
-        member = &Worker::STATISTICS::evq_length;
+    case POLL_STAT_EVQ_AVG:
+        member = &Worker::STATISTICS::evq_avg;
         approach = TS_STATS_AVG;
         break;
 
@@ -937,7 +937,9 @@ public:
         json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
         json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
         json_object_set_new(pStats, "blocking_polls", json_integer(s.blockingpolls));
-        json_object_set_new(pStats, "event_queue_length", json_integer(s.evq_length));
+        // TODO: When REST-API v2 is published, remove 'event_queue_length'.
+        json_object_set_new(pStats, "event_queue_length", json_integer(s.evq_avg));
+        json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
         json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
         json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
         json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
