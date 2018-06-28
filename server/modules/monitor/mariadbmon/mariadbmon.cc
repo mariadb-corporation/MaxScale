@@ -23,7 +23,9 @@
 #include <maxscale/modulecmd.h>
 
 #include <maxscale/mysql_utils.h>
+#include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
+#include <maxscale/semaphore.hh>
 #include <maxscale/utils.h>
 // TODO: For monitor_add_parameters
 #include "../../../core/internal/monitor.h"
@@ -50,6 +52,9 @@ static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
 // Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
+
+static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
+                                 "Check log for more information.";
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstance(monitor)
@@ -222,32 +227,75 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 
 void MariaDBMonitor::diagnostics(DCB *dcb) const
 {
-    dcb_printf(dcb, "Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Failcount:              %d\n", m_failcount);
-    dcb_printf(dcb, "Failover timeout:       %u\n", m_failover_timeout);
-    dcb_printf(dcb, "Switchover timeout:     %u\n", m_switchover_timeout);
-    dcb_printf(dcb, "Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Enforce read-only:      %s\n", m_enforce_read_only_slaves ?
+    /* The problem with diagnostic printing is that some of the printed elements are array-like and their
+     * length could change during a monitor loop. Thus, the variables should only be read by the monitor
+     * thread and not the admin thread. Because the diagnostic must be printable even when the monitor is
+     * not running, the printing must be done outside the normal loop. */
+
+    /* The 'dcb' is owned by the admin thread (the thread executing this function), and probably
+     * should not be written to by any other thread. To prevent this, have the monitor thread
+     * print the diagnostics to a string. */
+    string diag_str;
+    // 'execute_worker_task' is not a const method, although the task we are sending is.
+    MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
+    bool func_ran = mutable_ptr->execute_worker_task([this, &diag_str]
+    {
+        diag_str = diagnostics_to_string();
+    });
+
+    if (!func_ran)
+    {
+        diag_str = DIAG_ERROR;
+    }
+    dcb_printf(dcb, "%s", diag_str.c_str());
+}
+
+string MariaDBMonitor::diagnostics_to_string() const
+{
+    using maxscale::string_printf;
+    string rval;
+    rval += string_printf("Automatic failover:     %s\n", m_auto_failover ? "Enabled" : "Disabled");
+    rval += string_printf("Failcount:              %d\n", m_failcount);
+    rval += string_printf("Failover timeout:       %u\n", m_failover_timeout);
+    rval += string_printf("Switchover timeout:     %u\n", m_switchover_timeout);
+    rval += string_printf("Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
+    rval += string_printf("Enforce read-only:      %s\n", m_enforce_read_only_slaves ?
                "Enabled" : "Disabled");
-    dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", m_id);
-    dcb_printf(dcb, "Detect replication lag: %s\n", (m_detect_replication_lag) ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Detect stale master:    %s\n", (m_detect_stale_master == 1) ?
+    rval += string_printf("MaxScale monitor ID:    %lu\n", m_id);
+    rval += string_printf("Detect replication lag: %s\n", (m_detect_replication_lag) ? "Enabled" : "Disabled");
+    rval += string_printf("Detect stale master:    %s\n", (m_detect_stale_master == 1) ?
                "Enabled" : "Disabled");
     if (m_excluded_servers.size() > 0)
     {
-        dcb_printf(dcb, "Non-promotable servers (failover): ");
-        dcb_printf(dcb, "%s\n", monitored_servers_to_string(m_excluded_servers).c_str());
+        rval += string_printf("Non-promotable servers (failover): ");
+        rval += string_printf("%s\n", monitored_servers_to_string(m_excluded_servers).c_str());
     }
 
-    dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
+    rval += string_printf("\nServer information:\n-------------------\n\n");
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        string server_info = (*iter)->diagnostics() + "\n";
-        dcb_printf(dcb, "%s", server_info.c_str());
+        rval += (*iter)->diagnostics() + "\n";
     }
+    return rval;
 }
 
 json_t* MariaDBMonitor::diagnostics_json() const
+{
+    json_t* rval = NULL;
+    MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
+    bool func_ran = mutable_ptr->execute_worker_task([this, &rval]
+    {
+        rval = diagnostics_to_json();
+    });
+
+    if (!func_ran)
+    {
+        rval = mxs_json_error_append(rval, "%s", DIAG_ERROR);
+    }
+    return rval;
+}
+
+json_t* MariaDBMonitor::diagnostics_to_json() const
 {
     json_t* rval = json_object();
     json_object_set_new(rval, "monitor_id", json_integer(m_id));
@@ -283,6 +331,39 @@ json_t* MariaDBMonitor::diagnostics_json() const
     }
 
     return rval;
+}
+
+bool MariaDBMonitor::execute_worker_task(GenericFunction func)
+{
+    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    /* The worker message system works on objects of class Task, each representing a different action.
+     * Let's use a function object inside a task to construct a generic action. */
+    class CustomTask : public maxscale::Worker::Task
+    {
+    public:
+        CustomTask(GenericFunction func)
+            : m_func(func)
+        {}
+
+    private:
+        GenericFunction m_func;
+        void execute(maxscale::Worker& worker)
+        {
+            m_func();
+        }
+    };
+
+    CustomTask task(func);
+    maxscale::Semaphore done(0);
+    /* Although the current method is being ran in the admin thread, 'post' sends the task to the
+     * worker thread of "this". "task" is a stack parameter, so need to always wait for completion
+     * even if there were no results to process. */
+    bool sent = post(&task, &done, Worker::EXECUTE_AUTO);
+    if (sent)
+    {
+        done.wait();
+    }
+    return sent;
 }
 
 /**

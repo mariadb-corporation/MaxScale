@@ -22,7 +22,7 @@ namespace maxscale
 {
 
 class MonitorInstance : public  MXS_MONITOR_INSTANCE
-                      , private maxscale::Worker
+                      , protected maxscale::Worker
 {
 public:
     MonitorInstance(const MonitorInstance&) = delete;

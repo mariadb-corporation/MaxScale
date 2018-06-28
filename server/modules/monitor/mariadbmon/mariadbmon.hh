@@ -104,6 +104,7 @@ protected:
     void process_state_changes();
 
 private:
+    typedef std::function<void ()> GenericFunction;
 
     struct CycleInfo
     {
@@ -188,7 +189,10 @@ private:
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
-    bool execute_manual_command(std::function<void (void)> command, json_t** error_out);
+    bool execute_manual_command(GenericFunction command, json_t** error_out);
+    bool execute_worker_task(GenericFunction func);
+    std::string diagnostics_to_string() const;
+    json_t* diagnostics_to_json() const;
 
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer& server);
