@@ -17,6 +17,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
+#include <maxscale/messagequeue.hh>
 #include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/session.h>
@@ -463,6 +464,8 @@ int test_output()
 int main(int argc, char **argv)
 {
     int rc = 0;
+
+    mxs::MessageQueue::init();
 
     rc += test_arguments();
     rc += test_optional_arguments();

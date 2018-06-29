@@ -19,6 +19,7 @@
 #include <sstream>
 #include <vector>
 #include <maxscale/alloc.h>
+#include <maxscale/messagequeue.hh>
 #include <set>
 
 using std::string;
@@ -69,6 +70,8 @@ private:
 
 int main()
 {
+    mxs::MessageQueue::init();
+
     MariaDBMonitor::Test tester;
     return tester.run_tests();
 }
