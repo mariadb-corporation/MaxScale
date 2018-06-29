@@ -9,7 +9,8 @@ if [ "$box_type" == "RPM" ] ; then
 
         rm -rf $path_prefix/$platform/$platform_version/$arch/
         mkdir -p $path_prefix/$platform/$platform_version/$arch/
-        cp -r ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform/$platform_version/$arch/
+        chmod 775 $path_prefix/$platform/$platform_version/$arch
+        rsync -avz  --progress --delete ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform/$platform_version/$arch/
 	env > $build_info_path
         cd $path_prefix/$platform
         ln -s $platform_version "$platform_version"server
@@ -27,7 +28,8 @@ else
         rm -rf $path_prefix/$platform_family/dists/$platform_version/main/binary-"$arch"
         rm -rf $path_prefix/$platform_family/dists/$platform_version/main/binary-i386
         mkdir -p $path_prefix/$platform_family/
-        cp -r ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform_family/
+        chmod 775 $path_prefix/$platform_family
+        rsync -avz  --progress --delete ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform_family/
         env > $build_info_path
   eval "cat <<EOF
 $(<${script_dir}/templates/repository-config/deb.json.template)
