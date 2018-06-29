@@ -120,6 +120,7 @@ static struct option long_options[] =
     {"language",         required_argument, 0, 'N'},
     {"piddir",           required_argument, 0, 'P'},
     {"basedir",          required_argument, 0, 'R'},
+    {"runtimedir",       required_argument, 0, 'r'},
     {"user",             required_argument, 0, 'U'},
     {"syslog",           required_argument, 0, 's'},
     {"maxlog",           required_argument, 0, 'S'},
@@ -967,6 +968,7 @@ static void usage(void)
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
+            "  -r  --runtimedir=PATH       base path for all other paths expect binaries\n"
             "  -U, --user=USER             user ID and group ID of specified user are used to\n"
             "                              run MaxScale\n"
             "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
@@ -1202,14 +1204,7 @@ bool configure_signals(void)
     return true;
 }
 
-/**
- * Set the directories of MaxScale relative to a basedir
- *
- * @param basedir The base directory relative to which the other are set.
- *
- * @return True if the directories could be set, false otherwise.
- */
-bool set_dirs(const char *basedir)
+bool set_runtime_dirs(const char *basedir)
 {
     bool rv = true;
     char *path;
@@ -1222,11 +1217,6 @@ bool set_dirs(const char *basedir)
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH, true, true)))
     {
         set_cachedir(path);
-    }
-
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
-    {
-        set_libdir(path);
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH, true, false)))
@@ -1244,11 +1234,6 @@ bool set_dirs(const char *basedir)
         set_datadir(path);
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH, true, false)))
-    {
-        set_execdir(path);
-    }
-
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH, true, false)))
     {
         set_langdir(path);
@@ -1259,7 +1244,7 @@ bool set_dirs(const char *basedir)
         set_piddir(path);
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_DATA_SUBPATH "/"
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH "/"
                                     MXS_DEFAULT_CONFIG_PERSIST_SUBPATH, true, true)))
     {
         set_config_persistdir(path);
@@ -1269,6 +1254,33 @@ bool set_dirs(const char *basedir)
                                     "var/" MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH, true, true)))
     {
         set_connector_plugindir(path);
+    }
+
+    return rv;
+}
+
+/**
+ * Set the directories of MaxScale relative to a basedir
+ *
+ * @param basedir The base directory relative to which the other are set.
+ *
+ * @return True if the directories could be set, false otherwise.
+ */
+bool set_dirs(const char *basedir)
+{
+    bool rv = true;
+    char *path;
+
+    rv = set_runtime_dirs(basedir);
+
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
+    {
+        set_libdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH, true, false)))
+    {
+        set_execdir(path);
     }
 
     return rv;
@@ -1567,6 +1579,18 @@ int main(int argc, char **argv)
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
                 succp = set_dirs(tmp_path);
+                free(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+
+        case 'r':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                succp = set_runtime_dirs(tmp_path);
                 free(tmp_path);
             }
             else
