@@ -278,6 +278,11 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
                 MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
             }
         }
+        else
+        {
+            MXS_ERROR("Could not find valid server for target type %s, closing "
+                      "connection.", STRTARGET(route_target));
+        }
     }
 
     if (succp && inst->config().connection_keepalive &&
@@ -1002,11 +1007,12 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
             if (it->second->in_use())
             {
                 target = it->second;
-                MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+                MXS_INFO("COM_STMT_FETCH on %s", target->name());
             }
             else
             {
-                MXS_INFO("Old target not in use, cannot proceed");
+                MXS_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
+                          "proceed with COM_STMT_FETCH", it->second->name());
             }
         }
         else
@@ -1014,8 +1020,7 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
             MXS_WARNING("Unknown statement ID %u used in COM_STMT_FETCH", stmt_id);
         }
     }
-
-    if (!target)
+    else
     {
         target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
     }
