@@ -681,7 +681,6 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
     /** Check whether using target_node as target SLAVE */
     if (m_target_node && session_trx_is_read_only(m_client->session))
     {
-        MXS_DEBUG("In READ ONLY transaction, using server '%s'", m_target_node->name());
         return m_target_node;
     }
 
@@ -1060,8 +1059,6 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     if (!m_target_node && session_trx_is_read_only(m_client->session))
     {
         m_target_node = target;
-        MXS_DEBUG("Setting forced_node SLAVE to %s within an opened READ ONLY transaction",
-                  target->name());
     }
 
     MXS_INFO("Route query to %s: %s \t%s <", target->is_master() ? "master" : "slave",
@@ -1140,7 +1137,6 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             session_trx_is_read_only(m_client->session) &&
             session_trx_is_ending(m_client->session))
         {
-            MXS_DEBUG("An opened READ ONLY transaction ends: forced_node is set to NULL");
             m_target_node.reset();
         }
         return true;
