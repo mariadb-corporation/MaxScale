@@ -123,16 +123,15 @@ typedef struct
  */
 typedef struct gwbuf
 {
-    SPINLOCK        gwbuf_lock;
     struct gwbuf    *next;  /*< Next buffer in a linked chain of buffers */
     struct gwbuf    *tail;  /*< Last buffer in a linked chain of buffers */
     void            *start; /*< Start of the valid data */
     void            *end;   /*< First byte after the valid data */
     SHARED_BUF      *sbuf;  /*< The shared buffer with the real data */
-    uint32_t         gwbuf_type; /*< buffer's data type information */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */
     struct server   *server; /*< The target server where the buffer is executed */
+    uint32_t         gwbuf_type; /*< buffer's data type information */
 } GWBUF;
 
 /*<

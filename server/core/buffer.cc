@@ -79,7 +79,6 @@ gwbuf_alloc(unsigned int size)
     sbuf->info = GWBUF_INFO_NONE;
     sbuf->bufobj = NULL;
 
-    spinlock_init(&rval->gwbuf_lock);
     rval->start = &sbuf->data;
     rval->end = (void *)((char *)rval->start + size);
     rval->sbuf = sbuf;
@@ -675,20 +674,16 @@ void gwbuf_add_buffer_object(GWBUF* buf,
                              void*  data,
                              void (*donefun_fp)(void *))
 {
-    buffer_object_t** p_b;
-    buffer_object_t*  newb;
-
     CHK_GWBUF(buf);
-    newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
+    buffer_object_t* newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
     MXS_ABORT_IF_NULL(newb);
 
     newb->bo_id = id;
     newb->bo_data = data;
     newb->bo_donefun_fp = donefun_fp;
     newb->bo_next = NULL;
-    /** Lock */
-    spinlock_acquire(&buf->gwbuf_lock);
-    p_b = &buf->sbuf->bufobj;
+
+    buffer_object_t** p_b = &buf->sbuf->bufobj;
     /** Search the end of the list and add there */
     while (*p_b != NULL)
     {
@@ -697,30 +692,20 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     *p_b = newb;
     /** Set flag */
     buf->sbuf->info |= GWBUF_INFO_PARSED;
-    /** Unlock */
-    spinlock_release(&buf->gwbuf_lock);
 }
 
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 {
-    buffer_object_t* bo;
-
     CHK_GWBUF(buf);
-    /** Lock */
-    spinlock_acquire(&buf->gwbuf_lock);
-    bo = buf->sbuf->bufobj;
+
+    buffer_object_t* bo = buf->sbuf->bufobj;
 
     while (bo != NULL && bo->bo_id != id)
     {
         bo = bo->bo_next;
     }
-    /** Unlock */
-    spinlock_release(&buf->gwbuf_lock);
-    if (bo)
-    {
-        return bo->bo_data;
-    }
-    return NULL;
+
+    return bo ? bo->bo_data : NULL;
 }
 
 /**
@@ -754,30 +739,23 @@ gwbuf_add_property(GWBUF *buf, const char *name, const char *value)
 
     prop->name = my_name;
     prop->value = my_value;
-    spinlock_acquire(&buf->gwbuf_lock);
     prop->next = buf->properties;
     buf->properties = prop;
-    spinlock_release(&buf->gwbuf_lock);
+
     return true;
 }
 
 char *
 gwbuf_get_property(GWBUF *buf, const char *name)
 {
-    BUF_PROPERTY *prop;
+    BUF_PROPERTY* prop = buf->properties;
 
-    spinlock_acquire(&buf->gwbuf_lock);
-    prop = buf->properties;
     while (prop && strcmp(prop->name, name) != 0)
     {
         prop = prop->next;
     }
-    spinlock_release(&buf->gwbuf_lock);
-    if (prop)
-    {
-        return prop->value;
-    }
-    return NULL;
+
+    return prop ? prop->value : NULL;
 }
 
 GWBUF *
