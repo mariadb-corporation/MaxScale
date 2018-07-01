@@ -368,52 +368,27 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
 }
 
 /**
- * Purge session command history
+ * Compress session command history
+ *
+ * This function removes data duplication by sharing buffers between session
+ * commands that have identical data. Only one copy of the actual data is stored
+ * for each unique session command.
  *
  * @param sescmd Executed session command
  */
-void RWSplitSession::purge_history(mxs::SSessionCommand& sescmd)
+void RWSplitSession::compress_history(mxs::SSessionCommand& sescmd)
 {
-    /**
-     * We can try to purge duplicate text protocol session commands. This
-     * makes the history size smaller but at the cost of being able to handle
-     * the more complex user variable modifications. To keep the best of both
-     * worlds, keeping the first and last copy of each command should be
-     * an adequate compromise. This way executing the following SQL will still
-     * produce the correct result.
-     *
-     * USE test;
-     * SET @myvar = (SELECT COUNT(*) FROM t1);
-     * USE test;
-     *
-     * Another option would be to keep the first session command but that would
-     * require more work to be done in the session command response processing.
-     * This would be a better alternative but the gain might not be optimal.
-     */
-
-    // As the PS handles map to explicit IDs, we must retain all COM_STMT_PREPARE commands
-    if (sescmd->get_command() != MXS_COM_STMT_PREPARE)
+    auto eq = [&](mxs::SSessionCommand& scmd)
     {
-        auto eq = [&](mxs::SSessionCommand& scmd)
-        {
-            return scmd->eq(*sescmd);
-        };
+        return scmd->eq(*sescmd);
+    };
 
-        auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
+    auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
 
-        if (first != m_sescmd_list.end())
-        {
-            // We have at least one of these commands. See if we have a second one
-            auto second = std::find_if(std::next(first), m_sescmd_list.end(), eq);
-
-            if (second != m_sescmd_list.end())
-            {
-                // We have a total of three commands, remove the middle one
-                auto old_cmd = *second;
-                m_sescmd_responses.erase(old_cmd->get_position());
-                m_sescmd_list.erase(second);
-            }
-        }
+    if (first != m_sescmd_list.end())
+    {
+        // Duplicate command, use a reference of the old command instead of duplicating it
+        sescmd->mark_as_duplicate(**first);
     }
 }
 
@@ -541,7 +516,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
     }
     else
     {
-        purge_history(sescmd);
+        compress_history(sescmd);
         m_sescmd_list.push_back(sescmd);
     }
 

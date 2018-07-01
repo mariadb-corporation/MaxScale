@@ -89,6 +89,17 @@ public:
      */
     bool eq(const SessionCommand& rhs) const;
 
+    /**
+     * Mark the session command as a re-execution of another command
+     *
+     * This function makes the current command's buffer a reference to the other
+     * command's buffer. The commands will still have separate positions and
+     * reply statuses.
+     *
+     * @param rhs Session command whose data is used
+     */
+    void mark_as_duplicate(const SessionCommand& rhs);
+
 private:
     mxs::Buffer m_buffer;    /**< The buffer containing the command */
     uint8_t     m_command;   /**< The command being executed */

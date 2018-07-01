@@ -164,7 +164,7 @@ private:
                    const mxs::SRWBackendList& backends, const mxs::SRWBackend& master);
 
     void process_sescmd_response(mxs::SRWBackend& backend, GWBUF** ppPacket);
-    void purge_history(mxs::SSessionCommand& sescmd);
+    void compress_history(mxs::SSessionCommand& sescmd);
 
     bool route_session_write(GWBUF *querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF *querybuf, uint32_t type);
