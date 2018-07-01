@@ -853,7 +853,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         atomic_add_uint64(&m_router->stats().n_slave, 1);
-        ss_dassert(target->in_use());
+        ss_dassert(target->in_use() || target->can_connect());
     }
     else
     {
