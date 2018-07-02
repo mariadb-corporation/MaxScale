@@ -145,6 +145,9 @@ void cmd_with_history(int so, char** argv, bool use_emacs)
     /* Remember 100 events      */
     history(hist, &ev, H_SETSIZE, 100);
 
+    /* Don't enter duplicate commands to history  */
+    history(hist, &ev, H_SETUNIQUE, 1);
+
     tok = tok_init(NULL); /* Initialize the tokenizer   */
 
     /* Initialize editline      */
