@@ -360,10 +360,15 @@ void MariaDBMonitor::pre_loop()
     // MonitorInstance read the journal and has the last known master in its m_master member variable.
     // Write the corresponding MariaDBServer into the class-specific m_master variable.
     m_master = MonitorInstance::m_master ? get_server_info(MonitorInstance::m_master) : NULL;
+    m_log_no_master = true;
 
-    /* It's possible (e.g. after switchover) that the MXS_MONITORED_SERVER-objects have live connections
-     * from last time the monitor was active. These should be closed to avoid confusing the monitor and
-     * making it clear this is a new start. This can be removed once monitor pause/resume is implemented. */
+    if (m_detect_replication_lag)
+    {
+        check_maxscale_schema_replication();
+    }
+
+    /* This loop can be removed if/once the replication check code is inside tick. It's required so that
+     * the monitor makes new connections when starting. */
     for (MariaDBServer* server : m_servers)
     {
         if (server->m_server_base->con)
@@ -372,13 +377,6 @@ void MariaDBMonitor::pre_loop()
             server->m_server_base->con = NULL;
         }
     }
-
-    if (m_detect_replication_lag)
-    {
-        check_maxscale_schema_replication();
-    }
-
-    m_log_no_master = true;
 }
 
 void MariaDBMonitor::tick()
