@@ -242,57 +242,6 @@ void MariaDBMonitor::find_graph_cycles()
             tarjan_scc_visit_node(*iter, &stack, &index, &cycle);
         }
     }
-
-    assign_cycle_roles(cycle);
-}
-
-void MariaDBMonitor::assign_cycle_roles(int cycle)
-{
-    // TODO: This part needs to be rewritten as it's faulty. And moved elsewhere.
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-    {
-        MariaDBServer& server = **iter;
-        MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
-        if (server.m_node.cycle != NodeData::CYCLE_NONE)
-        {
-            /** We have at least one cycle in the graph */
-            if (server.m_read_only)
-            {
-                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
-                monitor_clear_pending_status(mon_srv, SERVER_MASTER);
-            }
-            else
-            {
-                monitor_set_pending_status(mon_srv, SERVER_MASTER);
-                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
-            }
-        }
-        else if (m_detect_stale_master && cycle == 1 && mon_srv->mon_prev_status & SERVER_MASTER &&
-                 (mon_srv->pending_status & SERVER_MASTER) == 0)
-        {
-            /**
-             * Stale master detection is handled here for multi-master mode.
-             *
-             * If we know that no cycles were found from the graph and that a
-             * server once had the master status, replication has broken
-             * down. These masters are assigned the stale master status allowing
-             * them to be used as masters even if they lose their slaves. A
-             * slave in this case can be either a normal slave or another
-             * master.
-             */
-            if (server.m_read_only)
-            {
-                /** The master is in read-only mode, set it into Slave state */
-                monitor_set_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
-                monitor_clear_pending_status(mon_srv, SERVER_MASTER | SERVER_WAS_MASTER);
-            }
-            else
-            {
-                monitor_set_pending_status(mon_srv, SERVER_MASTER | SERVER_WAS_MASTER);
-                monitor_clear_pending_status(mon_srv, SERVER_SLAVE | SERVER_WAS_SLAVE);
-            }
-        }
-    }
 }
 
 /**

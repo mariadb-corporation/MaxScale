@@ -207,7 +207,6 @@ private:
     void check_maxscale_schema_replication();
     void build_replication_graph();
     void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index, int *cycle);
-    void assign_cycle_roles(int cycle);
     MariaDBServer* find_topology_master_server(std::string* msg_out);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
     void calculate_node_reach(MariaDBServer* node);
