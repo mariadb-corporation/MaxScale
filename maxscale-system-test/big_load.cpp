@@ -48,7 +48,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         create_t1(Test->maxscales->conn_rwsplit[0]);
         create_insert_string(sql, sql_l, 1);
 
-        if ((execute_query(Test->maxscales->conn_rwsplit[0], sql) != 0) && (report_errors))
+        if ((execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != 0) && (report_errors))
         {
             Test->add_result(1, "Query %s failed\n", sql);
         }

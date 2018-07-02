@@ -327,10 +327,10 @@ private:
         for (size_t i = 0; i < s_nClients; ++i)
         {
             string drop = drop_head + std::to_string(i);
-            test.try_query(pConn, drop.c_str());
+            test.try_query(pConn, "%s", drop.c_str());
 
             string create = create_head + std::to_string(i) + create_tail;
-            test.try_query(pConn, create.c_str());
+            test.try_query(pConn, "%s", create.c_str());
         }
 
         return test.ok();
@@ -360,7 +360,7 @@ private:
                 }
             }
 
-            test.try_query(pConn, insert.c_str());
+            test.try_query(pConn, "%s", insert.c_str());
         }
 
         return test.ok();

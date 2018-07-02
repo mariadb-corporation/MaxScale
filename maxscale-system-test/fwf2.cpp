@@ -33,7 +33,7 @@ int read_and_execute_queries(TestConnections *Test, const char* filename, int ex
             if (strlen(sql) > 1)
             {
                 Test->tprintf("%s", sql);
-                if (execute_query(Test->maxscales->conn_rwsplit[0], sql) != expected &&
+                if (execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != expected &&
                     (expected == 1 || mysql_errno(Test->maxscales->conn_rwsplit[0]) == 1141))
                 {
                     Test->tprintf("Query %s, but %s expected, MySQL error: %d, %s\n",

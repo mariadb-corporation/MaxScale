@@ -41,7 +41,7 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
        cout << "Query is '" << change_master.str() << "'" << endl;
     }
     test.try_query(test.repl->nodes[server_ind], "STOP SLAVE;");
-    test.try_query(test.repl->nodes[server_ind], change_master.str().c_str());
+    test.try_query(test.repl->nodes[server_ind], "%s", change_master.str().c_str());
     test.try_query(test.repl->nodes[server_ind], "START SLAVE;");
 }
 

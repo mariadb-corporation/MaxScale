@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     for (int i = 0; queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->try_query(Test->maxscales->conn_rwsplit[0], queries[i]);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", queries[i]);
     }
     int rval = Test->global_result;
     delete Test;

@@ -63,7 +63,7 @@ bool found_in_file(TestConnections& test, const string& file, const string& patt
     command += " ";
     command += file;
 
-    return test.maxscales->ssh_node_f(0, true, command.c_str()) == 0;
+    return test.maxscales->ssh_node_f(0, true, "%s", command.c_str()) == 0;
 }
 
 }

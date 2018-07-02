@@ -227,7 +227,7 @@ void *query_thread(void *ptr)
             char str[256];
             sprintf(str, "INSERT INTO t1 VALUES (%d, %d)", insert_val, insert_val + 100);
             insert_val = 0;
-            execute_query(Test->repl->nodes[0], str);
+            execute_query(Test->repl->nodes[0], "%s", str);
         }
     }
 

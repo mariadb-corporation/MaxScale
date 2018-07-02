@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
-    test.try_query(test.maxscales->conn_rwsplit[0], sql);
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", sql);
 
     // Do the select inside a transacttion so that it gets routed to the master
     test.try_query(test.maxscales->conn_rwsplit[0], "BEGIN");

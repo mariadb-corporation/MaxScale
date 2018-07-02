@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(20);
         create_insert_string(sql, 100, i);
-        Test->try_query(Test->maxscales->conn_rwsplit[0], sql);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", sql);
     }
     Test->try_query(Test->maxscales->conn_rwsplit[0], "COMMIT");
 

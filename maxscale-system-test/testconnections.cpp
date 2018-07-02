@@ -619,7 +619,7 @@ void TestConnections::process_template(int m, const char *template_name, const c
         }
 
         mdn[j]->connect();
-        execute_query(mdn[j]->nodes[0], (char *) "CREATE DATABASE IF NOT EXISTS test");
+        execute_query(mdn[j]->nodes[0], "CREATE DATABASE IF NOT EXISTS test");
         mdn[j]->close_connections();
     }
 
@@ -889,8 +889,8 @@ int TestConnections::start_binlog(int m)
     repl->stop_nodes();
 
     binlog = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
-    execute_query(binlog, (char *) "stop slave");
-    execute_query(binlog, (char *) "reset slave all");
+    execute_query(binlog, "stop slave");
+    execute_query(binlog, "reset slave all");
     mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
@@ -1068,7 +1068,7 @@ bool TestConnections::replicate_from_master(int m)
     return rval;
 }
 
-void TestConnections::revert_replicate_from_master(int m)
+void TestConnections::revert_replicate_from_master()
 {
     char log_file[256] = "";
 
@@ -1106,11 +1106,11 @@ int TestConnections::start_mm(int m)
     repl->connect();
     for (i = 0; i < 2; i++)
     {
-        execute_query(repl->nodes[i], (char *) "stop slave");
-        execute_query(repl->nodes[i], (char *) "reset master");
+        execute_query(repl->nodes[i], "stop slave");
+        execute_query(repl->nodes[i], "reset master");
     }
 
-    execute_query(repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=ON");
+    execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
 
     find_field(repl->nodes[0], (char *) "show master status", (char *) "File", log_file1);
     find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", log_pos1);
@@ -1573,7 +1573,7 @@ int TestConnections::get_client_ip(int m, char * ip)
 
     maxscales->connect_rwsplit(m);
     if (execute_query(maxscales->conn_rwsplit[m],
-                      (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
+                      "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
     {
         return ret;
     }
@@ -1746,15 +1746,15 @@ int TestConnections::use_db(int m, char * db)
     sprintf(sql, "USE %s;", db);
     set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    local_result += execute_query(maxscales->conn_rwsplit[m], sql);
+    local_result += execute_query(maxscales->conn_rwsplit[m], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    local_result += execute_query(maxscales->conn_slave[m], sql);
+    local_result += execute_query(maxscales->conn_slave[m], "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    local_result += execute_query(maxscales->conn_master[m], sql);
+    local_result += execute_query(maxscales->conn_master[m], "%s", sql);
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
-        local_result += execute_query(repl->nodes[i], sql);
+        local_result += execute_query(repl->nodes[i], "%s", sql);
     }
     return local_result;
 }

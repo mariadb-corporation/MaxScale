@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     Test->try_query(conn, (char *) "CREATE TABLE t2 (x varchar(10));");
     char sql[256];
     sprintf(sql, "INSERT INTO t2 VALUES (\"Кот\");");
-    Test->try_query(conn, sql);
+    Test->try_query(conn, "%s", sql);
     Test->stop_timeout();
     sleep(5);
 

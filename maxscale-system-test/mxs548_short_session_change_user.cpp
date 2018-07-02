@@ -255,7 +255,7 @@ void *query_thread_master(void *ptr)
     {
         while (data->exit_flag == 0)
         {
-            data->Test->try_query(data->conn1, sql);
+            data->Test->try_query(data->conn1, "%s", sql);
             data->i++;
         }
     }

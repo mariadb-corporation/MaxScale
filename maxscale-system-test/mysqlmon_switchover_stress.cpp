@@ -330,10 +330,10 @@ private:
         for (size_t i = 0; i < s_nClients; ++i)
         {
             string drop = drop_head + std::to_string(i);
-            test.try_query(pConn, drop.c_str());
+            test.try_query(pConn, "%s", drop.c_str());
 
             string create = create_head + std::to_string(i) + create_tail;
-            test.try_query(pConn, create.c_str());
+            test.try_query(pConn, "%s", create.c_str());
         }
 
         return test.ok();
@@ -363,7 +363,7 @@ private:
                 }
             }
 
-            test.try_query(pConn, insert.c_str());
+            test.try_query(pConn, "%s", insert.c_str());
         }
 
         return test.ok();
@@ -514,7 +514,7 @@ void create_client_user(TestConnections& test)
     stmt += "'";
     stmt += CLIENT_USER;
     stmt += "'@'%%'";
-    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
 
     // Create user
     stmt = "CREATE USER ";
@@ -525,14 +525,14 @@ void create_client_user(TestConnections& test)
     stmt += "'";
     stmt += CLIENT_PASSWORD;
     stmt += "'";
-    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
 
     // Grant access
     stmt = "GRANT SELECT, INSERT, UPDATE ON *.* TO ";
     stmt += "'";
     stmt += CLIENT_USER;
     stmt += "'@'%%'";
-    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
 
     test.try_query(test.maxscales->conn_rwsplit[0], "FLUSH PRIVILEGES");
 }

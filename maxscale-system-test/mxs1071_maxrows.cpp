@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
     exp_rows[0] = 2;
     exp_rows[1] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test03_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test03_sql);
     compare_expected(Test, "CALL multi()", 2, exp_rows);
 
     Test->tprintf("**** Test 4 ****\n");
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
     exp_rows[2] = 1;
     exp_rows[3] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test04_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test04_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 5 ****\n");
@@ -351,14 +351,14 @@ int main(int argc, char *argv[])
     exp_rows[3] = 1;
     exp_rows[4] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test05_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test05_sql);
     compare_expected(Test, "CALL multi()", 5, exp_rows);
 
     Test->tprintf("**** Test 6 ****\n");
     exp_rows[0] = 0;
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test06_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test06_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
 
@@ -382,14 +382,14 @@ int main(int argc, char *argv[])
     exp_rows[7] = 0;
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test07_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test07_sql);
     compare_expected(Test, "CALL multi()", 8, exp_rows);
 
     Test->tprintf("**** Test 8 ****\n");
     exp_rows[0] = 0;
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test08_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test08_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 9 ****\n");
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
     exp_rows[1] = 4;
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test10_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test10_sql);
     compare_expected(Test, "CALL multi()", 2, exp_rows);
 
     err_check(Test, 1096);
@@ -470,13 +470,13 @@ int main(int argc, char *argv[])
     exp_rows[2] = 1;
     exp_rows[3] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test14_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test14_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 15 ****\n");
     exp_rows[0] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test15_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test15_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 16 ****\n");
@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
     exp_rows[2] = 1;
     exp_rows[3] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test17_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test17_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 18 ****\n");
@@ -516,14 +516,14 @@ int main(int argc, char *argv[])
     exp_rows[19] = 1;
     exp_rows[20] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test18_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test18_sql);
     compare_expected(Test, "CALL multi()", 21, exp_rows);
 
     Test->tprintf("**** Test 19 ****\n");
     exp_rows[0] = 0;
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], test19_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", test19_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 20 ****\n");

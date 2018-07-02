@@ -156,7 +156,7 @@ struct
     { datetime_types, datetime_values },
     { date_types,     date_values     },
     { time_types,     time_values     },
-    { 0 }
+    { 0, 0 }
 };
 
 void insert_data(TestConnections& test, const char *table, const char* type, const char** values)

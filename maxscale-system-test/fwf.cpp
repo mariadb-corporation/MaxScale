@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    int rv = execute_query(Test->maxscales->conn_rwsplit[0], sql);
+                    int rv = execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql);
                     Test->add_result(rv, "Query should succeed: %s", sql);
                     local_result += rv;
                 }

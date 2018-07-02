@@ -87,7 +87,7 @@ int transaction(MYSQL * conn, int N)
     }
 
     create_insert_string(sql, N_INSERTS, N);
-    local_result += execute_query(conn, sql);
+    local_result += execute_query(conn, "%s", sql);
     if (local_result != 0)
     {
         Test->tprintf("Insert Failed\n");
@@ -308,7 +308,7 @@ void select_new_master(TestConnections * test)
         sprintf(str, setup_slave1, test->repl->IP[2], maxscale_log_file_new, "4", test->repl->port[2]);
     }
     test->tprintf("change master query: %s\n", str);
-    test->try_query(binlog, str);
+    test->try_query(binlog, "%s", str);
     test->tprintf("start slave\n");
     test->try_query(binlog, "start slave");
     test->tprintf("start slave one more\n");
@@ -331,7 +331,7 @@ void *disconnect_thread( void *ptr )
     while (exit_flag == 0)
     {
         sprintf(cmd, "DISCONNECT SERVER %d", i);
-        execute_query(conn, cmd);
+        execute_query(conn, "%s", cmd);
         i++;
         if (i > Test->repl->N)
         {

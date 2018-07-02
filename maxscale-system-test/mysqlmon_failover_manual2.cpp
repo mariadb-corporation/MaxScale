@@ -55,7 +55,7 @@ void connect_maxscale(TestConnections& test)
 
 void try_query(TestConnections& test, const char* zQuery)
 {
-    if (test.try_query(test.maxscales->conn_rwsplit[0], zQuery) != 0)
+    if (test.try_query(test.maxscales->conn_rwsplit[0], "%s", zQuery) != 0)
     {
         string s("Could not execute query: ");
         s += zQuery;

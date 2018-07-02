@@ -161,9 +161,9 @@ int main(int argc, char *argv[])
         master_conn[i] = Test->maxscales->open_readconn_master_connection(0);
         slave_conn[i] = Test->maxscales->open_readconn_slave_connection(0);
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
-        execute_query(rwsplit_conn[i], sql);
+        execute_query(rwsplit_conn[i], "%s", sql);
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);
-        execute_query(master_conn[i], sql);
+        execute_query(master_conn[i], "%s", sql);
         fflush(stdout);
     }
 
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
         Test->set_timeout(60);
         slave_conn[i] = Test->maxscales->open_readconn_slave_connection(0);
         sprintf(sql, "SELECT * FROM t1");
-        execute_query(slave_conn[i], sql);
+        execute_query(slave_conn[i], "%s", sql);
         fflush(stdout);
     }
 

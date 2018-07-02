@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     test.maxscales->connect_maxscale(0);
     for (int i = 0; i < 10; i++)
     {
-        test.try_query(test.maxscales->conn_rwsplit[0], std::string("set @test=" + std::to_string(i)).c_str());
+        test.try_query(test.maxscales->conn_rwsplit[0], "%s", std::string("set @test=" + std::to_string(i)).c_str());
     }
 
     test.tprintf("Execute one more session command and expect message in error log");

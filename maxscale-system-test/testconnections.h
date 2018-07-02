@@ -293,7 +293,7 @@ public:
     /**
      * @brief Stop binlogrouter replication from master
      */
-    void revert_replicate_from_master(int m = 0);
+    void revert_replicate_from_master();
 
     /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it

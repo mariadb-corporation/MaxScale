@@ -28,7 +28,7 @@ void drop(TestConnections& test)
     string stmt("DROP TABLE IF EXISTS cache_test");
 
     cout << stmt << endl;
-    test.try_query(pMysql, stmt.c_str());
+    test.try_query(pMysql, "%s", stmt.c_str());
 }
 
 void create(TestConnections& test)
@@ -40,7 +40,7 @@ void create(TestConnections& test)
     string stmt("CREATE TABLE cache_test (a INT)");
 
     cout << stmt << endl;
-    test.try_query(pMysql, stmt.c_str());
+    test.try_query(pMysql, "%s", stmt.c_str());
 }
 
 void insert(TestConnections& test)
@@ -50,7 +50,7 @@ void insert(TestConnections& test)
     string stmt("INSERT INTO cache_test VALUES (1)");
 
     cout << stmt << endl;
-    test.try_query(pMysql, stmt.c_str());
+    test.try_query(pMysql, "%s", stmt.c_str());
 }
 
 void update(TestConnections& test, int value)
@@ -61,7 +61,7 @@ void update(TestConnections& test, int value)
     stmt += std::to_string(value);
 
     cout << stmt << endl;
-    test.try_query(pMysql, stmt.c_str());
+    test.try_query(pMysql, "%s", stmt.c_str());
 }
 
 void select(TestConnections& test, int* pValue)
@@ -118,7 +118,7 @@ void set(TestConnections& test, Cache::What what, bool value)
     stmt += (value ? "true" : "false");
 
     cout << stmt << endl;
-    test.try_query(pMysql, stmt.c_str());
+    test.try_query(pMysql, "%s", stmt.c_str());
 }
 
 }

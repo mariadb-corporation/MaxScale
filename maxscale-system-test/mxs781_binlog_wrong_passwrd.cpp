@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     sprintf(str, setup_binlog_wrong_passwrd, Test->repl->IP[0], Test->repl->port[0]);
     Test->tprintf("binlog setup sql: %s\n", str);
     Test->set_timeout(10);
-    execute_query(binlog, str);
+    execute_query(binlog, "%s", str);
     Test->tprintf("Error: %s\n", mysql_error(binlog));
 
     Test->tprintf("'start slave' to binlog\n");

@@ -58,7 +58,7 @@ void *disconnect_thread( void *ptr )
     while (exit_flag == 0)
     {
         sprintf(cmd, "DISCONNECT SERVER %d", i);
-        execute_query(conn, cmd);
+        execute_query(conn, "%s", cmd);
         i++;
         if (i > Test->repl->N)
         {

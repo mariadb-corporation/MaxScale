@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
              filename);
     test->tprintf("Loading data\n");
     test->set_timeout(100);
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0], query), "Loading data failed.");
+    test->add_result(execute_query(test->maxscales->conn_rwsplit[0], "%s", query), "Loading data failed.");
     test->tprintf("Reading data\n");
     test->set_timeout(100);
     test->add_result(execute_query(test->maxscales->conn_rwsplit[0], "SELECT * FROM test.dump"),

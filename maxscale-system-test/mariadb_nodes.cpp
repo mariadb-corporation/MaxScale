@@ -267,7 +267,7 @@ void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
     }
 
     execute_query(nodes[NewMaster], "RESET SLAVE ALL");
-    execute_query(nodes[NewMaster], create_repl_user);
+    execute_query(nodes[NewMaster], "%s", create_repl_user);
 
     if (mysql_ping(nodes[OldMaster]) == 0)
     {
@@ -284,7 +284,7 @@ void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
         {
             char str[1024];
             sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);
-            execute_query(nodes[i], str);
+            execute_query(nodes[i], "%s", str);
         }
     }
 }
@@ -471,7 +471,7 @@ int Galera_nodes::start_galera()
     sleep(5);
 
     local_result += connect();
-    local_result += execute_query(nodes[0], create_repl_user);
+    local_result += execute_query(nodes[0], "%s", create_repl_user);
 
     close_connections();
     return local_result;
@@ -940,7 +940,7 @@ int Mariadb_nodes::set_slave(MYSQL * conn, char master_host[], int master_port, 
     {
         printf("Setup slave SQL: %s\n", str);
     }
-    return execute_query(conn, str);
+    return execute_query(conn, "%s", str);
 }
 
 int Mariadb_nodes::set_repl_user()
@@ -949,7 +949,7 @@ int Mariadb_nodes::set_repl_user()
     global_result += connect();
     for (int i = 0; i < N; i++)
     {
-        global_result += execute_query(nodes[i], create_repl_user);
+        global_result += execute_query(nodes[i], "%s", create_repl_user);
     }
     close_connections();
     return global_result;
@@ -1074,7 +1074,7 @@ int Mariadb_nodes::execute_query_all_nodes(const char* sql)
     connect();
     for (int i = 0; i < N; i++)
     {
-        local_result += execute_query(nodes[i], sql);
+        local_result += execute_query(nodes[i], "%s", sql);
     }
     close_connections();
     return local_result;
@@ -1505,6 +1505,6 @@ void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
     }
 
     execute_query(nodes[slave], "STOP SLAVE;");
-    execute_query(nodes[slave], change_master.str().c_str());
+    execute_query(nodes[slave], "%s", change_master.str().c_str());
     execute_query(nodes[slave], "START SLAVE;");
 }

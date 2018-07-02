@@ -19,7 +19,7 @@ void* async_query(void* data)
         for (int i = 0; i < 50 && running && test->global_result == 0; i++)
         {
             const char* query = "SET @a = (SELECT SLEEP(1))";
-            test->try_query(conn, query);
+            test->try_query(conn, "%s", query);
         }
 
         mysql_close(conn);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
     ss << "CREATE OR REPLACE TABLE test.t1 (id INT)";
     test.maxscales->connect_maxscale(0);
-    test.try_query(test.maxscales->conn_rwsplit[0], ss.str().c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
 
     ss.str("");
     ss << "INSERT INTO test.t1 VALUES (0)";
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     {
         ss << ",(" << i << ")";
     }
-    test.try_query(test.maxscales->conn_rwsplit[0], ss.str().c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
 
     test.maxscales->close_maxscale_connections(0);
 

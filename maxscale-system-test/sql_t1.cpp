@@ -183,7 +183,7 @@ int insert_into_t1(MYSQL *conn, int N)
         printf("INSERT: rwsplitter\n");
         printf("Trying INSERT, len=%d\n", x);
         fflush(stdout);
-        result += execute_query(conn,  sqlstr);
+        result += execute_query(conn, "%s", sqlstr);
         fflush(stdout);
         x *= 16;
     }

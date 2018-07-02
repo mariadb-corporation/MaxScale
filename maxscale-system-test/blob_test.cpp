@@ -17,7 +17,7 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, unsigne
     Test->try_query(conn, (char *) "DROP TABLE IF EXISTS long_blob_table");
     sprintf(sql, "CREATE TABLE long_blob_table(id int NOT NULL AUTO_INCREMENT, x INT, b %s, PRIMARY KEY (id))",
             blob_name);
-    Test->try_query(conn, sql);
+    Test->try_query(conn, "%s", sql);
 
     for (int k = 0; k < rows; k++)
     {

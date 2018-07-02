@@ -51,7 +51,7 @@ void insert_data(TestConnections& test)
     {
         stringstream ss;
         ss << "INSERT INTO test.t1 VALUES (" << i << ")";
-        test.try_query(pConn, ss.str().c_str());
+        test.try_query(pConn, "%s", ss.str().c_str());
     }
 
     test.try_query(pConn, "COMMIT");

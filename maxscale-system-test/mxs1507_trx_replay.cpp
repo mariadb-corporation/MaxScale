@@ -43,9 +43,10 @@ int main(int argc, char** argv)
         vector<function<void ()>> pre;
         vector<function<void ()>> post;
         vector<function<void ()>> check;
-    }
-    tests[] =
-    {
+    };
+
+    std::vector<TrxTest> tests
+    ({
         {
             "Basic transaction",
             {
@@ -56,6 +57,8 @@ int main(int argc, char** argv)
                 bind(ok, "SELECT 2"),
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Transaction with a write",
@@ -81,6 +84,8 @@ int main(int argc, char** argv)
                 bind(ok, "SELECT 2"),
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Trx started, no queries",
@@ -91,6 +96,8 @@ int main(int argc, char** argv)
                 bind(ok, "SELECT 1"),
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Trx waiting on commit",
@@ -101,6 +108,8 @@ int main(int argc, char** argv)
             {
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Trx with NOW()",
@@ -111,6 +120,8 @@ int main(int argc, char** argv)
             {
                 bind(err, "SELECT 1"),
             },
+            {
+            }
         },
         {
             "Commit trx with NOW()",
@@ -121,6 +132,8 @@ int main(int argc, char** argv)
             {
                 bind(err, "COMMIT"),
             },
+            {
+            }
         },
         {
             "NOW() used after replay",
@@ -132,6 +145,8 @@ int main(int argc, char** argv)
                 bind(ok, "SELECT NOW()"),
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Exceed transaction length limit",
@@ -149,6 +164,8 @@ int main(int argc, char** argv)
                 bind(err, "SELECT 7"),
                 bind(err, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Normal trx after hitting limit",
@@ -183,6 +200,8 @@ int main(int argc, char** argv)
                 bind(check, "SELECT @a", "1"),
                 bind(ok, "COMMIT"),
             },
+            {
+            }
         },
         {
             "Empty transaction",
@@ -192,8 +211,10 @@ int main(int argc, char** argv)
             {
                 bind(ok, "COMMIT"),
             },
-        },
-    };
+            {
+            }
+        }
+    });
 
     // Create a table for testing
     test.maxscales->connect();

@@ -47,13 +47,13 @@ void set_max_packet(TestConnections* Test, bool binlog, char * cmd)
     if (binlog)
     {
         Test->repl->connect();
-        Test->try_query(Test->repl->nodes[0], cmd);
+        Test->try_query(Test->repl->nodes[0], "%s", cmd);
         Test->repl->close_connections();
     }
     else
     {
         Test->maxscales->connect_maxscale(0);
-        Test->try_query(Test->maxscales->conn_rwsplit[0], cmd);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "%s", cmd);
         Test->maxscales->close_maxscale_connections(0);
     }
     Test->tprintf(".. done\n");

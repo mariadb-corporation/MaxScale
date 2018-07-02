@@ -206,14 +206,14 @@ void *query_thread1( void *ptr )
 
     while (data->exit_flag == 0)
     {
-        if (data->Test->try_query(data->conn1, sql))
+        if (data->Test->try_query(data->conn1, "%s", sql))
         {
             data->Test->add_result(1, "Query to ReadConn Master failed\n");
             return NULL;
         }
         if (data->rwsplit_only == 0)
         {
-            if (data->Test->try_query(data->conn2, sql))
+            if (data->Test->try_query(data->conn2, "%s", sql))
             {
                 data->Test->add_result(1, "Query to RWSplit failed\n");
                 return NULL;

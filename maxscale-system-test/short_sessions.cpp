@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
         test.set_timeout(15);
         conn = test.maxscales->open_rwsplit_connection(0);
-        execute_query(conn, sql);
+        execute_query(conn, "%s", sql);
         mysql_close(conn);
     }
 

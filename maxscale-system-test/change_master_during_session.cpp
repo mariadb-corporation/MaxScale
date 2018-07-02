@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         Test->set_timeout(60);
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);
         Test->tprintf("Trying: %d\n", i);
-        execute_query(Test->maxscales->conn_rwsplit[0], sql);
+        execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql);
     }
     Test->set_timeout(60);
     Test->tprintf("executing SELECT\n");
