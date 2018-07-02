@@ -1044,6 +1044,65 @@ string MaskingRules::Rule::match() const
     return s;
 }
 
+bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
+                                 const char* zUser,
+                                 const char* zHost) const
+{
+    const LEncString& table = column_def.org_table();
+    const LEncString& database = column_def.schema();
+
+    // If the resultset does not contain table and database names, as will
+    // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
+    // we consider it a match if a table or database have been provided.
+    // Otherwise it would be easy to bypass a table/database rule.
+
+    bool match =
+        (m_column == column_def.org_name()) &&
+        (m_table.empty() || table.empty() || (m_table == table)) &&
+        (m_database.empty() || database.empty() || (m_database == database));
+
+    if (match)
+    {
+        // If the column matched, then we need to check whether the rule applies
+        // to the user and host.
+
+        match = matches_account(zUser, zHost);
+    }
+
+    return match;
+}
+
+bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
+                                 const char* zUser,
+                                 const char* zHost) const
+{
+    const char* zColumn = field.column;
+    const char* zTable = field.table;
+    const char* zDatabase = field.database;
+
+    ss_dassert(zColumn);
+
+    // If the resultset does not contain table and database names, as will
+    // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
+    // we consider it a match if a table or database have been provided.
+    // Otherwise it would be easy to bypass a table/database rule.
+
+    bool match =
+        (m_column == zColumn) &&
+        (m_table.empty() || !zTable || (m_table == zTable)) &&
+        (m_database.empty() || !zDatabase || (m_database == zDatabase));
+
+    if (match)
+    {
+        // If the column matched, then we need to check whether the rule applies
+        // to the user and host.
+
+        match = matches_account(zUser, zHost);
+    }
+
+    return match;
+}
+
 namespace
 {
 
@@ -1067,52 +1126,32 @@ private:
 
 }
 
-bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
-                                 const char* zUser,
-                                 const char* zHost) const
+bool MaskingRules::Rule::matches_account(const char* zUser,
+                                         const char* zHost) const
 {
-    const LEncString& table = column_def.org_table();
-    const LEncString& database = column_def.schema();
+    bool match = true;
 
-    // If the resultset does not contain table and database names, as will
-    // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
-    // we consider it a match if a table or database have been provided.
-    // Otherwise it would be easy to bypass a table/database rule.
+    AccountMatcher matcher(zUser, zHost);
 
-    bool match =
-        (m_column == column_def.org_name()) &&
-        (m_table.empty() || table.empty() || (m_table == table)) &&
-        (m_database.empty() || database.empty() || (m_database == database));
-
-    if (match)
+    if (m_applies_to.size() != 0)
     {
-        // If the column matched, then we need to check whether the rule applies
-        // to the user and host.
+        vector<SAccount>::const_iterator i = std::find_if(m_applies_to.begin(),
+                                                          m_applies_to.end(),
+                                                          matcher);
 
-        AccountMatcher matcher(zUser, zHost);
+        match = (i != m_applies_to.end());
+    }
 
-        if (m_applies_to.size() != 0)
-        {
-            match = false;
+    if (match && (m_exempted.size() != 0))
+    {
+        // If it is still a match, we need to check whether the user/host is
+        // exempted.
 
-            vector<SAccount>::const_iterator i = std::find_if(m_applies_to.begin(),
-                                                              m_applies_to.end(),
-                                                              matcher);
+        vector<SAccount>::const_iterator i = std::find_if(m_exempted.begin(),
+                                                          m_exempted.end(),
+                                                          matcher);
 
-            match = (i != m_applies_to.end());
-        }
-
-        if (match && (m_exempted.size() != 0))
-        {
-            // If it is still a match, we need to check whether the user/host is
-            // exempted.
-
-            vector<SAccount>::const_iterator i = std::find_if(m_exempted.begin(),
-                                                              m_exempted.end(),
-                                                              matcher);
-
-            match = (i == m_exempted.end());
-        }
+        match = (i == m_exempted.end());
     }
 
     return match;
@@ -1352,13 +1391,14 @@ std::auto_ptr<MaskingRules> MaskingRules::create_from(json_t* pRoot)
 namespace
 {
 
+template<class T>
 class RuleMatcher : std::unary_function<MaskingRules::SRule, bool>
 {
 public:
-    RuleMatcher(const ComQueryResponse::ColumnDef& column_def,
+    RuleMatcher(const T& field,
                 const char* zUser,
                 const char* zHost)
-        : m_column_def(column_def)
+        : m_field(field)
         , m_zUser(zUser)
         , m_zHost(zHost)
     {
@@ -1366,11 +1406,11 @@ public:
 
     bool operator()(const MaskingRules::SRule& sRule)
     {
-        return sRule->matches(m_column_def, m_zUser, m_zHost);
+        return sRule->matches(m_field, m_zUser, m_zHost);
     }
 
 private:
-    const ComQueryResponse::ColumnDef& m_column_def;
+    const T&    m_field;
     const char* m_zUser;
     const char* m_zHost;
 };
@@ -1383,7 +1423,7 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::Col
 {
     const Rule* pRule = NULL;
 
-    RuleMatcher matcher(column_def, zUser, zHost);
+    RuleMatcher<ComQueryResponse::ColumnDef> matcher(column_def, zUser, zHost);
     vector<SRule>::const_iterator i = std::find_if(m_rules.begin(), m_rules.end(), matcher);
 
     if (i != m_rules.end())
@@ -1395,3 +1435,23 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::Col
 
     return pRule;
 }
+
+const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_info,
+                                                     const char* zUser,
+                                                     const char* zHost) const
+{
+    const Rule* pRule = NULL;
+
+    RuleMatcher<QC_FIELD_INFO> matcher(field_info, zUser, zHost);
+    vector<SRule>::const_iterator i = std::find_if(m_rules.begin(), m_rules.end(), matcher);
+
+    if (i != m_rules.end())
+    {
+        const SRule& sRule = *i;
+
+        pRule = sRule.get();
+    }
+
+    return pRule;
+}
+

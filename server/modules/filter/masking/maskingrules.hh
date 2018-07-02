@@ -124,6 +124,19 @@ public:
                      const char* zHost) const;
 
         /**
+         * Establish whether a rule matches a field and user/host.
+         *
+         * @param field  What field.
+         * @param zUser  The current user.
+         * @param zHost  The current host.
+         *
+         * @return True, if the rule matches.
+         */
+        bool matches(const QC_FIELD_INFO& field,
+                     const char* zUser,
+                     const char* zHost) const;
+
+        /**
          * Mask the column content with value or fill.
          *
          * @param s    The current value to be rewritten.
@@ -133,6 +146,9 @@ public:
     private:
         Rule(const Rule&);
         Rule& operator = (const Rule&);
+
+        bool matches_account(const char* zUser,
+                             const char* zHost) const;
 
     private:
         std::string           m_column;
@@ -358,6 +374,23 @@ public:
      *            @c MaskingRules object remains valid.
      */
     const Rule* get_rule_for(const ComQueryResponse::ColumnDef& column_def,
+                             const char* zUser,
+                             const char* zHost) const;
+
+    /**
+     * Return the rule object that matches a QC_FIELD_INFO and user/host.
+     *
+     * @param field  A field.
+     * @param zUser  The current user.
+     * @param zHost  The current host.
+     *
+     * @return A rule object that matches the field indo and user/host
+     *         or NULL if no such rule object exists.
+     *
+     * @attention The returned object remains value only as long as the
+     *            @c MaskingRules object remains valid.
+     */
+    const Rule* get_rule_for(const QC_FIELD_INFO& field_info,
                              const char* zUser,
                              const char* zHost) const;
 
