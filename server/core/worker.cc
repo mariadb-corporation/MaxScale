@@ -503,6 +503,8 @@ void Worker::run()
 bool Worker::start(size_t stack_size)
 {
     m_started = true;
+    m_should_shutdown = false;
+    m_shutdown_initiated = false;
 
     if (!thread_start(&m_thread, &Worker::thread_main, this, stack_size))
     {

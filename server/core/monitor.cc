@@ -225,19 +225,23 @@ monitor_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     {
         spinlock_acquire(&monitor->lock);
 
-        if (journal_is_stale(monitor, monitor->journal_max_age))
+        // Only start the monitor if it's newly created or currently stopped.
+        if (monitor->state == MONITOR_STATE_ALLOC || monitor->state == MONITOR_STATE_STOPPED)
         {
-            MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->name);
-            remove_server_journal(monitor);
-        }
+            if (journal_is_stale(monitor, monitor->journal_max_age))
+            {
+                MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->name);
+                remove_server_journal(monitor);
+            }
 
-        if ((*monitor->api->startMonitor)(monitor->instance, params))
-        {
-            monitor->state = MONITOR_STATE_RUNNING;
-        }
-        else
-        {
-            MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+            if ((*monitor->api->startMonitor)(monitor->instance, params))
+            {
+                monitor->state = MONITOR_STATE_RUNNING;
+            }
+            else
+            {
+                MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+            }
         }
 
         spinlock_release(&monitor->lock);
