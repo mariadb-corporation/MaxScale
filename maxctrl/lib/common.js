@@ -377,13 +377,15 @@ function getTable(headobj) {
 function pingCluster(hosts) {
     var promises = []
 
-    hosts.forEach(function(i) {
-        args = {}
-        args.uri = getUri(i, this.argv.secure, '')
-        args.json = true
-        setTlsCerts(args)
-        promises.push(request(args))
-    })
+    if (hosts.length > 1 ) {
+        hosts.forEach(function(i) {
+            args = {}
+            args.uri = getUri(i, this.argv.secure, '')
+            args.json = true
+            setTlsCerts(args)
+            promises.push(request(args))
+        })
+    }
 
     return Promise.all(promises)
 }
