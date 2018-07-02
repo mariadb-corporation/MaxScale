@@ -810,7 +810,7 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         }
 
         const char* command = "ls /tmp/core* && exit 42";
-        int rc = maxscales->ssh_node_f(i, true, command);
+        int rc = maxscales->ssh_node_f(i, true, "%s", command);
         assert(rc != 42, "Test should not generate core files");
     }
     return 0;
@@ -924,13 +924,13 @@ int TestConnections::start_binlog(int m)
     {
         // GTID to connect real Master
         tprintf("GTID for connection 1st slave to master!\n");
-        try_query(repl->nodes[1], (char *) "stop slave");
-        try_query(repl->nodes[1], (char *) "SET @@global.gtid_slave_pos=''");
+        try_query(repl->nodes[1], "stop slave");
+        try_query(repl->nodes[1], "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
-        try_query(repl->nodes[1], sys1);
-        try_query(repl->nodes[1], (char *) "start slave");
+        try_query(repl->nodes[1], "%s", sys1);
+        try_query(repl->nodes[1], "start slave");
     }
     else
     {
@@ -941,7 +941,7 @@ int TestConnections::start_binlog(int m)
         tprintf("Real master pos : %s\n", log_pos);
 
         tprintf("Stopping first slave (node 1)\n");
-        try_query(repl->nodes[1], (char *) "stop slave;");
+        try_query(repl->nodes[1], "stop slave;");
         //repl->no_set_pos = true;
         repl->no_set_pos = false;
         tprintf("Configure first backend slave node to be slave of real master\n");
@@ -960,12 +960,12 @@ int TestConnections::start_binlog(int m)
     {
         // GTID to connect real Master
         tprintf("GTID for connection binlog router to master!\n");
-        try_query(binlog, (char *) "stop slave");
-        try_query(binlog, (char *) "SET @@global.gtid_slave_pos=''");
+        try_query(binlog, "stop slave");
+        try_query(binlog, "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
-        try_query(binlog, sys1);
+        try_query(binlog, "%s", sys1);
     }
     else
     {
@@ -982,7 +982,7 @@ int TestConnections::start_binlog(int m)
                 "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
                 maxscales->access_homedir[m], maxscales->access_homedir[m], maxscales->access_homedir[m]);
         tprintf("Configuring Master ssl: %s\n", sys1);
-        try_query(binlog, sys1);
+        try_query(binlog, "%s", sys1);
     }
     try_query(binlog, "start slave");
     try_query(binlog, "show slave status");
@@ -994,13 +994,13 @@ int TestConnections::start_binlog(int m)
         fflush(stdout);
         for (i = 2; i < repl->N; i++)
         {
-            try_query(repl->nodes[i], (char *) "stop slave");
-            try_query(repl->nodes[i], (char *) "SET @@global.gtid_slave_pos=''");
+            try_query(repl->nodes[i], "stop slave");
+            try_query(repl->nodes[i], "SET @@global.gtid_slave_pos=''");
             sprintf(sys1,
                     "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                     maxscales->IP[m], maxscales->binlog_port[m]);
-            try_query(repl->nodes[i], sys1);
-            try_query(repl->nodes[i], (char *) "start slave");
+            try_query(repl->nodes[i], "%s", sys1);
+            try_query(repl->nodes[i], "start slave");
         }
     }
     else
@@ -1019,7 +1019,7 @@ int TestConnections::start_binlog(int m)
         fflush(stdout);
         for (i = 2; i < repl->N; i++)
         {
-            try_query(repl->nodes[i], (char *) "stop slave");
+            try_query(repl->nodes[i], "stop slave");
             repl->set_slave(repl->nodes[i],  maxscales->IP[m], maxscales->binlog_port[m], log_file, log_pos);
         }
     }
@@ -1364,13 +1364,13 @@ int TestConnections::check_maxscale_alive(int m)
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
-    try_query(maxscales->conn_rwsplit[m], (char *) "show databases;");
+    try_query(maxscales->conn_rwsplit[m], "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(maxscales->conn_master[m], (char *) "show databases;");
+    try_query(maxscales->conn_master[m], "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
-    try_query(maxscales->conn_slave[m], (char *) "show databases;");
+    try_query(maxscales->conn_slave[m], "show databases;");
     set_timeout(10);
     maxscales->close_maxscale_connections(m);
     add_result(global_result - gr, "Maxscale is not alive\n");
@@ -1705,6 +1705,8 @@ void *log_copy_thread( void *ptr )
         Test->tprintf("\n **** Copying all logs *** \n");
         Test->copy_all_logs_periodic();
     }
+
+    return NULL;
 }
 
 int TestConnections::insert_select(int m, int N)
@@ -1848,9 +1850,9 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
 
 int TestConnections::try_query_all(int m, const char *sql)
 {
-    return try_query(maxscales->conn_rwsplit[m], sql) +
-           try_query(maxscales->conn_master[m], sql) +
-           try_query(maxscales->conn_slave[m], sql);
+    return try_query(maxscales->conn_rwsplit[m], "%s", sql) +
+           try_query(maxscales->conn_master[m], "%s", sql) +
+           try_query(maxscales->conn_slave[m], "%s", sql);
 }
 
 StringSet TestConnections::get_server_status(const char* name)

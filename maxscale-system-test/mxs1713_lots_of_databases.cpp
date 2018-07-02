@@ -43,9 +43,15 @@ int main(int argc, char** argv)
     }
     test.tprintf("Done!");
 
-    test.assert(errors.empty(), "None of the queries should fail: %s",
-                std::accumulate(errors.begin(), errors.end(), std::string(),
-                                [](const std::string &a, const std::string &b){return a + b + " ";}));
+    auto combiner = [](std::string& a, std::string b)
+    {
+        a += b + " ";
+        return a;
+    };
+
+    std::string errstr;
+    std::accumulate(errors.begin(), errors.end(), errstr, combiner);
+    test.assert(errors.empty(), "None of the queries should fail: %s", errstr.c_str());
 
     test.tprintf("Dropping databases...");
     for (auto db : db_list)
