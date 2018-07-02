@@ -495,6 +495,13 @@ public:
      */
     static void set_maxwait(unsigned int maxwait);
 
+    /**
+     * Get next Worker's ID
+     *
+     * @return The ID of the worker where work should be assigned
+     */
+    static int pick_worker_id();
+
 private:
     Worker(int id,
            int epoll_fd);

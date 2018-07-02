@@ -582,6 +582,13 @@ void Worker::set_maxwait(unsigned int maxwait)
     this_unit.max_poll_sleep = maxwait;
 }
 
+// static
+int Worker::pick_worker_id()
+{
+    static int id_generator = 0;
+    return atomic_add(&id_generator, 1) % this_unit.n_workers;
+}
+
 bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
