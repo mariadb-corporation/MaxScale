@@ -38,34 +38,36 @@
 #define UINT64_MAX      (18446744073709551615UL)
 #endif
 
-// Count
-#define CACHE_DEFAULT_MAX_RESULTSET_ROWS "0"
-// Bytes
-#define CACHE_DEFAULT_MAX_RESULTSET_SIZE "0"
-// Seconds
-#define CACHE_DEFAULT_HARD_TTL           "0"
-// Seconds
-#define CACHE_DEFAULT_SOFT_TTL           "0"
-// Integer value
-#define CACHE_DEFAULT_DEBUG              "0"
-// Positive integer
-#define CACHE_DEFAULT_MAX_COUNT          "0"
-// Positive integer
-#define CACHE_DEFAULT_MAX_SIZE           "0"
-// Thread model
-#define CACHE_DEFAULT_THREAD_MODEL       "shared"
-// Cacheable selects
-#define CACHE_DEFAULT_SELECTS            "verify_cacheable"
-// Storage
-#define CACHE_DEFAULT_STORAGE            "storage_inmemory"
-// Transaction behaviour
-#define CACHE_DEFAULT_CACHE_IN_TRXS      "all_transactions"
-
 typedef enum cache_selects
 {
     CACHE_SELECTS_ASSUME_CACHEABLE,
     CACHE_SELECTS_VERIFY_CACHEABLE,
 } cache_selects_t;
+
+// Count
+#define CACHE_ZDEFAULT_MAX_RESULTSET_ROWS             "0"
+// Bytes
+#define CACHE_ZDEFAULT_MAX_RESULTSET_SIZE             "0"
+// Seconds
+#define CACHE_ZDEFAULT_HARD_TTL                       "0"
+// Seconds
+#define CACHE_ZDEFAULT_SOFT_TTL                       "0"
+// Integer value
+#define CACHE_ZDEFAULT_DEBUG                          "0"
+// Positive integer
+#define CACHE_ZDEFAULT_MAX_COUNT                      "0"
+// Positive integer
+#define CACHE_ZDEFAULT_MAX_SIZE                       "0"
+// Thread model
+#define CACHE_ZDEFAULT_THREAD_MODEL                   "thread_specific"
+const cache_thread_model CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
+// Cacheable selects
+#define CACHE_ZDEFAULT_SELECTS                        "assume_cacheable"
+const cache_selects_t CACHE_DEFAULT_SELECTS =         CACHE_SELECTS_ASSUME_CACHEABLE;
+// Storage
+#define CACHE_ZDEFAULT_STORAGE                        "storage_inmemory"
+// Transaction behaviour
+#define CACHE_ZDEFAULT_CACHE_IN_TRXS                  "all_transactions"
 
 typedef enum cache_in_trxs
 {
