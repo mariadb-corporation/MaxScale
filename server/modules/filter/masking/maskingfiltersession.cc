@@ -56,65 +56,15 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     switch (request.command())
     {
     case MXS_COM_QUERY:
+        m_res.reset(request.command(), m_filter.rules());
+
+        if (m_filter.config().prevent_function_usage() && reject_if_function_used(pPacket))
         {
-            m_res.reset(request.command(), m_filter.rules());
-
-            SMaskingRules sRules = m_filter.rules();
-
-            const char *zUser = session_get_user(m_pSession);
-            const char *zHost = session_get_remote(m_pSession);
-
-            if (!zUser)
-            {
-                zUser = "";
-            }
-
-            if (!zHost)
-            {
-                zHost = "";
-            }
-
-            auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info)
-                {
-                    const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
-
-                    return pRule ? true : false;
-                };
-
-            auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info)
-                {
-                    const QC_FIELD_INFO* begin = function_info.fields;
-                    const QC_FIELD_INFO* end = begin + function_info.n_fields;
-
-                    auto i = std::find_if(begin, end, pred1);
-
-                    return i != end;
-                };
-
-            const QC_FUNCTION_INFO* pInfos;
-            size_t nInfos;
-
-            qc_get_function_info(pPacket, &pInfos, &nInfos);
-
-            const QC_FUNCTION_INFO* begin = pInfos;
-            const QC_FUNCTION_INFO* end = begin + nInfos;
-
-            auto i = std::find_if(begin, end, pred2);
-
-            if (i == end)
-            {
-                m_state = EXPECTING_RESPONSE;
-            }
-            else
-            {
-                std::stringstream ss;
-                ss << "The function " << i->name << " is used in conjunction with a field "
-                   << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
-
-                GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
-                set_response(pResponse);
-                m_state = EXPECTING_NOTHING;
-            }
+            m_state = EXPECTING_NOTHING;
+        }
+        else
+        {
+            m_state = EXPECTING_RESPONSE;
         }
         break;
 
@@ -417,4 +367,65 @@ void MaskingFilterSession::mask_values(ComPacket& response)
         MXS_ERROR("Unexpected request: %d", m_res.command());
         ss_dassert(!true);
     }
+}
+
+bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
+{
+    bool rejected = false;
+
+    SMaskingRules sRules = m_filter.rules();
+
+    const char *zUser = session_get_user(m_pSession);
+    const char *zHost = session_get_remote(m_pSession);
+
+    if (!zUser)
+    {
+        zUser = "";
+    }
+
+    if (!zHost)
+    {
+        zHost = "";
+    }
+
+    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info)
+        {
+            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+
+            return pRule ? true : false;
+        };
+
+    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info)
+        {
+            const QC_FIELD_INFO* begin = function_info.fields;
+            const QC_FIELD_INFO* end = begin + function_info.n_fields;
+
+            auto i = std::find_if(begin, end, pred1);
+
+            return i != end;
+        };
+
+    const QC_FUNCTION_INFO* pInfos;
+    size_t nInfos;
+
+    qc_get_function_info(pPacket, &pInfos, &nInfos);
+
+    const QC_FUNCTION_INFO* begin = pInfos;
+    const QC_FUNCTION_INFO* end = begin + nInfos;
+
+    auto i = std::find_if(begin, end, pred2);
+
+    if (i != end)
+    {
+        std::stringstream ss;
+        ss << "The function " << i->name << " is used in conjunction with a field "
+           << "that should be masked for '" << zUser << "'@'" << zHost << "', access is denied.";
+
+        GWBUF* pResponse = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
+        set_response(pResponse);
+
+        rejected = true;
+    }
+
+    return rejected;
 }

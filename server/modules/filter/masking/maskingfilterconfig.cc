@@ -26,6 +26,10 @@ const char config_value_ignore[] = "ignore";
 const char config_value_never[]  = "never";
 const char config_value_always[] = "always";
 
+const char config_name_prevent_function_usage[] = "prevent_function_usage";
+
+const char config_value_true[] = "true";
+
 }
 
 /*
@@ -72,6 +76,16 @@ const MXS_ENUM_VALUE MaskingFilterConfig::warn_type_mismatch_values[] =
 const char* MaskingFilterConfig::warn_type_mismatch_default = config_value_never;
 
 /*
+ * PARAM prevent_function_usage
+ */
+
+//static
+const char* MaskingFilterConfig::prevent_function_usage_name = config_name_prevent_function_usage;
+
+//static
+const char* MaskingFilterConfig::prevent_function_usage_default = config_value_true;
+
+/*
  * MaskingFilterConfig
  */
 
@@ -96,3 +110,10 @@ MaskingFilterConfig::get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams)
     int value = config_get_enum(pParams, warn_type_mismatch_name, warn_type_mismatch_values);
     return static_cast<warn_type_mismatch_t>(value);
 }
+
+//static
+bool MaskingFilterConfig::get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams)
+{
+    return config_get_bool(pParams, prevent_function_usage_name);
+}
+

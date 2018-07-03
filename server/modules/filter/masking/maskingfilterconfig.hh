@@ -42,11 +42,15 @@ public:
     static const MXS_ENUM_VALUE warn_type_mismatch_values[];
     static const char*          warn_type_mismatch_default;
 
+    static const char*          prevent_function_usage_name;
+    static const char*          prevent_function_usage_default;
+
     MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
         , m_rules(get_rules(pParams))
         , m_warn_type_mismatch(get_warn_type_mismatch(pParams))
+        , m_prevent_function_usage(get_prevent_function_usage(pParams))
     {}
     ~MaskingFilterConfig() {}
 
@@ -70,6 +74,11 @@ public:
         return m_warn_type_mismatch;
     }
 
+    bool prevent_function_usage() const
+    {
+        return m_prevent_function_usage;
+    }
+
     void set_large_payload(large_payload_t l)
     {
         m_large_payload = l;
@@ -84,13 +93,20 @@ public:
         m_warn_type_mismatch = w;
     }
 
+    void set_prevent_function_usage(bool b)
+    {
+        m_prevent_function_usage = b;
+    }
+
     static large_payload_t get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
     static std::string get_rules(const MXS_CONFIG_PARAMETER* pParams);
     static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
+    static bool get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;
     large_payload_t      m_large_payload;
     std::string          m_rules;
     warn_type_mismatch_t m_warn_type_mismatch;
+    bool                 m_prevent_function_usage;
 };

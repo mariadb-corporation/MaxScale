@@ -61,6 +61,8 @@ private:
 
     void mask_values(ComPacket& response);
 
+    bool reject_if_function_used(GWBUF* pPacket);
+
 private:
     typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
 

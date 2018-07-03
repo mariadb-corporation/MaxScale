@@ -133,6 +133,29 @@ resultsets that do not contain such columns.
 large_payload=ignore
 ```
 
+#### `prevent_function_usage`
+
+This optional parameter specifies how the masking filter should behave
+if a column that should be masked, is used in conjunction with some
+function. As the masking filter works _only_ on the basis of the
+information in the returned result-set, if the name of a column is
+not present in the result-set, then the masking filter cannot mask a
+value. This means that the masking filter bascially can be bypassed
+with a query like:
+```
+SELECT CONCAT(masked_column) FROM tbl;
+```
+If the value of `prevent_function_usage` is `true`, then all
+statements that contain functions referring to masked columns will
+be rejected. As that means that also queries using potentially
+harmless functions, such as `LENGTH(masked_column)`, are rejected
+as well, this feature can be turned off. In that case, the firewall
+filter should be setup to allow or reject the use of certain functions.
+```
+prevent_function_usage=false
+```
+The default value is `true`.
+
 # Rules
 
 The masking rules are expressed as a JSON object.

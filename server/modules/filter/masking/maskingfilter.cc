@@ -104,6 +104,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
                 MXS_MODULE_OPT_NONE, Config::large_payload_values
             },
+            {
+                Config::prevent_function_usage_name,
+                MXS_MODULE_PARAM_BOOL, Config::prevent_function_usage_default,
+                MXS_MODULE_OPT_NONE,
+            },
             { MXS_END_MODULE_PARAMS }
         }
     };

@@ -28,6 +28,12 @@ still retaining the relative order of each command.
 To keep the old functionality, add `disable_sescmd_history=true` to the service
 definition.
 
+### Masking Filter
+
+By default the masking filter rejects statements that use functions on
+conjuction with columns that should be masked. Please see the
+[Masking Filter](../Filters/Masking.md) documentation for details.
+
 ###  Switchover new master autoselection
 
 The switchover command in *mariadbmon* can now be called with just the monitor
