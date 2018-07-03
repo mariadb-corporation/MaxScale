@@ -843,3 +843,73 @@ bool MariaDBMonitor::cycle_has_master_server(ServerArray& cycle_servers)
 
     return outside_replication;
 }
+
+void MariaDBMonitor::update_topology()
+{
+    m_servers_by_id.clear();
+    for (auto server : m_servers)
+    {
+        m_servers_by_id[server->m_server_id] = server;
+    }
+    build_replication_graph();
+    find_graph_cycles();
+
+    /* Check if a failover/switchover was performed last loop and the master should change.
+     * In this case, update the master and its cycle info here. */
+    if (m_next_master)
+    {
+        assign_new_master(m_next_master);
+        m_next_master = NULL;
+    }
+
+    // Find the server that looks like it would be the best master. It does not yet overwrite the
+    // current master.
+    string topology_messages;
+    MariaDBServer* root_master = find_topology_master_server(&topology_messages);
+
+    // Check if current master is still valid.
+    string reason;
+    if (master_is_valid(&reason))
+    {
+        // Update master cycle info in case it has changed
+        update_master_cycle_info();
+        if (root_master && m_master != root_master)
+        {
+            // Master is still valid but it is no longer the best master. Print a warning.
+            MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
+                "Master will change if '%s' is no longer a valid master.",
+                root_master->name(), m_master->name(), m_master->name());
+        }
+    }
+    else
+    {
+        if (m_master && !reason.empty())
+        {
+            MXS_WARNING("The previous master server '%s' is no longer a valid master because %s. "
+                "Selecting new master.", m_master->name(), reason.c_str());
+        }
+        else
+        {
+            MXS_NOTICE("Selecting master server.");
+        }
+
+        // The current master is no longer ok (or it never was). Change the master, even though this may
+        // break replication. Master changes are logged by the log_master_changes()-method.
+        if (!topology_messages.empty())
+        {
+            MXS_WARNING("%s", topology_messages.c_str());
+        }
+
+        assign_new_master(root_master);
+
+        if (m_master)
+        {
+            MXS_NOTICE("'%s' is the best master candidate.", m_master->name());
+        }
+        else
+        {
+            MXS_WARNING("No valid master servers found.");
+        }
+    }
+    m_cluster_topology_changed = false;
+}

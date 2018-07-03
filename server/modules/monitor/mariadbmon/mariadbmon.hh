@@ -100,6 +100,7 @@ public:
 protected:
     void pre_loop();
     void tick();
+
     void process_state_changes();
 
 private:
@@ -192,6 +193,7 @@ private:
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer& server);
     void find_graph_cycles();
+    void update_topology();
     void log_master_changes();
     void update_gtid_domain();
     void update_external_master();
@@ -211,6 +213,7 @@ private:
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_master_cycle_info();
     void set_low_disk_slaves_maintenance();
+    void assign_new_master(MariaDBServer* new_master);
 
     // Switchover methods
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);

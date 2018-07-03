@@ -102,7 +102,7 @@ void MariaDBMonitor::clear_server_info()
     m_server_info.clear();
     m_servers_by_id.clear();
     m_excluded_servers.clear();
-    m_master = NULL;
+    assign_new_master(NULL);
     m_next_master = NULL;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
     m_external_master_host.clear();
@@ -353,10 +353,16 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
 
 void MariaDBMonitor::pre_loop()
 {
-    // MonitorInstance read the journal and has the last known master in its m_master member variable.
+    // MonitorInstance reads the journal and has the last known master in its m_master member variable.
     // Write the corresponding MariaDBServer into the class-specific m_master variable.
-    m_master = MonitorInstance::m_master ? get_server_info(MonitorInstance::m_master) : NULL;
-    m_log_no_master = true;
+    auto journal_master = MonitorInstance::m_master;
+    if (journal_master)
+    {
+        // This is somewhat questionable, as the journal only contains status bits but no actual topology
+        // info. In a fringe case the actual queried topology may not match the journal data, freezing the
+        // master to a suboptimal choice.
+        assign_new_master(get_server_info(journal_master));
+    }
 
     if (m_detect_replication_lag)
     {
@@ -401,74 +407,8 @@ void MariaDBMonitor::tick()
     if (m_cluster_topology_changed)
     {
         // This means that a server id or a slave connection has changed, or read_only was set.
-        // Update the server id array and check various things.
-        m_servers_by_id.clear();
-        for (auto server : m_servers)
-        {
-            m_servers_by_id[server->m_server_id] = server;
-        }
-        build_replication_graph();
-        find_graph_cycles();
-
-        /* Check if a failover/switchover was performed last loop and the master should change.
-         * In this case, update the master and its cycle info here. */
-        if (m_next_master)
-        {
-            m_master = m_next_master;
-            update_master_cycle_info();
-            m_next_master = NULL;
-        }
-
-        // Find the server that looks like it would be the best master. It does not yet overwrite the
-        // current master.
-        string topology_messages;
-        MariaDBServer* root_master = find_topology_master_server(&topology_messages);
-
-        // Check if current master is still valid.
-        string reason;
-        if (master_is_valid(&reason))
-        {
-            // Update master cycle info in case it has changed
-            update_master_cycle_info();
-            if (root_master && m_master != root_master)
-            {
-                // Master is still valid but it is no longer the best master. Print a warning.
-                MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
-                            "Master will change if '%s' is no longer a valid master.",
-                            root_master->name(), m_master->name(), m_master->name());
-            }
-        }
-        else
-        {
-            if (m_master && !reason.empty())
-            {
-                MXS_WARNING("The previous master server '%s' is no longer a valid master because %s. "
-                            "Selecting new master.", m_master->name(), reason.c_str());
-            }
-            else
-            {
-                MXS_NOTICE("Selecting master server.");
-            }
-
-            // The current master is no longer ok (or it never was). Change the master, even though this may
-            // break replication. Master changes are logged by the log_master_changes()-method.
-            if (!topology_messages.empty())
-            {
-                MXS_WARNING("%s", topology_messages.c_str());
-            }
-
-            m_master = root_master;
-            update_master_cycle_info();
-            if (m_master)
-            {
-                MXS_NOTICE("'%s' is the best master candidate.", m_master->name());
-            }
-            else
-            {
-                MXS_WARNING("No valid master servers found.");
-            }
-        }
-        m_cluster_topology_changed = false;
+        // Various things need to be checked and updated.
+        update_topology();
     }
 
     // Always re-assign master, slave etc bits as these depend on other factors outside topology
@@ -713,6 +653,12 @@ void MariaDBMonitor::handle_auto_rejoin()
     {
         MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.", m_master->name());
     }
+}
+
+void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
+{
+    m_master = new_master;
+    update_master_cycle_info();
 }
 
 /**
