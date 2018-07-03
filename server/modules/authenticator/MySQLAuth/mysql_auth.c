@@ -304,12 +304,16 @@ mysql_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            // Enough to hold the error message and the database name
-            char extra[256] = {};
+            // The default failure is a `User not found` one
+            char extra[256] = "User not found.";
 
             if (auth_ret == MXS_AUTH_FAILED_DB)
             {
                 snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db);
+            }
+            else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
+            {
+                strcpy(extra, "Wrong password.");
             }
 
             if (dcb->path)
