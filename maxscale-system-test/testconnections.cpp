@@ -18,6 +18,7 @@ namespace maxscale
 {
 static bool start = true;
 static bool check_nodes = true;
+static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 }
@@ -157,6 +158,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
         case 's':
             printf("Maxscale won't be started\n");
             maxscale::start = false;
+            maxscale::manual_debug = true;
             break;
 
         case 'i':
@@ -641,7 +643,7 @@ void TestConnections::init_maxscale(int m)
 {
     const char * template_name = get_template_name(test_name);
 
-    if (maxscale::start)
+    if (!maxscale::manual_debug)
     {
         stop_maxscale(m);
     }
