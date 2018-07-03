@@ -306,7 +306,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 PARAM_NEWLINE,
                 MXS_MODULE_PARAM_QUOTEDSTRING,
-                " ",
+                "\" \"",
                 MXS_MODULE_OPT_NONE
             },
             {
