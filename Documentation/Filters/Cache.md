@@ -3,14 +3,22 @@
 This filter was introduced in MariaDB MaxScale 2.1.
 
 ## Overview
-_Note that the cache is still experimental and that non-backward compatible
-changes may be made._
+
+From MaxScale version 2.2.11 onwards, the cache filter is no longer
+considered experimental. The following changes to the default behaviour
+have also been made:
+
+* The default value of `cached_data` is now `thread_specific` (used to be
+  `shared`).
+* The default value of `selects` is now `assume_cacheable` (used to be
+  `verify_cacheable`).
 
 The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
 By _default_ the cache will be used and populated in the following circumstances:
+
 * There is _no_ explicit transaction active, that is, _autocommit_ is used,
 * there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
   READ ONLY`) active, or
@@ -29,24 +37,9 @@ the isolation level of the backends actually is.
 The default behaviour can be altered using the configuration parameter
 [cache_inside_transactions](#cache_inside_transactions).
 
-By default, it is *ensured* that the cache is **not** used in the following
-circumstances:
-
-* The `SELECT` uses any of the following functions: `BENCHMARK`,
-  `CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
-  `CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
-  `IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
-  `MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
-  `SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
-* The `SELECT` accesses any of the following fields: `CURRENT_DATE`,
-  `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
-* The `SELECT` uses system or user variables.
-
-In order to ensure that, all `SELECT` statements have to be parsed, which
-carries a _significant_ performance cost. If it is known that there are no
-such statements or that it does not matter even if they are cached, that
-safety measure can be turned off. Please read [performance](#performance)
-for more details.
+By default it is assumed that all `SELECT` statements are cacheable, which
+means that also statements like `SELECT LOCALTIME` are cached. Please check
+[selects](#selects) for how to change the default behaviour.
 
 ## Limitations
 
@@ -229,11 +222,11 @@ allowed values are:
      multiple times.
 
 ```
-cached_data=thread_specific
+cached_data=shared
 ```
 
-Default is `shared`. See `max_count` and `max_size` what implication changing
-this setting to `thread_specific` has.
+Default is `thread_specific`. See `max_count` and `max_size` what implication
+changing this setting to `shared` has.
 
 #### `selects`
 
@@ -246,17 +239,33 @@ respect to `SELECT` statements. The allowed values are:
      statements are cacheable, but must verify that.
 
 ```
-selects=assume_cacheable
+selects=verify_cacheable
 ```
 
-Default is `verify_cacheable`. In this case, the `SELECT` statements will be
+Default is `assume_cacheable`. In this case, all `SELECT` statements are
+assumed to be cacheable and will be parsed *only* if some specific rule
+requires that.
+
+If `verify_cacheable` is specified, then all `SELECT` statements will be
 parsed and only those that are safe for caching - e.g. do *not* call any
 non-cacheable functions or access any non-cacheable variables - will be
 subject to caching.
 
-If `assume_cacheable` is specified, then all `SELECT` statements are
-assumed to be cacheable and will be parsed *only* if some specific rule
-requires that.
+If `verify_cacheable` has been specified, the cache will not be used in
+the following circumstances:
+
+* The `SELECT` uses any of the following functions: `BENCHMARK`,
+  `CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
+  `CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
+  `IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
+  `MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
+  `SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
+* The `SELECT` accesses any of the following fields: `CURRENT_DATE`,
+  `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
+* The `SELECT` uses system or user variables.
+
+Note that parsing all `SELECT` statements carries a _significant_ performance
+cost. Please read [performance](#performance) for more details.
 
 #### `cache_inside_transactions`
 
@@ -545,6 +554,7 @@ Each entry in the `store` array is an object containing three fields,
 ```
 
 where,
+
    * the _attribute_ can be `database`, `table`, `column` or `query`,
    * the _op_ can be `=`, `!=`, `like` or `unlike`, and
    * the _value_ a string.
@@ -712,6 +722,7 @@ Each entry in the `use` array is an object containing three fields,
 ```
 
 where,
+
    * the _attribute_ can be `user`,
    * the _op_ can be `=`, `!=`, `like` or `unlike`, and
    * the _value_ a string.
@@ -1020,7 +1031,8 @@ rule like
 ```
 The exact match rule requires all statements to be parsed.
 
-Note that the qps figures are only indicative.
+Note that the qps figures are only indicative and that the difference under
+high load may be significantly _greater_.
 
 | `selects`          | Rule           | qps |
 | -------------------| ---------------|-----|
@@ -1034,9 +1046,9 @@ Note that the qps figures are only indicative.
 ## Summary
 
 For maximum performance:
-* Arrange the situation so that `selects=assume_cacheable` can be
-  configured, and use _no_ rules.
-* If `selects=assume_cacheable` has been configured, use _only_
-  regexp based rules.
-* If `selects=verify_cacheable` has been configured non-regex based
+
+* Arrange the situation so that the default `selects=assume_cacheable`
+  can be used, and use _no_ rules.
+* If `selects=assume_cacheable` is used, use _only_ regexp based rules.
+* If `selects=verify_cacheable` has been configured, non-regex based
   matching can be used.

@@ -87,6 +87,7 @@ gwbuf_alloc(unsigned int size)
     rval->hint = NULL;
     rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
+    rval->server = NULL;
     CHK_GWBUF(rval);
 retblock:
     if (rval == NULL)
@@ -303,6 +304,7 @@ gwbuf_clone_one(GWBUF *buf)
     }
 
     atomic_add(&buf->sbuf->refcount, 1);
+    rval->server = buf->server;
     rval->sbuf = buf->sbuf;
     rval->start = buf->start;
     rval->end = buf->end;
@@ -384,6 +386,7 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
         return NULL;
     }
     atomic_add(&buf->sbuf->refcount, 1);
+    clonebuf->server = buf->server;
     clonebuf->sbuf = buf->sbuf;
     clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
     clonebuf->start = (void *)((char*)buf->start + start_offset);

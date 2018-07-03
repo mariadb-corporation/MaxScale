@@ -1,6 +1,7 @@
 #include "nodes.h"
 #include <string>
 #include <cstring>
+#include <iostream>
 
 Nodes::Nodes()
 {
@@ -9,8 +10,6 @@ Nodes::Nodes()
 int Nodes::check_node_ssh(int node)
 {
     int res = 0;
-    printf("Checking node %d\n", node);
-    fflush(stdout);
 
     if (ssh_node(node, (char *) "ls > /dev/null", false) != 0)
     {
@@ -20,7 +19,6 @@ int Nodes::check_node_ssh(int node)
     }
     else
     {
-        printf("Node %d is OK\n", node);
         fflush(stdout);
     }
     return res;
@@ -28,12 +26,17 @@ int Nodes::check_node_ssh(int node)
 
 int Nodes::check_nodes()
 {
-    int res = 0;
+    std::cout << "Checking nodes..." << std::endl;
+
     for (int i = 0; i < N; i++)
     {
-        res += check_node_ssh(i);
+        if (check_node_ssh(i) != 0)
+        {
+            return 1;
+        }
     }
-    return res;
+
+    return 0;
 }
 
 void Nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)

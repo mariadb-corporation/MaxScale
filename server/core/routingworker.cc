@@ -1014,3 +1014,11 @@ json_t* mxs_rworker_list_to_json(const char* host)
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }
+
+// static
+RoutingWorker* RoutingWorker::pick_worker()
+{
+    static int id_generator = 0;
+    int id = this_unit.id_min_worker + (atomic_add(&id_generator, 1) % this_unit.nWorkers);
+    return get(id);
+}

@@ -3588,23 +3588,30 @@ int poll_add_dcb(DCB *dcb)
         events = EPOLLIN;
         new_state = DCB_STATE_LISTENING;
     }
-    else if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
-             (strcasecmp(dcb->service->routerModule, "cli") == 0 ||
-              strcasecmp(dcb->service->routerModule, "maxinfo") == 0))
+    else if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
-        // If the DCB refers to an accepted maxadmin/maxinfo socket, we force it
-        // to the main thread. That's done in order to prevent a deadlock
-        // that may happen if there are multiple concurrent administrative calls,
-        // handled by different worker threads.
-        // See: https://jira.mariadb.org/browse/MXS-1805 and https://jira.mariadb.org/browse/MXS-1833
+        if (strcasecmp(dcb->service->routerModule, "cli") == 0 ||
+            strcasecmp(dcb->service->routerModule, "maxinfo") == 0)
+        {
+            // If the DCB refers to an accepted maxadmin/maxinfo socket, we force it
+            // to the main thread. That's done in order to prevent a deadlock
+            // that may happen if there are multiple concurrent administrative calls,
+            // handled by different worker threads.
+            // See: https://jira.mariadb.org/browse/MXS-1805 and https://jira.mariadb.org/browse/MXS-1833
+            owner = RoutingWorker::get(RoutingWorker::MAIN);
+        }
+        else
+        {
+            // Round-robin the client connection worker assignment
+            owner = RoutingWorker::pick_worker();
+        }
+
         new_state = DCB_STATE_POLLING;
-        owner = RoutingWorker::get(RoutingWorker::MAIN);
         dcb->poll.owner = owner;
     }
     else
     {
-        ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
-                   dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+        ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
         ss_dassert(RoutingWorker::get_current_id() != -1);
         ss_dassert(RoutingWorker::get_current() == dcb->poll.owner);
 

@@ -53,8 +53,8 @@ void cache_config_finish(CACHE_CONFIG& config)
     config.hard_ttl = 0;
     config.soft_ttl = 0;
     config.debug = 0;
-    config.thread_model = CACHE_THREAD_MODEL_MT;
-    config.selects = CACHE_SELECTS_VERIFY_CACHEABLE;
+    config.thread_model = CACHE_DEFAULT_THREAD_MODEL;
+    config.selects = CACHE_DEFAULT_SELECTS;
 }
 
 /**
@@ -79,6 +79,9 @@ void cache_config_free(CACHE_CONFIG* pConfig)
 void cache_config_reset(CACHE_CONFIG& config)
 {
     memset(&config, 0, sizeof(config));
+
+    config.thread_model = CACHE_DEFAULT_THREAD_MODEL;
+    config.selects = CACHE_DEFAULT_SELECTS;
 }
 
 /**
@@ -163,7 +166,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
-        MXS_MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_GA,
         MXS_FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
@@ -177,7 +180,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "storage",
                 MXS_MODULE_PARAM_STRING,
-                CACHE_DEFAULT_STORAGE
+                CACHE_ZDEFAULT_STORAGE
             },
             {
                 "storage_options",
@@ -186,32 +189,32 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "hard_ttl",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_HARD_TTL
+                CACHE_ZDEFAULT_HARD_TTL
             },
             {
                 "soft_ttl",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_SOFT_TTL
+                CACHE_ZDEFAULT_SOFT_TTL
             },
             {
                 "max_resultset_rows",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_MAX_RESULTSET_ROWS
+                CACHE_ZDEFAULT_MAX_RESULTSET_ROWS
             },
             {
                 "max_resultset_size",
                 MXS_MODULE_PARAM_SIZE,
-                CACHE_DEFAULT_MAX_RESULTSET_SIZE
+                CACHE_ZDEFAULT_MAX_RESULTSET_SIZE
             },
             {
                 "max_count",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_MAX_COUNT
+                CACHE_ZDEFAULT_MAX_COUNT
             },
             {
                 "max_size",
                 MXS_MODULE_PARAM_SIZE,
-                CACHE_DEFAULT_MAX_SIZE
+                CACHE_ZDEFAULT_MAX_SIZE
             },
             {
                 "rules",
@@ -220,33 +223,33 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "debug",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_DEBUG
+                CACHE_ZDEFAULT_DEBUG
             },
             {
                 "cached_data",
                 MXS_MODULE_PARAM_ENUM,
-                CACHE_DEFAULT_THREAD_MODEL,
+                CACHE_ZDEFAULT_THREAD_MODEL,
                 MXS_MODULE_OPT_NONE,
                 parameter_cached_data_values
             },
             {
                 "selects",
                 MXS_MODULE_PARAM_ENUM,
-                CACHE_DEFAULT_SELECTS,
+                CACHE_ZDEFAULT_SELECTS,
                 MXS_MODULE_OPT_NONE,
                 parameter_selects_values
             },
             {
                 "cache_in_transactions",
                 MXS_MODULE_PARAM_ENUM,
-                CACHE_DEFAULT_CACHE_IN_TRXS,
+                CACHE_ZDEFAULT_CACHE_IN_TRXS,
                 MXS_MODULE_OPT_NONE,
                 parameter_cache_in_trxs_values
             },
             {
                 "enabled",
                 MXS_MODULE_PARAM_BOOL,
-                CACHE_DEFAULT_ENABLED
+                CACHE_ZDEFAULT_ENABLED
             },
             {MXS_END_MODULE_PARAMS}
         }

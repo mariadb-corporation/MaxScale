@@ -311,17 +311,25 @@ mysql_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
+            // Enough to hold the error message and the database name
+            char extra[256] = {};
+
+            if (auth_ret == MXS_AUTH_FAILED_DB)
+            {
+                snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db);
+            }
+
             if (dcb->path)
             {
                 MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%s, authentication failed.",
-                              dcb->service->name, client_data->user, dcb->remote, dcb->path);
+                              "%s: login attempt for user '%s'@[%s]:%s, authentication failed. %s",
+                              dcb->service->name, client_data->user, dcb->remote, dcb->path, extra);
             }
             else
             {
                 MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed.",
-                              dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
+                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
+                              dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb), extra);
             }
 
             if (is_localhost_address(&dcb->ip) &&

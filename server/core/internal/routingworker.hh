@@ -271,6 +271,13 @@ public:
      */
     static int64_t get_one_statistic(POLL_STAT what);
 
+    /**
+     * Get next worker
+     *
+     * @return The worker where work should be assigned
+     */
+    static RoutingWorker* pick_worker();
+
 private:
     const int    m_id;       /*< The id of the worker. */
     SessionsById m_sessions; /*< A mapping of session_id->MXS_SESSION. The map
