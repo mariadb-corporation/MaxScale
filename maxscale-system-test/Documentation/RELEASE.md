@@ -26,6 +26,10 @@ also the version number being changed.
 So, ensure that the `maxscale-x.y.z-ttN` has been created and pushed
 to the repository.
 
+```
+git push origin refs/tags/maxscale-x.y.z-ttN
+```
+
 **NOTE** The tentative suffix - `-ttN` - is **only** used when
 specifying the tag for the build, it must **not** be present in
 any other names or paths.
@@ -140,7 +144,7 @@ the final tag
 ```
 $ git checkout maxscale-x.y.z-ttN
 $ git tag -a -m "Tag for MaxScale x.y.z" maxscale-x.y.z
-$ git push --tags origin
+$ git push origin refs/tags/maxscale-x.y.z
 ```
 and remove the tentative tag(s)
 ```
