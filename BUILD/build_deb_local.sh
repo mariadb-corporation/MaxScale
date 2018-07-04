@@ -76,5 +76,5 @@ if [ "$BUILD_RABBITMQ" == "yes" ] ; then
   cp _build/*.deb .
   cp *.deb ..
 fi
-sudo dpkg -i ../maxscale*.dev
+sudo dpkg -i ../maxscale*.deb
 set +x
