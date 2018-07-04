@@ -31,8 +31,8 @@ else
         mkdir -p $path_prefix/$platform_family/
         rsync -avz  --progress --delete ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform_family/
         env > $build_info_path
-        find $path_prefix/.. -type d -exec chmod 755 {}
-        find $path_prefix/.. -type f -exec chmod 644 {}
+        find $path_prefix/.. -type d -exec chmod 755 {} \;
+        find $path_prefix/.. -type f -exec chmod 644 {} \;
   eval "cat <<EOF
 $(<${script_dir}/templates/repository-config/deb.json.template)
 " 2> /dev/null > ${path_prefix}/${platform}_${platform_version}.json
