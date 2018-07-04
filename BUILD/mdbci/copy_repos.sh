@@ -11,8 +11,8 @@ if [ "$box_type" == "RPM" ] ; then
         mkdir -p $path_prefix/$platform/$platform_version/$arch/
         rsync -avz  --progress --delete ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform/$platform_version/$arch/
 	env > $build_info_path
-        find $path_prefix/.. -type d -exec chmod 755 {}
-        find $path_prefix/.. -type f -exec chmod 644 {}
+        find $path_prefix/.. -type d -exec chmod 755 {} \;
+        find $path_prefix/.. -type f -exec chmod 644 {} \;
         cd $path_prefix/$platform
         ln -s $platform_version "$platform_version"server
         ln -s $platform_version "$platform_version"Server
