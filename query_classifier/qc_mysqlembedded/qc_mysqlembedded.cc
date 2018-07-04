@@ -3488,6 +3488,13 @@ int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
     return rv;
 }
 
+QC_STMT_INFO* qc_mysql_dup(QC_STMT_INFO* info)
+{
+    // TODO: Not implemented yet.
+    ss_dassert(!true);
+    return info;
+}
+
 /**
  * EXPORTS
  */
@@ -3521,6 +3528,7 @@ extern "C"
             qc_mysql_get_server_version,
             qc_mysql_get_sql_mode,
             qc_mysql_set_sql_mode,
+            qc_mysql_dup,
         };
 
         static MXS_MODULE info =

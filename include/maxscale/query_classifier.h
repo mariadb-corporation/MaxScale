@@ -17,7 +17,7 @@
 
 MXS_BEGIN_DECLS
 
-#define MXS_QUERY_CLASSIFIER_VERSION {2, 0, 0}
+#define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
 
 /**
  * qc_init_kind_t specifies what kind of initialization should be performed.
@@ -154,6 +154,14 @@ typedef enum qc_result
     QC_RESULT_OK,
     QC_RESULT_ERROR
 } qc_result_t;
+
+/**
+ * QC_STMT_INFO is an opaque type where the query classifier stores
+ * information about a statement.
+ */
+typedef struct qc_stmt_info
+{
+} QC_STMT_INFO;
 
 /**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
@@ -406,6 +414,16 @@ typedef struct query_classifier
      * @return QC_RESULT_OK if @sql_mode is valid, otherwise QC_RESULT_ERROR.
      */
     int32_t (*qc_set_sql_mode)(qc_sql_mode_t sql_mode);
+
+    /**
+     * Dups the provided info object. After having been dupped, the info object
+     * can be stored on another GWBUF.
+     *
+     * @param info  The info to be dupped.
+     *
+     * @return The same info that was provided as argument.
+     */
+    QC_STMT_INFO* (*qc_dup)(QC_STMT_INFO* info);
 } QUERY_CLASSIFIER;
 
 /**
