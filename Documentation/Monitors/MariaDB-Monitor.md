@@ -4,9 +4,8 @@ Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Overview
 
-The MariaDB Monitor is a monitoring module for MaxScale that monitors a Master-Slave
-replication cluster. It assigns master and slave roles inside MaxScale according to
-the actual replication tree in the cluster.
+The MariaDB Monitor monitors a Master-Slave replication cluster. It monitors the
+state of the backends and assigns master and slave roles.
 
 ## Configuration
 
@@ -20,14 +19,14 @@ module=mariadbmon
 servers=server1,server2,server3
 user=myuser
 passwd=mypwd
-
 ```
-Note that from MaxScale 2.2.1 onwards, the module name is `mariadbmon`; up until
-MaxScale 2.2.0 it was `mysqlmon`. The name `mysqlmon` has been deprecated but can
-still be used, although it will cause a warning to be logged.
 
-The user requires the REPLICATION CLIENT privilege to successfully monitor the
-state of the servers.
+From MaxScale 2.2.1 onwards, the module name is `mariadbmon` instead of
+`mysqlmon`. The old name can still be used.
+
+The `user` requires the REPLICATION CLIENT privilege to successfully monitor the
+state of the servers. SUPER privilege is required for cluster manipulation
+features such as failover.
 
 ```
 MariaDB [(none)]> grant replication client on *.* to 'maxscale'@'maxscalehost';
@@ -49,16 +48,17 @@ A boolean value which controls if replication lag between the master and the
 slaves is monitored. This allows the routers to route read queries to only
 slaves that are up to date. Default value for this parameter is _false_.
 
-To detect the replication lag, MaxScale uses the _maxscale_schema.replication_heartbeat_
-table. This table is created on the master server and it is updated at every heartbeat
-with the current timestamp. The updates are then replicated to the slave servers
-and when the replicated timestamp is read from the slave servers, the lag between
-the slave and the master can be calculated.
+To measure the replication lag, MaxScale uses the
+*maxscale_schema.replication_heartbeat* table. This table is created on the
+master server and it is updated at every heartbeat with the current timestamp.
+The updates are then replicated to the slave servers and when the replicated
+timestamp is read from the slave servers, the lag between the slave and the
+master is calculated.
 
 The monitor user requires INSERT, UPDATE, DELETE and SELECT permissions on the
-maxscale_schema.replication_heartbeat table and CREATE permissions on the
-maxscale_schema database. The monitor user will always try to create the database
-and the table if they do not exist.
+*maxscale_schema.replication_heartbeat* table and CREATE permissions on the
+maxscale_schema database. The monitor creates the database and the table if they
+do not exist.
 
 ### `detect_stale_master`
 
@@ -97,38 +97,11 @@ detect_stale_slave=true
 
 ### `mysql51_replication`
 
-Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL
-server older than 5.5 is used as a slave in replication.
-
-```
-mysql51_replication=true
-```
+Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `multimaster`
 
-Detect multi-master replication topologies. This feature is disabled by default.
-
-When enabled, the multi-master detection looks for the root master servers in
-the replication clusters. These masters can be found by detecting cycles in the
-graph created by the servers. When a cycle is detected, it is assigned a master
-group ID. Every master in a master group will receive the Master status. The
-special group ID 0 is assigned to all servers which are not a part of a
-multi-master replication cycle.
-
-If one or more masters in a group has the `@@read_only` system variable set to
-`ON`, those servers will receive the Slave status even though they are in the
-multi-master group. Slave servers with `@@read_only` disabled will never receive
-the master status.
-
-By setting the servers into read-only mode, the user can control which
-server receive the master status. To do this:
-
-- Enable `@@read_only` on all servers (preferably through the configuration file)
-- Manually disable `@@read_only` on the server which should be the master
-
-This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
-functionality. The only difference is that the MariaDB monitor will also detect
-traditional Master-Slave topologies.
+Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `ignore_external_masters`
 
@@ -149,89 +122,22 @@ External Server, Running` labels will instead get the `Master, Running` labels.
 
 ### `detect_standalone_master`
 
-Detect standalone master servers. This feature takes a boolean parameter and
-from MaxScale 2.2.1 onwards is enabled by default. Up until MaxScale 2.2.0 it
-was disabled by default. In MaxScale 2.1.0, this parameter was called `failover`.
+Detect standalone master servers. This feature takes a boolean parameter and is
+enabled by default.
 
-This parameter is intended to be used with simple, two node master-slave pairs
-where the failure of the master can be resolved by "promoting" the slave as the
-new master. Normally this is done by using an external agent of some sort
-(possibly triggered by MaxScale's monitor scripts), like
-[MariaDB Replication Manager](https://github.com/tanji/replication-manager)
-or [MHA](https://code.google.com/p/mysql-master-ha/).
-
-When the number of running servers in the cluster drops down to one, MaxScale
-cannot be absolutely certain whether the last remaining server is a master or a
-slave. At this point, MaxScale will try to deduce the type of the server by
-looking at the system variables of the server in question.
-
-By default, MaxScale will only attempt to deduce if the server can be used as a
-slave server (controlled by the `detect_stale_slave` parameter). When the
-`detect_standalone_master` mode is enabled, MaxScale will also attempt to deduce
-whether the server can be used as a master server. This is done by checking that
-the server is not in read-only mode and that it is not configured as a slave.
-
-This mode in mariadbmon is completely passive in the sense that it does not modify
-the cluster or any of the servers in it. It only labels the last remaining
-server in a cluster as the master server.
-
-Before a server is labelled as a standalone master, the following conditions must
-have been met:
-
-- Previous attempts to connect to other servers in the cluster have failed,
-  controlled by the `failcount` parameter
-
-- There is only one running server among the monitored servers
-
-- The value of the `@@read_only` system variable is set to `OFF`
-
-In 2.1.1, the following additional condition was added:
-
-- The last running server is not configured as a slave
-
-If the value of the `allow_cluster_recovery` parameter is set to false, the monitor
-sets all other servers into maintenance mode. This is done to prevent accidental
-use of the failed servers if they came back online. If the failed servers come
-back up, the maintenance mode needs to be manually cleared once replication has
-been set up.
-
-**Note**: A failover will cause permanent changes in the data of the promoted
-  server. Only use this feature if you know that the slave servers are capable
-  of acting as master servers.
+This setting controls whether a standalone server can be a master. A standalone
+server is a server from which no other server in the cluster is attempting to
+replicate from. In most cases this should be left on.
 
 ### `failcount`
 
-Number of failures that must occur on all failed servers before a standalone
-server is labelled as a master. The default value is 5 failures.
-
-The monitor will attempt to contact all servers once per monitoring cycle. When
-`detect_standalone_master` is enabled, all of the failed servers must fail
-_failcount_ number of connection attempts before the last server is labeled as
-the master.
-
-The formula for calculating the actual number of milliseconds before the server
-is labelled as the master is `monitor_interval * failcount`.
-
-If automatic failover is enabled (`auto_failover=true`), this setting also
-controls how many times the master server must fail to respond before failover
-begins.
+Number of failures that must consecutively occur on a failed master before an
+automatic failover triggers. The default value is 5 failures. Automatic failover
+must be enabled for this effect (`auto_failover=true`).
 
 ### `allow_cluster_recovery`
 
-Allow recovery after the cluster has dropped down to one server. This feature
-takes a boolean parameter is enabled by default. This parameter requires that
-`detect_standalone_master` is set to true. In MaxScale 2.1.0, this parameter was
-called `failover_recovery`.
-
-When this parameter is disabled, if the last remaining server is labelled as the
-master, the monitor will set all of the failed servers into maintenance
-mode. When this option is enabled, the failed servers are allowed to rejoin the
-cluster.
-
-This option should be enabled only when MaxScale is used in conjunction with an
-external agent that automatically reintegrates failed servers into the
-cluster. One of these agents is the _replication-manager_ which automatically
-configures the failed servers as new slaves of the current master.
+Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `enforce_read_only_slaves`
 

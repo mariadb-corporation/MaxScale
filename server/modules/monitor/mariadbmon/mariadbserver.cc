@@ -487,7 +487,7 @@ const char* MariaDBServer::name() const
     return m_server_base->server->name;
 }
 
-string MariaDBServer::diagnostics(bool multimaster) const
+string MariaDBServer::diagnostics() const
 {
     std::stringstream ss;
     ss << "Server:                 " << name() << "\n";
@@ -507,14 +507,14 @@ string MariaDBServer::diagnostics(bool multimaster) const
     {
         ss << "Gtid binlog position:   " << m_gtid_binlog_pos.to_string() << "\n";
     }
-    if (multimaster)
+    if (m_node.cycle != NodeData::CYCLE_NONE)
     {
         ss << "Master group:           " << m_node.cycle << "\n";
     }
     return ss.str();
 }
 
-json_t* MariaDBServer::diagnostics_json(bool multimaster) const
+json_t* MariaDBServer::diagnostics_json() const
 {
     json_t* srv = json_object();
     json_object_set_new(srv, "name", json_string(name()));
@@ -541,7 +541,7 @@ json_t* MariaDBServer::diagnostics_json(bool multimaster) const
         json_object_set_new(srv, "gtid_io_pos",
                             json_string(m_slave_status[0].gtid_io_pos.to_string().c_str()));
     }
-    if (multimaster)
+    if (m_node.cycle != NodeData::CYCLE_NONE)
     {
         json_object_set_new(srv, "master_group", json_integer(m_node.cycle));
     }

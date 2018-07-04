@@ -143,14 +143,11 @@ private:
     CycleInfo m_master_cycle_status;     /**< Info about master server cycle from previous round */
 
     // Replication topology detection settings
-    bool m_allow_cluster_recovery;       /**< Allow failed servers to rejoin the cluster */
     bool m_detect_replication_lag;       /**< Monitor flag for MySQL replication heartbeat */
-    bool m_detect_multimaster;           /**< Detect and handle multi-master topologies */
     bool m_detect_stale_master;          /**< Monitor flag for MySQL replication Stale Master detection */
     bool m_detect_stale_slave;           /**< Monitor flag for MySQL replication Stale Slave detection */
     bool m_detect_standalone_master;     /**< If standalone master are detected */
     bool m_ignore_external_masters;      /**< Ignore masters outside of the monitor configuration */
-    bool m_mysql51_replication;          /**< Use MySQL 5.1 replication */
 
     // Failover, switchover and rejoin settings
     bool m_auto_failover;                /**< Is automatic master failover is enabled? */
@@ -174,7 +171,6 @@ private:
     // Other settings
     std::string m_script;                /**< Script to call when state changes occur on servers */
     uint64_t m_events;                   /**< enabled events */
-    bool m_warn_set_standalone_master;   /**< Log a warning when setting standalone master */
     bool m_log_no_master;                /**< Should it be logged that there is no master */
     bool m_warn_no_valid_in_cycle;       /**< Log a warning when a replication cycle has no valid master */
     bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master
@@ -196,8 +192,6 @@ private:
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer& server);
     void find_graph_cycles();
-    bool standalone_master_required();
-    bool set_standalone_master();
     void log_master_changes();
     void update_gtid_domain();
     void update_external_master();

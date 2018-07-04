@@ -299,18 +299,16 @@ public:
     /**
      * Print server information to a json object.
      *
-     * @param multimaster Print multimaster group
      * @return Json diagnostics object
      */
-    json_t* diagnostics_json(bool multimaster) const;
+    json_t* diagnostics_json() const;
 
     /**
      * Print server information to a string.
      *
-     * @param multimaster Print multimaster group
      * @return Diagnostics string
      */
-    std::string diagnostics(bool multimaster) const;
+    std::string diagnostics() const;
 
     /**
      * Check if server is using gtid replication.

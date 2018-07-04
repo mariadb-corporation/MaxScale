@@ -42,6 +42,7 @@ static const char CN_NO_PROMOTE_SERVERS[]           = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[]             = "failover_timeout";
 static const char CN_SWITCHOVER_ON_LOW_DISK_SPACE[] = "switchover_on_low_disk_space";
 static const char CN_SWITCHOVER_TIMEOUT[]           = "switchover_timeout";
+static const char CN_DETECT_STANDALONE_MASTER[]     = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
@@ -58,7 +59,6 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_cluster_topology_changed(true)
     , m_cluster_modified(false)
     , m_switchover_on_low_disk_space(false)
-    , m_warn_set_standalone_master(true)
     , m_log_no_master(true)
     , m_warn_failover_precond(true)
     , m_warn_cannot_rejoin(true)
@@ -181,11 +181,9 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_detect_stale_master = config_get_bool(params, "detect_stale_master");
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
     m_detect_replication_lag = config_get_bool(params, "detect_replication_lag");
-    m_detect_multimaster = config_get_bool(params, "multimaster");
     m_ignore_external_masters = config_get_bool(params, "ignore_external_masters");
-    m_detect_standalone_master = config_get_bool(params, "detect_standalone_master");
+    m_detect_standalone_master = config_get_bool(params, CN_DETECT_STANDALONE_MASTER);
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
-    m_allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
     m_script = config_get_string(params, "script");
     m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
@@ -244,7 +242,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
-        string server_info = (*iter)->diagnostics(m_detect_multimaster) + "\n";
+        string server_info = (*iter)->diagnostics() + "\n";
         dcb_printf(dcb, "%s", server_info.c_str());
     }
 }
@@ -256,10 +254,8 @@ json_t* MariaDBMonitor::diagnostics_json() const
     json_object_set_new(rval, "detect_stale_master", json_boolean(m_detect_stale_master));
     json_object_set_new(rval, "detect_stale_slave", json_boolean(m_detect_stale_slave));
     json_object_set_new(rval, "detect_replication_lag", json_boolean(m_detect_replication_lag));
-    json_object_set_new(rval, "multimaster", json_boolean(m_detect_multimaster));
-    json_object_set_new(rval, "detect_standalone_master", json_boolean(m_detect_standalone_master));
+    json_object_set_new(rval, CN_DETECT_STANDALONE_MASTER, json_boolean(m_detect_standalone_master));
     json_object_set_new(rval, CN_FAILCOUNT, json_integer(m_failcount));
-    json_object_set_new(rval, "allow_cluster_recovery", json_boolean(m_allow_cluster_recovery));
     json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(m_auto_failover));
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(m_failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(m_switchover_timeout));
@@ -281,7 +277,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
         json_t* arr = json_array();
         for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
         {
-            json_array_append_new(arr, (*iter)->diagnostics_json(m_detect_multimaster));
+            json_array_append_new(arr, (*iter)->diagnostics_json());
         }
         json_object_set_new(rval, "server_info", arr);
     }
@@ -488,20 +484,6 @@ void MariaDBMonitor::tick()
             {
                 server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
             }
-        }
-    }
-
-    /* Check if need to use standalone master. TODO: Rewrite these methods. */
-    if (m_detect_standalone_master)
-    {
-        if (standalone_master_required())
-        {
-            // Other servers have died, set last remaining server as master
-            set_standalone_master();
-        }
-        else
-        {
-            m_warn_set_standalone_master = true;
         }
     }
 
@@ -1273,10 +1255,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
             {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
             {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false", MXS_MODULE_OPT_DEPRECATED},
-            {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {"multimaster", MXS_MODULE_PARAM_BOOL, "false", MXS_MODULE_OPT_DEPRECATED},
+            {CN_DETECT_STANDALONE_MASTER, MXS_MODULE_PARAM_BOOL, "true"},
             {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
-            {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED},
             {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "script",
