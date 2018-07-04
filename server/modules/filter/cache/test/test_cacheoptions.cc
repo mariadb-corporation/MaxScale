@@ -317,6 +317,8 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
     auto_ptr<FilterModule::ConfigParameters> sParameters = filter_module.create_default_parameters();
     sParameters->set_value("cache_in_transactions", to_string(tc.cit));
     sParameters->set_value("debug", "31");
+    sParameters->set_value("cached_data", "shared");
+    sParameters->set_value("selects", "verify_cacheable");
 
     auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, sParameters);
 

@@ -55,6 +55,8 @@ socket=default
 type=filter
 module=cache
 storage=storage_inmemory
+selects=verify_cacheable
+cached_data=shared
 # NOTE: If you adjust the TTL values, ensure that test programs dependent
 # NOTE: on the TTL are ajusted as well.
 hard_ttl=10

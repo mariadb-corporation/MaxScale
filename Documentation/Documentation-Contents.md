@@ -132,6 +132,4 @@ document.
 
 ## Design Documents
 
- - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
- - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
  - [Plugin development guide](Design-Documents/Plugin-development-guide.md)

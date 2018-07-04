@@ -22,6 +22,9 @@ for details.
 
 ## Bug fixes
 
+* [MXS-1953](https://jira.mariadb.org/browse/MXS-1953) MaxScale hangs
+* [MXS-1950](https://jira.mariadb.org/browse/MXS-1950) No explanation for routing failure when no valid servers are available
+* [MXS-1948](https://jira.mariadb.org/browse/MXS-1948) Connections not balanced between workers
 
 ## Known Issues and Limitations
 
