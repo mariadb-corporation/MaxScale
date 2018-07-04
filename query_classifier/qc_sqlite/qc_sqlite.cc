@@ -236,12 +236,27 @@ extern void exposed_sqlite3Update(Parse* pParse,
 /**
  * Contains information about a particular query.
  */
-class QcSqliteInfo
+class QcSqliteInfo : public QC_STMT_INFO
 {
     QcSqliteInfo(const QcSqliteInfo&);
     QcSqliteInfo& operator = (const QcSqliteInfo&);
 
 public:
+    void inc_ref()
+    {
+        ss_dassert(m_refs > 0);
+        ++m_refs;
+    }
+
+    void dec_ref()
+    {
+        ss_dassert(m_refs > 0);
+        if (--m_refs == 0)
+        {
+            delete this;
+        }
+    }
+
     static QcSqliteInfo* create(uint32_t collect)
     {
         QcSqliteInfo* pInfo = new (std::nothrow) QcSqliteInfo(collect);
@@ -274,20 +289,6 @@ public:
         MXS_FREE(info.name);
 
         std::for_each(info.fields, info.fields + info.n_fields, finish_field_info);
-    }
-
-    ~QcSqliteInfo()
-    {
-        std::for_each(m_table_names.begin(), m_table_names.end(), mxs_free);
-        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxs_free);
-        free(m_zCreated_table_name);
-        std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
-        free(m_zPrepare_name);
-        gwbuf_free(m_pPreparable_stmt);
-        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish_field_info);
-        std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
-
-        // Data in m_function_field_usage is freed in finish_function_info().
     }
 
     bool is_valid() const
@@ -3002,7 +3003,8 @@ public:
 
 private:
     QcSqliteInfo(uint32_t cllct)
-        : m_status(QC_QUERY_INVALID)
+        : m_refs(1)
+        , m_status(QC_QUERY_INVALID)
         , m_collect(cllct)
         , m_collected(0)
         , m_pQuery(NULL)
@@ -3019,6 +3021,22 @@ private:
         , m_sql_mode(this_thread.sql_mode)
         , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
     {
+    }
+
+    ~QcSqliteInfo()
+    {
+        ss_dassert(m_refs == 0);
+
+        std::for_each(m_table_names.begin(), m_table_names.end(), mxs_free);
+        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxs_free);
+        free(m_zCreated_table_name);
+        std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
+        free(m_zPrepare_name);
+        gwbuf_free(m_pPreparable_stmt);
+        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish_field_info);
+        std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
+
+        // Data in m_function_field_usage is freed in finish_function_info().
     }
 
 private:
@@ -3186,6 +3204,7 @@ private:
 
 public:
     // TODO: Make these private once everything's been updated.
+    int32_t m_refs;                             // The reference count.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
     uint32_t m_collect;                         // What information should be collected.
     uint32_t m_collected;                       // What information has been collected.
@@ -3281,7 +3300,7 @@ extern int maxscaleTranslateKeyword(int token);
 static void buffer_object_free(void* pData)
 {
     QcSqliteInfo* pInfo = static_cast<QcSqliteInfo*>(pData);
-    delete pInfo;
+    pInfo->dec_ref();
 }
 
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity)
@@ -4496,7 +4515,7 @@ static int32_t qc_sqlite_thread_init(void)
             this_thread.pInfo->m_pQuery = NULL;
             this_thread.pInfo->m_nQuery = 0;
 
-            delete this_thread.pInfo;
+            this_thread.pInfo->dec_ref();
             this_thread.pInfo = NULL;
 
             this_thread.initialized = true;
@@ -4961,8 +4980,7 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
 
 QC_STMT_INFO* qc_sqlite_dup(QC_STMT_INFO* info)
 {
-    // TODO: Not implemented yet.
-    ss_dassert(!true);
+    static_cast<QcSqliteInfo*>(info)->inc_ref();
     return info;
 }
 

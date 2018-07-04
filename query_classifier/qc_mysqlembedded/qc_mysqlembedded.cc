@@ -131,7 +131,7 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
 
 #define MYSQL_COM_QUERY_HEADER_SIZE 5 /*< 3 bytes size, 1 sequence, 1 command */
 #define MAX_QUERYBUF_SIZE 2048
-typedef struct parsing_info_st
+typedef struct parsing_info_st : public QC_STMT_INFO
 {
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_top;
@@ -3488,13 +3488,6 @@ int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
     return rv;
 }
 
-QC_STMT_INFO* qc_mysql_dup(QC_STMT_INFO* info)
-{
-    // TODO: Not implemented yet.
-    ss_dassert(!true);
-    return info;
-}
-
 /**
  * EXPORTS
  */
@@ -3528,7 +3521,7 @@ extern "C"
             qc_mysql_get_server_version,
             qc_mysql_get_sql_mode,
             qc_mysql_set_sql_mode,
-            qc_mysql_dup,
+            nullptr,
         };
 
         static MXS_MODULE info =
