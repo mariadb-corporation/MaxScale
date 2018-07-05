@@ -28,21 +28,17 @@ Shard::~Shard()
 
 bool Shard::add_location(std::string db, SERVER* target)
 {
-    std::transform(db.begin(), db.end(), db.begin(), ::tolower);
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
 void Shard::replace_location(std::string db, SERVER* target)
 {
-    std::transform(db.begin(), db.end(), db.begin(), ::tolower);
     m_map[db] = target;
 }
 
 SERVER* Shard::get_location(std::string table)
 {
     SERVER* rval = NULL;
-    std::transform(table.begin(), table.end(), table.begin(), ::tolower);
-
     if (table.find(".") == std::string::npos)
     {
         for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)

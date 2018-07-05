@@ -1396,11 +1396,11 @@ void SchemaRouterSession::query_databases()
     m_state &= ~INIT_UNINT;
 
     GWBUF *buffer = modutil_create_query
-                    ("SELECT LOWER(schema_name) FROM information_schema.schemata AS s "
+                    ("SELECT schema_name FROM information_schema.schemata AS s "
             "LEFT JOIN information_schema.tables AS t ON s.schema_name = t.table_schema "
             "WHERE t.table_name IS NULL "
             "UNION "
-            "SELECT LOWER(CONCAT(table_schema, '.', table_name)) FROM information_schema.tables "
+            "SELECT CONCAT (table_schema, '.', table_name) FROM information_schema.tables "
             "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql');");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
