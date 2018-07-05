@@ -1899,12 +1899,9 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    MXS_NOTICE("MariaDB MaxScale %s started", MAXSCALE_VERSION);
+    MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
 
-#ifdef SS_DEBUG
-    MXS_NOTICE("Commit: %s", MAXSCALE_COMMIT);
-#endif
     cleanup_old_process_datadirs();
     if (!cnf->config_check)
     {
