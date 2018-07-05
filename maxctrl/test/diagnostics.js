@@ -52,7 +52,12 @@ describe("MXS-1656: `list servers` with GTIDs", function() {
                 // empty strings. This is because the test setup uses file and position based
                 // replication.
                 res = res.split('\n').map(i => i.split('\t')).map(i => i[5])
-                _.uniq(res).should.deep.equal([''])
+                var pos = _.uniq(res)[0]
+                if (pos.length) {
+                    pos.should.match(/[0-9]*-[0-9]*-[0-9]*/)
+                } else {
+                    pos.should.equal('')
+                }
             })
     }
 
