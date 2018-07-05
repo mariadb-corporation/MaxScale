@@ -56,7 +56,7 @@ using namespace maxscale;
  * @param options Router options
  * @return True on success, false if a configuration error was found
  */
-static bool rwsplit_process_router_options(Config& config, char **options)
+static bool rwsplit_process_router_options(SConfig config, char **options)
 {
     if (options == NULL)
     {
@@ -92,51 +92,51 @@ static bool rwsplit_process_router_options(Config& config, char **options)
                               "Allowed values are LEAST_GLOBAL_CONNECTIONS, "
                               "LEAST_ROUTER_CONNECTIONS, LEAST_BEHIND_MASTER,"
                               "and LEAST_CURRENT_OPERATIONS.",
-                              STRCRITERIA(config.slave_selection_criteria));
+                              STRCRITERIA(config->slave_selection_criteria));
                     success = false;
                 }
                 else
                 {
-                    config.slave_selection_criteria = c;
+                    config->slave_selection_criteria = c;
                 }
             }
             else if (strcmp(options[i], "max_sescmd_history") == 0)
             {
-                config.max_sescmd_history = atoi(value);
+                config->max_sescmd_history = atoi(value);
             }
             else if (strcmp(options[i], "disable_sescmd_history") == 0)
             {
-                config.disable_sescmd_history = config_truth_value(value);
+                config->disable_sescmd_history = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_accept_reads") == 0)
             {
-                config.master_accept_reads = config_truth_value(value);
+                config->master_accept_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "strict_multi_stmt") == 0)
             {
-                config.strict_multi_stmt = config_truth_value(value);
+                config->strict_multi_stmt = config_truth_value(value);
             }
             else if (strcmp(options[i], "strict_sp_calls") == 0)
             {
-                config.strict_sp_calls = config_truth_value(value);
+                config->strict_sp_calls = config_truth_value(value);
             }
             else if (strcmp(options[i], "retry_failed_reads") == 0)
             {
-                config.retry_failed_reads = config_truth_value(value);
+                config->retry_failed_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_failure_mode") == 0)
             {
                 if (strcasecmp(value, "fail_instantly") == 0)
                 {
-                    config.master_failure_mode = RW_FAIL_INSTANTLY;
+                    config->master_failure_mode = RW_FAIL_INSTANTLY;
                 }
                 else if (strcasecmp(value, "fail_on_write") == 0)
                 {
-                    config.master_failure_mode = RW_FAIL_ON_WRITE;
+                    config->master_failure_mode = RW_FAIL_ON_WRITE;
                 }
                 else if (strcasecmp(value, "error_on_write") == 0)
                 {
-                    config.master_failure_mode = RW_ERROR_ON_WRITE;
+                    config->master_failure_mode = RW_ERROR_ON_WRITE;
                 }
                 else
                 {
@@ -157,7 +157,7 @@ static bool rwsplit_process_router_options(Config& config, char **options)
 }
 
 // TODO: Don't process parameters in readwritesplit
-static bool handle_max_slaves(Config& config, const char *str)
+static bool handle_max_slaves(SConfig config, const char *str)
 {
     bool rval = true;
     char *endptr;
@@ -165,13 +165,13 @@ static bool handle_max_slaves(Config& config, const char *str)
 
     if (*endptr == '%' && *(endptr + 1) == '\0')
     {
-        config.rw_max_slave_conn_percent = val;
-        config.max_slave_connections = 0;
+        config->rw_max_slave_conn_percent = val;
+        config->max_slave_connections = 0;
     }
     else if (*endptr == '\0')
     {
-        config.max_slave_connections = val;
-        config.rw_max_slave_conn_percent = 0;
+        config->max_slave_connections = val;
+        config->rw_max_slave_conn_percent = 0;
     }
     else
     {
@@ -182,7 +182,7 @@ static bool handle_max_slaves(Config& config, const char *str)
     return rval;
 }
 
-RWSplit::RWSplit(SERVICE* service, const Config& config):
+RWSplit::RWSplit(SERVICE* service, SConfig config):
     mxs::Router<RWSplit, RWSplitSession>(service),
     m_service(service),
     m_config(config)
@@ -198,8 +198,9 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-const Config& RWSplit::config() const
+SConfig RWSplit::config() const
 {
+    ss_dassert(m_config);
     return m_config;
 }
 
@@ -215,9 +216,9 @@ const Stats& RWSplit::stats() const
 int RWSplit::max_slave_count() const
 {
     int router_nservers = m_service->n_dbref;
-    int conf_max_nslaves = m_config.max_slave_connections > 0 ?
-                           m_config.max_slave_connections :
-                           (router_nservers * m_config.rw_max_slave_conn_percent) / 100;
+    int conf_max_nslaves = m_config->max_slave_connections > 0 ?
+                           m_config->max_slave_connections :
+                           (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
     return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 }
 
@@ -227,8 +228,8 @@ bool RWSplit::have_enough_servers() const
     const int min_nsrv = 1;
     const int router_nsrv = m_service->n_dbref;
 
-    int n_serv = MXS_MAX(m_config.max_slave_connections,
-                         (router_nsrv * m_config.rw_max_slave_conn_percent) / 100);
+    int n_serv = MXS_MAX(m_config->max_slave_connections,
+                         (router_nsrv * m_config->rw_max_slave_conn_percent) / 100);
 
     /** With too few servers session is not created */
     if (router_nsrv < min_nsrv || n_serv < min_nsrv)
@@ -241,15 +242,15 @@ bool RWSplit::have_enough_servers() const
         }
         else
         {
-            int pct = m_config.rw_max_slave_conn_percent / 100;
+            int pct = m_config->rw_max_slave_conn_percent / 100;
             int nservers = router_nsrv * pct;
 
-            if (m_config.max_slave_connections < min_nsrv)
+            if (m_config->max_slave_connections < min_nsrv)
             {
                 MXS_ERROR("Unable to start %s service. There are "
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d when %d is required.",
-                          m_service->name, m_config.max_slave_connections, min_nsrv);
+                          m_service->name, m_config->max_slave_connections, min_nsrv);
             }
             if (nservers < min_nsrv)
             {
@@ -258,7 +259,7 @@ bool RWSplit::have_enough_servers() const
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d%% when at least %.0f%% "
                           "would be required.", m_service->name,
-                          m_config.rw_max_slave_conn_percent, dbgpct);
+                          m_config->rw_max_slave_conn_percent, dbgpct);
             }
         }
         succp = false;
@@ -274,9 +275,8 @@ bool RWSplit::have_enough_servers() const
 
 RWSplit* RWSplit::create(SERVICE *service, char **options)
 {
-
     MXS_CONFIG_PARAMETER* params = service->svc_config_param;
-    Config config(params);
+    SConfig config(new Config(params));
 
     if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")) ||
         (options && !rwsplit_process_router_options(config, options)))
@@ -285,25 +285,25 @@ RWSplit* RWSplit::create(SERVICE *service, char **options)
     }
 
     /** These options cancel each other out */
-    if (config.disable_sescmd_history && config.max_sescmd_history > 0)
+    if (config->disable_sescmd_history && config->max_sescmd_history > 0)
     {
-        config.max_sescmd_history = 0;
+        config->max_sescmd_history = 0;
     }
 
-    if (config.optimistic_trx)
+    if (config->optimistic_trx)
     {
         // Optimistic transaction routing requires transaction replay
-        config.transaction_replay = true;
+        config->transaction_replay = true;
     }
 
-    if (config.transaction_replay)
+    if (config->transaction_replay)
     {
         /**
          * Replaying transactions requires that we are able to do delayed query
          * retries and reconnect to a master.
          */
-        config.delayed_retry = true;
-        config.master_reconnection = true;
+        config->delayed_retry = true;
+        config->master_reconnection = true;
     }
 
     return new (std::nothrow) RWSplit(service, config);
@@ -320,40 +320,41 @@ void RWSplit::diagnostics(DCB *dcb)
 {
     const char *weightby = serviceGetWeightingParameter(service());
     double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
+    SConfig cnf = config();
 
     dcb_printf(dcb, "\n");
     dcb_printf(dcb, "\tuse_sql_variables_in:      %s\n",
-               mxs_target_to_str(config().use_sql_variables_in));
+               mxs_target_to_str(cnf->use_sql_variables_in));
     dcb_printf(dcb, "\tslave_selection_criteria:  %s\n",
-               select_criteria_to_str(config().slave_selection_criteria));
+               select_criteria_to_str(cnf->slave_selection_criteria));
     dcb_printf(dcb, "\tmaster_failure_mode:       %s\n",
-               failure_mode_to_str(config().master_failure_mode));
+               failure_mode_to_str(cnf->master_failure_mode));
     dcb_printf(dcb, "\tmax_slave_replication_lag: %d\n",
-               config().max_slave_replication_lag);
+               cnf->max_slave_replication_lag);
     dcb_printf(dcb, "\tretry_failed_reads:        %s\n",
-               config().retry_failed_reads ? "true" : "false");
+               cnf->retry_failed_reads ? "true" : "false");
     dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
-               config().strict_multi_stmt ? "true" : "false");
+               cnf->strict_multi_stmt ? "true" : "false");
     dcb_printf(dcb, "\tstrict_sp_calls:           %s\n",
-               config().strict_sp_calls ? "true" : "false");
+               cnf->strict_sp_calls ? "true" : "false");
     dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
-               config().disable_sescmd_history ? "true" : "false");
+               cnf->disable_sescmd_history ? "true" : "false");
     dcb_printf(dcb, "\tmax_sescmd_history:        %lu\n",
-               config().max_sescmd_history);
+               cnf->max_sescmd_history);
     dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
-               config().master_accept_reads ? "true" : "false");
+               cnf->master_accept_reads ? "true" : "false");
     dcb_printf(dcb, "\tconnection_keepalive:       %d\n",
-               config().connection_keepalive);
+               cnf->connection_keepalive);
     dcb_printf(dcb, "\tcausal_reads:       %s\n",
-               config().causal_reads ? "true" : "false");
+               cnf->causal_reads ? "true" : "false");
     dcb_printf(dcb, "\tcausal_reads_timeout:       %s\n",
-               config().causal_reads_timeout.c_str());
+               cnf->causal_reads_timeout.c_str());
     dcb_printf(dcb, "\tmaster_reconnection:       %s\n",
-               config().master_reconnection ? "true" : "false");
+               cnf->master_reconnection ? "true" : "false");
     dcb_printf(dcb, "\tdelayed_retry:        %s\n",
-               config().delayed_retry ? "true" : "false");
+               cnf->delayed_retry ? "true" : "false");
     dcb_printf(dcb, "\tdelayed_retry_timeout:       %lu\n",
-               config().delayed_retry_timeout);
+               cnf->delayed_retry_timeout);
 
     dcb_printf(dcb, "\n");
 

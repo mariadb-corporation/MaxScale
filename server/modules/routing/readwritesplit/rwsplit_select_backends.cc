@@ -301,15 +301,16 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
                                              connection_type type)
 {
     SRWBackend master = get_root_master(backends);
+    SConfig cnf(config());
 
-    if (!master && config().master_failure_mode == RW_FAIL_INSTANTLY)
+    if (!master && cnf->master_failure_mode == RW_FAIL_INSTANTLY)
     {
         MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
         return false;
     }
 
     /** Check slave selection criteria and set compare function */
-    select_criteria_t select_criteria = config().slave_selection_criteria;
+    select_criteria_t select_criteria = cnf->slave_selection_criteria;
     auto cmpfun = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 

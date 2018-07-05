@@ -84,7 +84,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
     ss_dassert(target);
     ss_debug(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = m_config.connection_keepalive * 10;
+    int keepalive = m_config->connection_keepalive * 10;
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -115,7 +115,7 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     if (!target->in_use())
     {
         ss_dassert(target->can_connect() && can_recover_servers());
-        ss_dassert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
+        ss_dassert(!TARGET_IS_MASTER(route_target) || m_config->master_reconnection);
         rval = target->connect(m_client->session, &m_sescmd_list);
         MXS_INFO("Connected to '%s'", target->name());
 
@@ -166,7 +166,7 @@ bool RWSplitSession::have_connected_slaves() const
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
 {
-    return m_config.optimistic_trx &&        // Optimistic transactions are enabled
+    return m_config->optimistic_trx &&       // Optimistic transactions are enabled
            !is_locked_to_master() &&         // Not locked to master
            !m_is_replay_active &&            // Not replaying a transaction
            m_otrx_state == OTRX_INACTIVE &&  // Not yet in optimistic mode
@@ -260,7 +260,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         }
 
         // If delayed query retry is enabled, we need to store the current statement
-        bool store_stmt = m_config.delayed_retry;
+        bool store_stmt = m_config->delayed_retry;
 
         if (m_qc.large_query())
         {
@@ -297,7 +297,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
             {
                 succp = true;
 
-                if (m_config.retry_failed_reads &&
+                if (m_config->retry_failed_reads &&
                     (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE))
                 {
                     // Only commands that can contain an SQL statement should be stored
@@ -309,8 +309,8 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         {
             succp = handle_master_is_target(&target);
 
-            if (!m_config.strict_multi_stmt &&
-                !m_config.strict_sp_calls &&
+            if (!m_config->strict_multi_stmt &&
+                !m_config->strict_sp_calls &&
                 m_target_node == m_current_master)
             {
                 /** Reset the forced node as we're in relaxed multi-statement mode */
@@ -363,7 +363,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         }
     }
 
-    if (succp && m_router->config().connection_keepalive &&
+    if (succp && m_config->connection_keepalive &&
         (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
     {
         handle_connection_keepalive(target);
@@ -488,7 +488,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
         }
     }
 
-    if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history)
+    if (m_config->max_sescmd_history > 0 && m_sescmd_list.size() >= m_config->max_sescmd_history)
     {
         static bool warn_history_exceeded = true;
         if (warn_history_exceeded)
@@ -500,16 +500,16 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
                         "command history, add `disable_sescmd_history=true` to "
                         "service '%s'. To increase the limit (currently %lu), add "
                         "`max_sescmd_history` to the same service and increase the value.",
-                        m_router->service()->name, m_config.max_sescmd_history);
+                        m_router->service()->name, m_config->max_sescmd_history);
             warn_history_exceeded = false;
         }
 
-        m_config.disable_sescmd_history = true;
-        m_config.max_sescmd_history = 0;
+        m_config->disable_sescmd_history = true;
+        m_config->max_sescmd_history = 0;
         m_sescmd_list.clear();
     }
 
-    if (m_config.disable_sescmd_history)
+    if (m_config->disable_sescmd_history)
     {
         /** Prune stored responses */
         ResponseMap::iterator it = m_sescmd_responses.lower_bound(lowest_pos);
@@ -596,7 +596,7 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
                 }
                 else if (backend->in_use() || counts.second < m_router->max_slave_count())
                 {
-                    if (!m_config.master_accept_reads && rval->is_master())
+                    if (!m_config->master_accept_reads && rval->is_master())
                     {
                         // Pick slaves over masters with master_accept_reads=false
                         rval = backend;
@@ -604,7 +604,7 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
                     else
                     {
                         // Compare the two servers and pick the best one
-                        rval = compare_backends(rval, backend, m_config.slave_selection_criteria);
+                        rval = compare_backends(rval, backend, m_config->slave_selection_criteria);
                     }
                 }
             }
@@ -622,7 +622,7 @@ SRWBackend RWSplitSession::get_master_backend()
 
     if (master)
     {
-        if (master->in_use() || (m_config.master_reconnection && master->can_connect()))
+        if (master->in_use() || (m_config->master_reconnection && master->can_connect()))
         {
             if (master->is_master())
             {
@@ -696,9 +696,9 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag;
 
     /** if there is no configured value, then longest possible int is used */
-    if (m_config.max_slave_replication_lag > 0)
+    if (m_config->max_slave_replication_lag > 0)
     {
-        conf_max_rlag = m_config.max_slave_replication_lag;
+        conf_max_rlag = m_config->max_slave_replication_lag;
     }
     else
     {
@@ -878,7 +878,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else
     {
         /** We never had a master connection, the session must be in read-only mode */
-        if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
+        if (m_config->master_failure_mode != RW_FAIL_INSTANTLY)
         {
             sprintf(errmsg, "Session is in read-only mode because it was created "
                     "when no master was available");
@@ -899,7 +899,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::should_replace_master(SRWBackend& target)
 {
-    return m_config.master_reconnection &&
+    return m_config->master_reconnection &&
            // We have a target server and it's not the current master
            target && target != m_current_master &&
            // We are not inside a transaction (also checks for autocommit=1)
@@ -946,7 +946,7 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
     {
         succp = false;
         /** The original master is not available, we can't route the write */
-        if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
+        if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
         {
             succp = send_readonly_error(m_client);
 
@@ -955,8 +955,8 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
                 m_current_master->close();
             }
         }
-        else if (!m_config.delayed_retry ||
-                 m_retry_duration >= m_config.delayed_retry_timeout)
+        else if (!m_config->delayed_retry ||
+                 m_retry_duration >= m_config->delayed_retry_timeout)
         {
             // Cannot retry the query, log a message that routing has failed
             log_master_routing_failure(succp, m_current_master, target);
@@ -993,7 +993,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
     GWBUF* rval = origin;
     const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
                             MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
-    const char *gtid_wait_timeout = m_router->config().causal_reads_timeout.c_str();
+    const char *gtid_wait_timeout = m_config->causal_reads_timeout.c_str();
     const char *gtid_position = m_gtid_pos.c_str();
 
     /* Create a new buffer to store prefix sql */
@@ -1051,7 +1051,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF *send_buf = gwbuf_clone(querybuf);
 
-    if (cmd == COM_QUERY && m_router->config().causal_reads && !m_gtid_pos .empty())
+    if (cmd == COM_QUERY && m_config->causal_reads && !m_gtid_pos .empty())
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;

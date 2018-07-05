@@ -132,7 +132,7 @@ public:
     mxs::SRWBackend         m_current_master; /**< Current master server */
     mxs::SRWBackend         m_target_node; /**< The currently locked target node */
     mxs::SRWBackend         m_prev_target; /**< The previous target where a query was sent */
-    Config                  m_config; /**< copied config info from router instance */
+    SConfig                 m_config; /**< Configuration for this session */
     int                     m_nbackends; /**< Number of backend servers (obsolete) */
     DCB*                    m_client; /**< The client DCB */
     uint64_t                m_sescmd_count; /**< Number of executed session commands */
@@ -249,14 +249,14 @@ private:
          *
          * @see handle_trx_replay
          */
-        return m_config.delayed_retry &&
-               m_retry_duration < m_config.delayed_retry_timeout &&
+        return m_config->delayed_retry &&
+               m_retry_duration < m_config->delayed_retry_timeout &&
                !session_trx_is_active(m_client->session);
     }
 
     inline bool can_recover_servers() const
     {
-        return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
+        return !m_config->disable_sescmd_history || m_recv_sescmd == 0;
     }
 
     inline bool is_large_query(GWBUF* buf)
