@@ -4319,7 +4319,8 @@ static void qc_sqlite_set_server_version(uint64_t version);
 static void qc_sqlite_get_server_version(uint64_t* version);
 static int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode);
 static int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode);
-static QC_STMT_INFO* qc_sqlite_dup(QC_STMT_INFO* info);
+static QC_STMT_INFO* qc_sqlite_info_dup(QC_STMT_INFO* info);
+static void qc_sqlite_info_close(QC_STMT_INFO* info);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -4978,10 +4979,15 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
     return rv;
 }
 
-QC_STMT_INFO* qc_sqlite_dup(QC_STMT_INFO* info)
+QC_STMT_INFO* qc_sqlite_info_dup(QC_STMT_INFO* info)
 {
     static_cast<QcSqliteInfo*>(info)->inc_ref();
     return info;
+}
+
+void qc_sqlite_info_close(QC_STMT_INFO* info)
+{
+    static_cast<QcSqliteInfo*>(info)->dec_ref();
 }
 
 /**
@@ -5017,7 +5023,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_server_version,
         qc_sqlite_get_sql_mode,
         qc_sqlite_set_sql_mode,
-        qc_sqlite_dup
+        qc_sqlite_info_dup,
+        qc_sqlite_info_close,
     };
 
     static MXS_MODULE info =
