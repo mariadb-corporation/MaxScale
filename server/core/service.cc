@@ -1773,6 +1773,27 @@ void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param)
     }
 }
 
+void service_add_parameters(SERVICE *service, const char* key, const char* value)
+{
+    MXS_CONFIG_PARAMETER p{const_cast<char*>(key), const_cast<char*>(value), nullptr};
+    service_add_parameters(service, &p);
+}
+
+void service_replace_parameter(SERVICE *service, const char* key, const char* value)
+{
+    for (MXS_CONFIG_PARAMETER* p = service->svc_config_param; p; p = p->next)
+    {
+        if (strcasecmp(p->name, key) == 0)
+        {
+            MXS_FREE(p->value);
+            p->value = MXS_STRDUP_A(value);
+            return;
+        }
+    }
+
+    service_add_parameters(service, key, value);
+}
+
 /*
  * Function to find a string in typelib_t
  * (similar to find_type() of mysys/typelib.c)

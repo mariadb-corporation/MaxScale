@@ -30,6 +30,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
+#include <maxscale/router.h>
 
 #include "internal/config.h"
 #include "internal/monitor.h"
@@ -564,6 +565,9 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     std::string value(zValue);
     bool valid = false;
 
+    const MXS_MODULE* module = get_module(service->routerModule, MODULE_ROUTER);
+    ss_dassert(module);
+
     spinlock_acquire(&crt_lock);
 
     if (key == CN_USER)
@@ -646,6 +650,33 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     {
         valid = true;
         serviceSetRetryOnFailure(service, value.c_str());
+    }
+    else if (config_param_is_valid(module->parameters, key.c_str(), value.c_str(), NULL))
+    {
+        if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
+        {
+            // Stash the old value in case the reconfiguration fails.
+            std::string old_value = config_get_string(service->svc_config_param, key.c_str());
+            ss_dassert(!old_value.empty());
+            service_replace_parameter(service, key.c_str(), value.c_str());
+
+            if (service->router->configureInstance(service->router_instance, service->svc_config_param))
+            {
+                valid = true;
+            }
+            else
+            {
+                // Reconfiguration failed, restore the old value of the parameter
+                service_replace_parameter(service, key.c_str(), old_value.c_str());
+                runtime_error("Reconfiguration of service '%s' failed. See log "
+                              "file for more details.", service->name);
+            }
+        }
+        else
+        {
+            runtime_error("Router '%s' does not support reconfiguration.",
+                          service->routerModule);
+        }
     }
     else
     {
@@ -1779,6 +1810,13 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
             }
 
+            const MXS_MODULE *mod = get_module(service->routerModule, MODULE_ROUTER);
+
+            for (int i = 0; mod->parameters[i].name; i++)
+            {
+                paramset.insert(mod->parameters[i].name);
+            }
+
             const char* key;
             json_t* value;
 
@@ -1801,14 +1839,9 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
                 else
                 {
-                    const MXS_MODULE *mod = get_module(service->routerModule, MODULE_ROUTER);
                     std::string v = mxs::json_to_string(value);
 
-                    if (config_param_is_valid(mod->parameters, key, v.c_str(), NULL))
-                    {
-                        runtime_error("Runtime modifications to router parameters is not supported: %s=%s", key, v.c_str());
-                    }
-                    else if (!is_dynamic_param(key))
+                    if (!is_dynamic_param(key))
                     {
                         runtime_error("Runtime modifications to static service parameters is not supported: %s=%s", key, v.c_str());
                     }

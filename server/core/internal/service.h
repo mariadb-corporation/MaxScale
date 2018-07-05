@@ -136,6 +136,15 @@ void  service_update(SERVICE *service, char *router, char *user, char *auth);
 void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
 
 /**
+ * @brief Replace service parameter
+ *
+ * @param service Service to modify
+ * @param key     Parameter name
+ * @param value   Parameter value
+ */
+void service_replace_parameter(SERVICE *service, const char* key, const char* value);
+
+/**
  * @brief Set listener rebinding interval
  *
  * @param service Service to configure
