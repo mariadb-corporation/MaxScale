@@ -12,11 +12,14 @@
  */
 
 #include "internal/query_classifier.h"
+#include <algorithm>
+#include <unordered_map>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
-#include <maxscale/alloc.h>
-#include <maxscale/platform.h>
 #include <maxscale/pcre2.h>
+#include <maxscale/platform.h>
 #include <maxscale/utils.h>
 
 #include "internal/modules.h"
@@ -43,14 +46,181 @@ struct type_name_info
 const char DEFAULT_QC_NAME[] = "qc_sqlite";
 const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
-struct this_unit
+static struct this_unit
 {
     QUERY_CLASSIFIER*    classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
+    int32_t              use_cached_result;
 } this_unit =
 {
     nullptr,
-    QC_TRX_PARSE_USING_PARSER
+    QC_TRX_PARSE_USING_PARSER,
+    1  // TODO: Make this configurable
+};
+
+class QCInfoCache;
+
+static thread_local struct
+{
+    QCInfoCache* pInfo_cache;
+} this_thread =
+{
+    nullptr
+};
+
+
+/**
+ * @class QCInfoCache
+ *
+ * An instance of this class maintains a mapping from a canonical statement to
+ * the QC_STMT_INFO object created by the actual query classifier.
+ */
+class QCInfoCache
+{
+public:
+    QCInfoCache(const QCInfoCache&) = delete;
+    QCInfoCache& operator=(const QCInfoCache&) = delete;
+
+    QCInfoCache()
+    {
+    }
+
+    ~QCInfoCache()
+    {
+        ss_dassert(this_unit.classifier);
+
+        for (auto a : m_infos)
+        {
+            this_unit.classifier->qc_info_close(a.second);
+        }
+    }
+
+    QC_STMT_INFO* peek(const std::string& canonical_stmt) const
+    {
+        auto i = m_infos.find(canonical_stmt);
+
+        return i != m_infos.end() ? i->second : nullptr;
+    }
+
+    QC_STMT_INFO* get(const std::string& canonical_stmt) const
+    {
+        QC_STMT_INFO* pInfo = peek(canonical_stmt);
+
+        if (pInfo)
+        {
+            ss_dassert(this_unit.classifier);
+            this_unit.classifier->qc_info_dup(pInfo);
+        }
+
+        return pInfo;
+    }
+
+    void insert(const std::string& canonical_stmt, QC_STMT_INFO* pInfo)
+    {
+        ss_dassert(peek(canonical_stmt) == nullptr);
+        ss_dassert(this_unit.classifier);
+
+        this_unit.classifier->qc_info_dup(pInfo);
+
+        m_infos.emplace(canonical_stmt, pInfo);
+    }
+
+    void erase(const std::string& canonical_stmt)
+    {
+        auto i = m_infos.find(canonical_stmt);
+        ss_dassert(i != m_infos.end());
+
+        if (i != m_infos.end())
+        {
+            QC_STMT_INFO* pInfo = i->second;
+
+            ss_dassert(this_unit.classifier);
+            this_unit.classifier->qc_info_close(pInfo);
+
+            m_infos.erase(i);
+        }
+    }
+
+private:
+    typedef std::unordered_map<std::string, QC_STMT_INFO*> InfosByStmt;
+
+    InfosByStmt m_infos;
+};
+
+bool use_cached_result()
+{
+    return atomic_load_int32(&this_unit.use_cached_result) != 0;
+}
+
+bool has_not_been_parsed(GWBUF* pStmt)
+{
+    // A GWBUF has not been parsed, if it does not have a parsing info object attached.
+    return gwbuf_get_buffer_object_data(pStmt, GWBUF_PARSING_INFO) == nullptr;
+}
+
+void info_object_close(void* pData)
+{
+    ss_dassert(this_unit.classifier);
+    this_unit.classifier->qc_info_close(static_cast<QC_STMT_INFO*>(pData));
+}
+
+
+/**
+ * @class QCInfoCacheScope
+ *
+ * QCInfoCacheScope is somewhat like a guard or RAII class that
+ * in the constructor
+ * - figures out whether the query classification cache should be used,
+ * - checks whether the classification result already exists, and
+ * - if it does attaches it to the GWBUF
+ * and in the destructor
+ * - if the query classification result was not already present,
+ *   stores the result it in the cache.
+ */
+class QCInfoCacheScope
+{
+public:
+    QCInfoCacheScope(const QCInfoCacheScope&) = delete;
+    QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
+
+    QCInfoCacheScope(GWBUF* pStmt)
+        : m_pStmt(pStmt)
+    {
+        if (use_cached_result() && has_not_been_parsed(m_pStmt))
+        {
+            char* zCanonical = qc_get_canonical(m_pStmt);
+
+            if (zCanonical)
+            {
+                m_canonical = zCanonical;
+                MXS_FREE(zCanonical);
+
+                QC_STMT_INFO* pInfo = this_thread.pInfo_cache->get(m_canonical);
+
+                if (pInfo)
+                {
+                    gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
+                    m_canonical.clear();
+                }
+            }
+        }
+    }
+
+    ~QCInfoCacheScope()
+    {
+        if (!m_canonical.empty())
+        {
+            void* pData = gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO);
+            ss_dassert(pData);
+            QC_STMT_INFO* pInfo = static_cast<QC_STMT_INFO*>(pData);
+
+            this_thread.pInfo_cache->insert(m_canonical, pInfo);
+        }
+    }
+
+private:
+    GWBUF*      m_pStmt;
+    std::string m_canonical;
 };
 
 }
@@ -168,11 +338,24 @@ bool qc_thread_init(uint32_t kind)
     QC_TRACE();
     ss_dassert(this_unit.classifier);
 
-    bool rc = true;
+    bool rc = false;
 
-    if (kind & QC_INIT_PLUGIN)
+    this_thread.pInfo_cache = new (std::nothrow) QCInfoCache;
+
+    if (this_thread.pInfo_cache)
     {
-        rc = this_unit.classifier->qc_thread_init() == 0;
+        rc = true;
+
+        if (kind & QC_INIT_PLUGIN)
+        {
+            rc = this_unit.classifier->qc_thread_init() == 0;
+        }
+
+        if (!rc)
+        {
+            delete this_thread.pInfo_cache;
+            this_thread.pInfo_cache = nullptr;
+        }
     }
 
     return rc;
@@ -187,6 +370,9 @@ void qc_thread_end(uint32_t kind)
     {
         this_unit.classifier->qc_thread_end();
     }
+
+    delete this_thread.pInfo_cache;
+    this_thread.pInfo_cache = nullptr;
 }
 
 qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
@@ -208,6 +394,7 @@ uint32_t qc_get_type_mask(GWBUF* query)
 
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_type_mask(query, &type_mask);
 
     return type_mask;
@@ -220,6 +407,7 @@ qc_query_op_t qc_get_operation(GWBUF* query)
 
     int32_t op = QUERY_OP_UNDEFINED;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_operation(query, &op);
 
     return (qc_query_op_t)op;
@@ -232,6 +420,7 @@ char* qc_get_created_table_name(GWBUF* query)
 
     char* name = NULL;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_created_table_name(query, &name);
 
     return name;
@@ -244,6 +433,7 @@ bool qc_is_drop_table_query(GWBUF* query)
 
     int32_t is_drop_table = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_is_drop_table_query(query, &is_drop_table);
 
     return (is_drop_table != 0) ? true : false;
@@ -257,6 +447,7 @@ char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
     char** names = NULL;
     *tblsize = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_table_names(query, fullnames, &names, tblsize);
 
     return names;
@@ -293,6 +484,7 @@ bool qc_query_has_clause(GWBUF* query)
 
     int32_t has_clause = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_query_has_clause(query, &has_clause);
 
     return (has_clause != 0) ? true : false;
@@ -307,6 +499,7 @@ void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_info
 
     uint32_t n = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_field_info(query, infos, &n);
 
     *n_infos = n;
@@ -321,6 +514,7 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
 
     uint32_t n = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_function_info(query, infos, &n);
 
     *n_infos = n;
@@ -334,6 +528,7 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
     char** names = NULL;
     *sizep = 0;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_database_names(query, &names, sizep);
 
     return names;
@@ -346,6 +541,7 @@ char* qc_get_prepare_name(GWBUF* query)
 
     char* name = NULL;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_prepare_name(query, &name);
 
     return name;
@@ -358,6 +554,7 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
 
     GWBUF* preparable_stmt = NULL;
 
+    QCInfoCacheScope scope(stmt);
     this_unit.classifier->qc_get_preparable_stmt(stmt, &preparable_stmt);
 
     return preparable_stmt;

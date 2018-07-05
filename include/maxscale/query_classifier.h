@@ -426,7 +426,7 @@ typedef struct query_classifier
     QC_STMT_INFO* (*qc_info_dup)(QC_STMT_INFO* info);
 
     /**
-     * Closes a dupped info object.After the info objec has been closed, it must
+     * Closes a dupped info object. After the info object has been closed, it must
      * not be accessed.
      *
      * @param info  The info to be closed.
