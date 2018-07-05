@@ -964,6 +964,7 @@ public:
         ss << idx;
 
         json_t* pJson = json_object();
+        json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str()));
         json_object_set_new(pJson, CN_TYPE, json_string(CN_THREADS));
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
