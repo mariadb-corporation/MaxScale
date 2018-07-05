@@ -130,6 +130,13 @@ template<class RouterType, class RouterSessionType>
 class Router : public MXS_ROUTER
 {
 public:
+
+    // The default configure entry point, does nothing and always fails
+    bool configure(MXS_CONFIG_PARAMETER* param)
+    {
+        return false;
+    }
+
     static MXS_ROUTER* createInstance(SERVICE* pService, char** pzOptions)
     {
         RouterType* pRouter = NULL;
@@ -228,6 +235,14 @@ public:
         MXS_EXCEPTION_GUARD(delete pRouter);
     }
 
+    static bool configure(MXS_ROUTER* pInstance, MXS_CONFIG_PARAMETER* param)
+    {
+        RouterType* pRouter = static_cast<RouterType*>(pInstance);
+        bool rval = false;
+        MXS_EXCEPTION_GUARD(rval = pRouter->configure(param));
+        return rval;
+    }
+
     static MXS_ROUTER_OBJECT s_object;
 
 protected:
@@ -254,6 +269,7 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,
     &Router<RouterType, RouterSessionType>::destroyInstance,
+    &Router<RouterType, RouterSessionType>::configure,
 };
 
 

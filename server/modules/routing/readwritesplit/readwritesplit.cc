@@ -429,7 +429,14 @@ json_t* RWSplit::diagnostics_json() const
 uint64_t RWSplit::getCapabilities()
 {
     return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING |
-           RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING;
+           RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING |
+           RCAP_TYPE_RUNTIME_CONFIG;
+}
+
+bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
+{
+    m_config.reset(new Config(params));
+    return true;
 }
 
 /**
@@ -445,7 +452,8 @@ extern "C" MXS_MODULE *MXS_CREATE_MODULE()
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
         RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING |
-        RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING,
+        RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING |
+        RCAP_TYPE_RUNTIME_CONFIG,
         &RWSplit::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */

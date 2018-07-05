@@ -298,6 +298,7 @@ public:
      */
     uint64_t getCapabilities();
 
+    bool configure(MXS_CONFIG_PARAMETER* params);
 private:
     SERVICE* m_service; /**< Service where the router belongs*/
     SConfig  m_config;

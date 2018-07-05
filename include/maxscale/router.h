@@ -211,6 +211,28 @@ typedef struct mxs_router_object
      * @param instance Router instance
      */
     void     (*destroyInstance)(MXS_ROUTER *instance);
+
+    /**
+     * @brief Configure router instance at runtime
+     *
+     * This function is guaranteed to be called by only one thread at a time.
+     * The router must declare the RCAP_TYPE_RUNTIME_CONFIG in its capabilities
+     * in order for this function to be called.
+     *
+     * Modifications to the router should be made in an atomic manner so that
+     * existing sessions do not read a partial configuration. One way to do this
+     * is to use shared pointers for storing configurations.
+     *
+     * @param instance Router instance
+     * @param params   Updated parameters for the service. The parameters are
+     *                 validated before this function is called.
+     *
+     * @return True if reconfiguration was successful, false if reconfiguration
+     *         failed. If reconfiguration failed, the state of the router
+     *         instance should not be modified.
+     */
+    bool (*configureInstance)(MXS_ROUTER *instance, MXS_CONFIG_PARAMETER* params);
+
 } MXS_ROUTER_OBJECT;
 
 /**
@@ -218,7 +240,7 @@ typedef struct mxs_router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define MXS_ROUTER_VERSION  { 3, 0, 0 }
+#define MXS_ROUTER_VERSION  { 3, 1, 0 }
 
 /**
  * Specifies capabilities specific for routers. Common capabilities
@@ -231,10 +253,11 @@ typedef struct mxs_router_object
  */
 typedef enum router_capability
 {
-    RCAP_TYPE_NO_RSESSION   = 0x00010000, /**< Router does not use router sessions */
-    RCAP_TYPE_NO_USERS_INIT = 0x00020000, /**< Prevent the loading of authenticator
+    RCAP_TYPE_NO_RSESSION    = 0x00010000, /**< Router does not use router sessions */
+    RCAP_TYPE_NO_USERS_INIT  = 0x00020000, /**< Prevent the loading of authenticator
                                              users when the service is started */
-    RCAP_TYPE_NO_AUTH       = 0x00040000, /**< No `user` or `password` parameter required */
+    RCAP_TYPE_NO_AUTH        = 0x00040000, /**< No `user` or `password` parameter required */
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00080000, /**< Router supports runtime cofiguration */
 } mxs_router_capability_t;
 
 typedef enum
