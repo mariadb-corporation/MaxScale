@@ -946,6 +946,10 @@ add_test_executable(mxs1926_killed_server.cpp mxs1926_killed_server mxs1926_kill
 # https://jira.mariadb.org/browse/MXS-1932
 add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)
 
+# MXS-1949: Warning for user load failure logged even when service has no users
+# https://jira.mariadb.org/browse/MXS-1949
+add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection avro LABELS REPL_BACKEND)
+
 # MXS-1958: Users with insert-only privileges don't work
 # https://jira.mariadb.org/browse/MXS-1958
 add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
