@@ -43,7 +43,9 @@ SERVER* Shard::get_location(std::string table)
     {
         for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
         {
+            std::transform(table.begin(), table.end(), table.begin(), ::tolower);
             std::string db = it->first.substr(0, it->first.find("."));
+            std::transform(db.begin(), db.end(), db.begin(), ::tolower);
             if (db.compare(table) == 0)
             {
                 if ((rval && rval != it->second))
@@ -61,11 +63,16 @@ SERVER* Shard::get_location(std::string table)
     }
     else
     {
-        ServerMap::iterator iter = m_map.find(table);
-
-        if (iter != m_map.end())
+        for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
         {
-            rval = iter->second;
+            std::transform(table.begin(), table.end(), table.begin(), ::tolower);
+            std::string db = it->first;
+            std::transform(db.begin(), db.end(), db.begin(), ::tolower);
+            if (db.compare(table) == 0)
+            {
+                rval = it->second;
+                break;
+            }
         }
     }
     return rval;
