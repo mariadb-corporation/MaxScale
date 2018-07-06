@@ -255,7 +255,9 @@ private:
 }
 
 
-bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args)
+bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
+              qc_sql_mode_t sql_mode,
+              const char* plugin_name, const char* plugin_args)
 {
     QC_TRACE();
     ss_dassert(!this_unit.classifier);
@@ -276,6 +278,7 @@ bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugi
         if (rv == QC_RESULT_OK)
         {
             this_unit.qc_sql_mode = sql_mode;
+            this_unit.use_cached_result = (cache_properties ? true : false);
         }
         else
         {

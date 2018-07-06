@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));
 
-    qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL);
+    qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
     qc_process_init(QC_INIT_BOTH);
     qc_thread_init(QC_INIT_BOTH);
 

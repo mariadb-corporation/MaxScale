@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 
         set_libdir(strdup(LIBDIR));
 
-        if (qc_setup(QC_LIB, QC_SQL_MODE_DEFAULT, NULL))
+        if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, QC_LIB, NULL))
         {
             if (qc_process_init(QC_INIT_BOTH) && qc_thread_init(QC_INIT_BOTH))
             {

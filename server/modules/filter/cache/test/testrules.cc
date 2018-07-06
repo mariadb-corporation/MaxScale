@@ -397,7 +397,7 @@ int main()
         pConfig->n_threads = 1;
 
         set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
-        if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, "") &&
+        if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", "") &&
             qc_process_init(QC_INIT_BOTH) &&
             qc_thread_init(QC_INIT_BOTH))
         {

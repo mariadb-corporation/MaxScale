@@ -423,7 +423,7 @@ int main(int argc, char* argv[])
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL))
+            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
             {
                 if (qc_process_init(QC_INIT_SELF))
                 {

@@ -435,6 +435,13 @@ typedef struct query_classifier
 } QUERY_CLASSIFIER;
 
 /**
+ * QC_CACHE specifies the limits of the query classification cache.
+ */
+typedef struct QC_CACHE_PROPERTIES
+{
+} QC_CACHE_PROPERTIES;
+
+/**
  * Loads and sets up the default query classifier.
  *
  * This must be called once during the execution of a process. The query
@@ -443,9 +450,10 @@ typedef struct query_classifier
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param qc_cache     If non-NULL, specifies the properties of the QC cache.
+ * @param sql_mode     The default sql mode.
  * @param plugin_name  The name of the plugin from which the query classifier
  *                     should be loaded.
- * @param sql_mode     The default sql mode.
  * @param plugin_args  The arguments to be provided to the query classifier.
  *
  * @return True if the query classifier could be loaded and initialized,
@@ -453,7 +461,9 @@ typedef struct query_classifier
  *
  * @see qc_end qc_thread_init
  */
-bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args);
+bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
+              qc_sql_mode_t sql_mode,
+              const char* plugin_name, const char* plugin_args);
 
 /**
  * Intializes the query classifier.

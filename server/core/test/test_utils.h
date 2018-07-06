@@ -42,7 +42,7 @@ void init_test_env(char *path)
     }
     dcb_global_init();
     set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
-    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL);
+    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     qc_process_init(QC_INIT_BOTH);
     poll_init();
     maxscale::MessageQueue::init();
