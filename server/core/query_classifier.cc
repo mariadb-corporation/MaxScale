@@ -278,7 +278,19 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
         if (rv == QC_RESULT_OK)
         {
             this_unit.qc_sql_mode = sql_mode;
-            this_unit.use_cached_result = (cache_properties ? true : false);
+
+            bool use_cached_result = (cache_properties != nullptr);
+
+            if (use_cached_result)
+            {
+                MXS_NOTICE("Query classification results are cached and reused.");
+            }
+            else
+            {
+                MXS_NOTICE("Query classification results are not cached.");
+            }
+
+            this_unit.use_cached_result = use_cached_result;
         }
         else
         {

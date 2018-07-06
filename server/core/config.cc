@@ -120,6 +120,7 @@ const char CN_PORT[]                          = "port";
 const char CN_PROTOCOL[]                      = "protocol";
 const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
+const char CN_QUERY_CLASSIFIER_CACHE[]        = "query_classifier_cache";
 const char CN_QUERY_RETRIES[]                 = "query_retries";
 const char CN_QUERY_RETRY_TIMEOUT[]           = "query_retry_timeout";
 const char CN_RELATIONSHIPS[]                 = "relationships";
@@ -1722,6 +1723,12 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, CN_QUERY_CLASSIFIER_ARGS) == 0)
     {
         gateway.qc_args = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE) == 0)
+    {
+        static QC_CACHE_PROPERTIES cache_properties;
+
+        gateway.qc_cache_properties = &cache_properties;
     }
     else if (strcmp(name, "sql_mode") == 0)
     {
