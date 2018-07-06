@@ -50,11 +50,13 @@ static struct this_unit
 {
     QUERY_CLASSIFIER*    classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
+    qc_sql_mode_t        qc_sql_mode;
     int32_t              use_cached_result;
 } this_unit =
 {
     nullptr,
     QC_TRX_PARSE_USING_PARSER,
+    QC_SQL_MODE_DEFAULT,
     1  // TODO: Make this configurable
 };
 
@@ -91,7 +93,7 @@ public:
 
         for (auto a : m_infos)
         {
-            this_unit.classifier->qc_info_close(a.second);
+            this_unit.classifier->qc_info_close(a.second.pInfo);
         }
     }
 
@@ -99,17 +101,32 @@ public:
     {
         auto i = m_infos.find(canonical_stmt);
 
-        return i != m_infos.end() ? i->second : nullptr;
+        return i != m_infos.end() ? i->second.pInfo : nullptr;
     }
 
-    QC_STMT_INFO* get(const std::string& canonical_stmt) const
+    QC_STMT_INFO* get(const std::string& canonical_stmt)
     {
-        QC_STMT_INFO* pInfo = peek(canonical_stmt);
+        QC_STMT_INFO* pInfo = nullptr;
 
-        if (pInfo)
+        auto i = m_infos.find(canonical_stmt);
+
+        if (i != m_infos.end())
         {
-            ss_dassert(this_unit.classifier);
-            this_unit.classifier->qc_info_dup(pInfo);
+            const Entry& entry = i->second;
+
+            if (entry.sql_mode == this_unit.qc_sql_mode)
+            {
+                ss_dassert(this_unit.classifier);
+                this_unit.classifier->qc_info_dup(entry.pInfo);
+                pInfo = entry.pInfo;
+            }
+            else
+            {
+                // If the sql_mode has changed, we discard the existing result.
+                ss_dassert(this_unit.classifier);
+                this_unit.classifier->qc_info_close(entry.pInfo);
+                m_infos.erase(i);
+            }
         }
 
         return pInfo;
@@ -122,7 +139,7 @@ public:
 
         this_unit.classifier->qc_info_dup(pInfo);
 
-        m_infos.emplace(canonical_stmt, pInfo);
+        m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode));
     }
 
     void erase(const std::string& canonical_stmt)
@@ -132,7 +149,7 @@ public:
 
         if (i != m_infos.end())
         {
-            QC_STMT_INFO* pInfo = i->second;
+            QC_STMT_INFO* pInfo = i->second.pInfo;
 
             ss_dassert(this_unit.classifier);
             this_unit.classifier->qc_info_close(pInfo);
@@ -142,7 +159,19 @@ public:
     }
 
 private:
-    typedef std::unordered_map<std::string, QC_STMT_INFO*> InfosByStmt;
+    struct Entry
+    {
+        Entry(QC_STMT_INFO* pInfo, qc_sql_mode_t sql_mode)
+            : pInfo(pInfo)
+            , sql_mode(sql_mode)
+        {
+        }
+
+        QC_STMT_INFO* pInfo;
+        qc_sql_mode_t sql_mode;
+    };
+
+    typedef std::unordered_map<std::string, Entry> InfosByStmt;
 
     InfosByStmt m_infos;
 };
@@ -244,7 +273,11 @@ bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugi
     {
         rv = this_unit.classifier->qc_setup(sql_mode, plugin_args);
 
-        if (rv != QC_RESULT_OK)
+        if (rv == QC_RESULT_OK)
+        {
+            this_unit.qc_sql_mode = sql_mode;
+        }
+        else
         {
             qc_unload(this_unit.classifier);
         }
@@ -1021,12 +1054,7 @@ qc_sql_mode_t qc_get_sql_mode()
     QC_TRACE();
     ss_dassert(this_unit.classifier);
 
-    qc_sql_mode_t sql_mode;
-
-    ss_debug(int32_t rv = ) this_unit.classifier->qc_get_sql_mode(&sql_mode);
-    ss_dassert(rv == QC_RESULT_OK);
-
-    return sql_mode;
+    return this_unit.qc_sql_mode;
 }
 
 void qc_set_sql_mode(qc_sql_mode_t sql_mode)
@@ -1036,4 +1064,9 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
 
     ss_debug(int32_t rv = ) this_unit.classifier->qc_set_sql_mode(sql_mode);
     ss_dassert(rv == QC_RESULT_OK);
+
+    if (rv == QC_RESULT_OK)
+    {
+        this_unit.qc_sql_mode = sql_mode;
+    }
 }
