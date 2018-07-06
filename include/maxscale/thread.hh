@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <tr1/memory>
+#include <memory>
 #include <maxscale/thread.h>
 #include <maxscale/future.hh>
 

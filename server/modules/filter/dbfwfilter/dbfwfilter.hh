@@ -19,8 +19,8 @@
 #include <string>
 #include <list>
 #include <vector>
-#include <tr1/memory>
-#include <tr1/unordered_map>
+#include <memory>
+#include <unordered_map>
 
 #include <maxscale/filter.hh>
 #include <maxscale/query_classifier.h>
@@ -154,7 +154,7 @@ struct QuerySpeed
 
 class Dbfw;
 class User;
-typedef std::tr1::shared_ptr<User> SUser;
+typedef std::shared_ptr<User> SUser;
 
 /**
  * The session structure for Firewall filter.
@@ -279,7 +279,7 @@ typedef std::list<std::string> ValueList;
 
 /** Temporary typedef for SRule */
 class Rule;
-typedef std::tr1::shared_ptr<Rule> SRule;
+typedef std::shared_ptr<Rule> SRule;
 
 /** Helper function for strdup'ing in printf style */
 char* create_error(const char* format, ...);

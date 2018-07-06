@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <tr1/memory>
+#include <memory>
 #include <list>
 #include <string>
 
@@ -24,7 +24,7 @@ namespace maxscale
 {
 
 class SessionCommand;
-typedef std::tr1::shared_ptr<SessionCommand> SSessionCommand;
+typedef std::shared_ptr<SessionCommand> SSessionCommand;
 typedef std::list<SSessionCommand> SessionCommandList;
 
 class SessionCommand

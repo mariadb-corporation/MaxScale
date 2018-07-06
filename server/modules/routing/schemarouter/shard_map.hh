@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <string>
 #include <list>
 
@@ -24,7 +24,7 @@
 using namespace maxscale;
 
 /** This contains the database to server mapping */
-typedef std::tr1::unordered_map<std::string, SERVER*> ServerMap;
+typedef std::unordered_map<std::string, SERVER*> ServerMap;
 
 class Shard
 {
@@ -96,7 +96,7 @@ private:
     time_t    m_last_updated;
 };
 
-typedef std::tr1::unordered_map<std::string, Shard> ShardMap;
+typedef std::unordered_map<std::string, Shard> ShardMap;
 
 class ShardManager
 {

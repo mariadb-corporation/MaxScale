@@ -17,7 +17,7 @@
 #include "storagefactory.hh"
 
 using maxscale::SpinLockGuard;
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 
 CacheMT::CacheMT(const std::string&              name,
                  const CACHE_CONFIG*             pConfig,

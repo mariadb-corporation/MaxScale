@@ -13,8 +13,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <tr1/functional>
-#include <tr1/memory>
+#include <functional>
+#include <memory>
 #include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
@@ -35,8 +35,8 @@ public:
         INFO_ALL     = (INFO_RULES | INFO_PENDING | INFO_STORAGE)
     };
 
-    typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
-    typedef std::tr1::shared_ptr<StorageFactory> SStorageFactory;
+    typedef std::shared_ptr<CacheRules> SCacheRules;
+    typedef std::shared_ptr<StorageFactory> SStorageFactory;
 
     virtual ~Cache();
 

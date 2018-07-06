@@ -14,7 +14,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <new>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <string>
 #include <algorithm>
 
@@ -54,7 +54,7 @@ class Users
     Users& operator=(const Users&);
 
 public:
-    typedef std::tr1::unordered_map<std::string, UserInfo> UserMap;
+    typedef std::unordered_map<std::string, UserInfo> UserMap;
 
     Users()
     {

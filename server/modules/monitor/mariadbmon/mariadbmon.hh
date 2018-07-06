@@ -16,7 +16,7 @@
 #include <condition_variable>
 #include <functional>
 #include <string>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <vector>
 
 #include <maxscale/monitor.hh>
@@ -29,11 +29,11 @@ extern const char * const CN_PROMOTION_SQL_FILE;
 extern const char * const CN_DEMOTION_SQL_FILE;
 
 // Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
-typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
+typedef std::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
-typedef std::tr1::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
+typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
 // Map of cycle number to cycle members
-typedef std::tr1::unordered_map<int, ServerArray> CycleMap;
+typedef std::unordered_map<int, ServerArray> CycleMap;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance

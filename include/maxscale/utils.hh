@@ -23,7 +23,7 @@
 #include <functional>
 #include <iterator>
 #include <string>
-#include <tr1/unordered_map>
+#include <unordered_map>
 
 #include <maxscale/buffer.h>
 #include <maxscale/utils.h>
@@ -352,7 +352,7 @@ public:
     }
 
 private:
-    typedef typename std::tr1::unordered_map<id_type, entry_type> ContainerType;
+    typedef typename std::unordered_map<id_type, entry_type> ContainerType;
     ContainerType m_registry;
 };
 

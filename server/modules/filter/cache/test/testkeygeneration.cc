@@ -14,7 +14,7 @@
 #include <maxscale/cppdefs.hh>
 #include <iostream>
 #include <fstream>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
@@ -25,7 +25,6 @@
 #include "tester.hh"
 
 using namespace std;
-using namespace std::tr1;
 
 namespace
 {

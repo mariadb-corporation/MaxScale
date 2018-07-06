@@ -30,14 +30,14 @@
 
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
-typedef std::tr1::unordered_set<std::string> TableSet;
+typedef std::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>          ResponseMap;
 
 /** List of slave responses that arrived before the master */
 typedef std::list< std::pair<mxs::SRWBackend, uint8_t> > SlaveResponseList;
 
 /** Map of COM_STMT_EXECUTE targets by internal ID */
-typedef std::tr1::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
+typedef std::unordered_map<uint32_t, mxs::SRWBackend> ExecMap;
 
 /**
  * The client session of a RWSplit instance

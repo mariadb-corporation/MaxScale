@@ -21,7 +21,7 @@
 #include "cachest.hh"
 #include "storagefactory.hh"
 
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 using std::string;
 
 namespace

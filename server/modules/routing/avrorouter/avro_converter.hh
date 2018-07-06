@@ -39,8 +39,8 @@ struct AvroTable
     avro_schema_t       avro_schema; /*< Native Avro schema of the table */
 };
 
-typedef std::tr1::shared_ptr<AvroTable>                  SAvroTable;
-typedef std::tr1::unordered_map<std::string, SAvroTable> AvroTables;
+typedef std::shared_ptr<AvroTable>                  SAvroTable;
+typedef std::unordered_map<std::string, SAvroTable> AvroTables;
 
 // Converts replicated events into CDC events
 class AvroConverter : public RowEventHandler

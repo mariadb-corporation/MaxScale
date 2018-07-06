@@ -15,7 +15,7 @@
 #include <maxscale/cppdefs.hh>
 #include <functional>
 #include <string>
-#include <tr1/functional>
+#include <functional>
 #include "cache_storage_api.h"
 
 
@@ -31,9 +31,6 @@ struct equal_to<CACHE_KEY>
     }
 };
 
-namespace tr1
-{
-
 template<>
 struct hash<CACHE_KEY>
 {
@@ -42,8 +39,6 @@ struct hash<CACHE_KEY>
         return cache_key_hash(&key);
     }
 };
-
-}
 
 }
 

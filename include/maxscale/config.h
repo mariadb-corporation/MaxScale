@@ -29,10 +29,10 @@
 #include <maxscale/query_classifier.h>
 
 #ifdef __cplusplus
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <string>
 // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
-typedef std::tr1::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
+typedef std::unordered_map<std::string, int32_t> MxsDiskSpaceThreshold;
 #else
 typedef void MxsDiskSpaceThreshold;
 #endif

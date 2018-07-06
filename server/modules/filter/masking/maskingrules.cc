@@ -27,7 +27,7 @@
 using std::auto_ptr;
 using std::string;
 using std::vector;
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 using maxscale::Closer;
 
 namespace

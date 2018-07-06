@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include "cache.hh"
 #include "cache_storage_api.hh"
 
@@ -55,7 +55,7 @@ private:
     CacheSimple& operator = (const CacheSimple&);
 
 protected:
-    typedef std::tr1::unordered_map<CACHE_KEY, const CacheFilterSession*> Pending;
+    typedef std::unordered_map<CACHE_KEY, const CacheFilterSession*> Pending;
 
     Pending  m_pending;  // Pending items; being fetched from the backend.
     Storage* m_pStorage; // The storage instance to use.

@@ -15,7 +15,7 @@
 #include "hintrouterdefs.hh"
 
 #include <deque>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <vector>
 #include <string>
 
@@ -29,7 +29,7 @@ class HintRouter;
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    typedef std::tr1::unordered_map<string, Dcb> BackendMap; // All backends, indexed by name
+    typedef std::unordered_map<string, Dcb> BackendMap; // All backends, indexed by name
     typedef std::vector<Dcb> BackendArray;
     typedef std::vector<SERVER_REF*> RefArray;
     typedef BackendMap::value_type MapElement;

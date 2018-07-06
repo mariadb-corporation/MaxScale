@@ -18,7 +18,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <tr1/unordered_map>
+#include <unordered_map>
 
 #include <maxscale/monitor.hh>
 
@@ -34,7 +34,7 @@ struct GaleraNode
     std::string cluster_uuid; /**< Cluster UUID */
 };
 
-typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, GaleraNode> NodeMap;
+typedef std::unordered_map<MXS_MONITORED_SERVER*, GaleraNode> NodeMap;
 
 class GaleraMonitor : public maxscale::MonitorInstanceSimple
 {

@@ -17,7 +17,6 @@
 #include <maxscale/debug.h>
 
 using namespace std;
-using namespace std::tr1;
 
 const char valid_minimal[] =
     "{"
@@ -253,7 +252,7 @@ public:
     {
         int rc = EXIT_SUCCESS;
 
-        using std::tr1::shared_ptr;
+        using std::shared_ptr;
         auto_ptr<MaskingRules> sRules = MaskingRules::parse(valid_users);
         ss_dassert(sRules.get());
 

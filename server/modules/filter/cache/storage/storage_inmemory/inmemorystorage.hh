@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include "../../cache_storage_api.hh"
 
 class InMemoryStorage
@@ -92,7 +92,7 @@ private:
         uint64_t deletes;    /*< How many times an existing key in the cache was deleted. */
     };
 
-    typedef std::tr1::unordered_map<CACHE_KEY, Entry> Entries;
+    typedef std::unordered_map<CACHE_KEY, Entry> Entries;
 
     std::string                m_name;
     const CACHE_STORAGE_CONFIG m_config;

@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <tr1/memory>
+#include <memory>
 #include <vector>
 #include "cache.hh"
 
@@ -41,7 +41,7 @@ public:
     cache_result_t del_value(const CACHE_KEY& key);
 
 private:
-    typedef std::tr1::shared_ptr<Cache> SCache;
+    typedef std::shared_ptr<Cache>      SCache;
     typedef std::vector<SCache>         Caches;
 
     CachePT(const std::string&              name,

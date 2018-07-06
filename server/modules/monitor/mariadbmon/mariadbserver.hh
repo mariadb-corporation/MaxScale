@@ -464,7 +464,7 @@ public:
 
 private:
     MYSQL_RES* m_resultset; // Underlying result set, freed at dtor.
-    std::tr1::unordered_map<std::string, int64_t> m_col_indexes; // Map of column name -> index
+    std::unordered_map<std::string, int64_t> m_col_indexes; // Map of column name -> index
     int64_t m_columns;     // How many columns does the data have. Usually equal to column index map size.
     MYSQL_ROW m_rowdata;   // Data for current row
     int64_t m_current_row; // Index of current row

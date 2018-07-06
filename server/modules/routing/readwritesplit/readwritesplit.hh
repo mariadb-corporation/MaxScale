@@ -20,8 +20,8 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <tr1/unordered_set>
-#include <tr1/unordered_map>
+#include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <string>
 
@@ -200,7 +200,7 @@ struct Config
     bool              optimistic_trx;            /**< Enable optimistic transactions */
 };
 
-typedef std::tr1::shared_ptr<Config> SConfig;
+typedef std::shared_ptr<Config> SConfig;
 
 /**
  * The statistics for this router instance

@@ -24,7 +24,7 @@
 #include <list>
 #include <set>
 #include <string>
-#include <tr1/memory>
+#include <memory>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/pcre2.h>
@@ -128,7 +128,7 @@ private:
     bool               m_mapped; /**< Whether the backend has been mapped */
 };
 
-typedef std::tr1::shared_ptr<SRBackend> SSRBackend;
+typedef std::shared_ptr<SRBackend> SSRBackend;
 typedef std::list<SSRBackend> SSRBackendList;
 
 }

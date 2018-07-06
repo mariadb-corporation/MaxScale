@@ -14,14 +14,14 @@
 
 #include "hintrouterdefs.hh"
 
-#include <tr1/memory>
+#include <memory>
 
 #include <maxscale/dcb.h>
 
 class Dcb
 {
 public:
-    typedef std::tr1::shared_ptr<DCB> SDCB;
+    typedef std::shared_ptr<DCB> SDCB;
 
     explicit Dcb(DCB* pDcb);
 

@@ -16,7 +16,7 @@
 
 #include <list>
 #include <string>
-#include <tr1/memory>
+#include <memory>
 
 #include <maxscale/service.h>
 #include <maxscale/session_command.hh>
@@ -359,6 +359,6 @@ private:
     std::string        m_uri;              /**< The combined address and port */
 };
 
-typedef std::tr1::shared_ptr<Backend> SBackend;
+typedef std::shared_ptr<Backend> SBackend;
 typedef std::list<SBackend> BackendList;
 }

@@ -122,7 +122,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
 MaskingFilter::MaskingFilter(const Config& config, auto_ptr<MaskingRules> sRules)
     : m_config(config)
-    , m_sRules(sRules)
+    , m_sRules(sRules.release())
 {
     MXS_NOTICE("Masking filter [%s] created.", m_config.name().c_str());
 }
@@ -171,7 +171,7 @@ uint64_t MaskingFilter::getCapabilities()
     return RCAP_TYPE_NONE;
 }
 
-std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
+std::shared_ptr<MaskingRules> MaskingFilter::rules() const
 {
     return m_sRules;
 }
@@ -186,7 +186,7 @@ bool MaskingFilter::reload()
         MXS_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
                    m_config.name().c_str(), m_config.rules().c_str());
 
-        m_sRules = sRules;
+        m_sRules.reset(sRules.release());
         rval = true;
     }
     else

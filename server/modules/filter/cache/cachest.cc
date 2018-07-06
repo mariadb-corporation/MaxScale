@@ -16,7 +16,7 @@
 #include "storage.hh"
 #include "storagefactory.hh"
 
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 
 CacheST::CacheST(const std::string&              name,
                  const CACHE_CONFIG*             pConfig,

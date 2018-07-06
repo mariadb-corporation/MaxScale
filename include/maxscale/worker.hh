@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <map>
-#include <tr1/unordered_set>
+#include <unordered_set>
 #include <memory>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
@@ -1147,7 +1147,7 @@ private:
 
     typedef DelegatingTimer<Worker>                         PrivateTimer;
     typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
-    typedef std::tr1::unordered_map<uint32_t, DelayedCall*> DelayedCallsById;
+    typedef std::unordered_map<uint32_t, DelayedCall*>      DelayedCallsById;
 
     STATISTICS         m_statistics;           /*< Worker statistics. */
     MessageQueue*      m_pQueue;               /*< The message queue of the worker. */

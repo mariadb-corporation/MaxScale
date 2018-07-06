@@ -14,9 +14,9 @@
 
 #include <maxscale/cppdefs.hh>
 #include <string>
-#include <tr1/memory>
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
 #include <maxscale/hint.h>
 #include <maxscale/router.h>
 #include <maxscale/session.h>
@@ -107,7 +107,7 @@ public:
         virtual bool supports_hint(HINT_TYPE hint_type) const = 0;
     };
 
-    typedef std::tr1::unordered_set<std::string> TableSet;
+    typedef std::unordered_set<std::string> TableSet;
 
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh
     enum
@@ -371,7 +371,7 @@ private:
     class PSManager;
     typedef std::shared_ptr<PSManager> SPSManager;
 
-    typedef std::tr1::unordered_map<uint32_t, uint32_t> HandleMap;
+    typedef std::unordered_map<uint32_t, uint32_t> HandleMap;
 
     static bool find_table(QueryClassifier& qc, const std::string& table);
     static bool delete_table(QueryClassifier& qc, const std::string& table);

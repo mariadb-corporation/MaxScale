@@ -16,8 +16,8 @@
 #include <cstdint>
 #include <string>
 #include <sstream>
-#include <tr1/memory>
-#include <tr1/unordered_map>
+#include <memory>
+#include <unordered_map>
 
 #include <maxscale/pcre2.h>
 #include <maxscale/service.h>
@@ -72,7 +72,7 @@ struct Column
 };
 
 struct TableCreateEvent;
-typedef std::tr1::shared_ptr<TableCreateEvent> STableCreateEvent;
+typedef std::shared_ptr<TableCreateEvent> STableCreateEvent;
 
 /** A CREATE TABLE abstraction */
 struct TableCreateEvent
@@ -151,12 +151,12 @@ struct TableMapEvent
     Bytes       column_metadata;
 };
 
-typedef std::tr1::shared_ptr<TableMapEvent>    STableMapEvent;
+typedef std::shared_ptr<TableMapEvent>    STableMapEvent;
 
 // Containers for the replication events
-typedef std::tr1::unordered_map<std::string, STableCreateEvent> CreatedTables;
-typedef std::tr1::unordered_map<std::string, STableMapEvent>    MappedTables;
-typedef std::tr1::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
+typedef std::unordered_map<std::string, STableCreateEvent> CreatedTables;
+typedef std::unordered_map<std::string, STableMapEvent>    MappedTables;
+typedef std::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
 
 // Handler class for row based replication events
 class RowEventHandler

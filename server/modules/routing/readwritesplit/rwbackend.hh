@@ -15,7 +15,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <map>
-#include <tr1/memory>
+#include <memory>
 
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.h>
@@ -35,7 +35,7 @@ enum reply_state_t
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 
 class RWBackend;
-typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
+typedef std::shared_ptr<RWBackend> SRWBackend;
 typedef std::list<SRWBackend> SRWBackendList;
 
 class RWBackend: public mxs::Backend

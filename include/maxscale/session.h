@@ -28,13 +28,13 @@
 #include <maxscale/jansson.h>
 
 #ifdef __cplusplus
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
+#include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <deque>
 #include <vector>
 typedef std::deque<std::vector<uint8_t> > SessionStmtQueue;
-typedef std::tr1::unordered_set<DCB*> DCBSet;
+typedef std::unordered_set<DCB*> DCBSet;
 #else
 typedef void SessionStmtQueue;
 typedef void DCBSet;
@@ -184,7 +184,7 @@ typedef struct session_variable
     void*                      context;
 } SESSION_VARIABLE;
 
-typedef std::tr1::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
+typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
 #else
 typedef void SessionVarsByName;
 #endif

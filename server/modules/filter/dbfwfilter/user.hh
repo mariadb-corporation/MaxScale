@@ -34,7 +34,7 @@ struct UserTemplate
     ValueList   rulenames; /** Names of the rules */
 };
 
-typedef std::tr1::shared_ptr<UserTemplate> SUserTemplate;
+typedef std::shared_ptr<UserTemplate>      SUserTemplate;
 typedef std::list<SUserTemplate>           TemplateList;
 
 /**
@@ -101,5 +101,5 @@ private:
                   GWBUF *queue, match_mode mode, char** rulename);
 };
 
-typedef std::tr1::shared_ptr<User>                  SUser;
-typedef std::tr1::unordered_map<std::string, SUser> UserMap;
+typedef std::shared_ptr<User>                  SUser;
+typedef std::unordered_map<std::string, SUser> UserMap;

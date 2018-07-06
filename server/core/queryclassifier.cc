@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/queryclassifier.hh>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
@@ -322,8 +322,8 @@ public:
     }
 
 private:
-    typedef std::tr1::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
-    typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
+    typedef std::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
+    typedef std::unordered_map<std::string, uint32_t> TextPSMap;
 
 private:
     BinaryPSMap m_binary_ps;

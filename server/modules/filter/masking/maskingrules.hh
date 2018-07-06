@@ -15,7 +15,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
-#include <tr1/memory>
+#include <memory>
 #include <vector>
 
 #include <maxscale/jansson.h>
@@ -67,7 +67,7 @@ public:
             virtual bool matches(const char* zUser, const char* zHost) const = 0;
         };
 
-        typedef std::tr1::shared_ptr<Account> SAccount;
+        typedef std::shared_ptr<Account> SAccount;
 
         /**
          * Constructor of base Rule class
@@ -394,7 +394,7 @@ public:
                              const char* zUser,
                              const char* zHost) const;
 
-    typedef std::tr1::shared_ptr<Rule> SRule;
+    typedef std::shared_ptr<Rule> SRule;
 
 private:
     MaskingRules(json_t* pRoot, const std::vector<SRule>& rules);

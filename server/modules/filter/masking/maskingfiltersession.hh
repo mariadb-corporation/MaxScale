@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
-#include <tr1/memory>
+#include <memory>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include "maskingrules.hh"
@@ -64,7 +64,7 @@ private:
     bool reject_if_function_used(GWBUF* pPacket);
 
 private:
-    typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
+    typedef std::shared_ptr<MaskingRules> SMaskingRules;
 
     class ResponseState
     {

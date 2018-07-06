@@ -17,7 +17,7 @@
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <jansson.h>
-#include <tr1/memory>
+#include <memory>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include <maxscale/pcre2.h>
@@ -184,7 +184,7 @@ MXS_END_DECLS
 class CacheRules
 {
 public:
-    typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
+    typedef std::shared_ptr<CacheRules> SCacheRules;
 
     CacheRules(const CacheRules&) = delete;
     CacheRules& operator = (const CacheRules&) = delete;

@@ -16,7 +16,7 @@
 
 #include <map>
 #include <string>
-#include <tr1/memory>
+#include <memory>
 #include <microhttpd.h>
 
 #include <maxscale/jansson.hh>

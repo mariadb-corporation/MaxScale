@@ -17,7 +17,7 @@
 #include <deque>
 #include <map>
 #include <string>
-#include <tr1/memory>
+#include <memory>
 #include <cstdint>
 #include <microhttpd.h>
 

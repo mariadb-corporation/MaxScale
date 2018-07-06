@@ -362,9 +362,6 @@ private:
 namespace std
 {
 
-namespace tr1
-{
-
 template<>
 struct hash<MessageRegistryKey>
 {
@@ -376,8 +373,6 @@ struct hash<MessageRegistryKey>
         return key.hash();
     }
 };
-
-}
 
 template<>
 struct equal_to<MessageRegistryKey>
@@ -428,7 +423,7 @@ public:
 
 private:
     mxs::SpinLock                       m_lock;
-    std::tr1::unordered_map<Key, Stats> m_registry;
+    std::unordered_map<Key, Stats>      m_registry;
 };
 
 }

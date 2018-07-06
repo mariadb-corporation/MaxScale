@@ -296,5 +296,5 @@ private:
     mxs::Closer<pcre2_code*> m_re;
 };
 
-typedef std::tr1::shared_ptr<Rule> SRule;
-typedef std::list<SRule>           RuleList;
+typedef std::shared_ptr<Rule> SRule;
+typedef std::list<SRule>      RuleList;
