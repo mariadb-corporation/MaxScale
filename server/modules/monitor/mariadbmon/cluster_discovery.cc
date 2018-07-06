@@ -726,7 +726,10 @@ void MariaDBMonitor::assign_master_and_slave()
             (m_detect_stale_master && (m_master->m_server_base->pending_status & SERVER_WAS_MASTER)))
         {
             m_master->clear_status(SLAVE_BITS | SERVER_RELAY_MASTER);
-            m_master->set_status(MASTER_BITS);
+            if (m_master->has_status(SERVER_RUNNING))
+            {
+                m_master->set_status(MASTER_BITS);
+            }
         }
 
         // Run another DFS, this time assigning slaves.
@@ -796,7 +799,10 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
             if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
             {
                 slave->clear_status(MASTER_BITS);
-                slave->set_status(SLAVE_BITS);
+                if (slave->has_status(SERVER_RUNNING))
+                {
+                    slave->set_status(SLAVE_BITS);
+                }
                 assign_slave_and_relay_master(slave);
             }
         }
