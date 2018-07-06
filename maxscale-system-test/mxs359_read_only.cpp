@@ -37,14 +37,14 @@ void test_replaced_master(TestConnections& test, std::ostream& out)
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     test.repl->block_node(0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     out << "Reads should still work even if no master is available" << endl;
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     test.repl->unblock_node(0);
     change_master(1, 0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     out << "Reads and writes after master change should work" << endl;
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (2)");
@@ -58,14 +58,14 @@ void test_new_master(TestConnections& test, std::ostream& out)
 {
     out << "Block the master before connecting" << endl;
     test.repl->block_node(0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     out << "Connect and check that read-only mode works" << endl;
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     change_master(1, 0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     out << "Both reads and writes after master change should work" << endl;
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (2)");
@@ -84,7 +84,7 @@ void test_master_failure(TestConnections& test, std::ostream& out)
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     test.repl->block_node(0);
-    sleep(10);
+    test.maxscales->wait_for_monitor();
 
     out << "Reads should still work even if no master is available" << endl;
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
         i.func(test, out);
         if (test.global_result)
         {
-            test.tprintf("Test '%s' failed: %s", i.description, out.str().c_str());
+            test.tprintf("Test '%s' failed: \n\n%s\n\n", i.description, out.str().c_str());
             break;
         }
     }

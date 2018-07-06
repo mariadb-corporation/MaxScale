@@ -42,8 +42,10 @@ void run(TestConnections& test)
     if (mysql_real_connect(pMysql, test.maxscales->IP[0], zUser, zPassword, "test", port, NULL,
                            CLIENT_MULTI_STATEMENTS))
     {
-        // One multi-statement with two UPDATEs.
-        test.try_query(pMysql, "UPDATE MXS_1719 SET a=1; UPDATE MXS_1719 SET a=1;");
+        const char* q = "UPDATE MXS_1719 SET a=1; UPDATE MXS_1719 SET a=1;";
+        // One multi-statement with two UPDATEs. Note: This query should fail
+        // with 2.3 now that function blocking has been added
+        test.assert(execute_query_silent(pMysql, q) != 0, "Query '%s' should not succeed", q);
 
         // Sleep a while, so that the log is flushed.
         sleep(5);
@@ -54,6 +56,7 @@ void run(TestConnections& test)
         // This will hang immediately, so we can shorten the timeout.
         test.set_timeout(5);
         test.try_query(pMysql, "SELECT * FROM MXS_1719");
+        test.stop_timeout();
     }
     else
     {
