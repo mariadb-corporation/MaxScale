@@ -45,6 +45,16 @@ extern const char *config_filter_params[];
 extern const char *config_server_params[];
 
 /**
+ * Initialize the configuration subsystem
+ */
+void config_init();
+
+/**
+ * Finalize the configuration subsystem
+ */
+void config_finish();
+
+/**
  * Set the defaults for the global configuration options
  */
 void config_set_global_defaults();
@@ -162,5 +172,14 @@ void fix_section_name(char *section);
  * @return True if options were serialized successfully
  */
 bool config_global_serialize();
+
+/**
+ * Export the configuration to a file
+ *
+ * @param filename Filename where the configuration will be written
+ *
+ * @return True if configuration was successfully exported
+ */
+bool export_config_file(const char* filename);
 
 MXS_END_DECLS
