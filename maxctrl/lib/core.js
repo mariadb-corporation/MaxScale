@@ -14,7 +14,9 @@
 var fs = require('fs')
 var program = require('yargs');
 
-const maxctrl_version = '1.0.0';
+// Note: The version.js file is generated at configuation time. If you are
+// building in-source, manually create the file
+const maxctrl_version = require('./version.js').version;
 
 program
     .version(maxctrl_version)

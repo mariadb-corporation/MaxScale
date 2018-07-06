@@ -239,6 +239,15 @@ TestConnections::TestConnections(int argc, char *argv[]):
     maxscales->use_ipv6 = use_ipv6;
     maxscales->ssl = ssl;
 
+    // Stop MaxScale to prevent it from interfering with the replication setup process
+    if (!maxscale::manual_debug)
+    {
+        for (int i = 0; i < maxscales->N; i++)
+        {
+            maxscales->stop(i);
+        }
+    }
+
     if (maxscale::required_repl_version.length())
     {
         int ver_repl_required = get_int_version(maxscale::required_repl_version);
@@ -645,11 +654,6 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     const char * template_name = get_template_name(test_name);
-
-    if (!maxscale::manual_debug)
-    {
-        stop_maxscale(m);
-    }
 
     process_template(m, template_name, maxscales->access_homedir[m]);
     maxscales->ssh_node_f(m, true,

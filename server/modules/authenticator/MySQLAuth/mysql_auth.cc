@@ -576,6 +576,19 @@ static bool add_service_user(SERV_LISTENER *port)
     return rval;
 }
 
+static bool service_has_servers(SERVICE* service)
+{
+    for (SERVER_REF* s = service->dbref; s; s = s->next)
+    {
+        if (s->active)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @brief Load MySQL authentication users
  *
@@ -632,9 +645,12 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
     if (injected)
     {
-        MXS_NOTICE("[%s] No users were loaded but 'inject_service_user' is enabled. "
-                   "Enabling service credentials for authentication until "
-                   "database users have been successfully loaded.", service->name);
+        if (service_has_servers(service))
+        {
+            MXS_NOTICE("[%s] No users were loaded but 'inject_service_user' is enabled. "
+                       "Enabling service credentials for authentication until "
+                       "database users have been successfully loaded.", service->name);
+        }
     }
     else if (loaded == 0 && !first_load)
     {
