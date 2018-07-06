@@ -202,7 +202,7 @@ private:
     void handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg);
     bool handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg);
 
-    void handle_trx_replay();
+    void trx_replay_next_stmt();
 
     // Do we have at least one open slave connection
     bool have_connected_slaves() const;

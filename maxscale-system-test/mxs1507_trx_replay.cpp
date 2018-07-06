@@ -61,6 +61,19 @@ int main(int argc, char** argv)
             }
         },
         {
+            "Large result",
+            {
+                bind(ok, "BEGIN"),
+                bind(ok, "SELECT REPEAT('a', 100000)"),
+            },
+            {
+                bind(ok, "SELECT REPEAT('a', 100000)"),
+                bind(ok, "COMMIT"),
+            },
+            {
+            }
+        },
+        {
             "Transaction with a write",
             {
                 bind(ok, "BEGIN"),

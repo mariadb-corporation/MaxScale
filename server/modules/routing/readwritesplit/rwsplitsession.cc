@@ -376,7 +376,7 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& bac
     return writebuf;
 }
 
-void RWSplitSession::handle_trx_replay()
+void RWSplitSession::trx_replay_next_stmt()
 {
     if (m_replayed_trx.have_stmts())
     {
@@ -495,8 +495,17 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
             {
                 /** Transaction size is OK, store the statement for replaying and
                  * update the checksum of the result */
-                m_trx.add_stmt(m_current_query.release());
                 m_trx.add_result(writebuf);
+
+                if (m_current_query.get())
+                {
+                    // TODO: Don't replay transactions interrupted mid-result. Currently
+                    // the client will receive a `Packets out of order` error if this happens.
+
+                    // Add the statement to the transaction once the first part
+                    // of the result is received.
+                    m_trx.add_stmt(m_current_query.release());
+                }
             }
             else
             {
@@ -561,7 +570,12 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     else if (m_is_replay_active)
     {
         ss_dassert(m_config->transaction_replay);
-        handle_trx_replay();
+
+        if (m_expected_responses == 0)
+        {
+            // Current statement is complete, continue with the next one
+            trx_replay_next_stmt();
+        }
 
         /**
          * If the start of the transaction was interrupted, we need to return
@@ -598,6 +612,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (m_expected_responses == 0 && m_query_queue)
     {
+        ss_dassert(!m_is_replay_active); // Note: We might currently end up here
         // All replies received, route any stored queries
         route_stored_query();
     }
