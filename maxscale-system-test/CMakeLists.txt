@@ -954,6 +954,10 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # https://jira.mariadb.org/browse/MXS-1958
 add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
 
+# MXS-1961: Standalone master loses master status
+# https://jira.mariadb.org/browse/MXS-1961
+add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
