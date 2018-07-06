@@ -238,6 +238,7 @@ int main(int argc, char** argv)
 
     for (auto& a : tests)
     {
+        test.set_timeout(90);
         test.tprintf("%d: %s", i++, a.description.c_str());
 
         test.maxscales->connect();

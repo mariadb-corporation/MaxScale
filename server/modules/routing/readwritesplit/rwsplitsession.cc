@@ -561,7 +561,10 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
                  m_expected_responses, backend->name());
     }
 
-    if (backend->has_session_commands())
+    // Later on we need to know whether we processed a session command
+    bool processed_sescmd = backend->has_session_commands();
+
+    if (processed_sescmd)
     {
         /** Process the reply to an executed session command. This function can
          * close the backend if it's a slave. */
@@ -610,10 +613,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
             m_expected_responses++;
         }
     }
-    else if (m_expected_responses == 0 && m_query_queue)
+    else if (m_expected_responses == 0 && m_query_queue &&
+             (!m_is_replay_active || processed_sescmd))
     {
-        ss_dassert(!m_is_replay_active); // Note: We might currently end up here
-        // All replies received, route any stored queries
+        /**
+         * All replies received, route any stored queries. This should be done
+         * even when transaction replay is active as long as we just completed
+         * a session command.
+         */
         route_stored_query();
     }
 
