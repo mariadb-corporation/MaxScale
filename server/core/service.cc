@@ -30,6 +30,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include <unordered_set>
 
 #include <maxscale/service.h>
 #include <maxscale/alloc.h>
@@ -2434,6 +2435,34 @@ static bool create_service_config(const SERVICE *service, const char *filename)
             }
         }
         dprintf(file, "\n");
+    }
+
+    std::unordered_set<std::string> common_params
+    {
+        CN_TYPE,
+        CN_USER,
+        CN_PASSWORD,
+        CN_ENABLE_ROOT_USER,
+        CN_MAX_RETRY_INTERVAL,
+        CN_MAX_CONNECTIONS,
+        CN_CONNECTION_TIMEOUT,
+        CN_AUTH_ALL_SERVERS,
+        CN_STRIP_DB_ESC,
+        CN_LOCALHOST_MATCH_WILDCARD_HOST,
+        CN_LOG_AUTH_WARNINGS,
+        CN_RETRY_ON_FAILURE,
+        CN_VERSION_STRING,
+        CN_WEIGHTBY,
+        CN_SERVERS
+    };
+
+    // Dump router specific parameters
+    for (auto p = service->svc_config_param; p; p = p->next)
+    {
+        if (common_params.count(p->name) == 0)
+        {
+            dprintf(file, "%s=%s\n", p->name, p->value);
+        }
     }
 
     close(file);
