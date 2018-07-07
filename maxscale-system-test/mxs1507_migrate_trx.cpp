@@ -19,10 +19,11 @@ int main(int argc, char** argv)
 
     auto switchover = [&]()
     {
-        test.maxscales->ssh_node_f(0, true, "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
-                                   master.c_str(), slave.c_str());
+        int rc = test.maxscales->ssh_node_f(0, true, "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
+                                            master.c_str(), slave.c_str());
+        test.assert(rc == 0, "Switchover should work");
         master.swap(slave);
-        sleep(5); // Seems that the system needs a few seconds to stabilize
+        test.maxscales->wait_for_monitor(); // Seems that the system needs a few seconds to stabilize
     };
 
     auto query = [&](string q)
