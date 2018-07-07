@@ -524,6 +524,9 @@ add_test_executable(mxs922_scaling.cpp mxs922_scaling mxs922_base LABELS maxscal
 # Dynamic listener SSL test
 add_test_executable(mxs922_listener_ssl.cpp mxs922_listener_ssl mxs922_base LABELS maxscale REPL_BACKEND)
 
+# Alter routers at runtime
+add_test_executable(alter_router.cpp alter_router replication LABELS maxscale REPL_BACKEND)
+
 # Test of MaxRows filter
 add_test_executable(mxs1071_maxrows.cpp mxs1071_maxrows maxrows LABELS maxrowsfilter REPL_BACKEND)
 
