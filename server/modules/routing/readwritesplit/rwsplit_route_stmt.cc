@@ -238,12 +238,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
     }
     else
     {
-        if (session_trx_is_ending(m_client->session))
-        {
-            atomic_add_uint64(m_qc.is_trx_still_read_only() ?
-                              &m_router->stats().n_ro_trx :
-                              &m_router->stats().n_rw_trx, 1);
-        }
+        update_trx_statistics();
 
         if (m_qc.is_trx_starting() && // A transaction is starting
             !session_trx_is_read_only(m_client->session) && // Not explicitly read-only
@@ -281,11 +276,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
         {
-            /**
-             * There is a hint which either names the target backend or
-             * hint which sets maximum allowed replication lag for the
-             * backend.
-             */
             if ((target = handle_hinted_target(querybuf, route_target)))
             {
                 succp = true;
@@ -308,14 +298,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         else if (TARGET_IS_MASTER(route_target))
         {
             succp = handle_master_is_target(&target);
-
-            if (!m_config->strict_multi_stmt &&
-                !m_config->strict_sp_calls &&
-                m_target_node == m_current_master)
-            {
-                /** Reset the forced node as we're in relaxed multi-statement mode */
-                m_target_node.reset();
-            }
         }
 
         if (succp && target)
@@ -353,7 +335,6 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         {
             retry_query(gwbuf_clone(querybuf));
             succp = true;
-
             MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
         }
         else
@@ -363,8 +344,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         }
     }
 
-    if (succp && m_config->connection_keepalive &&
-        (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
+    if (succp && m_config->connection_keepalive && !TARGET_IS_ALL(route_target))
     {
         handle_connection_keepalive(target);
     }
@@ -961,6 +941,13 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
             // Cannot retry the query, log a message that routing has failed
             log_master_routing_failure(succp, m_current_master, target);
         }
+    }
+
+    if (!m_config->strict_multi_stmt && !m_config->strict_sp_calls &&
+        m_target_node == m_current_master)
+    {
+        /** Reset the forced node as we're in relaxed multi-statement mode */
+        m_target_node.reset();
     }
 
     *dest = target;

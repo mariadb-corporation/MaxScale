@@ -270,6 +270,16 @@ private:
 
         return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
     }
+
+    void update_trx_statistics()
+    {
+        if (session_trx_is_ending(m_client->session))
+        {
+            atomic_add_uint64(m_qc.is_trx_still_read_only() ?
+                              &m_router->stats().n_ro_trx :
+                              &m_router->stats().n_rw_trx, 1);
+        }
+    }
 };
 
 /**
