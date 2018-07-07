@@ -435,8 +435,16 @@ uint64_t RWSplit::getCapabilities()
 
 bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
 {
-    m_config.reset(new Config(params));
-    return true;
+    bool rval = false;
+    SConfig cnf(new Config(params));
+
+    if (handle_max_slaves(cnf, config_get_string(params, "max_slave_connections")))
+    {
+        m_config = std::move(cnf);
+        rval = true;
+    }
+
+    return rval;
 }
 
 /**
