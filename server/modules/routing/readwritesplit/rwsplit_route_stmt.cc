@@ -298,6 +298,26 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         else if (TARGET_IS_MASTER(route_target))
         {
             succp = handle_master_is_target(&target);
+
+            if (!succp && should_migrate_trx(target))
+            {
+                MXS_INFO("Starting transaction migration from '%s' to '%s'",
+                         m_current_master->name(), target->name());
+
+                /**
+                 * Stash the current query so that the transaction replay treats
+                 * it as if the query was interrupted.
+                 */
+                m_current_query.copy_from(querybuf);
+
+                /**
+                 * After the transaction replay has been started, the rest of
+                 * the query processing needs to be skipped. This is done to avoid
+                 * the error logging done when no valid target is found for a query
+                 * as well as to prevent retrying of queries in the wrong order.
+                 */
+                return start_trx_replay();
+            }
         }
 
         if (succp && target)
@@ -893,6 +913,19 @@ void RWSplitSession::replace_master(SRWBackend& target)
     m_current_master = target;
 
     m_qc.master_replaced();
+}
+
+bool RWSplitSession::should_migrate_trx(SRWBackend& target)
+{
+    return m_config->transaction_replay &&
+           // We have a target server and it's not the current master
+           target && target != m_current_master &&
+           // Transaction replay is not active (replay is only attempted once)
+           !m_is_replay_active &&
+           // We have an open transaction
+           session_trx_is_active(m_client->session) &&
+           // The transaction can be replayed
+           m_can_replay_trx;
 }
 
 /**

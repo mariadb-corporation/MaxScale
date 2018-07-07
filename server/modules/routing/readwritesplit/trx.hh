@@ -131,7 +131,6 @@ public:
      */
     void close()
     {
-        MXS_INFO("Transaction is complete");
         m_checksum.reset();
         m_log.clear();
         m_size = 0;

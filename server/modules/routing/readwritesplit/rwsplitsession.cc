@@ -601,6 +601,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (m_config->transaction_replay && session_trx_is_ending(m_client->session))
     {
+        MXS_INFO("Transaction complete");
         m_trx.close();
         m_can_replay_trx = true;
     }

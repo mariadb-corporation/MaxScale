@@ -188,6 +188,7 @@ private:
 
     bool should_replace_master(mxs::SRWBackend& target);
     void replace_master(mxs::SRWBackend& target);
+    bool should_migrate_trx(mxs::SRWBackend& target);
     void log_master_routing_failure(bool found, mxs::SRWBackend& old_master,
                                     mxs::SRWBackend& curr_master);
 
