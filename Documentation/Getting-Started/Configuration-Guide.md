@@ -1108,7 +1108,8 @@ log with details about who tried to connect to MariaDB MaxScale and from where.
 The connection_timeout parameter is used to disconnect sessions to MariaDB
 MaxScale that have been idle for too long. The session timeouts are disabled by
 default. To enable them, define the timeout in seconds in the service's
-configuration section.
+configuration section. A value of zero is interpreted as no timeout, the same
+as if the parameter is not defined.
 
 Example:
 
