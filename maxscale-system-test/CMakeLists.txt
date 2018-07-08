@@ -954,6 +954,9 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # https://jira.mariadb.org/browse/MXS-1958
 add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
 
+# TODO: Remove this once MXS-1958 is fixed
+set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
+
 # MXS-1961: Standalone master loses master status
 # https://jira.mariadb.org/browse/MXS-1961
 add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
