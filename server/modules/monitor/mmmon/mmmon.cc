@@ -319,8 +319,7 @@ void MMMonitor::post_tick()
 
     /* Update server status from monitor pending status on that server*/
 
-    MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers;
-    while (ptr)
+    for(MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (!SERVER_IN_MAINT(ptr->server))
         {
