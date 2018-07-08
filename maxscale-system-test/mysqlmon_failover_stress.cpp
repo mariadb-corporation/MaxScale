@@ -17,6 +17,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <random>
 #include "testconnections.h"
 #include "fail_switch_rejoin_common.cpp"
 
@@ -105,15 +106,8 @@ private:
         : m_id(id)
         , m_verbose(verbose)
         , m_value(1)
+        , m_rand_dist(0.0, 1.0)
     {
-        ss_debug(int rv);
-
-        unsigned int seed = (time(NULL) << m_id);
-        ss_debug(rv =) initstate_r(seed, m_initstate, sizeof(m_initstate), &m_random_data);
-        ss_dassert(rv == 0);
-
-        ss_debug(rv=) srandom_r(seed, &m_random_data);
-        ss_dassert(rv == 0);
     }
 
     enum action_t
@@ -234,11 +228,7 @@ private:
 
     double random_decimal_fraction() const
     {
-        int32_t r;
-        ss_debug(int rv=) random_r(&m_random_data, &r);
-        ss_dassert(rv == 0);
-
-        return double(r) / RAND_MAX;
+        return m_rand_dist(m_rand_gen);
     }
 
     void run(const char* zHost, int port, const char* zUser, const char* zPassword)
@@ -375,8 +365,8 @@ private:
     size_t                     m_id;
     bool                       m_verbose;
     size_t                     m_value;
-    char                       m_initstate[INITSTATE_SIZE];
-    mutable struct random_data m_random_data;
+    mutable std::mt19937       m_rand_gen;
+    mutable std::uniform_real_distribution<double> m_rand_dist;
 
     static size_t s_nClients;
     static size_t s_nRows;
