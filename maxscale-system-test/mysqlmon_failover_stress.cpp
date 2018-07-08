@@ -43,7 +43,7 @@ const time_t TEST_DURATION = 90;
 
 #if !defined(NDEBUG)
 
-#define ss_dassert(x) do { if (!(x)) { fprintf(stderr, "Assertion failed: %s", #x); abort(); } } while(false)
+#define ss_dassert(x) do { if (!(x)) { fprintf(stderr, "Assertion failed: %s\n", #x); abort(); } } while(false)
 #define ss_debug(x) x
 
 #else
