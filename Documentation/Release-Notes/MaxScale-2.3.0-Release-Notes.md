@@ -40,6 +40,12 @@ The switchover command in *mariadbmon* can now be called with just the monitor
 name as parameter. In this case the monitor will automatically select a server
 for promotion.
 
+### `router_options` in Binlogrouter
+
+The use of `router_options` with the binlogrouter module is deprecated in
+MaxScale 2.3 and will be removed in a subsequent release. The
+`router_options` should be converted into separate parameters.
+
 ## Dropped Features
 
 ### Configuration Reloading

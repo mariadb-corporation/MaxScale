@@ -3799,7 +3799,7 @@ const char *blr_get_encryption_algorithm(int algo)
  * @param name   The algorithm string
  * @return       The numeric value or -1 on error
  */
-int blr_check_encryption_algorithm(char *name)
+int blr_check_encryption_algorithm(const char *name)
 {
     if (name)
     {

@@ -40,6 +40,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.h"
 
 #include <maxscale/protocol/mysql.h>
@@ -89,12 +90,8 @@ int main(int argc, char **argv)
     char *master_log_file = NULL;
     char *master_log_pos = NULL;
     SERVICE *service;
-    char *roptions;
     int tests = 1;
 
-    roptions = MXS_STRDUP_A("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,"
-                            "transaction_safety=1,master_version=5.6.99-common,"
-                            "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,master-id=999");
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
@@ -119,25 +116,25 @@ int main(int argc, char **argv)
     strcpy(service->credentials.name, "foo");
     strcpy(service->credentials.authdata, "bar");
 
+    for (auto&& a : mxs::strtok("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,"
+                                "transaction_safety=1,master_version=5.6.99-common,"
+                                "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,"
+                                "master-id=999", ","))
     {
-        char *lasts;
-        SERVER *server;
-        char *s = strtok_r(roptions, ",", &lasts);
-        while (s)
-        {
-            serviceAddRouterOption(service, s);
-            s = strtok_r(NULL, ",", &lasts);
-        }
-        server = server_alloc("binlog_router_master_host", "_none_", 3306,
-                              "MySQLBackend", "MySQLBackendAuth");
-        if (server == NULL)
-        {
-            printf("Failed to allocate 'server' object\n");
-            return 1;
-        }
-
-        serviceAddBackend(service, server);
+        auto tmp = mxs::strtok(a, "=");
+        MXS_CONFIG_PARAMETER p{const_cast<char*>(tmp[0].c_str()), const_cast<char*>(tmp[0].c_str()), nullptr};
+        service_add_parameters(service, &p);
     }
+
+    SERVER* server = server_alloc("binlog_router_master_host", "_none_", 3306,
+                          "MySQLBackend", "MySQLBackendAuth");
+    if (server == NULL)
+    {
+        printf("Failed to allocate 'server' object\n");
+        return 1;
+    }
+
+    serviceAddBackend(service, server);
 
     inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
     if (inst == NULL)
@@ -868,7 +865,6 @@ int main(int argc, char **argv)
     MXS_FREE(inst->password);
     MXS_FREE(inst->fileroot);
     MXS_FREE(inst);
-    MXS_FREE(roptions);
     return 0;
 }
 

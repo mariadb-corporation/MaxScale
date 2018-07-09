@@ -49,6 +49,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/worker.h>
 #include <maxscale/paths.h>
 
@@ -236,8 +237,6 @@ static  MXS_ROUTER  *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
-    char *value;
-    int i;
     uuid_t defuuid;
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
@@ -407,6 +406,8 @@ createInstance(SERVICE *service, char **options)
         }
     }
 
+    std::vector<std::string> options = mxs::strtok(config_get_string(params, "router_options"), ", \t");
+
     /*
      * Process the options.
      * We have an array of attribute values passed to us that we must
@@ -418,171 +419,153 @@ createInstance(SERVICE *service, char **options)
      *  master-id=
      *  filestem=
      */
-    if (options)
+
+    for (auto&& p : options)
     {
-        for (i = 0; options[i]; i++)
+        auto kv = mxs::strtok(p, "=");
+
+        if (kv.size() != 2)
         {
-            if ((value = strchr(options[i], '=')) == NULL)
+            MXS_ERROR("Unsupported router option %s for binlog router.", p.c_str());
+        }
+        else
+        {
+            auto& k = kv[0];
+            auto& v = kv[1];
+
+            if (k == "uuid")
             {
-                MXS_WARNING("Unsupported router "
-                            "option %s for binlog router.",
-                            options[i]);
+                MXS_FREE(inst->uuid);
+                inst->uuid = MXS_STRDUP_A(v.c_str());
             }
-            else
+            else if (k == "server_id")
             {
-                *value = 0;
-                value++;
-                if (strcmp(options[i], "uuid") == 0)
+                if ((inst->serverid = atoi(v.c_str())) <= 0)
                 {
-                    MXS_FREE(inst->uuid);
-                    inst->uuid = MXS_STRDUP_A(value);
+                    MXS_ERROR("Service %s, invalid server-id '%s'. "
+                              "Please configure it with a unique positive integer value (1..2^32-1)",
+                              service->name, v.c_str());
+                    free_instance(inst);
+                    return NULL;
                 }
-                else if ((strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0))
+            }
+            else if (k == "user")
+            {
+                MXS_FREE(inst->user);
+                inst->user = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "password")
+            {
+                MXS_FREE(inst->password);
+                inst->password = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "passwd")
+            {
+                MXS_FREE(inst->password);
+                inst->password = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "master_id")
+            {
+                int master_id = atoi(v.c_str());
+                if (master_id > 0)
                 {
-                    inst->serverid = atoi(value);
-                    if (strcmp(options[i], "server-id") == 0)
-                    {
-                        MXS_WARNING("Configuration setting '%s' in router_options is deprecated"
-                                    " and will be removed in a later version of MaxScale. "
-                                    "Please use the new setting '%s' instead.",
-                                    "server-id", "server_id");
-                    }
-
-                    if (inst->serverid <= 0)
-                    {
-                        MXS_ERROR("Service %s, invalid server-id '%s'. "
-                                  "Please configure it with a unique positive integer value (1..2^32-1)",
-                                  service->name, value);
-
-                        free_instance(inst);
-                        return NULL;
-                    }
+                    inst->masterid = master_id;
+                    inst->set_master_server_id = true;
                 }
-                else if (strcmp(options[i], "user") == 0)
+            }
+            else if (k == "master_uuid")
+            {
+                inst->set_master_uuid = true;
+                MXS_FREE(inst->master_uuid);
+                inst->master_uuid = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "master_version")
+            {
+                MXS_FREE(inst->set_master_version);
+                inst->set_master_version = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "master_hostname")
+            {
+                MXS_FREE(inst->set_master_hostname);
+                inst->set_master_hostname = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "slave_hostname")
+            {
+                MXS_FREE(inst->set_slave_hostname);
+                inst->set_slave_hostname = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "mariadb10-compatibility")
+            {
+                inst->mariadb10_compat = config_truth_value(v.c_str());
+            }
+            else if (k == "maxwell-compatibility")
+            {
+                inst->maxwell_compat = config_truth_value(v.c_str());
+            }
+            else if (k == "filestem")
+            {
+                MXS_FREE(inst->fileroot);
+                inst->fileroot = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "file")
+            {
+                inst->initbinlog = atoi(v.c_str());
+            }
+            else if (k == "transaction_safety")
+            {
+                inst->trx_safe = config_truth_value(v.c_str());
+            }
+            else if (k == "semisync")
+            {
+                inst->request_semi_sync = config_truth_value(v.c_str());
+            }
+            else if (k == "encrypt_binlog")
+            {
+                inst->encryption.enabled = config_truth_value(v.c_str());
+            }
+            else if (k == "mariadb10_master_gtid")
+            {
+                inst->mariadb10_master_gtid = config_truth_value(v.c_str());
+            }
+            else if (k == "encryption_algorithm")
+            {
+                int ret = blr_check_encryption_algorithm(v.c_str());
+                if (ret > -1)
                 {
-                    MXS_FREE(inst->user);
-                    inst->user = MXS_STRDUP_A(value);
+                    inst->encryption.encryption_algorithm = ret;
                 }
-                else if (strcmp(options[i], "password") == 0)
+                else
                 {
-                    MXS_FREE(inst->password);
-                    inst->password = MXS_STRDUP_A(value);
+                    MXS_ERROR("Service %s, invalid encryption_algorithm '%s'. "
+                              "Supported algorithms: %s",
+                              service->name, v.c_str(), blr_encryption_algorithm_list());
+                    free_instance(inst);
+                    return NULL;
                 }
-                else if (strcmp(options[i], "passwd") == 0)
+            }
+            else if (k == "encryption_key_file")
+            {
+                MXS_FREE(inst->encryption.key_management_filename);
+                inst->encryption.key_management_filename = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "shortburst")
+            {
+                inst->short_burst = atoi(v.c_str());
+            }
+            else if (k == "longburst")
+            {
+                inst->long_burst = atoi(v.c_str());
+            }
+            else if (k == "burstsize")
+            {
+                unsigned long size = atoi(v.c_str());
+                const char* ptr = v.c_str();
+                while (*ptr && isdigit(*ptr))
                 {
-                    MXS_FREE(inst->password);
-                    inst->password = MXS_STRDUP_A(value);
+                    ptr++;
                 }
-                else if ((strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0))
+                switch (*ptr)
                 {
-                    int master_id = atoi(value);
-                    if (master_id > 0)
-                    {
-                        inst->masterid = master_id;
-                        inst->set_master_server_id = true;
-                    }
-                    if (strcmp(options[i], "master-id") == 0)
-                    {
-                        MXS_WARNING("Configuration setting '%s' in router_options is deprecated"
-                                    " and will be removed in a later version of MaxScale. "
-                                    "Please use the new setting '%s' instead.",
-                                    "master-id", "master_id");
-                    }
-                }
-                else if (strcmp(options[i], "master_uuid") == 0)
-                {
-                    inst->set_master_uuid = true;
-                    MXS_FREE(inst->master_uuid);
-                    inst->master_uuid = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "master_version") == 0)
-                {
-                    MXS_FREE(inst->set_master_version);
-                    inst->set_master_version = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "master_hostname") == 0)
-                {
-                    MXS_FREE(inst->set_master_hostname);
-                    inst->set_master_hostname = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "slave_hostname") == 0)
-                {
-                    MXS_FREE(inst->set_slave_hostname);
-                    inst->set_slave_hostname = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "mariadb10-compatibility") == 0)
-                {
-                    inst->mariadb10_compat = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "maxwell-compatibility") == 0)
-                {
-                    inst->maxwell_compat = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "filestem") == 0)
-                {
-                    MXS_FREE(inst->fileroot);
-                    inst->fileroot = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "file") == 0)
-                {
-                    inst->initbinlog = atoi(value);
-                }
-                else if (strcmp(options[i], "transaction_safety") == 0)
-                {
-                    inst->trx_safe = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "semisync") == 0)
-                {
-                    inst->request_semi_sync = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "encrypt_binlog") == 0)
-                {
-                    inst->encryption.enabled = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "mariadb10_master_gtid") == 0)
-                {
-                    inst->mariadb10_master_gtid = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "encryption_algorithm") == 0)
-                {
-                    int ret = blr_check_encryption_algorithm(value);
-                    if (ret > -1)
-                    {
-                        inst->encryption.encryption_algorithm = ret;
-                    }
-                    else
-                    {
-                        MXS_ERROR("Service %s, invalid encryption_algorithm '%s'. "
-                                  "Supported algorithms: %s",
-                                  service->name, value, blr_encryption_algorithm_list());
-
-                        free_instance(inst);
-                        return NULL;
-                    }
-                }
-                else if (strcmp(options[i], "encryption_key_file") == 0)
-                {
-                    MXS_FREE(inst->encryption.key_management_filename);
-                    inst->encryption.key_management_filename = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "shortburst") == 0)
-                {
-                    inst->short_burst = atoi(value);
-                }
-                else if (strcmp(options[i], "longburst") == 0)
-                {
-                    inst->long_burst = atoi(value);
-                }
-                else if (strcmp(options[i], "burstsize") == 0)
-                {
-                    unsigned long size = atoi(value);
-                    char    *ptr = value;
-                    while (*ptr && isdigit(*ptr))
-                    {
-                        ptr++;
-                    }
-                    switch (*ptr)
-                    {
                     case 'G':
                     case 'g':
                         size = size * 1024 * 1000 * 1000;
@@ -595,55 +578,56 @@ createInstance(SERVICE *service, char **options)
                     case 'k':
                         size = size * 1024;
                         break;
-                    }
-                    inst->burst_size = size;
+                }
+                inst->burst_size = size;
 
-                }
-                else if (strcmp(options[i], "heartbeat") == 0)
-                {
-                    int h_val = (int)strtol(value, NULL, 10);
+            }
+            else if (k == "heartbeat")
+            {
+                int h_val = (int)strtol(v.c_str(), NULL, 10);
 
-                    if (h_val < 0 ||
-                        (errno == ERANGE) ||
-                        h_val > BLR_HEARTBEAT_MAX_INTERVAL)
-                    {
-                        MXS_WARNING("Invalid heartbeat period %s."
-                                    " Setting it to default value %ld.",
-                                    value,
-                                    inst->heartbeat);
-                    }
-                    else
-                    {
-                        inst->heartbeat = h_val;
-                    }
-                }
-                else if (strcmp(options[i], "connect_retry") == 0)
+                if (h_val < 0 || (errno == ERANGE) || h_val > BLR_HEARTBEAT_MAX_INTERVAL)
                 {
-                    inst->retry_interval = atoi(value);
-                }
-                else if (strcmp(options[i], "master_retry_count") == 0)
-                {
-                    inst->retry_limit = atoi(value);
-                }
-                else if (strcmp(options[i], "send_slave_heartbeat") == 0)
-                {
-                    inst->send_slave_heartbeat = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "binlogdir") == 0)
-                {
-                    MXS_FREE(inst->binlogdir);
-                    inst->binlogdir = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "ssl_cert_verification_depth") == 0)
-                {
-                    inst->ssl_cert_verification_depth = atoi(value);
+                    MXS_WARNING("Invalid heartbeat period %s. Setting it to default value %ld.",
+                                v.c_str(), inst->heartbeat);
                 }
                 else
                 {
-                    MXS_WARNING("%s: unsupported router option %s for binlog router.",
-                                service->name,
-                                options[i]);
+                    inst->heartbeat = h_val;
                 }
+            }
+            else if (k == "connect_retry")
+            {
+                inst->retry_interval = atoi(v.c_str());
+            }
+            else if (k == "master_retry_count")
+            {
+                inst->retry_limit = atoi(v.c_str());
+            }
+            else if (k == "send_slave_heartbeat")
+            {
+                inst->send_slave_heartbeat = config_truth_value(v.c_str());
+            }
+            else if (k == "binlogdir")
+            {
+                MXS_FREE(inst->binlogdir);
+                inst->binlogdir = MXS_STRDUP_A(v.c_str());
+            }
+            else if (k == "ssl_cert_verification_depth")
+            {
+                if ((inst->ssl_cert_verification_depth = atoi(v.c_str())) < 0)
+                {
+                    MXS_ERROR("%s: invalid Master ssl_cert_verification_depth %s."
+                              " Setting it to default value %i.", service->name,
+                              v.c_str(), inst->ssl_cert_verification_depth);
+                    free_instance(inst);
+                    return NULL;
+                }
+            }
+            else
+            {
+                MXS_WARNING("%s: unsupported router option %s for binlog router.",
+                            service->name, k.c_str());
             }
         }
     }
@@ -655,18 +639,6 @@ createInstance(SERVICE *service, char **options)
     if (inst->masterid)
     {
         inst->set_master_server_id = true;
-    }
-
-    /* Check ssl_cert_verification_depth option */
-    if (inst->ssl_cert_verification_depth < 0)
-    {
-        MXS_ERROR("%s: invalid Master ssl_cert_verification_depth %s."
-                  " Setting it to default value %i.",
-                  service->name,
-                  value,
-                  inst->ssl_cert_verification_depth);
-        free_instance(inst);
-        return NULL;
     }
 
     /* Check master connect options */
