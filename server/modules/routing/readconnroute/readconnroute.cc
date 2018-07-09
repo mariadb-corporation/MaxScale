@@ -265,7 +265,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
     SERVER_REF *candidate = NULL;
-    int i;
     SERVER_REF *master_host = NULL;
 
     MXS_DEBUG("%lu [newSession] new router session with session "
@@ -281,10 +280,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         return NULL;
     }
 
-#if defined(SS_DEBUG)
-    client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
-    client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
-#endif
     client_rses->client_dcb = session->client_dcb;
     client_rses->bitvalue = inst->bitvalue;
 
@@ -316,17 +311,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         if (!SERVER_REF_IS_ACTIVE(ref) || SERVER_IN_MAINT(ref->server))
         {
             continue;
-        }
-        else
-        {
-            MXS_DEBUG("%lu [newSession] Examine server in port %d with "
-                      "%d connections. Status is %s, "
-                      "inst->bitvalue is %d",
-                      pthread_self(),
-                      ref->server->port,
-                      ref->connections,
-                      STRSRVSTATUS(ref->server),
-                      inst->bitmask);
         }
 
         /* Check server status bits against bitvalue from router_options */
@@ -440,8 +424,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     inst->stats.n_sessions++;
 
-    CHK_CLIENT_RSES(client_rses);
-
     MXS_INFO("New session for server %s. Connections : %d",
              candidate->server->name, candidate->connections);
 
@@ -489,7 +471,6 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
     DCB* backend_dcb;
 
-    CHK_CLIENT_RSES(router_cli_ses);
     /**
      * Lock router client session for secure read and update.
      */
@@ -812,8 +793,6 @@ static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses)
 {
     bool succp = false;
 
-    CHK_CLIENT_RSES(rses);
-
     if (rses->rses_closed)
     {
         goto return_succp;
@@ -847,7 +826,6 @@ return_succp:
  */
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
 {
-    CHK_CLIENT_RSES(rses);
     spinlock_release(&rses->rses_lock);
 }
 

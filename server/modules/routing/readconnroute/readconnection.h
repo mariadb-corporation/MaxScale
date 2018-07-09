@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _READCONNECTION_H
-#define _READCONNECTION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -32,53 +30,39 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/router.h>
 
 /**
  * The client session structure used within this router.
  */
-typedef struct router_client_session
+struct ROUTER_CLIENT_SES: MXS_ROUTER_SESSION
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t rses_chk_top;
-#endif
     SPINLOCK rses_lock; /*< protects rses_deleted              */
     int rses_versno; /*< even = no active update, else odd  */
     bool rses_closed; /*< true when closeSession is called   */
     SERVER_REF *backend; /*< Backend used by the client session */
     DCB *backend_dcb; /*< DCB Connection to the backend      */
     DCB *client_dcb; /**< Client DCB */
-    unsigned int bitvalue; /*< Session specific required value of server->status */
-    struct router_client_session *next;
-#if defined(SS_DEBUG)
-    skygw_chk_t rses_chk_tail;
-#endif
-} ROUTER_CLIENT_SES;
+    uint32_t bitvalue; /*< Session specific required value of server->status */
+};
 
 /**
  * The statistics for this router instance
  */
-typedef struct
+struct ROUTER_STATS
 {
     int n_sessions; /*< Number sessions created     */
-    int n_queries; /*< Number of queries forwarded */
-} ROUTER_STATS;
+    int n_queries;  /*< Number of queries forwarded */
+};
 
 /**
  * The per instance data for the router.
  */
-typedef struct router_instance
+struct ROUTER_INSTANCE: public MXS_ROUTER
 {
-    SERVICE *service; /*< Pointer to the service using this router */
-    SPINLOCK lock; /*< Spinlock for the instance data           */
-    unsigned int bitmask; /*< Bitmask to apply to server->status       */
-    unsigned int bitvalue; /*< Required value of server->status         */
+    SERVICE *service;   /*< Pointer to the service using this router */
+    SPINLOCK lock;      /*< Spinlock for the instance data           */
+    uint32_t bitmask;   /*< Bitmask to apply to server->status       */
+    uint32_t bitvalue;  /*< Required value of server->status         */
     ROUTER_STATS stats; /*< Statistics for this router               */
-    struct router_instance
-        *next;
-} ROUTER_INSTANCE;
-
-MXS_END_DECLS
-
-#endif
+};
