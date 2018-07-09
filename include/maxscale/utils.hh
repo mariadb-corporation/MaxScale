@@ -24,6 +24,7 @@
 #include <iterator>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <maxscale/buffer.h>
 #include <maxscale/utils.h>
@@ -105,6 +106,29 @@ inline std::string trimmed_copy(const std::string& original)
     ltrim(s);
     rtrim(s);
     return s;
+}
+
+/**
+ * Tokenize a string
+ *
+ * @param str   String to tokenize
+ * @param delim List of delimiters (see strtok(3))
+ *
+ * @return List of tokenized strings
+ */
+inline std::vector<std::string> strtok(std::string str, const char* delim)
+{
+    std::vector<std::string> rval;
+    char* save_ptr;
+    char* tok = strtok_r(&str[0], delim, &save_ptr);
+
+    while (tok)
+    {
+        rval.emplace_back(tok);
+        tok = strtok_r(NULL, delim, &save_ptr);
+    }
+
+    return rval;
 }
 
 /**
