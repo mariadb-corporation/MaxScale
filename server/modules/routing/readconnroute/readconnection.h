@@ -43,6 +43,7 @@ struct ROUTER_CLIENT_SES: MXS_ROUTER_SESSION
     SERVER_REF *backend; /*< Backend used by the client session */
     DCB *backend_dcb; /*< DCB Connection to the backend      */
     DCB *client_dcb; /**< Client DCB */
+    uint32_t bitmask; /*< Bitmask to apply to server->status */
     uint32_t bitvalue; /*< Session specific required value of server->status */
 };
 
@@ -62,7 +63,6 @@ struct ROUTER_INSTANCE: public MXS_ROUTER
 {
     SERVICE *service;   /*< Pointer to the service using this router */
     SPINLOCK lock;      /*< Spinlock for the instance data           */
-    uint32_t bitmask;   /*< Bitmask to apply to server->status       */
-    uint32_t bitvalue;  /*< Required value of server->status         */
+    uint64_t bitmask_and_bitvalue; /*< Lower 32-bits for bitmask and upper for bitvalue */
     ROUTER_STATS stats; /*< Statistics for this router               */
 };

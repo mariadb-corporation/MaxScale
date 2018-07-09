@@ -76,6 +76,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <string>
+#include <vector>
 #include <maxscale/alloc.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
@@ -86,6 +88,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/modutil.h>
+#include <maxscale/utils.hh>
 
 /* The router entry points */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);
@@ -100,6 +103,7 @@ static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
+static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF *get_root_master(SERVER_REF *servers);
@@ -128,7 +132,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         handleError,
         getCapabilities,
-        NULL
+        NULL,
+        configureInstance
     };
 
     static MXS_MODULE info =
@@ -137,8 +142,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
         "A connection based router to load balance based on connections",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        "V2.0.0",
+        RCAP_TYPE_RUNTIME_CONFIG,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -160,6 +165,79 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
     }
 }
 
+static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params)
+{
+    ROUTER_INSTANCE* inst = static_cast<ROUTER_INSTANCE*>(instance);
+    uint64_t bitmask = 0;
+    uint64_t bitvalue = 0;
+    bool ok = true;
+    std::string optstr = config_get_string(params, "router_options");
+    std::vector<std::string> options;
+
+    while (!optstr.empty())
+    {
+        size_t pos = optstr.find(',');
+        options.push_back(mxs::trimmed_copy(optstr.substr(0, pos)));
+        optstr.erase(0, pos);
+        if (pos != optstr.npos)
+        {
+            optstr.erase(0, 1);
+        }
+    }
+
+    for (auto&& opt: options)
+    {
+        if (!strcasecmp(opt.c_str(), "master"))
+        {
+            bitmask |= (SERVER_MASTER | SERVER_SLAVE);
+            bitvalue |= SERVER_MASTER;
+        }
+        else if (!strcasecmp(opt.c_str(), "slave"))
+        {
+            bitmask |= (SERVER_MASTER | SERVER_SLAVE);
+            bitvalue |= SERVER_SLAVE;
+        }
+        else if (!strcasecmp(opt.c_str(), "running"))
+        {
+            bitmask |= (SERVER_RUNNING);
+            bitvalue |= SERVER_RUNNING;
+        }
+        else if (!strcasecmp(opt.c_str(), "synced"))
+        {
+            bitmask |= (SERVER_JOINED);
+            bitvalue |= SERVER_JOINED;
+        }
+        else if (!strcasecmp(opt.c_str(), "ndb"))
+        {
+            bitmask |= (SERVER_NDB);
+            bitvalue |= SERVER_NDB;
+        }
+        else
+        {
+            MXS_ERROR("Unsupported router option \'%s\' for readconnroute. "
+                "Expected router options are [slave|master|synced|ndb|running]",
+                      opt.c_str());
+            ok = false;
+        }
+    }
+
+
+    if (bitmask == 0 && bitvalue == 0)
+    {
+        /** No parameters given, use RUNNING as a valid server */
+        bitmask |= (SERVER_RUNNING);
+        bitvalue |= SERVER_RUNNING;
+    }
+
+    if (ok)
+    {
+        uint64_t mask = bitmask | (bitvalue << 32);
+        atomic_store_uint64(&inst->bitmask_and_bitvalue, mask);
+    }
+
+    return ok;
+}
+
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
@@ -169,87 +247,25 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER *
-createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
-    ROUTER_INSTANCE *inst;
-    SERVER_REF *sref;
-    int i, n;
+    ROUTER_INSTANCE* inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
 
-    if ((inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)))) == NULL)
+    if (inst)
     {
-        return NULL;
-    }
 
-    inst->service = service;
-    spinlock_init(&inst->lock);
+        inst->service = service;
+        spinlock_init(&inst->lock);
+        inst->bitmask_and_bitvalue = 0;
 
-    /*
-     * Process the options
-     */
-    bool error = false;
-    inst->bitmask = 0;
-    inst->bitvalue = 0;
-    if (options)
-    {
-        for (i = 0; options[i]; i++)
+        if (!configureInstance((MXS_ROUTER*)inst, service->svc_config_param))
         {
-            if (!strcasecmp(options[i], "master"))
-            {
-                inst->bitmask |= (SERVER_MASTER | SERVER_SLAVE);
-                inst->bitvalue |= SERVER_MASTER;
-            }
-            else if (!strcasecmp(options[i], "slave"))
-            {
-                inst->bitmask |= (SERVER_MASTER | SERVER_SLAVE);
-                inst->bitvalue |= SERVER_SLAVE;
-            }
-            else if (!strcasecmp(options[i], "running"))
-            {
-                inst->bitmask |= (SERVER_RUNNING);
-                inst->bitvalue |= SERVER_RUNNING;
-            }
-            else if (!strcasecmp(options[i], "synced"))
-            {
-                inst->bitmask |= (SERVER_JOINED);
-                inst->bitvalue |= SERVER_JOINED;
-            }
-            else if (!strcasecmp(options[i], "ndb"))
-            {
-                inst->bitmask |= (SERVER_NDB);
-                inst->bitvalue |= SERVER_NDB;
-            }
-            else
-            {
-                MXS_WARNING("Unsupported router "
-                            "option \'%s\' for readconnroute. "
-                            "Expected router options are "
-                            "[slave|master|synced|ndb|running]",
-                            options[i]);
-                error = true;
-            }
+            free_readconn_instance(inst);
+            inst = nullptr;
         }
     }
 
-    if (error)
-    {
-        free_readconn_instance(inst);
-        return NULL;
-    }
-
-    if (inst->bitmask == 0 && inst->bitvalue == 0)
-    {
-        /** No parameters given, use RUNNING as a valid server */
-        inst->bitmask |= (SERVER_RUNNING);
-        inst->bitvalue |= SERVER_RUNNING;
-    }
-    /*
-     * We have completed the creation of the instance data, so now
-     * insert this router instance into the linked list of routers
-     * that have been created with this module.
-     */
-
-    return (MXS_ROUTER *) inst;
+    return (MXS_ROUTER*)inst;
 }
 
 /**
@@ -281,7 +297,10 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     }
 
     client_rses->client_dcb = session->client_dcb;
-    client_rses->bitvalue = inst->bitvalue;
+
+    uint64_t mask = atomic_load_uint64(&inst->bitmask_and_bitvalue);
+    client_rses->bitmask = mask;
+    client_rses->bitvalue = mask >> 32;
 
     /**
      * Find the Master host from available servers
@@ -315,11 +334,11 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
         /* Check server status bits against bitvalue from router_options */
         if (ref && SERVER_IS_RUNNING(ref->server) &&
-            (ref->server->status & inst->bitmask & inst->bitvalue))
+            (ref->server->status & client_rses->bitmask & client_rses->bitvalue))
         {
             if (master_host)
             {
-                if (ref == master_host && (inst->bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
+                if (ref == master_host && (client_rses->bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
                 {
                     /* Skip root master here, as it could also be slave of an external server that
                      * is not in the configuration.  Intermediate masters (Relay Servers) are also
@@ -328,7 +347,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
                     continue;
                 }
-                if (ref == master_host && inst->bitvalue == SERVER_MASTER)
+                if (ref == master_host && client_rses->bitvalue == SERVER_MASTER)
                 {
                     /* If option is "master" return only the root Master as there could be
                      * intermediate masters (Relay Servers) and they must not be selected.
@@ -338,7 +357,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
                     break;
                 }
             }
-            else if (inst->bitvalue == SERVER_MASTER)
+            else if (client_rses->bitvalue == SERVER_MASTER)
             {
                 /* Master_host is NULL, no master server.  If requested router_option is 'master'
                  * candidate will be NULL.
@@ -540,7 +559,7 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     // the sole master available at session creation time.
 
     if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
-        (router_cli_ses->backend->server->status & inst->bitmask & router_cli_ses->bitvalue))
+        (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
@@ -831,7 +850,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_RUNTIME_CONFIG;
 }
 
 /*
