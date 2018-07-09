@@ -40,6 +40,7 @@ typedef enum
     TOK_MASTER,
     TOK_SLAVE,
     TOK_SERVER,
+    TOK_LAST,
     TOK_LINEBRK,
     TOK_END
 } TOKEN_VALUE;

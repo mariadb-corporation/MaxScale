@@ -117,7 +117,8 @@ public:
         TARGET_SLAVE        = 0x02,
         TARGET_NAMED_SERVER = 0x04,
         TARGET_ALL          = 0x08,
-        TARGET_RLAG_MAX     = 0x10
+        TARGET_RLAG_MAX     = 0x10,
+        TARGET_LAST_USED    = 0x20
     };
 
     static bool target_is_master(uint32_t t)
@@ -143,6 +144,11 @@ public:
     static bool target_is_rlag_max(uint32_t t)
     {
         return (t & TARGET_RLAG_MAX);
+    }
+
+    static bool target_is_last_used(uint32_t t)
+    {
+        return (t & TARGET_LAST_USED);
     }
 
     enum current_target_t

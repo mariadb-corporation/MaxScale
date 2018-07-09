@@ -993,6 +993,7 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     case HINT_ROUTE_TO_MASTER:
     case HINT_ROUTE_TO_SLAVE:
     case HINT_ROUTE_TO_NAMED_SERVER:
+    case HINT_ROUTE_TO_LAST_USED:
     case HINT_PARAMETER:
         break;
 

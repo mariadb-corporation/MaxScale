@@ -281,6 +281,13 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
                 succp = true;
             }
         }
+        else if (TARGET_IS_LAST_USED(route_target))
+        {
+            if ((target = get_last_used_backend()))
+            {
+                succp = true;
+            }
+        }
         else if (TARGET_IS_SLAVE(route_target))
         {
             if ((target = handle_slave_is_target(command, stmt_id)))
@@ -642,6 +649,11 @@ SRWBackend RWSplitSession::get_master_backend()
     }
 
     return rval;
+}
+
+SRWBackend RWSplitSession::get_last_used_backend()
+{
+    return m_prev_target ? m_prev_target : get_master_backend();
 }
 
 /**

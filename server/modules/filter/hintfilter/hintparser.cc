@@ -49,6 +49,7 @@ static struct
     { "master", TOK_MASTER},
     { "slave", TOK_SLAVE},
     { "server", TOK_SERVER},
+    { "last" , TOK_LAST},
     { NULL, static_cast<TOKEN_VALUE>(0)}
 };
 
@@ -334,6 +335,12 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 rval = hint_create_route(rval,
                                          HINT_ROUTE_TO_SLAVE, NULL);
                 break;
+
+            case TOK_LAST:
+                rval = hint_create_route(rval,
+                                         HINT_ROUTE_TO_LAST_USED, NULL);
+                break;
+
             case TOK_SERVER:
                 state = HS_ROUTE_SERVER;
                 break;

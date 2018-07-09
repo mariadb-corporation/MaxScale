@@ -27,6 +27,7 @@
 #define TARGET_IS_NAMED_SERVER(t)   maxscale::QueryClassifier::target_is_named_server(t)
 #define TARGET_IS_ALL(t)            maxscale::QueryClassifier::target_is_all(t)
 #define TARGET_IS_RLAG_MAX(t)       maxscale::QueryClassifier::target_is_rlag_max(t)
+#define TARGET_IS_LAST_USED(t)      maxscale::QueryClassifier::target_is_last_used(t)
 
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
@@ -57,6 +58,7 @@ public:
         TARGET_NAMED_SERVER = maxscale::QueryClassifier::TARGET_NAMED_SERVER,
         TARGET_ALL          = maxscale::QueryClassifier::TARGET_ALL,
         TARGET_RLAG_MAX     = maxscale::QueryClassifier::TARGET_RLAG_MAX,
+        TARGET_LAST_USED    = maxscale::QueryClassifier::TARGET_LAST_USED,
     };
 
     enum otrx_state
@@ -174,6 +176,7 @@ private:
     mxs::SRWBackend get_hinted_backend(char *name);
     mxs::SRWBackend get_slave_backend(int max_rlag);
     mxs::SRWBackend get_master_backend();
+    mxs::SRWBackend get_last_used_backend();
     mxs::SRWBackend get_target_backend(backend_type_t btype, char *name, int max_rlag);
 
     bool handle_target_is_all(route_target_t route_target, GWBUF *querybuf,

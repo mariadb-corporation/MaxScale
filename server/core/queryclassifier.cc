@@ -530,6 +530,11 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
                 ss_dassert(false);
                 break;
 
+            case HINT_ROUTE_TO_LAST_USED:
+                MXS_DEBUG("Hint: route to last used");
+                target = TARGET_LAST_USED;
+                break;
+
             case HINT_PARAMETER:
                 if (strncasecmp((char*)pHint->data, "max_slave_replication_lag",
                                 strlen("max_slave_replication_lag")) == 0)
