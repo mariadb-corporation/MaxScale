@@ -311,13 +311,11 @@ static void maxscale_ssl_id(CRYPTO_THREADID* id)
 #endif
 
 /**
- * Handler for SIGHUP signal. Reload the configuration for the
- * gateway.
+ * Handler for SIGHUP signal.
  */
 static void sighup_handler (int i)
 {
-    MXS_NOTICE("Refreshing configuration following SIGHUP\n");
-    config_reload();
+    // Legacy configuration reload handler
 }
 
 /**

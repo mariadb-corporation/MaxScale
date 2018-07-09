@@ -1571,47 +1571,6 @@ dListListeners(DCB *dcb)
 }
 
 /**
- * Update the definition of a service
- *
- * @param service       The service to update
- * @param router        The router module to use
- * @param user          The user to use to extract information from the database
- * @param auth          The password for the user above
- */
-void
-service_update(SERVICE *service, char *router, char *user, char *auth)
-{
-    MXS_ROUTER_OBJECT *router_obj;
-
-    if (!strcmp(service->routerModule, router))
-    {
-        if ((router_obj = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER)) == NULL)
-        {
-            MXS_ERROR("Failed to update router "
-                      "for service %s to %s.",
-                      service->name,
-                      router);
-        }
-        else
-        {
-            MXS_NOTICE("Update router for service %s to %s.",
-                       service->name,
-                       router);
-            MXS_FREE(service->routerModule);
-            service->routerModule = MXS_STRDUP_A(router);
-            service->router = router_obj;
-        }
-    }
-    if (user &&
-        (strcmp(service->credentials.name, user) != 0 ||
-         strcmp(service->credentials.authdata, auth) != 0))
-    {
-        MXS_NOTICE("Update credentials for service %s.", service->name);
-        serviceSetUser(service, user, auth);
-    }
-}
-
-/**
  * Refresh the database users for the service
  * This function replaces the MySQL users used by the service with the latest
  * version found on the backend servers. There is a limit on how often the users

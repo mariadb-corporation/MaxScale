@@ -42,6 +42,10 @@ for promotion.
 
 ## Dropped Features
 
+### Configuration Reloading
+
+The deprecated `maxadmin reload config` command has been removed.
+
 ### `router_options` in Avrorouter
 
 The use of `router_options` with avrorouter was deprecated in MaxScale 2.1. In

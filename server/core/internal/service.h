@@ -115,7 +115,6 @@ void service_update_weights();
  */
 void  serviceAddRouterOption(SERVICE *service, char *option);
 void  serviceClearRouterOptions(SERVICE *service);
-void  service_update(SERVICE *service, char *router, char *user, char *auth);
 
 /**
  * @brief Add parameters to a service

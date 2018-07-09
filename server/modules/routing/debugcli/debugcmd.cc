@@ -683,19 +683,12 @@ struct subcommand clearoptions[] =
 };
 
 static void reload_dbusers(DCB *dcb, SERVICE *service);
-static void reload_config(DCB *dcb);
 
 /**
  * The subcommands of the reload command
  */
 struct subcommand reloadoptions[] =
 {
-    {
-        "config", 0, 0, (FN)reload_config,
-        "[Deprecated] Reload the configuration",
-        "Usage: reload config",
-        {0}
-    },
     {
         "dbusers", 1, 1, (FN)reload_dbusers,
         "Reload the database users for a service",
@@ -2322,21 +2315,6 @@ reload_dbusers(DCB *dcb, SERVICE *service)
     {
         dcb_printf(dcb, "Error: Failed to reloaded database users for service %s.\n", service->name);
     }
-}
-
-/**
- * Reload the configuration data from the config file
- *
- * @param dcb           DCB to use to send output
- */
-static void
-reload_config(DCB *dcb)
-{
-    dcb_printf(dcb, "Reloading configuration from file.\n\n"
-               "Warning! This command has been deprecated, please use the `alter`\n"
-               "commands or use the MaxScale REST API to change the configuration\n"
-               "at runtime.\n");
-    config_reload();
 }
 
 /**

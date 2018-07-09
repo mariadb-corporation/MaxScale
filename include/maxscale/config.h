@@ -530,13 +530,6 @@ unsigned int config_nbpolls(void);
 unsigned int config_pollsleep(void);
 
 /**
- * @brief Reload the configuration
- *
- * @return True if reloading was successful
- */
-bool config_reload(void);
-
-/**
  * @brief List all path parameters as JSON
  *
  * @param host Hostname of this server
