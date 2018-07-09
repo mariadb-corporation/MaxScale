@@ -136,6 +136,14 @@ void  service_update(SERVICE *service, char *router, char *user, char *auth);
 void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
 
 /**
+ * @brief Remove service parameter
+ *
+ * @param service Service to modify
+ * @param key     Parameter to remove
+ */
+void service_remove_parameter(SERVICE *service, const char* key);
+
+/**
  * @brief Replace service parameter
  *
  * @param service Service to modify

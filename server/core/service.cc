@@ -1780,6 +1780,41 @@ void service_add_parameters(SERVICE *service, const char* key, const char* value
     service_add_parameters(service, &p);
 }
 
+void service_remove_parameter(SERVICE *service, const char* key)
+{
+    if (MXS_CONFIG_PARAMETER* params = service->svc_config_param)
+    {
+        MXS_CONFIG_PARAMETER* to_free = NULL;
+
+        if (strcasecmp(params->name, key) == 0)
+        {
+            service->svc_config_param = params->next;
+            to_free = params;
+        }
+        else
+        {
+            while (MXS_CONFIG_PARAMETER* p = params->next)
+            {
+                if (strcasecmp(p->name, key) == 0)
+                {
+                    params->next = p->next;
+                    to_free = p;
+                    break;
+                }
+
+                params = p;
+            }
+        }
+
+        if (to_free)
+        {
+            // Set next pointer to null to prevent freeing of other parameters
+            to_free->next = NULL;
+            config_parameter_free(to_free);
+        }
+    }
+}
+
 void service_replace_parameter(SERVICE *service, const char* key, const char* value)
 {
     for (MXS_CONFIG_PARAMETER* p = service->svc_config_param; p; p = p->next)
