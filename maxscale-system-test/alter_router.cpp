@@ -88,6 +88,21 @@ void alter_readconnroute(TestConnections& test)
     }
 }
 
+void alter_schemarouter(TestConnections& test)
+{
+    Connection conn = test.maxscales->readconn_slave();
+    conn.connect();
+    test.assert(!conn.query("SELECT 1"), "Query before reconfiguration should fail");
+    conn.disconnect();
+
+    int rc = test.maxscales->ssh_node_f(0, true, "maxctrl alter service SchemaRouter ignore_databases_regex '.*'");
+    test.assert(rc == 0, "Schemarouter alteration should work");
+
+    conn.connect();
+    test.assert(conn.query("SELECT 1"), "Query after reconfiguration should work: %s", conn.error());
+    conn.disconnect();
+}
+
 void alter_unsupported(TestConnections& test)
 {
     int rc = test.maxscales->ssh_node_f(0, true, "maxctrl alter service RW-Split-Router unknown parameter");
@@ -104,6 +119,7 @@ int main(int argc, char** argv)
     {
          TEST(alter_readwritesplit),
          TEST(alter_readconnroute),
+         TEST(alter_schemarouter),
          TEST(alter_unsupported)
     };
 
