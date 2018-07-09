@@ -67,7 +67,7 @@ test1()
 
     ss_info_dassert(NULL != service, "New service with valid router must not be null");
     ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
-    ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
+    ss_info_dassert(0 == strcmp("MyService", service->name), "Service must have given name");
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
     ss_info_dassert(serviceCreateListener(service, "TestProtocol", "testprotocol",

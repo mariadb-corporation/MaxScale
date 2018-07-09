@@ -37,13 +37,6 @@ MXS_BEGIN_DECLS
 SERVICE* service_alloc(const char *name, const char *router);
 
 /**
- * @brief Free the specified service
- *
- * @param service The service to free
- */
-void service_free(SERVICE *service);
-
-/**
  * @brief Shut all services down
  *
  * Turns on the shutdown flag in each service. This should be done as
@@ -104,7 +97,6 @@ bool service_serialize(const SERVICE *service);
 /**
  * Internal utility functions
  */
-char*    service_get_name(SERVICE* service);
 bool     service_all_services_have_listeners(void);
 int      service_isvalid(SERVICE *service);
 

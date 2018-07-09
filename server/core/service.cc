@@ -69,34 +69,9 @@ using std::set;
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
 
-/** To be used with configuration type checks */
-typedef struct typelib_st
-{
-    int          tl_nelems;
-    const char*  tl_name;
-    const char** tl_p_elems;
-} typelib_t;
-
-/** Set of subsequent false,true pairs */
-static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
-typelib_t bool_type  = {MXS_ARRAY_NELEMS(bool_strings) - 1, "bool_type", bool_strings};
-
-/** List of valid values */
-static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
-typelib_t sqlvar_target_type =
-{
-    MXS_ARRAY_NELEMS(sqlvar_target_strings) - 1,
-    "sqlvar_target_type",
-    sqlvar_target_strings
-};
-
 static SPINLOCK service_spin = SPINLOCK_INIT;
 static SERVICE  *allServices = NULL;
 
-static int find_type(typelib_t* tl, const char* needle, int maxlen);
-
-static void service_add_qualified_param(SERVICE*          svc,
-                                        MXS_CONFIG_PARAMETER* param);
 static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
 
@@ -714,51 +689,6 @@ bool serviceStart(SERVICE *service)
     }
 
     return listeners > 0;
-}
-
-void service_free(SERVICE *service)
-{
-    SERVICE *ptr;
-    SERVER_REF *srv;
-    if (service->stats.n_current)
-    {
-        return;
-    }
-    /* First of all remove from the linked list */
-    spinlock_acquire(&service_spin);
-    if (allServices == service)
-    {
-        allServices = service->next;
-    }
-    else
-    {
-        ptr = allServices;
-        while (ptr && ptr->next != service)
-        {
-            ptr = ptr->next;
-        }
-        if (ptr)
-        {
-            ptr->next = service->next;
-        }
-    }
-    spinlock_release(&service_spin);
-
-    /* Clean up session and free the memory */
-    while (service->dbref)
-    {
-        srv = service->dbref;
-        service->dbref = service->dbref->next;
-        MXS_FREE(srv);
-    }
-
-    MXS_FREE(service->name);
-    MXS_FREE(service->routerModule);
-
-    config_parameter_free(service->svc_config_param);
-    serviceClearRouterOptions(service);
-
-    MXS_FREE(service);
 }
 
 /**
@@ -1828,113 +1758,6 @@ void service_replace_parameter(SERVICE *service, const char* key, const char* va
     }
 
     service_add_parameters(service, key, value);
-}
-
-/*
- * Function to find a string in typelib_t
- * (similar to find_type() of mysys/typelib.c)
- *
- *       SYNOPSIS
- *       find_type()
- *       lib                  typelib_t
- *       find                 String to find
- *       length               Length of string to find
- *       part_match           Allow part matching of value
- *
- *       RETURN
- *       0 error
- *       > 0 position in TYPELIB->type_names +1
- */
-static int find_type(typelib_t*  tl,
-                     const char* needle,
-                     int         maxlen)
-{
-    int i;
-
-    if (tl == NULL || needle == NULL || maxlen <= 0)
-    {
-        return -1;
-    }
-
-    for (i = 0; i < tl->tl_nelems; i++)
-    {
-        if (strncasecmp(tl->tl_p_elems[i], needle, maxlen) == 0)
-        {
-            return i + 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * Add qualified config parameter to SERVICE struct.
- */
-static void service_add_qualified_param(SERVICE*          svc,
-                                        MXS_CONFIG_PARAMETER* param)
-{
-    spinlock_acquire(&svc->spin);
-
-    if (svc->svc_config_param == NULL)
-    {
-        svc->svc_config_param = config_clone_param(param);
-        svc->svc_config_param->next = NULL;
-    }
-    else
-    {
-        MXS_CONFIG_PARAMETER* p = svc->svc_config_param;
-        MXS_CONFIG_PARAMETER* prev = NULL;
-
-        while (true)
-        {
-            MXS_CONFIG_PARAMETER* old;
-
-            /** Replace existing parameter in the list, free old */
-            if (strncasecmp(param->name,
-                            p->name,
-                            strlen(param->name)) == 0)
-            {
-                old = p;
-                p = config_clone_param(param);
-                p->next = old->next;
-
-                if (prev != NULL)
-                {
-                    prev->next = p;
-                }
-                else
-                {
-                    svc->svc_config_param = p;
-                }
-                MXS_FREE(old);
-                break;
-            }
-            prev = p;
-            p = p->next;
-
-            /** Hit end of the list, add new parameter */
-            if (p == NULL)
-            {
-                p = config_clone_param(param);
-                prev->next = p;
-                p->next = NULL;
-                break;
-            }
-        }
-    }
-    /** Increment service's configuration version */
-    atomic_add(&svc->svc_config_version, 1);
-    spinlock_release(&svc->spin);
-}
-
-/**
- * Return the name of the service
- *
- * @param svc           The service
- */
-char *
-service_get_name(SERVICE *svc)
-{
-    return svc->name;
 }
 
 /**
