@@ -40,7 +40,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
     m_client(session->client_dcb),
     m_mysql_session((MYSQL_session*)session->client_dcb->data),
     m_backends(backends),
-    m_config(&router->m_config),
+    m_config(router->m_config),
     m_router(router),
     m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config->refresh_min_interval)),
     m_state(0),

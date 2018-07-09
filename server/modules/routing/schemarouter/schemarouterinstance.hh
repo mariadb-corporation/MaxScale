@@ -39,15 +39,16 @@ public:
     void diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
     uint64_t getCapabilities();
+    bool configure(MXS_CONFIG_PARAMETER* param);
 
 private:
     friend class SchemaRouterSession;
 
     /** Internal functions */
-    SchemaRouter(SERVICE *service, Config& config);
+    SchemaRouter(SERVICE *service, SConfig config);
 
     /** Member variables */
-    Config                m_config;        /*< expanded config info from SERVICE */
+    SConfig               m_config;        /*< expanded config info from SERVICE */
     ShardManager          m_shard_manager; /*< Shard maps hashed by user name */
     SERVICE*              m_service;       /*< Pointer to service */
     SPINLOCK              m_lock;          /*< Lock for the instance data */

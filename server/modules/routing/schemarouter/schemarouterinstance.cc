@@ -42,7 +42,7 @@ namespace schemarouter
  * @file schemarouter.c The entry points for the simple sharding router module.
  */
 
-SchemaRouter::SchemaRouter(SERVICE *service, Config& config):
+SchemaRouter::SchemaRouter(SERVICE *service, SConfig config):
     mxs::Router<SchemaRouter, SchemaRouterSession>(service),
     m_config(config),
     m_service(service)
@@ -52,10 +52,6 @@ SchemaRouter::SchemaRouter(SERVICE *service, Config& config):
 
 SchemaRouter::~SchemaRouter()
 {
-    if (m_config.ignore_regex)
-    {
-        pcre2_code_free(m_config.ignore_regex);
-    }
 }
 
 SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
@@ -69,108 +65,15 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
         pService->users_from_all = true;
     }
 
-    Config config;
-    MXS_CONFIG_PARAMETER* param;
+    SConfig config(new Config(pService->svc_config_param));
+    return new SchemaRouter(pService, config);
+}
 
-    config.refresh_databases = config_get_bool(conf, "refresh_databases");
-    config.refresh_min_interval = config_get_integer(conf, "refresh_interval");
-    config.debug = config_get_bool(conf, "debug");
-    config.preferred_server = config_get_server(conf, "preferred_server");
-
-    /** Add default system databases to ignore */
-    config.ignored_dbs.insert("mysql");
-    config.ignored_dbs.insert("information_schema");
-    config.ignored_dbs.insert("performance_schema");
-
-    if ((param = config_get_param(conf, "ignore_databases_regex")))
-    {
-        int errcode;
-        PCRE2_SIZE erroffset;
-        pcre2_code* re = pcre2_compile((PCRE2_SPTR)param->value, PCRE2_ZERO_TERMINATED, 0,
-                                       &errcode, &erroffset, NULL);
-
-        if (re == NULL)
-        {
-            PCRE2_UCHAR errbuf[512];
-            pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-            MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
-                      (int)erroffset, param->value, errbuf);
-            return NULL;
-        }
-
-        pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(re, NULL);
-
-        if (match_data == NULL)
-        {
-            pcre2_code_free(re);
-            return NULL;
-        }
-
-        config.ignore_regex = re;
-        config.ignore_match_data = match_data;
-    }
-
-    if ((param = config_get_param(conf, "ignore_databases")))
-    {
-        char val[strlen(param->value) + 1];
-        strcpy(val, param->value);
-
-        const char *sep = ", \t";
-        char *sptr;
-        char *tok = strtok_r(val, sep, &sptr);
-
-        while (tok)
-        {
-            config.ignored_dbs.insert(tok);
-            tok = strtok_r(NULL, sep, &sptr);
-        }
-    }
-
-    bool success = true;
-
-    for (int i = 0; pzOptions && pzOptions[i]; i++)
-    {
-        char* value = strchr(pzOptions[i], '=');
-
-        if (value == NULL)
-        {
-            MXS_ERROR("Unknown router options for %s", pzOptions[i]);
-            success = false;
-            break;
-        }
-
-        *value = '\0';
-        value++;
-
-        if (strcmp(pzOptions[i], "max_sescmd_history") == 0)
-        {
-            MXS_WARNING("Use of 'max_sescmd_history' is deprecated");
-        }
-        else if (strcmp(pzOptions[i], "disable_sescmd_history") == 0)
-        {
-            MXS_WARNING("Use of 'disable_sescmd_history' is deprecated");
-        }
-        else if (strcmp(pzOptions[i], "refresh_databases") == 0)
-        {
-            config.refresh_databases = config_truth_value(value);
-        }
-        else if (strcmp(pzOptions[i], "refresh_interval") == 0)
-        {
-            config.refresh_min_interval = atof(value);
-        }
-        else if (strcmp(pzOptions[i], "debug") == 0)
-        {
-            config.debug = config_truth_value(value);
-        }
-        else
-        {
-            MXS_ERROR("Unknown router options for %s", pzOptions[i]);
-            success = false;
-            break;
-        }
-    }
-
-    return success ? new SchemaRouter(pService, config) : NULL;
+bool SchemaRouter::configure(MXS_CONFIG_PARAMETER* params)
+{
+    SConfig config(new Config(params));
+    m_config = config;
+    return true;
 }
 
 /**
@@ -364,7 +267,7 @@ json_t* SchemaRouter::diagnostics_json() const
 
 uint64_t SchemaRouter::getCapabilities()
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
 }
 
 }
@@ -386,7 +289,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
+        RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG,
         &schemarouter::SchemaRouter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */

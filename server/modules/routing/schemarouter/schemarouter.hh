@@ -48,16 +48,16 @@ struct Config
     std::set<std::string> ignored_dbs;      /**< Set of ignored databases */
     SERVER*           preferred_server;     /**< Server to prefer in conflict situations */
 
-    Config():
-        refresh_min_interval(0.0),
-        refresh_databases(false),
-        debug(false),
-        ignore_regex(NULL),
-        ignore_match_data(NULL),
-        preferred_server(NULL)
+    Config(MXS_CONFIG_PARAMETER* conf);
+
+    ~Config()
     {
+        pcre2_match_data_free(ignore_match_data);
+        pcre2_code_free(ignore_regex);
     }
 };
+
+typedef std::shared_ptr<Config> SConfig;
 
 /**
  * Router statistics
