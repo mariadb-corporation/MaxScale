@@ -651,7 +651,8 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
         valid = true;
         serviceSetRetryOnFailure(service, value.c_str());
     }
-    else if (config_param_is_valid(module->parameters, key.c_str(), value.c_str(), NULL))
+    else if (config_param_is_valid(module->parameters, key.c_str(), value.c_str(), NULL) ||
+             key == CN_ROUTER_OPTIONS)
     {
         if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
         {
@@ -1779,7 +1780,6 @@ static bool is_dynamic_param(const std::string& key)
 {
     return key != CN_TYPE &&
            key != CN_ROUTER &&
-           key != CN_ROUTER_OPTIONS &&
            key != CN_SERVERS;
 }
 
