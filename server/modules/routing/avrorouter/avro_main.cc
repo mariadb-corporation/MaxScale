@@ -59,7 +59,7 @@ static bool conversion_task_ctl(Avro *inst, bool start);
  *
  * @return The instance data for this new instance
  */
-MXS_ROUTER* createInstance(SERVICE *service, char **options)
+MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
 {
     uint64_t block_size = config_get_size(service->svc_config_param, "block_size");
     mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(config_get_enum(service->svc_config_param,

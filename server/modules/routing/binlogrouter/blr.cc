@@ -54,7 +54,7 @@
 #include <maxscale/paths.h>
 
 /* The router entry points */
-static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
+static  MXS_ROUTER  *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
 static void free_instance(ROUTER_INSTANCE *instance);
 static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance,
                                        MXS_SESSION *session);
@@ -233,8 +233,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  MXS_ROUTER  *
-createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
 {
     ROUTER_INSTANCE *inst;
     uuid_t defuuid;
@@ -321,8 +320,6 @@ createInstance(SERVICE *service, char **options)
 
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
-
-    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
     inst->initbinlog = config_get_integer(params, "file");
 

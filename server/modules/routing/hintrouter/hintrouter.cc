@@ -54,11 +54,10 @@ HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& defa
 }
 
 //static
-HintRouter* HintRouter::create(SERVICE* pService, char** pzOptions)
+HintRouter* HintRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
     HR_ENTRY();
 
-    MXS_CONFIG_PARAMETER* params = pService->svc_config_param;
     HINT_TYPE default_action = (HINT_TYPE)config_get_enum(params, DEFAULT_ACTION,
                                                           default_action_values);
     string default_server(config_get_string(params, DEFAULT_SERVER));

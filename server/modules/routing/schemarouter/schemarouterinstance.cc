@@ -54,18 +54,16 @@ SchemaRouter::~SchemaRouter()
 {
 }
 
-SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
+SchemaRouter* SchemaRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
-    MXS_CONFIG_PARAMETER* conf = pService->svc_config_param;
-
-    if ((config_get_param(conf, "auth_all_servers")) == NULL)
+    if ((config_get_param(params, "auth_all_servers")) == NULL)
     {
         MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
                    "add 'auth_all_servers=0' to the service.");
         pService->users_from_all = true;
     }
 
-    SConfig config(new Config(pService->svc_config_param));
+    SConfig config(new Config(params));
     return new SchemaRouter(pService, config);
 }
 

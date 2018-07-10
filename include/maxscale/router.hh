@@ -98,7 +98,7 @@ protected:
  * class MyRouter : public maxscale::Router<MyRouter, MyRouterSession>
  * {
  * public:
- *      static MyRouter* create(SERVICE* pService, char** pzOptions);
+ *      static MyRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
  *
  *      MyRouterSession* newSession(MXS_SESSION* pSession);
  *
@@ -137,11 +137,11 @@ public:
         return false;
     }
 
-    static MXS_ROUTER* createInstance(SERVICE* pService, char** pzOptions)
+    static MXS_ROUTER* createInstance(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
     {
         RouterType* pRouter = NULL;
 
-        MXS_EXCEPTION_GUARD(pRouter = RouterType::create(pService, pzOptions));
+        MXS_EXCEPTION_GUARD(pRouter = RouterType::create(pService, params));
 
         return pRouter;
     }

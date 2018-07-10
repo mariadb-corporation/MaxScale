@@ -129,7 +129,6 @@ typedef struct service
     SERV_LISTENER *ports;              /**< Linked list of ports and protocols
                                         * that this service will listen on */
     char *routerModule;                /**< Name of router module to use */
-    char **routerOptions;              /**< Router specific option strings */
     struct mxs_router_object *router;  /**< The router we are using */
     struct mxs_router *router_instance;/**< The router instance for this service */
     char version_string[MAX_SERVICE_VERSION_LEN]; /**< version string for this service listeners */

@@ -256,7 +256,7 @@ public:
      *
      * @return New router instance or NULL on error
      */
-    static RWSplit* create(SERVICE* pService, char** pzOptions);
+    static RWSplit* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
 
     /**
      * @brief Create a new session for this router instance

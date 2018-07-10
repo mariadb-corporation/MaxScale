@@ -273,13 +273,11 @@ bool RWSplit::have_enough_servers() const
  */
 
 
-RWSplit* RWSplit::create(SERVICE *service, char **options)
+RWSplit* RWSplit::create(SERVICE *service, MXS_CONFIG_PARAMETER* params)
 {
-    MXS_CONFIG_PARAMETER* params = service->svc_config_param;
     SConfig config(new Config(params));
 
-    if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")) ||
-        (options && !rwsplit_process_router_options(config, options)))
+    if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")))
     {
         return NULL;
     }

@@ -127,7 +127,6 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->retry_start = true;
     service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
     service->svc_config_param = NULL;
-    service->routerOptions = NULL;
     service->log_auth_warnings = true;
     service->strip_db_esc = true;
     service->rate_limits = rate_limits;
@@ -420,47 +419,6 @@ int serviceStartAllPorts(SERVICE* service)
     return listeners;
 }
 
-/** Helper function for copying an array of strings */
-static char** copy_string_array(char** original)
-{
-    char **array = NULL;
-
-    if (original)
-    {
-        int values = 0;
-
-        while (original[values])
-        {
-            values++;
-        }
-
-        array = (char**)MXS_MALLOC(sizeof(char*) * (values + 1));
-
-        if (array)
-        {
-            for (int i = 0; i < values; i++)
-            {
-                array[i] = MXS_STRDUP_A(original[i]);
-            }
-            array[values] = NULL;
-        }
-    }
-    return array;
-}
-
-/** Helper function for freeing an array of strings */
-static void free_string_array(char** array)
-{
-    if (array)
-    {
-        for (int i = 0; array[i]; i++)
-        {
-            MXS_FREE(array[i]);
-        }
-        MXS_FREE(array);
-    }
-}
-
 /**
  * Start a service
  *
@@ -478,9 +436,8 @@ int serviceInitialize(SERVICE *service)
     service_calculate_weights(service);
 
     int listeners = 0;
-    char **router_options = copy_string_array(service->routerOptions);
 
-    if ((service->router_instance = service->router->createInstance(service, router_options)))
+    if ((service->router_instance = service->router->createInstance(service, service->svc_config_param)))
     {
         if (service->router->getCapabilities)
         {
@@ -502,8 +459,6 @@ int serviceInitialize(SERVICE *service)
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
         service->state = SERVICE_STATE_FAILED;
     }
-
-    free_string_array(router_options);
 
     return listeners;
 }
@@ -957,62 +912,6 @@ serviceHasBackend(SERVICE *service, SERVER *server)
     spinlock_release(&service->spin);
 
     return ptr != NULL;
-}
-
-/**
- * Add a router option to a service
- *
- * @param service       The service to add the router option to
- * @param option        The option string
- */
-void
-serviceAddRouterOption(SERVICE *service, char *option)
-{
-    int i;
-
-    spinlock_acquire(&service->spin);
-    if (service->routerOptions == NULL)
-    {
-        service->routerOptions = (char **)MXS_CALLOC(2, sizeof(char *));
-        MXS_ABORT_IF_NULL(service->routerOptions);
-        service->routerOptions[0] = MXS_STRDUP_A(option);
-        service->routerOptions[1] = NULL;
-    }
-    else
-    {
-        for (i = 0; service->routerOptions[i]; i++)
-        {
-            ;
-        }
-        service->routerOptions = (char **)MXS_REALLOC(service->routerOptions, (i + 2) * sizeof(char *));
-        MXS_ABORT_IF_NULL(service->routerOptions);
-        service->routerOptions[i] = MXS_STRDUP_A(option);
-        service->routerOptions[i + 1] = NULL;
-    }
-    spinlock_release(&service->spin);
-}
-
-/**
- * Remove the router options for the service
- *
- * @param       service The service to remove the options from
- */
-void
-serviceClearRouterOptions(SERVICE *service)
-{
-    int i;
-
-    spinlock_acquire(&service->spin);
-    if (service->routerOptions != NULL)
-    {
-        for (i = 0; service->routerOptions[i]; i++)
-        {
-            MXS_FREE(service->routerOptions[i]);
-        }
-        MXS_FREE(service->routerOptions);
-        service->routerOptions = NULL;
-    }
-    spinlock_release(&service->spin);
 }
 
 /**
@@ -2427,18 +2326,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
 {
     json_t* rval = json_object();
 
-    string options;
-
-    if (service->routerOptions && service->routerOptions[0])
-    {
-        options += service->routerOptions[0];
-
-        for (int i = 1; service->routerOptions[i]; i++)
-        {
-            options += ",";
-            options += service->routerOptions[i];
-        }
-    }
+    string options{config_get_string(service->svc_config_param, "router_options")};
 
     json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
     json_object_set_new(rval, CN_USER, json_string(service->credentials.name));

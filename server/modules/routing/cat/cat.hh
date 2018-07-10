@@ -25,7 +25,7 @@ class Cat: public mxs::Router<Cat, CatSession>
     Cat& operator =(const Cat&) = delete;
 public:
     ~Cat();
-    static Cat* create(SERVICE* pService, char** pzOptions);
+    static Cat* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     CatSession* newSession(MXS_SESSION* pSession);
     void diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;

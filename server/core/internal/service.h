@@ -111,12 +111,6 @@ bool service_server_in_use(const SERVER *server);
 void service_update_weights();
 
 /**
- * Alteration of the service configuration
- */
-void  serviceAddRouterOption(SERVICE *service, char *option);
-void  serviceClearRouterOptions(SERVICE *service);
-
-/**
  * @brief Add parameters to a service
  *
  * A copy of @c param is added to @c service.

@@ -567,7 +567,7 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
  * The functions implementing the router module API. These do not need to be
  * "extern C", but they do need to be callable from  C code.
  */
-static MXS_ROUTER* createInstance(SERVICE* service, char** options);
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
 static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
 static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
@@ -663,7 +663,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param options   The options for this query router
  * @return          NULL in failure, pointer to router in success.
  */
-static MXS_ROUTER* createInstance(SERVICE* service, char** options)
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     RRRouter* instance = NULL;
     /* The core of MaxScale is written in C and does not understand exceptions.

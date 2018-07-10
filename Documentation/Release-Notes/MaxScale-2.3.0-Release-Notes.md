@@ -58,6 +58,11 @@ The use of `router_options` with avrorouter was deprecated in MaxScale 2.1. In
 MaxScale 2.3, the use of `router_options` is no longer supported and the options
 should be given as parameters instead.
 
+### `router_options` in readwritesplit
+
+The use of `router_options` with readwritesplit, which was deprecated in
+MaxScale 2.2.0, has been removed in MaxScale 2.3.0.
+
 ### `QUERY-LAST-TRANSACTION` and `QUERY-TRANSACTION` CDC commands
 
 The CDC protocol no longer accepts the `QUERY-LAST-TRANSACTION` and

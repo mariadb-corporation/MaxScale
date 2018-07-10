@@ -15,7 +15,7 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 
-static MXS_ROUTER *createInstance(SERVICE *service, char **options);
+static MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
 static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
@@ -94,8 +94,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  MXS_ROUTER  *
-createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
 {
     return (MXS_ROUTER*)MXS_MALLOC(sizeof(TESTROUTER));
 }

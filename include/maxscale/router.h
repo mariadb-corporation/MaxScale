@@ -90,11 +90,11 @@ typedef struct mxs_router_object
      * other API functions.
      *
      * @param service The service where the instance is created
-     * @param options Router options
+     * @param params  Parameters for the router
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER *(*createInstance)(SERVICE *service, char **options);
+    MXS_ROUTER *(*createInstance)(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 
     /**
      * Called to create a new user session within the router
@@ -240,7 +240,7 @@ typedef struct mxs_router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define MXS_ROUTER_VERSION  { 3, 1, 0 }
+#define MXS_ROUTER_VERSION  { 4, 0, 0 }
 
 /**
  * Specifies capabilities specific for routers. Common capabilities

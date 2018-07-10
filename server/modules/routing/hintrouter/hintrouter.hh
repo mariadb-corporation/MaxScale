@@ -20,7 +20,7 @@
 class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
 {
 public:
-    static HintRouter* create(SERVICE* pService, char** pzOptions);
+    static HintRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     HintRouterSession* newSession(MXS_SESSION *pSession);
     void diagnostics(DCB* pOut);
     json_t* diagnostics_json() const;

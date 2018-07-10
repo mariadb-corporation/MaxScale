@@ -62,7 +62,6 @@ using namespace maxscale;
  */
 void Avro::read_source_service_options(SERVICE* source)
 {
-    char** options = source->routerOptions;
     MXS_CONFIG_PARAMETER* params = source->svc_config_param;
 
     for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
@@ -77,28 +76,17 @@ void Avro::read_source_service_options(SERVICE* source)
         }
     }
 
-    if (options)
+    for (auto&& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
-        for (int i = 0; options[i]; i++)
+        auto&& kv = mxs::strtok(opt, "=");
+
+        if (kv[0] == "binlogdir")
         {
-            char option[strlen(options[i]) + 1];
-            strcpy(option, options[i]);
-
-            char *value = strchr(option, '=');
-            if (value)
-            {
-                *value++ = '\0';
-                value = trim(value);
-
-                if (strcmp(option, "binlogdir") == 0)
-                {
-                    binlogdir = value;
-                }
-                else if (strcmp(option, "filestem") == 0)
-                {
-                    filestem = value;
-                }
-            }
+            binlogdir = kv[1];
+        }
+        else if (kv[0] == "filestem")
+        {
+            filestem = kv[1];
         }
     }
 }

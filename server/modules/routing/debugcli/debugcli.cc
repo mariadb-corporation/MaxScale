@@ -42,7 +42,7 @@
 #include <maxscale/log_manager.h>
 
 /* The router entry points */
-static  MXS_ROUTER *createInstance(SERVICE *service, char **options);
+static  MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
 static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
 static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
@@ -115,11 +115,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  MXS_ROUTER  *
-createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     CLI_INSTANCE    *inst;
-    int     i;
 
     if ((inst = static_cast<CLI_INSTANCE*>(MXS_MALLOC(sizeof(CLI_INSTANCE)))) == NULL)
     {

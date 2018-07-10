@@ -3316,17 +3316,6 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
             }
         }
 
-        if (roptions)
-        {
-            char *lasts;
-            char *s = strtok_r(roptions, ",", &lasts);
-            while (s)
-            {
-                serviceAddRouterOption(service, s);
-                s = strtok_r(NULL, ",", &lasts);
-            }
-        }
-
         if (filters)
         {
             if (!serviceSetFilters(service, filters))

@@ -34,7 +34,7 @@ class SchemaRouter: public mxs::Router<SchemaRouter, SchemaRouterSession>
 {
 public:
     ~SchemaRouter();
-    static SchemaRouter* create(SERVICE* pService, char** pzOptions);
+    static SchemaRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     SchemaRouterSession* newSession(MXS_SESSION* pSession);
     void diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
