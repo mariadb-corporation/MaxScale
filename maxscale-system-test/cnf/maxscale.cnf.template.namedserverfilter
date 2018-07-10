@@ -13,7 +13,7 @@ type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [RW Split Router]
@@ -23,7 +23,7 @@ router=readwritesplit
 # Mixing the order of slaves will make server3 the first slave server
 servers=server1,server3,server2,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=namedserverfilter
 
 [CLI]
@@ -42,7 +42,7 @@ router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -50,7 +50,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

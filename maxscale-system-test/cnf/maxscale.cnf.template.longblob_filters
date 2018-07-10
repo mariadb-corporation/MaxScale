@@ -7,7 +7,7 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 monitor_interval=1000
 backend_connect_timeout=10
 backend_read_timeout=10
@@ -17,7 +17,7 @@ type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_connections=1
 #filters=duplicate|hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter|Database Firewall
@@ -31,7 +31,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -39,7 +39,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener
@@ -160,7 +160,7 @@ type=monitor
 module=galeramon
 servers=gserver1,gserver2,gserver3,gserver4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=100
 root_node_as_master=false
 
@@ -169,7 +169,7 @@ type=service
 router= readwritesplit
 servers=gserver1,gserver2,gserver3,gserver4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [RW Split Listener Galera]

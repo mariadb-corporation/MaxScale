@@ -7,14 +7,14 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 
 [RW_Router]
 type=service
 router=readconnroute
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 version_string=5.1-OLD-Bored-Mysql
 filters=DuplicaFilter
 
@@ -23,7 +23,7 @@ type=service
 router=readwritesplit
 servers=server1,server3,server2
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [DuplicaFilter]
 type=filter
@@ -48,7 +48,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -56,7 +56,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Listener Slave]
 type=listener

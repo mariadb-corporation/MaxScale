@@ -7,7 +7,7 @@ type = monitor
 module = mariadbmon
 servers = server1,server2,server3,server4
 user = maxskysql
-passwd = skysql
+password = skysql
 monitor_interval = 5000
 auto_failover = 1
 
@@ -16,7 +16,7 @@ type = service
 router = readwritesplit
 servers = server1,server2,server3,server4
 user = maxskysql
-passwd = skysql
+password = skysql
 filters = throttle
 
 [RW-Split-Listener]
@@ -31,7 +31,7 @@ router = readconnroute
 router_options = master
 servers = server1,server2,server3,server4
 user = maxskysql
-passwd = skysql
+password = skysql
 
 [Read-Connection-Listener-Master]
 type = listener
@@ -45,7 +45,7 @@ router = readconnroute
 router_options = slave
 servers = server1,server2,server3,server4
 user = maxskysql
-passwd = skysql
+password = skysql
 
 [Read-Connection-Listener-Slave]
 type = listener

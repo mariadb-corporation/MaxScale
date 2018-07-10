@@ -7,7 +7,7 @@ type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [RW Split Router]
@@ -15,7 +15,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 transaction_replay=true
 transaction_replay_max_size=200
 

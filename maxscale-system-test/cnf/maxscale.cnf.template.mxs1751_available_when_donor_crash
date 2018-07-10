@@ -6,7 +6,7 @@ type=monitor
 module=galeramon
 servers=server1,server2,server3
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=100
 available_when_donor=true
 
@@ -15,7 +15,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3
 user=maxskysql
-passwd=skysql
+password=skysql
 master_accept_reads=true
 
 [RW Split Listener]

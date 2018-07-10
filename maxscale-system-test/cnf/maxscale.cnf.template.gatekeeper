@@ -9,7 +9,7 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 monitor_interval=1000
 detect_stale_master=false
 
@@ -23,7 +23,7 @@ max_slave_connections=100%
 use_sql_variables_in=master
 router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=gatekeeper
 
 [CLI]

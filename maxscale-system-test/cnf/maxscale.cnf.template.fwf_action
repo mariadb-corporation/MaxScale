@@ -6,7 +6,7 @@ type=monitor
 module=mysqlmon
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [server1]
@@ -22,7 +22,7 @@ type=service
 router=readconnroute
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=blacklist
 
 [readconn-blacklist-listener]
@@ -46,7 +46,7 @@ type=service
 router=readconnroute
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=whitelist
 
 [readconn-whitelist-listener]
@@ -70,7 +70,7 @@ type=service
 router=readconnroute
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=ignore
 
 [readconn-ignore-listener]

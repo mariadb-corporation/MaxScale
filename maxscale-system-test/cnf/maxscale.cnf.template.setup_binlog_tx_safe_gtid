@@ -7,7 +7,7 @@ type=service
 router=binlogrouter
 #servers=master
 user=skysql
-passwd=skysql
+password=skysql
 version_string=5.6.15-log
 #router_options=server-id=3,user=repl,password=repl,master-id=1
 router_options=server-id=3,user=repl,password=repl,longburst=500,heartbeat=30,binlogdir=/var/lib/maxscale/Binlog_Service,mariadb10_master_gtid=on,mariadb10_slave_gtid=on,transaction_safety=on,mariadb10-compatibility=1

@@ -6,20 +6,20 @@ type=service
 router=readwritesplit
 weightby=weight
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [read-connection-router-slave]
 type=service
 router=readconnroute
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [read-connection-router-master]
 type=service
 router=readconnroute
 router_options=master
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [CLI]
 type=service

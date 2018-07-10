@@ -7,14 +7,14 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 
 [MySQL Monitor 1]
 type=monitor
 module=galeramon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 root_node_as_master=false
 
 [RW Split Router]
@@ -22,7 +22,7 @@ type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [Read Connection Router Slave]
@@ -31,7 +31,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -39,7 +39,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

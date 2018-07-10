@@ -6,14 +6,14 @@ type=monitor
 module=mysqlmon
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Sharding router]
 type=service
 router=schemarouter
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Sharding Listener]
 type=listener

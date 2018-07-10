@@ -7,7 +7,7 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 script=/###access_homedir###/script/script.sh --event=$EVENT --initiator=$INITIATOR --nodelist=$NODELIST
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
 monitor_interval=1000
@@ -21,7 +21,7 @@ events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lo
 disable_master_role_setting=true
 root_node_as_master=false
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [RW Split Router]
@@ -29,7 +29,7 @@ type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [RW Split Router Galera]
@@ -37,7 +37,7 @@ type=service
 router= readwritesplit
 servers=gserver1,gserver2,gserver3,gserver4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [Read Connection Router Slave]
@@ -46,7 +46,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -54,7 +54,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

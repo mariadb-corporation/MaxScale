@@ -7,7 +7,7 @@ type=monitor
 module=mysqlmon
 servers= server1,server2,server3,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 
 [CLI]
 type=service
@@ -24,7 +24,7 @@ type=service
 router= readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [RW Split Listener]

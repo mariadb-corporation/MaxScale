@@ -6,7 +6,7 @@ type=monitor
 module=mysqlmon
 servers= server1, server2, server3, server4
 user=maxskysql
-passwd= skysql
+password= skysql
 monitor_interval=1000
 allow_cluster_recovery=true
 detect_standalone_master=true
@@ -23,7 +23,7 @@ type=service
 router= readwritesplit
 servers=server1, server2, server3, server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read-Connection-Router-Slave]
 type=service
@@ -31,7 +31,7 @@ router=readconnroute
 router_options= slave
 servers=server1, server2, server3, server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read-Connection-Router-Master]
 type=service
@@ -39,7 +39,7 @@ router=readconnroute
 router_options=master
 servers=server1, server2, server3, server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW-Split-Listener]
 type=listener

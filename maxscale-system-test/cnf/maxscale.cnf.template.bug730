@@ -7,14 +7,14 @@ type=monitor
 module=mysqlmon
 servers= server1, server2,server3  ,server4
 user=maxskysql
-passwd= skysql
+password= skysql
 
 [RW Split Router]
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=MySetOptionFilter
 
@@ -31,7 +31,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=MySetOptionFilter
 
 [Read Connection Router Master]
@@ -40,7 +40,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=MySetOptionFilter
 
 [RW Split Listener]

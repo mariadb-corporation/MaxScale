@@ -30,14 +30,14 @@ type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [Maxinfo]
 type=service
 router=maxinfo
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 # Added here to allow users to be fetched from the backend server
 servers=server1
 
@@ -52,7 +52,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

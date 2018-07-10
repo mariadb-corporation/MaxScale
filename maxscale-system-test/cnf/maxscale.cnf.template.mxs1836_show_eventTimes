@@ -15,7 +15,7 @@ socket=default
 type=service
 router=maxinfo
 user=maxinfo_user
-passwd=maxinfo_passwd
+password=maxinfo_passwd
 
 [MaxInfo-Listener]
 type=listener

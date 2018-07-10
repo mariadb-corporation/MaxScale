@@ -5,7 +5,7 @@ threads=4
 type=service
 router=maxinfo
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 
 [Maxinfo SQL Listener]
 type=listener
@@ -24,7 +24,7 @@ type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=10000
 
 [RW Split Router]
@@ -32,7 +32,7 @@ type=service
 router= readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 max_slave_connections=1
 
@@ -42,7 +42,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -50,7 +50,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

@@ -7,7 +7,7 @@ type=service
 router=binlogrouter
 #servers=master
 user=repl
-passwd=repl
+password=repl
 version_string=5.6.15-log
 
 

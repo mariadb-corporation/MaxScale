@@ -6,7 +6,7 @@ type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [RW Split Router]
@@ -14,7 +14,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=master_failure_mode=fail_instantly
 
 [Read Connection Router Slave]
@@ -22,7 +22,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=master_failure_mode=error_on_write
 
 [Read Connection Router Master]
@@ -30,7 +30,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=master_failure_mode=fail_on_write
 
 [RW Split Listener]

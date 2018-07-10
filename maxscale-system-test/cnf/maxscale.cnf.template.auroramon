@@ -9,7 +9,7 @@ type=monitor
 module=auroramon
 servers=server1,server2,server3,server4
 user=skysql
-passwd=skysqlrds
+password=skysqlrds
 monitor_interval=1000
 
 # Services
@@ -19,7 +19,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=skysql
-passwd=skysqlrds
+password=skysqlrds
 
 [CLI]
 type=service

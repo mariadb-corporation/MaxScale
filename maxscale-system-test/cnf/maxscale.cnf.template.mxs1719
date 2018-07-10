@@ -14,7 +14,7 @@ type=monitor
 module=mysqlmon
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [Masking]
@@ -29,7 +29,7 @@ type=service
 router=readwritesplit
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=Masking
 
 [RWS-Listener]

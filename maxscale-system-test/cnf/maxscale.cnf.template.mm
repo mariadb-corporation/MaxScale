@@ -7,7 +7,7 @@ type=monitor
 module=mmmon
 servers= server1, server2
 user=maxskysql
-passwd= skysql
+password= skysql
 detect_stale_master=0
 monitor_interval=1000
 
@@ -16,7 +16,7 @@ type=service
 router= readwritesplit
 servers=server1,     server2
 user=maxskysql
-passwd=skysql
+password=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [Read Connection Router Slave]
@@ -25,7 +25,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -33,7 +33,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

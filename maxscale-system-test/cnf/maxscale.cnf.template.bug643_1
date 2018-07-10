@@ -10,7 +10,7 @@ servers=server1,server2,server3,server4
 detect_replication_lag=1
 detect_stale_master=1
 user=maxskysql
-passwd= skysql
+password= skysql
 
 [hints]
 type=filter
@@ -52,7 +52,7 @@ max_slave_connections=100%
 use_sql_variables_in=all
 #use_sql_variables_in=master
 user=maxskysql
-passwd=skysql
+password=skysql
 #filters=typo|qla|regex|hints|regex|hints
 #enable_root_user=1
 filters=duplicate
@@ -64,7 +64,7 @@ servers=server1,server2,server3,server4
 max_slave_connections=100%
 use_sql_variables_in=all
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=qla|tests|hints
 
 
@@ -74,7 +74,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router Master]
 type=service
@@ -82,7 +82,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

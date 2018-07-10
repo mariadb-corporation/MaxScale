@@ -21,6 +21,7 @@ const char *bad_configs[] =
     "mxs720_wierd_line",
     "mxs799",
     "mxs1731_empty_param",
+    "old_passwd",
     NULL
 };
 

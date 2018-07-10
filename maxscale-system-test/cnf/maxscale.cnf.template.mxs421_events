@@ -9,7 +9,7 @@ type=monitor
 module=mysqlmon
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [RW-Split-Router]
@@ -17,7 +17,7 @@ type=service
 router=readwritesplit
 servers=server1
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW-Split-Listener]
 type=listener

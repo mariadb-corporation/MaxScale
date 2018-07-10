@@ -14,7 +14,7 @@ type=service
 router=readconnroute
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=regex1
 
 [Read Connection Listener 1]
@@ -37,7 +37,7 @@ router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=regex2
 
 [Read Connection Listener 2]
@@ -60,7 +60,7 @@ router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=regex3
 
 [Read Connection Listener 3]
@@ -74,7 +74,7 @@ type=monitor
 module=mysqlmon
 servers= server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 monitor_interval=1000
 
 [server1]

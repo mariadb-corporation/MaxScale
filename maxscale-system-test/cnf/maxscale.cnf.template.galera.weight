@@ -7,7 +7,7 @@ type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
 user=maxskysql
-passwd=skysql
+password=skysql
 use_priority=true
 root_node_as_master=false
 
@@ -19,7 +19,7 @@ weightby=serversize_rws
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_connections=1
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Router]
 type=service
@@ -28,7 +28,7 @@ router_options=synced
 servers=server1,server2,server3,server4
 weightby=serversize
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener

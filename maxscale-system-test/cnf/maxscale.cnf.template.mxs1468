@@ -5,7 +5,7 @@ threads=###threads###
 type=service
 router=readwritesplit
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [CLI]
 type=service

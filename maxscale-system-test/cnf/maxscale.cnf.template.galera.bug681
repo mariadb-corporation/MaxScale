@@ -7,9 +7,9 @@ type=monitor
 module=galeramon
 servers=server1,server2,server3
 #user=maxmon
-#passwd=maxpwd
+#password=maxpwd
 user=maxskysql
-passwd=skysql
+password=skysql
 root_node_as_master=false
 
 [RW Split Router]
@@ -17,9 +17,9 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3
 #user=maxpriv
-#passwd=maxpwd
+#password=maxpwd
 user=maxskysql
-passwd=skysql
+password=skysql
 filters=MyLogFilter
 version_string=MariaDBEC-10.0.14
 localhost_match_wildcard_host=1
@@ -33,9 +33,9 @@ router=readconnroute
 router_options=synced
 servers=server1,server2,server3
 #user=maxpriv
-#passwd=maxpwd
+#password=maxpwd
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [Read Connection Listener Slave]
 type=listener
@@ -49,7 +49,7 @@ router=readconnroute
 router_options= slave
 servers=server1,server2,server3
 user=maxskysql
-passwd=skysql
+password=skysql
 
 [RW Split Listener]
 type=listener
