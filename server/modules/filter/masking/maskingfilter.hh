@@ -29,7 +29,7 @@ public:
     typedef MaskingFilterConfig Config;
 
     ~MaskingFilter();
-    static MaskingFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+    static MaskingFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     MaskingFilterSession* newSession(MXS_SESSION* pSession);
 

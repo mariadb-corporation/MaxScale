@@ -60,7 +60,7 @@ CommentFilter::~CommentFilter()
 }
 
 // static
-CommentFilter* CommentFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams)
+CommentFilter* CommentFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     return new CommentFilter(config_get_string(pParams, CN_INJECT));
 }

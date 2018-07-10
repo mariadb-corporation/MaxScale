@@ -70,7 +70,6 @@ filter_alloc(const char *name, const char *module)
     filter->name = my_name;
     filter->module = my_module;
     filter->filter = NULL;
-    filter->options = NULL;
     filter->obj = NULL;
     filter->parameters = NULL;
 
@@ -121,15 +120,6 @@ filter_free(MXS_FILTER_DEF *filter)
         /* Clean up session and free the memory */
         MXS_FREE(filter->name);
         MXS_FREE(filter->module);
-
-        if (filter->options)
-        {
-            for (int i = 0; filter->options[i]; i++)
-            {
-                MXS_FREE(filter->options[i]);
-            }
-            MXS_FREE(filter->options);
-        }
 
         filter_free_parameters(filter);
 
@@ -204,15 +194,6 @@ dprintAllFilters(DCB *dcb)
     {
         dcb_printf(dcb, "Filter %p (%s)\n", ptr, ptr->name);
         dcb_printf(dcb, "\tModule:      %s\n", ptr->module);
-        if (ptr->options)
-        {
-            dcb_printf(dcb, "\tOptions:     ");
-            for (i = 0; ptr->options && ptr->options[i]; i++)
-            {
-                dcb_printf(dcb, "%s ", ptr->options[i]);
-            }
-            dcb_printf(dcb, "\n");
-        }
         if (ptr->obj && ptr->filter)
         {
             ptr->obj->diagnostics(ptr->filter, NULL, dcb);
@@ -239,15 +220,6 @@ dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
 
     dcb_printf(dcb, "Filter %p (%s)\n", filter, filter->name);
     dcb_printf(dcb, "\tModule:      %s\n", filter->module);
-    if (filter->options)
-    {
-        dcb_printf(dcb, "\tOptions:     ");
-        for (i = 0; filter->options && filter->options[i]; i++)
-        {
-            dcb_printf(dcb, "%s ", filter->options[i]);
-        }
-        dcb_printf(dcb, "\n");
-    }
     if (filter->obj && filter->filter)
     {
         filter->obj->diagnostics(filter->filter, NULL, dcb);
@@ -278,10 +250,6 @@ dListFilters(DCB *dcb)
     {
         dcb_printf(dcb, "%-19s | %-15s | ",
                    ptr->name, ptr->module);
-        for (i = 0; ptr->options && ptr->options[i]; i++)
-        {
-            dcb_printf(dcb, "%s ", ptr->options[i]);
-        }
         dcb_printf(dcb, "\n");
         ptr = ptr->next;
     }
@@ -291,41 +259,6 @@ dListFilters(DCB *dcb)
                    "--------------------+-----------------+----------------------------------------\n\n");
     }
     spinlock_release(&filter_spin);
-}
-
-/**
- * Add a router option to a service
- *
- * @param filter        The filter to add the option to
- * @param option        The option string
- */
-void
-filter_add_option(MXS_FILTER_DEF *filter, const char *option)
-{
-    int i;
-
-    spinlock_acquire(&filter->spin);
-    if (filter->options == NULL)
-    {
-        filter->options = (char **)MXS_CALLOC(2, sizeof(char *));
-        MXS_ABORT_IF_NULL(filter->options);
-        filter->options[0] = MXS_STRDUP_A(option);
-        filter->options[1] = NULL;
-    }
-    else
-    {
-        for (i = 0; filter->options[i]; i++)
-        {
-            ;
-        }
-
-        filter->options = (char **)MXS_REALLOC(filter->options, (i + 2) * sizeof(char *));
-        MXS_ABORT_IF_NULL(filter->options);
-        filter->options[i] = MXS_STRDUP_A(option);
-        MXS_ABORT_IF_NULL(filter->options[i]);
-        filter->options[i + 1] = NULL;
-    }
-    spinlock_release(&filter->spin);
 }
 
 /**
@@ -386,7 +319,6 @@ bool filter_load(MXS_FILTER_DEF* filter)
                 ss_dassert(!filter->filter);
 
                 if ((filter->filter = (filter->obj->createInstance)(filter->name,
-                                                                    filter->options,
                                                                     filter->parameters)))
                 {
                     rval = true;
@@ -478,18 +410,6 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
 json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
 {
     json_t* rval = json_object();
-
-    if (filter->options)
-    {
-        json_t* arr = json_array();
-
-        for (int i = 0; filter->options && filter->options[i]; i++)
-        {
-            json_array_append_new(arr, json_string(filter->options[i]));
-        }
-
-        json_object_set_new(rval, "options", arr);
-    }
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(filter->module, MODULE_FILTER);

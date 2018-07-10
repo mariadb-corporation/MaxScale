@@ -228,11 +228,11 @@ template<class FilterType, class FilterSessionType>
 class Filter : public MXS_FILTER
 {
 public:
-    static MXS_FILTER* createInstance(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* createInstance(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 
-        MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, pzOptions, ppParams));
+        MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, ppParams));
 
         return pFilter;
     }

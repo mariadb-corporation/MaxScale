@@ -27,7 +27,7 @@ public:
     ~CommentFilter();
 
     // Creates a new filter instance
-    static CommentFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+    static CommentFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     // Creates a new session for this filter
     CommentFilterSession* newSession(MXS_SESSION* pSession);

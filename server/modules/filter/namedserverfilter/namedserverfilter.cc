@@ -232,7 +232,7 @@ uint64_t RegexHintFilter::getCapabilities()
  * @return The new instance or null on error
  */
 RegexHintFilter*
-RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* params)
+RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
     SourceHost* source_host = NULL;

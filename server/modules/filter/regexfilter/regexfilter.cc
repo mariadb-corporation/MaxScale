@@ -42,7 +42,7 @@
  * @endverbatim
  */
 
-static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -188,7 +188,7 @@ void free_instance(REGEX_INSTANCE *instance)
  * @return The instance data for this new instance
  */
 static MXS_FILTER *
-createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
+createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
 {
     REGEX_INSTANCE *my_instance = static_cast<REGEX_INSTANCE*>(MXS_CALLOC(1, sizeof(REGEX_INSTANCE)));
 

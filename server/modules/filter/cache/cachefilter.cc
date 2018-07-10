@@ -273,7 +273,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
+CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
 {
     CacheFilter* pFilter = new CacheFilter;
 
@@ -281,7 +281,7 @@ CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, MXS_CONFIG
     {
         Cache* pCache = NULL;
 
-        if (process_params(pzOptions, ppParams, pFilter->m_config))
+        if (process_params(ppParams, pFilter->m_config))
         {
             switch (pFilter->m_config.thread_model)
             {
@@ -338,7 +338,7 @@ uint64_t CacheFilter::getCapabilities()
 }
 
 // static
-bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
+bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
 {
     bool error = false;
 

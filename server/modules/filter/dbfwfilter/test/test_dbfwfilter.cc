@@ -819,7 +819,7 @@ int test(FilterModule& filter_module, const FW_TEST& t)
     sParameters->set_value("action", zAction);
     sParameters->set_value("rules", file.name());
 
-    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, sParameters);
+    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", sParameters);
 
     if (sInstance.get())
     {

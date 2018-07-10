@@ -126,7 +126,7 @@ NullFilter::~NullFilter()
 }
 
 // static
-NullFilter* NullFilter::create(const char* zName, char**, MXS_CONFIG_PARAMETER* pParams)
+NullFilter* NullFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     NullFilter* pFilter = NULL;
 

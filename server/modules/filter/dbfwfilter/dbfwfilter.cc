@@ -1198,7 +1198,7 @@ Dbfw::~Dbfw()
 
 }
 
-Dbfw* Dbfw::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams)
+Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     Dbfw* rval = NULL;
     RuleList rules;

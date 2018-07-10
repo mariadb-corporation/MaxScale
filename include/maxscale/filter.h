@@ -84,12 +84,11 @@ typedef struct mxs_filter_object
      * other API functions.
      *
      * @param name    Name of the filter instance
-     * @param options Filter options
      * @param params  Filter parameters
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER *(*createInstance)(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+    MXS_FILTER *(*createInstance)(const char *name, MXS_CONFIG_PARAMETER *params);
 
     /**
      * Called to create a new user session within the filter

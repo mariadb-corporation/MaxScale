@@ -22,7 +22,7 @@ class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 public:
     ~CacheFilter();
 
-    static CacheFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+    static CacheFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     Cache& cache()
     {
@@ -48,7 +48,7 @@ private:
     CacheFilter(const CacheFilter&);
     CacheFilter& operator = (const CacheFilter&);
 
-    static bool process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
+    static bool process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
 
 private:
     CACHE_CONFIG         m_config;

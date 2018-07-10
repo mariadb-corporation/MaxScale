@@ -49,7 +49,6 @@ public:
 
     // Creates a new filter instance
     static BinlogFilter* create(const char* zName,
-                                char** pzOptions,
                                 MXS_CONFIG_PARAMETER* ppParams);
 
     // Creates a new session for this filter

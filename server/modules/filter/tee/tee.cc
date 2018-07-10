@@ -59,7 +59,7 @@ Tee::Tee(SERVICE* service, std::string user, std::string remote,
  *
  * @return The instance data for this new instance
  */
-Tee* Tee::create(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
+Tee* Tee::create(const char *name, MXS_CONFIG_PARAMETER *params)
 {
     SERVICE* service = config_get_service(params, "service");
     const char* source = config_get_string(params, "source");

@@ -205,7 +205,7 @@ public:
      *
      * @return New instance or NULL on error
      */
-    static Dbfw* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+    static Dbfw* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     /**
      * Create a new filter session

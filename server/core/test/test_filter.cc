@@ -83,9 +83,6 @@ test2()
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
     }
-    filter_add_option(f1, "option1");
-    filter_add_option(f1, "option2");
-    filter_add_option(f1, "option3");
     filter_add_parameter(f1, "name1", "value1");
     filter_add_parameter(f1, "name2", "value2");
     filter_add_parameter(f1, "name3", "value3");

@@ -56,7 +56,6 @@ BinlogFilter::~BinlogFilter()
 
 // static: filter create routine
 BinlogFilter* BinlogFilter::create(const char* zName,
-                                   char** pzOptions,
                                    MXS_CONFIG_PARAMETER* pParams)
 {
     return new BinlogFilter(pParams);

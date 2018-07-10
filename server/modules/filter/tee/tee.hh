@@ -32,7 +32,7 @@ class Tee: public mxs::Filter<Tee, TeeSession>
     const Tee& operator=(const Tee&);
 public:
 
-    static Tee* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+    static Tee* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
     TeeSession* newSession(MXS_SESSION* session);
     void diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;

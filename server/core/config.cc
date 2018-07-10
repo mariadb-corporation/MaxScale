@@ -3689,17 +3689,6 @@ int create_new_filter(CONFIG_CONTEXT *obj)
         if ((obj->element = filter_alloc(obj->object, module)))
         {
             MXS_FILTER_DEF* filter_def = (MXS_FILTER_DEF*)obj->element;
-            char *options = config_get_value(obj->parameters, CN_OPTIONS);
-            if (options)
-            {
-                char *lasts;
-                char *s = strtok_r(options, ",", &lasts);
-                while (s)
-                {
-                    filter_add_option(filter_def, s);
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
 
             const MXS_MODULE *mod = get_module(module, MODULE_FILTER);
 

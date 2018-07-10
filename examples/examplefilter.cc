@@ -50,7 +50,7 @@ ExampleFilter::~ExampleFilter()
 }
 
 // static
-ExampleFilter* ExampleFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams)
+ExampleFilter* ExampleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     return new ExampleFilter();
 }

@@ -54,8 +54,7 @@ public:
     RegexHintFilter(string user, SourceHost* source, const MappingArray& map,
                     int ovector_size);
     ~RegexHintFilter();
-    static RegexHintFilter* create(const char* zName, char** pzOptions,
-                                   MXS_CONFIG_PARAMETER* ppParams);
+    static RegexHintFilter* create(const char* zName,  MXS_CONFIG_PARAMETER* ppParams);
     RegexHintFSession* newSession(MXS_SESSION *session);
     void diagnostics(DCB* dcb);
     json_t* diagnostics_json() const;

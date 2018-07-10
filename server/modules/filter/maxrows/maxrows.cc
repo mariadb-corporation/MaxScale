@@ -37,9 +37,7 @@
 
 #include "maxrows.h"
 
-static MXS_FILTER *createInstance(const char *name,
-                                  char **options,
-                                  MXS_CONFIG_PARAMETER *);
+static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance,
                                       MXS_SESSION *session);
 static void    closeSession(MXS_FILTER *instance,
@@ -234,9 +232,7 @@ static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata);
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *createInstance(const char *name,
-                                  char **options,
-                                  MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
 {
     MAXROWS_INSTANCE *cinstance = static_cast<MAXROWS_INSTANCE*>(MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE)));
 

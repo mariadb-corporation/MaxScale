@@ -89,7 +89,7 @@ enum log_options
 };
 
 /* The filter entry points */
-static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
+static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -442,7 +442,7 @@ MXS_END_DECLS
  * @return The new filter instance, or NULL on error
  */
 static MXS_FILTER *
-createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
+createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
 {
     bool error = false;
     QlaInstance* my_instance = NULL;

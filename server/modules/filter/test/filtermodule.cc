@@ -27,12 +27,11 @@ namespace maxscale
 const char* FilterModule::zName = MODULE_FILTER;
 
 auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
-                                                              char** pzOptions,
                                                               MXS_CONFIG_PARAMETER* pParameters)
 {
     auto_ptr<Instance> sInstance;
 
-    MXS_FILTER* pFilter = m_pApi->createInstance(zName, pzOptions, pParameters);
+    MXS_FILTER* pFilter = m_pApi->createInstance(zName, pParameters);
 
     if (pFilter)
     {
@@ -43,10 +42,9 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
 }
 
 auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
-                                                              char** pzOptions,
                                                               std::auto_ptr<ConfigParameters> sParameters)
 {
-    return createInstance(zName, pzOptions, sParameters.get());
+    return createInstance(zName, sParameters.get());
 }
 
 //

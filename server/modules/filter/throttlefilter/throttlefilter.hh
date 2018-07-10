@@ -49,7 +49,7 @@ struct ThrottleConfig
 class ThrottleFilter : public maxscale::Filter<ThrottleFilter, ThrottleSession>
 {
 public:
-    static ThrottleFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams);
+    static ThrottleFilter* create(const char* zName, MXS_CONFIG_PARAMETER* pParams);
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator = (const ThrottleFilter&) = delete;
 

@@ -30,7 +30,7 @@
  * @file datastream.c - Streaming of bulk inserts
  */
 
-static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER*params);
+static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER*params);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -163,7 +163,7 @@ static const char load_data_template[] = "LOAD DATA LOCAL INFILE 'maxscale.data'
  * @return The instance data for this new instance
  */
 static MXS_FILTER *
-createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
+createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
 {
     DS_INSTANCE *my_instance;
 

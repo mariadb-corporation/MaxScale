@@ -320,7 +320,7 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
     sParameters->set_value("cached_data", "shared");
     sParameters->set_value("selects", "verify_cacheable");
 
-    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, sParameters);
+    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", sParameters);
 
     if (sInstance.get())
     {

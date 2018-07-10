@@ -137,11 +137,9 @@ public:
      * @return A new instance or NULL if creation failed.
      */
     std::auto_ptr<Instance> createInstance(const char* zName,
-                                           char** pzOptions,
                                            MXS_CONFIG_PARAMETER* pParameters);
 
     std::auto_ptr<Instance> createInstance(const char* zName,
-                                           char** pzOptions,
                                            std::auto_ptr<ConfigParameters> sParameters);
 
 private:
