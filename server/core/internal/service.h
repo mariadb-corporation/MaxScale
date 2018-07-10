@@ -29,12 +29,13 @@ MXS_BEGIN_DECLS
 /**
  * @brief Allocate a new service
  *
- * @param name  The service name
+ * @param name   The service name
  * @param router The router module this service uses
+ * @param params Service parameters
  *
  * @return The newly created service or NULL if an error occurred
  */
-SERVICE* service_alloc(const char *name, const char *router);
+SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params);
 
 /**
  * @brief Shut all services down

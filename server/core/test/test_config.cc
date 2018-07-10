@@ -202,9 +202,9 @@ int test_required_parameters()
     CONFIG_CONTEXT ctx = {};
     ctx.object = (char*)"";
 
-    TEST(missing_required_parameters(params, ctx.parameters));
+    TEST(missing_required_parameters(params, ctx.parameters, "test"));
     config_add_defaults(&ctx, params);
-    TEST(!missing_required_parameters(params, ctx.parameters));
+    TEST(!missing_required_parameters(params, ctx.parameters, "test"));
 
     config_parameter_free(ctx.parameters);
     ctx.parameters = NULL;
@@ -212,7 +212,7 @@ int test_required_parameters()
     config_add_param(&ctx, "p1", "1");
     config_add_param(&ctx, "p2", "1");
     config_add_param(&ctx, "p3", "1");
-    TEST(!missing_required_parameters(params, ctx.parameters));
+    TEST(!missing_required_parameters(params, ctx.parameters, "test"));
     config_parameter_free(ctx.parameters);
     return 0;
 }

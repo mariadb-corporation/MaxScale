@@ -75,8 +75,16 @@ static SERVICE  *allServices = NULL;
 static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
 
-SERVICE* service_alloc(const char *name, const char *router)
+SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
 {
+    MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
+
+    if (router_api == NULL)
+    {
+        MXS_ERROR("Unable to load router module '%s'", router);
+        return NULL;
+    }
+
     char *my_name = MXS_STRDUP(name);
     char *my_router = MXS_STRDUP(router);
     SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
@@ -91,59 +99,63 @@ SERVICE* service_alloc(const char *name, const char *router)
         return NULL;
     }
 
-    if ((service->router = (MXS_ROUTER_OBJECT*)load_module(my_router, MODULE_ROUTER)) == NULL)
-    {
-        char* home = get_libdir();
-        char* ldpath = getenv("LD_LIBRARY_PATH");
-
-        MXS_ERROR("Unable to load %s module \"%s\".\n\t\t\t"
-                  "      Ensure that lib%s.so exists in one of the "
-                  "following directories :\n\t\t\t      "
-                  "- %s\n%s%s",
-                  MODULE_ROUTER,
-                  my_router,
-                  my_router,
-                  home,
-                  ldpath ? "\t\t\t      - " : "",
-                  ldpath ? ldpath : "");
-        MXS_FREE(my_name);
-        MXS_FREE(my_router);
-        MXS_FREE(service);
-        MXS_FREE(rate_limits);
-        return NULL;
-    }
-
     const MXS_MODULE* module = get_module(my_router, MODULE_ROUTER);
     ss_dassert(module);
 
+    service->router = router_api;
     service->capabilities = module->module_capabilities;
-    service->max_retry_interval = SERVICE_MAX_RETRY_INTERVAL;
     service->client_count = 0;
     service->n_dbref = 0;
     service->name = my_name;
     service->routerModule = my_router;
-    service->users_from_all = false;
-    service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
-    service->retry_start = true;
-    service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
     service->svc_config_param = NULL;
-    service->log_auth_warnings = true;
-    service->strip_db_esc = true;
     service->rate_limits = rate_limits;
     service->stats.started = time(0);
     service->stats.n_failed_starts = 0;
     service->state = SERVICE_STATE_ALLOC;
     spinlock_init(&service->spin);
 
-    // Load router default parameters
-    for (int i = 0; module->parameters[i].name; i++)
+    service->max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
+    service->users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
+    service->localhost_match_wildcard_host = config_get_bool(params, CN_LOCALHOST_MATCH_WILDCARD_HOST);
+    service->retry_start = config_get_bool(params, CN_RETRY_ON_FAILURE);
+    service->enable_root = config_get_bool(params, CN_ENABLE_ROOT_USER);
+    service->conn_idle_timeout = config_get_integer(params, CN_CONNECTION_TIMEOUT);
+    service->max_connections = config_get_integer(params, CN_MAX_CONNECTIONS);
+    service->log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
+    service->strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
+    service->session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
+
+    serviceWeightBy(service, config_get_string(params, CN_WEIGHTBY));
+    serviceSetUser(service, config_get_string(params, CN_USER),
+                   config_get_string(params, CN_PASSWORD));
+
+    std::string version_string = config_get_string(params, CN_VERSION_STRING);
+
+    if (!version_string.empty())
     {
-        if (module->parameters[i].default_value)
+        /** Add the 5.5.5- string to the start of the version string if
+         * the version string starts with "10.".
+         * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
+        if (version_string[0] != '5')
         {
-            service_add_parameter(service, module->parameters[i].name,
-                                  module->parameters[i].default_value);
+            version_string = "5.5.5-" + version_string;
         }
+
+        serviceSetVersionString(service, version_string.c_str());
     }
+    else if (config_get_global_options()->version_string)
+    {
+        serviceSetVersionString(service, config_get_global_options()->version_string);
+    }
+
+    if (service->conn_idle_timeout)
+    {
+        dcb_enable_session_timeouts();
+    }
+
+    // Store parameters in the service
+    service_add_parameters(service, params);
 
     spinlock_acquire(&service_spin);
     service->next = allServices;

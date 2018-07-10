@@ -139,6 +139,7 @@ const char CN_SERVER[]                        = "server";
 const char CN_SERVICES[]                      = "services";
 const char CN_SERVICE[]                       = "service";
 const char CN_SESSIONS[]                      = "sessions";
+const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
 const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
 const char CN_SOCKET[]                        = "socket";
 const char CN_SQL_MODE[]                      = "sql_mode";
@@ -162,7 +163,6 @@ const char CN_USERS[]                         = "users";
 const char CN_USERS_REFRESH_TIME[]            = "users_refresh_time";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
-const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
 const char CN_WRITEQ_HIGH_WATER[]             = "writeq_high_water";
 const char CN_WRITEQ_LOW_WATER[]              = "writeq_low_water";
 
@@ -224,103 +224,98 @@ char *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 static CONFIG_CONTEXT config_context;
 
-const char *config_service_params[] =
+const MXS_MODULE_PARAM config_service_params[] =
 {
-    CN_TYPE,
-    CN_ROUTER,
-    CN_ROUTER_OPTIONS,
-    CN_SERVERS,
-    CN_MONITOR,
-    CN_USER,
-    "passwd", // DEPRECATE: See config_get_password.
-    CN_PASSWORD,
-    CN_ENABLE_ROOT_USER,
-    CN_MAX_RETRY_INTERVAL,
-    CN_MAX_CONNECTIONS,
-    "max_queued_connections", //TODO: Fix this
-    "queued_connection_timeout", // TODO: Fix this
-    CN_CONNECTION_TIMEOUT,
-    CN_AUTH_ALL_SERVERS,
-    CN_STRIP_DB_ESC,
-    CN_LOCALHOST_MATCH_WILDCARD_HOST,
-    CN_VERSION_STRING,
-    CN_FILTERS,
-    CN_WEIGHTBY,
-    CN_LOG_AUTH_WARNINGS,
-    CN_RETRY_ON_FAILURE,
-    CN_SESSION_TRACK_TRX_STATE,
-    NULL
+    {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_ROUTER, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_ROUTER_OPTIONS, MXS_MODULE_PARAM_STRING},
+    {CN_SERVERS, MXS_MODULE_PARAM_STRING},
+    {CN_USER, MXS_MODULE_PARAM_STRING},     // Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_PASSWORD, MXS_MODULE_PARAM_STRING}, // Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_ENABLE_ROOT_USER, MXS_MODULE_PARAM_BOOL, "false"},
+    {CN_MAX_RETRY_INTERVAL, MXS_MODULE_PARAM_COUNT, "3600"},
+    {CN_MAX_CONNECTIONS, MXS_MODULE_PARAM_COUNT, "0"},
+    {CN_CONNECTION_TIMEOUT, MXS_MODULE_PARAM_COUNT, "0"},
+    {CN_AUTH_ALL_SERVERS, MXS_MODULE_PARAM_BOOL, "false"},
+    {CN_STRIP_DB_ESC, MXS_MODULE_PARAM_BOOL, "true"},
+    {CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true"},
+    {CN_VERSION_STRING, MXS_MODULE_PARAM_STRING},
+    {CN_FILTERS, MXS_MODULE_PARAM_STRING},
+    {CN_WEIGHTBY, MXS_MODULE_PARAM_STRING},
+    {CN_LOG_AUTH_WARNINGS, MXS_MODULE_PARAM_BOOL, "true"},
+    {CN_RETRY_ON_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
+    {CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"},
+    {NULL}
 };
 
-const char *config_listener_params[] =
+const MXS_MODULE_PARAM config_listener_params[] =
 {
-    CN_AUTHENTICATOR_OPTIONS,
-    CN_TYPE,
-    CN_SERVICE,
-    CN_PROTOCOL,
-    CN_PORT,
-    CN_ADDRESS,
-    CN_SOCKET,
-    CN_AUTHENTICATOR,
-    CN_SSL_CERT,
-    CN_SSL_CA_CERT,
-    CN_SSL,
-    CN_SSL_KEY,
-    CN_SSL_VERSION,
-    CN_SSL_CERT_VERIFY_DEPTH,
-    CN_SSL_VERIFY_PEER_CERTIFICATE,
-    NULL
+    {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_SERVICE, MXS_MODULE_PARAM_SERVICE, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_PORT, MXS_MODULE_PARAM_COUNT}, // Either port or socket, checked when created
+    {CN_SOCKET, MXS_MODULE_PARAM_STRING},
+    {CN_AUTHENTICATOR_OPTIONS, MXS_MODULE_PARAM_STRING},
+    {CN_PROTOCOL, MXS_MODULE_PARAM_STRING, "MariaDBClient"},
+    {CN_ADDRESS, MXS_MODULE_PARAM_STRING, "::"},
+    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING, "MySQLAuth"},
+    {CN_SSL, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_CERT, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_KEY, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_STRING},
+    {NULL}
 };
 
-const char *config_monitor_params[] =
+const MXS_MODULE_PARAM config_monitor_params[] =
 {
-    CN_TYPE,
-    CN_MODULE,
-    CN_SERVERS,
-    CN_USER,
-    "passwd",   // DEPRECATE: See config_get_password.
-    CN_PASSWORD,
-    CN_SCRIPT,
-    CN_EVENTS,
-    CN_MONITOR_INTERVAL,
-    CN_JOURNAL_MAX_AGE,
-    CN_SCRIPT_TIMEOUT,
-    CN_BACKEND_CONNECT_TIMEOUT,
-    CN_BACKEND_READ_TIMEOUT,
-    CN_BACKEND_WRITE_TIMEOUT,
-    CN_BACKEND_CONNECT_ATTEMPTS,
-    CN_DISK_SPACE_THRESHOLD,
-    CN_DISK_SPACE_CHECK_INTERVAL,
-    NULL
+    {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_MODULE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_USER, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_PASSWORD, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_SERVERS, MXS_MODULE_PARAM_STRING},
+    {CN_SCRIPT, MXS_MODULE_PARAM_STRING},
+    {CN_EVENTS, MXS_MODULE_PARAM_STRING},
+    {CN_MONITOR_INTERVAL, MXS_MODULE_PARAM_COUNT, "2000"},
+    {CN_JOURNAL_MAX_AGE, MXS_MODULE_PARAM_COUNT, "28800"},
+    {CN_SCRIPT_TIMEOUT, MXS_MODULE_PARAM_COUNT, "90"},
+    {CN_BACKEND_CONNECT_TIMEOUT, MXS_MODULE_PARAM_COUNT, "3"},
+    {CN_BACKEND_READ_TIMEOUT, MXS_MODULE_PARAM_COUNT, "1"},
+    {CN_BACKEND_WRITE_TIMEOUT, MXS_MODULE_PARAM_COUNT, "2"},
+    {CN_BACKEND_CONNECT_ATTEMPTS, MXS_MODULE_PARAM_COUNT, "1"},
+    {CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING},
+    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT},
+    {NULL}
 };
 
-const char *config_filter_params[] =
+const MXS_MODULE_PARAM config_filter_params[] =
 {
-    CN_TYPE,
-    CN_MODULE,
-    NULL
+    {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_MODULE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {NULL}
 };
 
-const char *server_params[] =
+const MXS_MODULE_PARAM server_params[] =
 {
-    CN_TYPE,
-    CN_PROTOCOL,
-    CN_PORT,
-    CN_ADDRESS,
-    CN_AUTHENTICATOR,
-    CN_MONITORUSER,
-    CN_MONITORPW,
-    CN_PERSISTPOOLMAX,
-    CN_PERSISTMAXTIME,
-    CN_SSL_CERT,
-    CN_SSL_CA_CERT,
-    CN_SSL,
-    CN_SSL_KEY,
-    CN_SSL_VERSION,
-    CN_SSL_CERT_VERIFY_DEPTH,
-    CN_SSL_VERIFY_PEER_CERTIFICATE,
-    CN_PROXY_PROTOCOL,
-    NULL
+    {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_ADDRESS, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+    {CN_PROTOCOL, MXS_MODULE_PARAM_STRING, "MariaDBBackend"},
+    {CN_PORT, MXS_MODULE_PARAM_COUNT, "3306"},
+    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING, "MySQLBackendAuth"},
+    {CN_MONITORUSER, MXS_MODULE_PARAM_STRING},
+    {CN_MONITORPW, MXS_MODULE_PARAM_STRING},
+    {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT, "0"},
+    {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_COUNT, "0"},
+    {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL, "false"},
+    {CN_SSL, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_CERT, MXS_MODULE_PARAM_PATH},
+    {CN_SSL_KEY, MXS_MODULE_PARAM_PATH},
+    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_PATH},
+    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING},
+    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL},
+    {NULL}
 };
 
 /*
@@ -2328,7 +2323,8 @@ void config_set_global_defaults()
  * @return True if at least one of the required parameters is missing
  */
 static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
-                                        MXS_CONFIG_PARAMETER *params)
+                                        MXS_CONFIG_PARAMETER *params,
+                                        const char* name)
 {
     bool rval = false;
 
@@ -2339,7 +2335,8 @@ static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
             if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) &&
                 config_get_param(params, mod_params[i].name) == NULL)
             {
-                MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
+                MXS_ERROR("Mandatory parameter '%s' is not defined for '%s'.",
+                          mod_params[i].name, name);
                 rval = true;
             }
         }
@@ -2424,7 +2421,7 @@ check_config_objects(CONFIG_CONTEXT *context)
             continue;
         }
 
-        const char **param_set = NULL;
+        const MXS_MODULE_PARAM* param_set = NULL;
         const char *module = NULL;
         const char *type;
         const char *module_type = NULL;
@@ -2464,16 +2461,9 @@ check_config_objects(CONFIG_CONTEXT *context)
             MXS_CONFIG_PARAMETER *params = obj->parameters;
             while (params)
             {
-                int found = 0;
-                for (int i = 0; param_set[i]; i++)
-                {
-                    if (!strcmp(params->name, param_set[i]))
-                    {
-                        found = 1;
-                    }
-                }
+                bool ok = config_param_is_valid(param_set, params->name, params->value, context);
 
-                if (found == 0)
+                if (!ok)
                 {
                     if (mod == NULL ||
                         !config_param_is_valid(mod->parameters, params->name, params->value, context))
@@ -2505,9 +2495,14 @@ check_config_objects(CONFIG_CONTEXT *context)
             {
                 config_remove_param(obj, it->c_str());
             }
+
+            if (missing_required_parameters(param_set, obj->parameters, obj->object))
+            {
+                rval = false;
+            }
         }
 
-        if (mod && missing_required_parameters(mod->parameters, obj->parameters))
+        if (mod && missing_required_parameters(mod->parameters, obj->parameters, obj->object))
         {
             rval = false;
         }
@@ -2985,13 +2980,13 @@ static json_t* param_value_json(const MXS_CONFIG_PARAMETER* param,
 }
 
 void config_add_module_params_json(const MXS_MODULE* mod, MXS_CONFIG_PARAMETER* parameters,
-                                   const char** type_params, json_t* output)
+                                   const MXS_MODULE_PARAM* type_params, json_t* output)
 {
     set<string> param_set;
 
-    for (int i = 0; type_params[i]; i++)
+    for (int i = 0; type_params[i].name; i++)
     {
-        param_set.insert(type_params[i]);
+        param_set.insert(type_params[i].name);
     }
 
     for (MXS_CONFIG_PARAMETER* p = parameters; p; p = p->next)
@@ -3010,149 +3005,39 @@ void config_add_module_params_json(const MXS_MODULE* mod, MXS_CONFIG_PARAMETER* 
  */
 int create_new_service(CONFIG_CONTEXT *obj)
 {
-    char *router = config_get_value(obj->parameters, CN_ROUTER);
-    if (router == NULL)
-    {
-        obj->element = NULL;
-        MXS_ERROR("No router defined for service '%s'.", obj->object);
-        return 1;
-    }
-    else if ((obj->element = service_alloc(obj->object, router)) == NULL)
-    {
-        MXS_ERROR("Service creation failed.");
-        return 1;
-    }
-
-    SERVICE* service = (SERVICE*) obj->element;
-    int error_count = 0;
-    MXS_CONFIG_PARAMETER* param;
-
-    char *retry = config_get_value(obj->parameters, CN_RETRY_ON_FAILURE);
-    if (retry)
-    {
-        serviceSetRetryOnFailure(service, retry);
-    }
-
-    char *enable_root_user = config_get_value(obj->parameters, CN_ENABLE_ROOT_USER);
-    if (enable_root_user)
-    {
-        serviceEnableRootUser(service, config_truth_value(enable_root_user));
-    }
-
-    char *max_retry_interval = config_get_value(obj->parameters, CN_MAX_RETRY_INTERVAL);
-
-    if (max_retry_interval)
-    {
-        char *endptr;
-        long val = strtol(max_retry_interval, &endptr, 10);
-
-        if (val && *endptr == '\0')
-        {
-            service_set_retry_interval(service, val);
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for 'max_retry_interval': %s", max_retry_interval);
-            error_count++;
-        }
-    }
-
-    char *connection_timeout = config_get_value(obj->parameters, CN_CONNECTION_TIMEOUT);
-    if (connection_timeout)
-    {
-        serviceSetTimeout(service, atoi(connection_timeout));
-    }
-
-    const char *max_connections = config_get_value_string(obj->parameters, CN_MAX_CONNECTIONS);
-    const char *max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
-    const char *queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
-    if (strlen(max_connections))
-    {
-        serviceSetConnectionLimits(service, atoi(max_connections),
-                                   atoi(max_queued_connections), atoi(queued_connection_timeout));
-    }
-
-    char *auth_all_servers = config_get_value(obj->parameters, CN_AUTH_ALL_SERVERS);
-    if (auth_all_servers)
-    {
-        serviceAuthAllServers(service, config_truth_value(auth_all_servers));
-    }
-
-    char *strip_db_esc = config_get_value(obj->parameters, CN_STRIP_DB_ESC);
-    if (strip_db_esc)
-    {
-        serviceStripDbEsc(service, config_truth_value(strip_db_esc));
-    }
-
-    char *weightby = config_get_value(obj->parameters, CN_WEIGHTBY);
-    if (weightby)
-    {
-        serviceWeightBy(service, weightby);
-    }
-
-    char *wildcard = config_get_value(obj->parameters, CN_LOCALHOST_MATCH_WILDCARD_HOST);
-    if (wildcard)
-    {
-        serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(wildcard));
-    }
+    const char *router = config_get_string(obj->parameters, CN_ROUTER);
+    ss_dassert(*router);
 
     char *user = config_get_value(obj->parameters, CN_USER);
-    char *auth = config_get_password(obj->parameters);
+    char *auth = config_get_value(obj->parameters, CN_PASSWORD);
+    const MXS_MODULE* module = get_module(router, MODULE_ROUTER);
+    ss_dassert(module);
 
-    if (user && auth)
+    if ((!user || !auth) &&
+        !rcap_type_required(module->module_capabilities, RCAP_TYPE_NO_AUTH))
     {
-        serviceSetUser(service, user, auth);
-    }
-    else if (!rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH))
-    {
-        error_count++;
-        MXS_ERROR("Service '%s' is missing %s%s%s.",
-                  obj->object,
+        MXS_ERROR("Service '%s' is missing %s%s%s.", obj->object,
                   user ? "" : "the 'user' parameter",
                   !user && !auth ? " and " : "",
-                  auth ? "" : "the 'password' or 'passwd' parameter");
+                  auth ? "" : "the 'password' parameter");
+        return 1;
     }
 
-    char *log_auth_warnings = config_get_value(obj->parameters, CN_LOG_AUTH_WARNINGS);
-    if (log_auth_warnings)
+    config_add_defaults(obj, config_service_params);
+    config_add_defaults(obj, module->parameters);
+
+    SERVICE* service = service_alloc(obj->object, router, obj->parameters);
+
+    if (service)
     {
-        int truthval = config_truth_value(log_auth_warnings);
-        if (truthval != -1)
-        {
-            service->log_auth_warnings = (bool) truthval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for 'log_auth_warnings': %s", log_auth_warnings);
-        }
+        obj->element = service;
     }
-
-    char *version_string = config_get_value(obj->parameters, CN_VERSION_STRING);
-    if (version_string)
+    else
     {
-        /** Add the 5.5.5- string to the start of the version string if
-         * the version string starts with "10.".
-         * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-        if (version_string[0] != '5')
-        {
-            size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
-            char ver[len];
-            snprintf(ver, sizeof(ver), "5.5.5-%s", version_string);
-            serviceSetVersionString(service, ver);
-        }
-        else
-        {
-            serviceSetVersionString(service, version_string);
-        }
-    }
-    else if (gateway.version_string)
-    {
-        serviceSetVersionString(service, gateway.version_string);
+        MXS_ERROR("Service creation failed.");
     }
 
-    service->session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
-
-    return error_count;
+    return service ? 0 : 1;
 }
 
 /**
@@ -3162,9 +3047,9 @@ int create_new_service(CONFIG_CONTEXT *obj)
  */
 bool is_normal_server_parameter(const char *param)
 {
-    for (int i = 0; server_params[i]; i++)
+    for (int i = 0; server_params[i].name; i++)
     {
-        if (strcmp(param, server_params[i]) == 0)
+        if (strcmp(param, server_params[i].name) == 0)
         {
             return true;
         }

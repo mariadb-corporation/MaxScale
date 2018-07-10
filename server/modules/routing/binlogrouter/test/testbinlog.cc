@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
     load_module("MySQLBackendAuth", MODULE_AUTHENTICATOR);
 
-    if ((service = service_alloc("test_service", "binlogrouter")) == NULL)
+    if ((service = service_alloc("test_service", "binlogrouter", NULL)) == NULL)
     {
         printf("Failed to allocate 'service' object\n");
         return 1;

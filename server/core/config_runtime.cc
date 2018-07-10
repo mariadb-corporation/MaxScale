@@ -1808,11 +1808,11 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
         {
             /** Create a set of accepted service parameters */
             StringSet paramset;
-            for (int i = 0; config_service_params[i]; i++)
+            for (int i = 0; config_service_params[i].name; i++)
             {
-                if (is_dynamic_param(config_service_params[i]))
+                if (is_dynamic_param(config_service_params[i].name))
                 {
-                    paramset.insert(config_service_params[i]);
+                    paramset.insert(config_service_params[i].name);
                 }
             }
 

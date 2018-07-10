@@ -39,13 +39,13 @@ enum
     MAX_PARAM_LEN = 256
 };
 
-/** Object type specific parameter name lists */
-extern const char *config_service_params[];
-extern const char *config_listener_params[];
-extern const char *config_monitor_params[];
-extern const char *config_filter_params[];
-extern const char *config_server_params[];
-extern const char *config_pre_parse_global_params[];
+/** Object type specific parameter lists */
+extern const MXS_MODULE_PARAM config_service_params[];
+extern const MXS_MODULE_PARAM config_listener_params[];
+extern const MXS_MODULE_PARAM config_monitor_params[];
+extern const MXS_MODULE_PARAM config_filter_params[];
+extern const MXS_MODULE_PARAM config_server_params[];
+extern const char* config_pre_parse_global_params[];
 
 /**
  * Initialize the configuration subsystem
@@ -167,7 +167,7 @@ bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
  */
 void config_add_module_params_json(const MXS_MODULE* mod,
                                    MXS_CONFIG_PARAMETER* parameters,
-                                   const char** type_params,
+                                   const MXS_MODULE_PARAM* type_params,
                                    json_t* output);
 
 /**

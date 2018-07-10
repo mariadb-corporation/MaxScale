@@ -58,12 +58,12 @@ test1()
     /* Service tests */
     ss_dfprintf(stderr,
                 "testservice : creating service called MyService with router nonexistent");
-    service = service_alloc("MyService", "non-existent");
+    service = service_alloc("MyService", "non-existent", NULL);
     ss_info_dassert(NULL == service, "New service with invalid router should be null");
     ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
     set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
-    service = service_alloc("MyService", "readconnroute");
+    service = service_alloc("MyService", "readconnroute", NULL);
 
     ss_info_dassert(NULL != service, "New service with valid router must not be null");
     ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
