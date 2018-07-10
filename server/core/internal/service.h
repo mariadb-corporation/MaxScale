@@ -121,6 +121,17 @@ void service_update_weights();
 void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
 
 /**
+ * @brief Add parameters to a service
+ *
+ * A copy of @c param is added to @c service.
+ *
+ * @param service Service where the parameters are added
+ * @param key     Parameter name
+ * @param value   Parameter value
+ */
+void service_add_parameter(SERVICE *service, const char* key, const char* value);
+
+/**
  * @brief Remove service parameter
  *
  * @param service Service to modify

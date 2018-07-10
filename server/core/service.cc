@@ -130,19 +130,20 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->log_auth_warnings = true;
     service->strip_db_esc = true;
     service->rate_limits = rate_limits;
-    if (service->name == NULL || service->routerModule == NULL)
-    {
-        if (service->name)
-        {
-            MXS_FREE(service->name);
-        }
-        MXS_FREE(service);
-        return NULL;
-    }
     service->stats.started = time(0);
     service->stats.n_failed_starts = 0;
     service->state = SERVICE_STATE_ALLOC;
     spinlock_init(&service->spin);
+
+    // Load router default parameters
+    for (int i = 0; module->parameters[i].name; i++)
+    {
+        if (module->parameters[i].default_value)
+        {
+            service_add_parameter(service, module->parameters[i].name,
+                                  module->parameters[i].default_value);
+        }
+    }
 
     spinlock_acquire(&service_spin);
     service->next = allServices;
@@ -1562,7 +1563,7 @@ void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param)
     }
 }
 
-void service_add_parameters(SERVICE *service, const char* key, const char* value)
+void service_add_parameter(SERVICE *service, const char* key, const char* value)
 {
     MXS_CONFIG_PARAMETER p{const_cast<char*>(key), const_cast<char*>(value), nullptr};
     service_add_parameters(service, &p);
@@ -1615,7 +1616,7 @@ void service_replace_parameter(SERVICE *service, const char* key, const char* va
         }
     }
 
-    service_add_parameters(service, key, value);
+    service_add_parameter(service, key, value);
 }
 
 /**

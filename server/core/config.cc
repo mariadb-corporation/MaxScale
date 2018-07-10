@@ -3067,18 +3067,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
     }
 
     service->session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
-    /** Store the configuration parameters for the service */
-    const MXS_MODULE *mod = get_module(router, MODULE_ROUTER);
-
-    if (mod)
-    {
-        config_add_defaults(obj, mod->parameters);
-        service_add_parameters(service, obj->parameters);
-    }
-    else
-    {
-        error_count++;
-    }
 
     return error_count;
 }
