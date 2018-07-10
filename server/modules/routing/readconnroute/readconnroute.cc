@@ -171,21 +171,8 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
     bool ok = true;
-    std::string optstr = config_get_string(params, "router_options");
-    std::vector<std::string> options;
 
-    while (!optstr.empty())
-    {
-        size_t pos = optstr.find(',');
-        options.push_back(mxs::trimmed_copy(optstr.substr(0, pos)));
-        optstr.erase(0, pos);
-        if (pos != optstr.npos)
-        {
-            optstr.erase(0, 1);
-        }
-    }
-
-    for (auto&& opt: options)
+    for (auto&& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {
