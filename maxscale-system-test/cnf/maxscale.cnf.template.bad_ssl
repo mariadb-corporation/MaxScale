@@ -16,7 +16,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 max_slave_connections=100%
-router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS
+slave_selection_criteria=LEAST_CURRENT_OPERATIONS
 ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem

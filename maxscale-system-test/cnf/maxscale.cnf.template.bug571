@@ -33,7 +33,7 @@ user=maxskysql
 password=skysql
 max_slave_connections=100%
 use_sql_variables_in=all
-router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
+slave_selection_criteria=LEAST_BEHIND_MASTER
 filters=hints|regex|r2
 
 

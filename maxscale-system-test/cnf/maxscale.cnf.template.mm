@@ -17,7 +17,7 @@ router= readwritesplit
 servers=server1,     server2
 user=maxskysql
 password=skysql
-router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
 [Read Connection Router Slave]
 type=service

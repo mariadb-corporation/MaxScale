@@ -16,7 +16,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 weightby=serversize_rws
-router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_connections=1
 user=maxskysql
 password=skysql

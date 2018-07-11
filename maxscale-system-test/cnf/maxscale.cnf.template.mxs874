@@ -14,7 +14,7 @@ detect_stale_master=false
 type=service
 router=readwritesplit
 servers=server1,server2,server3
-router_options=disable_sescmd_history=false
+disable_sescmd_history=false
 user=maxskysql
 password=skysql
 max_slave_connections=1

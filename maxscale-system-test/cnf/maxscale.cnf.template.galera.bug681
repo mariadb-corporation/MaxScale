@@ -25,7 +25,7 @@ version_string=MariaDBEC-10.0.14
 localhost_match_wildcard_host=1
 max_slave_connections=10%
 #max_slave_replication_lag=30
-#router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
+#slave_selection_criteria=LEAST_BEHIND_MASTER
 
 [Read Connection Router]
 type=service

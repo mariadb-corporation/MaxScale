@@ -16,7 +16,7 @@ max_slave_connections=1
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-router_options=disable_sescmd_history=false
+disable_sescmd_history=false
 
 [Read Connection Router Slave]
 type=service
