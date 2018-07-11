@@ -418,30 +418,54 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     return valid;
 }
 
+static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
+{
+    if (strcmp(type, CN_SERVICE) == 0)
+    {
+        return config_service_params;
+    }
+    else if (strcmp(type, CN_LISTENER) == 0)
+    {
+        return config_listener_params;
+    }
+    else if (strcmp(type, CN_MONITOR) == 0)
+    {
+        return config_monitor_params;
+    }
+    else if (strcmp(type, CN_FILTER) == 0)
+    {
+        return config_filter_params;
+    }
+
+    MXS_NOTICE("Module type with no default parameters used: %s", type);
+    ss_info_dassert(!true, "Module type with no default parameters used");
+    return NULL;
+}
+
 /**
  * @brief Add default parameters to a monitor
  *
  * @param monitor Monitor to modify
  */
-static void add_monitor_defaults(MXS_MONITOR *monitor)
+static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_type,
+                                           const char* object_type)
 {
-    /** Inject the default module parameters in case we only deleted
-     * a parameter */
-    CONFIG_CONTEXT ctx = {};
-    ctx.object = (char*)"";
-    const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
+    MXS_CONFIG_PARAMETER* rval = NULL;
+    CONFIG_CONTEXT ctx = {(char*)""};
 
-    if (mod)
+    if (const MXS_MODULE* mod = get_module(name, module_type))
     {
+        config_add_defaults(&ctx, get_type_parameters(object_type));
         config_add_defaults(&ctx, mod->parameters);
-        monitor_add_parameters(monitor, ctx.parameters);
-        config_parameter_free(ctx.parameters);
+        rval = ctx.parameters;
     }
     else
     {
-        MXS_ERROR("Failed to load module '%s'. See previous error messages for more details.",
-                  monitor->module_name);
+        MXS_ERROR("Failed to load module '%s'. See previous error messages for "
+                  "more details.", name);
     }
+
+    return rval;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
@@ -975,15 +999,18 @@ bool runtime_create_monitor(const char *name, const char *module)
         {
             MXS_DEBUG("Repurposed monitor '%s'", name);
         }
-        else if ((monitor = monitor_create(name, module)) == NULL)
+        else if (MXS_CONFIG_PARAMETER* params = load_defaults(module, MODULE_MONITOR, CN_MONITOR))
         {
-            runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+            if ((monitor = monitor_create(name, module, params)) == NULL)
+            {
+                runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+            }
+
+            config_parameter_free(params);
         }
 
         if (monitor)
         {
-            add_monitor_defaults(monitor);
-
             if (monitor_serialize(monitor))
             {
                 MXS_NOTICE("Created monitor '%s'", name);

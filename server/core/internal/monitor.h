@@ -47,7 +47,7 @@ typedef enum
     MONITOR_CONNECT_ATTEMPTS = 3
 } monitor_timeouts_t;
 
-MXS_MONITOR *monitor_create(const char *, const char *);
+MXS_MONITOR *monitor_create(const char *, const char *, MXS_CONFIG_PARAMETER* params);
 void monitor_destroy(MXS_MONITOR *);
 
 void monitor_start(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);

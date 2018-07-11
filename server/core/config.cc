@@ -212,7 +212,7 @@ static int config_get_release_string(char* release);
 bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
-int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers);
+int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers);
 int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
@@ -285,7 +285,7 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     {CN_BACKEND_WRITE_TIMEOUT, MXS_MODULE_PARAM_COUNT, "2"},
     {CN_BACKEND_CONNECT_ATTEMPTS, MXS_MODULE_PARAM_COUNT, "1"},
     {CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING},
-    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT},
+    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT, "0"},
     {NULL}
 };
 
@@ -1144,7 +1144,7 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (!strcmp(type, CN_MONITOR))
                 {
-                    error_count += create_new_monitor(context, obj, monitored_servers);
+                    error_count += create_new_monitor(obj, monitored_servers);
                 }
                 else if (strcmp(type, CN_SERVER) != 0 && strcmp(type, CN_FILTER) != 0)
                 {
@@ -3287,239 +3287,74 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
 
 /**
  * Create a new monitor
- * @param context The complete configuration context
- * @param obj Monitor configuration context
+ *
+ * @param obj               Monitor configuration context
  * @param monitored_servers Set containing the servers that are already monitored
+ *
  * @return Number of errors
  */
-int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers)
+int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers)
 {
-    int error_count = 0;
+    bool err = false;
 
-    char *module = config_get_value(obj->parameters, CN_MODULE);
-    if (module)
+    // TODO: Use server list parameter type for this
+    for (auto&& s: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ", \t"))
     {
-        if ((obj->element = monitor_create(obj->object, module)) == NULL)
+        SERVER* server = server_find_by_unique_name(s.c_str());
+
+        if (!server)
         {
-            MXS_ERROR("Failed to create monitor '%s'.", obj->object);
-            error_count++;
+            MXS_ERROR("Unable to find server '%s' that is configured in "
+                      "the monitor '%s'.", s.c_str(), obj->object);
+            err = true;
         }
+        else if (monitored_servers.insert(s.c_str()).second == false)
+        {
+            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                        "This will cause undefined behavior.", s.c_str());
+        }
+    }
+
+    if (err)
+    {
+        return 1;
+    }
+
+    const char* module = config_get_string(obj->parameters, CN_MODULE);
+    ss_dassert(module);
+
+    if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
+    {
+        config_add_defaults(obj, config_monitor_params);
+        config_add_defaults(obj, mod->parameters);
     }
     else
     {
-        obj->element = NULL;
-        MXS_ERROR("Monitor '%s' is missing the required 'module' parameter.", obj->object);
-        error_count++;
+        MXS_ERROR("Unable to load monitor module '%s'.", module);
+        return 1;
     }
 
-    char *servers = config_get_value(obj->parameters, CN_SERVERS);
+    MXS_MONITOR* monitor = monitor_create(obj->object, module, obj->parameters);
 
-    if (error_count == 0)
+    if (monitor == NULL)
     {
-        MXS_MONITOR* monitor = (MXS_MONITOR*)obj->element;
-        const MXS_MODULE *mod = get_module(module, MODULE_MONITOR);
+        MXS_ERROR("Failed to create monitor '%s'.", obj->object);
+        return 1;
+    }
 
-        if (mod)
-        {
-            config_add_defaults(obj, mod->parameters);
-            monitor_add_parameters(monitor, obj->parameters);
-        }
-        else
-        {
-            error_count++;
-        }
+    obj->element = monitor;
 
-        char *interval_str = config_get_value(obj->parameters, CN_MONITOR_INTERVAL);
-        if (interval_str)
-        {
-            char *endptr;
-            long interval = strtol(interval_str, &endptr, 0);
-            /* The interval must be >0 because it is used as a divisor.
-                Perhaps a greater minimum value should be added? */
-            if (*endptr == '\0' && interval > 0)
-            {
-                monitor_set_interval(monitor, (unsigned long)interval);
-            }
-            else
-            {
-                MXS_NOTICE("Invalid '%s' parameter for monitor '%s', "
-                           "using default value of %d milliseconds.",
-                           CN_MONITOR_INTERVAL, obj->object, DEFAULT_MONITOR_INTERVAL);
-            }
-        }
-        else
-        {
-            MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
-                       "using default value of %d milliseconds.",
-                       obj->object, CN_MONITOR_INTERVAL, DEFAULT_MONITOR_INTERVAL);
-        }
+    int error_count = 0;
 
-        char *journal_age = config_get_value(obj->parameters, CN_JOURNAL_MAX_AGE);
-        if (journal_age)
-        {
-            char *endptr;
-            long interval = strtol(journal_age, &endptr, 0);
+    // TODO: Parse this in the configuration
+    const char* dst = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
 
-            if (*endptr == '\0' && interval > 0)
-            {
-                monitor_set_journal_max_age(monitor, (time_t)interval);
-            }
-            else
-            {
-                error_count++;
-                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
-                           CN_JOURNAL_MAX_AGE, obj->object);
-            }
-        }
-        else
+    if (dst)
+    {
+        if (!monitor_set_disk_space_threshold(monitor, dst))
         {
-            MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
-                       "using default value of %d seconds.",
-                       obj->object, CN_JOURNAL_MAX_AGE, DEFAULT_JOURNAL_MAX_AGE);
-        }
-
-        char *script_timeout = config_get_value(obj->parameters, CN_SCRIPT_TIMEOUT);
-        if (script_timeout)
-        {
-            char *endptr;
-            long interval = strtol(script_timeout, &endptr, 0);
-
-            if (*endptr == '\0' && interval > 0)
-            {
-                monitor_set_script_timeout(monitor, (uint32_t)interval);
-            }
-            else
-            {
-                error_count++;
-                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
-                           CN_SCRIPT_TIMEOUT, obj->object);
-            }
-        }
-        else
-        {
-            MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
-                       "using default value of %d seconds.",
-                       obj->object, CN_SCRIPT_TIMEOUT, DEFAULT_SCRIPT_TIMEOUT);
-        }
-
-        char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);
-        if (connect_timeout)
-        {
-            if (!monitor_set_network_timeout(monitor, MONITOR_CONNECT_TIMEOUT,
-                                          atoi(connect_timeout), CN_BACKEND_CONNECT_TIMEOUT))
-            {
-                MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_TIMEOUT);
-                error_count++;
-            }
-        }
-
-        char *read_timeout = config_get_value(obj->parameters, CN_BACKEND_READ_TIMEOUT);
-        if (read_timeout)
-        {
-            if (!monitor_set_network_timeout(monitor, MONITOR_READ_TIMEOUT,
-                                          atoi(read_timeout), CN_BACKEND_READ_TIMEOUT))
-            {
-                MXS_ERROR("Failed to set '%s'", CN_BACKEND_READ_TIMEOUT);
-                error_count++;
-            }
-        }
-
-        char *write_timeout = config_get_value(obj->parameters, CN_BACKEND_WRITE_TIMEOUT);
-        if (write_timeout)
-        {
-            if (!monitor_set_network_timeout(monitor, MONITOR_WRITE_TIMEOUT,
-                                          atoi(write_timeout), CN_BACKEND_WRITE_TIMEOUT))
-            {
-                MXS_ERROR("Failed to set '%s'", CN_BACKEND_WRITE_TIMEOUT);
-                error_count++;
-            }
-        }
-
-        char *connect_attempts = config_get_value(obj->parameters, CN_BACKEND_CONNECT_ATTEMPTS);
-        if (connect_attempts)
-        {
-            if (!monitor_set_network_timeout(monitor, MONITOR_CONNECT_ATTEMPTS,
-                                          atoi(connect_attempts), CN_BACKEND_CONNECT_ATTEMPTS))
-            {
-                MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_ATTEMPTS);
-                error_count++;
-            }
-        }
-
-        const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
-        if (disk_space_threshold)
-        {
-            if (!monitor_set_disk_space_threshold(monitor, disk_space_threshold))
-            {
-                MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                          CN_DISK_SPACE_THRESHOLD, monitor->name, disk_space_threshold);
-                error_count++;
-            }
-        }
-
-        const char* disk_space_check_interval =
-            config_get_value(obj->parameters, CN_DISK_SPACE_CHECK_INTERVAL);
-        if (disk_space_check_interval)
-        {
-            char* endptr;
-            long int value = strtoll(disk_space_check_interval, &endptr, 0);
-            if (*endptr == 0 && value >= 0)
-            {
-                monitor->disk_space_check_interval = value;
-            }
-            else
-            {
-                MXS_ERROR("Invalid value for '%s': %s",
-                          CN_DISK_SPACE_CHECK_INTERVAL, disk_space_check_interval);
-                ++error_count;
-            }
-        }
-
-        if (servers)
-        {
-            /* get the servers to monitor */
-            char *s, *lasts;
-            s = strtok_r(servers, ",", &lasts);
-            while (s)
-            {
-                CONFIG_CONTEXT *obj1 = context;
-                int found = 0;
-                while (obj1)
-                {
-                    if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
-                    {
-                        found = 1;
-                        if (monitored_servers.insert(obj1->object).second == false)
-                        {
-                            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                                        "This will cause undefined behavior.",
-                                        obj1->object);
-                        }
-                        monitor_add_server(monitor, (SERVER*)obj1->element);
-                    }
-                    obj1 = obj1->next;
-                }
-                if (!found)
-                {
-                    MXS_ERROR("Unable to find server '%s' that is "
-                              "configured in the monitor '%s'.", s, obj->object);
-                    error_count++;
-                }
-
-                s = strtok_r(NULL, ",", &lasts);
-            }
-        }
-
-        char *user = config_get_value(obj->parameters, CN_USER);
-        char *passwd = config_get_password(obj->parameters);
-        if (user && passwd)
-        {
-            monitor_add_user(monitor, user, passwd);
-        }
-        else if (user)
-        {
-            MXS_ERROR("Monitor '%s' defines a username but does not define a password.",
-                      obj->object);
+            MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
+                      CN_DISK_SPACE_THRESHOLD, monitor->name, dst);
             error_count++;
         }
     }

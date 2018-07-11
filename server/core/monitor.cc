@@ -99,8 +99,16 @@ static uint64_t all_server_bits = SERVER_RUNNING |  SERVER_MAINT | SERVER_MASTER
  * @param module        The module to load
  * @return      The newly created monitor
  */
-MXS_MONITOR* monitor_create(const char *name, const char *module)
+MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
 {
+    MXS_MONITOR_API* api = (MXS_MONITOR_API*)load_module(module, MODULE_MONITOR);
+
+    if (api == NULL)
+    {
+        MXS_ERROR("Unable to load monitor module '%s'.", name);
+        return NULL;
+    }
+
     char* my_name = MXS_STRDUP(name);
     char *my_module = MXS_STRDUP(module);
     MXS_MONITOR *mon = (MXS_MONITOR *)MXS_MALLOC(sizeof(MXS_MONITOR));
@@ -113,36 +121,36 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
         return NULL;
     }
 
-    if ((mon->api = (MXS_MONITOR_API*)load_module(module, MODULE_MONITOR)) == NULL)
-    {
-        MXS_ERROR("Unable to load monitor module '%s'.", my_name);
-        MXS_FREE(mon);
-        MXS_FREE(my_module);
-        MXS_FREE(my_name);
-        return NULL;
-    }
+    mon->api = api;
     mon->active = true;
     mon->state = MONITOR_STATE_ALLOC;
     mon->name = my_name;
     mon->module_name = my_module;
-    mon->instance = NULL;
     mon->monitored_servers = NULL;
-    *mon->password = '\0';
-    *mon->user = '\0';
-    mon->read_timeout = DEFAULT_READ_TIMEOUT;
-    mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
-    mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    mon->connect_attempts = DEFAULT_CONNECTION_ATTEMPTS;
-    mon->interval = DEFAULT_MONITOR_INTERVAL;
-    mon->journal_max_age = DEFAULT_JOURNAL_MAX_AGE;
-    mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
-    mon->parameters = NULL;
+    mon->read_timeout = config_get_integer(params, CN_BACKEND_READ_TIMEOUT);
+    mon->write_timeout = config_get_integer(params, CN_BACKEND_WRITE_TIMEOUT);
+    mon->connect_timeout = config_get_integer(params, CN_BACKEND_CONNECT_TIMEOUT);
+    mon->connect_attempts = config_get_integer(params, CN_BACKEND_CONNECT_ATTEMPTS);
+    mon->interval = config_get_integer(params, CN_MONITOR_INTERVAL);
+    mon->journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
+    mon->script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
     mon->check_maintenance_flag = MAINTENANCE_FLAG_NOCHECK;
     mon->ticks = 0;
+    mon->parameters = NULL;
     memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     mon->disk_space_threshold = NULL;
-    mon->disk_space_check_interval = 0;
+    mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
     spinlock_init(&mon->lock);
+
+    for (auto&& s: mxs::strtok(config_get_string(params, CN_SERVERS), ", \t"))
+    {
+        monitor_add_server(mon, server_find_by_unique_name(s.c_str()));
+    }
+
+    monitor_add_user(mon, config_get_string(params, CN_USER),
+                     config_get_string(params, CN_PASSWORD));
+
+    monitor_add_parameters(mon, params);
 
     if ((mon->instance = mon->api->createInstance(mon)) == NULL)
     {
@@ -151,6 +159,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module)
         MXS_FREE(mon);
         MXS_FREE(my_module);
         MXS_FREE(my_name);
+        return NULL;
     }
 
     spinlock_acquire(&monLock);
@@ -338,6 +347,7 @@ monitor_stop_all()
  */
 bool monitor_add_server(MXS_MONITOR *mon, SERVER *server)
 {
+    ss_dassert(mon && server);
     bool rval = false;
 
     if (monitor_server_in_use(server))
