@@ -222,17 +222,12 @@ static void blr_start_master(void* data)
         router->retry_count++;
         spinlock_release(&router->lock);
         /* Set reconnection task */
-        static const char master[] = "Master";
-        char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
-        if (name)
-        {
-            sprintf(name, "%s %s", router->service->name, master);
-            hktask_add(name,
-                       blr_start_master_in_main,
-                       router,
-                       connect_retry);
-            MXS_FREE(name);
-        }
+        std::string name = router->service->name;
+        name += " Master";
+        hktask_add(name.c_str(),
+                   blr_start_master_in_main,
+                   router,
+                   connect_retry);
 
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "retrying in %d seconds",
