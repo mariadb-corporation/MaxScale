@@ -1,6 +1,5 @@
 [maxscale]
 threads=###threads###
-log_warning=1
 
 [Binlog_Service]
 type=service
@@ -8,9 +7,7 @@ router=binlogrouter
 user=skysql
 password=skysql
 version_string=5.6.15-log
-#router_options=server-id=3,user=repl,password=repl,master-id=1
-router_options=server-id=3,user=repl,password=repl,longburst=500,heartbeat=30,binlogdir=/var/lib/maxscale/Binlog_Service,mariadb10-compatibility=1,encrypt_binlog=1,encryption_key_file=/etc/mariadb_binlog_keys.txt,encryption_algorithm=aes_cbc
-
+router_options=server_id=3,user=repl,password=repl,longburst=500,heartbeat=30,binlogdir=/var/lib/maxscale/Binlog_Service,mariadb10-compatibility=1,encrypt_binlog=1,encryption_key_file=/etc/mariadb_binlog_keys.txt,encryption_algorithm=aes_cbc
 
 [Binlog Listener]
 type=listener
@@ -26,13 +23,4 @@ router=cli
 type=listener
 service=CLI
 protocol=maxscaled
-#address=localhost
 socket=default
-
-[master]
-type=server
-address=###node_server_IP_1###
-port=###node_server_port_1###
-protocol=MySQLBackend
-
-
