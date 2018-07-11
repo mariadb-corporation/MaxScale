@@ -493,16 +493,7 @@ CONFIG_CONTEXT* config_context_create(const char *section)
 /** A set that holds all the section names that contain whitespace */
 static std::set<string> warned_whitespace;
 
-/**
- * @brief Fix section names
- *
- * Check that section names contain no whitespace. If the name contains
- * whitespace, trim it, squeeze it and replace the remaining whitespace with
- * hyphens. If a replacement was made, a warning is logged.
- *
- * @param section Section name
- */
-void fix_section_name(char *section)
+static void fix_section_name(char *section)
 {
     for (char* s = section; *s; s++)
     {
@@ -518,9 +509,14 @@ void fix_section_name(char *section)
         }
     }
 
-    squeeze_whitespace(section);
-    trim(section);
-    replace_whitespace(section);
+    fix_object_name(section);
+}
+
+void fix_object_name(char *name)
+{
+    squeeze_whitespace(name);
+    trim(name);
+    replace_whitespace(name);
 }
 
 static bool is_empty_string(const char* str)
@@ -3392,7 +3388,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
         {
             char service_name[strlen(raw_service_name) + 1];
             strcpy(service_name, raw_service_name);
-            fix_section_name(service_name);
+            fix_object_name(service_name);
 
             SERVICE *service = service_find(service_name);
             if (service)
@@ -3655,7 +3651,7 @@ void fix_serverlist(char* value)
 
     while (start)
     {
-        fix_section_name(start);
+        fix_object_name(start);
         dest += sep;
         dest += start;
         sep = ",";
@@ -3676,7 +3672,7 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
             {
             case MXS_MODULE_PARAM_SERVER:
             case MXS_MODULE_PARAM_SERVICE:
-                fix_section_name(p->value);
+                fix_object_name(p->value);
                 break;
 
             case MXS_MODULE_PARAM_SERVERLIST:
@@ -3714,7 +3710,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
     bool valid = false;
     char fixed_value[strlen(value) + 1];
     strcpy(fixed_value, value);
-    fix_section_name(fixed_value);
+    fix_object_name(fixed_value);
 
     for (int i = 0; params[i].name && !valid; i++)
     {
@@ -3933,7 +3929,7 @@ int config_parse_server_list(const char *servers, char ***output_array)
     {
         char srv_name_tmp[strlen(s) + 1];
         strcpy(srv_name_tmp, s);
-        fix_section_name(srv_name_tmp);
+        fix_object_name(srv_name_tmp);
 
         if (strlen(srv_name_tmp) > 0)
         {

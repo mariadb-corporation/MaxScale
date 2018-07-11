@@ -1816,17 +1816,17 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_OBJECT_NAME:
-        fix_section_name(arg);
+        fix_object_name(arg);
         rval = (unsigned long)arg;
         break;
 
     case ARG_TYPE_SERVICE:
-        fix_section_name(arg);
+        fix_object_name(arg);
         rval = (unsigned long)service_find(arg);
         break;
 
     case ARG_TYPE_SERVER:
-        fix_section_name(arg);
+        fix_object_name(arg);
         rval = (unsigned long)server_find_by_unique_name(arg);
         break;
 
@@ -1835,12 +1835,12 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_MONITOR:
-        fix_section_name(arg);
+        fix_object_name(arg);
         rval = (unsigned long)monitor_find(arg);
         break;
 
     case ARG_TYPE_FILTER:
-        fix_section_name(arg);
+        fix_object_name(arg);
         rval = (unsigned long)filter_def_find(arg);
         break;
 

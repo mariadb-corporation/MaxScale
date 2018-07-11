@@ -1142,7 +1142,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     ptr = strtok_r(filters, "|", &brkt);
     while (ptr)
     {
-        fix_section_name(ptr);
+        fix_object_name(ptr);
 
         n++;
         MXS_FILTER_DEF **tmp;

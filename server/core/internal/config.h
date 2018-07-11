@@ -171,11 +171,15 @@ void config_add_module_params_json(const MXS_MODULE* mod,
                                    json_t* output);
 
 /**
- * @brief Convert section names to new format
+ * @brief Convert object names to correct format
  *
- * @param section Section name to fix
+ * Check that object name contains no whitespace. If the name contains
+ * whitespace, trim it, squeeze it and replace the remaining whitespace with
+ * hyphens.
+ *
+ * @param name Object name to fix
  */
-void fix_section_name(char *section);
+void fix_object_name(char *name);
 
 /**
  * @brief Serialize global options
