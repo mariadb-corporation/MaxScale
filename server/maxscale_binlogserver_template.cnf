@@ -27,7 +27,7 @@ threads=6
 #       router=<name of router module>
 #       servers=<server name>,<server name>,...
 #       user=<User to fetch password inforamtion with>
-#       passwd=<Password of the user, plain text currently>
+#       password=<Password of the user, plain text currently>
 #       version_string=<specific string for server handshake,
 #               default is the MariaDB embedded library version>
 #       router_options=<option[=value]>,<option[=value]>,...
@@ -57,7 +57,7 @@ servers=master
 #       SELECT ON mysql.db
 #       SHOW DATABASES ON *.*
 user=repl
-passwd=slavepass
+password=slavepass
 version_string=5.6.15-log
 
 # The router_options set parameters to the binlogrouter:

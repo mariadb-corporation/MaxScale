@@ -30,7 +30,7 @@ type=monitor
 module=mariadbmon
 servers=server1,server2,server3
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=2000
 
 # Service definitions
@@ -44,7 +44,7 @@ type=service
 router=readconnroute
 servers=server1,server2,server3
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 router_options=slave
 
 # ReadWriteSplit documentation:
@@ -55,7 +55,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 
 # Listener definitions for the services
 # Listeners represent the ports the services will listen on.
