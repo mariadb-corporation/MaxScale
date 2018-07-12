@@ -296,7 +296,7 @@ const MXS_MODULE_PARAM config_filter_params[] =
     {NULL}
 };
 
-const MXS_MODULE_PARAM server_params[] =
+const MXS_MODULE_PARAM config_server_params[] =
 {
     {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
     {CN_ADDRESS, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
@@ -2397,6 +2397,78 @@ static bool param_is_deprecated(const MXS_MODULE_PARAM* params, const char* name
     return rval;
 }
 
+static bool param_in_set(const MXS_MODULE_PARAM* params, const char* name)
+{
+    bool found = false;
+
+    for (int i = 0; params[i].name; i++)
+    {
+        if (strcmp(params[i].name, name) == 0)
+        {
+            found = true;
+            break;
+        }
+    }
+
+    return found;
+}
+
+const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
+{
+
+    for (int i = 0; params[i].name; i++)
+    {
+        if (strcmp(params[i].name, name) == 0)
+        {
+            switch (params[i].type)
+            {
+            case MXS_MODULE_PARAM_COUNT:
+                return "a non-negative integer";
+
+            case MXS_MODULE_PARAM_INT:
+                return "an integer";
+
+            case MXS_MODULE_PARAM_SIZE:
+                return "a size in bytes (e.g. 1M)";
+
+            case MXS_MODULE_PARAM_BOOL:
+                return "a boolean value";
+
+            case MXS_MODULE_PARAM_STRING:
+                return "a string";
+
+            case MXS_MODULE_PARAM_QUOTEDSTRING:
+                return "a quoted string";
+
+            case MXS_MODULE_PARAM_REGEX:
+                return "a regular expression";
+
+            case MXS_MODULE_PARAM_ENUM:
+                return "an enumeration value";
+
+            case MXS_MODULE_PARAM_SERVICE:
+                return "a service name";
+
+            case MXS_MODULE_PARAM_SERVER:
+                return "a server name";
+
+            case MXS_MODULE_PARAM_SERVERLIST:
+                return "a comma-separated list of server names";
+
+            case MXS_MODULE_PARAM_PATH:
+                return "a path to a file";
+
+            default:
+                ss_info_dassert(!true, "Unknown parameter type");
+                return "<unknown parameter type>";
+            }
+        }
+    }
+
+    ss_info_dassert(!true, "Unknown parameter name");
+    return "<unknown parameter name>";
+}
+
 /**
  * @brief Check that the configuration objects have valid parameters
  *
@@ -2407,103 +2479,121 @@ static bool
 check_config_objects(CONFIG_CONTEXT *context)
 {
     bool rval = true;
-    CONFIG_CONTEXT *obj = context;
 
-    while (obj)
+    for (CONFIG_CONTEXT* obj = context; obj; obj = obj->next)
     {
         if (is_maxscale_section(obj->object))
         {
-            obj = obj->next;
             continue;
         }
 
         const MXS_MODULE_PARAM* param_set = NULL;
         const char *module = NULL;
-        const char *type;
         const char *module_type = NULL;
+        const char *type = config_get_string(obj->parameters, CN_TYPE);
 
-        if (obj->parameters && (type = config_get_value(obj->parameters, CN_TYPE)))
+        if (!strcmp(type, CN_SERVICE))
         {
-            if (!strcmp(type, CN_SERVICE))
-            {
-                param_set = config_service_params;
-                module = config_get_value(obj->parameters, CN_ROUTER);
-                module_type = MODULE_ROUTER;
-            }
-            else if (!strcmp(type, CN_LISTENER))
-            {
-                param_set = config_listener_params;
-            }
-            else if (!strcmp(type, CN_MONITOR))
-            {
-                param_set = config_monitor_params;
-                module = config_get_value(obj->parameters, CN_MODULE);
-                module_type = MODULE_MONITOR;
-            }
-            else if (!strcmp(type, CN_FILTER))
-            {
-                param_set = config_filter_params;
-                module = config_get_value(obj->parameters, CN_MODULE);
-                module_type = MODULE_FILTER;
-            }
+            param_set = config_service_params;
+            module = config_get_value(obj->parameters, CN_ROUTER);
+            module_type = MODULE_ROUTER;
+        }
+        else if (!strcmp(type, CN_LISTENER))
+        {
+            param_set = config_listener_params;
+            module = config_get_value(obj->parameters, CN_PROTOCOL);
+            module_type = MODULE_PROTOCOL;
+        }
+        else if (!strcmp(type, CN_SERVER))
+        {
+            param_set = config_server_params;
+            module = config_get_value(obj->parameters, CN_PROTOCOL);
+            module_type = MODULE_PROTOCOL;
+        }
+        else if (!strcmp(type, CN_MONITOR))
+        {
+            param_set = config_monitor_params;
+            module = config_get_value(obj->parameters, CN_MODULE);
+            module_type = MODULE_MONITOR;
+        }
+        else if (!strcmp(type, CN_FILTER))
+        {
+            param_set = config_filter_params;
+            module = config_get_value(obj->parameters, CN_MODULE);
+            module_type = MODULE_FILTER;
+        }
+        else
+        {
+            MXS_ERROR("Unknown module type for object '%s': %s", obj->object, type);
+            rval = false;
+            continue;
         }
 
+        ss_dassert(param_set);
+        std::vector<std::string> to_be_removed;
         const MXS_MODULE *mod = module ? get_module(module, module_type) : NULL;
 
-        if (param_set != NULL)
+        for (MXS_CONFIG_PARAMETER *params = obj->parameters; params; params = params->next)
         {
-            std::vector<std::string> to_be_removed;
+            const MXS_MODULE_PARAM* fix_params;
 
-            MXS_CONFIG_PARAMETER *params = obj->parameters;
-            while (params)
+            if (param_in_set(param_set, params->name))
             {
-                bool ok = config_param_is_valid(param_set, params->name, params->value, context);
-
-                if (!ok)
+                fix_params = param_set;
+            }
+            else if (mod && param_in_set(mod->parameters, params->name))
+            {
+                fix_params = mod->parameters;
+            }
+            else
+            {
+                // Server's "need" to ignore any unknown parameters as they could
+                // be used as weighting parameters
+                if (strcmp(type, CN_SERVER) != 0)
                 {
-                    if (mod == NULL ||
-                        !config_param_is_valid(mod->parameters, params->name, params->value, context))
-                    {
-                        MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s', "
-                                  "or '%s' is an invalid value for parameter '%s'.",
-                                  params->name, obj->object, type, params->value, params->name);
-                        rval = false;
-                    }
-                    else if (is_path_parameter(mod->parameters, params->name))
-                    {
-                        process_path_parameter(params);
-                    }
-                    else
-                    {
-                        /** Fix old-style object names */
-                        config_fix_param(mod->parameters, params);
-                    }
-
-                    if (mod && param_is_deprecated(mod->parameters, params->name, obj->object))
-                    {
-                        to_be_removed.push_back(params->name);
-                    }
+                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'",
+                              params->name, obj->object, type);
+                    rval = false;
                 }
-                params = params->next;
+                continue;
             }
 
-            for (auto it = to_be_removed.begin(); it != to_be_removed.end(); it++)
+            if (config_param_is_valid(fix_params, params->name, params->value, context))
             {
-                config_remove_param(obj, it->c_str());
-            }
+                if (is_path_parameter(fix_params, params->name))
+                {
+                    process_path_parameter(params);
+                }
+                else // Fix old-style object names
+                {
+                    config_fix_param(fix_params, params);
+                }
 
-            if (missing_required_parameters(param_set, obj->parameters, obj->object))
+                if (param_is_deprecated(fix_params, params->name, obj->object))
+                {
+                    to_be_removed.push_back(params->name);
+                }
+            }
+            else
             {
+                MXS_ERROR("Invalid value for parameter '%s' for object '%s' "
+                          "of type '%s': %s (was expecting %s)",
+                          params->name, params->value, obj->object, type,
+                          param_type_to_str(fix_params, params->name));
                 rval = false;
             }
         }
 
-        if (mod && missing_required_parameters(mod->parameters, obj->parameters, obj->object))
+        for (auto it = to_be_removed.begin(); it != to_be_removed.end(); it++)
+        {
+            config_remove_param(obj, it->c_str());
+        }
+
+        if (missing_required_parameters(param_set, obj->parameters, obj->object) ||
+            (mod && missing_required_parameters(mod->parameters, obj->parameters, obj->object)))
         {
             rval = false;
         }
-
-        obj = obj->next;
     }
 
     return rval;
@@ -3043,9 +3133,9 @@ int create_new_service(CONFIG_CONTEXT *obj)
  */
 bool is_normal_server_parameter(const char *param)
 {
-    for (int i = 0; server_params[i].name; i++)
+    for (int i = 0; config_server_params[i].name; i++)
     {
-        if (strcmp(param, server_params[i].name) == 0)
+        if (strcmp(param, config_server_params[i].name) == 0)
         {
             return true;
         }
