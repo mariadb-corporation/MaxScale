@@ -44,16 +44,15 @@ static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters
 static void filter_free_parameters(MXS_FILTER_DEF *filter);
 
 /**
- * Allocate a new filter within MaxScale
+ * Allocate a new filter
  *
+ * @param name   The filter name
+ * @param module The module to load
+ * @param params Module parameters
  *
- * @param name          The filter name
- * @param module        The module to load
- *
- * @return              The newly created filter or NULL if an error occured
+ * @return The newly created filter or NULL if an error occurred
  */
-MXS_FILTER_DEF *
-filter_alloc(const char *name, const char *module)
+MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
 {
     char* my_name = MXS_STRDUP(name);
     char* my_module = MXS_STRDUP(module);
@@ -72,8 +71,12 @@ filter_alloc(const char *name, const char *module)
     filter->filter = NULL;
     filter->obj = NULL;
     filter->parameters = NULL;
-
     spinlock_init(&filter->spin);
+
+    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+    {
+        filter_add_parameter(filter, p->name, p->value);
+    }
 
     spinlock_acquire(&filter_spin);
     filter->next = allFilters;

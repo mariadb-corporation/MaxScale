@@ -3534,29 +3534,16 @@ int create_new_listener(CONFIG_CONTEXT *obj)
 int create_new_filter(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    char *module = config_get_value(obj->parameters, CN_MODULE);
+    const char* module = config_get_value(obj->parameters, CN_MODULE);
+    ss_dassert(*module);
 
-    if (module)
+    if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
     {
-        if ((obj->element = filter_alloc(obj->object, module)))
+        config_add_defaults(obj, mod->parameters);
+
+        if (MXS_FILTER_DEF* filter = filter_alloc(obj->object, module, obj->parameters))
         {
-            MXS_FILTER_DEF* filter_def = (MXS_FILTER_DEF*)obj->element;
-
-            const MXS_MODULE *mod = get_module(module, MODULE_FILTER);
-
-            if (mod)
-            {
-                config_add_defaults(obj, mod->parameters);
-            }
-            else
-            {
-                error_count++;
-            }
-
-            for (MXS_CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
-            {
-                filter_add_parameter(filter_def, p->name, p->value);
-            }
+            obj->element = filter;
         }
         else
         {
@@ -3567,7 +3554,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     }
     else
     {
-        MXS_ERROR("Filter '%s' has no module defined to load.", obj->object);
+        MXS_ERROR("Failed to load filter module '%s'", module);
         error_count++;
     }
 

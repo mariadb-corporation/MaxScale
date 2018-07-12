@@ -45,7 +45,7 @@ test1()
 {
     MXS_FILTER_DEF  *f1, *f2;
 
-    if ((f1 = filter_alloc("test1", "module")) == NULL)
+    if ((f1 = filter_alloc("test1", "module", NULL)) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
@@ -78,7 +78,7 @@ test2()
 {
     MXS_FILTER_DEF  *f1;
 
-    if ((f1 = filter_alloc("test1", "module")) == NULL)
+    if ((f1 = filter_alloc("test1", "module", NULL)) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
@@ -106,7 +106,7 @@ test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_alloc(name, "module")) == NULL)
+        if ((f1 = filter_alloc(name, "module", NULL)) == NULL)
         {
             fprintf(stderr,
                     "filter_alloc: test 3 failed with %s.\n", name);
