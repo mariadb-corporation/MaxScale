@@ -21,6 +21,7 @@
 #include <strings.h>
 #include <cmath>
 #include <new>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
@@ -268,6 +269,20 @@ bool RWSplit::have_enough_servers() const
     return succp;
 }
 
+static void log_router_options_not_supported(SERVICE* service, MXS_CONFIG_PARAMETER* p)
+{
+    std::stringstream ss;
+
+    for (auto&& a: mxs::strtok(p->value, ", \t"))
+    {
+        ss << a << "\n";
+    }
+
+    MXS_ERROR("`router_options` is no longer supported in readwritesplit. "
+              "To define the router options as parameters, add the following "
+              "lines to service '%s':\n\n%s\n", service->name, ss.str().c_str());
+}
+
 /**
  * API function definitions
  */
@@ -275,6 +290,12 @@ bool RWSplit::have_enough_servers() const
 
 RWSplit* RWSplit::create(SERVICE *service, MXS_CONFIG_PARAMETER* params)
 {
+    if (MXS_CONFIG_PARAMETER* p = config_get_param(params, CN_ROUTER_OPTIONS))
+    {
+        log_router_options_not_supported(service, p);
+        return NULL;
+    }
+
     SConfig config(new Config(params));
 
     if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")))
