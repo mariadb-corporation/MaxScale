@@ -23,7 +23,7 @@ plugin modules that tailor the behavior of the program.
 * [Monitor Modules](#monitor-modules)
 * [Filter Modules](#filter-modules)
 * [Encrypting Passwords](#encrypting-passwords)
-* [Reloading Configuration](#reloading-configuration)
+* [Runtime Configuration Changes](#runtime-configuration-changes)
 * [Authentication](#authentication)
 * [Error Reporting](#error-reporting)
 
@@ -1170,7 +1170,8 @@ log with details about who tried to connect to MariaDB MaxScale and from where.
 The connection_timeout parameter is used to disconnect sessions to MariaDB
 MaxScale that have been idle for too long. The session timeouts are disabled by
 default. To enable them, define the timeout in seconds in the service's
-configuration section.
+configuration section. A value of zero is interpreted as no timeout, the same
+as if the parameter is not defined.
 
 Example:
 
@@ -1720,10 +1721,52 @@ password=61DD955512C39A4A8BC4BB1E5F116705
 ```
 
 
+## Runtime Configuration Changes
+
+Read the following documents for different methods of altering the MaxScale
+configuration at runtime.
+
+* MaxAdmin
+  * [Runtime Configuration Changes](../Reference/MaxAdmin.md#runtime-configuration-changes)
+
+* MaxCtrl
+  * [`create`](../Reference/MaxCtrl.md#create)
+  * [`destroy`](../Reference/MaxCtrl.md#destroy)
+  * [`add`](../Reference/MaxCtrl.md#add)
+  * [`remove`](../Reference/MaxCtrl.md#remove)
+  * [`alter`](../Reference/MaxCtrl.md#alter)
+
+* [REST API](../REST-API/API.md) documentation
+
+All changes to the configuration are persisted as individual configuration files
+in `/var/lib/maxscale/maxscale.cnf.d/`. These files are applied after the main
+configuration file and all auxiliary configurations have been loaded. This means
+that once runtime configurations have been made, they need to be incorporated
+into the main configuration files.
+
+### Backing Up Configuration Changes
+
+The combination of configuration files can be done either manually
+(e.g. `rsync`) or with the `maxscale --export-config=FILE` command line
+option. See `maxscale --help` for more information about how to use the
+`--export-config` flag.
+
+For example, to export the current runtime configuration, run the following
+command.
+
+```
+maxscale --export-config=/tmp/maxscale.cnf.combined
+```
+
+This will create the `/tmp/maxscale.cnf.combined` file and write the current
+configuration into the it. This allows new MaxScale instances to be easily set
+up without requiring copying of all runtime configuration files.
+
 ## Reloading Configuration
 
-**Note:** This functionality has been deprecated. Use the MaxScale REST API or the
-  MaxAdmin `alter` commands to change configuration values at runtime.
+**Note:** This functionality has been deprecated and should not be used.
+
+---
 
 The current MariaDB MaxScale configuration may be updated by editing the
 configuration file and then forcing MariaDB MaxScale to reread the configuration

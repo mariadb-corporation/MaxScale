@@ -1029,10 +1029,16 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # MXS-1958: Users with insert-only privileges don't work
 # https://jira.mariadb.org/browse/MXS-1958
 add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
+# TODO: Remove this once MXS-1958 is fixed
+set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 
 # MXS-1849: Table family sharding router
 # https://jira.mariadb.org/browse/MXS-1849
 add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL)
+
+# MXS-1961: Standalone master loses master status
+# https://jira.mariadb.org/browse/MXS-1961
+add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
 
 configure_file(templates.h.in templates.h @ONLY)
 

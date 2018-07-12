@@ -16,9 +16,8 @@
 
 homedir=$(pwd)
 
-find . -name '*.md'|while read file
-do
-    cd "$(dirname "$file")"
+function check_file() {
+    file=$1
     grep -o '\[.*\]([^#].*[.]md)' "$(basename "$file")"| sed -e 's/\[.*\](\(.*\))/\1/'|while read i
     do
         if [ ! -f "$i" ]
@@ -26,5 +25,15 @@ do
             echo "Link $i in $file is not correct!"
         fi
     done
+}
+
+find . -name '*.md'|while read file
+do
+    cd "$(dirname "$file")"
+    check_file $file
     cd "$homedir"
 done
+
+cd ..
+check_file $PWD/README.md
+cd "$homedir"

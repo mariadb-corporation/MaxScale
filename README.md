@@ -12,18 +12,8 @@ functionality transparently to the applications. In addition it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing decisions.
 
-MaxScale is implemented in C and makes extensive use of the
-asynchronous I/O capabilities of the Linux operating system. The epoll
-system is used to provide the event driven framework for the input and
-output via sockets.
-
-The protocols are implemented as external shared object modules which
-can be loaded at runtime. These modules support a fixed interface,
-communicating the entries points via a structure consisting of a set of
-function pointers. This structure is called the "module object".
-
-The code that routes the queries to the database servers is also loaded
-as external shared objects and are referred to as routing modules.
+For a detailed overview of what MaxScale can do, read the
+[MaxScale page on the MariaDB website](https://mariadb.com/products/technology/maxscale).
 
 An Google Group exists for MaxScale that can be used to discuss ideas,
 issues and communicate with the MaxScale community.
@@ -35,18 +25,27 @@ We're also on the #maria and #maxscale channels on FreeNode.
 
 Please report all feature requests, improvements and bugs in the [MariaDB Jira](https://jira.mariadb.org/projects/MXS/issues).
 
+# Getting Started
+
+Read the [Documentation Overview](Documentation/Documentation-Contents.md) for a
+list of all MaxScale documents.
+
+- [Installing MaxScale](Documentation/Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
+- [Setting up MariaDB MaxScale](Documentation/Tutorials/MaxScale-Tutorial.md)
+- [Building from Source Code](Documentation/Getting-Started/Building-MaxScale-from-Source-Code.md)
+- [Other Tutorials](Documentation/Documentation-Contents.md#tutorials)
+
 # Documentation
 
-For information about installing and using MaxScale, please refer to the
-documentation. The official documentation can be found on the
+The official documentation can be found on the
 [MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb-enterprise/maxscale/).
 
-- [MariaDB MaxScale 2.1 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/6308/)
-- [MariaDB MaxScale 2.0 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-20-contents/)
-- [MariaDB MaxScale 1.4 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-14/maxscale-maxscale-contents/)
+A MaxScale Troubleshooting Guide can be found on the MariaDB Knowledgebase. It
+answers common questions encountered when installing and using MaxScale.
 
-The module and configuration documentation can be found in the _Documentation_
-directory of the source tree.
+The documentation can also be found in the
+[Documentation](Documentation/Documentation-Contents.md) directory of the
+source tree.
 
 # Contributing Code
 

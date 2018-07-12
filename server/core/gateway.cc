@@ -105,6 +105,7 @@ const char *progname = NULL;
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
+    {"export-config",    required_argument, 0, 'e'},
     {"daemon",           no_argument,       0, 'n'},
     {"nodaemon",         no_argument,       0, 'd'},
     {"config",           required_argument, 0, 'f'},
@@ -948,6 +949,7 @@ static void usage(void)
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
             "  -c, --config-check          validate configuration file and exit\n"
+            "  -e, --export-config=FILE    export configuration to a single file\n"
             "  -d, --nodaemon              enable running in terminal process\n"
             "  -f, --config=FILE           relative or absolute pathname of config file\n"
             "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout\n"
@@ -1334,7 +1336,9 @@ int main(int argc, char **argv)
     bool pid_file_created = false;
     Worker* worker;
     const char* specified_user = NULL;
+    char export_cnf[PATH_MAX + 1] = "";
 
+    config_init();
     config_set_global_defaults();
     ss_dassert(cnf);
 
@@ -1348,7 +1352,7 @@ int main(int argc, char **argv)
     file_write_header(stderr);
 
     // Option string for getopt
-    const char accepted_opts[] = "dncf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
+    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
     /*<
      * Register functions which are called at exit.
@@ -1652,6 +1656,11 @@ int main(int argc, char **argv)
 
         case 'c':
             cnf->config_check = true;
+            break;
+
+        case 'e':
+            cnf->config_check = true;
+            strcpy(export_cnf, optarg);
             break;
 
         case 'p':
@@ -2087,6 +2096,12 @@ int main(int argc, char **argv)
     if (cnf->config_check)
     {
         MXS_NOTICE("Configuration was successfully verified.");
+
+        if (*export_cnf && export_config_file(export_cnf))
+        {
+            MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+        }
+
         rc = MAXSCALE_SHUTDOWN;
         goto return_main;
     }
@@ -2230,6 +2245,8 @@ return_main:
     {
         MXS_FREE(cnf_file_path);
     }
+
+    config_finish();
 
     return rc;
 } /*< End of main */
