@@ -209,5 +209,9 @@ int main(int argc, char* argv[])
         run(test);
     }
 
+    test.maxscales->connect();
+    drop(test);
+    test.maxscales->disconnect();
+
     return test.global_result;
 }

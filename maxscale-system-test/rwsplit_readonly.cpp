@@ -273,6 +273,10 @@ int main(int argc, char *argv[])
     /** More complex tests */
     test_complex(Test);
 
+    Test->repl->connect();
+    execute_query(Test->repl->nodes[0], "DROP TABLE test.readonly");
+    Test->repl->disconnect();
+
     /** Clean up test environment */
     Test->repl->flush_hosts();
     int rval = Test->global_result;

@@ -82,6 +82,11 @@ int main(int argc, char *argv[])
     test->tprintf("Cecking if Maxscale alive\n");
     test->check_maxscale_alive(0);
     int rval = test->global_result;
+
+    test->maxscales->connect();
+    execute_query(test->maxscales->conn_rwsplit[0], "DROP TABLE test.dump");
+    test->maxscales->disconnect();
+
     delete test;
     unlink(filename);
     return rval;

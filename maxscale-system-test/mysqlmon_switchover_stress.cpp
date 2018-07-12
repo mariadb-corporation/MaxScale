@@ -633,5 +633,9 @@ int main(int argc, char* argv[])
 
     run(test);
 
+    test.repl->connect();
+    execute_query(test.repl->nodes[0], "DROP TABLE test.t");
+    test.repl->disconnect();
+
     return test.global_result;
 }

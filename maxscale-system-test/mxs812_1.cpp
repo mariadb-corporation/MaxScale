@@ -65,5 +65,9 @@ int main(int argc, char *argv[])
 
     test.maxscales->disconnect();
 
+    test.repl->connect();
+    test.try_query(test.repl->nodes[0], "DROP TABLE long_blob_table");
+    test.repl->disconnect();
+
     return test.global_result;
 }

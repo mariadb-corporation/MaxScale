@@ -100,5 +100,9 @@ int main(int argc, char* argv[])
         test.assert(false, "Could not copy masking file to MaxScale node.");
     }
 
+    test.maxscales->connect();
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE MXS_1719");
+    test.maxscales->disconnect();
+
     return test.global_result;
 }

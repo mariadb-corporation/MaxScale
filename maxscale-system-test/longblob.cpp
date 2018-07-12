@@ -80,6 +80,10 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
     Test->maxscales->close_maxscale_connections(0);
 
+    Test->repl->connect();
+    Test->try_query(Test->repl->nodes[0], "DROP TABLE long_blob_table");
+    Test->repl->disconnect();
+
     int rval = Test->global_result;
     delete Test;
     return rval;
