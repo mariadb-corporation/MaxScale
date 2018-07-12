@@ -117,6 +117,16 @@ public:
     char *ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...) mxb_attribute((format(printf, 5, 6)));
     char *ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code);
 
+    // Simplified C++ version
+    std::string ssh_output(std::string ssh, int node = 0, bool sudo = true)
+    {
+        int rc;
+        char* out = ssh_node_output(node, ssh.c_str(), sudo, &rc);
+        std::string rval(out);
+        free(out);
+        return rval;
+    }
+
     /**
      * @brief executes shell command on the node using ssh
      * @param index number of the node (index)
