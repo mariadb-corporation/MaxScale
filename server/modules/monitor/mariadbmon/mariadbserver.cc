@@ -47,7 +47,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_
     , m_n_slaves_running(0)
     , m_n_slave_heartbeats(0)
     , m_heartbeat_period(0)
-    , m_latest_event(0)
+    , m_latest_event(time(NULL))
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
     , m_topology_changed(true)
     , m_print_update_errormsg(true)
