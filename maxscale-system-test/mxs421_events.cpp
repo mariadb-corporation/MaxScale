@@ -73,6 +73,13 @@ int main(int argc, char* argv[])
     srandom(time(NULL));
 
     TestConnections test(argc, argv);
+    int rc = test.maxscales->ssh_node_f(0, true, "test -f /var/log/auth.log");
+
+    if (rc != 0)
+    {
+        test.tprintf("Skipping test, `/var/log/auth.log` does not exist.");
+        return 0;
+    }
 
     test.maxscales->connect();
 
