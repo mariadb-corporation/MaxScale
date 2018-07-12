@@ -99,7 +99,7 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
 
     void *auth_instance = NULL;
 
-    if (!authenticator_init(&auth_instance, my_authenticator, auth_options))
+    if (!authenticator_init(&auth_instance, my_authenticator, my_auth_options))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for "
                   "listener '%s'.", my_authenticator, name);

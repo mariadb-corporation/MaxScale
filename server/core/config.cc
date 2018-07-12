@@ -257,7 +257,7 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {CN_AUTHENTICATOR_OPTIONS, MXS_MODULE_PARAM_STRING},
     {CN_PROTOCOL, MXS_MODULE_PARAM_STRING, "MariaDBClient"},
     {CN_ADDRESS, MXS_MODULE_PARAM_STRING, "::"},
-    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING, "MySQLAuth"},
+    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING},
     {CN_SSL, MXS_MODULE_PARAM_STRING},
     {CN_SSL_CERT, MXS_MODULE_PARAM_STRING},
     {CN_SSL_KEY, MXS_MODULE_PARAM_STRING},
@@ -3360,103 +3360,77 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
 
 /**
  * Create a new listener for a service
+ *
  * @param obj Listener configuration context
- * @param startnow If true, start the listener now
+ *
  * @return Number of errors
  */
 int create_new_listener(CONFIG_CONTEXT *obj)
 {
-    int error_count = 0;
-    char *raw_service_name = config_get_value(obj->parameters, CN_SERVICE);
-    char *port = config_get_value(obj->parameters, CN_PORT);
-    char *address = config_get_value(obj->parameters, CN_ADDRESS);
-    char *protocol = config_get_value(obj->parameters, CN_PROTOCOL);
-    char *socket = config_get_value(obj->parameters, CN_SOCKET);
-    char *authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
-    char *authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
+    const char* protocol = config_get_string(obj->parameters, CN_PROTOCOL);
+    ss_dassert(*protocol);
 
-    if (raw_service_name && protocol && (socket || port))
+    if (const MXS_MODULE * mod = get_module(protocol, MODULE_PROTOCOL))
     {
-        if (socket && port)
-        {
-            MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                      "both 'socket' and 'port' are defined. Only either one is allowed.",
-                      obj->object, raw_service_name);
-            error_count++;
-        }
-        else
-        {
-            char service_name[strlen(raw_service_name) + 1];
-            strcpy(service_name, raw_service_name);
-            fix_object_name(service_name);
-
-            SERVICE *service = service_find(service_name);
-            if (service)
-            {
-                SERV_LISTENER *listener;
-                SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
-                if (socket)
-                {
-                    if (address)
-                    {
-                        MXS_WARNING("In the definition of the listener `%s', the value of "
-                                    "'address' lacks meaning as the listener listens on a "
-                                    "domain socket ('%s') and not on a port.",
-                                    obj->object, socket);
-                    }
-
-                    listener = service_find_listener(service, socket, NULL, 0);
-
-                    if (listener)
-                    {
-                        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                                  "listener '%s' already listens on the socket '%s'.",
-                                  obj->object, raw_service_name, listener->name, socket);
-                        error_count++;
-                    }
-                    else
-                    {
-                        serviceCreateListener(service, obj->object, protocol, socket, 0,
-                                              authenticator, authenticator_options, ssl_info);
-                    }
-                }
-
-                if (port)
-                {
-                    listener = service_find_listener(service, NULL, address, atoi(port));
-
-                    if (listener)
-                    {
-                        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                                  "listener '%s' already listens on the port %s.",
-                                  obj->object, raw_service_name, listener->name, port);
-                        error_count++;
-                    }
-                    else
-                    {
-                        serviceCreateListener(service, obj->object, protocol, address, atoi(port),
-                                              authenticator, authenticator_options, ssl_info);
-                    }
-                }
-
-                if (ssl_info && error_count)
-                {
-                    free_ssl_structure(ssl_info);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Listener '%s', service '%s' not found.", obj->object,
-                          service_name);
-                error_count++;
-            }
-        }
+        config_add_defaults(obj, config_listener_params);
+        config_add_defaults(obj, mod->parameters);
     }
     else
+    {
+        MXS_ERROR("Unable to load protocol module '%s'.", protocol);
+        return 1;
+    }
+
+    int error_count = 0;
+
+    char *port = config_get_value(obj->parameters, CN_PORT);
+    char *socket = config_get_value(obj->parameters, CN_SOCKET);
+
+    if (socket && port)
+    {
+        MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
+                  "are defined. Only one of them is allowed.", obj->object);
+        error_count++;
+    }
+    else if (!socket && !port)
     {
         MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
                   "must have a service, protocol and port (or socket) defined.", obj->object);
         error_count++;
+    }
+    else
+    {
+        const char *address = config_get_string(obj->parameters, CN_ADDRESS);
+        SERVICE *service = config_get_service(obj->parameters, CN_SERVICE);
+        ss_dassert(service);
+
+        if (auto l = service_find_listener(service, socket, address, socket ? 0 : atoi(port)))
+        {
+            MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                      "listener '%s' already listens on the %s %s.",
+                      obj->object, service->name, l->name, socket ? "socket" : "port",
+                      socket ? socket : port);
+            return 1;
+        }
+
+        const char *protocol = config_get_string(obj->parameters, CN_PROTOCOL);
+        SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
+
+        // These two values being NULL trigger the loading of the default
+        // authenticators that are specific to each protocol module
+        char *authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
+        char *authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
+
+        if (socket)
+        {
+            serviceCreateListener(service, obj->object, protocol, socket, 0,
+                                  authenticator, authenticator_options, ssl_info);
+        }
+        else if (port)
+        {
+            serviceCreateListener(service, obj->object, protocol, address, atoi(port),
+                                  authenticator, authenticator_options, ssl_info);
+        }
     }
 
     return error_count;
