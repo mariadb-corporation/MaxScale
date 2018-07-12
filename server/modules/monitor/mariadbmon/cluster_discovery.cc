@@ -664,6 +664,16 @@ void MariaDBMonitor::assign_master_and_slave()
         reset_node_index_info();
         assign_slave_and_relay_master(m_master);
     }
+    else
+    {
+        for (MariaDBServer* s: m_servers)
+        {
+            if (s->has_status(SERVER_WAS_SLAVE))
+            {
+                s->set_status(SERVER_SLAVE);
+            }
+        }
+    }
 }
 
 /**
@@ -760,7 +770,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     // The master server of the cluster needs to be re-calculated in the following four cases:
     bool rval = true;
     // 1) There is no master.
-    if (m_master == NULL)
+    if (m_master == NULL || m_master->is_down())
     {
         rval = false;
     }

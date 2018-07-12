@@ -1327,6 +1327,12 @@ bool MariaDBMonitor::failover_check(string* error_out)
         *error_out += separator + "No valid slaves to promote.";
         error = true;
     }
+    else
+    {
+        // There's at least one valid promotion candidate
+        error = false;
+    }
+
     return !error;
 }
 
