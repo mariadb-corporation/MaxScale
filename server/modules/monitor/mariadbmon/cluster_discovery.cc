@@ -725,8 +725,30 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
                 // Can in theory cause a 'SERVER_WAS_SLAVE' bit from another master to affect the result.
                 (!require_was_slave || (slave->m_server_base->pending_status & SERVER_WAS_SLAVE)))
             {
-                found_slave_conn = true;
-                break;
+                /** Note: The following fixes mxs1961_standalone_rejoin
+                 *
+                 * The fact that the relay master status is assigned based on
+                 * the last good observed state of the slave (i.e. before it went
+                 * down), it is theoretically correct to label the server as a relay
+                 * master. In practice this is not quite correct.
+                 *
+                 * One example of this is the following chain of failover events
+                 * with M(master), S(slave) and X(down) and arrows for last known
+                 * slave connection:
+                 *
+                 *     S → M ← S
+                 *     X → M ← S
+                 *     X → X   M
+                 *     X → S → M // This is where S gets the Relay Master status
+                 *
+                 * The last state does indeed form a relay master topology but it
+                 * has never been observed to happen and as such is wrong.
+                 */
+                if (slave->is_running())
+                {
+                    found_slave_conn = true;
+                    break;
+                }
             }
         }
 
