@@ -245,11 +245,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     port->listener->service = service;
 
-    if (port->ssl)
-    {
-        listener_init_SSL(port->ssl);
-    }
-
     if ((funcs = (MXS_PROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
         MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",

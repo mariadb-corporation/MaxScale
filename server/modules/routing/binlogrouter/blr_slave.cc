@@ -4043,28 +4043,6 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         }
     }
 
-    /** Initialise SSL: exit on error */
-    if (router->ssl_enabled && router->service->dbref->server->server_ssl)
-    {
-        if (listener_init_SSL(router->service->dbref->server->server_ssl) != 0)
-        {
-            MXS_ERROR("%s: Unable to initialise SSL with backend server",
-                      router->service->name);
-
-            blr_slave_send_error_packet(slave,
-                                        "Unable to initialise SSL with backend server",
-                                        1210,
-                                        "HY000");
-            spinlock_acquire(&router->lock);
-
-            router->master_state = BLRM_SLAVE_STOPPED;
-
-            spinlock_release(&router->lock);
-
-            return 1;
-        }
-    }
-
     /** Start replication from master */
     blr_start_master_in_main(router);
 

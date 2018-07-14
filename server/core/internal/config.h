@@ -135,14 +135,15 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  *
  * The SSL structure is used by both listeners and servers.
  *
- * TODO: Rename to something like @c config_construct_ssl
- *
- * @param obj Configuration context
+ * @param name         Name of object being created (usually server or listener name)
+ * @param params       Parameters to create SSL from
  * @param require_cert Whether certificates are required
- * @param error_count Pointer to an int which is incremented for each error
- * @return New SSL_LISTENER structure or NULL on error
+ * @param dest         Pointer where initialized SSL structure is stored
+ *
+ * @return True on success, false on error
  */
-SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
+bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
+                       bool require_cert, SSL_LISTENER** dest);
 
 /**
  * @brief Check if all SSL parameters are defined

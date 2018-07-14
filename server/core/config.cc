@@ -224,6 +224,36 @@ char *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 static CONFIG_CONTEXT config_context;
 
+// Values for the `ssl` parameter. These are plain boolean types but for legacy
+// reasons the required and disabled keywords need to be allowed.
+static const MXS_ENUM_VALUE ssl_values[] =
+{
+    {"required", 1},
+    {"true", 1},
+    {"yes", 1},
+    {"on", 1},
+    {"1", 1},
+    {"disabled",  0},
+    {"false",  0},
+    {"no",  0},
+    {"off",  0},
+    {"0",  0},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE ssl_version_values[] =
+{
+    {"MAX", 1},
+#ifndef OPENSSL_1_1
+    {"TLSV10", 1},
+#endif
+#ifdef OPENSSL_1_0
+    {"TLSV11", 1},
+    {"TLSV12", 1},
+#endif
+    {NULL}
+};
+
 const MXS_MODULE_PARAM config_service_params[] =
 {
     {CN_TYPE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
@@ -258,13 +288,13 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {CN_PROTOCOL, MXS_MODULE_PARAM_STRING, "MariaDBClient"},
     {CN_ADDRESS, MXS_MODULE_PARAM_STRING, "::"},
     {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING},
-    {CN_SSL, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_CERT, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_KEY, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_STRING},
+    {CN_SSL, MXS_MODULE_PARAM_STRING, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_values},
+    {CN_SSL_CERT, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_KEY, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING, "MAX", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_version_values},
+    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT, "9"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"},
     {NULL}
 };
 
@@ -302,19 +332,19 @@ const MXS_MODULE_PARAM config_server_params[] =
     {CN_ADDRESS, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
     {CN_PROTOCOL, MXS_MODULE_PARAM_STRING, "MariaDBBackend"},
     {CN_PORT, MXS_MODULE_PARAM_COUNT, "3306"},
-    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING, "MySQLBackendAuth"},
+    {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING},
     {CN_MONITORUSER, MXS_MODULE_PARAM_STRING},
     {CN_MONITORPW, MXS_MODULE_PARAM_STRING},
     {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT, "0"},
     {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_COUNT, "0"},
     {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL, "false"},
-    {CN_SSL, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_CERT, MXS_MODULE_PARAM_PATH},
-    {CN_SSL_KEY, MXS_MODULE_PARAM_PATH},
-    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_PATH},
-    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING},
-    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL},
+    {CN_SSL, MXS_MODULE_PARAM_STRING, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_values},
+    {CN_SSL_CERT, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_KEY, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_CA_CERT, MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_VERSION, MXS_MODULE_PARAM_STRING, "MAX", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_version_values},
+    {CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT, "9"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"},
     {NULL}
 };
 
@@ -2097,133 +2127,80 @@ free_ssl_structure(SSL_LISTENER *ssl)
     }
 }
 
-/**
- * Form an SSL structure from listener section parameters
- *
- * @param obj The configuration object for the item being created
- * @param require_cert  Whether a certificate and key are required
- * @param *error_count  An error count which may be incremented
- * @return SSL_LISTENER structure or NULL
- */
-SSL_LISTENER* make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
+bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
+                       bool require_cert, SSL_LISTENER** dest)
 {
-    char *ssl, *ssl_version, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_cert_verify_depth;
-    int local_errors = 0;
-    SSL_LISTENER *new_ssl;
+    SSL_LISTENER* ssl = NULL;
 
-    ssl = config_get_value(obj->parameters, CN_SSL);
+    // The enum values convert to bool
+    int value = config_get_enum(params, CN_SSL, ssl_values);
+    ss_dassert(value != -1);
 
-    if (ssl)
+    if (value)
     {
-        if (!strcmp(ssl, CN_REQUIRED))
+        bool error = false;
+        char* ssl_cert = config_get_value(params, CN_SSL_CERT);
+        char* ssl_key = config_get_value(params, CN_SSL_KEY);
+        char* ssl_ca_cert = config_get_value(params, CN_SSL_CA_CERT);
+
+        if (ssl_ca_cert == NULL)
         {
-            if ((new_ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
-            {
-                return NULL;
-            }
-            new_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
-            ssl_cert = config_get_value(obj->parameters, CN_SSL_CERT);
-            ssl_key = config_get_value(obj->parameters, CN_SSL_KEY);
-            ssl_ca_cert = config_get_value(obj->parameters, CN_SSL_CA_CERT);
-            ssl_version = config_get_value(obj->parameters, CN_SSL_VERSION);
-            ssl_cert_verify_depth = config_get_value(obj->parameters, CN_SSL_CERT_VERIFY_DEPTH);
-            const char* ssl_verify_peer_certificate = config_get_value(obj->parameters, CN_SSL_VERIFY_PEER_CERTIFICATE);
-            new_ssl->ssl_init_done = false;
-            new_ssl->ssl_cert_verify_depth = 9; // Default of 9 as per Linux man page
-            new_ssl->ssl_verify_peer_certificate = true;
-
-            if (ssl_version && listener_set_ssl_version(new_ssl, ssl_version) != 0)
-            {
-                MXS_ERROR("Unknown parameter value for 'ssl_version' for '%s': %s",
-                          obj->object, ssl_version);
-                local_errors++;
-            }
-
-            if (ssl_cert_verify_depth &&
-                (new_ssl->ssl_cert_verify_depth = atoi(ssl_cert_verify_depth)) < 0)
-            {
-                MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth for '%s': %s",
-                          obj->object, ssl_cert_verify_depth);
-                new_ssl->ssl_cert_verify_depth = 0;
-                local_errors++;
-            }
-
-            if (ssl_verify_peer_certificate)
-            {
-                int rv = config_truth_value(ssl_verify_peer_certificate);
-                if (rv == -1)
-                {
-                    MXS_ERROR("Invalid parameter value for 'ssl_verify_peer_certificate"
-                              " for '%s': %s", obj->object, ssl_verify_peer_certificate);
-                    local_errors++;
-                }
-                else
-                {
-                    new_ssl->ssl_verify_peer_certificate = rv;
-                }
-            }
-
-            listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
-
-            if (require_cert)
-            {
-                if (new_ssl->ssl_cert == NULL)
-                {
-                    local_errors++;
-                    MXS_ERROR("Server certificate missing for listener '%s'."
-                              "Please provide the path to the server certificate by adding "
-                              "the ssl_cert=<path> parameter", obj->object);
-                }
-                else if (access(new_ssl->ssl_cert, F_OK) != 0)
-                {
-                    MXS_ERROR("Server certificate file for listener '%s' not found: %s",
-                              obj->object, new_ssl->ssl_cert);
-                    local_errors++;
-                }
-
-                if (new_ssl->ssl_key == NULL)
-                {
-                    local_errors++;
-                    MXS_ERROR("Server private key missing for listener '%s'. "
-                              "Please provide the path to the server certificate key by "
-                              "adding the ssl_key=<path> parameter", obj->object);
-                }
-                else if (access(new_ssl->ssl_key, F_OK) != 0)
-                {
-                    MXS_ERROR("Server private key file for listener '%s' not found: %s",
-                              obj->object, new_ssl->ssl_key);
-                    local_errors++;
-                }
-            }
-
-            if (new_ssl->ssl_ca_cert == NULL)
-            {
-                local_errors++;
-                MXS_ERROR("CA Certificate missing for '%s'."
-                          "Please provide the path to the certificate authority "
-                          "certificate by adding the ssl_ca_cert=<path> parameter",
-                          obj->object);
-            }
-            else if (access(new_ssl->ssl_ca_cert, F_OK) != 0)
-            {
-                MXS_ERROR("Certificate authority file for '%s' not found: %s",
-                          obj->object, new_ssl->ssl_ca_cert);
-                local_errors++;
-            }
-
-            if (0 == local_errors)
-            {
-                return new_ssl;
-            }
-            *error_count += local_errors;
-            MXS_FREE(new_ssl);
+            MXS_ERROR("CA Certificate missing for '%s'."
+                      "Please provide the path to the certificate authority "
+                      "certificate by adding the ssl_ca_cert=<path> parameter",
+                      name);
+            error = true;
         }
-        else if (strcmp(ssl, "disabled") != 0)
+
+        if (require_cert)
         {
-            MXS_ERROR("Unknown value for 'ssl': %s. Service will not use SSL.", ssl);
+            if (ssl_cert == NULL)
+            {
+                MXS_ERROR("Server certificate missing for listener '%s'."
+                          "Please provide the path to the server certificate by adding "
+                          "the ssl_cert=<path> parameter", name);
+                error = true;
+            }
+
+            if (ssl_key == NULL)
+            {
+                MXS_ERROR("Server private key missing for listener '%s'. "
+                          "Please provide the path to the server certificate key by "
+                          "adding the ssl_key=<path> parameter", name);
+                error = true;
+            }
+        }
+
+        if (error)
+        {
+            return false;
+        }
+
+        ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER));
+        MXS_ABORT_IF_NULL(ssl);
+
+        int ssl_version = config_get_enum(params, CN_SSL_VERSION, ssl_version_values);
+
+        ssl->ssl_method_type = (ssl_method_type_t)ssl_version;
+        ssl->ssl_init_done = false;
+        ssl->ssl_cert_verify_depth = config_get_integer(params, CN_SSL_CERT_VERIFY_DEPTH);
+        ssl->ssl_verify_peer_certificate = config_get_bool(params, CN_SSL_VERIFY_PEER_CERTIFICATE);
+
+        listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
+
+        ss_dassert(access(ssl_ca_cert, F_OK) == 0);
+        ss_dassert(!ssl_cert || access(ssl_cert, F_OK) == 0);
+        ss_dassert(!ssl_key || access(ssl_key, F_OK) == 0);
+
+        if (!SSL_LISTENER_init(ssl))
+        {
+            SSL_LISTENER_free(ssl);
+            return false;
         }
     }
-    return NULL;
+
+    *dest = ssl;
+    return true;
 }
 
 void config_set_global_defaults()
@@ -3504,7 +3481,12 @@ int create_new_listener(CONFIG_CONTEXT *obj)
         }
 
         const char *protocol = config_get_string(obj->parameters, CN_PROTOCOL);
-        SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
+        SSL_LISTENER *ssl_info = NULL;
+
+        if (!config_create_ssl(obj->object, obj->parameters, true, &ssl_info))
+        {
+            return 1;
+        }
 
         // These two values being NULL trigger the loading of the default
         // authenticators that are specific to each protocol module

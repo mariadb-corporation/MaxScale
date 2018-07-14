@@ -82,7 +82,31 @@ SERV_LISTENER* listener_alloc(struct service* service, const char* name, const c
 void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
-int listener_init_SSL(SSL_LISTENER *ssl_listener);
+
+
+/**
+ * Initialize SSL configuration
+ *
+ * This sets up the generated RSA encryption keys, chooses the listener
+ * encryption level and configures the listener certificate, private key and
+ * certificate authority file.
+ *
+ * @note This function should not be called directly, use config_create_ssl() instead
+ *
+ * @todo Combine this with config_create_ssl() into one function
+ *
+ * @param ssl SSL configuration to initialize
+ *
+ * @return True on success, false on error
+ */
+bool SSL_LISTENER_init(SSL_LISTENER* ssl);
+
+/**
+ * Free an SSL_LISTENER
+ *
+ * @param ssl SSL_LISTENER to free
+ */
+void SSL_LISTENER_free(SSL_LISTENER* ssl);
 
 /**
  * @brief Check if listener is active

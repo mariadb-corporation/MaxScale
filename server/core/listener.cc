@@ -260,127 +260,145 @@ static const char* get_ssl_errors()
     return ssl_errbuf->c_str();
 }
 
-/**
- * Initialize the listener's SSL context. This sets up the generated RSA
- * encryption keys, chooses the listener encryption level and configures the
- * listener certificate, private key and certificate authority file.
- * @param ssl_listener Listener data to initialize
- * @return 0 on success, -1 on error
- */
-int
-listener_init_SSL(SSL_LISTENER *ssl_listener)
+bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 {
-    DH* dh;
-    RSA* rsa;
+    ss_dassert(!ssl->ssl_init_done);
+    bool rval = true;
 
-    if (!ssl_listener->ssl_init_done)
+    switch (ssl->ssl_method_type)
     {
-        switch (ssl_listener->ssl_method_type)
-        {
 #ifndef OPENSSL_1_1
         case SERVICE_TLS10:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_method();
+            ssl->method = (SSL_METHOD*)TLSv1_method();
             break;
 #endif
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_1_method();
+            ssl->method = (SSL_METHOD*)TLSv1_1_method();
             break;
         case SERVICE_TLS12:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_2_method();
+            ssl->method = (SSL_METHOD*)TLSv1_2_method();
             break;
 #endif
-        /** Rest of these use the maximum available SSL/TLS methods */
+            /** Rest of these use the maximum available SSL/TLS methods */
         case SERVICE_SSL_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
+            ssl->method = (SSL_METHOD*)SSLv23_method();
             break;
         case SERVICE_TLS_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
+            ssl->method = (SSL_METHOD*)SSLv23_method();
             break;
         case SERVICE_SSL_TLS_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
+            ssl->method = (SSL_METHOD*)SSLv23_method();
             break;
         default:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
+            ssl->method = (SSL_METHOD*)SSLv23_method();
             break;
-        }
-
-        if ((ssl_listener->ctx = SSL_CTX_new(ssl_listener->method)) == NULL)
-        {
-            MXS_ERROR("SSL context initialization failed: %s", get_ssl_errors());
-            return -1;
-        }
-
-        SSL_CTX_set_default_read_ahead(ssl_listener->ctx, 0);
-
-        /** Enable all OpenSSL bug fixes */
-        SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_ALL);
-
-        /** Disable SSLv3 */
-        SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_NO_SSLv3);
-
-        // Disable session cache
-        SSL_CTX_set_session_cache_mode(ssl_listener->ctx, SSL_SESS_CACHE_OFF);
-
-        /** Generate the 512-bit and 1024-bit RSA keys */
-        if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
-        {
-            MXS_ERROR("512-bit RSA key generation failed.");
-            return -1;
-        }
-        if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
-        {
-            MXS_ERROR("1024-bit RSA key generation failed.");
-            return -1;
-        }
-
-        ss_dassert(rsa_512 && rsa_1024);
-        SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
-
-        ss_dassert(ssl_listener->ssl_ca_cert);
-
-        /* Load the CA certificate into the SSL_CTX structure */
-        if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
-        {
-            MXS_ERROR("Failed to set Certificate Authority file");
-            return -1;
-        }
-
-        if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
-        {
-            /** Load the server certificate */
-            if (SSL_CTX_use_certificate_chain_file(ssl_listener->ctx, ssl_listener->ssl_cert) <= 0)
-            {
-                MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
-                return -1;
-            }
-
-            /* Load the private-key corresponding to the server certificate */
-            if (SSL_CTX_use_PrivateKey_file(ssl_listener->ctx, ssl_listener->ssl_key, SSL_FILETYPE_PEM) <= 0)
-            {
-                MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
-                return -1;
-            }
-
-            /* Check if the server certificate and private-key matches */
-            if (!SSL_CTX_check_private_key(ssl_listener->ctx))
-            {
-                MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
-                return -1;
-            }
-        }
-
-        /* Set to require peer (client) certificate verification */
-        if (ssl_listener->ssl_verify_peer_certificate)
-        {
-            SSL_CTX_set_verify(ssl_listener->ctx, SSL_VERIFY_PEER, NULL);
-        }
-
-        /* Set the verification depth */
-        SSL_CTX_set_verify_depth(ssl_listener->ctx, ssl_listener->ssl_cert_verify_depth);
-        ssl_listener->ssl_init_done = true;
     }
-    return 0;
+
+    SSL_CTX* ctx = SSL_CTX_new(ssl->method);
+
+    if (ctx == NULL)
+    {
+        MXS_ERROR("SSL context initialization failed: %s", get_ssl_errors());
+        return false;
+    }
+
+    SSL_CTX_set_default_read_ahead(ctx, 0);
+
+    /** Enable all OpenSSL bug fixes */
+    SSL_CTX_set_options(ctx, SSL_OP_ALL);
+
+    /** Disable SSLv3 */
+    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+
+    // Disable session cache
+    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+
+    //
+    // Note: This is not safe if SSL initialization is done concurrently
+    //
+    /** Generate the 512-bit and 1024-bit RSA keys */
+    if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
+    {
+        MXS_ERROR("512-bit RSA key generation failed.");
+        rval = false;
+    }
+    else if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
+    {
+        MXS_ERROR("1024-bit RSA key generation failed.");
+        rval = false;
+    }
+    else
+    {
+        ss_dassert(rsa_512 && rsa_1024);
+        SSL_CTX_set_tmp_rsa_callback(ctx, tmp_rsa_callback);
+    }
+
+    ss_dassert(ssl->ssl_ca_cert);
+
+    /* Load the CA certificate into the SSL_CTX structure */
+    if (!SSL_CTX_load_verify_locations(ctx, ssl->ssl_ca_cert, NULL))
+    {
+        MXS_ERROR("Failed to set Certificate Authority file");
+        rval = false;
+    }
+
+    if (ssl->ssl_cert && ssl->ssl_key)
+    {
+        /** Load the server certificate */
+        if (SSL_CTX_use_certificate_chain_file(ctx, ssl->ssl_cert) <= 0)
+        {
+            MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
+            rval = false;
+        }
+
+        /* Load the private-key corresponding to the server certificate */
+        if (SSL_CTX_use_PrivateKey_file(ctx, ssl->ssl_key, SSL_FILETYPE_PEM) <= 0)
+        {
+            MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
+            rval = false;
+        }
+
+        /* Check if the server certificate and private-key matches */
+        if (!SSL_CTX_check_private_key(ctx))
+        {
+            MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
+            rval = false;
+        }
+    }
+
+    /* Set to require peer (client) certificate verification */
+    if (ssl->ssl_verify_peer_certificate)
+    {
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    }
+
+    /* Set the verification depth */
+    SSL_CTX_set_verify_depth(ctx, ssl->ssl_cert_verify_depth);
+
+    if (rval)
+    {
+        ssl->ssl_init_done = true;
+        ssl->ctx = ctx;
+    }
+    else
+    {
+        SSL_CTX_free(ctx);
+    }
+
+    return rval;
+}
+
+void SSL_LISTENER_free(SSL_LISTENER* ssl)
+{
+    if (ssl)
+    {
+        SSL_CTX_free(ssl->ctx);
+        MXS_FREE(ssl->ssl_ca_cert);
+        MXS_FREE(ssl->ssl_cert);
+        MXS_FREE(ssl->ssl_key);
+        MXS_FREE(ssl);
+    }
 }
 
 /**

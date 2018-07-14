@@ -778,6 +778,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
             return NULL;
         }
 
+        SSL_LISTENER *ssl_cfg;
         /* Allocate SSL struct for backend connection */
         if ((ssl_cfg =
              static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
@@ -873,27 +874,6 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
 
     if (inst->ssl_enabled)
     {
-        if (service->dbref &&
-            service->dbref->server &&
-            service->dbref->server->server_ssl)
-        {
-            /* Initialise SSL: exit on error */
-            if (listener_init_SSL(service->dbref->server->server_ssl) != 0)
-            {
-                MXS_ERROR("%s: Unable to initialize SSL with backend server",
-                          service->name);
-                /* Free SSL struct */
-                /* Note: SSL struct in server should be freed by server_free() */
-                blr_free_ssl_data(inst);
-
-                server_free(service->dbref->server);
-                MXS_FREE(service->dbref);
-                service->dbref = NULL;
-                sqlite3_close_v2(inst->gtid_maps);
-                free_instance(inst);
-                return NULL;
-            }
-        }
         MXS_INFO("%s: Replicating from master with SSL", service->name);
     }
     else

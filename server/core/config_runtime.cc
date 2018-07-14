@@ -262,13 +262,7 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
             (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth)) &&
             (!verify || config_add_param(obj, CN_SSL_VERIFY_PEER_CERTIFICATE, verify)))
         {
-            int err = 0;
-            SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
-
-            if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
-            {
-                rval = ssl;
-            }
+            config_create_ssl(name, obj->parameters, true, &rval);
         }
 
         config_context_free(obj);
