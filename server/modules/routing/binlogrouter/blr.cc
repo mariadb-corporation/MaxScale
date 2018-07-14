@@ -38,6 +38,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
@@ -762,12 +763,19 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
     /* Dynamically allocate master_host server struct, not written in any cnf file */
     if (service->dbref == NULL)
     {
-        SERVER *server;
-        SSL_LISTENER *ssl_cfg;
-        server = server_alloc("binlog_router_master_host",
-                              "_none_", 3306,
-                              "MySQLBackend",
-                              "MySQLBackendAuth");
+        // Declared in config.cc and needs to be removed if/when blr is refactored
+        extern const MXS_MODULE_PARAM config_server_params[];
+
+        mxs::ParamList p(
+        {
+            {"address", "_none_"},
+            {"port", "3306"},
+            {"protocol", "MySQLBackend"},
+            {"authenticator", "MySQLBackendAuth"}
+        }, config_server_params);
+
+        SERVER* server = server_alloc("binlog_router_master_host", p.params());
+
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",

@@ -37,10 +37,19 @@
 #include <maxscale/server.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
+#include <maxscale/config.hh>
 
 // This is pretty ugly but it's required to test internal functions
 #include "../config.cc"
 #include "../server.cc"
+
+static mxs::ParamList params(
+{
+    {"address", "127.0.0.1"},
+    {"port", "9876"},
+    {"protocol", "HTTPD"},
+    {"authenticator", "NullAuthAllow"}
+}, config_server_params);
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -55,13 +64,9 @@ test1()
 
     /* Server tests */
     ss_dfprintf(stderr, "testserver : creating server called MyServer");
-    set_libdir(MXS_STRDUP_A("../../modules/authenticator/NullAuthAllow/"));
-    server = server_alloc("uniquename", "127.0.0.1", 9876, "HTTPD", "NullAuthAllow");
+    server = server_alloc("uniquename", params.params());
     ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
-
-    //ss_info_dassert(NULL != service, "New server with valid protocol and port must not be null");
-    //ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
 
     char buf[120];
     ss_dfprintf(stderr, "\t..done\nTest Parameter for Server.");
@@ -123,6 +128,7 @@ bool test_load_config(const char *input, SERVER *server)
         {
             CONFIG_CONTEXT *obj = ccontext.next;
             MXS_CONFIG_PARAMETER *param = obj->parameters;
+            config_add_defaults(obj, config_server_params);
 
             TEST(strcmp(obj->object, server->name) == 0, "Server names differ");
             TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0, "Server addresses differ");
@@ -130,7 +136,7 @@ bool test_load_config(const char *input, SERVER *server)
             TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
                  "Server authenticators differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
-            TEST(create_new_server(obj) == 0, "Failed to create server from loaded config");
+            TEST(server_alloc(obj->object, obj->parameters), "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
         }
@@ -146,7 +152,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char *persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    SERVER *server = server_alloc(name, "127.0.0.1", 9876, "HTTPD", "NullAuthAllow");
+    SERVER *server = server_alloc(name, params.params());
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -178,6 +184,16 @@ bool test_serialize()
 
 int main(int argc, char **argv)
 {
+    /**
+     * Prepare test environment by pre-loading modules. This prevents the server
+     * allocation from failing if multiple modules from different directories are
+     * loaded in one core function call.
+     */
+    set_libdir(MXS_STRDUP_A("../../modules/authenticator/NullAuthAllow/"));
+    load_module("NullAuthAllow", MODULE_AUTHENTICATOR);
+    set_libdir(MXS_STRDUP_A("../../modules/protocol/HTTPD/"));
+    load_module("HTTPD", MODULE_PROTOCOL);
+
     int result = 0;
 
     result += test1();

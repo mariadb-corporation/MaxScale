@@ -16,6 +16,7 @@
  */
 
 #include <maxscale/config.h>
+#include <maxscale/config.hh>
 
 #include <ctype.h>
 #include <ftw.h>
@@ -4308,4 +4309,33 @@ bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_thresh
     }
 
     return success;
+}
+
+namespace maxscale
+{
+
+ParamList::ParamList(std::initializer_list<std::pair<const char*, const char*>> list,
+                     const MXS_MODULE_PARAM* module_params)
+{
+    for (auto&& a : list)
+    {
+        config_add_param(&m_ctx, a.first, a.second);
+    }
+
+    if (module_params)
+    {
+        config_add_defaults(&m_ctx, module_params);
+    }
+}
+
+ParamList::~ParamList()
+{
+    config_parameter_free(m_ctx.parameters);
+}
+
+MXS_CONFIG_PARAMETER* ParamList::params()
+{
+    return m_ctx.parameters;
+}
+
 }

@@ -52,6 +52,7 @@
 
 // This isn't really a clean way of testing
 #include "../../../../core/internal/service.h"
+#include <maxscale/config.hh>
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
@@ -126,8 +127,18 @@ int main(int argc, char **argv)
         service_add_parameters(service, &p);
     }
 
-    SERVER* server = server_alloc("binlog_router_master_host", "_none_", 3306,
-                          "MySQLBackend", "MySQLBackendAuth");
+    // Declared in config.cc and needs to be removed if/when blr is refactored
+    extern const MXS_MODULE_PARAM config_server_params[];
+
+    mxs::ParamList p(
+    {
+        {"address", "_none_"},
+        {"port", "3306"},
+        {"protocol", "MySQLBackend"},
+        {"authenticator", "MySQLBackendAuth"}
+    }, config_server_params);
+
+    SERVER* server = server_alloc("binlog_router_master_host", p.params());
     if (server == NULL)
     {
         printf("Failed to allocate 'server' object\n");
