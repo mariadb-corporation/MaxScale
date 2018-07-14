@@ -44,6 +44,7 @@
 #include "internal/monitor.h"
 #include "internal/poll.h"
 #include "internal/routingworker.hh"
+#include "internal/config.h"
 
 
 using maxscale::Semaphore;
@@ -72,10 +73,22 @@ static void spin_reporter(void *, char *, int);
 static void server_parameter_free(SERVER_PARAM *tofree);
 
 
-SERVER* server_alloc(const char *name, const char *address, unsigned short port,
-                     const char *protocol, const char *authenticator)
+SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
 {
-    if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
+    const char* monuser = config_get_string(params, CN_MONITORUSER);
+    const char* monpw = config_get_string(params, CN_MONITORPW);
+
+    if ((*monuser != '\0') != (*monpw != '\0'))
+    {
+        MXS_ERROR("Both '%s' and '%s' need to be defined for server '%s'",
+                  CN_MONITORUSER, CN_MONITORPW, name);
+        return NULL;
+    }
+
+    const char* protocol = config_get_string(params, CN_PROTOCOL);
+    const char* authenticator = config_get_string(params, CN_AUTHENTICATOR);
+
+    if (!authenticator[0] && !(authenticator = get_default_authenticator(protocol)))
     {
         MXS_ERROR("No authenticator defined for server '%s' and no default "
                   "authenticator for protocol '%s'.", name, protocol);
@@ -91,12 +104,19 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         return NULL;
     }
 
-    int nthr = config_threadcount();
+    SSL_LISTENER* ssl = NULL;
+
+    if (!config_create_ssl(name, params, false, &ssl))
+    {
+        MXS_ERROR("Unable to initialize SSL for server '%s'", name);
+        return NULL;
+    }
+
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
     char *my_name = MXS_STRDUP(name);
     char *my_protocol = MXS_STRDUP(protocol);
     char *my_authenticator = MXS_STRDUP(authenticator);
-    DCB **persistent = (DCB**)MXS_CALLOC(nthr, sizeof(*persistent));
+    DCB **persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !my_name || !my_protocol || !my_authenticator || !persistent)
     {
@@ -105,8 +125,11 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         MXS_FREE(persistent);
         MXS_FREE(my_protocol);
         MXS_FREE(my_authenticator);
+        SSL_LISTENER_free(ssl);
         return NULL;
     }
+
+    const char* address = config_get_string(params, CN_ADDRESS);
 
     if (snprintf(server->address, sizeof(server->address), "%s", address) > (int)sizeof(server->address))
     {
@@ -122,7 +145,8 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
     server->auth_instance = auth_instance;
-    server->port = port;
+    server->port = config_get_integer(params, CN_PORT);
+    server->server_ssl = ssl;
     server->status = SERVER_RUNNING;
     server->maint_request = MAINTENANCE_NO_CHANGE;
     server->node_id = -1;
@@ -132,13 +156,13 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     spinlock_init(&server->lock);
     server->persistent = persistent;
     server->persistmax = 0;
-    server->persistmaxtime = 0;
-    server->persistpoolmax = 0;
+    server->persistpoolmax = config_get_integer(params, CN_PERSISTPOOLMAX);
+    server->persistmaxtime = config_get_integer(params, CN_PERSISTMAXTIME);
     server->monuser[0] = '\0';
     server->monpw[0] = '\0';
     server->is_active = true;
     server->charset = SERVER_DEFAULT_CHARSET;
-    server->proxy_protocol = false;
+    server->proxy_protocol = config_get_bool(params, CN_PROXY_PROTOCOL);
 
     // Set last event to server_up as the server is in Running state on startup
     server->last_event = SERVER_UP_EVENT;
@@ -148,6 +172,20 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->warn_ssl_not_enabled = true;
 
     server->disk_space_threshold = NULL;
+
+    if (*monuser && *monpw)
+    {
+        server_add_mon_user(server, monuser, monpw);
+    }
+
+    for (MXS_CONFIG_PARAMETER *p = params; p; p = p->next)
+    {
+        if (!is_normal_server_parameter(p->name))
+        {
+            server_add_parameter(server, p->name, p->value);
+        }
+    }
+
     spinlock_acquire(&server_spin);
     server->next = allServers;
     allServers = server;

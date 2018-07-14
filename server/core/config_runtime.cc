@@ -62,6 +62,64 @@ static std::string runtime_get_error()
     return rval;
 }
 
+static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
+{
+    if (strcmp(type, CN_SERVICE) == 0)
+    {
+        return config_service_params;
+    }
+    else if (strcmp(type, CN_LISTENER) == 0)
+    {
+        return config_listener_params;
+    }
+    else if (strcmp(type, CN_MONITOR) == 0)
+    {
+        return config_monitor_params;
+    }
+    else if (strcmp(type, CN_FILTER) == 0)
+    {
+        return config_filter_params;
+    }
+    else if (strcmp(type, CN_SERVER) == 0)
+    {
+        return config_server_params;
+    }
+
+    MXS_NOTICE("Module type with no default parameters used: %s", type);
+    ss_info_dassert(!true, "Module type with no default parameters used");
+    return NULL;
+}
+
+/**
+ * @brief Load module default parameters
+ *
+ * @param name        Name of the module to load
+ * @param module_type Type of the module (MODULE_ROUTER, MODULE_PROTOCOL etc.)
+ * @param object_type Type of the object (server, service, listener etc.)
+ *
+ * @return List of default parameters or NULL on error
+ */
+static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_type,
+                                           const char* object_type)
+{
+    MXS_CONFIG_PARAMETER* rval = NULL;
+    CONFIG_CONTEXT ctx = {(char*)""};
+
+    if (const MXS_MODULE* mod = get_module(name, module_type))
+    {
+        config_add_defaults(&ctx, get_type_parameters(object_type));
+        config_add_defaults(&ctx, mod->parameters);
+        rval = ctx.parameters;
+    }
+    else
+    {
+        MXS_ERROR("Failed to load module '%s'. See previous error messages for "
+                  "more details.", name);
+    }
+
+    return rval;
+}
+
 bool runtime_link_server(SERVER *server, const char *target)
 {
     spinlock_acquire(&crt_lock);
@@ -145,45 +203,58 @@ bool runtime_create_server(const char *name, const char *address, const char *po
 
     if (server_find_by_unique_name(name) == NULL)
     {
-        // TODO: Get default values from the protocol module
-        if (port == NULL)
-        {
-            port = "3306";
-        }
         if (protocol == NULL)
         {
             protocol = "mariadbbackend";
         }
-        if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
-        {
-            MXS_ERROR("No authenticator defined for server '%s' and no default "
-                      "authenticator for protocol '%s'.", name, protocol);
-            spinlock_release(&crt_lock);
-            return false;
-        }
 
-        /** First check if this service has been created before */
-        SERVER *server = server_repurpose_destroyed(name, protocol, authenticator, address, port);
+        CONFIG_CONTEXT ctx{(char*)""};
+        ctx.parameters = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
 
-        if (server)
+        if (ctx.parameters)
         {
-            MXS_DEBUG("Reusing server '%s'", name);
+            if (address)
+            {
+                config_replace_param(&ctx, "address", address);
+            }
+            if (port)
+            {
+                config_replace_param(&ctx, "port", port);
+            }
+            if (authenticator)
+            {
+                config_replace_param(&ctx, "authenticator", authenticator);
+            }
+
+            /** First check if this service has been created before */
+            SERVER *server = server_repurpose_destroyed(name, protocol, authenticator,
+                                                        address, port);
+
+            if (server)
+            {
+                MXS_INFO("Reusing server '%s'", name);
+            }
+            else
+            {
+                server = server_alloc(name, ctx.parameters);
+            }
+
+            if (server && server_serialize(server))
+            {
+                rval = true;
+                MXS_NOTICE("Created server '%s' at %s:%u", server->name,
+                           server->address, server->port);
+            }
+            else
+            {
+                runtime_error("Failed to create server '%s', see error log for more details", name);
+            }
+
+            config_parameter_free(ctx.parameters);
         }
         else
         {
-            MXS_DEBUG("Creating server '%s'", name);
-            server = server_alloc(name, address, atoi(port), protocol, authenticator);
-        }
-
-        if (server && server_serialize(server))
-        {
-            rval = true;
-            MXS_NOTICE("Created server '%s' at %s:%u", server->name,
-                       server->address, server->port);
-        }
-        else
-        {
-            runtime_error("Failed to create server '%s', see error log for more details", name);
+            runtime_error("Server creation failed when loading protocol module '%s'", protocol);
         }
     }
     else
@@ -410,56 +481,6 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 
     spinlock_release(&crt_lock);
     return valid;
-}
-
-static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
-{
-    if (strcmp(type, CN_SERVICE) == 0)
-    {
-        return config_service_params;
-    }
-    else if (strcmp(type, CN_LISTENER) == 0)
-    {
-        return config_listener_params;
-    }
-    else if (strcmp(type, CN_MONITOR) == 0)
-    {
-        return config_monitor_params;
-    }
-    else if (strcmp(type, CN_FILTER) == 0)
-    {
-        return config_filter_params;
-    }
-
-    MXS_NOTICE("Module type with no default parameters used: %s", type);
-    ss_info_dassert(!true, "Module type with no default parameters used");
-    return NULL;
-}
-
-/**
- * @brief Add default parameters to a monitor
- *
- * @param monitor Monitor to modify
- */
-static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_type,
-                                           const char* object_type)
-{
-    MXS_CONFIG_PARAMETER* rval = NULL;
-    CONFIG_CONTEXT ctx = {(char*)""};
-
-    if (const MXS_MODULE* mod = get_module(name, module_type))
-    {
-        config_add_defaults(&ctx, get_type_parameters(object_type));
-        config_add_defaults(&ctx, mod->parameters);
-        rval = ctx.parameters;
-    }
-    else
-    {
-        MXS_ERROR("Failed to load module '%s'. See previous error messages for "
-                  "more details.", name);
-    }
-
-    return rval;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)

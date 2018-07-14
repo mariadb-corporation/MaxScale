@@ -198,4 +198,6 @@ bool config_global_serialize();
  */
 bool export_config_file(const char* filename);
 
+bool is_normal_server_parameter(const char *param);
+
 MXS_END_DECLS

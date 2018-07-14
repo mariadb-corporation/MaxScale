@@ -1559,19 +1559,17 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
 
 bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
-    ss_dassert(param);
-    char *new_value = MXS_STRDUP(value);
-    bool rval;
-
-    if (new_value)
+    if (MXS_CONFIG_PARAMETER* param = config_get_param(obj->parameters, key))
     {
         MXS_FREE(param->value);
-        param->value = new_value;
-        rval = true;
+        param->value = MXS_STRDUP(value);
+    }
+    else
+    {
+        config_add_param(obj, key, value);
     }
 
-    return rval;
+    return true;
 }
 
 void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
@@ -3136,98 +3134,25 @@ bool is_normal_server_parameter(const char *param)
  */
 int create_new_server(CONFIG_CONTEXT *obj)
 {
-    int error_count = 0;
-    char *address = config_get_value(obj->parameters, CN_ADDRESS);
-    char *port = config_get_value(obj->parameters, CN_PORT);
-    char *protocol = config_get_value(obj->parameters, CN_PROTOCOL);
-    char *monuser = config_get_value(obj->parameters, CN_MONITORUSER);
-    char *monpw = config_get_value(obj->parameters, CN_MONITORPW);
-    char *auth = config_get_value(obj->parameters, CN_AUTHENTICATOR);
+    bool error = false;
 
-    if (address && port && protocol)
+    config_add_defaults(obj, config_server_params);
+
+    const char* module = config_get_string(obj->parameters, CN_PROTOCOL);
+    ss_dassert(module);
+
+    if (const MXS_MODULE* mod = get_module(module, MODULE_PROTOCOL))
     {
-        if ((obj->element = server_alloc(obj->object, address, atoi(port), protocol, auth)) == NULL)
-        {
-            MXS_ERROR("Failed to create a new server, memory allocation failed.");
-            error_count++;
-        }
+        config_add_defaults(obj, mod->parameters);
     }
     else
     {
-        obj->element = NULL;
-        MXS_ERROR("Server '%s' is missing a required configuration parameter. A "
-                  "server must have address, port and protocol defined.", obj->object);
-        error_count++;
+        MXS_ERROR("Unable to load protocol module '%s'.", module);
+        return 1;
     }
 
-    if (error_count == 0)
+    if (SERVER* server = server_alloc(obj->object, obj->parameters))
     {
-        SERVER *server = (SERVER*)obj->element;
-
-        if (monuser && monpw)
-        {
-            server_add_mon_user(server, monuser, monpw);
-        }
-        else if (monuser && monpw == NULL)
-        {
-            MXS_ERROR("Server '%s' has a monitoruser defined but no corresponding "
-                      "password.", obj->object);
-            error_count++;
-        }
-
-        char *endptr;
-        const char *poolmax = config_get_value_string(obj->parameters, CN_PERSISTPOOLMAX);
-        if (poolmax)
-        {
-            long int persistpoolmax = strtol(poolmax, &endptr, 0);
-            if (*endptr != '\0' || persistpoolmax < 0)
-            {
-                MXS_ERROR("Invalid value for 'persistpoolmax' for server %s: %s",
-                          server->name, poolmax);
-                error_count++;
-            }
-            else
-            {
-                server->persistpoolmax = persistpoolmax;
-            }
-        }
-
-        const char *persistmax = config_get_value_string(obj->parameters, CN_PERSISTMAXTIME);
-        if (persistmax)
-        {
-            long int persistmaxtime = strtol(persistmax, &endptr, 0);
-            if (*endptr != '\0' || persistmaxtime < 0)
-            {
-                MXS_ERROR("Invalid value for 'persistmaxtime' for server %s: %s",
-                          server->name, persistmax);
-                error_count++;
-            }
-            else
-            {
-                server->persistmaxtime = persistmaxtime;
-            }
-        }
-
-        const char* proxy_protocol = config_get_value_string(obj->parameters, CN_PROXY_PROTOCOL);
-        if (*proxy_protocol)
-        {
-            int truth_value = config_truth_value(proxy_protocol);
-            if (truth_value == 1)
-            {
-                server->proxy_protocol = true;
-            }
-            else if (truth_value == 0)
-            {
-                server->proxy_protocol = false;
-            }
-            else
-            {
-                MXS_ERROR("Invalid value for '%s' for server %s: %s",
-                          CN_PROXY_PROTOCOL, server->name, proxy_protocol);
-                error_count++;
-            }
-        }
-
         const char* disk_space_threshold = config_get_value(obj->parameters, CN_DISK_SPACE_THRESHOLD);
         if (disk_space_threshold)
         {
@@ -3235,28 +3160,18 @@ int create_new_server(CONFIG_CONTEXT *obj)
             {
                 MXS_ERROR("Invalid value for '%s' for server %s: %s",
                           CN_DISK_SPACE_THRESHOLD, server->name, disk_space_threshold);
-                error_count++;
+                error = true;
             }
         }
 
-        MXS_CONFIG_PARAMETER *params = obj->parameters;
-
-        server->server_ssl = make_ssl_structure(obj, false, &error_count);
-        if (server->server_ssl && listener_init_SSL(server->server_ssl) != 0)
-        {
-            MXS_ERROR("Unable to initialize server SSL");
-        }
-
-        while (params)
-        {
-            if (!is_normal_server_parameter(params->name))
-            {
-                server_add_parameter(server, params->name, params->value);
-            }
-            params = params->next;
-        }
     }
-    return error_count;
+    else
+    {
+        MXS_ERROR("Failed to create a new server, memory allocation failed.");
+        error = true;
+    }
+
+    return error;
 }
 
 /**

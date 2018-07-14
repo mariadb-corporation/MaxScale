@@ -263,15 +263,12 @@ enum
  * can use. This function will add the server to the running configuration but
  * will not persist the changes.
  *
- * @param name          Unique server name
- * @param address       The server address
- * @param port          The port to connect to
- * @param protocol      The protocol to use to connect to the server
- * @param authenticator The server authenticator module
- * @return              The newly created server or NULL if an error occurred
+ * @param name   Unique server name
+ * @param params Parameters for the server
+ *
+ * @return       The newly created server or NULL if an error occurred
  */
-extern SERVER* server_alloc(const char *name, const char *address, unsigned short port,
-                            const char *protocol, const char *authenticator);
+extern SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params);
 
 /**
  * @brief Find a server that can be reused
