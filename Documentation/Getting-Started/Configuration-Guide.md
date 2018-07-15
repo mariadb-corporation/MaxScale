@@ -1509,7 +1509,7 @@ that control the TLS/SSL encryption method and the various certificate files
 involved in it.
 
 To enable TLS/SSL for a listener or a server, you must set the `ssl` parameter
-to `required` and provide the three files for `ssl_cert`, `ssl_key` and
+to `true` and provide the three files for `ssl_cert`, `ssl_key` and
 `ssl_ca_cert`.
 
 After this, MaxScale connections between the server and/or the client will be
@@ -1519,30 +1519,34 @@ enabled, only encrypted connections to MaxScale can be created.
 
 #### `ssl`
 
-This enables SSL connections when set to `required`. If enabled, the three
-certificate files mentioned below must also be supplied. MaxScale connections
-to will then be encrypted with TLS/SSL.
+This enables SSL connections when set to true. The parameter takes a boolean
+value and is disabled by default. The parameter also accepts the special values
+`required` and `disabled` which were the only supported values before MaxScale
+2.3.0.
+
+If enabled, the three certificate files mentioned below must also be
+supplied. MaxScale connections to will then be encrypted with TLS/SSL.
 
 #### `ssl_key`
 
 A string giving a file path that identifies an existing readable file. The file
 must be the SSL client private key MaxScale should use. This is a required
-parameter for SSL enabled configurations.
+parameter for listeners but an optional parameter for servers.
 
 #### `ssl_cert`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL client certificate MaxScale should use with the server. This is
-a required parameter for SSL enabled configurations. The certificate must match
-the key defined in `ssl_key`.
+must be the SSL client certificate MaxScale should use with the server. The
+certificate must match the key defined in `ssl_key`. This is a required
+parameter for listeners but an optional parameter for servers.
 
 #### `ssl_ca_cert`
 
 A string giving a file path that identifies an existing readable file. The file
 must be the Certificate Authority (CA) certificate for the CA that signed the
 certificate referred to in the previous parameter. It will be used to verify
-that the certificate is valid. This is a required parameter for SSL enabled
-configurations.
+that the certificate is valid. This is a required parameter for both listeners
+and servers.
 
 #### `ssl_version`
 
@@ -1562,10 +1566,8 @@ layer encryption.
 
 #### `ssl_cert_verify_depth`
 
-The maximum length of the certificate authority chain that will be accepted.
-Legal values are positive integers. Note that if the client is to submit an SSL
-certificate, the `ssl_cert_verify_depth` parameter must not be 0. If no
-value is specified, the default is 9.
+The maximum length of the certificate authority chain that will be accepted. The
+default value is 9. If changed, the new value must be larger than zero.
 
 #### `ssl_verify_peer_certificate`
 
