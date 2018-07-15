@@ -493,26 +493,7 @@ For a list of readwritesplit limitations, please read the
 ## Legacy Configuration
 
 In older versions of MaxScale, routers were configured via the _router_options_
-parameter. This functionality is deprecated and should not be used.
-
-**`router_options`** may include multiple **readwritesplit**-specific options.
-All the options are parameter-value pairs. All parameters listed in this section
-must be configured as a value in `router_options`.
-
-Multiple options can be defined as a comma-separated list of parameter-value
-pairs.
-
-```
-router_options=<option>,<option>
-```
-
-For example, to set **`slave_selection_criteria`** and
-**`disable_sescmd_history`**, write
-
-```
-router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS,disable_sescmd_history=true
-```
-
+parameter. This functionality was deprecated in 2.2 and was removed in 2.3.
 
 ## Examples
 
@@ -536,7 +517,7 @@ The following operations are routed to master:
 * stored procedure calls
 * user-defined function calls
 * DDL statements (`DROP`|`CREATE`|`ALTER TABLE` … etc.)
-* `EXECUTE` (prepared) statements
+* `EXECUTE` (prepared) statements that modify the database
 * all statements using temporary tables
 
 In addition to these, if the **readwritesplit** service is configured with the
@@ -585,5 +566,5 @@ slave failure, a replacement slave can be chosen and the session command history
 can be repeated on that new slave. This means that the router stores each
 executed session command for the duration of the session. Applications that use
 long-running sessions might cause MariaDB MaxScale to consume a growing amount
-of memory unless the sessions are closed. This can be solved by setting a
-connection timeout on the application side.
+of memory unless the sessions are closed. This can be solved by adjusting the
+value of `max_sescmd_history`.
