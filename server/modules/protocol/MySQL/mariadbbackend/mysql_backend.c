@@ -965,6 +965,7 @@ gw_read_and_write(DCB *dcb)
                 stmt = read_buffer;
                 read_buffer = NULL;
                 gwbuf_set_type(stmt, GWBUF_TYPE_RESPONSE_END | GWBUF_TYPE_SESCMD_RESPONSE);
+                protocol_archive_srv_command(proto);
             }
             else
             {
