@@ -48,6 +48,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/version.h>
 #include <maxscale/jansson.h>
 #include <maxscale/json_api.h>
@@ -1116,82 +1117,57 @@ void service_set_retry_interval(SERVICE *service, int value)
 /**
  * Set the filters used by the service
  *
- * @param service       The service itself
- * @param filters       ASCII string of filters to use
+ * @param service The service itself
+ * @param filters The filters to use separated by the pipe character |
+ *
  * @return True if loading and creating all filters was successful. False if a
- * filter module was not found or the instance creation failed.
+ *         filter module was not found or the instance creation failed.
  */
-bool
-serviceSetFilters(SERVICE *service, char *filters)
+bool service_set_filters(SERVICE* service, const char* filters)
 {
-    MXS_FILTER_DEF **flist = NULL;
-    char *ptr = NULL, *brkt = NULL;
-    int n = 0;
     bool rval = true;
+    std::vector<MXS_FILTER_DEF*> flist;
     uint64_t capabilities = 0;
 
-    if ((flist = (MXS_FILTER_DEF **) MXS_MALLOC(sizeof(MXS_FILTER_DEF *))) == NULL)
+    for (auto&& f: mxs::strtok(filters, "| \t"))
     {
-        return false;
-    }
-    ptr = strtok_r(filters, "|", &brkt);
-    while (ptr)
-    {
-        fix_object_name(ptr);
+        fix_object_name(&f[0]);
 
-        n++;
-        MXS_FILTER_DEF **tmp;
-        if ((tmp = (MXS_FILTER_DEF **) MXS_REALLOC(flist,
-                                                   (n + 1) * sizeof(MXS_FILTER_DEF *))) == NULL)
+        if (MXS_FILTER_DEF* def = filter_def_find(f.c_str()))
         {
-            rval = false;
-            break;
-        }
-
-        flist = tmp;
-        char *filter_name = trim(ptr);
-
-        if ((flist[n - 1] = filter_def_find(filter_name)))
-        {
-            if (filter_load(flist[n - 1]))
+            if (filter_load(def))
             {
-                const MXS_MODULE* module = get_module(flist[n - 1]->module, MODULE_FILTER);
+                flist.push_back(def);
+
+                const MXS_MODULE* module = get_module(def->module, MODULE_FILTER);
                 ss_dassert(module);
                 capabilities |= module->module_capabilities;
-                if (flist[n - 1]->obj->getCapabilities)
+
+                if (def->obj->getCapabilities)
                 {
-                    capabilities |= flist[n - 1]->obj->getCapabilities(flist[n - 1]->filter);
+                    capabilities |= def->obj->getCapabilities(def->filter);
                 }
             }
             else
             {
-                MXS_ERROR("Failed to load filter '%s' for service '%s'.",
-                          filter_name, service->name);
+                MXS_ERROR("Failed to load filter '%s' for service '%s'.", f.c_str(), service->name);
                 rval = false;
-                break;
             }
         }
         else
         {
-            MXS_ERROR("Unable to find filter '%s' for service '%s'",
-                      filter_name, service->name);
+            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), service->name);
             rval = false;
-            break;
         }
-
-        flist[n] = NULL;
-        ptr = strtok_r(NULL, "|", &brkt);
     }
 
     if (rval)
     {
-        service->filters = flist;
-        service->n_filters = n;
+        service->filters = (MXS_FILTER_DEF**)MXS_MALLOC((flist.size() + 1) * sizeof(MXS_FILTER_DEF*));
+        std::copy(flist.begin(), flist.end(), service->filters);
+        service->n_filters = flist.size();
+        service->filters[service->n_filters] = NULL;
         service->capabilities |= capabilities;
-    }
-    else
-    {
-        MXS_FREE(flist);
     }
 
     return rval;

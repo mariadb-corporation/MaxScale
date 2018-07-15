@@ -285,7 +285,7 @@ bool service_has_named_listener(SERVICE *service, const char *name);
 
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
 int   serviceSetUser(SERVICE *service, const char *user, const char *auth);
-bool  serviceSetFilters(SERVICE *service, char *filters);
+bool  service_set_filters(SERVICE *service, const char* filters);
 int   serviceEnableRootUser(SERVICE *service, int action);
 int   serviceSetTimeout(SERVICE *service, int val);
 int   serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout);

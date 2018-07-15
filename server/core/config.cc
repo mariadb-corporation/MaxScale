@@ -3204,7 +3204,7 @@ int configure_new_service(CONFIG_CONTEXT *obj)
 
     if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
     {
-        if (!serviceSetFilters(service, filters))
+        if (!service_set_filters(service, filters))
         {
             error_count++;
         }
