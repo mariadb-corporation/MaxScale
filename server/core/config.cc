@@ -216,7 +216,7 @@ int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers);
 int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
-int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
+int configure_new_service(CONFIG_CONTEXT *obj);
 void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p);
 
 static const char *config_file = NULL;
@@ -1163,7 +1163,7 @@ process_config_context(CONFIG_CONTEXT *context)
             {
                 if (!strcmp(type, CN_SERVICE))
                 {
-                    error_count += configure_new_service(context, obj);
+                    error_count += configure_new_service(obj);
                 }
                 else if (!strcmp(type, CN_LISTENER))
                 {
@@ -3176,88 +3176,37 @@ int create_new_server(CONFIG_CONTEXT *obj)
 }
 
 /**
- * Configure a new service
+ * Configure a new service after all objects have been created
  *
- * Add servers, router options and filters to a new service.
- * @param context The complete configuration context
  * @param obj The service configuration context
+ *
  * @return Number of errors
  */
-int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
+int configure_new_service(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    char *filters = config_get_value(obj->parameters, CN_FILTERS);
-    char *servers = config_get_value(obj->parameters, CN_SERVERS);
-    char *monitor = config_get_value(obj->parameters, CN_MONITOR);
-    char *roptions = config_get_value(obj->parameters, CN_ROUTER_OPTIONS);
     SERVICE *service = (SERVICE*)obj->element;
+    ss_dassert(service);
 
-    if (service)
+    for (auto&& a: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ", \t"))
     {
-        if (monitor)
+        if (SERVER* s = server_find_by_unique_name(a.c_str()))
         {
-            if (servers)
-            {
-                MXS_WARNING("Both `monitor` and `servers` are defined. Only the "
-                            "value of `monitor` will be used.");
-            }
-
-            /** `monitor` takes priority over `servers` */
-            servers = NULL;
-
-            for (CONFIG_CONTEXT *ctx = context; ctx; ctx = ctx->next)
-            {
-                if (strcmp(ctx->object, monitor) == 0)
-                {
-                    servers = config_get_value(ctx->parameters, CN_SERVERS);
-                    break;
-                }
-            }
-
-            if (servers == NULL)
-            {
-                MXS_ERROR("Unable to find monitor '%s'.", monitor);
-                error_count++;
-            }
+            serviceAddBackend(service, s);
         }
-
-        if (servers)
+        else
         {
-            char srv_list[strlen(servers) + 1];
-            strcpy(srv_list, servers);
-            char *lasts;
-            char *s = strtok_r(srv_list, ",", &lasts);
-            while (s)
-            {
-                CONFIG_CONTEXT *obj1 = context;
-                int found = 0;
-                while (obj1)
-                {
-                    if (strcmp(trim(s), obj1->object) == 0 && obj1->element)
-                    {
-                        found = 1;
-                        serviceAddBackend(service, (SERVER*)obj1->element);
-                        break;
-                    }
-                    obj1 = obj1->next;
-                }
-
-                if (!found)
-                {
-                    MXS_ERROR("Unable to find server '%s' that is "
-                              "configured as part of service '%s'.", s, obj->object);
-                    error_count++;
-                }
-                s = strtok_r(NULL, ",", &lasts);
-            }
+            MXS_ERROR("Unable to find server '%s' that is configured as part "
+                      "of service '%s'.", a.c_str(), obj->object);
+            error_count++;
         }
+    }
 
-        if (filters)
+    if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
+    {
+        if (!serviceSetFilters(service, filters))
         {
-            if (!serviceSetFilters(service, filters))
-            {
-                error_count++;
-            }
+            error_count++;
         }
     }
 
