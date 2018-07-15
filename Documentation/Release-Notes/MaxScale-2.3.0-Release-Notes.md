@@ -69,6 +69,11 @@ The CDC protocol no longer accepts the `QUERY-LAST-TRANSACTION` and
 `QUERY-TRANSACTION` commands. They were removed due to the addition of the REST
 API that provides the same information in a more easy to process format.
 
+### `ssl` for Servers and Listeners
+
+The `ssl` parameter now accepts boolean values ìn addition to the old `required`
+and `disabled` values.
+
 ## New Features
 
 ### Runtime Configuration of the Cache
@@ -83,6 +88,35 @@ It is now possible for the end user to specify the syslog facility and level
 for authentication errors. Please see
 [the configuration guide](../Getting-Started/Configuration-Guide.md#events)
 for details.
+
+### ReadWriteSplit
+
+A set of new features have been added to readwritesplit.
+
+#### `transaction_replay`
+
+The [`transaction_replay`](../Routers/ReadWriteSplit.md#transaction_replay)
+parameter enables replaying of transactions if a master server is lost
+mid-transaction. This allows transparent replacement of master servers with a
+minimal amount of failed transactions.
+
+#### `master_reconnection`
+
+With the
+[`master_reconnection`](../Routers/ReadWriteSplit.md#master_reconnection)
+parameter, if the connection to a master server is lost or the master server
+changes, readwritesplit can now reconnect seamlessly to the master server
+without losing the session state.
+
+#### `delayed_retry`
+
+The [`delayed_retry`](../Routers/ReadWriteSplit.md#delayed_retry) parameter
+allows queries to be automatically retried if their execution is interrupted.
+
+#### `causal_reads`
+
+The [`causal_reads`](../Routers/ReadWriteSplit.md#causal_reads) parameter
+enables distributed consistent reads with MariaDB version 10.2 and newer.
 
 ## Bug fixes
 
