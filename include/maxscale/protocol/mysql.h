@@ -44,9 +44,6 @@
 MXS_BEGIN_DECLS
 
 #define GW_MYSQL_VERSION "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
-#define GW_MYSQL_LOOP_TIMEOUT 300000000
-#define GW_MYSQL_READ 0
-#define GW_MYSQL_WRITE 1
 
 #define MYSQL_HEADER_LEN 4
 #define MYSQL_CHECKSUM_LEN 4
@@ -112,9 +109,6 @@ MXS_BEGIN_DECLS
 #define MYSQL_TABLE_MAXLEN    64
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
-#define SMALL_CHUNK 1024
-#define MAX_CHUNK SMALL_CHUNK * 8 * 4
-#define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
@@ -321,19 +315,6 @@ static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) - 1;
 static const char* const MXS_LAST_GTID = "last_gtid";
 
 /**
- * List of server commands, and number of response packets are stored here.
- * server_command_t is used in MySQLProtocol structure, so for each DCB there is
- * one MySQLProtocol and one server command list.
- */
-typedef struct server_command_st
-{
-    mxs_mysql_cmd_t           scom_cmd;
-    int                       scom_nresponse_packets; /*< packets in response */
-    size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
-    struct server_command_st* scom_next;
-} server_command_t;
-
-/**
  * MySQL Protocol specific state data.
  *
  * Protocol carries information from client side to backend side, such as
@@ -347,8 +328,6 @@ typedef struct
     int                    fd;                           /*< The socket descriptor */
     struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
     mxs_mysql_cmd_t        current_command;              /*< Current command being executed */
-    server_command_t       protocol_command;             /*< session command list */
-    server_command_t*      protocol_cmd_history;         /*< session command history */
     mxs_auth_state_t       protocol_auth_state;          /*< Authentication status */
     mysql_protocol_state_t protocol_state;               /*< Protocol struct status */
     uint8_t                scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble, created or received */
@@ -485,15 +464,6 @@ int mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
 int mysql_send_custom_error(DCB *dcb, int sequence, int affected_rows, const char* msg);
 int mysql_send_standard_error(DCB *dcb, int sequence, int errnum, const char *msg);
 int mysql_send_auth_error(DCB *dcb, int sequence, int affected_rows, const char* msg);
-
-void   protocol_add_srv_command(MySQLProtocol* p, mxs_mysql_cmd_t cmd);
-void   protocol_remove_srv_command(MySQLProtocol* p);
-bool   protocol_waits_response(MySQLProtocol* p);
-mxs_mysql_cmd_t protocol_get_srv_command(MySQLProtocol* p, bool removep);
-int  get_stmt_nresponse_packets(GWBUF* buf, mxs_mysql_cmd_t cmd);
-bool protocol_get_response_status(MySQLProtocol* p, int* npackets, size_t* nbytes);
-void protocol_set_response_status(MySQLProtocol* p, int  npackets, size_t  nbytes);
-void protocol_archive_srv_command(MySQLProtocol* p);
 
 char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *db, int);
 

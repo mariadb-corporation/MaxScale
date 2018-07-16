@@ -432,11 +432,6 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
         }
     }
 
-    if (GWBUF_IS_TYPE_SESCMD(buffer))
-    {
-        mxs_mysql_cmd_t cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(buffer));
-        protocol_add_srv_command(proto, cmd);
-    }
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
     {
         proto->collect_result = true;
@@ -1642,12 +1637,7 @@ static int gw_change_user(DCB *backend,
             rv = 0;
             goto retblock;
         }
-        /**
-         * Add command to backend's protocol, create artificial reply
-         * packet and add it to client's read buffer.
-         */
-        protocol_add_srv_command((MySQLProtocol*)backend->protocol,
-                                 MXS_COM_CHANGE_USER);
+
         modutil_reply_auth_error(backend, message, 0);
         rv = 1;
     }
