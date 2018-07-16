@@ -501,23 +501,20 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
 {
     if (bref->has_session_commands())
     {
-        /** We are executing a session command */
-        if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))
-        {
-            uint64_t id = bref->complete_session_command();
+        ss_dassert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
+        uint64_t id = bref->complete_session_command();
 
-            if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1)
-            {
-                /** First reply to this session command, route it to the client */
-                ++m_replied_sescmd;
-            }
-            else
-            {
-                /** The reply to this session command has already been sent to
-                 * the client, discard it */
-                gwbuf_free(*ppPacket);
-                *ppPacket = NULL;
-            }
+        if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1)
+        {
+            /** First reply to this session command, route it to the client */
+            ++m_replied_sescmd;
+        }
+        else
+        {
+            /** The reply to this session command has already been sent to
+             * the client, discard it */
+            gwbuf_free(*ppPacket);
+            *ppPacket = NULL;
         }
     }
 }
@@ -1094,28 +1091,6 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
     }
     *wbuf = writebuf;
     return mapped ? 1 : 0;
-}
-
-/**
- * Create a fake error message from a DCB.
- * @param fail_str Custom error message
- * @param dcb DCB to use as the origin of the error
- */
-void create_error_reply(char* fail_str, DCB* dcb)
-{
-    MXS_INFO("change_current_db: failed to change database: %s", fail_str);
-    GWBUF* errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
-
-    if (errbuf == NULL)
-    {
-        MXS_ERROR("Creating buffer for error message failed.");
-        return;
-    }
-    /** Set flags that help router to identify session commands reply */
-    gwbuf_set_type(errbuf, GWBUF_TYPE_SESCMD_RESPONSE);
-    gwbuf_set_type(errbuf, GWBUF_TYPE_RESPONSE_END);
-
-    poll_add_epollin_event_to_dcb(dcb, errbuf);
 }
 
 /**

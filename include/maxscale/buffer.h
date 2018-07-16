@@ -51,25 +51,19 @@ typedef struct buf_property
 
 typedef enum
 {
-    GWBUF_TYPE_UNDEFINED       = 0x00,
-    GWBUF_TYPE_SESCMD_RESPONSE = 0x01,
-    GWBUF_TYPE_RESPONSE_END    = 0x02,
-    GWBUF_TYPE_SESCMD          = 0x04,
-    GWBUF_TYPE_HTTP            = 0x08,
-    GWBUF_TYPE_IGNORABLE       = 0x10,
-    GWBUF_TYPE_COLLECT_RESULT  = 0x20,
-    GWBUF_TYPE_RESULT          = 0x40,
-    GWBUF_TYPE_REPLY_OK        = 0x80,
+    GWBUF_TYPE_UNDEFINED       = 0,
+    GWBUF_TYPE_HTTP            = (1 << 0),
+    GWBUF_TYPE_IGNORABLE       = (1 << 1),
+    GWBUF_TYPE_COLLECT_RESULT  = (1 << 2),
+    GWBUF_TYPE_RESULT          = (1 << 3),
+    GWBUF_TYPE_REPLY_OK        = (1 << 4),
 } gwbuf_type_t;
 
-#define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
-#define GWBUF_IS_TYPE_SESCMD_RESPONSE(b) (b->gwbuf_type & GWBUF_TYPE_SESCMD_RESPONSE)
-#define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
-#define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
-#define GWBUF_IS_IGNORABLE(b)            (b->gwbuf_type & GWBUF_TYPE_IGNORABLE)
-#define GWBUF_IS_COLLECTED_RESULT(b)     (b->gwbuf_type & GWBUF_TYPE_RESULT)
-#define GWBUF_SHOULD_COLLECT_RESULT(b)   (b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
-#define GWBUF_IS_REPLY_OK(b)             (b->gwbuf_type & GWBUF_TYPE_REPLY_OK)
+#define GWBUF_IS_TYPE_UNDEFINED(b)       ((b)->gwbuf_type == 0)
+#define GWBUF_IS_IGNORABLE(b)            ((b)->gwbuf_type & GWBUF_TYPE_IGNORABLE)
+#define GWBUF_IS_COLLECTED_RESULT(b)     ((b)->gwbuf_type & GWBUF_TYPE_RESULT)
+#define GWBUF_SHOULD_COLLECT_RESULT(b)   ((b)->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
+#define GWBUF_IS_REPLY_OK(b)             ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
 
 typedef enum
 {

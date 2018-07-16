@@ -75,76 +75,73 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
 {
     if (backend->has_session_commands())
     {
-        /** We are executing a session command */
-        if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))
+        ss_dassert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
+        uint8_t cmd;
+        gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
+        uint8_t command = backend->next_session_command()->get_command();
+        mxs::SSessionCommand sescmd = backend->next_session_command();
+        uint64_t id = backend->complete_session_command();
+        MXS_PS_RESPONSE resp = {};
+        bool discard = true;
+
+        if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
         {
-            uint8_t cmd;
-            gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
-            uint8_t command = backend->next_session_command()->get_command();
-            mxs::SSessionCommand sescmd = backend->next_session_command();
-            uint64_t id = backend->complete_session_command();
-            MXS_PS_RESPONSE resp = {};
-            bool discard = true;
+            // This should never fail or the backend protocol is broken
+            ss_debug(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
+            ss_dassert(b);
+            backend->add_ps_handle(id, resp.id);
+        }
 
-            if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
+        if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
+        {
+            if (!m_current_master || !m_current_master->in_use() || // Session doesn't have a master
+                m_current_master == backend) // This is the master's response
             {
-                // This should never fail or the backend protocol is broken
-                ss_debug(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
-                ss_dassert(b);
-                backend->add_ps_handle(id, resp.id);
-            }
+                /** First reply to this session command, route it to the client */
+                ++m_recv_sescmd;
+                discard = false;
 
-            if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
-            {
-                if (!m_current_master || !m_current_master->in_use() || // Session doesn't have a master
-                    m_current_master == backend) // This is the master's response
+                /** Store the master's response so that the slave responses can
+                 * be compared to it */
+                m_sescmd_responses[id] = cmd;
+
+                if (cmd == MYSQL_REPLY_ERR)
                 {
-                    /** First reply to this session command, route it to the client */
-                    ++m_recv_sescmd;
-                    discard = false;
-
-                    /** Store the master's response so that the slave responses can
-                     * be compared to it */
-                    m_sescmd_responses[id] = cmd;
-
-                    if (cmd == MYSQL_REPLY_ERR)
-                    {
-                        MXS_INFO("Session command no. %lu failed: %s",
-                                 id, extract_error(*ppPacket).c_str());
-                    }
-                    else if (command == MXS_COM_STMT_PREPARE)
-                    {
-                        /** Map the returned response to the internal ID */
-                        MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
-                        m_qc.ps_id_internal_put(resp.id, id);
-                    }
-
-                    // Discard any slave connections that did not return the same result
-                    for (SlaveResponseList::iterator it = m_slave_responses.begin();
-                         it != m_slave_responses.end(); it++)
-                    {
-                        discard_if_response_differs(it->first, cmd, it->second, sescmd);
-                    }
-
-                    m_slave_responses.clear();
+                    MXS_INFO("Session command no. %lu failed: %s",
+                             id, extract_error(*ppPacket).c_str());
                 }
-                else
+                else if (command == MXS_COM_STMT_PREPARE)
                 {
-                    /** Record slave command so that the response can be validated
-                     * against the master's response when it arrives. */
-                    m_slave_responses.push_back(std::make_pair(backend, cmd));
+                    /** Map the returned response to the internal ID */
+                    MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
+                    m_qc.ps_id_internal_put(resp.id, id);
                 }
+
+                // Discard any slave connections that did not return the same result
+                for (SlaveResponseList::iterator it = m_slave_responses.begin();
+                     it != m_slave_responses.end(); it++)
+                {
+                    discard_if_response_differs(it->first, cmd, it->second, sescmd);
+                }
+
+                m_slave_responses.clear();
             }
             else
             {
-                discard_if_response_differs(backend, m_sescmd_responses[id], cmd, sescmd);
+                /** Record slave command so that the response can be validated
+                 * against the master's response when it arrives. */
+                m_slave_responses.push_back(std::make_pair(backend, cmd));
             }
+        }
+        else
+        {
+            discard_if_response_differs(backend, m_sescmd_responses[id], cmd, sescmd);
+        }
 
-            if (discard)
-            {
-                gwbuf_free(*ppPacket);
-                *ppPacket = NULL;
-            }
+        if (discard)
+        {
+            gwbuf_free(*ppPacket);
+            *ppPacket = NULL;
         }
     }
 }

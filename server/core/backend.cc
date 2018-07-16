@@ -103,16 +103,13 @@ bool Backend::execute_session_command()
         break;
 
     case MXS_COM_CHANGE_USER:
-        /** This makes it possible to handle replies correctly */
-        gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
         rval = auth(buffer);
         break;
 
     case MXS_COM_QUERY:
     default:
-        // TODO: Remove use of GWBUF_TYPE_SESCMD
-        //Mark session command buffer, it triggers writing MySQL command to protocol
-        gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
+        // We want the complete response in one packet
+        gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
         rval = write(buffer, EXPECT_RESPONSE);
         ss_dassert(is_waiting_result());
         break;

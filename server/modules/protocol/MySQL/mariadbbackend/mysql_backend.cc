@@ -976,43 +976,16 @@ gw_read_and_write(DCB *dcb)
     do
     {
         GWBUF *stmt = NULL;
-        /**
-         * If protocol has session command set, concatenate whole
-         * response into one buffer.
-         */
-        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MXS_COM_UNDEFINED)
+
+        if (result_collected)
         {
-            if (result_collected)
-            {
-                /** The result set or PS response was collected, we know it's complete */
-                stmt = read_buffer;
-                read_buffer = NULL;
-                gwbuf_set_type(stmt, GWBUF_TYPE_RESPONSE_END | GWBUF_TYPE_SESCMD_RESPONSE);
-            }
-            else
-            {
-                stmt = process_response_data(dcb, &read_buffer, gwbuf_length(read_buffer));
-                /**
-                 * Received incomplete response to session command.
-                 * Store it to readqueue and return.
-                 */
-                if (!sescmd_response_complete(dcb))
-                {
-                    stmt = gwbuf_append(stmt, read_buffer);
-                    dcb_readq_prepend(dcb, stmt);
-                    return 0;
-                }
-            }
-            if (!stmt)
-            {
-                MXS_ERROR("Read buffer unexpectedly null, even though response "
-                          "not marked as complete. User: %s", dcb->session->client_dcb->user);
-                return 0;
-            }
+            /** The result set or PS response was collected, we know it's complete */
+            stmt = read_buffer;
+            read_buffer = NULL;
+            gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
         }
         else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) &&
-                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
-                 !result_collected)
+                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
 
@@ -1665,195 +1638,6 @@ retblock:
 }
 
 /**
- * Move packets or parts of packets from readbuf to outbuf as the packet headers
- * and lengths have been noticed and counted.
- * Session commands need to be marked so that they can be handled properly in
- * the router's clientReply.
- *
- * @param dcb                   Backend's DCB where data was read from
- * @param readbuf               GWBUF where data was read to
- * @param nbytes_to_process     Number of bytes that has been read and need to be processed
- *
- * @return GWBUF which includes complete MySQL packet
- */
-static GWBUF* process_response_data(DCB* dcb,
-                                    GWBUF** readbuf,
-                                    int nbytes_to_process)
-{
-    int npackets_left = 0; /*< response's packet count */
-    int nbytes_left = 0; /*< nbytes to be read for the packet */
-    MySQLProtocol* p;
-    GWBUF* outbuf = NULL;
-    int initial_packets = npackets_left;
-    int initial_bytes = nbytes_left;
-
-    /** Get command which was stored in gw_MySQLWrite_backend */
-    p = DCB_PROTOCOL(dcb, MySQLProtocol);
-    CHK_PROTOCOL(p);
-
-    /** All buffers processed here are sescmd responses */
-    gwbuf_set_type(*readbuf, GWBUF_TYPE_SESCMD_RESPONSE);
-
-    /**
-     * Now it is known how many packets there should be and how much
-     * is read earlier.
-     */
-    while (nbytes_to_process != 0)
-    {
-        mxs_mysql_cmd_t srvcmd;
-        bool succp;
-
-        srvcmd = protocol_get_srv_command(p, false);
-
-        MXS_DEBUG("Read command %s for DCB %p fd %d.", STRPACKETTYPE(srvcmd), dcb, dcb->fd);
-        /**
-         * Read values from protocol structure, fails if values are
-         * uninitialized.
-         */
-        if (npackets_left == 0)
-        {
-            size_t bytes; // nbytes_left is int, but the type must be size_t.
-            succp = protocol_get_response_status(p, &npackets_left, &bytes);
-            nbytes_left = bytes;
-
-            if (!succp || npackets_left == 0)
-            {
-                /**
-                 * Examine command type and the readbuf. Conclude response
-                 * packet count from the command type or from the first
-                 * packet content. Fails if read buffer doesn't include
-                 * enough data to read the packet length.
-                 */
-                init_response_status(*readbuf, srvcmd, &npackets_left, &bytes);
-                nbytes_left = bytes;
-            }
-
-            initial_packets = npackets_left;
-            initial_bytes = nbytes_left;
-        }
-        /** Only session commands with responses should be processed */
-        ss_dassert(npackets_left > 0);
-
-        /** Read incomplete packet. */
-        if ((int)nbytes_left > nbytes_to_process)
-        {
-            /** Includes length info so it can be processed */
-            if (nbytes_to_process >= 5)
-            {
-                /** discard source buffer */
-                *readbuf = gwbuf_consume(*readbuf, GWBUF_LENGTH(*readbuf));
-                nbytes_left -= nbytes_to_process;
-            }
-            nbytes_to_process = 0;
-        }
-        /** Packet was read. All bytes belonged to the last packet. */
-        else if ((int)nbytes_left == nbytes_to_process)
-        {
-            nbytes_left = 0;
-            nbytes_to_process = 0;
-            ss_dassert(npackets_left > 0);
-            npackets_left -= 1;
-            outbuf = gwbuf_append(outbuf, *readbuf);
-            *readbuf = NULL;
-        }
-        /**
-         * Buffer contains more data than we need. Split the complete packet and
-         * the extra data into two separate buffers.
-         */
-        else
-        {
-            ss_dassert((int)nbytes_left < nbytes_to_process);
-            ss_dassert(nbytes_left > 0);
-            ss_dassert(npackets_left > 0);
-            outbuf = gwbuf_append(outbuf, gwbuf_split(readbuf, nbytes_left));
-            nbytes_to_process -= nbytes_left;
-            npackets_left -= 1;
-            nbytes_left = 0;
-        }
-
-        /** Store new status to protocol structure */
-        protocol_set_response_status(p, npackets_left, nbytes_left);
-
-        /** A complete packet was read */
-        if (nbytes_left == 0)
-        {
-            /** No more packets in this response */
-            if (npackets_left == 0 && outbuf != NULL)
-            {
-                GWBUF* b = outbuf;
-
-                while (b->next != NULL)
-                {
-                    b = b->next;
-                }
-                /** Mark last as end of response */
-                gwbuf_set_type(b, GWBUF_TYPE_RESPONSE_END);
-
-                /** Archive the command */
-                protocol_archive_srv_command(p);
-
-                /** Ignore the rest of the response */
-                nbytes_to_process = 0;
-            }
-            /** Read next packet */
-            else
-            {
-                uint8_t* data;
-
-                /** Read next packet length if there is at least
-                 * three bytes left. If there is less than three
-                 * bytes in the buffer or it is NULL, we need to
-                 wait for more data from the backend server.*/
-                if (*readbuf == NULL || gwbuf_length(*readbuf) < 3)
-                {
-                    MXS_DEBUG("[%s] Read %d packets. Waiting for %d more "
-                              "packets for a total of %d packets.", __FUNCTION__,
-                              initial_packets - npackets_left,
-                              npackets_left, initial_packets);
-
-                    /** Store the already read data into the readqueue of the DCB
-                     * and restore the response status to the initial number of packets */
-
-                    dcb_readq_prepend(dcb, outbuf);
-
-                    protocol_set_response_status(p, initial_packets, initial_bytes);
-                    return NULL;
-                }
-                uint8_t packet_len[3];
-                gwbuf_copy_data(*readbuf, 0, 3, packet_len);
-                nbytes_left = gw_mysql_get_byte3(packet_len) + MYSQL_HEADER_LEN;
-                /** Store new status to protocol structure */
-                protocol_set_response_status(p, npackets_left, nbytes_left);
-            }
-        }
-    }
-    return outbuf;
-}
-
-static bool sescmd_response_complete(DCB* dcb)
-{
-    int npackets_left;
-    size_t nbytes_left;
-    MySQLProtocol* p;
-    bool succp;
-
-    p = DCB_PROTOCOL(dcb, MySQLProtocol);
-    CHK_PROTOCOL(p);
-
-    protocol_get_response_status(p, &npackets_left, &nbytes_left);
-
-    if (npackets_left == 0)
-    {
-        succp = true;
-    }
-    else
-    {
-        succp = false;
-    }
-    return succp;
-}
-
-/**
  * Create COM_CHANGE_USER packet and store it to GWBUF
  *
  * @param mses          MySQL session
@@ -1931,11 +1715,6 @@ gw_create_change_user_packet(MYSQL_session*  mses,
     bytes += 4;
 
     buffer = gwbuf_alloc(bytes);
-    /**
-     * Set correct type to GWBUF so that it will be handled like session
-     * commands
-     */
-    buffer->gwbuf_type = GWBUF_TYPE_SESCMD;
     payload = GWBUF_DATA(buffer);
     memset(payload, '\0', bytes);
     payload_start = payload;
