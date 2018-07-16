@@ -656,6 +656,14 @@ static inline bool session_ok_to_route(DCB *dcb)
 static inline bool expecting_resultset(MySQLProtocol *proto)
 {
     return proto->current_command == MXS_COM_QUERY ||
+           proto->current_command == MXS_COM_STMT_EXECUTE ||
+           /**
+            * The addition of COM_STMT_FETCH to the list of commands that produce
+            * result sets is slightly wrong. The command can generate complete
+            * result sets but it can also generate incomplete ones if cursors
+            * are used. The use of cursors most likely needs to be detected on
+            * an upper level and the use of this function avoided in those cases.
+            */
            proto->current_command == MXS_COM_STMT_FETCH;
 }
 
@@ -857,16 +865,22 @@ gw_read_and_write(DCB *dcb)
                     proto->collect_result = false;
                     result_collected = true;
                 }
-                else if (expecting_ps_response(proto) &&
-                         mxs_mysql_is_prep_stmt_ok(read_buffer))
+                else if (expecting_ps_response(proto))
                 {
-                    if (!complete_ps_response(read_buffer))
-                    {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
-                    }
+                        if (mxs_mysql_is_prep_stmt_ok(read_buffer) &&
+                            !complete_ps_response(read_buffer))
+                        {
+                            dcb_readq_prepend(dcb, read_buffer);
+                            return 0;
+                        }
 
-                    // Collected the complete result
+                        // Collected the complete result
+                        proto->collect_result = false;
+                        result_collected = true;
+                }
+                else
+                {
+                    // Assume that everything else responds with an single packet
                     proto->collect_result = false;
                     result_collected = true;
                 }
@@ -1715,6 +1729,10 @@ gw_create_change_user_packet(MYSQL_session*  mses,
     bytes += 4;
 
     buffer = gwbuf_alloc(bytes);
+
+    // The COM_CHANGE_USER is a session command so the result must be collected
+    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+
     payload = GWBUF_DATA(buffer);
     memset(payload, '\0', bytes);
     payload_start = payload;
