@@ -32,8 +32,8 @@ extern const char * const CN_DEMOTION_SQL_FILE;
 typedef std::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
 // Map of server id:s to MariaDBServer. Useful when constructing the replication graph.
 typedef std::unordered_map<int64_t, MariaDBServer*> IdToServerMap;
-// Map of cycle number to cycle members
-typedef std::unordered_map<int, ServerArray> CycleMap;
+// Map of cycle number to cycle members. The elements should be in order for predictability when iterating.
+typedef std::map<int, ServerArray> CycleMap;
 
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorInstance

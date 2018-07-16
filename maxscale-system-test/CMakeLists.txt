@@ -246,6 +246,12 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # Basic MaxCtrl test
 add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
 
+# MySQL Monitor with Multi-master configurations
+add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
+
+# MySQL Monitor crash safety
+#add_test_executable(mysqlmon_backup.cpp mysqlmon_backup mysqlmon_backup LABELS mysqlmon REPL_BACKEND)
+
 # MySQL Monitor Failover Test
 add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
 
@@ -381,12 +387,6 @@ add_test_executable(maxscale_process_user.cpp maxscale_process_user replication 
 
 # Test of multi master monitor
 add_test_executable(mm.cpp mm mm LABELS mmmon BREAKS_REPL)
-
-# MySQL Monitor with Multi-master configurations
-add_test_executable(mm_mysqlmon.cpp mm_mysqlmon mm_mysqlmon LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
-
-# MySQL Monitor crash safety
-#add_test_executable(mysqlmon_backup.cpp mysqlmon_backup mysqlmon_backup LABELS mysqlmon REPL_BACKEND)
 
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
