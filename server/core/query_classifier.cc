@@ -1077,7 +1077,7 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     QC_TRACE();
     ss_dassert(this_unit.classifier);
 
-    ss_debug(int32_t rv = ) this_unit.classifier->qc_set_sql_mode(sql_mode);
+    int32_t rv = this_unit.classifier->qc_set_sql_mode(sql_mode);
     ss_dassert(rv == QC_RESULT_OK);
 
     if (rv == QC_RESULT_OK)
