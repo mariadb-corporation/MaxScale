@@ -51,24 +51,32 @@ static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RW
     int n_tables;
     char** tables = qc_get_table_names(querybuf, &n_tables, true);
 
-    for (int i = 0; i < n_tables; i++)
+    if (tables)
     {
-        const char* db = mxs_mysql_get_current_db(rses->client_dcb->session);
-        std::string table;
-
-        if (strchr(tables[i], '.') == NULL)
+        for (int i = 0; i < n_tables; i++)
         {
-            table += db;
-            table += ".";
+            if (rval)
+            {
+                const char* db = mxs_mysql_get_current_db(rses->client_dcb->session);
+                std::string table;
+
+                if (strchr(tables[i], '.') == NULL)
+                {
+                    table += db;
+                    table += ".";
+                }
+
+                table += tables[i];
+
+                if (!func(rses, table))
+                {
+                    rval = false;
+                }
+            }
+            MXS_FREE(tables[i]);
         }
 
-        table += tables[i];
-
-        if (!func(rses, table))
-        {
-            rval = false;
-            break;
-        }
+        MXS_FREE(tables);
     }
 
     return rval;

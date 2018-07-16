@@ -637,8 +637,9 @@ void protocol_remove_srv_command(MySQLProtocol* p)
     }
     else
     {
-        p->protocol_command = *(s->scom_next);
+        server_command_t tmp = *(s->scom_next);
         MXS_FREE(s->scom_next);
+        p->protocol_command = tmp;
     }
 }
 
