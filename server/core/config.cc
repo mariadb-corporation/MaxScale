@@ -3188,8 +3188,10 @@ int configure_new_service(CONFIG_CONTEXT *obj)
     SERVICE *service = (SERVICE*)obj->element;
     ss_dassert(service);
 
-    for (auto&& a: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ", \t"))
+    for (auto&& a: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
+        fix_object_name(&a[0]);
+
         if (SERVER* s = server_find_by_unique_name(a.c_str()))
         {
             serviceAddBackend(service, s);
@@ -3226,8 +3228,9 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
     bool err = false;
 
     // TODO: Use server list parameter type for this
-    for (auto&& s: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ", \t"))
+    for (auto&& s: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
+        fix_object_name(&s[0]);
         SERVER* server = server_find_by_unique_name(s.c_str());
 
         if (!server)
