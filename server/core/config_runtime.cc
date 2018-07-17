@@ -36,6 +36,7 @@
 #include "internal/monitor.h"
 #include "internal/modules.h"
 #include "internal/service.h"
+#include "internal/filter.h"
 
 typedef std::set<std::string> StringSet;
 
@@ -1032,6 +1033,53 @@ bool runtime_create_monitor(const char *name, const char *module)
     return rval;
 }
 
+bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
+{
+    mxs::SpinLockGuard guard(crt_lock);
+    bool rval = false;
+
+    if (filter_def_find(name) == NULL)
+    {
+        MXS_FILTER_DEF* filter = NULL;
+        CONFIG_CONTEXT ctx{(char*)""};
+        ctx.parameters = load_defaults(module, MODULE_FILTER, CN_FILTER);
+
+        if (ctx.parameters)
+        {
+            for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+            {
+                config_replace_param(&ctx, p->name, p->value);
+            }
+
+            if ((filter = filter_alloc(name, module, ctx.parameters)) == NULL)
+            {
+                runtime_error("Could not create filter '%s' with module '%s'", name, module);
+            }
+
+            config_parameter_free(ctx.parameters);
+        }
+
+        if (filter)
+        {
+            if (filter_serialize(filter))
+            {
+                MXS_NOTICE("Created filter '%s'", name);
+                rval = true;
+            }
+            else
+            {
+                runtime_error("Failed to serialize filter '%s'", name);
+            }
+        }
+    }
+    else
+    {
+        runtime_error("Can't create filter '%s', it already exists", name);
+    }
+
+    return rval;
+}
+
 bool runtime_destroy_monitor(MXS_MONITOR *monitor)
 {
     bool rval = false;
@@ -1063,6 +1111,24 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     }
 
     return rval;
+}
+
+static MXS_CONFIG_PARAMETER* extract_parameters_from_json(json_t* json)
+{
+    CONFIG_CONTEXT ctx{(char*)""};
+
+    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    {
+        const char* key;
+        json_t* value;
+
+        json_object_foreach(parameters, key, value)
+        {
+            config_add_param(&ctx, key, json_string_value(value));
+        }
+    }
+
+    return ctx.parameters;
 }
 
 static bool extract_relations(json_t* json, StringSet& relations,
@@ -1240,6 +1306,11 @@ static bool server_relation_is_valid(const std::string& type, const std::string&
 {
     return (type == CN_SERVICES && service_find(value.c_str())) ||
            (type == CN_MONITORS && monitor_find(value.c_str()));
+}
+
+static bool filter_relation_is_valid(const std::string& type, const std::string& value)
+{
+    return type == CN_SERVICES && service_find(value.c_str());
 }
 
 static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
@@ -1566,11 +1637,16 @@ static bool object_relation_is_valid(const std::string& type, const std::string&
 /**
  * @brief Do a coarse validation of the monitor JSON
  *
- * @param json JSON to validate
+ * @param json          JSON to validate
+ * @param paths         List of paths that must be string values
+ * @param relationships Path to relationships to validate
+ * @param validator     Validation function
  *
  * @return True of the JSON is valid
  */
-static bool validate_monitor_json(json_t* json)
+static bool validate_object_json(json_t* json, std::vector<std::string> paths,
+                                 const char* relationships = nullptr,
+                                 bool (*validator)(const std::string&, const std::string&) = nullptr)
 {
     bool rval = false;
     json_t* value;
@@ -1585,20 +1661,28 @@ static bool validate_monitor_json(json_t* json)
         {
             runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
         }
-        else if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)))
-        {
-            runtime_error("Invalid value for '%s'", MXS_JSON_PTR_MODULE);
-        }
-        else if (!json_is_string(value))
-        {
-            runtime_error("Value '%s' is not a string", MXS_JSON_PTR_MODULE);
-        }
         else
         {
-            StringSet relations;
-            if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVERS, object_relation_is_valid))
+            for (auto&& a: paths)
             {
-                rval = true;
+                if (!(value = mxs_json_pointer(json, a.c_str())))
+                {
+                    runtime_error("Invalid value for '%s'", a.c_str());
+                }
+                else if (!json_is_string(value))
+                {
+                    runtime_error("Value '%s' is not a string", a.c_str());
+                }
+            }
+
+            if (relationships)
+            {
+                ss_dassert(validator);
+                StringSet relations;
+                if (extract_relations(json, relations, relationships, validator))
+                {
+                    rval = true;
+                }
             }
         }
     }
@@ -1647,7 +1731,9 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 {
     MXS_MONITOR* rval = NULL;
 
-    if (validate_monitor_json(json))
+    if (validate_object_json(json, {MXS_JSON_PTR_MODULE},
+                             MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
+                             object_relation_is_valid))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -1663,6 +1749,30 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
                 rval = NULL;
             }
         }
+    }
+
+    return rval;
+}
+
+MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
+{
+    MXS_FILTER_DEF* rval = NULL;
+
+    if (validate_object_json(json, {MXS_JSON_PTR_MODULE},
+                             MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
+                             filter_relation_is_valid))
+    {
+        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+        MXS_CONFIG_PARAMETER* params = extract_parameters_from_json(json);
+
+        if (runtime_create_filter(name, module, params))
+        {
+            rval = filter_def_find(name);
+            ss_dassert(rval);
+        }
+
+        config_parameter_free(params);
     }
 
     return rval;

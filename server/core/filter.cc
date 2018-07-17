@@ -21,13 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <string>
 #include <set>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include <maxscale/service.h>
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.h>
@@ -531,4 +534,71 @@ json_t* FilterSession::diagnostics_json() const
     return NULL;
 }
 
+}
+
+static bool create_filter_config(const MXS_FILTER_DEF *filter, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        MXS_ERROR("Failed to open file '%s' when serializing filter '%s': %d, %s",
+                  filename, filter->name, errno, mxs_strerror(errno));
+        return false;
+    }
+
+    mxs::SpinLockGuard guard(filter->spin);
+
+    dprintf(file, "[%s]\n", filter->name);
+    dprintf(file, "%s=%s\n", CN_TYPE, CN_FILTER);
+    dprintf(file, "%s=%s\n", CN_MODULE, filter->module);
+
+    std::set<std::string> param_set{CN_TYPE, CN_MODULE};
+
+    for (MXS_CONFIG_PARAMETER* p = filter->parameters; p; p = p->next)
+    {
+        if (param_set.count(p->name) == 0)
+        {
+            dprintf(file, "%s=%s\n", p->name, p->value);
+        }
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool filter_serialize(const MXS_FILTER_DEF *filter)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             filter->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary filter configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+    else if (create_filter_config(filter, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to rename temporary filter configuration at '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
 }

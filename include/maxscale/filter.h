@@ -277,6 +277,17 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host);
  */
 json_t* filter_list_to_json(const char* host);
 
+/**
+ * @brief Serialize a filter to a file
+ *
+ * This converts the static configuration of the filter into an INI format file.
+ *
+ * @param filter Monitor to serialize
+ *
+ * @return True if serialization was successful
+ */
+bool filter_serialize(const MXS_FILTER_DEF *filter);
+
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, const MXS_FILTER_DEF *);
 void dListFilters(DCB *);

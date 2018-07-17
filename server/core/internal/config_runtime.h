@@ -195,6 +195,17 @@ bool runtime_destroy_listener(SERVICE *service, const char *name);
 bool runtime_create_monitor(const char *name, const char *module);
 
 /**
+ * @brief Create a new filter
+ *
+ * @param name   Name of the filter
+ * @param module Filter module
+ * @param params Filter parameters
+ *
+ * @return True if a new filter was created and persisted
+ */
+bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARAMETER* params);
+
+/**
  * @brief Destroy a monitor
  *
  * Monitors are not removed from the runtime configuration but they are stopped.
@@ -243,6 +254,15 @@ bool runtime_alter_server_relationships_from_json(SERVER* server, const char* ty
  * @return Created monitor or NULL on error
  */
 MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
+
+/**
+ * @brief Create a new filter from JSON
+ *
+ * @param json JSON defining the filter
+ *
+ * @return Created filter or NULL on error
+ */
+MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json);
 
 /**
  * @brief Alter a monitor using JSON
