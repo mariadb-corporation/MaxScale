@@ -1392,17 +1392,10 @@ int gw_MySQLAccept(DCB *listener)
 
     CHK_DCB(listener);
 
-    if (DCB_STATE_WAITING == listener->state)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
-        gw_process_one_new_client(listener);
-    }
-    else
-    {
-        while ((client_dcb = dcb_accept(listener)) != NULL)
-        {
-            gw_process_one_new_client(client_dcb);
-        } /**< while client_dcb != NULL */
-    }
+        gw_process_one_new_client(client_dcb);
+    } /**< while client_dcb != NULL */
 
     /* Must have broken out of while loop or received NULL client_dcb */
     return 1;
@@ -1424,14 +1417,8 @@ static void gw_process_one_new_client(DCB *client_dcb)
     }
     CHK_PROTOCOL(protocol);
     client_dcb->protocol = protocol;
-    if (DCB_STATE_WAITING == client_dcb->state)
-    {
-        client_dcb->state = DCB_STATE_ALLOC;
-    }
-    else
-    {
-        atomic_add(&client_dcb->service->client_count, 1);
-    }
+
+    atomic_add(&client_dcb->service->client_count, 1);
     //send handshake to the client_dcb
     MySQLSendHandshake(client_dcb);
 

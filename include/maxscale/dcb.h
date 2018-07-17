@@ -60,7 +60,6 @@ typedef enum
     DCB_STATE_UNDEFINED,    /*< State variable with no state */
     DCB_STATE_ALLOC,        /*< Memory allocated but not populated */
     DCB_STATE_POLLING,      /*< Waiting in the poll loop */
-    DCB_STATE_WAITING,      /*< Client wanting a connection */
     DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
     DCB_STATE_DISCONNECTED, /*< The socket is now closed */
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */

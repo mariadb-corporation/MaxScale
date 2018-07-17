@@ -3083,7 +3083,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     }
     if ((events & EPOLLIN) && (dcb->n_close == 0))
     {
-        if (dcb->state == DCB_STATE_LISTENING || dcb->state == DCB_STATE_WAITING)
+        if (dcb->state == DCB_STATE_LISTENING)
         {
             MXS_DEBUG("%lu [poll_waitevents] "
                       "Accept in fd %d",
