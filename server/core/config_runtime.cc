@@ -28,7 +28,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
 #include <maxscale/platform.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include <maxscale/users.h>
 #include <maxscale/router.h>
 
@@ -39,7 +39,7 @@
 
 typedef std::set<std::string> StringSet;
 
-static SPINLOCK crt_lock = SPINLOCK_INIT;
+static mxs::SpinLock crt_lock;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
@@ -122,7 +122,7 @@ static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_
 
 bool runtime_link_server(SERVER *server, const char *target)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     bool rval = false;
     SERVICE *service = service_find(target);
@@ -160,13 +160,12 @@ bool runtime_link_server(SERVER *server, const char *target)
         MXS_NOTICE("Added server '%s' to %s '%s'", server->name, type, target);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
 bool runtime_unlink_server(SERVER *server, const char *target)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     bool rval = false;
     SERVICE *service = service_find(target);
@@ -191,14 +190,13 @@ bool runtime_unlink_server(SERVER *server, const char *target)
         MXS_NOTICE("Removed server '%s' from %s '%s'", server->name, type, target);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
 bool runtime_create_server(const char *name, const char *address, const char *port,
                            const char *protocol, const char *authenticator)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
     bool rval = false;
 
     if (server_find_by_unique_name(name) == NULL)
@@ -262,13 +260,12 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         runtime_error("Server '%s' already exists", name);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
 bool runtime_destroy_server(SERVER *server)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
     bool rval = false;
 
     if (service_server_in_use(server) || monitor_server_in_use(server))
@@ -312,7 +309,6 @@ bool runtime_destroy_server(SERVER *server)
         }
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
@@ -350,7 +346,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 
     if (key && cert && ca)
     {
-        spinlock_acquire(&crt_lock);
+        mxs::SpinLockGuard guard(crt_lock);
         SSL_LISTENER *ssl = create_ssl(server->name, key, cert, ca, version, depth, verify);
 
         if (ssl)
@@ -369,7 +365,6 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
                 rval = true;
             }
         }
-        spinlock_release(&crt_lock);
     }
 
     return rval;
@@ -404,7 +399,7 @@ static inline bool is_valid_integer(const char* value)
 
 bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
     bool valid = false;
 
     if (strcmp(key, CN_ADDRESS) == 0)
@@ -479,13 +474,12 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
         runtime_error("Invalid server parameter: %s=%s", key, value);
     }
 
-    spinlock_release(&crt_lock);
     return valid;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
     bool valid = false;
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
@@ -594,7 +588,6 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         runtime_error("Invalid monitor parameter: %s", key);
     }
 
-    spinlock_release(&crt_lock);
     return valid;
 }
 
@@ -607,7 +600,7 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     const MXS_MODULE* module = get_module(service->routerModule, MODULE_ROUTER);
     ss_dassert(module);
 
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     if (key == CN_USER)
     {
@@ -737,8 +730,6 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
         MXS_NOTICE("Updated service '%s': %s=%s", service->name, key.c_str(), value.c_str());
     }
 
-    spinlock_release(&crt_lock);
-
     return valid;
 }
 
@@ -748,7 +739,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     std::string key = name;
     bool rval = false;
 
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
@@ -863,8 +854,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         config_global_serialize();
     }
 
-    spinlock_release(&crt_lock);
-
     return rval;
 }
 
@@ -904,7 +893,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     unsigned short u_port = atoi(port);
     bool rval = false;
 
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     if (!serviceHasListener(service, name, proto, addr, u_port))
     {
@@ -949,7 +938,6 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
         runtime_error("Listener '%s' already exists", name);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
@@ -959,7 +947,7 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
 
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     if (unlink(filename) == -1)
     {
@@ -996,13 +984,12 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
         }
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
 bool runtime_create_monitor(const char *name, const char *module)
 {
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
     bool rval = false;
 
     if (monitor_find(name) == NULL)
@@ -1042,7 +1029,6 @@ bool runtime_create_monitor(const char *name, const char *module)
         runtime_error("Can't create monitor '%s', it already exists", name);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
@@ -1052,7 +1038,7 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name);
 
-    spinlock_acquire(&crt_lock);
+    mxs::SpinLockGuard guard(crt_lock);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -1076,7 +1062,6 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
     }
 
-    spinlock_release(&crt_lock);
     return rval;
 }
 
