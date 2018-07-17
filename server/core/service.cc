@@ -158,12 +158,48 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     // Store parameters in the service
     service_add_parameters(service, params);
 
+    service->router_instance = router_api->createInstance(service, params);
+
+    if (service->router_instance == NULL)
+    {
+        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
+        service_free(service);
+        return NULL;
+    }
+
+    if (router_api->getCapabilities)
+    {
+        service->capabilities |= router_api->getCapabilities(service->router_instance);
+    }
+
     spinlock_acquire(&service_spin);
     service->next = allServices;
     allServices = service;
     spinlock_release(&service_spin);
 
     return service;
+}
+
+void service_free(SERVICE* service)
+{
+    if (service->router && service->router_instance)
+    {
+        service->router->destroyInstance(service->router_instance);
+    }
+
+    while (service->dbref)
+    {
+        SERVER_REF* tmp = service->dbref;
+        service->dbref = service->dbref->next;
+        MXS_FREE(tmp);
+    }
+
+    config_parameter_free(service->svc_config_param);
+    MXS_FREE(service->name);
+    MXS_FREE(service->routerModule);
+    MXS_FREE(service->filters);
+    MXS_FREE(service->rate_limits);
+    MXS_FREE(service);
 }
 
 /**
@@ -434,10 +470,9 @@ int serviceStartAllPorts(SERVICE* service)
  * This function loads the protocol modules for each port on which the
  * service listens and starts the listener on that port
  *
- * Also create the router_instance for the service.
+ * @param service The Service that should be started
  *
- * @param service       The Service that should be started
- * @return      Returns the number of listeners created
+ * @return Returns the number of listeners created
  */
 int serviceInitialize(SERVICE *service)
 {
@@ -446,27 +481,14 @@ int serviceInitialize(SERVICE *service)
 
     int listeners = 0;
 
-    if ((service->router_instance = service->router->createInstance(service, service->svc_config_param)))
+    if (!config_get_global_options()->config_check)
     {
-        if (service->router->getCapabilities)
-        {
-            service->capabilities |= service->router->getCapabilities(service->router_instance);
-        }
-
-        if (!config_get_global_options()->config_check)
-        {
-            listeners = serviceStartAllPorts(service);
-        }
-        else
-        {
-            /** We're only checking that the configuration is valid */
-            listeners++;
-        }
+        listeners = serviceStartAllPorts(service);
     }
     else
     {
-        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
-        service->state = SERVICE_STATE_FAILED;
+        /** We're only checking that the configuration is valid */
+        listeners++;
     }
 
     return listeners;

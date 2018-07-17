@@ -38,6 +38,13 @@ MXS_BEGIN_DECLS
 SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params);
 
 /**
+ * Free a service
+ *
+ * @param service Service to free
+ */
+void service_free(SERVICE* service);
+
+/**
  * @brief Shut all services down
  *
  * Turns on the shutdown flag in each service. This should be done as
