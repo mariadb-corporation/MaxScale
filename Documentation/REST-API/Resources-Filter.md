@@ -85,3 +85,49 @@ GET /v1/filters
     ]
 }
 ```
+
+### Create a filter
+
+Create a new filter. The request body must define the `/data/id`
+field with the name of the filter, the `/data/type` field with the
+value of `filters` and the `/data/attributes/module` field with the
+filter module for this filter. All of the filter parameters should
+be defined at creation time.
+
+```
+POST /v1/filters
+```
+
+The following example defines a request body which creates the new filter,
+_test-filter_, and assigns it to a service.
+
+```javascript
+{
+    data: {
+        "id": "test-filter", // Name of the filter
+        "type": "filters",
+        "attributes": {
+            "module": "qlafilter", // The filter uses the qlafilter module
+            "parameters": { // Filter parameters
+                "filebase": "/tmp/qla.log"
+            }
+        },
+        "relationships": { // List of services that use this filter
+            "services": {
+                "data": [ // This filter is used by one service
+                    {
+                        "id": "service-1",
+                        "type": "services"
+                    }
+                ]
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+Filter is created:
+
+`Status: 204 No Content`
