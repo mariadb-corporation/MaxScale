@@ -182,6 +182,8 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 
 void service_free(SERVICE* service)
 {
+    ss_dassert(atomic_load_int(&service->client_count) == 0);
+
     if (service->router && service->router_instance)
     {
         service->router->destroyInstance(service->router_instance);

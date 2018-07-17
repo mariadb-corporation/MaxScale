@@ -1418,7 +1418,6 @@ static void gw_process_one_new_client(DCB *client_dcb)
     CHK_PROTOCOL(protocol);
     client_dcb->protocol = protocol;
 
-    atomic_add(&client_dcb->service->client_count, 1);
     //send handshake to the client_dcb
     MySQLSendHandshake(client_dcb);
 

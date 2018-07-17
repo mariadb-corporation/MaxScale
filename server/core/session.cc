@@ -391,9 +391,11 @@ static void session_free(MXS_SESSION *session)
     }
 
     MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name, session->ses_id);
+    SERVICE* service = session->service;
 
     session->state = SESSION_STATE_FREE;
     session_final_free(session);
+    atomic_add(&service->client_count, -1);
 }
 
 static void

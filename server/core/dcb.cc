@@ -1235,20 +1235,6 @@ void dcb_final_close(DCB* dcb)
             dcb_stop_polling_and_shutdown(dcb);
         }
 
-        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
-        {
-            // TODO: If the role of the dcb is that of a client handler,
-            // TODO: then dcb->service should be non-NULL, so there should
-            // TODO: be no need for an if. Let's add an assert to see if
-            // TODO: such a situation exists.
-            ss_dassert(dcb->service);
-
-            if (dcb->service)
-            {
-                atomic_add(&dcb->service->client_count, -1);
-            }
-        }
-
         if (dcb->server)
         {
             // This is now a DCB_ROLE_BACKEND_HANDLER.
@@ -2491,6 +2477,12 @@ dcb_accept(DCB *dcb)
             }
         }
     }
+
+    if (client_dcb)
+    {
+        atomic_add(&client_dcb->service->client_count, 1);
+    }
+
     return client_dcb;
 }
 
