@@ -692,9 +692,10 @@ _shutdown service_ command. This will not affect the connections that are
 already in place for a service, but will stop any new connections from being
 accepted.
 
-Stopping a service will not cause new connections to be rejected. All new
-connections that were creted while the service was stopped will be processed
-normally once the service is restared.
+Connection requests are not processed while a service is stopped. New connection
+requests will remain in a queue that is processed once the service is
+restarted. A client application will see old connections work normally but new
+connections are unresponsive as long as the service is stopped.
 
 ```
 MaxScale> shutdown service RWSplit
