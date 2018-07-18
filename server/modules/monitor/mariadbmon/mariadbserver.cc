@@ -19,8 +19,10 @@
 #include <sstream>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/thread.h>
+#include <maxscale/utils.hh>
 
 using std::string;
+using maxscale::string_printf;
 
 namespace
 {
@@ -461,10 +463,10 @@ bool MariaDBServer::is_in_maintenance() const
     return m_server_base->pending_status & SERVER_MAINT;
 }
 
-bool MariaDBServer::is_relay_server() const
+bool MariaDBServer::is_relay_master() const
 {
-    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) ==
-           (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
+    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_RELAY_MASTER | SERVER_MAINT)) ==
+           (SERVER_RUNNING | SERVER_RELAY_MASTER);
 }
 
 bool MariaDBServer::has_status(uint64_t bits) const
@@ -551,9 +553,9 @@ json_t* MariaDBServer::diagnostics_json() const
 bool MariaDBServer::uses_gtid(std::string* error_out)
 {
     bool using_gtid = !m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty();
-    if (!using_gtid)
+    if (!using_gtid && error_out)
     {
-        *error_out = string("Slave server ") + name() + " is not using gtid replication.";
+        *error_out = string_printf("Server '%s' is not using gtid replication.", name());
     }
     return using_gtid;
 }

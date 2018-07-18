@@ -262,9 +262,9 @@ public:
     bool is_in_maintenance() const;
 
     /**
-     * Convenience method for SERVER_IS_RELAY_SERVER
+     * Is the server a relay master.
      */
-    bool is_relay_server() const;
+    bool is_relay_master() const;
 
     /**
      * Check if server has the given bits on in 'pending_status'.
@@ -317,7 +317,7 @@ public:
      * @return True if using gtid-replication. False if not, or if server is not a slave or otherwise does
      * not have a gtid_IO_Pos.
      */
-    bool uses_gtid(std::string* error_out);
+    bool uses_gtid(std::string* error_out = NULL);
 
     /**
      * Update replication settings, gtid:s and slave status of the server.

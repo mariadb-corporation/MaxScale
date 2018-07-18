@@ -19,6 +19,7 @@
 #include <maxscale/mysql_utils.h>
 
 using std::string;
+using maxscale::string_printf;
 
 static void print_redirect_errors(MariaDBServer* first_server, const ServerArray& servers,
                                   json_t** err_out);
@@ -1275,9 +1276,8 @@ bool MariaDBMonitor::switchover_check_new(const MariaDBServer* new_master_cand, 
  */
 bool MariaDBMonitor::failover_check(string* error_out)
 {
-    // Check that there is no running master and that there is at least one running slave in the cluster.
+    // Check that there is no running master and that there is at least one promotable slave in the cluster.
     // Also, all slaves must be using gtid-replication and the gtid-domain of the cluster must be known.
-    int slaves = 0;
     bool error = false;
     string separator;
     // Topology has already been tested to be simple.
@@ -1289,6 +1289,7 @@ bool MariaDBMonitor::failover_check(string* error_out)
         error = true;
     }
 
+    int valid_slaves = 0;
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         MariaDBServer* server = *iter;
@@ -1306,12 +1307,16 @@ bool MariaDBMonitor::failover_check(string* error_out)
             separator = "\n";
             error = true;
         }
-        else if (server->is_slave() && !server_is_excluded(server))
+        else if (server->is_slave())
         {
+            // Gtid-replication is checked for all slaves, but only slaves not excluded are accepted.
             string gtid_error;
             if (server->uses_gtid(&gtid_error))
             {
-                slaves++;
+                if (!server_is_excluded(server))
+                {
+                    valid_slaves++;
+                }
             }
             else
             {
@@ -1322,15 +1327,10 @@ bool MariaDBMonitor::failover_check(string* error_out)
         }
     }
 
-    if (slaves == 0)
+    if (valid_slaves == 0)
     {
         *error_out += separator + "No valid slaves to promote.";
         error = true;
-    }
-    else
-    {
-        // There's at least one valid promotion candidate
-        error = false;
     }
 
     return !error;
@@ -1345,22 +1345,29 @@ bool MariaDBMonitor::failover_check(string* error_out)
 */
 void MariaDBMonitor::handle_auto_failover()
 {
-    const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
+    const char RE_ENABLE_FMT[] = "To re-enable automatic failover, manually set '%s' to 'true' for monitor "
                                  "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-    if (m_master && m_master->is_master())
+
+    string cluster_issues;
+    // TODO: Only check this when topology has changed.
+    if (!cluster_supports_failover(&cluster_issues))
     {
+        const char PROBLEMS[] = "The backend cluster does not support failover due to the following "
+                                "reason(s):\n"
+                                "%s\n\n"
+                                "Automatic failover has been disabled. It should only be enabled after the "
+                                "above issues have been resolved.";
+        string problems = string_printf(PROBLEMS, cluster_issues.c_str());
+        string total_msg = problems + " " + string_printf(RE_ENABLE_FMT, CN_AUTO_FAILOVER, m_monitor->name);
+        MXS_ERROR("%s", total_msg.c_str());
+        m_auto_failover = false;
+        disable_setting(CN_AUTO_FAILOVER);
         return;
     }
 
-    if (failover_not_possible())
+    if (m_master && m_master->is_master())
     {
-        const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
-                                "replication configuration, disabling automatic failover. Failover "
-                                "should only be enabled after the replication configuration has been "
-                                "fixed.";
-        MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, m_monitor->name);
-        m_auto_failover = false;
-        disable_setting(CN_AUTO_FAILOVER);
+        // Certainly no need for a failover.
         return;
     }
 
@@ -1419,8 +1426,10 @@ void MariaDBMonitor::handle_auto_failover()
                 failed_master->m_server_base->new_event = false;
                 if (!do_failover(NULL))
                 {
-                    const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
-                    MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, m_monitor->name);
+                    const string FAILED = "Automatic failover failed, disabling automatic failover.";
+                    string error_msg = FAILED + " " +
+                        string_printf(RE_ENABLE_FMT, CN_AUTO_FAILOVER, m_monitor->name);
+                    MXS_ERROR("%s", error_msg.c_str());
                     m_auto_failover = false;
                     disable_setting(CN_AUTO_FAILOVER);
                 }
@@ -1444,16 +1453,54 @@ void MariaDBMonitor::handle_auto_failover()
     }
 }
 
-bool MariaDBMonitor::failover_not_possible()
+/**
+ * Is the topology such that failover is supported, even if not required just yet?
+ *
+ * @param reasons_out Why failover is not supported
+ * @return True if cluster supports failover
+ */
+bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
 {
-    bool rval = false;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    bool rval = true;
+    string separator;
+    // Currently, only simple topologies are supported. No Relay Masters or multiple slave connections.
+    // Gtid-replication is required, and a server version which supports it.
+    for (MariaDBServer* server : m_servers)
     {
-        if ((*iter)->m_slave_status.size() > 1)
+        if (server->m_version != MariaDBServer::version::MARIADB_100)
         {
-            MXS_ERROR("Server '%s' is configured to replicate from multiple masters, "
-                      "failover is not possible.", (*iter)->name());
-            rval = true;
+            *reasons_out += separator + string_printf("The version of server '%s' is not supported. Failover "
+                                                      "requires MariaDB 10.X.", server->name());
+            separator = "\n";
+            rval = false;
+        }
+
+        if (server->is_slave())
+        {
+            if (server->m_slave_status.size() > 1)
+            {
+                *reasons_out += separator +
+                    string_printf("Server '%s' is replicating or attempting to replicate from "
+                                  "multiple masters.", server->name());
+                separator = "\n";
+                rval = false;
+            }
+            if (!server->uses_gtid())
+            {
+                *reasons_out += separator +
+                    string_printf("Server '%s' is not using gtid-replication.", server->name());
+                separator = "\n";
+                rval = false;
+            }
+        }
+
+        if (server->is_relay_master())
+        {
+            *reasons_out += separator +
+                    string_printf("Server '%s' is a relay master. Only topologies with one replication "
+                                  "layer are supported.", server->name());
+            separator = "\n";
+            rval = false;
         }
     }
     return rval;
@@ -1623,7 +1670,7 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
     for (MariaDBServer* server : m_servers)
     {
         if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_running() &&
-            !server->is_master() && !server->is_relay_server())
+            !server->is_master() && !server->is_relay_master())
         {
             server->set_status(SERVER_MAINT);
         }

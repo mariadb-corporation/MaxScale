@@ -238,7 +238,7 @@ private:
     // Failover methods
     bool manual_failover(json_t** output);
     void handle_auto_failover();
-    bool failover_not_possible();
+    bool cluster_supports_failover(std::string* reasons_out);
     bool slave_receiving_events();
     bool failover_check(std::string* error_out);
     bool do_failover(json_t** err_out);
