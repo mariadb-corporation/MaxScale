@@ -8,9 +8,7 @@
 
 int main(int argc, char** argv)
 {
-    printf("THIS TEST IS DISABLED UNTIL A SERVER VERSION WITH THE FIX IS RELEASED\n");
-    return 0;
-
+    TestConnections::require_repl_version("10.3.8");
     TestConnections test(argc, argv);
     const int N_QUERIES = 100;
 
