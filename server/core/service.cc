@@ -496,29 +496,6 @@ int serviceInitialize(SERVICE *service)
     return listeners;
 }
 
-/**
- * @brief Remove a listener from use
- *
- * @note This does not free the memory
- *
- * @param service Service where @c port points to
- * @param port Port to remove
- */
-void serviceRemoveListener(SERVICE *service, SERV_LISTENER *target)
-{
-    LISTENER_ITERATOR iter;
-
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
-         listener; listener = listener_iterator_next(&iter))
-    {
-        if (listener == target)
-        {
-            listener_set_active(listener, false);
-            break;
-        }
-    }
-}
-
 bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
 {
     ss_dassert(service->state != SERVICE_STATE_FAILED);
@@ -529,7 +506,7 @@ bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
     if (serviceStartPort(service, port) == 0)
     {
         /** Failed to start the listener */
-        serviceRemoveListener(service, port);
+        service_remove_listener(service, port->name);
         rval = false;
     }
 
@@ -696,6 +673,30 @@ static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
     /** Compare the current value to our expected value and if they match, replace
      * the current value with our new value. */
     while (!atomic_cas_ptr((void**)&service->ports, (void**)&proto->next, proto));
+}
+
+bool service_remove_listener(SERVICE *service, const char* target)
+{
+    bool rval = false;
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener) && strcmp(listener->name, target) == 0)
+        {
+            listener_set_active(listener, false);
+
+            if (poll_remove_dcb(listener->listener) == 0)
+            {
+                listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                rval = true;
+            }
+            break;
+        }
+    }
+
+    return rval;
 }
 
 /**

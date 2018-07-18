@@ -87,6 +87,18 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name,
                                      unsigned short port, const char *authenticator,
                                      const char *options, SSL_LISTENER *ssl);
 
+/**
+ * @brief Remove a listener from use
+ *
+ * @note This does not free the memory
+ *
+ * @param service Service that owns the listener
+ * @param char    Name of the listener to remove
+ *
+ * @return True if listener was found and removed
+ */
+bool service_remove_listener(SERVICE *service, const char* target);
+
 void serviceRemoveBackend(SERVICE *service, const SERVER *server);
 
 /**
