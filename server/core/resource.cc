@@ -337,6 +337,18 @@ HttpResponse cb_create_filter(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_create_service(const HttpRequest& request)
+{
+    ss_dassert(request.get_json());
+
+    if (runtime_create_service_from_json(request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_create_service_listener(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
@@ -885,6 +897,7 @@ public:
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
         m_post.push_back(SResource(new Resource(cb_create_filter, 1, "filters")));
+        m_post.push_back(SResource(new Resource(cb_create_service, 1, "services")));
         m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
                                                 "services", ":service", "listeners")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));

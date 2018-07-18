@@ -76,6 +76,7 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT  MXS_JSON_PTR_PARAMETERS "/ssl_verify_peer_certificate"
 
 /** Non-parameter JSON pointers */
+#define MXS_JSON_PTR_ROUTER   "/data/attributes/router"
 #define MXS_JSON_PTR_MODULE   "/data/attributes/module"
 #define MXS_JSON_PTR_PASSWORD "/data/attributes/password"
 #define MXS_JSON_PTR_ACCOUNT  "/data/attributes/account"

@@ -276,6 +276,15 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
 MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json);
 
 /**
+ * @brief Create a new service from JSON
+ *
+ * @param json JSON defining the service
+ *
+ * @return Created service or NULL on error
+ */
+SERVICE* runtime_create_service_from_json(json_t* json);
+
+/**
  * @brief Alter a monitor using JSON
  *
  * @param monitor Monitor to alter

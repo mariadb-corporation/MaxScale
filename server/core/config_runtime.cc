@@ -1078,6 +1078,53 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     return rval;
 }
 
+static bool runtime_create_service(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
+{
+    mxs::SpinLockGuard guard(crt_lock);
+    bool rval = false;
+
+    if (service_find(name) == NULL)
+    {
+        SERVICE* service = NULL;
+        CONFIG_CONTEXT ctx{(char*)""};
+        ctx.parameters = load_defaults(router, MODULE_FILTER, CN_FILTER);
+
+        if (ctx.parameters)
+        {
+            for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+            {
+                config_replace_param(&ctx, p->name, p->value);
+            }
+
+            if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
+            {
+                runtime_error("Could not create service '%s' with module '%s'", name, router);
+            }
+
+            config_parameter_free(ctx.parameters);
+        }
+
+        if (service)
+        {
+            if (service_serialize(service))
+            {
+                MXS_NOTICE("Created service '%s'", name);
+                rval = true;
+            }
+            else
+            {
+                runtime_error("Failed to serialize service '%s'", name);
+            }
+        }
+    }
+    else
+    {
+        runtime_error("Can't create service '%s', it already exists", name);
+    }
+
+    return rval;
+}
+
 bool runtime_destroy_service(SERVICE* service)
 {
     bool rval = false;
@@ -1806,6 +1853,28 @@ MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
         if (runtime_create_filter(name, module, params))
         {
             rval = filter_def_find(name);
+            ss_dassert(rval);
+        }
+
+        config_parameter_free(params);
+    }
+
+    return rval;
+}
+
+SERVICE* runtime_create_service_from_json(json_t* json)
+{
+    SERVICE* rval = NULL;
+
+    if (validate_object_json(json, {MXS_JSON_PTR_ROUTER}, {service_to_filter, object_to_server}))
+    {
+        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
+        MXS_CONFIG_PARAMETER* params = extract_parameters_from_json(json);
+
+        if (runtime_create_service(name, router, params))
+        {
+            rval = service_find(name);
             ss_dassert(rval);
         }
 
