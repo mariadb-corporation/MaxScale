@@ -21,6 +21,8 @@
 #include <set>
 #include <iterator>
 #include <algorithm>
+#include <tuple>
+#include <functional>
 
 #include <maxscale/atomic.h>
 #include <maxscale/clock.h>
@@ -44,6 +46,9 @@ static mxs::SpinLock crt_lock;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
+
+typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
+typedef std::pair<const char*, JsonValidator> Relationship;
 
 /** Attributes need to be in the declaration */
 static void runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
@@ -1133,7 +1138,7 @@ static MXS_CONFIG_PARAMETER* extract_parameters_from_json(json_t* json)
 
 static bool extract_relations(json_t* json, StringSet& relations,
                               const char* relation_type,
-                              bool (*relation_check)(const std::string&, const std::string&))
+                              JsonValidator relation_check)
 {
     bool rval = true;
     json_t* arr = mxs_json_pointer(json, relation_type);
@@ -1308,9 +1313,14 @@ static bool server_relation_is_valid(const std::string& type, const std::string&
            (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
-static bool filter_relation_is_valid(const std::string& type, const std::string& value)
+static bool filter_to_service_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_SERVICES && service_find(value.c_str());
+}
+
+static bool service_to_filter_relation_is_valid(const std::string& type, const std::string& value)
+{
+    return type == CN_FILTERS && filter_def_find(value.c_str());
 }
 
 static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
@@ -1634,19 +1644,38 @@ static bool object_relation_is_valid(const std::string& type, const std::string&
     return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
 }
 
+//
+// Constants for validate_object_json
+//
+const Relationship object_to_server
+{
+    MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
+    object_relation_is_valid
+};
+
+const Relationship filter_to_service
+{
+    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
+    filter_to_service_relation_is_valid
+};
+
+const Relationship service_to_filter
+{
+    MXS_JSON_PTR_RELATIONSHIPS_FILTERS,
+    service_to_filter_relation_is_valid
+};
+
 /**
  * @brief Do a coarse validation of the monitor JSON
  *
  * @param json          JSON to validate
  * @param paths         List of paths that must be string values
- * @param relationships Path to relationships to validate
- * @param validator     Validation function
+ * @param relationships List of JSON paths and validation functions to check
  *
  * @return True of the JSON is valid
  */
 static bool validate_object_json(json_t* json, std::vector<std::string> paths,
-                                 const char* relationships = nullptr,
-                                 bool (*validator)(const std::string&, const std::string&) = nullptr)
+                                 std::vector<Relationship> relationships)
 {
     bool rval = false;
     json_t* value;
@@ -1675,11 +1704,10 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
                 }
             }
 
-            if (relationships)
+            for (auto&& a: relationships)
             {
-                ss_dassert(validator);
                 StringSet relations;
-                if (extract_relations(json, relations, relationships, validator))
+                if (extract_relations(json, relations, a.first, a.second))
                 {
                     rval = true;
                 }
@@ -1731,9 +1759,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 {
     MXS_MONITOR* rval = NULL;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_MODULE},
-                             MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
-                             object_relation_is_valid))
+    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server}))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -1758,9 +1784,7 @@ MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
 {
     MXS_FILTER_DEF* rval = NULL;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_MODULE},
-                             MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-                             filter_relation_is_valid))
+    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service}))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
