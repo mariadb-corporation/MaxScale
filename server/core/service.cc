@@ -2218,6 +2218,7 @@ static bool create_service_config(const SERVICE *service, const char *filename)
      */
     dprintf(file, "[%s]\n", service->name);
     dprintf(file, "%s=service\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_ROUTER, service->routerModule);
     dprintf(file, "%s=%s\n", CN_USER, service->credentials.name);
     dprintf(file, "%s=%s\n", CN_PASSWORD, service->credentials.authdata);
     dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, service->enable_root ? "true" : "false");
