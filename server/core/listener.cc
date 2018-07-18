@@ -154,6 +154,12 @@ void listener_free(SERV_LISTENER* listener)
             users_free(listener->users);
         }
 
+        if (listener->listener)
+        {
+            dcb_close(listener->listener);
+        }
+
+        SSL_LISTENER_free(listener->ssl);
         MXS_FREE(listener->address);
         MXS_FREE(listener->authenticator);
         MXS_FREE(listener->auth_options);

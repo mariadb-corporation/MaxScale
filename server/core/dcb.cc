@@ -2804,49 +2804,46 @@ static void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    if (dcb->dcb_role != DCB_ROLE_SERVICE_LISTENER)
+    int id = static_cast<RoutingWorker*>(dcb->poll.owner)->id();
+
+    if (dcb == this_unit.all_dcbs[id])
     {
-        int id = static_cast<RoutingWorker*>(dcb->poll.owner)->id();
+        DCB *tail = this_unit.all_dcbs[id]->thread.tail;
+        this_unit.all_dcbs[id] = this_unit.all_dcbs[id]->thread.next;
 
-        if (dcb == this_unit.all_dcbs[id])
+        if (this_unit.all_dcbs[id])
         {
-            DCB *tail = this_unit.all_dcbs[id]->thread.tail;
-            this_unit.all_dcbs[id] = this_unit.all_dcbs[id]->thread.next;
-
-            if (this_unit.all_dcbs[id])
-            {
-                this_unit.all_dcbs[id]->thread.tail = tail;
-            }
+            this_unit.all_dcbs[id]->thread.tail = tail;
         }
-        else
-        {
-            // If the creation of the DCB failed, it will not have been added
-            // to the list at all. And if it happened to be the first DCB to be
-            // created, then `prev` is NULL at this point.
-            DCB *prev = this_unit.all_dcbs[id];
-            DCB *current = prev ? prev->thread.next : NULL;
-
-            while (current)
-            {
-                if (current == dcb)
-                {
-                    if (current == this_unit.all_dcbs[id]->thread.tail)
-                    {
-                        this_unit.all_dcbs[id]->thread.tail = prev;
-                    }
-                    prev->thread.next = current->thread.next;
-                    break;
-                }
-                prev = current;
-                current = current->thread.next;
-            }
-        }
-
-        /** Reset the next and tail pointers so that if this DCB is added to the list
-         * again, it will be in a clean state. */
-        dcb->thread.next = NULL;
-        dcb->thread.tail = NULL;
     }
+    else
+    {
+        // If the creation of the DCB failed, it will not have been added
+        // to the list at all. And if it happened to be the first DCB to be
+        // created, then `prev` is NULL at this point.
+        DCB *prev = this_unit.all_dcbs[id];
+        DCB *current = prev ? prev->thread.next : NULL;
+
+        while (current)
+        {
+            if (current == dcb)
+            {
+                if (current == this_unit.all_dcbs[id]->thread.tail)
+                {
+                    this_unit.all_dcbs[id]->thread.tail = prev;
+                }
+                prev->thread.next = current->thread.next;
+                break;
+            }
+            prev = current;
+            current = current->thread.next;
+        }
+    }
+
+    /** Reset the next and tail pointers so that if this DCB is added to the list
+     * again, it will be in a clean state. */
+    dcb->thread.next = NULL;
+    dcb->thread.tail = NULL;
 }
 
 /**

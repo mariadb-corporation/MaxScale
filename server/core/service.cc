@@ -184,6 +184,33 @@ void service_free(SERVICE* service)
 {
     ss_dassert(atomic_load_int(&service->client_count) == 0);
 
+    spinlock_acquire(&service_spin);
+
+    if (service == allServices)
+    {
+        allServices = allServices->next;
+    }
+    else
+    {
+        for (SERVICE* s = allServices; s; s = s->next)
+        {
+            if (s->next == service)
+            {
+                s->next = service->next;
+                break;
+            }
+        }
+    }
+
+    spinlock_release(&service_spin);
+
+    while (service->ports)
+    {
+        auto tmp = service->ports;
+        service->ports = service->ports->next;
+        listener_free(tmp);
+    }
+
     if (service->router && service->router_instance)
     {
         service->router->destroyInstance(service->router_instance);
