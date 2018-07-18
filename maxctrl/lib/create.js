@@ -156,6 +156,60 @@ exports.builder = function(yargs) {
             })
         })
 
+    // Create service
+        .group(['servers', 'filters'], 'Create service options:')
+        .option('servers', {
+            describe: 'Link the created service to these servers',
+            type: 'array'
+        })
+        .option('filters', {
+            describe: 'Link the created service to these filters',
+            type: 'array'
+        })
+        .command('service <name> <router> <params...>', 'Create a new service', function(yargs) {
+            return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
+                                'given as the service parameters. If the --servers or --filters options ' +
+                                'are used, they must be defined after the service parameters.')
+                .usage('Usage: service <name> <router> <params...>')
+        }, function(argv) {
+
+            var to_obj = (obj, value) => {
+                var kv = value.split('=')
+                if (kv.length < 2) {
+                    throw 'Error: Not a key-value parameter: ' + value
+                }
+                obj[kv[0]] = kv[1]
+                return obj
+            }
+
+            var service = {
+                'data': {
+                    'id': argv.name,
+                    'attributes': {
+                        'router': argv.router,
+                        'parameters': argv.params.reduce(to_obj, {})
+                    }
+                }
+            }
+
+            if (argv.servers) {
+                for (i = 0; i < argv.servers.length; i++) {
+                    _.set(service, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
+                }
+            }
+
+            if (argv.filters) {
+                for (i = 0; i < argv.filters.length; i++) {
+                    _.set(service, 'data.relationships.filters.data[' + i + ']', {id: argv.filters[i], type: 'filters'})
+                }
+            }
+
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services', null, {method: 'POST', body: service})
+            })
+        })
+
+
     // Create listener
         .group(['interface'], 'Create listener options:')
         .option('interface', {

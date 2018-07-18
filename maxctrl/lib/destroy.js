@@ -45,6 +45,16 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
             })
         })
+        .command('service <name>', 'Destroy an unused service', function(yargs) {
+            return yargs.epilog('The service must be unlinked from all servers and filter and ' +
+                                'all listeners for the service must be destroyed before the service ' +
+                                'itself can be destroyed.')
+                .usage('Usage: destroy service <name>')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services/' + argv.name, null, {method: 'DELETE'})
+            })
+        })
         .command('user <name>', 'Remove a network user', function(yargs) {
             return yargs.epilog('The last remaining administrative user cannot be removed. ' +
                                 'Create a replacement administrative user before attempting ' +
