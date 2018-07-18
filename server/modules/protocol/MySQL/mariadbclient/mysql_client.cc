@@ -1716,6 +1716,9 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                     rc = 0;
                     gwbuf_free(packetbuf);
                     packetbuf = NULL;
+                    MXS_ERROR("User reauthentication failed for '%s'@'%s'",
+                              session->client_dcb->user,
+                              session->client_dcb->remote);
                 }
             }
 
