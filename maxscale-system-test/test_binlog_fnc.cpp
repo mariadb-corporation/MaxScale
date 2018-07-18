@@ -134,8 +134,22 @@ void test_binlog(TestConnections* Test)
     Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed");
     Test->stop_timeout();
     Test->tprintf("Waiting for replication to catch up");
+
     Test->set_timeout(500);
-    Test->repl->sync_slaves();
+    // Create a table and wait for it to replicate to all servers
+    Test->try_query(Test->repl->nodes[0], "CREATE TABLE test.t2(id INT)");
+
+    for (int i = 1; i < Test->repl->N; i++)
+    {
+        // The timeout set before will terminate the loop if a fatal error occurs
+        while (execute_query_silent(Test->repl->nodes[i], "SELECT * FROM test.t2"))
+        {
+            sleep(1);
+        }
+        mysql_free_result(mysql_store_result(Test->repl->nodes[i]));
+    }
+
+    Test->try_query(Test->repl->nodes[0], "DROP TABLE test.t2");
 
     for (i = 0; i < Test->repl->N; i++)
     {
