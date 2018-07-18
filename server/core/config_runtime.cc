@@ -964,30 +964,23 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
         }
         else
         {
-            runtime_error("Listener '%s' was not created at runtime. Remove the listener "
-                          "manually from the correct configuration file.", name);
+            runtime_error("Persisted configuration file for listener '%s' was not "
+                          "found. This means that the listener was not created at "
+                          "runtime. Remove the listener manually from the correct "
+                          "configuration file.", name);
         }
+    }
+    else if (!service_remove_listener(service, name))
+    {
+        MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
+        runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
     }
     else
     {
         rval = true;
-    }
-
-    if (rval)
-    {
-        rval = serviceStopListener(service, name);
-
-        if (rval)
-        {
-            MXS_NOTICE("Destroyed listener '%s' for service '%s'. The listener "
-                       "will be removed after the next restart of MaxScale.",
-                       name, service->name);
-        }
-        else
-        {
-            MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
-            runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
-        }
+        MXS_NOTICE("Destroyed listener '%s' for service '%s'. The listener "
+                   "will be removed after the next restart of MaxScale.",
+                   name, service->name);
     }
 
     return rval;
