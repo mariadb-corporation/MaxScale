@@ -165,6 +165,7 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     if (service->router_instance == NULL)
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
+        service->active = false;
         service_free(service);
         return NULL;
     }

@@ -42,6 +42,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.h"
+#include "../../../../core/internal/config.h"
 
 #include <maxscale/protocol/mysql.h>
 #include <ini.h>
@@ -103,29 +104,40 @@ int main(int argc, char **argv)
 
     set_libdir(MXS_STRDUP_A(".."));
     load_module("binlogrouter", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP_A("../../../protocol/MySQL/MySQLBackend/"));
+    set_libdir(MXS_STRDUP_A("../../../protocol/MySQL/mariadbbackend/"));
     load_module("MySQLBackend", MODULE_PROTOCOL);
     set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
     load_module("MySQLBackendAuth", MODULE_AUTHENTICATOR);
+    set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
+    load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
-    if ((service = service_alloc("test_service", "binlogrouter", NULL)) == NULL)
+    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
+    qc_process_init(QC_INIT_BOTH);
+    hkinit();
+
+    CONFIG_CONTEXT ctx{(char*)""};
+    config_add_defaults(&ctx, get_module("binlogrouter", MODULE_ROUTER)->parameters);
+
+    const char* options = "server_id=3,heartbeat=200,binlogdir=/tmp/my_dir,"
+        "transaction_safety=1,master_version=5.6.99-common,"
+        "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,"
+        "master_id=999,user=foo,password=bar";
+
+    for (auto&& a : mxs::strtok(options, ","))
+    {
+        auto tmp = mxs::strtok(a, "=");
+        config_replace_param(&ctx, tmp[0].c_str(), tmp[1].c_str());
+    }
+
+    config_replace_param(&ctx, "router_options", options);
+
+    if ((service = service_alloc("test_service", "binlogrouter", ctx.parameters)) == NULL)
     {
         printf("Failed to allocate 'service' object\n");
         return 1;
     }
 
-    strcpy(service->credentials.name, "foo");
-    strcpy(service->credentials.authdata, "bar");
-
-    for (auto&& a : mxs::strtok("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,"
-                                "transaction_safety=1,master_version=5.6.99-common,"
-                                "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,"
-                                "master-id=999", ","))
-    {
-        auto tmp = mxs::strtok(a, "=");
-        MXS_CONFIG_PARAMETER p{const_cast<char*>(tmp[0].c_str()), const_cast<char*>(tmp[0].c_str()), nullptr};
-        service_add_parameters(service, &p);
-    }
+    config_parameter_free(ctx.parameters);
 
     // Declared in config.cc and needs to be removed if/when blr is refactored
     extern const MXS_MODULE_PARAM config_server_params[];
