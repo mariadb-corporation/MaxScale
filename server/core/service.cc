@@ -58,6 +58,7 @@
 #include "internal/filter.h"
 #include "internal/modules.h"
 #include "internal/service.h"
+#include "internal/routingworker.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined(UINT64_MAX)
@@ -114,6 +115,7 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->stats.started = time(0);
     service->stats.n_failed_starts = 0;
     service->state = SERVICE_STATE_ALLOC;
+    service->active = true;
     spinlock_init(&service->spin);
 
     service->max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
@@ -183,6 +185,7 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 void service_free(SERVICE* service)
 {
     ss_dassert(atomic_load_int(&service->client_count) == 0);
+    ss_dassert(!service->active);
 
     spinlock_acquire(&service_spin);
 
@@ -208,6 +211,7 @@ void service_free(SERVICE* service)
     {
         auto tmp = service->ports;
         service->ports = service->ports->next;
+        ss_dassert(!tmp->active);
         listener_free(tmp);
     }
 
@@ -219,6 +223,7 @@ void service_free(SERVICE* service)
     while (service->dbref)
     {
         SERVER_REF* tmp = service->dbref;
+        ss_dassert(!tmp->active);
         service->dbref = service->dbref->next;
         MXS_FREE(tmp);
     }
@@ -229,6 +234,34 @@ void service_free(SERVICE* service)
     MXS_FREE(service->filters);
     MXS_FREE(service->rate_limits);
     MXS_FREE(service);
+}
+
+void service_destroy(SERVICE* service)
+{
+#ifdef SS_DEBUG
+    auto current = mxs::RoutingWorker::get_current();
+    auto main = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    ss_info_dassert(current == main, "Destruction of service must be done on the main worker");
+#endif
+
+    ss_dassert(service->active);
+    service->active = false;
+
+    char filename[PATH_MAX + 1];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
+             service->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove persisted service configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+
+    if (atomic_load_int(&service->client_count) == 0)
+    {
+        // The service has no active sessions, it can be closed immediately
+        service_free(service);
+    }
 }
 
 /**
@@ -841,6 +874,36 @@ bool service_has_named_listener(SERVICE *service, const char *name)
     return false;
 }
 
+bool service_can_be_destroyed(SERVICE *service)
+{
+    bool rval = true;
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    if (rval)
+    {
+        for (auto s = service->dbref; s; s = s->next)
+        {
+            if (s->active)
+            {
+                rval = false;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Allocate a new server reference
  *
@@ -1238,8 +1301,12 @@ service_find(const char *servname)
 
     spinlock_acquire(&service_spin);
     service = allServices;
-    while (service && strcmp(service->name, servname) != 0)
+    while (service)
     {
+        if (strcmp(service->name, servname) == 0 && service->active)
+        {
+            break;
+        }
         service = service->next;
     }
     spinlock_release(&service_spin);

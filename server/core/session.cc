@@ -44,6 +44,7 @@
 #include "internal/filter.h"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
+#include "internal/service.h"
 
 using std::string;
 using std::stringstream;
@@ -341,6 +342,23 @@ void session_close(MXS_SESSION *session)
     }
 }
 
+class ServiceDestroyTask: public mxs::WorkerDisposableTask
+{
+public:
+    ServiceDestroyTask(SERVICE* service):
+        m_service(service)
+    {
+    }
+
+    void execute(Worker& worker) override
+    {
+        service_free(m_service);
+    }
+
+private:
+    SERVICE* m_service;
+};
+
 /**
  * Deallocate the specified session
  *
@@ -395,7 +413,13 @@ static void session_free(MXS_SESSION *session)
 
     session->state = SESSION_STATE_FREE;
     session_final_free(session);
-    atomic_add(&service->client_count, -1);
+
+    if (atomic_add(&service->client_count, -1) == 1 && !service->active)
+    {
+        // Destroy the service in the main routing worker thread
+        mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        main_worker->post(std::auto_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)));
+    }
 }
 
 static void

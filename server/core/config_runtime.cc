@@ -979,8 +979,8 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
     {
         rval = true;
         MXS_NOTICE("Destroyed listener '%s' for service '%s'. The listener "
-                   "will be removed after the next restart of MaxScale.",
-                   name, service->name);
+                   "will be removed after the next restart of MaxScale or "
+                   "when the associated service is destroyed.", name, service->name);
     }
 
     return rval;
@@ -1073,6 +1073,26 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     else
     {
         runtime_error("Can't create filter '%s', it already exists", name);
+    }
+
+    return rval;
+}
+
+bool runtime_destroy_service(SERVICE* service)
+{
+    bool rval = false;
+    mxs::SpinLockGuard guard(crt_lock);
+    ss_dassert(service && service->active);
+
+    if (service_can_be_destroyed(service))
+    {
+        service_destroy(service);
+        rval = true;
+    }
+    else
+    {
+        runtime_error("Service '%s' cannot be destroyed: Remove all servers and "
+                      "destroy all listeners first", service->name);
     }
 
     return rval;

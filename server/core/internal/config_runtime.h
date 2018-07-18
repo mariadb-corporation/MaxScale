@@ -217,6 +217,17 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
 bool runtime_destroy_monitor(MXS_MONITOR *monitor);
 
 /**
+ * Destroy a service
+ *
+ * The service can only be destroyed if it uses no servers and has no active listeners.
+ *
+ * @param service Service to destroy
+ *
+ * @return True if service was destroyed
+ */
+bool runtime_destroy_service(SERVICE* service);
+
+/**
  * @brief Create a new server from JSON
  *
  * @param json JSON defining the server

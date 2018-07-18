@@ -40,9 +40,30 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 /**
  * Free a service
  *
+ * @note Must not be called if the service has any active client connections or
+ *       active listeners
+ *
  * @param service Service to free
  */
 void service_free(SERVICE* service);
+
+/**
+ * Mark a service for destruction
+ *
+ * Once the service reference count drops down to zero, the service is destroyed.
+ *
+ * @param service Service to destroy
+ */
+void service_destroy(SERVICE *service);
+
+/**
+ * Check whether a service can be destroyed
+ *
+ * @param service Service to check
+ *
+ * @return True if service can be destroyed
+ */
+bool service_can_be_destroyed(SERVICE *service);
 
 /**
  * @brief Shut all services down

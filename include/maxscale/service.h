@@ -157,6 +157,7 @@ typedef struct service
     uint64_t capabilities;             /**< The capabilities of the service, @see enum routing_capability */
     int max_retry_interval;            /**< Maximum retry interval */
     bool session_track_trx_state;      /**< Get transaction state via session track mechanism */
+    bool active;                       /**< Whether the service is still active */
 } SERVICE;
 
 typedef enum count_spec_t
