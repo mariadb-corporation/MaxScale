@@ -20,6 +20,7 @@
 #include <algorithm>
 
 using std::string;
+using maxscale::string_printf;
 
 static bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database);
 static bool check_replicate_do_table(MXS_MONITORED_SERVER* database);
@@ -783,7 +784,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
 /**
  * Is the current master server still valid or should a new one be selected?
  *
- * @param reason_out Output for a text description
+ * @param reason_out If master is not valid, the reason is printed here.
  * @return True, if master is ok. False if the current master has changed in a way that
  * a new master should be selected.
  */
@@ -791,8 +792,8 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
 {
     // The master server of the cluster needs to be re-calculated in the following four cases:
     bool rval = true;
-    // 1) There is no master.
-    if (m_master == NULL || m_master->is_down())
+    // 1) There is no master. This typically only applies when MaxScale is first ran.
+    if (m_master == NULL)
     {
         rval = false;
     }
@@ -801,6 +802,13 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     {
         rval = false;
         *reason_out = "it is in read-only mode";
+    }
+    // 3) The master has been down for failcount iterations and auto_failover is not on.
+    else if (m_master->is_down() && !m_auto_failover && m_master->m_server_base->mon_err_count >= m_failcount)
+    {
+        rval = false;
+        *reason_out = string_printf("it has been down over %d (failcount) monitor updates and failover "
+            "is not on", m_failcount);
     }
     // 3) The master was a non-replicating master (not in a cycle) but now has a slave connection.
     else if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
@@ -897,51 +905,87 @@ void MariaDBMonitor::update_topology()
     // Find the server that looks like it would be the best master. It does not yet overwrite the
     // current master.
     string topology_messages;
-    MariaDBServer* root_master = find_topology_master_server(&topology_messages);
-
+    MariaDBServer* master_candidate = find_topology_master_server(&topology_messages);
+    // If the 'master_candidate' is a valid server but different from the current master,
+    // a change may be necessary. It will only happen if the current master is no longer usable.
+    bool have_better = (master_candidate && master_candidate != m_master);
     // Check if current master is still valid.
-    string reason;
-    if (master_is_valid(&reason))
+    string reason_not_valid;
+    bool current_is_ok = master_is_valid(&reason_not_valid);
+
+    if (current_is_ok)
     {
-        // Update master cycle info in case it has changed
+        m_warn_current_master_invalid = true;
+        // Update master cycle info in case it has changed.
         update_master_cycle_info();
-        if (root_master && m_master != root_master)
+        if (have_better)
         {
-            // Master is still valid but it is no longer the best master. Print a warning.
-            MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
-                "Master will change if '%s' is no longer a valid master.",
-                root_master->name(), m_master->name(), m_master->name());
+            // Master is still valid but it is no longer the best master. Print a warning. This
+            // may be a continuous situation so only print once.
+            if (m_warn_have_better_master)
+            {
+                MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
+                            "Master will change when '%s' is no longer a valid master.",
+                            master_candidate->name(), m_master->name(), m_master->name());
+                m_warn_have_better_master = false;
+            }
         }
     }
     else
     {
-        if (m_master && !reason.empty())
+        // Current master is faulty or does not exist
+        m_warn_have_better_master = true;
+        if (have_better)
         {
-            MXS_WARNING("The previous master server '%s' is no longer a valid master because %s. "
-                "Selecting new master.", m_master->name(), reason.c_str());
+            // We have an alternative. Swap master. The messages give the impression
+            // that new master selection has not yet happened, but this is just for clarity.
+            const char sel_new_master[] = "Selecting new master server.";
+            if (m_master)
+            {
+                ss_dassert(!reason_not_valid.empty());
+                MXS_WARNING("The current master server '%s' is no longer valid because %s. %s",
+                            m_master->name(), reason_not_valid.c_str(), sel_new_master);
+            }
+            else
+            {
+                // This typically happens only when starting from scratch.
+                MXS_NOTICE("%s", sel_new_master);
+            }
+
+            // At this point, print messages explaining why any/other possible master servers weren't picked.
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+
+            MXS_NOTICE("Setting '%s' as master.", master_candidate->name());
+            // Change the master, even though this may break replication.
+            assign_new_master(master_candidate);
         }
         else
         {
-            MXS_NOTICE("Selecting master server.");
-        }
+            // No alternative master. Keep current status and print warnings.
+            // This situation may stick so only print the messages once.
+            if (m_warn_current_master_invalid)
+            {
+                if (m_master)
+                {
+                    ss_dassert(!reason_not_valid.empty());
+                    MXS_WARNING("The current master server '%s' is no longer valid because %s, "
+                                "but there is no better alternative to swap to.",
+                                m_master->name(), reason_not_valid.c_str());
+                }
+                else
+                {
+                    MXS_WARNING("No valid master server found.");
+                }
 
-        // The current master is no longer ok (or it never was). Change the master, even though this may
-        // break replication. Master changes are logged by the log_master_changes()-method.
-        if (!topology_messages.empty())
-        {
-            MXS_WARNING("%s", topology_messages.c_str());
-        }
-
-        assign_new_master(root_master);
-
-        if (m_master)
-        {
-            MXS_NOTICE("'%s' is the best master candidate.", m_master->name());
-        }
-        else
-        {
-            MXS_WARNING("No valid master servers found.");
+                if (!topology_messages.empty())
+                {
+                    MXS_WARNING("%s", topology_messages.c_str());
+                }
+                m_warn_current_master_invalid = false;
+            }
         }
     }
-    m_cluster_topology_changed = false;
 }

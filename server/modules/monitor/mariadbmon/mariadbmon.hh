@@ -179,6 +179,8 @@ private:
                                           *   outside of a cycle. */
     bool m_warn_failover_precond;        /**< Print failover preconditions error message? */
     bool m_warn_cannot_rejoin;           /**< Print warning if auto_rejoin fails because of invalid gtid:s? */
+    bool m_warn_current_master_invalid;  /**< Print warning if current master is not valid? */
+    bool m_warn_have_better_master;      /**< Print warning if the current master is not the best one? */
 
     // Base methods
     MariaDBMonitor(MXS_MONITOR* monitor_base);

@@ -67,6 +67,8 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_log_no_master(true)
     , m_warn_failover_precond(true)
     , m_warn_cannot_rejoin(true)
+    , m_warn_current_master_invalid(true)
+    , m_warn_have_better_master(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -485,11 +487,11 @@ void MariaDBMonitor::tick()
         }
     }
 
-    if (m_cluster_topology_changed)
+    // Topology needs to be rechecked if it has changed or if master is down.
+    if (m_cluster_topology_changed || (m_master && m_master->is_down()))
     {
-        // This means that a server id or a slave connection has changed, or read_only was set.
-        // Various things need to be checked and updated.
         update_topology();
+        m_cluster_topology_changed = false;
     }
 
     // Always re-assign master, slave etc bits as these depend on other factors outside topology
@@ -740,6 +742,8 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
 {
     m_master = new_master;
     update_master_cycle_info();
+    m_warn_current_master_invalid = true;
+    m_warn_have_better_master = true;
 }
 
 /**
