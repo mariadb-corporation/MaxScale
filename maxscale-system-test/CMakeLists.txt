@@ -961,6 +961,10 @@ set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 # https://jira.mariadb.org/browse/MXS-1961
 add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
 
+# MXS-1985: MaxScale hangs on concurrent KILL processing
+# https://jira.mariadb.org/browse/MXS-1985
+add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
