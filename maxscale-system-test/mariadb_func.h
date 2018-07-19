@@ -24,6 +24,10 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <string>
+#include <vector>
+
+typedef std::vector<std::string> Row;
+typedef std::vector<Row> Result;
 
 /**
  * Opens connection to DB: wropper over mysql_real_connect
@@ -203,6 +207,26 @@ int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string 
  * @return 0 in case of success
  */
 int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value);
+
+/**
+ * Execute a query and return the first row
+ *
+ * @param conn The connection to use
+ * @param sql  The query to execute
+ *
+ * @return The first row as a list of strings
+ */
+Row get_row(MYSQL* conn, std::string sql);
+
+/**
+ * Execute a query and return the result
+ *
+ * @param conn The connection to use
+ * @param sql  The query to execute
+ *
+ * @return The result as a list of rows
+ */
+Result get_result(MYSQL* conn, std::string sql);
 
 int get_int_version(std::string version);
 
