@@ -356,6 +356,8 @@ static inline void dcb_readq_set(DCB *dcb, GWBUF *buffer)
  *
  * @deprecated You should not use this function, use dcb_foreach_parallel instead
  *
+ * @warning This must only be called from the main thread, otherwise deadlocks occur
+ *
  * @param func Function to call. The function should return @c true to continue iteration
  * and @c false to stop iteration earlier. The first parameter is a DCB and the second
  * is the value of @c data that the user provided.

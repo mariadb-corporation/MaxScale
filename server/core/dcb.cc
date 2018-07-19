@@ -2937,6 +2937,7 @@ private:
 
 bool dcb_foreach(bool(*func)(DCB *dcb, void *data), void *data)
 {
+    ss_dassert(Worker::get_current() == Worker::get(0));
     SerialDcbTask task(func, data);
     Worker::execute_serially(task);
     return task.more();
