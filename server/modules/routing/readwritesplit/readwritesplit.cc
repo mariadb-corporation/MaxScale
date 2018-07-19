@@ -471,6 +471,7 @@ static bool route_stored_query(RWSplitSession *rses)
     {
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&rses->query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
+        ss_dassert(query_queue);
 
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
