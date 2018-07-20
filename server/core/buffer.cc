@@ -795,6 +795,7 @@ gwbuf_make_contiguous(GWBUF *orig)
 
     if (orig == NULL)
     {
+        ss_info_dassert(!true, "gwbuf_make_contiguous: NULL buffer");
         return NULL;
     }
     if (orig->next == NULL)
