@@ -810,7 +810,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
         *reason_out = string_printf("it has been down over %d (failcount) monitor updates and failover "
             "is not on", m_failcount);
     }
-    // 3) The master was a non-replicating master (not in a cycle) but now has a slave connection.
+    // 4) The master was a non-replicating master (not in a cycle) but now has a slave connection.
     else if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
     {
         // The master should not have a master of its own.
@@ -820,7 +820,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             *reason_out = "it has started replicating from another server in the cluster";
         }
     }
-    // 4) The master was part of a cycle but is no longer, or one of the servers in the cycle is
+    // 5) The master was part of a cycle but is no longer, or one of the servers in the cycle is
     //    replicating from a server outside the cycle.
     else
     {
@@ -828,7 +828,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
          * if the cycle is still the best multimaster group. */
         int current_cycle_id = m_master->m_node.cycle;
 
-        // 4a) The master is no longer in a cycle.
+        // 5a) The master is no longer in a cycle.
         if (current_cycle_id == NodeData::CYCLE_NONE)
         {
             rval = false;
@@ -836,7 +836,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             string server_names_old = monitored_servers_to_string(old_members);
             *reason_out = "it is no longer in the multimaster group (" + server_names_old + ")";
         }
-        // 4b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
+        // 5b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
         else
         {
             ServerArray& current_members = m_cycles[current_cycle_id];
@@ -909,6 +909,8 @@ void MariaDBMonitor::update_topology()
     // If the 'master_candidate' is a valid server but different from the current master,
     // a change may be necessary. It will only happen if the current master is no longer usable.
     bool have_better = (master_candidate && master_candidate != m_master);
+    bool current_still_best = (master_candidate && master_candidate == m_master);
+
     // Check if current master is still valid.
     string reason_not_valid;
     bool current_is_ok = master_is_valid(&reason_not_valid);
@@ -962,6 +964,20 @@ void MariaDBMonitor::update_topology()
             // Change the master, even though this may break replication.
             assign_new_master(master_candidate);
         }
+        else if (current_still_best)
+        {
+            // Tried to find another master but the current one is still the best.
+            MXS_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
+                        "but '%s' is still the best master server.",
+                        m_master->name(), reason_not_valid.c_str(), m_master->name());
+
+            if (!topology_messages.empty())
+            {
+                MXS_WARNING("%s", topology_messages.c_str());
+            }
+            // The following updates some data on the master.
+            assign_new_master(master_candidate);
+        }
         else
         {
             // No alternative master. Keep current status and print warnings.
@@ -972,7 +988,7 @@ void MariaDBMonitor::update_topology()
                 {
                     ss_dassert(!reason_not_valid.empty());
                     MXS_WARNING("The current master server '%s' is no longer valid because %s, "
-                                "but there is no better alternative to swap to.",
+                                "but there is no valid alternative to swap to.",
                                 m_master->name(), reason_not_valid.c_str());
                 }
                 else
