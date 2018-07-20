@@ -1688,6 +1688,8 @@ void *log_copy_thread( void *ptr )
         Test->tprintf("\n **** Copying all logs *** \n");
         Test->copy_all_logs_periodic();
     }
+
+    return NULL;
 }
 
 int TestConnections::insert_select(int m, int N)
