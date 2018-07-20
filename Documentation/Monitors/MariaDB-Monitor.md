@@ -5,7 +5,45 @@ Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 ## Overview
 
 The MariaDB Monitor monitors a Master-Slave replication cluster. It monitors the
-state of the backends and assigns master and slave roles.
+state of the backends and assigns server roles such as master and slave, which
+are used by the routers when deciding where to route a query. It can also modify
+the replication cluster by performing failover, switchover and rejoin. Backend
+server versions older than MariaDB/MySQL 5.5 are not supported.
+
+## Master selection
+
+Only one backend can be master at any given time. When a master has been
+selected, the monitor prefers to stick with the choice even if other potential
+masters are available. Only if the current master is clearly unsuitable does the
+monitor try to select another master. An existing master turns invalid if:
+
+1. It is unwritable (*read_only* is on).
+2. It has been down for more than *failcount* monitor passes and automatic
+failover is disabled.
+3. It did not previously replicate from another server in the cluster but it
+is now replicating.
+4. It was previously part of a multimaster group but is no longer, or the
+multimaster group is replicating from a server not in the group.
+
+Cases 1 and 2 cover the situations in which the master server is indeed invalid
+and can no longer act as master. Cases 3 and 4 are less severe, as in these
+cases the topology has changed significantly and the master should be
+re-selected, but the current master may still be the best choice.
+
+The master change described above is not the same as the failover described in
+the section
+[Failover, switchover and auto-rejoin](#failover,-switchover-and-auto-rejoin).
+A master change only modifies the server roles inside MaxScale but does not
+modify the replication topology. For this reason case 2 requires automatic
+failover to be off.
+
+Master selection prefers to select the server with the most slaves, possibly in
+multiple replication layers. A master must also be running (successfully
+connected) and *read_only* must be off. Servers in a cyclical replication
+topology (multimaster group) are interpreted as having all the servers in the
+group as slaves. Even from a multimaster group only one server is selected as
+the overall master. When multiple servers are tied for master status, the server
+which appears earlier in the `servers`-field of the monitor is selected.
 
 ## Configuration
 
@@ -131,9 +169,16 @@ replicate from. In most cases this should be left on.
 
 ### `failcount`
 
-Number of failures that must consecutively occur on a failed master before an
-automatic failover triggers. The default value is 5 failures. Automatic failover
-must be enabled for this effect (`auto_failover=true`).
+Number of consecutive monitor passes a master server must be down before it is
+considered failed. At this point, automatic failover is performed if enabled
+(`auto_failover=true`). If automatic failover is not on, the monitor will try to
+search for another server to fultill the master role. See section
+[Master selection](#master-selection)
+for more details. Changing the master may break replication as queries could be
+routed to a server without previous events. To prevent this, avoid having
+multiple valid master servers in the cluster.
+
+The default value is 5 failures.
 
 ### `allow_cluster_recovery`
 
