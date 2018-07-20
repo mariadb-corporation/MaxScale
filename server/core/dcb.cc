@@ -2943,39 +2943,17 @@ bool dcb_foreach(bool(*func)(DCB *dcb, void *data), void *data)
     return task.more();
 }
 
-/** Helper class for parallel iteration over all DCBs */
-class ParallelDcbTask : public WorkerTask
+void dcb_foreach_local(bool(*func)(DCB *dcb, void *data), void *data)
 {
-public:
+    int thread_id = Worker::get_current_id();
 
-    ParallelDcbTask(bool(*func)(DCB *, void *), void **data):
-        m_func(func),
-        m_data(data)
+    for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
     {
-    }
-
-    void execute(Worker& worker)
-    {
-        int thread_id = worker.id();
-
-        for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
+        if (!func(dcb, data))
         {
-            if (!m_func(dcb, m_data[thread_id]))
-            {
-                break;
-            }
+            break;
         }
     }
-
-private:
-    bool(*m_func)(DCB *dcb, void *data);
-    void** m_data;
-};
-
-void dcb_foreach_parallel(bool(*func)(DCB *dcb, void *data), void **data)
-{
-    ParallelDcbTask task(func, data);
-    Worker::execute_concurrently(task);
 }
 
 int dcb_get_port(const DCB *dcb)
