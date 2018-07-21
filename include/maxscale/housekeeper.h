@@ -45,6 +45,13 @@ typedef bool (*TASKFN)(void *data);
 bool hkinit();
 
 /**
+ * Start the housekeeper thread
+ *
+ * @return True if the housekeeper mechanism was started
+ */
+bool hkstart();
+
+/**
  * Waits for the housekeeper thread to finish.
  */
 void hkfinish();

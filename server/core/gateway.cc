@@ -1969,6 +1969,15 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    // Initialize the housekeeper
+    if (!hkinit())
+    {
+        const char* logerr = "Failed to initialize housekeeper";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     if (!config_load(cnf_file_path))
     {
         const char* fprerr =
@@ -2071,7 +2080,7 @@ int main(int argc, char **argv)
     }
 
     // Start the housekeeper thread
-    if (!hkinit())
+    if (!hkstart())
     {
         const char* logerr = "Failed to start housekeeper thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);

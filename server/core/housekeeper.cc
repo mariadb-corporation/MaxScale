@@ -94,6 +94,7 @@ public:
     Housekeeper();
 
     static bool init();
+    static bool start();
     void stop();
     void run();
     void add(const Task& task);
@@ -131,10 +132,15 @@ Housekeeper::Housekeeper():
 
 bool Housekeeper::init()
 {
+    hk = new (std::nothrow) Housekeeper;
+    return hk != nullptr;
+}
+
+bool Housekeeper::start()
+{
     struct hkinit_result res;
     sem_init(&res.sem, 0, 0);
     res.ok = false;
-    hk = new (std::nothrow) Housekeeper;
 
     if (hk && thread_start(&hk->m_thread, hkthread, &res, 0) != NULL)
     {
@@ -148,7 +154,6 @@ bool Housekeeper::init()
     sem_destroy(&res.sem);
     return res.ok;
 }
-
 void Housekeeper::run()
 {
     while (is_running())
@@ -286,6 +291,11 @@ void hkthread(void *data)
 bool hkinit()
 {
     return Housekeeper::init();
+}
+
+bool hkstart()
+{
+    return Housekeeper::start();
 }
 
 void hkfinish()
