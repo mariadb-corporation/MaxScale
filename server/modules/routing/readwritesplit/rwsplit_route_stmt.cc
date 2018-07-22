@@ -1083,7 +1083,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF *send_buf = gwbuf_clone(querybuf);
 
-    if (cmd == COM_QUERY && m_config->causal_reads && !m_gtid_pos .empty())
+    if (m_config->causal_reads && cmd == COM_QUERY && !m_gtid_pos.empty())
     {
         send_buf = add_prefix_wait_gtid(target->server(), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;

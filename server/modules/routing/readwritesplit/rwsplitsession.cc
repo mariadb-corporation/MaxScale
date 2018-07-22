@@ -363,9 +363,7 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& bac
     {
         if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
         {
-            /** Save gtid position */
-            char *tmp = gwbuf_get_property(writebuf, MXS_LAST_GTID);
-            if (tmp)
+            if (char *tmp = gwbuf_get_property(writebuf, MXS_LAST_GTID))
             {
                 m_gtid_pos = std::string(tmp);
             }
