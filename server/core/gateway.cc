@@ -1978,19 +1978,6 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (!config_load(cnf_file_path))
-    {
-        const char* fprerr =
-            "Failed to open, read or process the MaxScale configuration "
-            "file. Exiting. See the error log for details.";
-        print_log_n_stderr(false, true, fprerr, fprerr, 0);
-        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
-                  "Exiting.",
-                  cnf_file_path);
-        rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
-
     if (!qc_setup(cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
         const char* logerr = "Failed to initialise query classifier library.";
@@ -2068,6 +2055,19 @@ int main(int argc, char **argv)
     {
         MXS_ERROR("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    if (!config_load(cnf_file_path))
+    {
+        const char* fprerr =
+            "Failed to open, read or process the MaxScale configuration "
+            "file. Exiting. See the error log for details.";
+        print_log_n_stderr(false, true, fprerr, fprerr, 0);
+        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
+                  "Exiting.",
+                  cnf_file_path);
+        rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
 
