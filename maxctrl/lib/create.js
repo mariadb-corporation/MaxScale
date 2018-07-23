@@ -12,6 +12,16 @@
  */
 require('./common.js')()
 
+// Converts an array of key=value pairs into an object
+function to_obj(obj, value) {
+    var kv = value.split('=')
+    if (kv.length < 2) {
+        throw 'Error: Not a key-value parameter: ' + value
+    }
+    obj[kv[0]] = kv[1]
+    return obj
+}
+
 exports.command = 'create <command>'
 exports.desc = 'Create objects'
 exports.handler = function() {}
@@ -173,15 +183,6 @@ exports.builder = function(yargs) {
                 .usage('Usage: service <name> <router> <params...>')
         }, function(argv) {
 
-            var to_obj = (obj, value) => {
-                var kv = value.split('=')
-                if (kv.length < 2) {
-                    throw 'Error: Not a key-value parameter: ' + value
-                }
-                obj[kv[0]] = kv[1]
-                return obj
-            }
-
             var service = {
                 'data': {
                     'id': argv.name,
@@ -209,6 +210,27 @@ exports.builder = function(yargs) {
             })
         })
 
+    // Create filter
+        .command('filter <name> <module> <params...>', 'Create a new filter', function(yargs) {
+            return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
+                                'given as the filter parameters.')
+                .usage('Usage: filter <name> <router> <params...>')
+        }, function(argv) {
+
+            var filter = {
+                'data': {
+                    'id': argv.name,
+                    'attributes': {
+                        'module': argv.module,
+                        'parameters': argv.params.reduce(to_obj, {})
+                    }
+                }
+            }
+
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'filters', null, {method: 'POST', body: filter})
+            })
+        })
 
     // Create listener
         .group(['interface'], 'Create listener options:')

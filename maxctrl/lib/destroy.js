@@ -55,6 +55,14 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'services/' + argv.name, null, {method: 'DELETE'})
             })
         })
+        .command('filter <name>', 'Destroy an unused filter', function(yargs) {
+            return yargs.epilog('The filter must not be used by any service when it is destroyed.')
+                .usage('Usage: destroy filter <name>')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'filters/' + argv.name, null, {method: 'DELETE'})
+            })
+        })
         .command('user <name>', 'Remove a network user', function(yargs) {
             return yargs.epilog('The last remaining administrative user cannot be removed. ' +
                                 'Create a replacement administrative user before attempting ' +
