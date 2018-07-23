@@ -1915,6 +1915,13 @@ SERVICE* runtime_create_service_from_json(json_t* json)
         {
             rval = service_find(name);
             ss_dassert(rval);
+
+            // Performing an alter right after creation takes care of server relationships
+            if (!runtime_alter_service_from_json(rval, json))
+            {
+                runtime_destroy_service(rval);
+                rval = NULL;
+            }
         }
 
         config_parameter_free(params);
