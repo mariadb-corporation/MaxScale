@@ -87,7 +87,7 @@ void service_destroy_instances(void);
  * Initialize and start all services. This should only be called once by the
  * main initialization code.
  *
- * @return Number of successfully started services
+ * @return Number of successfully started services or -1 on error
  */
 int service_launch_all(void);
 

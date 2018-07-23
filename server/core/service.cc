@@ -650,7 +650,8 @@ int service_launch_all()
 
         ptr = ptr->next;
     }
-    return error ? 0 : n;
+
+    return error ? -1 : n;
 }
 
 bool serviceStop(SERVICE *service)

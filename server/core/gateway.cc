@@ -2094,7 +2094,7 @@ int main(int argc, char **argv)
     /** Start the services that were created above */
     n_services = service_launch_all();
 
-    if (n_services == 0)
+    if (n_services == -1)
     {
         const char* logerr = "Failed to start all MaxScale services. Exiting.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
