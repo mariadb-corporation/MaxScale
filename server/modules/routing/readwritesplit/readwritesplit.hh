@@ -127,8 +127,8 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
         strncmp(s,"LEAST_CURRENT_OPERATIONS", strlen("LEAST_CURRENT_OPERATIONS")) == 0 ?        \
         LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
 
-#define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
-        (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+#define BACKEND_TYPE(b) (server_is_master((b)->backend_server) ? BE_MASTER :    \
+        (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
 #define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
 #define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"

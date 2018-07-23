@@ -382,7 +382,7 @@ MXS_MONITORED_SERVER *GaleraMonitor::get_candidate_master()
     /* set min_id to the lowest value of moitor_servers->server->node_id */
     while (moitor_servers)
     {
-        if (!SERVER_IN_MAINT(moitor_servers->server) &&
+        if (!server_is_in_maint(moitor_servers->server) &&
             (moitor_servers->pending_status & SERVER_JOINED))
         {
 
@@ -463,7 +463,7 @@ static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *current_ma
          *
          */
         if ((current_master->pending_status & SERVER_JOINED) &&
-            (!SERVER_IN_MAINT(current_master->server)))
+            (!server_is_in_maint(current_master->server)))
         {
             return current_master;
         }

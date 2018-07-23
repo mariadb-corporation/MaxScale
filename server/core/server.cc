@@ -537,7 +537,7 @@ static void cleanup_persistent_connections(const SERVER* server)
 void
 dprintServer(DCB *dcb, const SERVER *server)
 {
-    if (!SERVER_IS_ACTIVE(server))
+    if (!server_is_active(server))
     {
         return;
     }
@@ -556,7 +556,7 @@ dprintServer(DCB *dcb, const SERVER *server)
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
-    if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
+    if (server_is_slave(server) || server_is_relay(server))
     {
         if (server->rlag >= 0)
         {
@@ -765,7 +765,7 @@ server_set_status_nolock(SERVER *server, uint64_t bit)
     server->status |= bit;
 
     /** clear error logged flag before the next failure */
-    if (SERVER_IS_MASTER(server))
+    if (server_is_master(server))
     {
         server->master_err_is_logged = false;
     }
@@ -1049,7 +1049,7 @@ serverRowCallback(RESULTSET *set, void *data)
         return NULL;
     }
     (*rowno)++;
-    if (SERVER_IS_ACTIVE(server))
+    if (server_is_active(server))
     {
         row = resultset_make_row(set);
         resultset_row_set(row, 0, server->name);
@@ -1599,7 +1599,7 @@ json_t* server_list_to_json(const char* host)
 
     for (SERVER* server = allServers; server; server = server->next)
     {
-        if (SERVER_IS_ACTIVE(server))
+        if (server_is_active(server))
         {
             json_array_append_new(data, server_to_json_data(server, host));
         }

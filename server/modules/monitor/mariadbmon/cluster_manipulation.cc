@@ -726,7 +726,7 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
     MYSQL* conn = current_master->m_server_base->con;
     const char* query = ""; // The next query to execute. Used also for error printing.
     // The presence of an external master changes several things.
-    const bool external_master = SERVER_IS_SLAVE_OF_EXT_MASTER(current_master->m_server_base->server);
+    const bool external_master = server_is_slave_of_ext_master(current_master->m_server_base->server);
 
     if (external_master)
     {
@@ -1178,8 +1178,8 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
             // If both have log_slave_updates on ...
             else if (cand_updates && curr_updates)
             {
-                bool cand_disk_ok = !SERVER_IS_DISK_SPACE_EXHAUSTED(candidate->m_server_base->server);
-                bool curr_disk_ok = !SERVER_IS_DISK_SPACE_EXHAUSTED(current_best->m_server_base->server);
+                bool cand_disk_ok = !server_is_disk_space_exhausted(candidate->m_server_base->server);
+                bool curr_disk_ok = !server_is_disk_space_exhausted(current_best->m_server_base->server);
                 // ... prefer a slave without disk space issues.
                 if (cand_disk_ok && !curr_disk_ok)
                 {
@@ -1215,7 +1215,7 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
          mon_serv != NULL && extra_master == NULL;
          mon_serv = mon_serv->next)
     {
-        if (SRV_MASTER_STATUS(mon_serv->pending_status))
+        if (srv_master_status(mon_serv->pending_status))
         {
             if (mon_serv == suggested_curr_master)
             {

@@ -436,7 +436,7 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
 bool MariaDBServer::is_master() const
 {
     // Similar to macro SERVER_IS_MASTER
-    return SRV_MASTER_STATUS(m_server_base->pending_status);
+    return srv_master_status(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_slave() const

@@ -198,14 +198,14 @@ typedef enum skygw_chk_t
                           ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER"           : \
                            ((c) == LEAST_CURRENT_OPERATIONS ? "LEAST_CURRENT_OPERATIONS" : "Unknown criteria")))))
 
-#define STRSRVSTATUS(s) (SERVER_IS_MASTER(s)  ? "RUNNING MASTER" :      \
-                         (SERVER_IS_SLAVE(s)   ? "RUNNING SLAVE" :      \
-                          (SERVER_IS_JOINED(s)  ? "RUNNING JOINED" :    \
-                           (SERVER_IS_NDB(s)     ? "RUNNING NDB" :      \
-                            ((!SERVER_IS_DOWN(s) && SERVER_IN_MAINT(s)) ? "RUNNING MAINTENANCE" : \
-                             (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
-                              (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : \
-                               (SERVER_IS_DOWN(s) ? "DOWN" : "UNKNOWN STATUS"))))))))
+#define STRSRVSTATUS(s) (server_is_master(s)  ? "RUNNING MASTER" :      \
+                         (server_is_slave(s)   ? "RUNNING SLAVE" :      \
+                          (server_is_joined(s)  ? "RUNNING JOINED" :    \
+                           (server_is_ndb(s)     ? "RUNNING NDB" :      \
+                            ((!server_is_down(s) && server_is_in_maint(s)) ? "RUNNING MAINTENANCE" : \
+                             (server_is_relay(s) ? "RUNNING RELAY" : \
+                              (server_is_running(s) ? "RUNNING (only)" : \
+                               (server_is_down(s) ? "DOWN" : "UNKNOWN STATUS"))))))))
 
 #define STRTARGET(t)    (t == TARGET_ALL ? "TARGET_ALL" :               \
                          (t == TARGET_MASTER ? "TARGET_MASTER" :        \

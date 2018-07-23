@@ -314,13 +314,13 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
      */
     for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
     {
-        if (!SERVER_REF_IS_ACTIVE(ref) || SERVER_IN_MAINT(ref->server))
+        if (!SERVER_REF_IS_ACTIVE(ref) || server_is_in_maint(ref->server))
         {
             continue;
         }
 
         /* Check server status bits against bitvalue from router_options */
-        if (ref && SERVER_IS_RUNNING(ref->server) &&
+        if (ref && server_is_running(ref->server) &&
             (ref->server->status & client_rses->bitmask & client_rses->bitvalue))
         {
             if (master_host)
@@ -511,11 +511,11 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, bool is_closed,
     {
         sprintf(msg, "Session is closed.");
     }
-    else if (SERVER_IS_DOWN(ref->server))
+    else if (server_is_down(ref->server))
     {
         sprintf(msg, "Server '%s' is down.", ref->server->name);
     }
-    else if (SERVER_IN_MAINT(ref->server))
+    else if (server_is_in_maint(ref->server))
     {
         sprintf(msg, "Server '%s' is in maintenance.", ref->server->name);
     }
@@ -545,7 +545,7 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
+    if (server_is_running(router_cli_ses->backend->server) &&
         (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
@@ -855,7 +855,7 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
     SERVER_REF *master_host = NULL;
     for (SERVER_REF *ref = servers; ref; ref = ref->next)
     {
-        if (ref->active && SERVER_IS_MASTER(ref->server))
+        if (ref->active && server_is_master(ref->server))
         {
             // No master found yet or this one has higher weight.
             if (master_host == NULL || ref->weight > master_host->weight)

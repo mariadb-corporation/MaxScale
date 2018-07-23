@@ -606,7 +606,7 @@ void MariaDBMonitor::update_gtid_domain()
 
 void MariaDBMonitor::update_external_master()
 {
-    if (SERVER_IS_SLAVE_OF_EXT_MASTER(m_master->m_server_base->server))
+    if (server_is_slave_of_ext_master(m_master->m_server_base->server))
     {
         ss_dassert(!m_master->m_slave_status.empty());
         if (m_master->m_slave_status[0].master_host != m_external_master_host ||

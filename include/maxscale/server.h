@@ -197,64 +197,98 @@ enum
 /**
  * Is the server valid and active
  */
-#define SERVER_IS_ACTIVE(server) (server->is_active)
+inline bool server_is_active(const SERVER* server)
+{
+    return server->is_active;
+}
 
 /**
- * Is the server running - the macro returns true if the server is marked as running
- * regardless of it's state as a master or slave
+ * Is the server running - returns true if the server is marked as running.
  */
-#define SERVER_IS_RUNNING(server) (((server)->status & (SERVER_RUNNING|SERVER_MAINT)) == SERVER_RUNNING)
+inline bool server_is_running(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING);
+}
+
 /**
- * Is the server marked as down - the macro returns true if the server is believed
+ * Is the server marked as down - returns true if the server is believed
  * to be inoperable.
  */
-#define SERVER_IS_DOWN(server)          (((server)->status & SERVER_RUNNING) == 0)
-/**
- * Is the server a master? The server must be both running and marked as master
- * in order for the macro to return true
- */
-#define SERVER_IS_MASTER(server) SRV_MASTER_STATUS((server)->status)
+inline bool server_is_down(const SERVER* server)
+{
+    return ((server->status & SERVER_RUNNING) == 0);
+}
 
-#define SRV_MASTER_STATUS(status) ((status &                            \
-                                    (SERVER_RUNNING|SERVER_MASTER|SERVER_MAINT)) == \
-                                   (SERVER_RUNNING|SERVER_MASTER))
+
+inline bool srv_master_status(uint64_t status)
+{
+    return ((status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER));
+}
+
+/**
+ * Is the server a master? Returns true if server is both running and marked as master.
+ */
+inline bool server_is_master(const SERVER* server)
+{
+    return srv_master_status(server->status);
+}
 
 /**
  * Is the server a slave? The server must be both running and marked as a slave
  * in order for the macro to return true
  */
-#define SERVER_IS_SLAVE(server)                                         \
-    (((server)->status & (SERVER_RUNNING|SERVER_SLAVE|SERVER_MAINT)) == \
-     (SERVER_RUNNING|SERVER_SLAVE))
+inline bool server_is_slave(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
+            (SERVER_RUNNING | SERVER_SLAVE));
+}
 
 /**
  * Is the server joined Galera node? The server must be running and joined.
  */
-#define SERVER_IS_JOINED(server)                                        \
-    (((server)->status & (SERVER_RUNNING|SERVER_JOINED|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_JOINED))
+inline bool server_is_joined(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) ==
+            (SERVER_RUNNING | SERVER_JOINED));
+}
 
 /**
  * Is the server a SQL node in MySQL Cluster? The server must be running and with NDB status
  */
-#define SERVER_IS_NDB(server)                                           \
-    (((server)->status & (SERVER_RUNNING|SERVER_NDB|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_NDB))
+inline bool server_is_ndb(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB));
+}
 
 /**
  * Is the server in maintenance mode.
  */
-#define SERVER_IN_MAINT(server)         ((server)->status & SERVER_MAINT)
+inline bool server_is_in_maint(const SERVER* server)
+{
+    return (server->status & SERVER_MAINT);
+}
 
-#define SERVER_IS_IN_CLUSTER(s)  (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB)) != 0)
+inline bool server_is_in_cluster(const SERVER* server)
+{
+    return ((server->status & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB)) != 0);
+}
 
-#define SERVER_IS_RELAY_SERVER(server)                                  \
-    (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
-     (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
+inline bool server_is_relay(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) == \
+            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE));
+}
 
-#define SERVER_IS_SLAVE_OF_EXT_MASTER(s) (((s)->status & \
-    (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER)) == \
-    (SERVER_RUNNING|SERVER_SLAVE_OF_EXT_MASTER))
+inline bool server_is_slave_of_ext_master(const SERVER* server)
+{
+    return ((server->status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER)) ==
+            (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER));
+}
 
-#define SERVER_IS_DISK_SPACE_EXHAUSTED(s) ((s)->status & SERVER_DISK_SPACE_EXHAUSTED)
+inline bool server_is_disk_space_exhausted(const SERVER* server)
+{
+    return (server->status & SERVER_DISK_SPACE_EXHAUSTED);
+}
 
 /**
  * @brief Allocate a new server

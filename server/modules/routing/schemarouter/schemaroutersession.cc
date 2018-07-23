@@ -209,7 +209,7 @@ SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
         /** We either don't know or don't care where this query should go */
         target = get_shard_target(pPacket, type);
 
-        if (target && SERVER_IS_RUNNING(target))
+        if (target && server_is_running(target))
         {
             route_target = TARGET_NAMED_SERVER;
         }
@@ -236,7 +236,7 @@ SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
         for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
             SERVER *server = (*it)->backend()->server;
-            if (SERVER_IS_RUNNING(server))
+            if (server_is_running(server))
             {
                 route_target = TARGET_NAMED_SERVER;
                 target = server;
@@ -739,7 +739,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s\t%s:%d",
-                         SERVER_IS_MASTER((*it)->backend()->server) ? "master" : "slave",
+                         server_is_master((*it)->backend()->server) ? "master" : "slave",
                          (*it)->backend()->server->address,
                          (*it)->backend()->server->port);
             }
@@ -1382,7 +1382,7 @@ void SchemaRouterSession::query_databases()
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->in_use() && !(*it)->is_closed() &
-            SERVER_IS_RUNNING((*it)->backend()->server))
+            server_is_running((*it)->backend()->server))
         {
             GWBUF* clone = gwbuf_clone(buffer);
             MXS_ABORT_IF_NULL(clone);
@@ -1524,7 +1524,7 @@ bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
          */
         if ((*it)->in_use() &&
             (strncasecmp(name, b->server->name, PATH_MAX) == 0) &&
-            SERVER_IS_RUNNING(b->server))
+            server_is_running(b->server))
         {
             *p_dcb = (*it)->dcb();
             succp = true;
