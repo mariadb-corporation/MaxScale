@@ -34,7 +34,7 @@ if [ -d "install_$box" ]; then
 fi
 
 # starting VM for build
-${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name
+${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json generate $name
 ${mdbci_dir}/mdbci up $name --attempts=1
 if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
