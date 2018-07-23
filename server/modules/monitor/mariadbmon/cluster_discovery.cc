@@ -15,9 +15,10 @@
 #include <inttypes.h>
 #include <string>
 #include <sstream>
+#include <queue>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
-#include <algorithm>
+
 
 using std::string;
 using maxscale::string_printf;
@@ -634,14 +635,15 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
 /**
  * Assign replication role status bits to the servers in the cluster. Starts from the cluster master server.
  */
-void MariaDBMonitor::assign_master_and_slave()
+void MariaDBMonitor::assign_server_roles()
 {
-    // Remove any existing [Master], [Slave] etc flags.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY_MASTER |
-                                 SERVER_SLAVE_OF_EXT_MASTER;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
+    // 'mon_prev_status'.
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_WAS_SLAVE |
+                                 SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXT_MASTER;
+    for (auto server : m_servers)
     {
-        (*iter)->clear_status(remove_bits);
+        server->clear_status(remove_bits);
     }
 
     // Check the the master node, label it as the [Master] if...
@@ -650,28 +652,36 @@ void MariaDBMonitor::assign_master_and_slave()
         // the node has slaves, even if their slave sql threads are stopped ...
         if (!m_master->m_node.children.empty() ||
             // or detect standalone master is on ...
-            m_detect_standalone_master ||
-            // or "detect_stale_master" is on and the server was a master before.
-            (m_detect_stale_master && (m_master->m_server_base->pending_status & SERVER_WAS_MASTER)))
+            m_detect_standalone_master)
         {
-            m_master->clear_status(SLAVE_BITS | SERVER_RELAY_MASTER);
-            if (m_master->has_status(SERVER_RUNNING))
+            if (m_master->is_running())
             {
+                // Master is running, assign bits for valid replication.
+                m_master->clear_status(SLAVE_BITS | SERVER_RELAY_MASTER);
                 m_master->set_status(MASTER_BITS);
+                // Run another graph search, this time assigning slaves.
+                reset_node_index_info();
+                assign_slave_and_relay_master(m_master);
+            }
+            else if (m_detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
+            {
+                // The master is not running but it was the master last round and may have running slaves
+                // who have up-to-date events. Label any slaves, whether running or not with SERVER_WAS_SLAVE.
+                m_master->set_status(SERVER_WAS_MASTER);
+                reset_node_index_info();
+                assign_slave_and_relay_master(m_master);
             }
         }
-
-        // Run another DFS, this time assigning slaves.
-        reset_node_index_info();
-        assign_slave_and_relay_master(m_master);
     }
-    else
+
+    if (!m_ignore_external_masters)
     {
-        for (MariaDBServer* s: m_servers)
+        // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
+        for (MariaDBServer* server : m_servers)
         {
-            if (s->has_status(SERVER_WAS_SLAVE))
+            if (!server->m_node.external_masters.empty())
             {
-                s->set_status(SERVER_SLAVE);
+                server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
             }
         }
     }
@@ -681,103 +691,136 @@ void MariaDBMonitor::assign_master_and_slave()
  * Check if the servers replicating from the given node qualify for [Slave] and mark them. Continue the
  * search to any found slaves.
  *
- * @param node The node to process. The node itself is not marked [Slave].
+ * @param start_node The root master node where the search begins. The node itself is not marked [Slave].
  */
-void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* node)
+void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
 {
-    ss_dassert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
-    node->m_node.index = NodeData::INDEX_FIRST;
-    bool require_was_slave = false;
-
-    if (node->is_down())
+    ss_dassert(start_node->m_node.index == NodeData::INDEX_NOT_VISITED);
+    // Combines a node with its connection state. The state tracks whether there is a series of
+    // running slave connections all the way to the master server. If even one server is down or
+    // a connection is broken in the series, the link is considered stale.
+    struct QueueElement
     {
-        // If 'detect_stale_slave' is off, this node can only have slaves if the node is running.
-        if (m_detect_stale_slave)
+        MariaDBServer* node;
+        bool active_link;
+    };
+
+    auto compare = [](const QueueElement& left, const QueueElement& right)
+    {
+        return (!left.active_link && right.active_link);
+    };
+    /* 'open_set' contains the nodes which the search should expand to. It's a priority queue so that nodes
+     * with a functioning chain of slave connections to the master are processed first. Only after all such
+     * nodes have been processed does the search expand to downed or disconnected nodes. */
+    std::priority_queue<QueueElement, std::vector<QueueElement>, decltype(compare)> open_set(compare);
+
+    // Begin by adding the starting node to the open_set. Then keep running until no more nodes can be found.
+    QueueElement start = {start_node, start_node->is_running()};
+    open_set.push(start);
+    int next_index = NodeData::INDEX_FIRST;
+    const bool allow_stale_slaves = m_detect_stale_slave;
+
+    while (!open_set.empty())
+    {
+        auto parent = open_set.top().node;
+        // If the node is not running or does not have an active link to master,
+        // it can only have "stale slaves". Such slaves are assigned if
+        // the slave connection has been observed to have worked before.
+        bool parent_has_live_link = open_set.top().active_link && !parent->is_down();
+        open_set.pop();
+
+        if (parent->m_node.index != NodeData::INDEX_NOT_VISITED)
         {
-            require_was_slave = true;
+            // This node has already been processed and can be skipped. The same node
+            // can be in the open set multiple times if it has multiple slave connections.
+            continue;
         }
         else
         {
-            return;
+            parent->m_node.index = next_index++;
         }
-    }
 
-    int slaves = 0;
-    for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
-    {
-        MariaDBServer* slave = *iter;
-        // If the node has an index, it has already been labeled master/slave and visited. Even when this
-        // is the case, the node has to be checked to get correct [Relay Master] labels.
-        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+        bool has_slaves = false;
+        for (MariaDBServer* slave : parent->m_node.children)
         {
-            slave->clear_status(MASTER_BITS);
-        }
-        // The slave node may have several slave connections, need to find the right one.
-        bool found_slave_conn = false;
-        for (auto iter2 = slave->m_slave_status.begin(); iter2 != slave->m_slave_status.end(); iter2++)
-        {
-            SlaveStatus& ss = *iter2;
-            auto master_id = ss.master_server_id;
-            auto io_running = ss.slave_io_running;
-            // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
-            if (master_id > 0 && master_id == node->m_server_id && ss.slave_sql_running &&
-                (io_running == SlaveStatus::SLAVE_IO_YES ||
-                 io_running == SlaveStatus::SLAVE_IO_CONNECTING) &&
-                // Can in theory cause a 'SERVER_WAS_SLAVE' bit from another master to affect the result.
-                (!require_was_slave || (slave->m_server_base->pending_status & SERVER_WAS_SLAVE)))
+            // The slave node may have several slave connections, need to find the one that is
+            // connected to the parent. This section is quite similar to the one in
+            // 'build_replication_graph', although here we require that the sql thread is running.
+
+            // If the slave has an index, it has already been visited and labelled master/slave.
+            // Even when this is the case, the node has to be checked to get correct
+            // [Relay Master] labels.
+
+            // Need to differentiate between stale and running slave connections.
+            bool found_slave_conn = false;
+            bool conn_is_live = false;
+            bool slave_is_running = !slave->is_down();
+            for (SlaveStatus& ss : slave->m_slave_status)
             {
-                /** Note: The following fixes mxs1961_standalone_rejoin
-                 *
-                 * The fact that the relay master status is assigned based on
-                 * the last good observed state of the slave (i.e. before it went
-                 * down), it is theoretically correct to label the server as a relay
-                 * master. In practice this is not quite correct.
-                 *
-                 * One example of this is the following chain of failover events
-                 * with M(master), S(slave) and X(down) and arrows for last known
-                 * slave connection:
-                 *
-                 *     S → M ← S
-                 *     X → M ← S
-                 *     X → X   M
-                 *     X → S → M // This is where S gets the Relay Master status
-                 *
-                 * The last state does indeed form a relay master topology but it
-                 * has never been observed to happen and as such is wrong.
-                 */
-                if (slave->is_running())
+                auto master_id = ss.master_server_id;
+                auto io_running = ss.slave_io_running;
+                // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
+                if (master_id > 0 && master_id == parent->m_server_id && ss.slave_sql_running)
                 {
-                    found_slave_conn = true;
-                    break;
+                    // Would it be possible to have the parent down while IO is still connected? Perhaps
+                    // if the slave is slow to update the connection status.
+                    if (io_running == SlaveStatus::SLAVE_IO_YES)
+                    {
+                        found_slave_conn = true;
+                        // Check that a live connection chain exists from cluster master to the slave.
+                        conn_is_live = parent_has_live_link && slave_is_running;
+                        break;
+                    }
+                    else if (io_running == SlaveStatus::SLAVE_IO_CONNECTING &&
+                             slave->had_status(SERVER_WAS_SLAVE))
+                    {
+                        // Stale connection. TODO: The SERVER_WAS_SLAVE check above is not enough in
+                        // several situations. The previously observed live slave connections
+                        // need to be saved distinctly to avoid a SERVER_WAS_SLAVE bit from one
+                        // connection from affecting another.
+                        found_slave_conn = true;
+                        break;
+                    }
+                }
+            }
+
+            // If the slave had a valid connection, label it as a slave and add it to the open set if not
+            // yet visited.
+            if (found_slave_conn && (conn_is_live || allow_stale_slaves))
+            {
+                has_slaves = true;
+                if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+                {
+                    // Add the slave server to the priority queue to a position depending on the master
+                    // link status. It will be expanded later in the loop.
+                    open_set.push({slave, conn_is_live});
+
+                    // The slave only gets the slave flags if it's running.
+                    // TODO: If slaves with broken links should be given different flags, add that here.
+                    slave->clear_status(MASTER_BITS);
+                    if (slave->has_status(SERVER_RUNNING))
+                    {
+                        slave->set_status(SLAVE_BITS);
+                    }
+                    else if (allow_stale_slaves)
+                    {
+                        slave->set_status(SERVER_WAS_SLAVE);
+                    }
                 }
             }
         }
 
-        // If the slave had a valid connection, label it as a slave and recurse.
-        if (found_slave_conn)
+        // Finally, if the node itself is a running slave and has slaves of its own, label it as relay.
+        if (parent_has_live_link && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_slaves)
         {
-            slaves++;
-            if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-            {
-                slave->clear_status(MASTER_BITS);
-                if (slave->has_status(SERVER_RUNNING))
-                {
-                    slave->set_status(SLAVE_BITS);
-                }
-                assign_slave_and_relay_master(slave);
-            }
+            parent->set_status(SERVER_RELAY_MASTER);
         }
-    }
-
-    // Finally, if the node itself is a slave and has slaves of its own, label it as relay slave.
-    if (node->has_status(SERVER_SLAVE) && slaves > 0)
-    {
-        node->set_status(SERVER_RELAY_MASTER);
-    }
-    // If the node is a binlog relay, remove any slave bits that may have been set. Relay master bit can stay.
-    if (node->m_version == MariaDBServer::version::BINLOG_ROUTER)
-    {
-        node->clear_status(SERVER_SLAVE);
+        // If the node is a binlog relay, remove any slave bits that may have been set.
+        // Relay master bit can stay.
+        if (parent->m_version == MariaDBServer::version::BINLOG_ROUTER)
+        {
+            parent->clear_status(SLAVE_BITS);
+        }
     }
 }
 

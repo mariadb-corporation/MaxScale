@@ -465,19 +465,7 @@ void MariaDBMonitor::tick()
 
     // Always re-assign master, slave etc bits as these depend on other factors outside topology
     // (e.g. slave sql state).
-    assign_master_and_slave();
-
-    if (!m_ignore_external_masters)
-    {
-        // Do a sweep through all the nodes in the cluster (even the master) and mark external slaves.
-        for (MariaDBServer* server : m_servers)
-        {
-            if (!server->m_node.external_masters.empty())
-            {
-                server->set_status(SERVER_SLAVE_OF_EXT_MASTER);
-            }
-        }
-    }
+    assign_server_roles();
 
     if (m_master != NULL && m_master->is_master())
     {

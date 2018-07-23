@@ -211,8 +211,8 @@ private:
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
     void calculate_node_reach(MariaDBServer* node);
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
-    void assign_master_and_slave();
-    void assign_slave_and_relay_master(MariaDBServer* node);
+    void assign_server_roles();
+    void assign_slave_and_relay_master(MariaDBServer* start_node);
     bool master_is_valid(std::string* reason_out);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_master_cycle_info();

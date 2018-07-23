@@ -271,8 +271,8 @@ inline bool server_is_master(const SERVER* server)
 
 inline bool status_is_slave(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
-            (SERVER_RUNNING | SERVER_SLAVE);
+    return ((status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING) &&
+            ((status & SERVER_SLAVE) || (status & SERVER_WAS_SLAVE));
 }
 
 /**
