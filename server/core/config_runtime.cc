@@ -1087,7 +1087,7 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
     {
         SERVICE* service = NULL;
         CONFIG_CONTEXT ctx{(char*)""};
-        ctx.parameters = load_defaults(router, MODULE_FILTER, CN_FILTER);
+        ctx.parameters = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
         if (ctx.parameters)
         {
