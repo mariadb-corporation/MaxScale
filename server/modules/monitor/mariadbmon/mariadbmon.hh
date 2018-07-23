@@ -104,7 +104,6 @@ protected:
     void process_state_changes();
 
 private:
-    typedef std::function<void ()> GenericFunction;
 
     struct CycleInfo
     {
@@ -192,7 +191,6 @@ private:
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
     bool execute_manual_command(GenericFunction command, json_t** error_out);
-    bool execute_worker_task(GenericFunction func);
     std::string diagnostics_to_string() const;
     json_t* diagnostics_to_json() const;
 

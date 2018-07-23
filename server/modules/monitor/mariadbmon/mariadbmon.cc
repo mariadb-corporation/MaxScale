@@ -234,6 +234,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
      * thread and not the admin thread. Because the diagnostic must be printable even when the monitor is
      * not running, the printing must be done outside the normal loop. */
 
+    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     /* The 'dcb' is owned by the admin thread (the thread executing this function), and probably
      * should not be written to by any other thread. To prevent this, have the monitor thread
      * print the diagnostics to a string. */
@@ -283,6 +284,7 @@ string MariaDBMonitor::diagnostics_to_string() const
 
 json_t* MariaDBMonitor::diagnostics_json() const
 {
+    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     json_t* rval = NULL;
     MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
     bool func_ran = mutable_ptr->execute_worker_task([this, &rval]
@@ -333,39 +335,6 @@ json_t* MariaDBMonitor::diagnostics_to_json() const
     }
 
     return rval;
-}
-
-bool MariaDBMonitor::execute_worker_task(GenericFunction func)
-{
-    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    /* The worker message system works on objects of class Task, each representing a different action.
-     * Let's use a function object inside a task to construct a generic action. */
-    class CustomTask : public maxscale::Worker::Task
-    {
-    public:
-        CustomTask(GenericFunction func)
-            : m_func(func)
-        {}
-
-    private:
-        GenericFunction m_func;
-        void execute(maxscale::Worker& worker)
-        {
-            m_func();
-        }
-    };
-
-    CustomTask task(func);
-    maxscale::Semaphore done(0);
-    /* Although the current method is being ran in the admin thread, 'post' sends the task to the
-     * worker thread of "this". "task" is a stack parameter, so need to always wait for completion
-     * even if there were no results to process. */
-    bool sent = post(&task, &done, Worker::EXECUTE_AUTO);
-    if (sent)
-    {
-        done.wait();
-    }
-    return sent;
 }
 
 /**
