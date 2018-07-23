@@ -58,7 +58,7 @@ export sshopt="$scpopt $sshuser@$IP"
 
 old_version=`ssh $sshopt "maxscale --version" `
 
-${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${new_target} $name/maxscale
+${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/maxscale
 ${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 res=$?
