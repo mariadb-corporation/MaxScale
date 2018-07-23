@@ -368,16 +368,13 @@ extern char *gwbuf_get_property(GWBUF *buf, char *name);
 /**
  * Convert a chain of GWBUF structures into a single GWBUF structure
  *
- * @param orig  The chain to convert
+ * @param orig  The chain to convert, must not be used after the function call
  *
- * @return NULL if @c buf is NULL or if a memory allocation fails,
- *         @c buf if @c buf already is contiguous, and otherwise
- *         a contigious copy of @c buf.
+ * @return A contiguous version of @c buf.
  *
- * @attention If a non-NULL value is returned, the @c buf should no
- *            longer be used as it may have been freed.
+ * @attention Never returns NULL, memory allocation failures abort the process
  */
-extern GWBUF *gwbuf_make_contiguous(GWBUF *buf);
+extern GWBUF* gwbuf_make_contiguous(GWBUF *buf);
 
 /**
  * Add a buffer object to GWBUF buffer.
