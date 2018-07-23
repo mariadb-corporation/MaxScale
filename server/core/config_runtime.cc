@@ -1252,6 +1252,45 @@ static inline bool is_null_relation(json_t* json, const char* relation)
     return (data && json_is_null(data)) || (base && json_is_null(base));
 }
 
+static const char* json_type_to_string(const json_t* json)
+{
+    ss_dassert(json);
+
+    if (json_is_object(json))
+    {
+        return "an object";
+    }
+    else if (json_is_array(json))
+    {
+        return "an array";
+    }
+    else if (json_is_string(json))
+    {
+        return "a string";
+    }
+    else if (json_is_integer(json))
+    {
+        return "an integer";
+    }
+    else if (json_is_real(json))
+    {
+        return "a real number";
+    }
+    else if (json_is_boolean(json))
+    {
+        return "a boolean";
+    }
+    else if (json_is_null(json))
+    {
+        return "a null value";
+    }
+    else
+    {
+        ss_dassert(!true);
+        return "an unknown type";
+    }
+}
+
 static inline const char* get_string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
@@ -1271,7 +1310,7 @@ static inline bool is_string_or_null(json_t* json, const char* path)
 
     if (value && !json_is_string(value))
     {
-        runtime_error("Parameter '%s' is not a string", path);
+        runtime_error("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -1285,7 +1324,7 @@ static inline bool is_bool_or_null(json_t* json, const char* path)
 
     if (value && !json_is_boolean(value))
     {
-        runtime_error("Parameter '%s' is not a boolean", path);
+        runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -1301,7 +1340,7 @@ static inline bool is_count_or_null(json_t* json, const char* path)
     {
         if (!json_is_integer(value))
         {
-            runtime_error("Parameter '%s' is not an integer", path);
+            runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
             rval = false;
         }
         else if (json_integer_value(value) <= 0)

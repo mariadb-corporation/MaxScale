@@ -222,6 +222,10 @@ exports.builder = function(yargs) {
                 .usage('Usage: create listener <service> <name> <port>')
         }, function(argv) {
 
+            if (!Number.isInteger(argv.port)) {
+                throw "'" + argv.port + "' is not a valid value for port"
+            }
+
             var listener = {
                 'data': {
                     'id': argv.name,
