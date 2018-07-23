@@ -33,9 +33,6 @@ if [ -d "install_$box" ]; then
         ${mdbci_dir}/mdbci destroy $name
 fi
 
-${mdbci_dir}/repository-config/generate_all.sh repo.d
-${mdbci_dir}/repository-config/maxscale-release.sh $old_target repo.d
-
 # starting VM for build
 ${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name
 ${mdbci_dir}/mdbci up $name --attempts=1
@@ -61,12 +58,8 @@ export sshopt="$scpopt $sshuser@$IP"
 
 old_version=`ssh $sshopt "maxscale --version" `
 
-rm -rf repo.d
-${mdbci_dir}/repository-config/generate_all.sh repo.d
-${mdbci_dir}/repository-config/maxscale-ci.sh $target repo.d
-
-${mdbci_dir}/mdbci setup_repo --product maxscale --repo-dir $dir/repo.d $name/maxscale
-${mdbci_dir}/mdbci install_product --product maxscale $name/maxscale
+${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${new_target} $name/maxscale
+${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 res=$?
 
