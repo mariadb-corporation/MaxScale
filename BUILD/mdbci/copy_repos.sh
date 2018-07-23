@@ -38,3 +38,5 @@ $(<${script_dir}/templates/repository-config/deb.json.template)
 " 2> /dev/null > ${path_prefix}/${platform}_${platform_version}.json
 fi
 cd $dir
+
+${mdbci_dir}/mdbci generate-product-repositories --product maxscale_ci
