@@ -46,8 +46,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('service <name>', 'Destroy an unused service', function(yargs) {
-            return yargs.epilog('The service must be unlinked from all servers and filter and ' +
-                                'all listeners for the service must be destroyed before the service ' +
+            return yargs.epilog('The service must be unlinked from all servers and filters. ' +
+                                'All listeners for the service must be destroyed before the service ' +
                                 'itself can be destroyed.')
                 .usage('Usage: destroy service <name>')
         }, function(argv) {
