@@ -1600,11 +1600,11 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         // Process client request one packet at a time
         packetbuf = modutil_get_next_MySQL_packet(p_readbuf);
 
-        // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
-        packetbuf = gwbuf_make_contiguous(packetbuf);
-
         if (packetbuf != NULL)
         {
+            // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+            packetbuf = gwbuf_make_contiguous(packetbuf);
+
             CHK_GWBUF(packetbuf);
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
