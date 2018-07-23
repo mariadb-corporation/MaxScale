@@ -473,6 +473,14 @@ static bool route_stored_query(RWSplitSession *rses)
         query_queue = gwbuf_make_contiguous(query_queue);
         ss_dassert(query_queue);
 
+        if (query_queue == NULL)
+        {
+            MXS_ALERT("Queued query unexpectedly empty. Bytes queued: %d Hexdump: ",
+                      gwbuf_length(rses->query_queue));
+            gwbuf_hexdump(rses->query_queue, LOG_ALERT);
+            return true;
+        }
+
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */
         GWBUF *temp_storage = rses->query_queue;

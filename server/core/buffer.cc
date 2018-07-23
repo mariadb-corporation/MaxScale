@@ -892,7 +892,7 @@ static std::string dump_one_buffer(GWBUF* buffer)
     return rval;
 }
 
-void gwbuf_hexdump(GWBUF* buffer)
+void gwbuf_hexdump(GWBUF* buffer, int log_level)
 {
     std::stringstream ss;
 
@@ -910,5 +910,5 @@ void gwbuf_hexdump(GWBUF* buffer)
         n = 1024;
     }
 
-    MXS_INFO("%.*s", n, ss.str().c_str());
+    MXS_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
 }

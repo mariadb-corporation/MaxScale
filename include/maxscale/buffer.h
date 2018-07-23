@@ -403,10 +403,11 @@ extern void dprintAllBuffers(void *pdcb);
 #endif
 
 /**
- * Debug function for dumping buffer contents to INFO log
+ * Debug function for dumping buffer contents to log
  *
- * @param buffer Buffer to dump
+ * @param buffer    Buffer to dump
+ * @param log_level Log priority where the message is written
  */
-void gwbuf_hexdump(GWBUF* buffer);
+void gwbuf_hexdump(GWBUF* buffer, int log_level);
 
 MXS_END_DECLS
