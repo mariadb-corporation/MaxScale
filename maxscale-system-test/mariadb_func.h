@@ -270,7 +270,7 @@ public:
     {
         mysql_close(m_conn);
         m_conn = open_conn_db(m_port, m_host, m_db, m_user, m_pw, m_ssl);
-        return m_conn != nullptr;
+        return m_conn != nullptr && mysql_errno(m_conn) == 0;
     }
 
     void disconnect()

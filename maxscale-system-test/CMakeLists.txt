@@ -1018,6 +1018,10 @@ add_test_executable(mxs421_events.cpp mxs421_events mxs421_events LABELS REPL_BA
 # https://jira.mariadb.org/browse/MXS-1926
 add_test_executable(mxs1926_killed_server.cpp mxs1926_killed_server mxs1926_killed_server LABELS readwritesplit REPL_BACKEND)
 
+# MXS-1929: Runtime service creation
+# https://jira.mariadb.org/browse/MXS-1929
+add_test_executable(mxs1929_service_runtime.cpp mxs1929_service_runtime mxs1929_service_runtime LABELS REPL_BACKEND)
+
 # MXS-1932: Hidden files are not ignored
 # https://jira.mariadb.org/browse/MXS-1932
 add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)

@@ -118,13 +118,13 @@ public:
     char *ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code);
 
     // Simplified C++ version
-    std::string ssh_output(std::string ssh, int node = 0, bool sudo = true)
+    std::pair<int, std::string> ssh_output(std::string ssh, int node = 0, bool sudo = true)
     {
         int rc;
         char* out = ssh_node_output(node, ssh.c_str(), sudo, &rc);
         std::string rval(out);
         free(out);
-        return rval;
+        return {rc, rval};
     }
 
     /**
