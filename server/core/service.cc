@@ -1763,89 +1763,23 @@ serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
 
 void service_shutdown()
 {
-    SERVICE* svc;
     spinlock_acquire(&service_spin);
-    svc = allServices;
-    while (svc != NULL)
+
+    for (SERVICE* svc = allServices; svc; svc = svc->next)
     {
         svc->svc_do_shutdown = true;
-        svc = svc->next;
     }
+
     spinlock_release(&service_spin);
-}
-
-/**
- * Destroy a listener
- *
- * @param sl  The listener to destroy.
- *
- * @return The next listener or NULL if there is not one.
- */
-static SERV_LISTENER* service_destroy_listener(SERV_LISTENER* sl)
-{
-    SERV_LISTENER* next = sl->next;
-
-    dcb_close(sl->listener);
-
-    // TODO: What else should be closed and freed here?
-
-    return next;
-}
-
-typedef std::map<MXS_FILTER*, void(*)(MXS_FILTER*)> DestructorsByFilter;
-/**
- * Destroy one service instance
- *
- * @param svc  The service to destroy.
- */
-static void service_destroy_instance(SERVICE* svc, DestructorsByFilter* filters_to_delete)
-{
-    SERV_LISTENER* sl = svc->ports;
-
-    while (sl)
-    {
-        sl = service_destroy_listener(sl);
-    }
-
-    /* Call destroyInstance hook for routers */
-    if (svc->router->destroyInstance && svc->router_instance)
-    {
-        svc->router->destroyInstance(svc->router_instance);
-    }
-    if (svc->n_filters)
-    {
-        MXS_FILTER_DEF **filters = svc->filters;
-        for (int i = 0; i < svc->n_filters; i++)
-        {
-            if (filters[i]->obj->destroyInstance && filters[i]->filter)
-            {
-                if (filters_to_delete->find(filters[i]->filter) == filters_to_delete->end())
-                {
-                    auto entry = std::make_pair(filters[i]->filter, filters[i]->obj->destroyInstance);
-
-                    filters_to_delete->insert(entry);
-                }
-            }
-        }
-    }
 }
 
 void service_destroy_instances(void)
 {
     spinlock_acquire(&service_spin);
-    DestructorsByFilter filters_to_delete;
-    SERVICE* svc = allServices;
-    while (svc != NULL)
-    {
-        ss_dassert(svc->svc_do_shutdown);
-        service_destroy_instance(svc, &filters_to_delete);
 
-        svc = svc->next;
-    }
-
-    for (auto i = filters_to_delete.begin(); i != filters_to_delete.end(); ++i)
+    for (SERVICE* svc = allServices; svc; svc = svc->next)
     {
-        i->second(i->first);
+        service_destroy(svc);
     }
 
     spinlock_release(&service_spin);

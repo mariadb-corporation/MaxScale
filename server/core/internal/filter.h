@@ -63,5 +63,9 @@ bool filter_can_be_destroyed(MXS_FILTER_DEF *filter);
  */
 void filter_destroy(MXS_FILTER_DEF *filter);
 
+/**
+ * Destroy all filters
+ */
+void filter_destroy_instances();
 
 MXS_END_DECLS

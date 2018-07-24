@@ -181,6 +181,22 @@ void filter_destroy(MXS_FILTER_DEF *filter)
     ss_info_dassert(!true, "Not yet implemented");
 }
 
+void filter_destroy_instances()
+{
+    spinlock_acquire(&filter_spin);
+
+    for (MXS_FILTER_DEF* filter = allFilters; filter; filter = filter->next)
+    {
+        // NOTE: replace this with filter_destroy
+        if (filter->obj->destroyInstance)
+        {
+            filter->obj->destroyInstance(filter->filter);
+        }
+    }
+
+    spinlock_release(&filter_spin);
+}
+
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
 {
     return filter_def->name;
