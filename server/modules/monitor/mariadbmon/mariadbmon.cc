@@ -80,12 +80,6 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-enum slave_down_setting_t
-{
-    ACCEPT_DOWN,
-    REJECT_DOWN
-};
-
 enum print_repl_warnings_t
 {
     WARNINGS_ON,
@@ -99,7 +93,7 @@ static bool stop_monitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITORED_SERVER *getServerByNodeId(MXS_MONITORED_SERVER *, long);
-static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
+static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long);
 static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MXS_MONITORED_SERVER *);
 static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
@@ -2385,7 +2379,7 @@ monitorMain(void *arg)
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
-                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id, REJECT_DOWN) &&
+                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id) &&
                 getServerByNodeId(mon->monitored_servers, ptr->server->master_id) &&
                 (!handle->multimaster || serv_info->group == 0))
             {
@@ -2696,13 +2690,13 @@ getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
  * @return                   The slave server of this node_id
  */
 static MXS_MONITORED_SERVER *
-getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id, slave_down_setting_t slave_down_setting)
+getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
 {
     SERVER *current;
     while (ptr)
     {
         current = ptr->server;
-        if (current->master_id == node_id && (slave_down_setting == ACCEPT_DOWN || !SERVER_IS_DOWN(current)))
+        if (!SERVER_IS_DOWN(current) && current->master_id == node_id)
         {
             return ptr;
         }
@@ -3009,7 +3003,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
             getServerByNodeId(mon->monitored_servers, node_id) == NULL)
         {
             MXS_MONITORED_SERVER *find_slave;
-            find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id, ACCEPT_DOWN);
+            find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id);
 
             if (find_slave == NULL)
             {
