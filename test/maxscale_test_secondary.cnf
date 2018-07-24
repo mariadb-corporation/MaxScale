@@ -51,6 +51,7 @@ router_options=master
 servers=server1
 user=maxuser
 password=maxpwd
+filters=QLA
 
 [Hint]
 type=filter
@@ -70,6 +71,14 @@ service=Read-Connection-Router
 type=filter
 module=tee
 service=RW-Split-Hint-Router
+
+[QLA]
+type=filter
+module=qlafilter
+log_type=unified
+append=false
+flush=true
+filebase=/tmp/qla2.log
 
 [CLI]
 type=service
