@@ -3,9 +3,7 @@
 ## Pre-release Checklist
 
 * Create new release notes and add all fixed bugs, use a previous one as a template
-* Update the link to the latest release notes in Documentation-Contents.md
 * Add link to release notes and document major changes in Changelog.md
-* Add link to release notes in the Upgrading guide 
 
 ## 1. Tag
 
