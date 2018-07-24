@@ -89,15 +89,15 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 
     char *my_name = MXS_STRDUP(name);
     char *my_router = MXS_STRDUP(router);
-    SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
+    SERVICE* service = new (std::nothrow) SERVICE;
     SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
                                                                          sizeof(*rate_limits));
     if (!my_name || !my_router || !service || !rate_limits)
     {
         MXS_FREE(my_name);
         MXS_FREE(my_router);
-        MXS_FREE(service);
         MXS_FREE(rate_limits);
+        delete service;
         return NULL;
     }
 
@@ -234,7 +234,7 @@ void service_free(SERVICE* service)
     MXS_FREE(service->routerModule);
     MXS_FREE(service->filters);
     MXS_FREE(service->rate_limits);
-    MXS_FREE(service);
+    delete service;
 }
 
 void service_destroy(SERVICE* service)
