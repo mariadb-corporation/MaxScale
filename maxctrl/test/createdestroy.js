@@ -165,5 +165,38 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
+    it('create service', function() {
+        return verifyCommand('create service test-service readwritesplit user=maxuser password=maxpwd',
+                            'services/test-service')
+            .should.be.fulfilled
+    })
+
+    it('destroy service', function() {
+        return doCommand('destroy service test-service')
+            .should.be.fulfilled
+    })
+
+    it('create service with server relationship', function() {
+        return doCommand('create server test-server 127.0.0.1 3306')
+            .then(() => verifyCommand('create service test-service readwritesplit user=maxuser password=maxpwd --servers test-server',
+                                      'services/test-service'))
+            .then(() => request.get(host + 'services/test-service', {json: true}))
+            .then((res) => {
+                console.log(res)
+                return true
+            })
+    })
+
+    it('create filter', function() {
+        return verifyCommand('create filter test-filter qlafilter filebase=/tmp/qla.log',
+                            'filters/test-filter')
+            .should.be.fulfilled
+    })
+
+    it('destroy filter', function() {
+        return doCommand('destroy filter test-filter')
+            .should.be.fulfilled
+    })
+
     after(stopMaxScale)
 });
