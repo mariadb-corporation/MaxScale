@@ -484,6 +484,18 @@ HttpResponse cb_delete_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_delete_filter(const HttpRequest& request)
+{
+    MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
+    ss_dassert(filter);
+
+    if (runtime_destroy_filter(filter))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -957,6 +969,7 @@ public:
         m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
         m_delete.push_back(SResource(new Resource(cb_delete_service, 2, "services", ":service")));
+        m_delete.push_back(SResource(new Resource(cb_delete_filter, 2, "filters", ":filter")));
 
         m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "inet", ":inetuser")));
         m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "unix", ":unixuser")));

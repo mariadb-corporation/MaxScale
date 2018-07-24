@@ -2196,6 +2196,33 @@ bool service_server_in_use(const SERVER *server)
     return rval;
 }
 
+bool service_filter_in_use(const MXS_FILTER_DEF *filter)
+{
+    ss_dassert(filter);
+    bool rval = false;
+
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+        for (int i = 0; i < service->n_filters; i++)
+        {
+            if (service->filters[i] == filter)
+            {
+                rval = true;
+                break;
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}
+
 /**
  * Creates a service configuration at the location pointed by @c filename
  *

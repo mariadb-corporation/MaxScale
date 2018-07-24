@@ -37,6 +37,7 @@
 
 #include "internal/config.h"
 #include "internal/modules.h"
+#include "internal/service.h"
 
 using std::string;
 using std::set;
@@ -150,6 +151,17 @@ filter_def_find(const char *name)
     }
     spinlock_release(&filter_spin);
     return filter;
+}
+
+bool filter_can_be_destroyed(MXS_FILTER_DEF *filter)
+{
+    return !service_filter_in_use(filter);
+}
+
+void filter_destroy(MXS_FILTER_DEF *filter)
+{
+    ss_dassert(filter_can_be_destroyed(filter));
+    ss_info_dassert(!true, "Not yet implemented");
 }
 
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)

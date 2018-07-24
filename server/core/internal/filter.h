@@ -46,4 +46,23 @@ MXS_UPSTREAM *filter_upstream(MXS_FILTER_DEF *filter_def,
                               MXS_FILTER_SESSION *fsession,
                               MXS_UPSTREAM *upstream);
 
+/**
+ * Check if filter can be destroyed
+ *
+ * A filter can be destroyed if no service uses it.
+ *
+ * @param filter Filter to check
+ *
+ * @return True if filter can be destroyed
+ */
+bool filter_can_be_destroyed(MXS_FILTER_DEF *filter);
+
+/**
+ * Destroy a filter
+ *
+ * @param filter Filter to destroy
+ */
+void filter_destroy(MXS_FILTER_DEF *filter);
+
+
 MXS_END_DECLS

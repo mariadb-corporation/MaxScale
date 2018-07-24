@@ -148,6 +148,15 @@ int      service_isvalid(SERVICE *service);
  */
 bool service_server_in_use(const SERVER *server);
 
+/**
+ * Check if filter is used by any service
+ *
+ * @param filter Filter to inspect
+ *
+ * @return True if at least one service uses the filter
+ */
+bool service_filter_in_use(const MXS_FILTER_DEF *filter);
+
 /** Update the server weights used by services */
 void service_update_weights();
 

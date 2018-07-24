@@ -1078,6 +1078,26 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     return rval;
 }
 
+bool runtime_destroy_filter(MXS_FILTER_DEF* filter)
+{
+    ss_dassert(filter);
+    bool rval = false;
+    mxs::SpinLockGuard guard(crt_lock);
+
+    if (filter_can_be_destroyed(filter))
+    {
+        filter_destroy(filter);
+        rval = true;
+    }
+    else
+    {
+        runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
+                      "first", filter->name);
+    }
+
+    return rval;
+}
+
 static bool runtime_create_service(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
 {
     mxs::SpinLockGuard guard(crt_lock);

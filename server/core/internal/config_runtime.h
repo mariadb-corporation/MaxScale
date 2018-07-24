@@ -206,6 +206,17 @@ bool runtime_create_monitor(const char *name, const char *module);
 bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARAMETER* params);
 
 /**
+ * Destroy a filter
+ *
+ * The filter can only be destroyed if no service uses it
+ *
+ * @param service Filter to destroy
+ *
+ * @return True if filter was destroyed
+ */
+bool runtime_destroy_filter(MXS_FILTER_DEF* filter);
+
+/**
  * @brief Destroy a monitor
  *
  * Monitors are not removed from the runtime configuration but they are stopped.
