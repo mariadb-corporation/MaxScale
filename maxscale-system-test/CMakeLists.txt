@@ -1044,6 +1044,11 @@ add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1
 # https://jira.mariadb.org/browse/MXS-1985
 add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS REPL_BACKEND)
 
+# MXS-1113: Support of prepared statement for schemarouter
+# https://jira.mariadb.org/browse/MXS-1113
+add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL)
+
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
