@@ -40,7 +40,6 @@ void filter_add_parameter(MXS_FILTER_DEF *filter_def, const char *name, const ch
 MXS_FILTER_DEF *filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params);
 MXS_DOWNSTREAM *filter_apply(MXS_FILTER_DEF *filter_def, MXS_SESSION *session, MXS_DOWNSTREAM *downstream);
 void filter_free(MXS_FILTER_DEF *filter_def);
-bool filter_load(MXS_FILTER_DEF *filter_def);
 int filter_standard_parameter(const char *name);
 MXS_UPSTREAM *filter_upstream(MXS_FILTER_DEF *filter_def,
                               MXS_FILTER_SESSION *fsession,

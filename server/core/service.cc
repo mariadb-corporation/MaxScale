@@ -1252,23 +1252,15 @@ bool service_set_filters(SERVICE* service, const char* filters)
 
         if (MXS_FILTER_DEF* def = filter_def_find(f.c_str()))
         {
-            if (filter_load(def))
-            {
-                flist.push_back(def);
+            flist.push_back(def);
 
-                const MXS_MODULE* module = get_module(def->module, MODULE_FILTER);
-                ss_dassert(module);
-                capabilities |= module->module_capabilities;
+            const MXS_MODULE* module = get_module(def->module, MODULE_FILTER);
+            ss_dassert(module);
+            capabilities |= module->module_capabilities;
 
-                if (def->obj->getCapabilities)
-                {
-                    capabilities |= def->obj->getCapabilities(def->filter);
-                }
-            }
-            else
+            if (def->obj->getCapabilities)
             {
-                MXS_ERROR("Failed to load filter '%s' for service '%s'.", f.c_str(), service->name);
-                rval = false;
+                capabilities |= def->obj->getCapabilities(def->filter);
             }
         }
         else

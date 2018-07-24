@@ -58,6 +58,14 @@ static void filter_free_parameters(MXS_FILTER_DEF *filter);
  */
 MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
 {
+    MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
+
+    if (object == NULL)
+    {
+        MXS_ERROR("Failed to load filter module '%s'.", module);
+        return NULL;
+    }
+
     char* my_name = MXS_STRDUP(name);
     char* my_module = MXS_STRDUP(module);
 
@@ -72,14 +80,23 @@ MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PA
     }
     filter->name = my_name;
     filter->module = my_module;
-    filter->filter = NULL;
-    filter->obj = NULL;
+    filter->obj = object;
     filter->parameters = NULL;
     spinlock_init(&filter->spin);
 
     for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
     {
         filter_add_parameter(filter, p->name, p->value);
+    }
+
+    if ((filter->filter = object->createInstance(name, params)) == NULL)
+    {
+        MXS_ERROR("Failed to create filter '%s' instance.", name);
+        filter_free_parameters(filter);
+        MXS_FREE(my_name);
+        MXS_FREE(my_module);
+        MXS_FREE(filter);
+        return NULL;
     }
 
     spinlock_acquire(&filter_spin);
@@ -304,51 +321,6 @@ filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value
 static void filter_free_parameters(MXS_FILTER_DEF *filter)
 {
     config_parameter_free(filter->parameters);
-}
-
-/**
- * Load a filter module for use and create an instance of it for a service.
- * @param filter Filter definition
- * @return True if module was successfully loaded, false if an error occurred
- */
-bool filter_load(MXS_FILTER_DEF* filter)
-{
-    bool rval = false;
-    if (filter)
-    {
-        if (filter->filter)
-        {
-            // Already loaded and created.
-            rval = true;
-        }
-        else
-        {
-            if (filter->obj == NULL)
-            {
-                /* Filter not yet loaded */
-                if ((filter->obj = (MXS_FILTER_OBJECT*)load_module(filter->module, MODULE_FILTER)) == NULL)
-                {
-                    MXS_ERROR("Failed to load filter module '%s'.", filter->module);
-                }
-            }
-
-            if (filter->obj)
-            {
-                ss_dassert(!filter->filter);
-
-                if ((filter->filter = (filter->obj->createInstance)(filter->name,
-                                                                    filter->parameters)))
-                {
-                    rval = true;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
-                }
-            }
-        }
-    }
-    return rval;
 }
 
 /**
