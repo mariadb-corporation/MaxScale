@@ -15,7 +15,7 @@
  * @file filter.c  - A representation of a filter within MaxScale.
  */
 
-#include "internal/filter.h"
+#include "internal/filter.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <string>
 #include <set>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
@@ -34,6 +35,7 @@
 #include <maxscale/service.h>
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.h>
+#include <algorithm>
 
 #include "internal/config.h"
 #include "internal/modules.h"
@@ -42,10 +44,19 @@
 using std::string;
 using std::set;
 
-static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
-static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
+using namespace maxscale;
 
-static void filter_free_parameters(MXS_FILTER_DEF *filter);
+static SpinLock filter_spin;                /**< Protects the list of all filters */
+static std::vector<FilterDef*>  allFilters; /**< The list of all filters */
+
+/**
+ * Free filter parameters
+ * @param filter FilterDef whose parameters are to be freed
+ */
+static void filter_free_parameters(FilterDef* filter)
+{
+    config_parameter_free(filter->parameters);
+}
 
 /**
  * Allocate a new filter
@@ -56,7 +67,7 @@ static void filter_free_parameters(MXS_FILTER_DEF *filter);
  *
  * @return The newly created filter or NULL if an error occurred
  */
-MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
+FilterDef* filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
 {
     MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
 
@@ -69,13 +80,13 @@ MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PA
     char* my_name = MXS_STRDUP(name);
     char* my_module = MXS_STRDUP(module);
 
-    MXS_FILTER_DEF *filter = (MXS_FILTER_DEF *)MXS_MALLOC(sizeof(MXS_FILTER_DEF));
+    FilterDef* filter = new (std::nothrow) FilterDef;
 
     if (!my_name || !my_module || !filter)
     {
         MXS_FREE(my_name);
         MXS_FREE(my_module);
-        MXS_FREE(filter);
+        delete filter;
         return NULL;
     }
     filter->name = my_name;
@@ -99,47 +110,28 @@ MXS_FILTER_DEF* filter_alloc(const char *name, const char *module, MXS_CONFIG_PA
         return NULL;
     }
 
-    spinlock_acquire(&filter_spin);
-    filter->next = allFilters;
-    allFilters = filter;
-    spinlock_release(&filter_spin);
+    filter_spin.acquire();
+    allFilters.push_back(filter);
+    filter_spin.release();
 
     return filter;
 }
 
-
 /**
- * Deallocate the specified filter
+ * Free the specified filter
  *
- * @param filter        The filter to deallocate
- * @return      Returns true if the server was freed
+ * @param filter        The filter to free
  */
-void
-filter_free(MXS_FILTER_DEF *filter)
+void filter_free(FilterDef* filter)
 {
-    MXS_FILTER_DEF *ptr;
-
     if (filter)
     {
         /* First of all remove from the linked list */
-        spinlock_acquire(&filter_spin);
-        if (allFilters == filter)
-        {
-            allFilters = filter->next;
-        }
-        else
-        {
-            ptr = allFilters;
-            while (ptr && ptr->next != filter)
-            {
-                ptr = ptr->next;
-            }
-            if (ptr)
-            {
-                ptr->next = filter->next;
-            }
-        }
-        spinlock_release(&filter_spin);
+
+        filter_spin.acquire();
+        auto it = std::remove(allFilters.begin(), allFilters.end(), filter);
+        allFilters.erase(it);
+        filter_spin.release();
 
         /* Clean up session and free the memory */
         MXS_FREE(filter->name);
@@ -147,27 +139,31 @@ filter_free(MXS_FILTER_DEF *filter)
 
         filter_free_parameters(filter);
 
-        MXS_FREE(filter);
+        delete filter;
     }
 }
 
-MXS_FILTER_DEF *
-filter_def_find(const char *name)
+FilterDef* filter_find(const char *name)
 {
-    MXS_FILTER_DEF *filter;
+    FilterDef* rval = NULL;
+    filter_spin.acquire();
 
-    spinlock_acquire(&filter_spin);
-    filter = allFilters;
-    while (filter)
+    for (FilterDef* filter: allFilters)
     {
         if (strcmp(filter->name, name) == 0)
         {
+            rval = filter;
             break;
         }
-        filter = filter->next;
     }
-    spinlock_release(&filter_spin);
-    return filter;
+
+    filter_spin.release();
+    return rval;
+}
+
+MXS_FILTER_DEF* filter_def_find(const char *name)
+{
+    return filter_find(name);
 }
 
 bool filter_can_be_destroyed(MXS_FILTER_DEF *filter)
@@ -183,9 +179,9 @@ void filter_destroy(MXS_FILTER_DEF *filter)
 
 void filter_destroy_instances()
 {
-    spinlock_acquire(&filter_spin);
+    filter_spin.acquire();
 
-    for (MXS_FILTER_DEF* filter = allFilters; filter; filter = filter->next)
+    for (FilterDef* filter: allFilters)
     {
         // NOTE: replace this with filter_destroy
         if (filter->obj->destroyInstance)
@@ -194,22 +190,25 @@ void filter_destroy_instances()
         }
     }
 
-    spinlock_release(&filter_spin);
+    filter_spin.release();
 }
 
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
 {
-    return filter_def->name;
+    const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    return filter->name;
 }
 
 const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
 {
-    return filter_def->module;
+    const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    return filter->module;
 }
 
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 {
-    return filter_def->filter;
+    const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    return filter->filter;
 }
 
 /**
@@ -236,14 +235,11 @@ filter_standard_parameter(const char *name)
 void
 dprintAllFilters(DCB *dcb)
 {
-    MXS_FILTER_DEF *ptr;
-    int        i;
+    filter_spin.acquire();
 
-    spinlock_acquire(&filter_spin);
-    ptr = allFilters;
-    while (ptr)
+    for (FilterDef* ptr: allFilters)
     {
-        dcb_printf(dcb, "Filter %p (%s)\n", ptr, ptr->name);
+        dcb_printf(dcb, "FilterDef %p (%s)\n", ptr, ptr->name);
         dcb_printf(dcb, "\tModule:      %s\n", ptr->module);
         if (ptr->obj && ptr->filter)
         {
@@ -253,9 +249,9 @@ dprintAllFilters(DCB *dcb)
         {
             dcb_printf(dcb, "\tModule not loaded.\n");
         }
-        ptr = ptr->next;
     }
-    spinlock_release(&filter_spin);
+
+    filter_spin.release();
 }
 
 /**
@@ -264,12 +260,9 @@ dprintAllFilters(DCB *dcb)
  * Designed to be called within a debug CLI in order
  * to display all active filters in MaxScale
  */
-void
-dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
+void dprintFilter(DCB *dcb, const FilterDef *filter)
 {
-    int i;
-
-    dcb_printf(dcb, "Filter %p (%s)\n", filter, filter->name);
+    dcb_printf(dcb, "FilterDef %p (%s)\n", filter, filter->name);
     dcb_printf(dcb, "\tModule:      %s\n", filter->module);
     if (filter->obj && filter->filter)
     {
@@ -284,32 +277,29 @@ dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
 void
 dListFilters(DCB *dcb)
 {
-    MXS_FILTER_DEF      *ptr;
-    int     i;
+    filter_spin.acquire();
 
-    spinlock_acquire(&filter_spin);
-    ptr = allFilters;
-    if (ptr)
+    if (!allFilters.empty())
     {
-        dcb_printf(dcb, "Filters\n");
+        dcb_printf(dcb, "FilterDefs\n");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
         dcb_printf(dcb, "%-19s | %-15s | Options\n",
-                   "Filter", "Module");
+                   "FilterDef", "Module");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
     }
-    while (ptr)
+
+    for (FilterDef* ptr: allFilters)
     {
         dcb_printf(dcb, "%-19s | %-15s | ",
                    ptr->name, ptr->module);
         dcb_printf(dcb, "\n");
-        ptr = ptr->next;
     }
-    if (allFilters)
+    if (!allFilters.empty())
     {
         dcb_printf(dcb,
                    "--------------------+-----------------+----------------------------------------\n\n");
     }
-    spinlock_release(&filter_spin);
+    filter_spin.release();
 }
 
 /**
@@ -320,7 +310,7 @@ dListFilters(DCB *dcb)
  * @param value         The parameter value
  */
 void
-filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value)
+filter_add_parameter(FilterDef *filter, const char *name, const char *value)
 {
     CONFIG_CONTEXT ctx = {};
     ctx.object = (char*)"";
@@ -328,15 +318,6 @@ filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value
     config_add_param(&ctx, name, value);
     ctx.parameters->next = filter->parameters;
     filter->parameters = ctx.parameters;
-}
-
-/**
- * Free filter parameters
- * @param filter Filter whose parameters are to be freed
- */
-static void filter_free_parameters(MXS_FILTER_DEF *filter)
-{
-    config_parameter_free(filter->parameters);
 }
 
 /**
@@ -351,8 +332,7 @@ static void filter_free_parameters(MXS_FILTER_DEF *filter)
  * @return              The downstream component for the next filter or NULL
  *                      if the filter could not be created
  */
-MXS_DOWNSTREAM *
-filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
+MXS_DOWNSTREAM* filter_apply(FilterDef* filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     MXS_DOWNSTREAM *me;
 
@@ -386,8 +366,7 @@ filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downs
  * @param upstream      The filter that should be upstream of this filter
  * @return              The upstream component for the next filter
  */
-MXS_UPSTREAM *
-filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream)
+MXS_UPSTREAM* filter_upstream(FilterDef* filter, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream)
 {
     MXS_UPSTREAM *me = NULL;
 
@@ -413,7 +392,7 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     }
     return me;
 }
-json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
+json_t* filter_parameters_to_json(const FilterDef* filter)
 {
     json_t* rval = json_object();
 
@@ -424,7 +403,7 @@ json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
     return rval;
 }
 
-json_t* filter_json_data(const MXS_FILTER_DEF* filter, const char* host)
+json_t* filter_json_data(const FilterDef* filter, const char* host)
 {
     json_t* rval = json_object();
 
@@ -457,7 +436,7 @@ json_t* filter_json_data(const MXS_FILTER_DEF* filter, const char* host)
     return rval;
 }
 
-json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+json_t* filter_to_json(const FilterDef* filter, const char* host)
 {
     string self = MXS_JSON_API_FILTERS;
     self += filter->name;
@@ -468,9 +447,9 @@ json_t* filter_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
-    spinlock_acquire(&filter_spin);
+    filter_spin.acquire();
 
-    for (MXS_FILTER_DEF* f = allFilters; f; f = f->next)
+    for (FilterDef* f: allFilters)
     {
         json_t* json = filter_json_data(f, host);
 
@@ -480,7 +459,7 @@ json_t* filter_list_to_json(const char* host)
         }
     }
 
-    spinlock_release(&filter_spin);
+    filter_spin.release();
 
     return mxs_json_resource(host, MXS_JSON_API_FILTERS, rval);
 }
@@ -536,7 +515,7 @@ json_t* FilterSession::diagnostics_json() const
 
 }
 
-static bool create_filter_config(const MXS_FILTER_DEF *filter, const char *filename)
+static bool create_filter_config(const FilterDef *filter, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -568,7 +547,7 @@ static bool create_filter_config(const MXS_FILTER_DEF *filter, const char *filen
     return true;
 }
 
-bool filter_serialize(const MXS_FILTER_DEF *filter)
+bool filter_serialize(const FilterDef *filter)
 {
     bool rval = false;
     char filename[PATH_MAX];

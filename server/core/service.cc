@@ -56,7 +56,7 @@
 #include <maxscale/routingworker.h>
 
 #include "internal/config.h"
-#include "internal/filter.h"
+#include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/service.h"
 #include "internal/routingworker.hh"
@@ -1251,7 +1251,7 @@ bool service_set_filters(SERVICE* service, const char* filters)
     {
         fix_object_name(&f[0]);
 
-        if (MXS_FILTER_DEF* def = filter_def_find(f.c_str()))
+        if (FilterDef* def = filter_find(f.c_str()))
         {
             flist.push_back(def);
 
@@ -1373,7 +1373,7 @@ void dprintService(DCB *dcb, SERVICE *service)
         dcb_printf(dcb, "\tFilter chain:                ");
         for (i = 0; i < service->n_filters; i++)
         {
-            dcb_printf(dcb, "%s %s ", service->filters[i]->name,
+            dcb_printf(dcb, "%s %s ", filter_def_get_name(service->filters[i]),
                        i + 1 < service->n_filters ? "|" : "");
         }
         dcb_printf(dcb, "\n");
@@ -2448,7 +2448,7 @@ json_t* service_relationships(const SERVICE* service, const char* host)
 
         for (int i = 0; i < service->n_filters; i++)
         {
-            mxs_json_add_relation(filters, service->filters[i]->name, CN_FILTERS);
+            mxs_json_add_relation(filters, filter_def_get_name(service->filters[i]), CN_FILTERS);
         }
 
         json_object_set_new(rel, CN_FILTERS, filters);

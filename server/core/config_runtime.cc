@@ -38,7 +38,7 @@
 #include "internal/monitor.h"
 #include "internal/modules.h"
 #include "internal/service.h"
-#include "internal/filter.h"
+#include "internal/filter.hh"
 
 typedef std::set<std::string> StringSet;
 
@@ -1038,7 +1038,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
 
     if (filter_def_find(name) == NULL)
     {
-        MXS_FILTER_DEF* filter = NULL;
+        FilterDef* filter = NULL;
         CONFIG_CONTEXT ctx{(char*)""};
         ctx.parameters = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
@@ -1078,8 +1078,9 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     return rval;
 }
 
-bool runtime_destroy_filter(MXS_FILTER_DEF* filter)
+bool runtime_destroy_filter(MXS_FILTER_DEF* filter_def)
 {
+    FilterDef* filter = static_cast<FilterDef*>(filter_def);
     ss_dassert(filter);
     bool rval = false;
     mxs::SpinLockGuard guard(crt_lock);

@@ -41,7 +41,7 @@
 #include <maxscale/protocol/mysql.h>
 
 #include "internal/dcb.h"
-#include "internal/filter.h"
+#include "internal/filter.hh"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
 #include "internal/service.h"
@@ -393,16 +393,18 @@ static void session_free(MXS_SESSION *session)
         {
             if (session->filters[i].filter)
             {
-                session->filters[i].filter->obj->closeSession(session->filters[i].instance,
-                                                              session->filters[i].session);
+                FilterDef* filter = static_cast<FilterDef*>(session->filters[i].filter);
+                filter->obj->closeSession(session->filters[i].instance,
+                                          session->filters[i].session);
             }
         }
         for (i = 0; i < session->n_filters; i++)
         {
             if (session->filters[i].filter)
             {
-                session->filters[i].filter->obj->freeSession(session->filters[i].instance,
-                                                             session->filters[i].session);
+                FilterDef* filter = static_cast<FilterDef*>(session->filters[i].filter);
+                filter->obj->freeSession(session->filters[i].instance,
+                                         session->filters[i].session);
             }
         }
         MXS_FREE(session->filters);
@@ -558,11 +560,10 @@ dprintSession(DCB *dcb, MXS_SESSION *print_session)
     {
         for (i = 0; i < print_session->n_filters; i++)
         {
-            dcb_printf(dcb, "\tFilter: %s\n",
-                       print_session->filters[i].filter->name);
-            print_session->filters[i].filter->obj->diagnostics(print_session->filters[i].instance,
-                                                               print_session->filters[i].session,
-                                                               dcb);
+            FilterDef* filter = static_cast<FilterDef*>(print_session->filters[i].filter);
+            dcb_printf(dcb, "\tFilter: %s\n", filter->name);
+            filter->obj->diagnostics(print_session->filters[i].instance,
+                                     print_session->filters[i].session, dcb);
         }
     }
 }
@@ -670,12 +671,12 @@ session_setup_filters(MXS_SESSION *session)
             MXS_ERROR("Service '%s' contians an unresolved filter.", service->name);
             return 0;
         }
-        if ((head = filter_apply(service->filters[i], session,
+        if ((head = filter_apply((FilterDef*)service->filters[i], session,
                                  &session->head)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for "
                       "service '%s'.\n",
-                      service->filters[i]->name,
+                      filter_def_get_name(service->filters[i]),
                       service->name);
             return 0;
         }
@@ -688,12 +689,12 @@ session_setup_filters(MXS_SESSION *session)
 
     for (i = 0; i < service->n_filters; i++)
     {
-        if ((tail = filter_upstream(service->filters[i],
+        if ((tail = filter_upstream((FilterDef*)service->filters[i],
                                     session->filters[i].session,
                                     &session->tail)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
-                      service->filters[i]->name,
+                      filter_def_get_name(service->filters[i]),
                       service->name);
             return 0;
         }
@@ -1034,7 +1035,7 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
 
         for (int i = 0; i < session->n_filters; i++)
         {
-            mxs_json_add_relation(filters, session->filters[i].filter->name, CN_FILTERS);
+            mxs_json_add_relation(filters, filter_def_get_name(session->filters[i].filter), CN_FILTERS);
         }
         json_object_set_new(rel, CN_FILTERS, filters);
     }

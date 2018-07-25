@@ -21,7 +21,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 
-#include "internal/filter.h"
+#include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/monitor.h"
 
@@ -342,7 +342,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
         case MODULECMD_ARG_FILTER:
             if ((arg->value.filter = filter_def_find((char*)value)))
             {
-                const char* eff_name = mxs_module_get_effective_name(arg->value.filter->module);
+                const char* orig_name = filter_def_get_module_name(arg->value.filter);
+                const char* eff_name = mxs_module_get_effective_name(orig_name);
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;

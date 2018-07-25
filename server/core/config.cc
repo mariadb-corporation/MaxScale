@@ -52,7 +52,7 @@
 
 #include "internal/config.h"
 #include "internal/event.hh"
-#include "internal/filter.h"
+#include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/monitor.h"
 #include "internal/service.h"

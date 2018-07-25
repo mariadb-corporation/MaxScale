@@ -63,6 +63,7 @@
 #include "../../../core/internal/monitor.h"
 #include "../../../core/internal/poll.h"
 #include "../../../core/internal/session.h"
+#include "../../../core/internal/filter.hh"
 
 #define MAXARGS 14
 

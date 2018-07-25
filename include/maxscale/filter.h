@@ -220,7 +220,10 @@ typedef struct mxs_filter_object
  * Its exact definition is private to MaxScale.
  */
 struct mxs_filter_def;
-typedef struct mxs_filter_def MXS_FILTER_DEF;
+
+typedef struct mxs_filter_def
+{
+} MXS_FILTER_DEF;
 
 /**
  * Lookup a filter definition using the unique section name in
@@ -257,40 +260,6 @@ const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
  * @return A filter instance.
  */
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
-
-/**
- * @brief Convert a filter to JSON
- *
- * @param filter Filter to convert
- * @param host Hostname of this server
- *
- * @return Filter converted to JSON format
- */
-json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host);
-
-/**
- * @brief Convert all filters into JSON
- *
- * @param host Hostname of this server
- *
- * @return A JSON array containing all filters
- */
-json_t* filter_list_to_json(const char* host);
-
-/**
- * @brief Serialize a filter to a file
- *
- * This converts the static configuration of the filter into an INI format file.
- *
- * @param filter Monitor to serialize
- *
- * @return True if serialization was successful
- */
-bool filter_serialize(const MXS_FILTER_DEF *filter);
-
-void dprintAllFilters(DCB *);
-void dprintFilter(DCB *, const MXS_FILTER_DEF *);
-void dListFilters(DCB *);
 
 /**
  * Specifies capabilities specific for filters. Common capabilities

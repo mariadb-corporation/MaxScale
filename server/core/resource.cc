@@ -30,7 +30,7 @@
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
 #include "internal/session.h"
-#include "internal/filter.h"
+#include "internal/filter.hh"
 #include "internal/monitor.h"
 #include "internal/service.h"
 #include "internal/config_runtime.h"
@@ -486,7 +486,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
 
 HttpResponse cb_delete_filter(const HttpRequest& request)
 {
-    MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
+    FilterDef* filter = filter_find(request.uri_part(1).c_str());
     ss_dassert(filter);
 
     if (runtime_destroy_filter(filter))
@@ -549,7 +549,7 @@ HttpResponse cb_all_filters(const HttpRequest& request)
 
 HttpResponse cb_get_filter(const HttpRequest& request)
 {
-    MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
+    FilterDef* filter = filter_find(request.uri_part(1).c_str());
     ss_dassert(filter);
     return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
 }
