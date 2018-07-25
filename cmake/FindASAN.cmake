@@ -7,8 +7,8 @@
 find_library(ASAN_LIBRARIES NAMES libasan.so.0 libasan.so.1 libasan.so.2 libasan.so.3 libasan.so.4)
 
 if (ASAN_LIBRARIES)
-  message(STATUS "Found AdressSanitizer libraries: ${ASAN_LIBRARIES}")
+  message(STATUS "Found AddressSanitizer libraries: ${ASAN_LIBRARIES}")
   set(ASAN_FOUND TRUE CACHE INTERNAL "")
 else()
-  message(STATUS "Could not find AdressSanitizer")
+  message(STATUS "Could not find AddressSanitizer")
 endif()

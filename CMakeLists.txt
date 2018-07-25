@@ -43,6 +43,7 @@ find_package(Avro)
 find_package(GSSAPI)
 find_package(SQLite)
 find_package(ASAN)
+find_package(TSAN)
 
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
@@ -159,6 +160,9 @@ endif()
 if (WITH_ASAN AND ASAN_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+elseif (WITH_TSAN AND TSAN_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
