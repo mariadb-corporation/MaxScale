@@ -34,7 +34,7 @@
 #include "internal/dcb.h"
 #include "internal/modules.h"
 #include "internal/poll.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 #include "internal/statistics.h"
 
 #define WORKER_ABSENT_ID -1

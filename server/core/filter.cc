@@ -39,7 +39,7 @@
 
 #include "internal/config.h"
 #include "internal/modules.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 
 using std::string;
 using std::set;

@@ -55,7 +55,7 @@
 #include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/monitor.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 
 using std::set;
 using std::string;
@@ -3088,7 +3088,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     config_add_defaults(obj, config_service_params);
     config_add_defaults(obj, module->parameters);
 
-    SERVICE* service = service_alloc(obj->object, router, obj->parameters);
+    Service* service = service_alloc(obj->object, router, obj->parameters);
 
     if (service)
     {
@@ -3185,7 +3185,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
 int configure_new_service(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    SERVICE *service = (SERVICE*)obj->element;
+    Service *service = static_cast<Service*>(obj->element);
     ss_dassert(service);
 
     for (auto&& a: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
@@ -3336,7 +3336,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     else
     {
         const char *address = config_get_string(obj->parameters, CN_ADDRESS);
-        SERVICE *service = config_get_service(obj->parameters, CN_SERVICE);
+        Service *service = static_cast<Service*>(config_get_service(obj->parameters, CN_SERVICE));
         ss_dassert(service);
 
         if (auto l = service_find_listener(service, socket, address, socket ? 0 : atoi(port)))

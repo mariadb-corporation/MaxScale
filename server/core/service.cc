@@ -58,7 +58,7 @@
 #include "internal/config.h"
 #include "internal/filter.hh"
 #include "internal/modules.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 #include "internal/routingworker.hh"
 
 /** This define is needed in CentOS 6 systems */
@@ -68,17 +68,18 @@
 
 using std::string;
 using std::set;
+using namespace maxscale;
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
 
 static SPINLOCK service_spin = SPINLOCK_INIT;
-static SERVICE  *allServices = NULL;
+static std::vector<Service*> allServices;
 
 static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
 
-SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
+Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
 {
     MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
 
@@ -90,7 +91,7 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 
     char *my_name = MXS_STRDUP(name);
     char *my_router = MXS_STRDUP(router);
-    SERVICE* service = new (std::nothrow) SERVICE;
+    Service* service = new (std::nothrow) Service;
     SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
                                                                          sizeof(*rate_limits));
     if (!my_name || !my_router || !service || !rate_limits)
@@ -112,11 +113,21 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->name = my_name;
     service->routerModule = my_router;
     service->svc_config_param = NULL;
+    service->svc_config_version = 0;
     service->rate_limits = rate_limits;
     service->stats.started = time(0);
     service->stats.n_failed_starts = 0;
+    service->stats.n_current = 0;
+    service->stats.n_sessions = 0;
     service->state = SERVICE_STATE_ALLOC;
     service->active = true;
+    service->ports = NULL;
+    service->dbref = NULL;
+    service->n_dbref = 0;
+    service->svc_do_shutdown = false;
+    service->filters = NULL;
+    service->n_filters = 0;
+    service->weightby[0] = '\0';
     spinlock_init(&service->spin);
 
     service->max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
@@ -177,36 +188,20 @@ SERVICE* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     }
 
     spinlock_acquire(&service_spin);
-    service->next = allServices;
-    allServices = service;
+    allServices.push_back(service);
     spinlock_release(&service_spin);
 
     return service;
 }
 
-void service_free(SERVICE* service)
+void service_free(Service* service)
 {
     ss_dassert(atomic_load_int(&service->client_count) == 0);
     ss_dassert(!service->active);
 
     spinlock_acquire(&service_spin);
-
-    if (service == allServices)
-    {
-        allServices = allServices->next;
-    }
-    else
-    {
-        for (SERVICE* s = allServices; s; s = s->next)
-        {
-            if (s->next == service)
-            {
-                s->next = service->next;
-                break;
-            }
-        }
-    }
-
+    auto it = std::remove(allServices.begin(), allServices.end(), service);
+    allServices.erase(it);
     spinlock_release(&service_spin);
 
     while (service->ports)
@@ -238,7 +233,7 @@ void service_free(SERVICE* service)
     delete service;
 }
 
-void service_destroy(SERVICE* service)
+void service_destroy(Service* service)
 {
 #ifdef SS_DEBUG
     auto current = mxs::RoutingWorker::get_current();
@@ -272,24 +267,23 @@ void service_destroy(SERVICE* service)
  * @param service       The pointer to check
  * @return 1 if the service is in the list of all services
  */
-int
-service_isvalid(SERVICE *service)
+bool service_isvalid(Service *service)
 {
-    SERVICE *checkservice;
-    int rval = 0;
+    bool rval = false;
 
     spinlock_acquire(&service_spin);
-    checkservice = allServices;
-    while (checkservice)
+
+    for (Service* s: allServices)
     {
-        if (checkservice == service)
+        if (s == service)
         {
-            rval = 1;
+            rval = true;
             break;
         }
-        checkservice = checkservice->next;
     }
+
     spinlock_release(&service_spin);
+
     return rval;
 }
 
@@ -316,7 +310,7 @@ static inline void close_port(SERV_LISTENER *port)
  * @return              The number of listeners started
  */
 static int
-serviceStartPort(SERVICE *service, SERV_LISTENER *port)
+serviceStartPort(Service *service, SERV_LISTENER *port)
 {
     const size_t ANY_IPV4_ADDRESS_LEN = 7; // strlen("0:0:0:0");
 
@@ -480,7 +474,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
  * @return Number of started listeners. This is equal to the number of ports the service
  * is listening to.
  */
-int serviceStartAllPorts(SERVICE* service)
+int serviceStartAllPorts(Service* service)
 {
     SERV_LISTENER *port = service->ports;
     int listeners = 0;
@@ -538,7 +532,7 @@ int serviceStartAllPorts(SERVICE* service)
  *
  * @return Returns the number of listeners created
  */
-int serviceInitialize(SERVICE *service)
+int serviceInitialize(Service *service)
 {
     /** Calculate the server weights */
     service_calculate_weights(service);
@@ -558,7 +552,7 @@ int serviceInitialize(SERVICE *service)
     return listeners;
 }
 
-bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
+bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
 {
     ss_dassert(service->state != SERVICE_STATE_FAILED);
     bool rval = true;
@@ -577,8 +571,9 @@ bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
     return rval;
 }
 
-bool serviceStopListener(SERVICE *service, const char *name)
+bool serviceStopListener(SERVICE *svc, const char *name)
 {
+    Service* service = static_cast<Service*>(svc);
     bool rval = false;
     LISTENER_ITERATOR iter;
 
@@ -599,8 +594,9 @@ bool serviceStopListener(SERVICE *service, const char *name)
     return rval;
 }
 
-bool serviceStartListener(SERVICE *service, const char *name)
+bool serviceStartListener(SERVICE *svc, const char *name)
 {
+    Service* service = static_cast<Service*>(svc);
     bool rval = false;
     LISTENER_ITERATOR iter;
 
@@ -624,21 +620,14 @@ bool serviceStartListener(SERVICE *service, const char *name)
 
 int service_launch_all()
 {
-    SERVICE *ptr;
     int n = 0, i;
     bool error = false;
-    int num_svc = 0;
-
-    for (ptr = allServices; ptr; ptr = ptr->next)
-    {
-        num_svc++;
-    }
+    int num_svc = allServices.size();
 
     MXS_NOTICE("Starting a total of %d services...", num_svc);
 
     int curr_svc = 1;
-    ptr = allServices;
-    while (ptr && !ptr->svc_do_shutdown)
+    for (Service* ptr: allServices)
     {
         n += (i = serviceInitialize(ptr));
         MXS_NOTICE("Service '%s' started (%d/%d)", ptr->name, curr_svc++, num_svc);
@@ -649,7 +638,10 @@ int service_launch_all()
             error = true;
         }
 
-        ptr = ptr->next;
+        if (ptr->svc_do_shutdown)
+        {
+            break;
+        }
     }
 
     return error ? -1 : n;
@@ -738,7 +730,7 @@ static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
     while (!atomic_cas_ptr((void**)&service->ports, (void**)&proto->next, proto));
 }
 
-bool service_remove_listener(SERVICE *service, const char* target)
+bool service_remove_listener(Service *service, const char* target)
 {
     bool rval = false;
     LISTENER_ITERATOR iter;
@@ -774,7 +766,7 @@ bool service_remove_listener(SERVICE *service, const char* target)
  *
  * @return Created listener or NULL on error
  */
-SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
+SERV_LISTENER* serviceCreateListener(Service *service, const char *name, const char *protocol,
                                      const char *address, unsigned short port, const char *authenticator,
                                      const char *options, SSL_LISTENER *ssl)
 {
@@ -789,7 +781,7 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
     return proto;
 }
 
-SERV_LISTENER* service_find_listener(SERVICE* service,
+SERV_LISTENER* service_find_listener(Service* service,
                                      const char* socket,
                                      const char* address, unsigned short port)
 {
@@ -838,7 +830,7 @@ SERV_LISTENER* service_find_listener(SERVICE* service,
  * @param port          The port to listen on
  * @return      True if the protocol/port is already part of the service
  */
-bool serviceHasListener(SERVICE* service, const char* name, const char* protocol,
+bool serviceHasListener(Service* service, const char* name, const char* protocol,
                         const char* address, unsigned short port)
 {
     LISTENER_ITERATOR iter;
@@ -861,7 +853,7 @@ bool serviceHasListener(SERVICE* service, const char* name, const char* protocol
     return false;
 }
 
-bool service_has_named_listener(SERVICE *service, const char *name)
+bool service_has_named_listener(Service *service, const char *name)
 {
     LISTENER_ITERATOR iter;
 
@@ -877,7 +869,7 @@ bool service_has_named_listener(SERVICE *service, const char *name)
     return false;
 }
 
-bool service_can_be_destroyed(SERVICE *service)
+bool service_can_be_destroyed(Service *service)
 {
     bool rval = true;
     LISTENER_ITERATOR iter;
@@ -935,8 +927,9 @@ static SERVER_REF* server_ref_create(SERVER *server)
  * @param service       The service to add the server to
  * @param server        The server to add
  */
-bool serviceAddBackend(SERVICE *service, SERVER *server)
+bool serviceAddBackend(SERVICE *svc, SERVER *server)
 {
+    Service* service = static_cast<Service*>(svc);
     bool rval = false;
 
     if (!serviceHasBackend(service, server))
@@ -998,7 +991,7 @@ bool serviceAddBackend(SERVICE *service, SERVER *server)
  * @param service Service to modify
  * @param server  Server to remove
  */
-void serviceRemoveBackend(SERVICE *service, const SERVER *server)
+void serviceRemoveBackend(Service *service, const SERVER *server)
 {
     spinlock_acquire(&service->spin);
 
@@ -1014,6 +1007,7 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server)
 
     spinlock_release(&service->spin);
 }
+
 /**
  * Test if a server is part of a service
  *
@@ -1021,8 +1015,7 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server)
  * @param server        The server to add
  * @return              Non-zero if the server is already part of the service
  */
-bool
-serviceHasBackend(SERVICE *service, SERVER *server)
+bool serviceHasBackend(Service *service, SERVER *server)
 {
     SERVER_REF *ptr;
 
@@ -1050,8 +1043,7 @@ serviceHasBackend(SERVICE *service, SERVER *server)
  * @param auth          The authentication data we need, e.g. MySQL SHA1 password
  * @return      0 on failure
  */
-int
-serviceSetUser(SERVICE *service, const char *user, const char *auth)
+int serviceSetUser(Service *service, const char *user, const char *auth)
 {
     if (service->credentials.name != user)
     {
@@ -1079,8 +1071,9 @@ serviceSetUser(SERVICE *service, const char *user, const char *auth)
  * @return              0 on failure
  */
 int
-serviceGetUser(SERVICE *service, char **user, char **auth)
+serviceGetUser(SERVICE *svc, char **user, char **auth)
 {
+    Service* service = static_cast<Service*>(svc);
     if (service->credentials.name == NULL || service->credentials.authdata == NULL)
     {
         return 0;
@@ -1099,9 +1092,10 @@ serviceGetUser(SERVICE *service, char **user, char **auth)
  * @return              0 on failure
  */
 
-int
-serviceEnableRootUser(SERVICE *service, int action)
+int serviceEnableRootUser(Service *svc, int action)
 {
+    Service* service = static_cast<Service*>(svc);
+
     if (action != 0 && action != 1)
     {
         return 0;
@@ -1121,7 +1115,7 @@ serviceEnableRootUser(SERVICE *service, int action)
  */
 
 int
-serviceAuthAllServers(SERVICE *service, int action)
+serviceAuthAllServers(Service *service, int action)
 {
     if (action != 0 && action != 1)
     {
@@ -1140,7 +1134,7 @@ serviceAuthAllServers(SERVICE *service, int action)
  * @param action 0 for disabled, 1 for enabled
  * @return 1 if successful, 0 on error
  */
-int serviceStripDbEsc(SERVICE* service, int action)
+int serviceStripDbEsc(Service* service, int action)
 {
     if (action != 0 && action != 1)
     {
@@ -1160,7 +1154,7 @@ int serviceStripDbEsc(SERVICE* service, int action)
  * @return 1 on success, 0 when the value is invalid
  */
 int
-serviceSetTimeout(SERVICE *service, int val)
+serviceSetTimeout(Service *service, int val)
 {
 
     if (val < 0)
@@ -1178,7 +1172,7 @@ serviceSetTimeout(SERVICE *service, int val)
     return 1;
 }
 
-void serviceSetVersionString(SERVICE *service, const char* value)
+void serviceSetVersionString(Service *service, const char* value)
 {
     if (service->version_string != value)
     {
@@ -1197,7 +1191,7 @@ void serviceSetVersionString(SERVICE *service, const char* value)
  * @return 1 on success, 0 when the values are invalid
  */
 int
-serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout)
+serviceSetConnectionLimits(Service *service, int max, int queued, int timeout)
 {
 
     if (max < 0 || queued < 0)
@@ -1218,7 +1212,7 @@ serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout)
  * @param service Service to configure
  * @param value A string representation of a boolean value
  */
-void serviceSetRetryOnFailure(SERVICE *service, const char* value)
+void serviceSetRetryOnFailure(Service *service, const char* value)
 {
     if (value)
     {
@@ -1226,7 +1220,7 @@ void serviceSetRetryOnFailure(SERVICE *service, const char* value)
     }
 }
 
-void service_set_retry_interval(SERVICE *service, int value)
+void service_set_retry_interval(Service *service, int value)
 {
     ss_dassert(value > 0);
     service->max_retry_interval = value;
@@ -1241,7 +1235,7 @@ void service_set_retry_interval(SERVICE *service, int value)
  * @return True if loading and creating all filters was successful. False if a
  *         filter module was not found or the instance creation failed.
  */
-bool service_set_filters(SERVICE* service, const char* filters)
+bool service_set_filters(Service* service, const char* filters)
 {
     bool rval = true;
     std::vector<MXS_FILTER_DEF*> flist;
@@ -1283,30 +1277,35 @@ bool service_set_filters(SERVICE* service, const char* filters)
     return rval;
 }
 
+Service* service_internal_find(const char *name)
+{
+    Service* service = nullptr;
+
+    spinlock_acquire(&service_spin);
+
+    for (Service* s: allServices)
+    {
+        if (strcmp(s->name, name) == 0 && atomic_load_int(&s->active))
+        {
+            service = s;
+            break;
+        }
+    }
+
+    spinlock_release(&service_spin);
+
+    return service;
+}
+
 /**
  * Return a named service
  *
  * @param servname      The name of the service to find
  * @return The service or NULL if not found
  */
-SERVICE *
-service_find(const char *servname)
+SERVICE* service_find(const char *servname)
 {
-    SERVICE *service;
-
-    spinlock_acquire(&service_spin);
-    service = allServices;
-    while (service)
-    {
-        if (strcmp(service->name, servname) == 0 && atomic_load_int(&service->active))
-        {
-            break;
-        }
-        service = service->next;
-    }
-    spinlock_release(&service_spin);
-
-    return service;
+    return service_internal_find(servname);
 }
 
 /**
@@ -1318,15 +1317,13 @@ service_find(const char *servname)
 void
 dprintAllServices(DCB *dcb)
 {
-    SERVICE *ptr;
-
     spinlock_acquire(&service_spin);
-    ptr = allServices;
-    while (ptr)
+
+    for (Service* s: allServices)
     {
-        dprintService(dcb, ptr);
-        ptr = ptr->next;
+        dprintService(dcb, s);
     }
+
     spinlock_release(&service_spin);
 }
 
@@ -1336,8 +1333,9 @@ dprintAllServices(DCB *dcb)
  * @param dcb           DCB to print data to
  * @param service       The service to print
  */
-void dprintService(DCB *dcb, SERVICE *service)
+void dprintService(DCB *dcb, SERVICE *svc)
 {
+    Service* service = static_cast<Service*>(svc);
     SERVER_REF *server = service->dbref;
     struct tm result;
     char timebuf[30];
@@ -1409,12 +1407,11 @@ void dprintService(DCB *dcb, SERVICE *service)
 void
 dListServices(DCB *dcb)
 {
-    SERVICE *service;
     const char HORIZ_SEPARATOR[] = "--------------------------+-------------------"
                                    "+--------+----------------+-------------------\n";
     spinlock_acquire(&service_spin);
-    service = allServices;
-    if (service)
+
+    if (!allServices.empty())
     {
         dcb_printf(dcb, "Services.\n");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
@@ -1422,7 +1419,7 @@ dListServices(DCB *dcb)
                    "Service Name", "Router Module");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
     }
-    while (service)
+    for (Service* service: allServices)
     {
         ss_dassert(service->stats.n_current >= 0);
         dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
@@ -1448,9 +1445,8 @@ dListServices(DCB *dcb)
             server_ref = server_ref->next;
         }
         dcb_printf(dcb, "\n");
-        service = service->next;
     }
-    if (allServices)
+    if (!allServices.empty())
     {
         dcb_printf(dcb, "%s\n", HORIZ_SEPARATOR);
     }
@@ -1469,8 +1465,8 @@ dListListeners(DCB *dcb)
     SERV_LISTENER *port;
 
     spinlock_acquire(&service_spin);
-    service = allServices;
-    if (service)
+
+    if (!allServices.empty())
     {
         dcb_printf(dcb, "Listeners.\n");
         dcb_printf(dcb, "---------------------+---------------------+"
@@ -1480,7 +1476,7 @@ dListListeners(DCB *dcb)
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
     }
-    while (service)
+    for (Service* service: allServices)
     {
         LISTENER_ITERATOR iter;
 
@@ -1496,9 +1492,8 @@ dListListeners(DCB *dcb)
                            listener_state_to_string(listener));
             }
         }
-        service = service->next;
     }
-    if (allServices)
+    if (!allServices.empty())
     {
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n\n");
@@ -1588,7 +1583,7 @@ int service_refresh_users(SERVICE *service)
     return ret;
 }
 
-void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param)
+void service_add_parameters(Service *service, const MXS_CONFIG_PARAMETER *param)
 {
     while (param)
     {
@@ -1599,13 +1594,13 @@ void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param)
     }
 }
 
-void service_add_parameter(SERVICE *service, const char* key, const char* value)
+void service_add_parameter(Service *service, const char* key, const char* value)
 {
     MXS_CONFIG_PARAMETER p{const_cast<char*>(key), const_cast<char*>(value), nullptr};
     service_add_parameters(service, &p);
 }
 
-void service_remove_parameter(SERVICE *service, const char* key)
+void service_remove_parameter(Service *service, const char* key)
 {
     if (MXS_CONFIG_PARAMETER* params = service->svc_config_param)
     {
@@ -1640,7 +1635,7 @@ void service_remove_parameter(SERVICE *service, const char* key)
     }
 }
 
-void service_replace_parameter(SERVICE *service, const char* key, const char* value)
+void service_replace_parameter(Service *service, const char* key, const char* value)
 {
     for (MXS_CONFIG_PARAMETER* p = service->svc_config_param; p; p = p->next)
     {
@@ -1661,7 +1656,7 @@ void service_replace_parameter(SERVICE *service, const char* key, const char* va
  * @param       service         The service pointer
  * @param       weightby        The parameter name to weight the routing by
  */
-void serviceWeightBy(SERVICE *service, const char *weightby)
+void serviceWeightBy(Service *service, const char *weightby)
 {
     if (service->weightby != weightby)
     {
@@ -1674,8 +1669,9 @@ void serviceWeightBy(SERVICE *service, const char *weightby)
  * by
  * @param service               The Service pointer
  */
-const char* serviceGetWeightingParameter(SERVICE *service)
+const char* serviceGetWeightingParameter(SERVICE *svc)
 {
+    Service* service = static_cast<Service*>(svc);
     return service->weightby;
 }
 
@@ -1689,7 +1685,7 @@ const char* serviceGetWeightingParameter(SERVICE *service)
  */
 
 int
-serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
+serviceEnableLocalhostMatchWildcardHost(Service *service, int action)
 {
     if (action != 0 && action != 1)
     {
@@ -1705,9 +1701,9 @@ void service_shutdown()
 {
     spinlock_acquire(&service_spin);
 
-    for (SERVICE* svc = allServices; svc; svc = svc->next)
+    for (Service* s: allServices)
     {
-        svc->svc_do_shutdown = true;
+        s->svc_do_shutdown = true;
     }
 
     spinlock_release(&service_spin);
@@ -1717,9 +1713,9 @@ void service_destroy_instances(void)
 {
     spinlock_acquire(&service_spin);
 
-    for (SERVICE* svc = allServices; svc; svc = svc->next)
+    for (Service* s: allServices)
     {
-        service_destroy(svc);
+        service_destroy(s);
     }
 
     spinlock_release(&service_spin);
@@ -1733,17 +1729,15 @@ void service_destroy_instances(void)
 int
 serviceSessionCountAll()
 {
-    SERVICE *service;
     int rval = 0;
 
     spinlock_acquire(&service_spin);
-    service = allServices;
-    while (service)
+    for (Service* service: allServices)
     {
         rval += service->stats.n_current;
-        service = service->next;
     }
     spinlock_release(&service_spin);
+
     return rval;
 }
 
@@ -1764,6 +1758,7 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     int i = 0;;
     char buf[20];
     RESULT_ROW *row;
+    /* TODO: Fix this
     SERVICE *service;
     SERV_LISTENER *lptr = NULL;
 
@@ -1808,6 +1803,8 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     resultset_row_set(row, 4, listener_state_to_string(lptr));
     spinlock_release(&service_spin);
     return row;
+    */
+    return NULL;
 }
 
 /**
@@ -1819,6 +1816,7 @@ RESULTSET *
 serviceGetListenerList()
 {
     RESULTSET *set;
+    /* TODO: Fix this
     int *data;
 
     if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
@@ -1836,8 +1834,9 @@ serviceGetListenerList()
     resultset_add_column(set, "Address", 15, COL_TYPE_VARCHAR);
     resultset_add_column(set, "Port", 5, COL_TYPE_VARCHAR);
     resultset_add_column(set, "State", 8, COL_TYPE_VARCHAR);
-
     return set;
+     */
+    return NULL;
 }
 
 /**
@@ -1854,6 +1853,7 @@ serviceRowCallback(RESULTSET *set, void *data)
     int i = 0;
     char buf[20];
     RESULT_ROW *row;
+    /* TODO: Fix this
     SERVICE *service;
 
     spinlock_acquire(&service_spin);
@@ -1879,6 +1879,8 @@ serviceRowCallback(RESULTSET *set, void *data)
     resultset_row_set(row, 3, buf);
     spinlock_release(&service_spin);
     return row;
+    */
+    return NULL;
 }
 
 /**
@@ -1916,7 +1918,7 @@ serviceGetList()
  */
 static bool service_internal_restart(void *data)
 {
-    SERVICE* service = (SERVICE*)data;
+    Service* service = (Service*)data;
     serviceStartAllPorts(service);
     return false;
 }
@@ -1930,9 +1932,7 @@ bool service_all_services_have_listeners()
     bool rval = true;
     spinlock_acquire(&service_spin);
 
-    SERVICE* service = allServices;
-
-    while (service)
+    for (Service* service: allServices)
     {
         LISTENER_ITERATOR iter;
         SERV_LISTENER *listener = listener_iterator_init(service, &iter);
@@ -1942,8 +1942,6 @@ bool service_all_services_have_listeners()
             MXS_ERROR("Service '%s' has no listeners.", service->name);
             rval = false;
         }
-
-        service = service->next;
     }
 
     spinlock_release(&service_spin);
@@ -2028,7 +2026,7 @@ void service_update_weights()
 {
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service; service = service->next)
+    for (Service *service: allServices)
     {
         service_calculate_weights(service);
     }
@@ -2042,7 +2040,7 @@ bool service_server_in_use(const SERVER *server)
 
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    for (Service *service: allServices)
     {
         spinlock_acquire(&service->spin);
 
@@ -2055,6 +2053,11 @@ bool service_server_in_use(const SERVER *server)
         }
 
         spinlock_release(&service->spin);
+
+        if (rval)
+        {
+            break;
+        }
     }
 
     spinlock_release(&service_spin);
@@ -2069,7 +2072,7 @@ bool service_filter_in_use(const MXS_FILTER_DEF *filter)
 
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    for (Service *service: allServices)
     {
         spinlock_acquire(&service->spin);
         for (int i = 0; i < service->n_filters; i++)
@@ -2082,6 +2085,11 @@ bool service_filter_in_use(const MXS_FILTER_DEF *filter)
         }
 
         spinlock_release(&service->spin);
+
+        if (rval)
+        {
+            break;
+        }
     }
 
     spinlock_release(&service_spin);
@@ -2185,7 +2193,7 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     return true;
 }
 
-bool service_serialize(const SERVICE *service)
+bool service_serialize(const Service *service)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -2279,7 +2287,7 @@ bool service_port_is_used(unsigned short port)
     bool rval = false;
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    for (SERVICE *service: allServices)
     {
         LISTENER_ITERATOR iter;
 
@@ -2291,6 +2299,11 @@ bool service_port_is_used(unsigned short port)
                 rval = true;
                 break;
             }
+        }
+
+        if (rval)
+        {
+            break;
         }
     }
 
@@ -2489,14 +2502,14 @@ json_t* service_json_data(const SERVICE* service, const char* host)
     return rval;
 }
 
-json_t* service_to_json(const SERVICE* service, const char* host)
+json_t* service_to_json(const Service* service, const char* host)
 {
     string self = MXS_JSON_API_SERVICES;
     self += service->name;
     return mxs_json_resource(host, self.c_str(), service_json_data(service, host));
 }
 
-json_t* service_listener_list_to_json(const SERVICE* service, const char* host)
+json_t* service_listener_list_to_json(const Service* service, const char* host)
 {
     /** This needs to be done here as the listeners are sort of sub-resources
      * of the service. */
@@ -2507,7 +2520,7 @@ json_t* service_listener_list_to_json(const SERVICE* service, const char* host)
     return mxs_json_resource(host, self.c_str(), service_all_listeners_json_data(service));
 }
 
-json_t* service_listener_to_json(const SERVICE* service, const char* name, const char* host)
+json_t* service_listener_to_json(const Service* service, const char* name, const char* host)
 {
     /** This needs to be done here as the listeners are sort of sub-resources
      * of the service. */
@@ -2525,7 +2538,7 @@ json_t* service_list_to_json(const char* host)
 
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service; service = service->next)
+    for (Service *service: allServices)
     {
         json_t* svc = service_json_data(service, host);
 
@@ -2546,7 +2559,7 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
 
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service; service = service->next)
+    for (Service *service: allServices)
     {
         spinlock_acquire(&service->spin);
 
@@ -2572,7 +2585,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     std::vector<std::string> names;
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service; service = service->next)
+    for (Service *service: allServices)
     {
         spinlock_acquire(&service->spin);
 
@@ -2605,8 +2618,9 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     return rel;
 }
 
-uint64_t service_get_version(const SERVICE *service, service_version_which_t which)
+uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
 {
+    const Service* service = static_cast<const Service*>(svc);
     uint64_t version = 0;
 
     if (which == SERVICE_VERSION_ANY)
@@ -2687,7 +2701,7 @@ bool service_thread_init()
 {
     spinlock_acquire(&service_spin);
 
-    for (SERVICE* service = allServices; service; service = service->next)
+    for (Service* service: allServices)
     {
         if (service->capabilities & ACAP_TYPE_ASYNC)
         {

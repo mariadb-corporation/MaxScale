@@ -17,7 +17,7 @@
 
 #include "internal/maxscale.h"
 #include "internal/routingworker.hh"
-#include "internal/service.h"
+#include "internal/service.hh"
 
 static time_t started;
 

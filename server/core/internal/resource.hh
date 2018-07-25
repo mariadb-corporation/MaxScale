@@ -25,7 +25,7 @@
 #include "httprequest.hh"
 #include "httpresponse.hh"
 #include "monitor.h"
-#include "service.h"
+#include "service.hh"
 #include "filter.hh"
 #include "session.h"
 

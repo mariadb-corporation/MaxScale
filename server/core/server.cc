@@ -45,6 +45,7 @@
 #include "internal/poll.h"
 #include "internal/routingworker.hh"
 #include "internal/config.h"
+#include "internal/service.hh"
 
 
 using maxscale::Semaphore;

@@ -32,7 +32,7 @@
 #include "internal/session.h"
 #include "internal/filter.hh"
 #include "internal/monitor.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 #include "internal/config_runtime.h"
 #include "internal/modules.h"
 #include "internal/routingworker.hh"
@@ -253,14 +253,14 @@ HttpResponse cb_start_monitor(const HttpRequest& request)
 
 HttpResponse cb_stop_service(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     serviceStop(service);
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
 HttpResponse cb_start_service(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     serviceStart(service);
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
@@ -351,7 +351,7 @@ HttpResponse cb_create_service(const HttpRequest& request)
 
 HttpResponse cb_create_service_listener(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service && request.get_json());
 
     if (runtime_create_listener_from_json(service, request.get_json()))
@@ -390,7 +390,7 @@ HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
 
 HttpResponse cb_alter_service(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service && request.get_json());
 
     if (runtime_alter_service_from_json(service, request.get_json()))
@@ -403,7 +403,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
 
 HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service && request.get_json());
 
     if (runtime_alter_service_relationships_from_json(service, request.get_json()))
@@ -455,7 +455,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
 HttpResponse cb_delete_listener(const HttpRequest& request)
 {
 
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service);
     std::string listener = request.uri_part(3);
 
@@ -473,7 +473,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
 
 HttpResponse cb_delete_service(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service);
 
     if (runtime_destroy_service(service))
@@ -515,20 +515,20 @@ HttpResponse cb_all_services(const HttpRequest& request)
 
 HttpResponse cb_get_service(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service);
     return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
 }
 
 HttpResponse cb_get_all_service_listeners(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     return HttpResponse(MHD_HTTP_OK, service_listener_list_to_json(service, request.host()));
 }
 
 HttpResponse cb_get_service_listener(const HttpRequest& request)
 {
-    SERVICE* service = service_find(request.uri_part(1).c_str());
+    Service* service = service_internal_find(request.uri_part(1).c_str());
     std::string listener = request.uri_part(3);
     ss_dassert(service);
 

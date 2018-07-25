@@ -1172,7 +1172,7 @@ static void createListener(DCB *dcb, SERVICE *service, char *name, char *address
                            char *authenticator_options, char *key, char *cert,
                            char *ca, char *version, char *depth, char *verify)
 {
-    if (runtime_create_listener(service, name, address, port, protocol,
+    if (runtime_create_listener((Service*)service, name, address, port, protocol,
                                 authenticator, authenticator_options,
                                 key, cert, ca, version, depth, verify))
     {
@@ -1296,7 +1296,7 @@ static void destroyServer(DCB *dcb, SERVER *server)
 
 static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
 {
-    if (runtime_destroy_listener(service, name))
+    if (runtime_destroy_listener((Service*)service, name))
     {
         dcb_printf(dcb, "Destroyed listener '%s'\n", name);
     }
@@ -1505,7 +1505,7 @@ static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v
         {
             *value++ = '\0';
 
-            if (!runtime_alter_service(service, key, value))
+            if (!runtime_alter_service((Service*)service, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
@@ -2451,7 +2451,7 @@ restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
 static void
 enable_service_root(DCB *dcb, SERVICE *service)
 {
-    serviceEnableRootUser(service, 1);
+    serviceEnableRootUser((Service*)service, 1);
 }
 
 /**
@@ -2463,7 +2463,7 @@ enable_service_root(DCB *dcb, SERVICE *service)
 static void
 disable_service_root(DCB *dcb, SERVICE *service)
 {
-    serviceEnableRootUser(service, 0);
+    serviceEnableRootUser((Service*)service, 0);
 }
 
 struct log_action_entry

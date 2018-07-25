@@ -44,7 +44,7 @@
 #include "internal/filter.hh"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
-#include "internal/service.h"
+#include "internal/service.hh"
 
 using std::string;
 using std::stringstream;
@@ -345,7 +345,7 @@ void session_close(MXS_SESSION *session)
 class ServiceDestroyTask: public mxs::WorkerDisposableTask
 {
 public:
-    ServiceDestroyTask(SERVICE* service):
+    ServiceDestroyTask(Service* service):
         m_service(service)
     {
     }
@@ -356,7 +356,7 @@ public:
     }
 
 private:
-    SERVICE* m_service;
+    Service* m_service;
 };
 
 /**
@@ -411,7 +411,7 @@ static void session_free(MXS_SESSION *session)
     }
 
     MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name, session->ses_id);
-    SERVICE* service = session->service;
+    Service* service = static_cast<Service*>(session->service);
 
     session->state = SESSION_STATE_FREE;
     session_final_free(session);

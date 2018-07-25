@@ -23,7 +23,8 @@
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 
-MXS_BEGIN_DECLS
+#include "service.hh"
+#include "filter.hh"
 
 /**
  * @brief Create a new server
@@ -132,7 +133,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
  *
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue);
+bool runtime_alter_service(Service *service, const char* zKey, const char* zValue);
 
 /**
  * @brief Alter MaxScale parameters
@@ -165,7 +166,7 @@ bool runtime_alter_maxscale(const char* name, const char* value);
  *
  * @return True if the listener was successfully created and started
  */
-bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
+bool runtime_create_listener(Service *service, const char *name, const char *addr,
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
@@ -183,7 +184,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
  *
  * @return True if the listener was successfully destroyed
  */
-bool runtime_destroy_listener(SERVICE *service, const char *name);
+bool runtime_destroy_listener(Service *service, const char *name);
 
 /**
  * @brief Create a new monitor
@@ -214,7 +215,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
  *
  * @return True if filter was destroyed
  */
-bool runtime_destroy_filter(MXS_FILTER_DEF* filter);
+bool runtime_destroy_filter(FilterDef* filter);
 
 /**
  * @brief Destroy a monitor
@@ -236,7 +237,7 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor);
  *
  * @return True if service was destroyed
  */
-bool runtime_destroy_service(SERVICE* service);
+bool runtime_destroy_service(Service* service);
 
 /**
  * @brief Create a new server from JSON
@@ -284,7 +285,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
  *
  * @return Created filter or NULL on error
  */
-MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json);
+FilterDef* runtime_create_filter_from_json(json_t* json);
 
 /**
  * @brief Create a new service from JSON
@@ -293,7 +294,7 @@ MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json);
  *
  * @return Created service or NULL on error
  */
-SERVICE* runtime_create_service_from_json(json_t* json);
+Service* runtime_create_service_from_json(json_t* json);
 
 /**
  * @brief Alter a monitor using JSON
@@ -323,7 +324,7 @@ bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t*
  *
  * @return True if the service was successfully modified to represent @c new_json
  */
-bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
+bool runtime_alter_service_from_json(Service* service, json_t* new_json);
 
 /**
  * @brief Alter service relationships
@@ -333,7 +334,7 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
  *
  * @return True if the relationships were successfully modified
  */
-bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* json);
+bool runtime_alter_service_relationships_from_json(Service* service, json_t* json);
 
 /**
  * @brief Create a listener from JSON
@@ -343,7 +344,7 @@ bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* jso
  *
  * @return True if the listener was successfully created and started
  */
-bool runtime_create_listener_from_json(SERVICE* service, json_t* json);
+bool runtime_create_listener_from_json(Service* service, json_t* json);
 
 /**
  * @brief Alter logging options using JSON
@@ -388,5 +389,3 @@ bool runtime_remove_user(const char* id, enum user_type type);
  * @return True if the core parameters are valid and were successfully applied
  */
 bool runtime_alter_maxscale_from_json(json_t* new_json);
-
-MXS_END_DECLS

@@ -36,8 +36,9 @@
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 
-#include "../internal/service.h"
+#include "../internal/service.hh"
 #include "test_utils.h"
+#include "../config.cc"
 
 /**
  * test1    Allocate a service and do lots of other things
@@ -46,7 +47,7 @@
 static int
 test1()
 {
-    SERVICE     *service;
+    Service     *service;
     MXS_SESSION *session;
     DCB         *dcb;
     int         result;
@@ -55,6 +56,13 @@ test1()
     mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     init_test_env(NULL);
 
+    set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
+    load_module("mysqlauth", MODULE_AUTHENTICATOR);
+    set_libdir(MXS_STRDUP_A("../../modules/protocol/MySQL/mariadbclient/"));
+    load_module("mariadbclient", MODULE_PROTOCOL);
+    set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
+    load_module("readconnroute", MODULE_ROUTER);
+
     /* Service tests */
     ss_dfprintf(stderr,
                 "testservice : creating service called MyService with router nonexistent");
@@ -62,18 +70,16 @@ test1()
     ss_info_dassert(NULL == service, "New service with invalid router should be null");
     ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
-    set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
     service = service_alloc("MyService", "readconnroute", NULL);
 
     ss_info_dassert(NULL != service, "New service with valid router must not be null");
     ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
     ss_info_dassert(0 == strcmp("MyService", service->name), "Service must have given name");
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
-    set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
-    ss_info_dassert(serviceCreateListener(service, "TestProtocol", "testprotocol",
+    ss_info_dassert(serviceCreateListener(service, "TestProtocol", "mariadbclient",
                                           "localhost", 9876, "MySQLAuth", NULL, NULL),
                     "Add Protocol should succeed");
-    ss_info_dassert(0 != serviceHasListener(service, "TestProtocol", "testprotocol", "localhost", 9876),
+    ss_info_dassert(0 != serviceHasListener(service, "TestProtocol", "mariadbclient", "localhost", 9876),
                     "Service should have new protocol as requested");
 
     return 0;

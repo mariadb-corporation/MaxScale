@@ -151,7 +151,6 @@ typedef struct service
     int n_filters;                     /**< Number of filters */
     int64_t conn_idle_timeout;         /**< Session timeout in seconds */
     char weightby[MAX_SERVICE_WEIGHTBY_LEN]; /**< Service weighting parameter name */
-    struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service, @see enum routing_capability */

@@ -37,7 +37,6 @@
 #include "internal/config.h"
 #include "internal/monitor.h"
 #include "internal/modules.h"
-#include "internal/service.h"
 #include "internal/filter.hh"
 
 typedef std::set<std::string> StringSet;
@@ -131,7 +130,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     mxs::SpinLockGuard guard(crt_lock);
 
     bool rval = false;
-    SERVICE *service = service_find(target);
+    Service *service = service_internal_find(target);
     MXS_MONITOR *monitor = service ? NULL : monitor_find(target);
 
     if (service)
@@ -174,7 +173,7 @@ bool runtime_unlink_server(SERVER *server, const char *target)
     mxs::SpinLockGuard guard(crt_lock);
 
     bool rval = false;
-    SERVICE *service = service_find(target);
+    Service *service = service_internal_find(target);
     MXS_MONITOR *monitor = service ? NULL : monitor_find(target);
 
     if (service || monitor)
@@ -597,7 +596,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     return valid;
 }
 
-bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue)
+bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)
 {
     std::string key(zKey);
     std::string value(zValue);
@@ -863,7 +862,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     return rval;
 }
 
-bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
+bool runtime_create_listener(Service *service, const char *name, const char *addr,
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
@@ -947,7 +946,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     return rval;
 }
 
-bool runtime_destroy_listener(SERVICE *service, const char *name)
+bool runtime_destroy_listener(Service *service, const char *name)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1078,9 +1077,8 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     return rval;
 }
 
-bool runtime_destroy_filter(MXS_FILTER_DEF* filter_def)
+bool runtime_destroy_filter(FilterDef* filter)
 {
-    FilterDef* filter = static_cast<FilterDef*>(filter_def);
     ss_dassert(filter);
     bool rval = false;
     mxs::SpinLockGuard guard(crt_lock);
@@ -1104,9 +1102,9 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
     mxs::SpinLockGuard guard(crt_lock);
     bool rval = false;
 
-    if (service_find(name) == NULL)
+    if (service_internal_find(name) == NULL)
     {
-        SERVICE* service = NULL;
+        Service* service = NULL;
         CONFIG_CONTEXT ctx{(char*)""};
         ctx.parameters = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
@@ -1146,7 +1144,7 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
     return rval;
 }
 
-bool runtime_destroy_service(SERVICE* service)
+bool runtime_destroy_service(Service* service)
 {
     bool rval = false;
     mxs::SpinLockGuard guard(crt_lock);
@@ -1429,13 +1427,13 @@ static bool server_contains_required_fields(json_t* json)
 
 static bool server_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return (type == CN_SERVICES && service_find(value.c_str())) ||
+    return (type == CN_SERVICES && service_internal_find(value.c_str())) ||
            (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
 static bool filter_to_service_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return type == CN_SERVICES && service_find(value.c_str());
+    return type == CN_SERVICES && service_internal_find(value.c_str());
 }
 
 static bool service_to_filter_relation_is_valid(const std::string& type, const std::string& value)
@@ -1900,9 +1898,9 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     return rval;
 }
 
-MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
+FilterDef* runtime_create_filter_from_json(json_t* json)
 {
-    MXS_FILTER_DEF* rval = NULL;
+    FilterDef* rval = NULL;
 
     if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service}))
     {
@@ -1912,7 +1910,7 @@ MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
 
         if (runtime_create_filter(name, module, params))
         {
-            rval = filter_def_find(name);
+            rval = filter_find(name);
             ss_dassert(rval);
         }
 
@@ -1922,9 +1920,9 @@ MXS_FILTER_DEF* runtime_create_filter_from_json(json_t* json)
     return rval;
 }
 
-SERVICE* runtime_create_service_from_json(json_t* json)
+Service* runtime_create_service_from_json(json_t* json)
 {
-    SERVICE* rval = NULL;
+    Service* rval = NULL;
 
     if (validate_object_json(json, {MXS_JSON_PTR_ROUTER}, {service_to_filter, object_to_server}))
     {
@@ -1934,7 +1932,7 @@ SERVICE* runtime_create_service_from_json(json_t* json)
 
         if (runtime_create_service(name, router, params))
         {
-            rval = service_find(name);
+            rval = service_internal_find(name);
             ss_dassert(rval);
 
             // Performing an alter right after creation takes care of server relationships
@@ -2065,7 +2063,7 @@ bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t*
     return rval;
 }
 
-bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* json)
+bool runtime_alter_service_relationships_from_json(Service* service, json_t* json)
 {
     bool rval = false;
     mxs::Closer<json_t*> old_json(service_to_json(service, ""));
@@ -2099,7 +2097,7 @@ static bool is_dynamic_param(const std::string& key)
            key != CN_SERVERS;
 }
 
-bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
+bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
     bool rval = false;
     mxs::Closer<json_t*> old_json(service_to_json(service, ""));
@@ -2302,7 +2300,7 @@ static bool validate_listener_json(json_t* json)
     return rval;
 }
 
-bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
+bool runtime_create_listener_from_json(Service* service, json_t* json)
 {
     bool rval = false;
 
