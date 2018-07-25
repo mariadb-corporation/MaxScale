@@ -225,8 +225,7 @@ private:
                           MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                           json_t** error_out);
     bool switchover_check_new(const MariaDBServer* new_master_cand, json_t** error);
-    bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
-                                  json_t** error_out) const;
+    bool switchover_check_current(const MariaDBServer* suggested_curr_master, json_t** error_out) const;
     bool do_switchover(MariaDBServer** current_master, MariaDBServer** new_master, json_t** err_out);
     bool switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out);
     bool switchover_demote_master(MariaDBServer* current_master,

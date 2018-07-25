@@ -1205,25 +1205,25 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
  * @return True if current master seems ok. False, if there is some error with the
  * specified current master.
  */
-bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
+bool MariaDBMonitor::switchover_check_current(const MariaDBServer* suggested_curr_master,
                                               json_t** error_out) const
 {
     ss_dassert(suggested_curr_master);
     bool server_is_master = false;
-    MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
-    for (MXS_MONITORED_SERVER* mon_serv = m_monitor->monitored_servers;
-         mon_serv != NULL && extra_master == NULL;
-         mon_serv = mon_serv->next)
+    MariaDBServer* extra_master = NULL; // A master server which is not the suggested one
+
+    for (auto iter = m_servers.begin(); iter != m_servers.end() && extra_master == NULL; iter++)
     {
-        if (status_is_master(mon_serv->pending_status))
+        MariaDBServer* server = *iter;
+        if (server->is_master())
         {
-            if (mon_serv == suggested_curr_master)
+            if (server == suggested_curr_master)
             {
                 server_is_master = true;
             }
             else
             {
-                extra_master = mon_serv;
+                extra_master = server;
             }
         }
     }
@@ -1231,12 +1231,12 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
     if (!server_is_master)
     {
         PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
-                             suggested_curr_master->server->name);
+                             suggested_curr_master->name());
     }
     else if (extra_master)
     {
         PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
-                             extra_master->server->name);
+                             extra_master->name());
     }
     return server_is_master && !extra_master;
 }
@@ -1616,13 +1616,17 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
             current_master_ok = false;
             PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->name, m_monitor->name);
         }
-        else if (!switchover_check_current(mon_curr_master, error_out))
-        {
-            current_master_ok = false;
-        }
         else
         {
-            *current_master_out = get_server_info(mon_curr_master);
+            MariaDBServer* found_curr_master = get_server_info(mon_curr_master);
+            if (switchover_check_current(found_curr_master, error_out))
+            {
+                *current_master_out = get_server_info(mon_curr_master);
+            }
+            else
+            {
+                current_master_ok = false;
+            }
         }
     }
 
