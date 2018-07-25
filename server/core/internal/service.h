@@ -206,10 +206,4 @@ void service_replace_parameter(SERVICE *service, const char* key, const char* va
  */
 void service_set_retry_interval(SERVICE *service, int value);
 
-/**
- * Internal debugging diagnostics
- */
-void       printService(SERVICE *service);
-void       printAllServices(void);
-
 MXS_END_DECLS

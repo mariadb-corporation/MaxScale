@@ -1309,67 +1309,6 @@ service_find(const char *servname)
     return service;
 }
 
-
-/**
- * Print details of an individual service
- *
- * @param service       Service to print
- */
-void
-printService(SERVICE *service)
-{
-    SERVER_REF  *ptr = service->dbref;
-    struct tm result;
-    char time_buf[30];
-    int i;
-
-
-    printf("\tService:                              %s\n", service->name);
-    printf("\tRouter:                               %s\n", service->routerModule);
-    printf("\tStarted:              %s",
-           asctime_r(localtime_r(&service->stats.started, &result), time_buf));
-    printf("\tBackend databases\n");
-    while (ptr)
-    {
-        printf("\t\t[%s]:%d  Protocol: %s\n", ptr->server->address, ptr->server->port, ptr->server->protocol);
-        ptr = ptr->next;
-    }
-    if (service->n_filters)
-    {
-        printf("\tFilter chain:         ");
-        for (i = 0; i < service->n_filters; i++)
-        {
-            printf("%s %s ", service->filters[i]->name,
-                   i + 1 < service->n_filters ? "|" : "");
-        }
-        printf("\n");
-    }
-
-    printf("\tTotal connections:    %d\n", service->stats.n_sessions);
-    printf("\tCurrently connected:  %d\n", service->stats.n_current);
-}
-
-/**
- * Print all services
- *
- * Designed to be called within a debugger session in order
- * to display all active services within the gateway
- */
-void
-printAllServices()
-{
-    SERVICE *ptr;
-
-    spinlock_acquire(&service_spin);
-    ptr = allServices;
-    while (ptr)
-    {
-        printService(ptr);
-        ptr = ptr->next;
-    }
-    spinlock_release(&service_spin);
-}
-
 /**
  * Print all services to a DCB
  *
