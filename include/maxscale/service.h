@@ -174,13 +174,19 @@ typedef enum count_spec_t
 #define SERVICE_STATE_STOPPED   4       /**< The service has been stopped */
 
 /**
- * Starting and stopping services
+ * Find a service
+ *
+ * @param name Service name
+ *
+ * @return Service or NULL of no service was found
  */
+SERVICE* service_find(const char *name);
 
 /**
  * @brief Stop a service
  *
  * @param service Service to stop
+ *
  * @return True if service was stopped
  */
 bool serviceStop(SERVICE *service);
@@ -189,24 +195,17 @@ bool serviceStop(SERVICE *service);
  * @brief Restart a stopped service
  *
  * @param service Service to restart
+ *
  * @return True if service was restarted
  */
 bool serviceStart(SERVICE *service);
-
-/**
- * @brief Start new a listener for a service
- *
- * @param service Service where the listener is linked
- * @param port Listener to start
- * @return True if listener was started
- */
-bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port);
 
 /**
  * @brief Stop a listener for a service
  *
  * @param service Service where the listener is linked
  * @param name Name of the listener
+ *
  * @return True if listener was stopped
  */
 bool serviceStopListener(SERVICE *service, const char *name);
@@ -216,87 +215,21 @@ bool serviceStopListener(SERVICE *service, const char *name);
  *
  * @param service Service where the listener is linked
  * @param name Name of the listener
+ *
  * @return True if listener was restarted
  */
 bool serviceStartListener(SERVICE *service, const char *name);
 
-/**
- * Utility functions
- */
-SERVICE* service_find(const char *name);
-
 // TODO: Change binlogrouter to use the functions in config_runtime.h
 bool serviceAddBackend(SERVICE *service, SERVER *server);
 
-/**
- * @brief Check if a service uses a server
- * @param service Service to check
- * @param server Server being used
- * @return True if service uses the server
- */
-bool serviceHasBackend(SERVICE *service, SERVER *server);
-
-/**
- * @brief Find listener with specified properties.
- *
- * @param service Service to check
- * @param socket  Listener socket path
- * @param address Listener address
- * @param port    Listener port number
- *
- * @note Either socket should be NULL and port non-zero or socket
- *       non-NULL and port zero.
- *
- * @return True if service has the listener
- */
-SERV_LISTENER* service_find_listener(SERVICE* service,
-                                     const char* socket,
-                                     const char* address,
-                                     unsigned short port);
-
-/**
- * @brief Check if a service has a listener
- *
- * @param service Service to check
- * @param protocol Listener protocol
- * @param address Listener address
- * @param port Listener port
- * @return True if service has the listener
- */
-bool serviceHasListener(SERVICE* service, const char* name, const char* protocol,
-                        const char* address, unsigned short port);
-
-/**
- * @brief Check if a MaxScale service listens on a port
- *
- * @param port The port to check
- * @return True if a MaxScale service uses the port
- */
-bool service_port_is_used(unsigned short port);
-
-/**
- * @brief Check if the service has a listener with a matching name
- *
- * @param service Service to check
- * @param name    Name to compare to
- *
- * @return True if the service has a listener with a matching name
- */
-bool service_has_named_listener(SERVICE *service, const char *name);
-
+// Used by authenticators
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
-int   serviceSetUser(SERVICE *service, const char *user, const char *auth);
-bool  service_set_filters(SERVICE *service, const char* filters);
-int   serviceEnableRootUser(SERVICE *service, int action);
-int   serviceSetTimeout(SERVICE *service, int val);
-int   serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout);
-void  serviceSetRetryOnFailure(SERVICE *service, const char* value);
-void  serviceWeightBy(SERVICE *service, const char *weightby);
+
+// Used by routers
 const char* serviceGetWeightingParameter(SERVICE *service);
-int   serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action);
-int   serviceStripDbEsc(SERVICE* service, int action);
-int   serviceAuthAllServers(SERVICE *service, int action);
-void  serviceSetVersionString(SERVICE *service, const char* value);
+
+// Reload users
 int   service_refresh_users(SERVICE *service);
 
 /**
@@ -310,66 +243,6 @@ int   service_refresh_users(SERVICE *service);
  * @param service The service to diagnose
  */
 void service_print_users(DCB *, const SERVICE *);
-
-/**
- * @brief Convert a service to JSON
- *
- * @param service Service to convert
- * @param host    Hostname of this server
- *
- * @return JSON representation of the service
- */
-json_t* service_to_json(const SERVICE* service, const char* host);
-
-/**
- * @brief Convert all services to JSON
- *
- * @param host Hostname of this server
- *
- * @return A JSON array with all services
- */
-json_t* service_list_to_json(const char* host);
-
-/**
- * @brief Convert service listeners to JSON
- *
- * @param service Service whose listeners are converted
- * @param host    Hostname of this server
- *
- * @return Array of JSON format listeners
- */
-json_t* service_listener_list_to_json(const SERVICE* service, const char* host);
-
-/**
- * @brief Convert service listener to JSON
- *
- * @param service Service whose listener is converted
- * @param name    The name of the listener
- * @param host    Hostname of this server
- *
- * @return JSON format listener
- */
-json_t* service_listener_to_json(const SERVICE* service, const char* name, const char* host);
-
-/**
- * @brief Get links to services that relate to a server
- *
- * @param server Server to inspect
- * @param host   Hostname of this server
- *
- * @return Array of service links or NULL if no relations exist
- */
-json_t* service_relations_to_server(const SERVER* server, const char* host);
-
-/**
- * @brief Get links to services that relate to a filter
- *
- * @param filter Filter to inspect
- * @param host   Hostname of this server
- *
- * @return Array of service links
- */
-json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
 
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);
