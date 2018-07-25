@@ -7,12 +7,6 @@ export script_dir="$(dirname $(readlink -f $0))"
 
 . ${script_dir}/set_run_test_variables.sh
 
-${mdbci_dir}/repository-config/generate_all.sh repo.d
-${mdbci_dir}/repository-config/maxscale-ci.sh $target repo.d
-
-
-export repo_dir=$dir/repo.d/
-
 export provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
 
@@ -33,7 +27,7 @@ fi
 $(<${script_dir}/templates/${template}.json.template)
 " 2> /dev/null > ${MDBCI_VM_PATH}/${name}.json
 
-${mdbci_dir}/mdbci --override --template  ${MDBCI_VM_PATH}/${name}.json --repo-dir ${repo_dir} generate $name
+${mdbci_dir}/mdbci --override --template  ${MDBCI_VM_PATH}/${name}.json generate $name
 
 mkdir ${MDBCI_VM_PATH}/$name/cnf
 cp -r ${script_dir}/cnf/* ${MDBCI_VM_PATH}/$name/cnf/
