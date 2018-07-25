@@ -413,8 +413,9 @@ static void session_free(MXS_SESSION *session)
 
     session->state = SESSION_STATE_FREE;
     session_final_free(session);
+    bool should_destroy = !atomic_load_int(&service->active);
 
-    if (atomic_add(&service->client_count, -1) == 1 && !service->active)
+    if (atomic_add(&service->client_count, -1) && should_destroy)
     {
         // Destroy the service in the main routing worker thread
         mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);

@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
+#include <atomic>
 #include <map>
 #include <string>
 #include <set>
@@ -246,7 +247,7 @@ void service_destroy(SERVICE* service)
 #endif
 
     ss_dassert(service->active);
-    service->active = false;
+   atomic_store_int(&service->active, false);
 
     char filename[PATH_MAX + 1];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
@@ -1297,7 +1298,7 @@ service_find(const char *servname)
     service = allServices;
     while (service)
     {
-        if (strcmp(service->name, servname) == 0 && service->active)
+        if (strcmp(service->name, servname) == 0 && atomic_load_int(&service->active))
         {
             break;
         }
