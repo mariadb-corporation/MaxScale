@@ -1215,7 +1215,7 @@ bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* sugges
          mon_serv != NULL && extra_master == NULL;
          mon_serv = mon_serv->next)
     {
-        if (srv_master_status(mon_serv->pending_status))
+        if (status_is_master(mon_serv->pending_status))
         {
             if (mon_serv == suggested_curr_master)
             {

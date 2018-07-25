@@ -195,52 +195,106 @@ enum
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 31) /**<< The disk space of the server is exhausted */
 
 /**
- * Is the server valid and active
+ * Is the server valid and active?
+ *
+ * @param server The server
+ * @return True, if server has not been removed from the runtime configuration.
  */
 inline bool server_is_active(const SERVER* server)
 {
     return server->is_active;
 }
 
+inline bool status_is_running(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
+}
+
 /**
- * Is the server running - returns true if the server is marked as running.
+ * Is the server running?
+ *
+ * @param server The server
+ * @return True, if monitor can connect to server.
  */
 inline bool server_is_running(const SERVER* server)
 {
-    return ((server->status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING);
+    return status_is_running(server->status);
+}
+
+inline bool status_is_down(uint64_t status)
+{
+    return (status & SERVER_RUNNING) == 0;
 }
 
 /**
- * Is the server marked as down - returns true if the server is believed
- * to be inoperable.
+ * Is the server down?
+ *
+ * @param server The server
+ * @return True, if monitor cannot connect to the server.
  */
 inline bool server_is_down(const SERVER* server)
 {
-    return ((server->status & SERVER_RUNNING) == 0);
+    return status_is_down(server->status);
 }
 
-
-inline bool srv_master_status(uint64_t status)
+inline bool status_is_in_maint(uint64_t status)
 {
-    return ((status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER));
+    return status & SERVER_MAINT;
 }
 
 /**
- * Is the server a master? Returns true if server is both running and marked as master.
+ * Is the server in maintenance mode?
+ *
+ * @param server The server
+ * @return True, if server is in maintenance.
+ */
+inline bool server_is_in_maint(const SERVER* server)
+{
+    return status_is_in_maint(server->status);
+}
+
+inline bool status_is_master(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_MASTER);
+}
+
+/**
+ * Is the server a master?
+ *
+ * @param server The server
+ * @return True, if server is running and marked as master.
  */
 inline bool server_is_master(const SERVER* server)
 {
-    return srv_master_status(server->status);
+    return status_is_master(server->status);
+}
+
+inline bool status_is_slave(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
+            (SERVER_RUNNING | SERVER_SLAVE);
 }
 
 /**
- * Is the server a slave? The server must be both running and marked as a slave
- * in order for the macro to return true
+ * Is the server a slave.
+ *
+ * @param server The server
+ * @return True if server is running and marked as slave.
  */
 inline bool server_is_slave(const SERVER* server)
 {
-    return ((server->status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
-            (SERVER_RUNNING | SERVER_SLAVE));
+    return status_is_slave(server->status);
+}
+
+inline bool status_is_relay(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) == \
+            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
+}
+
+inline bool server_is_relay(const SERVER* server)
+{
+    return status_is_relay(server->status);
 }
 
 /**
@@ -260,23 +314,9 @@ inline bool server_is_ndb(const SERVER* server)
     return ((server->status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB));
 }
 
-/**
- * Is the server in maintenance mode.
- */
-inline bool server_is_in_maint(const SERVER* server)
-{
-    return (server->status & SERVER_MAINT);
-}
-
 inline bool server_is_in_cluster(const SERVER* server)
 {
     return ((server->status & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB)) != 0);
-}
-
-inline bool server_is_relay(const SERVER* server)
-{
-    return ((server->status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) == \
-            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE));
 }
 
 inline bool server_is_slave_of_ext_master(const SERVER* server)

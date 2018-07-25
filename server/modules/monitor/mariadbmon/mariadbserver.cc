@@ -435,38 +435,32 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
 
 bool MariaDBServer::is_master() const
 {
-    // Similar to macro SERVER_IS_MASTER
-    return srv_master_status(m_server_base->pending_status);
+    return status_is_master(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_slave() const
 {
-    // Similar to macro SERVER_IS_SLAVE
-    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) ==
-           (SERVER_RUNNING | SERVER_SLAVE);
+    return status_is_slave(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_running() const
 {
-    // Similar to macro SERVER_IS_RUNNING
-    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
+    return status_is_running(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_down() const
 {
-    // Similar to macro SERVER_IS_DOWN
-    return (m_server_base->pending_status & SERVER_RUNNING) == 0;
+    return status_is_down(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_in_maintenance() const
 {
-    return m_server_base->pending_status & SERVER_MAINT;
+    return status_is_in_maint(m_server_base->pending_status);
 }
 
 bool MariaDBServer::is_relay_master() const
 {
-    return (m_server_base->pending_status & (SERVER_RUNNING | SERVER_RELAY_MASTER | SERVER_MAINT)) ==
-           (SERVER_RUNNING | SERVER_RELAY_MASTER);
+    return status_is_relay(m_server_base->pending_status);
 }
 
 bool MariaDBServer::has_status(uint64_t bits) const
