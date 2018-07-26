@@ -25,20 +25,15 @@
 
 static const uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLET | ERROR_EVENTS;
 
-LocalClient::LocalClient(MXS_SESSION* session, int fd):
+LocalClient::LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd):
     m_state(VC_WAITING_HANDSHAKE),
     m_sock(fd),
     m_expected_bytes(0),
-    m_client({}),
-    m_protocol({}),
+    m_client(*session),
+    m_protocol(*proto),
     m_self_destruct(false)
 {
     MXS_POLL_DATA::handler = LocalClient::poll_handler;
-    MySQLProtocol* client = (MySQLProtocol*)session->client_dcb->protocol;
-    m_protocol.charset = client->charset;
-    m_protocol.client_capabilities = client->client_capabilities;
-    m_protocol.extra_capabilities = client->extra_capabilities;
-    gw_get_shared_session_auth_info(session->client_dcb, &m_client);
 }
 
 LocalClient::~LocalClient()
@@ -237,7 +232,7 @@ uint32_t LocalClient::poll_handler(struct mxs_poll_data* data, void* worker, uin
     return 0;
 }
 
-LocalClient* LocalClient::create(MXS_SESSION* session, const char* ip, uint64_t port)
+LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port)
 {
     LocalClient* rval = NULL;
     sockaddr_storage addr;
@@ -245,7 +240,7 @@ LocalClient* LocalClient::create(MXS_SESSION* session, const char* ip, uint64_t 
 
     if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
     {
-        LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
+        LocalClient* relay = new (std::nothrow) LocalClient(session, proto, fd);
 
         if (relay)
         {
@@ -271,7 +266,7 @@ LocalClient* LocalClient::create(MXS_SESSION* session, const char* ip, uint64_t 
     return rval;
 }
 
-LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
+LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, SERVICE* service)
 {
     LocalClient* rval = NULL;
     LISTENER_ITERATOR iter;
@@ -282,7 +277,7 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
         if (listener->port > 0)
         {
             /** Pick the first network listener */
-            rval = create(session, "127.0.0.1", service->ports->port);
+            rval = create(session, proto, "127.0.0.1", service->ports->port);
             break;
         }
     }
@@ -290,7 +285,7 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
     return rval;
 }
 
-LocalClient* LocalClient::create(MXS_SESSION* session, SERVER* server)
+LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, SERVER* server)
 {
-    return create(session, server->address, server->port);
+    return create(session, proto, server->address, server->port);
 }

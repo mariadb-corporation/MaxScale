@@ -101,7 +101,9 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
             return NULL;
         }
 
-        if ((client = LocalClient::create(session, my_instance->get_service())) == NULL)
+        if ((client = LocalClient::create((MYSQL_session*)session->client_dcb->data,
+                                          (MySQLProtocol*)session->client_dcb->protocol,
+                                          my_instance->get_service())) == NULL)
         {
             return NULL;
         }

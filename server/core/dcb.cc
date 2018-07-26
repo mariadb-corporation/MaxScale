@@ -2953,45 +2953,23 @@ private:
 
 bool dcb_foreach(bool(*func)(DCB *dcb, void *data), void *data)
 {
+    ss_dassert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
     SerialDcbTask task(func, data);
     RoutingWorker::execute_serially(task);
     return task.more();
 }
 
-/** Helper class for parallel iteration over all DCBs */
-class ParallelDcbTask : public WorkerTask
+void dcb_foreach_local(bool(*func)(DCB *dcb, void *data), void *data)
 {
-public:
+    int thread_id = RoutingWorker::get_current_id();
 
-    ParallelDcbTask(bool(*func)(DCB *, void *), void **data):
-        m_func(func),
-        m_data(data)
+    for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
     {
-    }
-
-    void execute(Worker& worker)
-    {
-        RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        int thread_id = rworker.id();
-
-        for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
+        if (!func(dcb, data))
         {
-            if (!m_func(dcb, m_data[thread_id]))
-            {
-                break;
-            }
+            break;
         }
     }
-
-private:
-    bool(*m_func)(DCB *dcb, void *data);
-    void** m_data;
-};
-
-void dcb_foreach_parallel(bool(*func)(DCB *dcb, void *data), void **data)
-{
-    ParallelDcbTask task(func, data);
-    RoutingWorker::execute_concurrently(task);
 }
 
 int dcb_get_port(const DCB *dcb)

@@ -5,7 +5,8 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "nyc mocha --timeout 15000 --slow 10000"
+    "test": "nyc mocha --timeout 15000 --slow 10000",
+    "preinstall": "cmake -P configure_version.cmake"
   },
   "keywords": [
     "maxscale"

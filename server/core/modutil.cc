@@ -488,6 +488,17 @@ int modutil_send_mysql_err_packet(DCB        *dcb,
     return dcb->func.write(dcb, buf);
 }
 
+// Helper function for debug assertions
+static bool only_one_packet(GWBUF* buffer)
+{
+    ss_dassert(buffer);
+    uint8_t header[4] = {};
+    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
+    size_t packet_len = gw_mysql_get_byte3(header);
+    size_t buffer_len = gwbuf_length(buffer);
+    return packet_len + MYSQL_HEADER_LEN == buffer_len;
+}
+
 /**
  * Return the first packet from a buffer.
  *
@@ -534,6 +545,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         }
     }
 
+    ss_dassert(!packet || only_one_packet(packet));
     return packet;
 }
 

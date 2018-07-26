@@ -106,8 +106,10 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     if (m_data.length() &&
         (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
     {
-        MHD_Response *response =
-            MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
+        string msg = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ")
+            + err.text + "\" } ] }";
+        MHD_Response *response = MHD_create_response_from_buffer(msg.size(), &msg[0],
+                                                                 MHD_RESPMEM_MUST_COPY);
         MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
         MHD_destroy_response(response);
         return MHD_YES;

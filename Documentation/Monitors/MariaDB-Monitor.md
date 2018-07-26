@@ -229,7 +229,7 @@ master), _switchover_ (swapping a slave with a running master) and _rejoin_
 (joining a standalone server to the cluster). The features and the parameters
 controlling them are presented in this section.
 
-These features require that the monitor user (`user`) has the SUPER privilege.
+These features require that the monitor user (`user`) has the SUPER and RELOAD privileges.
 In addition, the monitor needs to know which username and password a slave
 should use when starting replication. These are given in `replication_user` and
 `replication_password`.
@@ -357,7 +357,7 @@ error is logged and automatic failover is disabled. If this happens, the cluster
 must be fixed manually and the failover needs to be re-enabled via the REST API
 or MaxAdmin.
 
-The monitor user must have the SUPER privilege for failover to work.
+The monitor user must have the SUPER and RELOAD privileges for failover to work.
 
 #### `auto_rejoin`
 

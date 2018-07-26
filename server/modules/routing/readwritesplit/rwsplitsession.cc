@@ -185,6 +185,15 @@ bool RWSplitSession::route_stored_query()
         MXS_INFO("Routing stored queries");
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&m_query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
+        ss_dassert(query_queue);
+
+        if (query_queue == NULL)
+        {
+            MXS_ALERT("Queued query unexpectedly empty. Bytes queued: %d Hexdump: ",
+                      gwbuf_length(m_query_queue));
+            gwbuf_hexdump(m_query_queue, LOG_ALERT);
+            return true;
+        }
 
         /** Store the query queue locally for the duration of the routeQuery call.
          * This prevents recursive calls into this function. */

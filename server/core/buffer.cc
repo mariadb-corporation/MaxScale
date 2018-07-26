@@ -761,15 +761,11 @@ gwbuf_get_property(GWBUF *buf, const char *name)
     return prop ? prop->value : NULL;
 }
 
-GWBUF *
-gwbuf_make_contiguous(GWBUF *orig)
+GWBUF* gwbuf_make_contiguous(GWBUF *orig)
 {
-    GWBUF   *newbuf;
-    uint8_t *ptr;
-    int     len;
-
     if (orig == NULL)
     {
+        ss_info_dassert(!true, "gwbuf_make_contiguous: NULL buffer");
         return NULL;
     }
     if (orig->next == NULL)
@@ -777,20 +773,21 @@ gwbuf_make_contiguous(GWBUF *orig)
         return orig;
     }
 
-    if ((newbuf = gwbuf_alloc(gwbuf_length(orig))) != NULL)
-    {
-        newbuf->gwbuf_type = orig->gwbuf_type;
-        newbuf->hint = hint_dup(orig->hint);
-        ptr = GWBUF_DATA(newbuf);
+    GWBUF* newbuf = gwbuf_alloc(gwbuf_length(orig));
+    MXS_ABORT_IF_NULL(newbuf);
 
-        while (orig)
-        {
-            len = GWBUF_LENGTH(orig);
-            memcpy(ptr, GWBUF_DATA(orig), len);
-            ptr += len;
-            orig = gwbuf_consume(orig, len);
-        }
+    newbuf->gwbuf_type = orig->gwbuf_type;
+    newbuf->hint = hint_dup(orig->hint);
+    uint8_t* ptr = GWBUF_DATA(newbuf);
+
+    while (orig)
+    {
+        int len = GWBUF_LENGTH(orig);
+        memcpy(ptr, GWBUF_DATA(orig), len);
+        ptr += len;
+        orig = gwbuf_consume(orig, len);
     }
+
     return newbuf;
 }
 
@@ -888,7 +885,7 @@ static std::string dump_one_buffer(GWBUF* buffer)
     return rval;
 }
 
-void gwbuf_hexdump(GWBUF* buffer)
+void gwbuf_hexdump(GWBUF* buffer, int log_level)
 {
     std::stringstream ss;
 
@@ -906,5 +903,5 @@ void gwbuf_hexdump(GWBUF* buffer)
         n = 1024;
     }
 
-    MXS_INFO("%.*s", n, ss.str().c_str());
+    MXS_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
 }

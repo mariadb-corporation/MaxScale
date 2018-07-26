@@ -182,6 +182,16 @@ bool foreach_table(QueryClassifier& qc,
         }
     }
 
+    if (tables)
+    {
+        for (int i = 0; i < n_tables; i++)
+        {
+            MXS_FREE(tables[i]);
+        }
+
+        MXS_FREE(tables);
+    }
+
     return rval;
 }
 

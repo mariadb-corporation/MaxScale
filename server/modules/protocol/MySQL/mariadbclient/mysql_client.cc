@@ -1619,17 +1619,6 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     return rval;
 }
 
-// Helper function for debug assertions
-static bool only_one_packet(GWBUF* buffer)
-{
-    ss_dassert(buffer);
-    uint8_t header[4] = {};
-    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
-    size_t packet_len = gw_mysql_get_byte3(header);
-    size_t buffer_len = gwbuf_length(buffer);
-    return packet_len + MYSQL_HEADER_LEN == buffer_len;
-}
-
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
  * Store partial packet to dcb_readqueue. Send complete packets one by one
@@ -1654,12 +1643,11 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         // Process client request one packet at a time
         packetbuf = modutil_get_next_MySQL_packet(p_readbuf);
 
-        // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
-        packetbuf = gwbuf_make_contiguous(packetbuf);
-
         if (packetbuf != NULL)
         {
-            ss_dassert(only_one_packet(packetbuf));
+            // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+            packetbuf = gwbuf_make_contiguous(packetbuf);
+
             CHK_GWBUF(packetbuf);
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
@@ -1760,6 +1748,9 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                     rc = 0;
                     gwbuf_free(packetbuf);
                     packetbuf = NULL;
+                    MXS_ERROR("User reauthentication failed for '%s'@'%s'",
+                              session->client_dcb->user,
+                              session->client_dcb->remote);
                 }
             }
 

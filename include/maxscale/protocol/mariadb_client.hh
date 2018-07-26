@@ -37,8 +37,8 @@ public:
      *
      * @return New virtual client or NULL on error
      */
-    static LocalClient* create(MXS_SESSION* session, SERVICE* service);
-    static LocalClient* create(MXS_SESSION* session, SERVER* server);
+    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, SERVICE* service);
+    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, SERVER* server);
 
     /**
      * Queue a new query for execution
@@ -57,8 +57,8 @@ public:
     void self_destruct();
 
 private:
-    static LocalClient* create(MXS_SESSION* session, const char* ip, uint64_t port);
-    LocalClient(MXS_SESSION* session, int fd);
+    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port);
+    LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd);
     static uint32_t poll_handler(struct mxs_poll_data* data, void* worker, uint32_t events);
     void   process(uint32_t events);
     GWBUF* read_complete_packet();

@@ -156,7 +156,10 @@ public:
 
                         bypass_whitespace();
 
-                        if (is_set(m_pI))
+                        // Check that there's enough characters to contain a SET keyword
+                        bool long_enough = m_pEnd - m_pI > 3 ;
+
+                        if (long_enough && is_set(m_pI))
                         {
                             rv = parse(pSql_mode);
                         }

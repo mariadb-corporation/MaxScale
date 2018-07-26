@@ -43,6 +43,7 @@ listener            | A listener is the network endpoint that is used to listen 
 connection failover | When a connection currently being used between MariaDB MaxScale and the database server fails a replacement will be automatically created to another server by MariaDB MaxScale without client intervention
 backend database    | A term used to refer to a database that sits behind MariaDB MaxScale and is accessed by applications via MariaDB MaxScale.
 filter              | A module that can be placed between the client and the MariaDB MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
+REST API | HTTP administrative interface
 
 ## Configuration
 
@@ -746,17 +747,16 @@ configuration file.
 
 #### `admin_host`
 
-The network interface where the HTTP admin interface listens on. The default
-value is the IPv4 address `127.0.0.1` which only listens for local connections.
+The network interface where the REST API listens on. The default value is the
+IPv4 address `127.0.0.1` which only listens for local connections.
 
 #### `admin_port`
 
-The port where the HTTP admin interface listens on. The default value is port
-8989.
+The port where the REST API listens on. The default value is port 8989.
 
 #### `admin_auth`
 
-Enable HTTP admin interface authentication using HTTP Basic Access
+Enable REST API authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication without HTTPS but
 it does add a small layer of security. This option is enabled by default.
 

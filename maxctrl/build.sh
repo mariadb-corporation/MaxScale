@@ -12,6 +12,7 @@ if [ "$PWD" != "$src" ]
 then
     # Copy sources to working directory
     cp -r -t $PWD/maxctrl $src/maxctrl/*
+    cp -r -t $PWD/ $src/VERSION*.cmake
 fi
 
 cd $PWD/maxctrl
