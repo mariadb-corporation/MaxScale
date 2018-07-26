@@ -69,6 +69,21 @@ int mxs_rworker_get_current_id();
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
 /**
+ * Call a function on all workers
+ *
+ * A convenience function for executing simple tasks on all workers. The task
+ * will be executed immediately on the current worker and thus recursive calls
+ * into functions should not be done.
+ *
+ * @param cb Callback to call
+ * @param data Data passed to the callback
+ *
+ * @return The number of messages posted; if less that ne number of workers
+ *         then some postings failed.
+ */
+size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data);
+
+/**
  * Add a session to the current routing worker's session container. Currently
  * only required for some special commands e.g. "KILL <process_id>" to work.
  *
@@ -94,5 +109,48 @@ bool mxs_rworker_deregister_session(uint64_t id);
  * @return The found session or NULL if not found.
  */
 MXS_SESSION* mxs_rworker_find_session(uint64_t id);
+
+/**
+ * Worker local storage
+ */
+
+/**
+ * Initialize a globally unique data identifier
+ *
+ * The value returned by this function is used with the other data commands.
+ * The value is a unique handle to thread-local storage.
+ *
+ * @return The data identifier usable for worker local data storage
+ */
+uint64_t mxs_rworker_create_key();
+
+/**
+ * Set local worker data on current worker
+ *
+ * @param key      Key acquired with create_data
+ * @param data     Data to store
+ * @param callback Callback used to delete the data, NULL if no deletion is
+ *                 required. This function is called by mxs_rworker_delete_data
+ *                 when the data is deleted.
+ */
+void mxs_rworker_set_data(uint64_t key, void* data, void (*callback)(void*));
+
+/**
+ * Get local data from current worker
+ *
+ * @param key    Key to use
+ *
+ * @return Data previously stored or NULL if no data was previously stored
+ */
+void* mxs_rworker_get_data(uint64_t key);
+
+/**
+ * Deletes local data from all workers
+ *
+ * The key must not be used again after deletion.
+ *
+ * @param key      Key to remove
+ */
+void mxs_rworker_delete_data(uint64_t key);
 
 MXS_END_DECLS

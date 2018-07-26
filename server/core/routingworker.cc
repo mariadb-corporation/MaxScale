@@ -997,6 +997,57 @@ private:
     const char*     m_zHost;
 };
 
+class FunctionTask: public maxscale::WorkerDisposableTask
+{
+public:
+    FunctionTask(std::function<void ()> cb):
+        m_cb(cb)
+    {
+    }
+
+    void execute(Worker& worker)
+    {
+        m_cb();
+    }
+
+protected:
+    std::function<void ()> m_cb;
+};
+
+}
+
+size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data)
+{
+    return RoutingWorker::broadcast(std::auto_ptr<FunctionTask>(new FunctionTask([&]()
+    {
+        cb(data);
+    })));
+}
+
+uint64_t mxs_rworker_create_key()
+{
+    return RoutingWorker::create_key();
+}
+
+void mxs_rworker_set_data(uint64_t key, void* data, void (*callback)(void*))
+{
+    RoutingWorker::get_current()->set_data(key, data, callback);
+}
+
+void* mxs_rworker_get_data(uint64_t key)
+{
+    return RoutingWorker::get_current()->get_data(key);
+}
+
+void mxs_rworker_delete_data(uint64_t key)
+{
+    auto func = [key]()
+    {
+        RoutingWorker::get_current()->delete_data(key);
+    };
+
+    std::auto_ptr<FunctionTask> task(new FunctionTask(func));
+    RoutingWorker::broadcast(task);
 }
 
 json_t* mxs_rworker_to_json(const char* zHost, int id)

@@ -13,8 +13,12 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <unordered_map>
+
 #include <maxscale/routingworker.h>
 #include <maxscale/worker.hh>
+
 #include "session.hh"
 
 namespace maxscale
@@ -34,6 +38,9 @@ public:
 
     typedef Registry<MXS_SESSION> SessionsById;
     typedef std::vector<DCB*>     Zombies;
+
+    typedef std::unordered_map<uint64_t, void*>          LocalData;
+    typedef std::unordered_map<uint64_t, void(*)(void*)> DataDeleters;
 
     /**
      * Initialize the routing worker mechanism.
@@ -278,6 +285,75 @@ public:
      */
     static RoutingWorker* pick_worker();
 
+    /**
+     * Worker local storage
+     */
+
+    /**
+     * Initialize a globally unique data identifier
+     *
+     * @return The data identifier usable for worker local data storage
+     */
+    static uint64_t create_key()
+    {
+        static uint64_t id_generator = 0;
+        return atomic_add_uint64(&id_generator, 1);
+    }
+
+    /**
+     * Set local data
+     *
+     * @param key  Key acquired with create_local_data
+     * @param data Data to store
+     */
+    void set_data(uint64_t key, void* data, void (*callback)(void*))
+    {
+        if (callback)
+        {
+            m_data_deleters[key] = callback;
+        }
+
+        m_local_data[key] = data;
+    }
+
+    /**
+     * Get local data
+     *
+     * @param key Key to use
+     *
+     * @return Data previously stored
+     */
+    void* get_data(uint64_t key)
+    {
+        auto it = m_local_data.find(key);
+        return it != m_local_data.end() ? it->second : NULL;
+    }
+
+    /**
+     * Deletes local data
+     *
+     * If a callback was passed when the data was set, it will be called.
+     *
+     * @param key Key to remove
+     */
+    void delete_data(uint64_t key)
+    {
+        auto data = m_local_data.find(key);
+
+        if (data != m_local_data.end())
+        {
+            auto deleter = m_data_deleters.find(key);
+
+            if (deleter != m_data_deleters.end())
+            {
+                deleter->second(data->second);
+                m_data_deleters.erase(deleter);
+            }
+
+            m_local_data.erase(data);
+        }
+    }
+
 private:
     const int    m_id;       /*< The id of the worker. */
     SessionsById m_sessions; /*< A mapping of session_id->MXS_SESSION. The map
@@ -286,6 +362,8 @@ private:
                               *  it's up to the protocol to decide whether a new
                               *  session is added to the map. */
     Zombies      m_zombies;  /*< DCBs to be deleted. */
+    LocalData    m_local_data; /*< Data local to this worker */
+    DataDeleters m_data_deleters; /*< Delete functions for the local data */
 
     RoutingWorker();
     virtual ~RoutingWorker();
