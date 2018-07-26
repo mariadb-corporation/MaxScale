@@ -20,18 +20,22 @@
 namespace maxbase
 {
 
-#if __cplusplus >= 201103
-typedef std::chrono::steady_clock Clock;
-#else
-typedef std::chrono::system_clock Clock;
-#endif
+using Clock = std::chrono::steady_clock;
 
 struct Duration : public Clock::duration // for ADL
 {
-    // gcc 4.4 does not inherit constructors, so this is a bit limited.
+    using Clock::duration::duration;
     Duration() = default;
-    Duration(long long l) : Clock::duration(l) {}
     Duration(Clock::duration d) : Clock::duration(d) {}
+    Duration(long long l) : Clock::duration(l) {} // FIXME. Get rid of this.
+
+    explicit Duration(double secs) : Duration{rep(secs * period::den / period::num)}
+    {}
+
+    double secs()
+    {
+        return std::chrono::duration<double>(*this).count();
+    }
 };
 
 typedef std::chrono::time_point<Clock, Duration> TimePoint;
