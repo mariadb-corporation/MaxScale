@@ -4,6 +4,9 @@ function(add_template name template)
   set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\",\"${template}\"}," CACHE INTERNAL "")
 endfunction()
 
+# Default test timeout
+set(TIMEOUT 900)
+
 # This functions adds a source file as an executable, links that file against
 # the common test core and creates a test from it. The first parameter is the
 # source file, the second is the name of the executable and the test and the
@@ -26,6 +29,7 @@ function(add_test_executable source name template)
     get_property(prev_labels TEST ${name} PROPERTY LABELS)
     set_property(TEST ${name} PROPERTY LABELS ${label} ${prev_labels})
   endforeach()
+  set_property(TEST ${name} PROPERTY TIMEOUT ${TIMEOUT})
 endfunction()
 
 # Same as add_test_executable, but do not add executable into tests list
@@ -39,6 +43,7 @@ endfunction()
 function(add_test_derived name executable template)
   add_template(${name} ${template})
   add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/${executable} ${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  set_property(TEST ${name} PROPERTY TIMEOUT ${TIMEOUT})
 
   list(REMOVE_AT ARGV 0 1 2)
 
@@ -61,6 +66,7 @@ function(add_test_script name script template labels)
     get_property(prev_labels TEST ${name} PROPERTY LABELS)
     set_property(TEST ${name} PROPERTY LABELS ${label} ${prev_labels})
   endforeach()
+  set_property(TEST ${name} PROPERTY TIMEOUT ${TIMEOUT})
 endfunction()
 
 # Label a list of tests as heavy, long running tests
