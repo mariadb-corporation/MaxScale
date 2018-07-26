@@ -32,6 +32,7 @@
 #include <maxscale/router.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/routingworker.h>
 
 #include "rwsplitsession.hh"
 
@@ -186,12 +187,20 @@ static bool handle_max_slaves(SConfig config, const char *str)
 RWSplit::RWSplit(SERVICE* service, SConfig config):
     mxs::Router<RWSplit, RWSplitSession>(service),
     m_service(service),
-    m_config(config)
+    m_config(config),
+    m_wkey(mxs_rworker_create_key())
 {
+}
+
+static void data_destroy_callback(void* data)
+{
+    SConfig* my_config = static_cast<SConfig*>(data);
+    delete my_config;
 }
 
 RWSplit::~RWSplit()
 {
+    mxs_rworker_delete_data(m_wkey);
 }
 
 SERVICE* RWSplit::service() const
@@ -199,10 +208,50 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
+SConfig* RWSplit::get_local_config() const
+{
+    SConfig* my_config = static_cast<SConfig*>(mxs_rworker_get_data(m_wkey));
+
+    if (my_config == nullptr)
+    {
+        // First time we get the configuration, create and update it
+        my_config = new SConfig;
+        mxs_rworker_set_data(m_wkey, my_config, data_destroy_callback);
+        update_local_config();
+    }
+
+    ss_dassert(my_config);
+    return my_config;
+}
+
+void RWSplit::update_local_config() const
+{
+    SConfig* my_config = get_local_config();
+
+    m_lock.lock();
+    *my_config = m_config;
+    m_lock.unlock();
+}
+
+void RWSplit::update_config(void* data)
+{
+    RWSplit* inst = static_cast<RWSplit*>(data);
+    inst->update_local_config();
+}
+
+void RWSplit::store_config(SConfig config)
+{
+    m_lock.lock();
+    m_config = config;
+    m_lock.unlock();
+
+    // Broadcast to all workers that the configuration has been updated
+    mxs_rworker_broadcast(update_config, this);
+}
+
 SConfig RWSplit::config() const
 {
-    ss_dassert(m_config);
-    return m_config;
+    return *get_local_config();
 }
 
 Stats& RWSplit::stats()
@@ -459,7 +508,7 @@ bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
 
     if (handle_max_slaves(cnf, config_get_string(params, "max_slave_connections")))
     {
-        m_config = std::move(cnf);
+        store_config(std::move(cnf));
         rval = true;
     }
 

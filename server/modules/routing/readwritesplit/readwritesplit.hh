@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <map>
 #include <string>
+#include <mutex>
 
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
@@ -300,9 +301,25 @@ public:
 
     bool configure(MXS_CONFIG_PARAMETER* params);
 private:
-    SERVICE* m_service; /**< Service where the router belongs*/
-    SConfig  m_config;
-    Stats    m_stats;
+
+    // Update configuration
+    void store_config(SConfig config);
+    void update_local_config() const;
+    SConfig* get_local_config() const;
+
+    // Called when worker local data needs to be updated
+    static void update_config(void* data);
+
+    SERVICE*           m_service; /**< Service where the router belongs*/
+    SConfig            m_config;
+    mutable std::mutex m_lock; /**< Protects updates of m_config */
+    Stats              m_stats;
+
+    /** Handle to worker local data for this instance. In theory we could use
+     * the `this` pointer as the key but for the sake of simplicity, a unique
+     * integer is used. This also keeps behavior similar to how the C interface
+     * works. */
+    uint64_t           m_wkey;
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)
