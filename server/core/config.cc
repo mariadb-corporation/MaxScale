@@ -570,6 +570,11 @@ static bool is_maxscale_section(const char* section)
 
 static bool is_root_config_file = true;
 
+static int ini_global_handler(void *userdata, const char *section, const char *name, const char *value)
+{
+    return is_maxscale_section(section) ? handle_global_item(name, value) : 1;
+}
+
 /**
  * Config item handler for the ini file reader
  *
@@ -673,11 +678,7 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
 
     if (is_maxscale_section(section))
     {
-        if (is_root_config_file || is_persisted_config)
-        {
-            return handle_global_item(name, value);
-        }
-        else
+        if (!is_root_config_file && !is_persisted_config)
         {
             MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
             return 0;
@@ -685,6 +686,29 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
     }
 
     return 1;
+}
+
+static void log_config_error(const char* file, int rval)
+{
+    char errorbuffer[1024 + 1];
+
+    if (rval > 0)
+    {
+        snprintf(errorbuffer, sizeof(errorbuffer),
+                 "Failed to parse configuration file %s. Error on line %d.", file, rval);
+    }
+    else if (rval == -1)
+    {
+        snprintf(errorbuffer, sizeof(errorbuffer),
+                 "Failed to parse configuration file %s. Could not open file.", file);
+    }
+    else
+    {
+        snprintf(errorbuffer, sizeof(errorbuffer),
+                 "Failed to parse configuration file %s. Memory allocation failed.", file);
+    }
+
+    MXS_ERROR("%s", errorbuffer);
 }
 
 /**
@@ -710,25 +734,7 @@ static bool config_load_single_file(const char* file,
     {
         if ((rval = ini_parse(file, ini_handler, ccontext)) != 0)
         {
-            char errorbuffer[1024 + 1];
-
-            if (rval > 0)
-            {
-                snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file %s. Error on line %d.", file, rval);
-            }
-            else if (rval == -1)
-            {
-                snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file %s. Could not open file.", file);
-            }
-            else
-            {
-                snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file %s. Memory allocation failed.", file);
-            }
-
-            MXS_ERROR("%s", errorbuffer);
+            log_config_error(file, rval);
         }
     }
 
@@ -1073,6 +1079,18 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
         duplicate_context_finish(&dcontext);
     }
     return rval;
+}
+
+bool config_load_global(const char *filename)
+{
+    int rval;
+
+    if ((rval = ini_parse(filename, ini_global_handler, NULL)) != 0)
+    {
+        log_config_error(filename, rval);
+    }
+
+    return rval == 0;
 }
 
 /**

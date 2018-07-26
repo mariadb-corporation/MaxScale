@@ -1890,6 +1890,12 @@ int main(int argc, char **argv)
         }
     }
 
+    if (!config_load_global(cnf_file_path))
+    {
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
+    }
+
     if (daemon_mode)
     {
         if (!change_cwd())
