@@ -66,7 +66,7 @@ enum select_criteria_t
     LEAST_ROUTER_CONNECTIONS,   /**< connections established by this router */
     LEAST_BEHIND_MASTER,
     LEAST_CURRENT_OPERATIONS,
-    DEFAULT_CRITERIA   = LEAST_CURRENT_OPERATIONS,
+    LOWEST_RESPONSE_TIME,
     LAST_CRITERIA               /**< not used except for an index */
 };
 
@@ -103,6 +103,7 @@ static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
     {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
     {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER},
     {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
+    {"LOWEST_RESPONSE_TIME",    LOWEST_RESPONSE_TIME},
     {NULL}
 };
 
@@ -134,7 +135,9 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
         strncmp(s,"LEAST_ROUTER_CONNECTIONS", strlen("LEAST_ROUTER_CONNECTIONS")) == 0 ?        \
         LEAST_ROUTER_CONNECTIONS : (                                                            \
         strncmp(s,"LEAST_CURRENT_OPERATIONS", strlen("LEAST_CURRENT_OPERATIONS")) == 0 ?        \
-        LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
+        LEAST_CURRENT_OPERATIONS : (                                                            \
+        strncmp(s,"LOWEST_RESPONSE_TIME", strlen("LOWEST_RESPONSE_TIME")) == 0 ?              \
+        LOWEST_RESPONSE_TIME : UNDEFINED_CRITERIA)))))
 
 #define BACKEND_TYPE(b) (server_is_master((b)->backend_server) ? BE_MASTER :    \
         (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
@@ -336,6 +339,9 @@ static inline const char* select_criteria_to_str(select_criteria_t type)
 
     case LEAST_CURRENT_OPERATIONS:
         return "LEAST_CURRENT_OPERATIONS";
+
+    case LOWEST_RESPONSE_TIME:
+        return "LOWEST_RESPONSE_TIME";
 
     default:
         return "UNDEFINED_CRITERIA";

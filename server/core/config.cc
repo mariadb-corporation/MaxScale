@@ -3608,6 +3608,11 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
+        // nantti, TODO. Decide whether to expose some of this in config, or if the values
+        // can be calculated at runtime. The "500" or sample_max affects how often a
+        // session should updates this stat. sample_max should be slightly lower than max sample
+        // rate (which is less than qps due to the noise filter).
+        server->response_time = new (std::nothrow) maxbase::EMAverage(0.04, 0.35, 500);
     }
     else
     {
@@ -4615,7 +4620,7 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
 }
 
 bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_threshold,
-                                     const char* zDisk_space_threshold)
+                                       const char* zDisk_space_threshold)
 {
     mxb_assert(pDisk_space_threshold);
     mxb_assert(zDisk_space_threshold);

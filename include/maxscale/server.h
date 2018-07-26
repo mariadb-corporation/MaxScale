@@ -159,6 +159,9 @@ typedef struct server
                                           *   by rwsplit. TODO: Move to rwsplit */
     bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
+    // TODO, this is a plain ptr to a C++ class. Soonish, when the server is new/deleted
+    // this will become a std::unique ptr. But not in this commit.
+    maxbase::EMAverage* response_time; /**< for calculating average response time */
 } SERVER;
 
 /**
@@ -444,6 +447,17 @@ json_t* server_list_to_json(const char* host);
  */
 bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold);
 
+/**
+ * @brief Add a response average to the server response average.
+ *
+ * @param server      The server.
+ * @param ave         Average.
+ * @param num_samples Number of samples the average consists of.
+ *
+ */
+void server_add_response_average(SERVER *server, double ave, int num_samples);
+
+extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
 extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);
@@ -455,7 +469,8 @@ extern void server_transfer_status(SERVER *dest_server, const SERVER *source_ser
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
 extern size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
-extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id);
+extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol,
+                                  int id);
 extern void server_update_address(SERVER *server, const char *address);
 extern void server_update_port(SERVER *server,  unsigned short port);
 extern uint64_t server_map_status(const char *str);

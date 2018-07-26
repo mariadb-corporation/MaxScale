@@ -28,6 +28,9 @@
 #include <string>
 #include <list>
 #include <mutex>
+#include <sstream>
+
+#include <maxbase/stopwatch.hh>
 
 #include <maxscale/config.h>
 #include <maxscale/service.h>
@@ -228,6 +231,7 @@ void server_free(Server* server)
     }
 
     delete server->disk_space_threshold;
+    delete server->response_time;
     delete server;
 }
 
@@ -551,6 +555,18 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
     dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
+    std::ostringstream ave_os;
+    if (server->response_time->num_samples())
+    {
+        maxbase::Duration dur(server->response_time->average());
+        ave_os << dur;
+    }
+    else
+    {
+        ave_os << "not available";
+    }
+    dcb_printf(dcb, "\tAverage response time:               %s\n", ave_os.str().c_str());
+
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
@@ -1490,4 +1506,11 @@ bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_thre
     }
 
     return rv;
+}
+
+void server_add_response_average(SERVER *server, double ave, int num_samples)
+{
+    spinlock_acquire(&server->lock);
+    server->response_time->add(ave, num_samples);
+    spinlock_release(&server->lock);
 }

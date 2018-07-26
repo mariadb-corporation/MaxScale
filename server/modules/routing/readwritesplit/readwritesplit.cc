@@ -86,14 +86,15 @@ static bool rwsplit_process_router_options(Config& config, char **options)
                 select_criteria_t c = GET_SELECT_CRITERIA(value);
                 mxb_assert(c == LEAST_GLOBAL_CONNECTIONS ||
                            c == LEAST_ROUTER_CONNECTIONS || c == LEAST_BEHIND_MASTER ||
-                           c == LEAST_CURRENT_OPERATIONS || c == UNDEFINED_CRITERIA);
+                           c == LEAST_CURRENT_OPERATIONS || c == LOWEST_RESPONSE_TIME ||
+                           c == UNDEFINED_CRITERIA);
 
                 if (c == UNDEFINED_CRITERIA)
                 {
                     MXS_ERROR("Unknown slave selection criteria \"%s\". "
                               "Allowed values are LEAST_GLOBAL_CONNECTIONS, "
-                              "LEAST_ROUTER_CONNECTIONS, LEAST_BEHIND_MASTER,"
-                              "and LEAST_CURRENT_OPERATIONS.",
+                              "LEAST_ROUTER_CONNECTIONS, LEAST_BEHIND_MASTER, "
+                              "LEAST_CURRENT_OPERATIONS and LOWEST_RESPONSE_TIME.",
                               STRCRITERIA(config.slave_selection_criteria));
                     success = false;
                 }

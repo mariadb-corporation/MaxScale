@@ -62,7 +62,9 @@ void CumulativeAverage::reset()
 }
 
 EMAverage::EMAverage(double min_alpha, double max_alpha, int sample_max) :
-    m_min_alpha{min_alpha}, m_max_alpha{max_alpha}, m_sample_max{sample_max}
+    m_min_alpha{min_alpha},
+    m_max_alpha{max_alpha},
+    m_sample_max{sample_max}
 {
 }
 
