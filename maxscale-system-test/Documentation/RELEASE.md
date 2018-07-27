@@ -98,7 +98,8 @@ maxadmin -pmariadb show services
 
 ssh to `code.mariadb.com` with your LDAP credentials.
 
-Create directories and copy repositories files:
+Create directories and copy repositories files. Replace `x.y.z` with the
+correct version.
 
 ```bash
 cd  /home/mariadb-repos/mariadb-maxscale/
@@ -110,6 +111,18 @@ cd ../x.y.z-debug
 rsync -avz  --progress --delete -e ssh vagrant@max-tst-01.mariadb.com:/home/vagrant/repository/maxscale-x.y.z-debug/mariadb-maxscale/ .
 ```
 
+Once the code has been uploaded, update the symlink for the current major
+release.
+
+```bash
+cd  /home/mariadb-repos/mariadb-maxscale/
+rm x.y
+ln -s x.y.z x.y
+```
+
+If this is the GA release of a new major version, update the `latest` symlink to
+point to `x.y`.
+
 ## 4. Email webops-requests@mariadb.com
 
 Email example:
@@ -117,17 +130,16 @@ Email example:
 Subject: `MaxScale x.y.z release`
 
 ```
-Hello,
+Hi,
 
 Please publish Maxscale x.y.z binaries on web page.
-Repos are on code.mariadb.com /home/mariadb-repos/mariadb-maxscale/x.y.z
 
-symlink 'x.y' should be set to 'x.y.z'
-symlink 'latest' [should|should NOT] be set to 'x.y.z'
+Repos are on code.mariadb.com at /home/mariadb-repos/mariadb-maxscale/x.y.z
 
-Also please make sure that debug binaries are not visible from
-https://mariadb.com/my_portal/download/maxscale
+Br,
+  YOUR NAME HERE
 ```
+
 Replace `x.y.z` with the correct version.
 
 **NOTE** Sometimes - especially at _big_ releases when the exact release
@@ -139,15 +151,18 @@ can be done at the same time.
 
 Once the packages have been made available for download, create
 the final tag
+
+```bash
+git checkout maxscale-x.y.z-ttN
+git tag -a -m "Tag for MaxScale x.y.z" maxscale-x.y.z
+git push origin refs/tags/maxscale-x.y.z
 ```
-$ git checkout maxscale-x.y.z-ttN
-$ git tag -a -m "Tag for MaxScale x.y.z" maxscale-x.y.z
-$ git push origin refs/tags/maxscale-x.y.z
-```
+
 and remove the tentative tag(s)
-```
-$ git tag -d maxscale-x.y.z-ttN
-$ git push origin :refs/tags/maxscale-x.y.z-ttN
+
+```bash
+git tag -d maxscale-x.y.z-ttN
+git push origin :refs/tags/maxscale-x.y.z-ttN
 ```
 
 ## 6. Create the branch
@@ -155,10 +170,11 @@ $ git push origin :refs/tags/maxscale-x.y.z-ttN
 Release `x.y.z` is typically developed in the branch `x.y`.
 Once `x.y.z` has been released, the branch `x.y.z` also needs
 to be created.
-```
-$ git checkout maxscale-x.y.z
-$ git checkout -b x.y.z
-$ git push origin x.y.z
+
+```bash
+git checkout maxscale-x.y.z
+git checkout -b x.y.z
+git push origin x.y.z
 ```
 
 ## 7. Update the release date
@@ -166,12 +182,13 @@ $ git push origin x.y.z
 Once the branch `x.y.z` has been created and the actual release
 date of the release is known, update the release date in the
 release notes.
-```
-$ git checkout x.y.z
-$ # Update release date in .../MaxScale-x.y.z-Release-Notes.md
-$ git add .../MaxScale-x.y.z-Release-Notes.md
-$ git commit -m "Update release date"
-$ git push origin x.y.z
+
+```bash
+git checkout x.y.z
+# Update release date in .../MaxScale-x.y.z-Release-Notes.md
+git add .../MaxScale-x.y.z-Release-Notes.md
+git commit -m "Update release date"
+git push origin x.y.z
 ```
 
 **NOTE** The `maxscale-x.y.z` tag is **not** moved. That is, the
@@ -180,9 +197,10 @@ the tag `maxscale-x.y.z` but _is_ available in the branch marked
 with `x.y.z`.
 
 Merge `x.y.z` to `x.y`.
+
 ```
-$ git checkout x.y
-$ git merge x.y.z
+git checkout x.y
+git merge x.y.z
 ```
 
 At this point, the last commits on branches `x.y` and `x.y.z`
@@ -193,30 +211,30 @@ difference between the branches and the tag `maxscale-x.y.z`.
 
 ## 8. Update documentation
 
-Email webops-requests@mariadb.com with a mail containing the
-following.
+Email webops-requests@mariadb.com with a mail containing the following. Replace
+`x.y.z` with the correct version, also in the links.
+
+Subject: `Please update MaxScale x.y knowledge base`
+
 ```
-subject: Please update MaxScale x.y knowledge base
-body:
----
 Hi,
 
 Please update https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-XY/
 
 from https://github.com/mariadb-corporation/MaxScale/tree/x.y.z/Documentation
 
-using the "new" algorithm that does not honor single line-breaks.
-
 Br,
-  Your Name
+  YOUR NAME HERE
 ```
+
 ## 9. Send release email to mailing list
 
-Email maxscale@googlegroups.com with a mail containing the following.
+Email maxscale@googlegroups.com with a mail containing the following. Replace
+`x.y.z` with the correct version.
+
+Subject: `MariaDB MaxScale x.y.z available for download`
+
 ```
-subject: MariaDB MaxScale x.y.z available for download
-body:
----
 Hi,
 
 We are happy to announce that MariaDB MaxScale x.y.z GA is now available for download. This is a bugfix release.
@@ -226,17 +244,16 @@ The Jira list of fixed issues can be found here(ADD LINK HERE).
 * [MXS-XYZ] BUG FIX DESCRIPTION HERE
 
 Binaries:
-https://mariadb.com/downloads/maxscale
-https://mariadb.com/my_portal/download
+https://mariadb.com/downloads/mariadb-tx/maxscale
 
 Documentation:
-LINK TO KB DOCUMENTATION HERE
+https://mariadb.com/kb/en/mariadb-enterprise/maxscale/
 
 Release notes:
-LINK TO RELEASE NOTES HERE
+KB LINK TO RELEASE NOTES HERE
 
 Source code:
-LINK TO maxscale-x.y.z TAG HERE
+https://github.com/mariadb-corporation/MaxScale/releases/tag/maxscale-x.y.z
 
 Please report any issues on Jira:
 https://jira.mariadb.org/projects/MXS/issues
