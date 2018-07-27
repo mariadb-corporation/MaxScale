@@ -60,7 +60,8 @@
         "box" : "###box###",
         "memory_size" : "2048",
         "product" : {
-                "name": "maxscale"
+                "name" : "maxscale_ci",
+                "version" : "${target}"
         }
 
   }

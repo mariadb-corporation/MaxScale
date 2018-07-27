@@ -43,8 +43,6 @@ done
 touch ${snapshot_lock_file}
 echo $JOB_NAME-$BUILD_NUMBER >> ${snapshot_lock_file}
 
-export repo_dir=$dir/repo.d/
-
 ${mdbci_dir}/mdbci snapshot revert --path-to-nodes $name --snapshot-name $snapshot_name
 
 if [ $? != 0 ]; then
@@ -60,14 +58,11 @@ fi
 
 . ${script_dir}/set_env.sh "$name"
 
-${mdbci_dir}/repository-config/maxscale-ci.sh $target repo.d
-
-
 ${mdbci_dir}/mdbci sudo --command 'yum remove maxscale -y' $name/maxscale
 ${mdbci_dir}/mdbci sudo --command 'yum clean all' $name/maxscale
 
-${mdbci_dir}/mdbci setup_repo --product maxscale $name/maxscale --repo-dir $repo_dir
-${mdbci_dir}/mdbci install_product --product maxscale $name/maxscale --repo-dir $repo_dir
+${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/maxscale
+${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
 
