@@ -147,7 +147,7 @@ public:
      */
     inline bool can_connect() const
     {
-        return !has_failed() && server_is_running(m_backend->server);
+        return !has_failed() && server_is_usable(m_backend->server);
     }
 
     /**

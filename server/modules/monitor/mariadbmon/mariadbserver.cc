@@ -443,6 +443,11 @@ bool MariaDBServer::is_slave() const
     return status_is_slave(m_server_base->pending_status);
 }
 
+bool MariaDBServer::is_usable() const
+{
+    return status_is_usable(m_server_base->pending_status);
+}
+
 bool MariaDBServer::is_running() const
 {
     return status_is_running(m_server_base->pending_status);

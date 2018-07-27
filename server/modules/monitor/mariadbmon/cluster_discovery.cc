@@ -539,7 +539,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
         MariaDBServer* server = *iter;
         if (server->m_node.parents.empty())
         {
-            if (server->is_running() && !server->is_read_only())
+            if (server->is_usable() && !server->is_read_only())
             {
                 master_candidates.push_back(server);
             }
@@ -624,7 +624,7 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
     {
         MariaDBServer* server = *iter;
         ss_dassert(server->m_node.cycle != NodeData::CYCLE_NONE);
-        if (server->is_running() && !server->is_read_only())
+        if (server->is_usable() && !server->is_read_only())
         {
             return server;
         }
@@ -798,7 +798,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
                     // The slave only gets the slave flags if it's running.
                     // TODO: If slaves with broken links should be given different flags, add that here.
                     slave->clear_status(MASTER_BITS);
-                    if (slave->has_status(SERVER_RUNNING))
+                    if (slave->is_running())
                     {
                         slave->set_status(SLAVE_BITS);
                     }

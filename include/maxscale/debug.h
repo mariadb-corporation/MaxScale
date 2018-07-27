@@ -202,9 +202,9 @@ typedef enum skygw_chk_t
                          (server_is_slave(s)   ? "RUNNING SLAVE" :      \
                           (server_is_joined(s)  ? "RUNNING JOINED" :    \
                            (server_is_ndb(s)     ? "RUNNING NDB" :      \
-                            ((!server_is_down(s) && server_is_in_maint(s)) ? "RUNNING MAINTENANCE" : \
+                            ((server_is_running(s) && server_is_in_maint(s)) ? "RUNNING MAINTENANCE" : \
                              (server_is_relay(s) ? "RUNNING RELAY" : \
-                              (server_is_running(s) ? "RUNNING (only)" : \
+                              (server_is_usable(s) ? "RUNNING (only)" : \
                                (server_is_down(s) ? "DOWN" : "UNKNOWN STATUS"))))))))
 
 #define STRTARGET(t)    (t == TARGET_ALL ? "TARGET_ALL" :               \

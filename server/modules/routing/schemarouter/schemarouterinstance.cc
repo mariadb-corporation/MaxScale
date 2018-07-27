@@ -130,7 +130,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
     {
         SERVER_REF* b = (*it)->backend();
 
-        if (server_is_running(b->server))
+        if (server_is_usable(b->server))
         {
             servers_found += 1;
 

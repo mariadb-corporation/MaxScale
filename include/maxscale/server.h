@@ -205,16 +205,32 @@ inline bool server_is_active(const SERVER* server)
     return server->is_active;
 }
 
-inline bool status_is_running(uint64_t status)
+inline bool status_is_usable(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING;
+}
+
+/**
+ * Is the server running and not in maintenance?
+ *
+ * @param server The server
+ * @return True, if server can be used.
+ */
+inline bool server_is_usable(const SERVER* server)
+{
+    return status_is_usable(server->status);
+}
+
+inline bool status_is_running(uint64_t status)
+{
+    return (status & SERVER_RUNNING);
 }
 
 /**
  * Is the server running?
  *
  * @param server The server
- * @return True, if monitor can connect to server.
+ * @return True, if monitor can connect to the server.
  */
 inline bool server_is_running(const SERVER* server)
 {

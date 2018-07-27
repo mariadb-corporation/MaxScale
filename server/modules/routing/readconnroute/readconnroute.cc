@@ -320,7 +320,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         }
 
         /* Check server status bits against bitvalue from router_options */
-        if (ref && server_is_running(ref->server) &&
+        if (ref && server_is_usable(ref->server) &&
             (ref->server->status & client_rses->bitmask & client_rses->bitvalue))
         {
             if (master_host)
@@ -545,7 +545,7 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (server_is_running(router_cli_ses->backend->server) &&
+    if (server_is_usable(router_cli_ses->backend->server) &&
         (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a

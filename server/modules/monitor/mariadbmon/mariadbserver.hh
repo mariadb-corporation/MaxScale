@@ -229,35 +229,42 @@ public:
     bool wait_until_gtid(const GtidList& target, int timeout, json_t** err_out);
 
     /**
-     * Convenience method for SERVER_IS_MASTER
+     * Check if server is a running master.
      *
      * @return True if server is a master
      */
     bool is_master() const;
 
     /**
-     * Convenience method for SERVER_IS_SLAVE
+     * Check if server is a running slave.
      *
      * @return True if server is a slave
      */
     bool is_slave() const;
 
     /**
-     * Convenience method for SERVER_IS_RUNNING
+     * Check if server is running and not in maintenance.
+     *
+     * @return True if server is usable
+     */
+    bool is_usable() const;
+
+    /**
+     * Check if server is running.
      *
      * @return True if server is running
      */
     bool is_running() const;
 
     /**
-     * Convenience method for SERVER_IS_DOWN
+     * Check if server is down.
      *
      * @return True if server is down
      */
     bool is_down() const;
 
     /**
-     * Convenience method for SERVER_IN_MAINT
+     * Check if server is in maintenance.
      */
     bool is_in_maintenance() const;
 

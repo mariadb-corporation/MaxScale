@@ -392,7 +392,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
 bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output)
 {
     bool is_suspect = false;
-    if (rejoin_cand->is_running() && !rejoin_cand->is_master())
+    if (rejoin_cand->is_usable() && !rejoin_cand->is_master())
     {
         // Has no slave connection, yet is not a master.
         if (rejoin_cand->m_slave_status.empty())
@@ -1673,7 +1673,7 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
     // Only set pure slave and standalone servers to maintenance.
     for (MariaDBServer* server : m_servers)
     {
-        if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_running() &&
+        if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_usable() &&
             !server->is_master() && !server->is_relay_master())
         {
             server->set_status(SERVER_MAINT);

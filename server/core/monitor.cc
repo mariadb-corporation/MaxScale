@@ -1715,7 +1715,7 @@ void mon_hangup_failed_servers(MXS_MONITOR *monitor)
     for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr) &&
-            (!(server_is_running(ptr->server)) ||
+            (!(server_is_usable(ptr->server)) ||
              !(server_is_in_cluster(ptr->server))))
         {
             dcb_hangup_foreach(ptr->server);
