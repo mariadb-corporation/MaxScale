@@ -18,7 +18,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sstream>
 
+#include <maxbase/stopwatch.hh>
 #include <maxscale/router.h>
 
 using namespace maxscale;
@@ -179,6 +181,34 @@ static int backend_cmp_current_load(const SRWBackend& a, const SRWBackend& b)
            ((1000 + 1000 * second->server->stats.n_current_ops) / second->weight);
 }
 
+
+/** nantti. TODO. TEMP, this needs to see all eligible servers at the same time.
+ */
+static int backend_cmp_response_time(const SRWBackend& a, const SRWBackend& b)
+{
+    // Minimum average response time for use in selection. Avoids special cases (zero),
+    // and new servers immediately get some traffic.
+    constexpr double min_average = 100.0/1000000000; // 100 nano seconds
+
+    // Invert the response times.
+    double lhs = 1/std::max(min_average, a->backend()->server->response_time->average());
+    double rhs = 1/std::max(min_average, b->backend()->server->response_time->average());
+
+    // Clamp values to a range where the slowest is at least some fraction of the speed of the
+    // fastest. This allows sampling of slaves that have experienced anomalies. Also, if one
+    // slave is really slow compared to another, something is wrong and perhaps we should
+    // log something informational.
+    constexpr int clamp = 20;
+    double fastest = std::max(lhs, rhs);
+    lhs = std::max(lhs, fastest / clamp);
+    rhs = std::max(rhs, fastest / clamp);
+
+    // If random numbers are too slow to generate, an array of, say 500'000
+    // random numbers in the range [0.0, 1.0] could be generated during startup.
+    double r = rand() / static_cast<double>(RAND_MAX);
+    return (r < (lhs / (lhs + rhs))) ? -1 : 1;
+}
+
 /**
  * The order of functions _must_ match with the order the select criteria are
  * listed in select_criteria_t definition in readwritesplit.h
@@ -189,7 +219,8 @@ int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&) =
     backend_cmp_global_conn,
     backend_cmp_router_conn,
     backend_cmp_behind_master,
-    backend_cmp_current_load
+    backend_cmp_current_load,
+    backend_cmp_response_time
 };
 
 /**
@@ -232,6 +263,17 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
             MXS_INFO("replication lag : %d in \t[%s]:%d %s",
                      b->server->rlag, b->server->address,
                      b->server->port, STRSRVSTATUS(b->server));
+            break;
+
+        case LOWEST_RESPONSE_TIME:
+            {
+                maxbase::Duration response_ave(b->server->response_time->average());
+                std::ostringstream os;
+                os << response_ave;
+                MXS_INFO("Average response time : %s from \t[%s]:%d %s",
+                         os.str().c_str(), b->server->address,
+                         b->server->port, STRSRVSTATUS(b->server));
+            }
             break;
 
         default:

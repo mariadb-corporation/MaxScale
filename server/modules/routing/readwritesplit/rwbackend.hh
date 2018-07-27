@@ -12,7 +12,7 @@
  */
  #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include "response_stat.hh"
 
 #include <map>
 #include <memory>
@@ -112,6 +112,8 @@ public:
 
     bool reply_is_complete(GWBUF *buffer);
 
+    // Controlled by the session
+    ResponseStat& response_stat();
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
@@ -120,6 +122,7 @@ private:
     bool             m_opening_cursor; /**< Whether we are opening a cursor */
     uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool             m_local_infile_requested; /**< Whether a LOCAL INFILE was requested */
+    ResponseStat     m_response_stat;
 
     inline bool is_opening_cursor() const
     {

@@ -97,6 +97,18 @@ void RWSplitSession::close()
 {
     close_all_connections(m_backends);
     m_current_query.reset();
+
+    for (auto& backend : m_backends)
+    {
+        const ResponseStat& stat = backend->response_stat();
+        if (stat.is_valid())
+        {
+            server_add_response_average(backend->server(),
+                                        stat.average().secs(), stat.num_samples());
+        }
+        backend->response_stat().reset();
+    }
+
 }
 
 int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
@@ -611,6 +623,16 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         MXS_INFO("Transaction complete");
         m_trx.close();
         m_can_replay_trx = true;
+    }
+
+
+    ResponseStat& stat = backend->response_stat();
+    stat.query_ended();
+    if (stat.is_valid() && stat.sync_time_reached(500)) // nantti, TODO
+    {
+        server_add_response_average(backend->server(),
+                                    stat.average().secs(), stat.num_samples());
+        stat.reset();
     }
 
     if (backend->in_use() && backend->has_session_commands())

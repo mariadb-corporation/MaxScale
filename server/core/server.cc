@@ -29,6 +29,7 @@
 #include <list>
 #include <mutex>
 #include <sstream>
+#include <mutex>
 
 #include <maxbase/stopwatch.hh>
 
@@ -1508,9 +1509,15 @@ bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_thre
     return rv;
 }
 
+namespace
+{
+// Only need to prevent multiple writes, as long as only the average is read where
+// needed (and not in combination with num_samples), which is by design.
+std::mutex add_response_mutex;
+}
+
 void server_add_response_average(SERVER *server, double ave, int num_samples)
 {
-    spinlock_acquire(&server->lock);
+    std::lock_guard<std::mutex> lock(add_response_mutex);
     server->response_time->add(ave, num_samples);
-    spinlock_release(&server->lock);
 }

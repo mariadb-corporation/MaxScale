@@ -230,6 +230,11 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
     return get_reply_state() == REPLY_STATE_DONE;
 }
 
+ResponseStat &RWBackend::response_stat()
+{
+    return m_response_stat;
+}
+
 SRWBackendList RWBackend::from_servers(SERVER_REF* servers)
 {
     SRWBackendList backends;

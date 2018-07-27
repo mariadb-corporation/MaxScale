@@ -294,11 +294,15 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
             {
                 succp = true;
 
-                if (m_config.retry_failed_reads &&
-                    (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE))
+                bool is_sql = command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE;
+                if (is_sql)
                 {
-                    // Only commands that can contain an SQL statement should be stored
-                    store_stmt = true;
+                    target->response_stat().query_started();
+
+                    if (m_config.retry_failed_reads)
+                    {
+                        store_stmt = true;
+                    }
                 }
             }
         }
