@@ -39,4 +39,4 @@ $(<${script_dir}/templates/repository-config/deb.json.template)
 fi
 cd $dir
 
-${mdbci_dir}/mdbci generate-product-repositories --product maxscale_ci
+${mdbci_dir}/mdbci generate-product-repositories --product maxscale_ci --product-version $target
