@@ -51,6 +51,12 @@ public:
      */
     SERVER* get_location(std::string db);
 
+    void add_statement(std::string stmt, SERVER* target);
+
+    SERVER* get_statement(std::string stmt);
+
+    bool remove_statement(std::string stmt);
+
     /**
      * @brief Change the location of a database
      *
@@ -93,6 +99,7 @@ public:
 
 private:
     ServerMap m_map;
+    ServerMap stmt_map;
     time_t    m_last_updated;
 };
 

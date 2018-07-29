@@ -31,6 +31,11 @@ bool Shard::add_location(std::string db, SERVER* target)
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
+void Shard::add_statement(std::string stmt, SERVER* target)
+{
+    stmt_map[stmt] = target;
+}
+
 void Shard::replace_location(std::string db, SERVER* target)
 {
     m_map[db] = target;
@@ -76,6 +81,22 @@ SERVER* Shard::get_location(std::string table)
         }
     }
     return rval;
+}
+
+SERVER* Shard::get_statement(std::string stmt)
+{
+    SERVER* rval = NULL;
+    ServerMap::iterator iter = stmt_map.find(stmt);
+    if(iter != stmt_map.end())
+    {
+        rval = iter->second;
+    }
+    return rval;
+}
+
+bool Shard::remove_statement(std::string stmt)
+{
+    return stmt_map.erase(stmt);
 }
 
 bool Shard::stale(double max_interval) const

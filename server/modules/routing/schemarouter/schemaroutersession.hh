@@ -109,7 +109,7 @@ public:
 
     /**
      *
-     * @param pMessage  The rror message.
+     * @param pMessage  The error message.
      * @param pProblem  The DCB on which the error occurred.
      * @param action    The context.
      * @param pSuccess  On output, if false, the session will be terminated.

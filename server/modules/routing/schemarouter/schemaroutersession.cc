@@ -1408,9 +1408,11 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
 {
     SERVER *rval = NULL;
     bool has_dbs = false; /**If the query targets any database other than the current one*/
+    qc_query_op_t op = QUERY_OP_UNDEFINED;
 
     if (mxs_mysql_get_command(buffer) == MXS_COM_QUERY)
     {
+        op = qc_get_operation(buffer);
         int n_tables = 0;
         char** tables = qc_get_table_names(buffer, &n_tables, true);
 
@@ -1463,6 +1465,55 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
         }
         MXS_FREE(tables);
         MXS_FREE(databases);
+    }
+
+    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    {
+            GWBUF* pStmt = qc_get_preparable_stmt(buffer);
+            int n_tables = 0;
+            char** tables = qc_get_table_names(pStmt, &n_tables, true);
+            char* stmt = qc_get_prepare_name(buffer);
+            for (int i = 0; i < n_tables; i++)
+            {
+                SERVER* target = m_shard.get_location(tables[i]);
+                if (target)
+                {
+
+                    if (rval && target != rval)
+                    {
+                        MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name, target->name);
+                    }
+                    else if (rval == NULL)
+                    {
+                        rval = target;
+                    }
+                }
+                MXS_FREE(tables[i]);
+            }
+
+            if (rval)
+            {
+                m_shard.add_statement(stmt, rval);
+            }
+            MXS_FREE(tables);
+            MXS_FREE(stmt);
+    }
+    else if (op == QUERY_OP_EXECUTE)
+    {
+        char* stmt = qc_get_prepare_name(buffer);
+        rval = m_shard.get_statement(stmt);
+        MXS_FREE(stmt);
+    }
+    else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
+    {
+        char* stmt = qc_get_prepare_name(buffer);
+        if ((rval = m_shard.get_statement(stmt)))
+        {
+            m_shard.remove_statement(stmt);
+        }
+        MXS_FREE(stmt);
     }
 
     if (buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -1557,8 +1608,6 @@ enum route_target get_shard_route_target(uint32_t qtype)
     if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
         qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
         qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE) ||
-        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
         qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
     {
