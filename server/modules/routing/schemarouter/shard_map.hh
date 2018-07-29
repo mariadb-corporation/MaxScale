@@ -25,6 +25,8 @@ using namespace maxscale;
 
 /** This contains the database to server mapping */
 typedef std::unordered_map<std::string, SERVER*> ServerMap;
+typedef std::unordered_map<uint64_t, SERVER*> BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t> PSHandleMap;
 
 class Shard
 {
@@ -52,10 +54,14 @@ public:
     SERVER* get_location(std::string db);
 
     void add_statement(std::string stmt, SERVER* target);
-
+    void add_statement(uint32_t id, SERVER* target);
+    void add_ps_handle(uint32_t id, uint32_t handle);
+    uint32_t get_ps_handle(uint32_t id);
+    bool remove_ps_handle(uint32_t id);
     SERVER* get_statement(std::string stmt);
-
+    SERVER* get_statement(uint32_t id);
     bool remove_statement(std::string stmt);
+    bool remove_statement(uint32_t id);
 
     /**
      * @brief Change the location of a database
@@ -100,6 +106,8 @@ public:
 private:
     ServerMap m_map;
     ServerMap stmt_map;
+    BinaryPSMap m_binary_map;
+    PSHandleMap m_ps_handles;
     time_t    m_last_updated;
 };
 

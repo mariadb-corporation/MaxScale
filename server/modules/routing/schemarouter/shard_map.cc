@@ -36,6 +36,33 @@ void Shard::add_statement(std::string stmt, SERVER* target)
     stmt_map[stmt] = target;
 }
 
+void Shard::add_statement(uint32_t id, SERVER* target)
+{
+    MXS_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name);
+    m_binary_map[id] = target;
+}
+
+void Shard::add_ps_handle(uint32_t id, uint32_t handle)
+{
+    MXS_DEBUG("ID: [%u] HANDLE: [%u]", id, handle);
+    m_ps_handles[id] = handle;
+}
+
+bool Shard::remove_ps_handle(uint32_t id)
+{
+    return m_ps_handles.erase(id);
+}
+
+uint32_t Shard::get_ps_handle(uint32_t id)
+{
+    PSHandleMap::iterator it = m_ps_handles.find(id);
+    if (it != m_ps_handles.end())
+    {
+        return it->second;
+    }
+    return 0;
+}
+
 void Shard::replace_location(std::string db, SERVER* target)
 {
     m_map[db] = target;
@@ -94,9 +121,25 @@ SERVER* Shard::get_statement(std::string stmt)
     return rval;
 }
 
+SERVER* Shard::get_statement(uint32_t id)
+{
+    SERVER* rval = NULL;
+    BinaryPSMap::iterator iter = m_binary_map.find(id);
+    if(iter != m_binary_map.end())
+    {
+        rval = iter->second;
+    }
+    return rval;
+}
+
 bool Shard::remove_statement(std::string stmt)
 {
     return stmt_map.erase(stmt);
+}
+
+bool Shard::remove_statement(uint32_t id)
+{
+    return m_binary_map.erase(id);
 }
 
 bool Shard::stale(double max_interval) const

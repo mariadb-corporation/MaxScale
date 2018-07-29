@@ -147,6 +147,7 @@ private:
     void                 route_queued_query();
     void                 synchronize_shards();
     void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
+    bool                 handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type);
 
     /** Member variables */
     bool                   m_closed;         /**< True if session closed */
