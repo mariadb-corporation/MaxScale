@@ -1190,6 +1190,279 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(CONFIG_
     return {nullptr, nullptr};
 }
 
+CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
+                               CONFIG_CONTEXT* obj, std::string name)
+{
+    CONFIG_CONTEXT* rval = nullptr;
+
+    fix_object_name(name);
+
+    auto equal_name = [&](CONFIG_CONTEXT * c)
+    {
+        std::string s = c->object;
+        fix_object_name(s);
+        return s == name;
+    };
+
+    auto it = std::find_if(objects.begin(), objects.end(), equal_name);
+
+    if (it == objects.end())
+    {
+        MXS_ERROR("Could not find object '%s' that '%s' depends on. "
+                  "Check that the configuration object exists.",
+                  name.c_str(), obj->object);
+    }
+    else
+    {
+        rval = *it;
+    }
+
+    return rval;
+}
+
+std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CONTEXT*>& objects,
+                                                     CONFIG_CONTEXT* obj)
+{
+    std::unordered_set<CONFIG_CONTEXT*> rval;
+    const MXS_MODULE_PARAM* params;
+    const MXS_MODULE* module;
+    std::tie(params, module) = get_module_details(obj);
+
+    // Astyle really hates this style. Could be worked around with --keep-one-line-blocks
+    // but it would keep all one line blocks intact.
+    for (auto&& p :
+         {
+             params, module->parameters
+         })
+    {
+        for (int i = 0; p[i].name; i++)
+        {
+            if (config_get_value(obj->parameters, p[i].name))
+            {
+                if (p[i].type == MXS_MODULE_PARAM_SERVICE ||
+                    p[i].type == MXS_MODULE_PARAM_SERVER)
+                {
+                    std::string v = config_get_string(obj->parameters, p[i].name);
+                    rval.insert(name_to_object(objects, obj, v));
+                }
+            }
+        }
+    }
+
+    std::string type = config_get_string(obj->parameters, CN_TYPE);
+
+    if (type == CN_SERVICE && config_get_value(obj->parameters, CN_FILTERS))
+    {
+        for (std::string name : mxs::strtok(config_get_string(obj->parameters, CN_FILTERS), "|"))
+        {
+            rval.insert(name_to_object(objects, obj, name));
+        }
+    }
+
+    if ((type == CN_MONITOR || type == CN_SERVICE) && config_get_value(obj->parameters, CN_SERVERS))
+    {
+        for (std::string name : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+        {
+            rval.insert(name_to_object(objects, obj, name));
+        }
+    }
+
+    return rval;
+}
+
+namespace
+{
+
+// Represents a node in a graph
+template <class T>
+struct Node
+{
+    static const int NOT_VISITED = 0;
+
+    T value;
+    int index;
+    int lowlink;
+    bool on_stack;
+
+    Node(T value) :
+        value(value),
+        index(NOT_VISITED),
+        lowlink(NOT_VISITED),
+        on_stack(false)
+    {
+    }
+};
+
+template <class T> using Container = std::unordered_map<T, std::unordered_set<T>>;
+template <class T> using Groups = std::vector<std::vector<T>>;
+template <class T> using Graph = std::unordered_multimap<Node<T>*, Node<T>*>;
+
+/**
+ * Calculate strongly connected components (i.e. cycles) of a graph
+ *
+ * @see https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+ *
+ * @param graph An std::unordered_multimap where the keys represent nodes and
+ *              the set of values for that key as the edges from that node
+ *
+ * @return A list of groups where each group is an ordered list of values
+ */
+template <class T>
+Groups<T> get_graph_cycles(Container<T> graph)
+{
+    using namespace std::placeholders;
+
+    std::vector<Node<T>> nodes;
+
+    auto find_node = [&](T target, const Node<T>& n)
+    {
+        return n.value == target;
+    };
+
+    // Iterate over all values and place unique values in the vector.
+    for (auto&& a : graph)
+    {
+        nodes.emplace_back(a.first);
+    }
+
+    Graph<T> node_graph;
+
+    for (auto&& a : graph)
+    {
+        auto first = std::find_if(nodes.begin(), nodes.end(), std::bind(find_node, a.first, _1));
+
+        for (auto&& b : a.second)
+        {
+            auto second = std::find_if(nodes.begin(), nodes.end(), std::bind(find_node, b, _1));
+            node_graph.emplace(&(*first), &(*second));
+        }
+    }
+
+    std::vector<Node<T>*> stack;
+    Groups<T> groups;
+
+    std::function<void (Node<T>*)> visit_node = [&](Node<T>* n)
+    {
+        static int s_index = 1;
+        n->index = s_index++;
+        n->lowlink = n->index;
+        stack.push_back(n);
+        n->on_stack = true;
+        auto range = node_graph.equal_range(n);
+
+        for (auto it = range.first; it != range.second; it++)
+        {
+            Node<T>* s = it->second;
+
+            if (s->index == Node<T>::NOT_VISITED)
+            {
+                visit_node(s);
+                n->lowlink = std::min(n->lowlink, s->lowlink);
+            }
+            else if (s->on_stack)
+            {
+                n->lowlink = std::min(n->lowlink, s->index);
+            }
+        }
+
+        if (n->index == n->lowlink)
+        {
+            // Start a new group
+            groups.emplace_back();
+
+            Node<T>* c;
+
+            do
+            {
+                c = stack.back();
+                stack.pop_back();
+                c->on_stack = false;
+                groups.back().push_back(c->value);
+            }
+            while (c != n);
+        }
+    };
+
+    for (auto n = nodes.begin(); n != nodes.end(); n++)
+    {
+        if (n->index == Node<T>::NOT_VISITED)
+        {
+            visit_node((Node<T>*) & (*n));
+        }
+    }
+
+    return groups;
+}
+
+}
+
+/**
+ * Resolve dependencies in the configuration and validate them
+ *
+ * @param objects List of objects, sorted so that dependencies are constructed first
+ *
+ * @return True if the configuration has bad dependencies
+ */
+bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
+{
+    int errors = 0;
+    std::unordered_map<CONFIG_CONTEXT*, std::unordered_set < CONFIG_CONTEXT*>> g;
+
+    for (auto&& obj : objects)
+    {
+        auto deps = get_dependencies(objects, obj);
+
+        if (deps.count(nullptr))
+        {
+            // a missing reference, reported in get_dependencies
+            errors++;
+        }
+        else
+        {
+            g.insert(std::make_pair(obj, deps));
+        }
+    }
+
+    if (errors == 0)
+    {
+        std::vector<CONFIG_CONTEXT*> result;
+
+        for (auto&& group : get_graph_cycles<CONFIG_CONTEXT*>(g))
+        {
+            if (group.size() > 1)
+            {
+                auto join = [](std::string total, CONFIG_CONTEXT * c)
+                {
+                    return total + " -> " + c->object;
+                };
+
+                std::string first = group[0]->object;
+                std::string str_group = std::accumulate(std::next(group.begin()), group.end(), first, join);
+                str_group += " -> " + first;
+                MXS_ERROR("A circular dependency chain was found in the configuration: %s", str_group.c_str());
+                errors++;
+            }
+            else
+            {
+                ss_dassert(!group.empty());
+                /** Due to the algorithm that was used, the strongly connected
+                 * components are always identified before the nodes that depend
+                 * on them. This means that the result is sorted at the same
+                 * time the circular dependencies are resolved. */
+                result.push_back(group[0]);
+            }
+        }
+
+        // The end result should contain the same set of nodes we started with
+        ss_dassert(std::set<CONFIG_CONTEXT*>(result.begin(), result.end()) ==
+                   std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end()));
+
+        objects = std::move(result);
+    }
+
+    return errors > 0;
+}
+
 /**
  * @brief Process a configuration context and turn it into the set of objects
  *
@@ -1199,9 +1472,22 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(CONFIG_
 static bool
 process_config_context(CONFIG_CONTEXT *context)
 {
-    CONFIG_CONTEXT  *obj;
-    int             error_count = 0;
-    std::set<std::string> monitored_servers;
+    std::vector<CONFIG_CONTEXT*> objects;
+
+    for (CONFIG_CONTEXT* obj = context; obj; obj = obj->next)
+    {
+        if (!is_maxscale_section(obj->object))
+        {
+            objects.push_back(obj);
+        }
+    }
+
+    if (resolve_dependencies(objects))
+    {
+        return false;
+    }
+
+    int error_count = 0;
 
     /**
      * Process the data and create the services and servers defined
