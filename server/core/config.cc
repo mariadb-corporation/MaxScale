@@ -28,9 +28,14 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <ini.h>
+
+#include <fstream>
+#include <functional>
+#include <numeric>
 #include <set>
 #include <string>
-#include <fstream>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <maxscale/adminusers.h>
@@ -1118,6 +1123,73 @@ config_load(const char *filename)
     return rval;
 }
 
+bool valid_object_type(std::string type)
+{
+    std::set<std::string> types{CN_SERVICE, CN_LISTENER, CN_SERVER, CN_MONITOR, CN_FILTER};
+    return types.count(type);
+}
+
+/**
+ * Get the value of a config parameter
+ *
+ * @param params        The linked list of config parameters
+ * @param name          The parameter to return
+ * @return the parameter value or NULL if not found
+ */
+static char* config_get_value(MXS_CONFIG_PARAMETER *params, const char *name)
+{
+    while (params)
+    {
+        if (!strcmp(params->name, name))
+        {
+            return params->value;
+        }
+
+        params = params->next;
+    }
+    return NULL;
+}
+
+const MXS_MODULE* get_module(CONFIG_CONTEXT* obj, const char* param_name, const char* module_type)
+{
+    const char* module = config_get_value(obj->parameters, param_name);
+    return module ? get_module(module, module_type) : NULL;
+}
+
+std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(CONFIG_CONTEXT* obj)
+{
+    std::string type = config_get_string(obj->parameters, CN_TYPE);
+
+    if (type == CN_SERVICE)
+    {
+        const char* name = config_get_string(obj->parameters, CN_ROUTER);
+        return {config_service_params, get_module(name, MODULE_ROUTER)};
+    }
+    else if (type == CN_LISTENER)
+    {
+        const char* name = config_get_string(obj->parameters, CN_PROTOCOL);
+        return {config_listener_params, get_module(name, MODULE_PROTOCOL)};
+    }
+    else if (type == CN_SERVER)
+    {
+        const char* name = config_get_string(obj->parameters, CN_PROTOCOL);
+        return {config_server_params, get_module(name, MODULE_PROTOCOL)};
+    }
+    else if (type == CN_MONITOR)
+    {
+        const char* name = config_get_string(obj->parameters, CN_MODULE);
+        return {config_monitor_params, get_module(name, MODULE_MONITOR)};
+    }
+    else if (type == CN_FILTER)
+    {
+        const char* name = config_get_string(obj->parameters, CN_MODULE);
+        return {config_filter_params, get_module(name, MODULE_FILTER)};
+    }
+
+    ss_dassert(!true);
+    return {nullptr, nullptr};
+}
+
 /**
  * @brief Process a configuration context and turn it into the set of objects
  *
@@ -1135,37 +1207,23 @@ process_config_context(CONFIG_CONTEXT *context)
      * Process the data and create the services and servers defined
      * in the data.
      */
-    obj = context;
-    while (obj)
+    for (CONFIG_CONTEXT* obj : objects)
     {
-        if (is_maxscale_section(obj->object))
-        {
-            obj = obj->next;
-            continue;
-        }
+        std::string type = config_get_string(obj->parameters, CN_TYPE);
+        ss_dassert(!type.empty());
 
-        char *type = config_get_value(obj->parameters, CN_TYPE);
-        if (type)
+        if (type == CN_SERVICE)
         {
-            if (!strcmp(type, CN_SERVICE))
-            {
-                error_count += create_new_service(obj);
-            }
-            else if (!strcmp(type, "server"))
-            {
-                error_count += create_new_server(obj);
-            }
-            else if (!strcmp(type, "filter"))
-            {
-                error_count += create_new_filter(obj);
-            }
+            error_count += create_new_service(obj);
         }
-        else
+        else if (type == CN_SERVER)
         {
-            MXS_ERROR("Configuration object '%s' has no type.", obj->object);
-            error_count++;
+            error_count += create_new_server(obj);
         }
-        obj = obj->next;
+        else if (type == CN_FILTER)
+        {
+            error_count += create_new_filter(obj);
+        }
     }
 
     if (error_count == 0)
@@ -1175,52 +1233,28 @@ process_config_context(CONFIG_CONTEXT *context)
          * servers and filters to the services. Monitors are also created at this point
          * because they require a set of servers to monitor.
          */
-        obj = context;
-        while (obj)
-        {
-            if (is_maxscale_section(obj->object))
-            {
-                obj = obj->next;
-                continue;
-            }
 
-            char *type = config_get_value(obj->parameters, CN_TYPE);
-            if (type)
+        std::set<std::string> monitored_servers;
+
+        for (CONFIG_CONTEXT* obj : objects)
+        {
+            std::string type = config_get_string(obj->parameters, CN_TYPE);
+            ss_dassert(!type.empty());
+
+            if (type == CN_SERVICE)
             {
-                if (!strcmp(type, CN_SERVICE))
-                {
-                    error_count += configure_new_service(obj);
-                }
-                else if (!strcmp(type, CN_LISTENER))
-                {
-                    error_count += create_new_listener(obj);
-                }
-                else if (!strcmp(type, CN_MONITOR))
-                {
-                    error_count += create_new_monitor(obj, monitored_servers);
-                }
-                else if (strcmp(type, CN_SERVER) != 0 && strcmp(type, CN_FILTER) != 0)
-                {
-                    MXS_ERROR("Configuration object '%s' has an invalid type specified.",
-                              obj->object);
-                    error_count++;
-                }
+                error_count += configure_new_service(obj);
             }
-            obj = obj->next;
+            else if (type == CN_LISTENER)
+            {
+                error_count += create_new_listener(obj);
+            }
+            else if (type == CN_MONITOR)
+            {
+                error_count += create_new_monitor(obj, monitored_servers);
+            }
         }
     }
-    /** TODO: consistency check function */
-
-    /**
-     * error_count += consistency_checks();
-     */
-
-#ifdef REQUIRE_LISTENERS
-    if (!service_all_services_have_listeners())
-    {
-        error_count++;
-    }
-#endif
 
     if (error_count)
     {
@@ -1229,28 +1263,6 @@ process_config_context(CONFIG_CONTEXT *context)
     }
 
     return error_count == 0;
-}
-
-/**
- * Get the value of a config parameter
- *
- * @param params        The linked list of config parameters
- * @param name          The parameter to return
- * @return the parameter value or NULL if not found
- */
-static char *
-config_get_value(MXS_CONFIG_PARAMETER *params, const char *name)
-{
-    while (params)
-    {
-        if (!strcmp(params->name, name))
-        {
-            return params->value;
-        }
-
-        params = params->next;
-    }
-    return NULL;
 }
 
 // DEPRECATE: In 2.1 complain but accept if "passwd" is provided, in 2.2
@@ -2489,51 +2501,21 @@ check_config_objects(CONFIG_CONTEXT *context)
             continue;
         }
 
-        const MXS_MODULE_PARAM* param_set = NULL;
-        const char *module = NULL;
-        const char *module_type = NULL;
-        const char *type = config_get_string(obj->parameters, CN_TYPE);
+        std::string type = config_get_string(obj->parameters, CN_TYPE);
 
-        if (!strcmp(type, CN_SERVICE))
+        if (!valid_object_type(type))
         {
-            param_set = config_service_params;
-            module = config_get_value(obj->parameters, CN_ROUTER);
-            module_type = MODULE_ROUTER;
-        }
-        else if (!strcmp(type, CN_LISTENER))
-        {
-            param_set = config_listener_params;
-            module = config_get_value(obj->parameters, CN_PROTOCOL);
-            module_type = MODULE_PROTOCOL;
-        }
-        else if (!strcmp(type, CN_SERVER))
-        {
-            param_set = config_server_params;
-            module = config_get_value(obj->parameters, CN_PROTOCOL);
-            module_type = MODULE_PROTOCOL;
-        }
-        else if (!strcmp(type, CN_MONITOR))
-        {
-            param_set = config_monitor_params;
-            module = config_get_value(obj->parameters, CN_MODULE);
-            module_type = MODULE_MONITOR;
-        }
-        else if (!strcmp(type, CN_FILTER))
-        {
-            param_set = config_filter_params;
-            module = config_get_value(obj->parameters, CN_MODULE);
-            module_type = MODULE_FILTER;
-        }
-        else
-        {
-            MXS_ERROR("Unknown module type for object '%s': %s", obj->object, type);
+            MXS_ERROR("Unknown module type for object '%s': %s", obj->object, type.c_str());
             rval = false;
             continue;
         }
 
+        const MXS_MODULE_PARAM* param_set = nullptr;
+        const MXS_MODULE *mod = nullptr;
+        std::tie(param_set, mod) = get_module_details(obj);
+
         ss_dassert(param_set);
         std::vector<std::string> to_be_removed;
-        const MXS_MODULE *mod = module ? get_module(module, module_type) : NULL;
 
         for (MXS_CONFIG_PARAMETER *params = obj->parameters; params; params = params->next)
         {
@@ -2551,10 +2533,10 @@ check_config_objects(CONFIG_CONTEXT *context)
             {
                 // Server's "need" to ignore any unknown parameters as they could
                 // be used as weighting parameters
-                if (strcmp(type, CN_SERVER) != 0)
+                if (type != CN_SERVER)
                 {
                     MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'",
-                              params->name, obj->object, type);
+                              params->name, obj->object, type.c_str());
                     rval = false;
                 }
                 continue;
@@ -2580,7 +2562,7 @@ check_config_objects(CONFIG_CONTEXT *context)
             {
                 MXS_ERROR("Invalid value for parameter '%s' for object '%s' "
                           "of type '%s': %s (was expecting %s)",
-                          params->name, params->value, obj->object, type,
+                          params->name, params->value, obj->object, type.c_str(),
                           param_type_to_str(fix_params, params->name));
                 rval = false;
             }
