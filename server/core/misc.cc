@@ -50,3 +50,15 @@ int maxscale_shutdown()
 
     return n + 1;
 }
+
+static bool teardown_in_progress = false;
+
+bool maxscale_teardown_in_progress()
+{
+    return teardown_in_progress;
+}
+
+void maxscale_start_teardown()
+{
+    teardown_in_progress = true;
+}

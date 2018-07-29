@@ -2205,6 +2205,8 @@ int main(int argc, char **argv)
 
     MXS_NOTICE("All workers have shut down.");
 
+    maxscale_start_teardown();
+
     /*<
      * Destroy the router and filter instances of all services.
      */

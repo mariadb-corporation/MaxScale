@@ -35,4 +35,8 @@ int maxscale_shutdown(void);
  */
 void maxscale_reset_starttime(void);
 
+// Helper functions for debug assertions
+bool maxscale_teardown_in_progress();
+void maxscale_start_teardown();
+
 MXS_END_DECLS

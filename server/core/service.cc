@@ -60,6 +60,7 @@
 #include "internal/modules.h"
 #include "internal/service.hh"
 #include "internal/routingworker.hh"
+#include "internal/maxscale.h"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined(UINT64_MAX)
@@ -197,7 +198,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 void service_free(Service* service)
 {
     ss_dassert(atomic_load_int(&service->client_count) == 0);
-    ss_dassert(!service->active);
+    ss_dassert(!service->active || maxscale_teardown_in_progress());
 
     spinlock_acquire(&service_spin);
     auto it = std::remove(allServices.begin(), allServices.end(), service);
@@ -208,11 +209,11 @@ void service_free(Service* service)
     {
         auto tmp = service->ports;
         service->ports = service->ports->next;
-        ss_dassert(!tmp->active);
+        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
         listener_free(tmp);
     }
 
-    if (service->router && service->router_instance)
+    if (service->router && service->router_instance && service->router->destroyInstance)
     {
         service->router->destroyInstance(service->router_instance);
     }
@@ -220,7 +221,7 @@ void service_free(Service* service)
     while (service->dbref)
     {
         SERVER_REF* tmp = service->dbref;
-        ss_dassert(!tmp->active);
+        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
         service->dbref = service->dbref->next;
         MXS_FREE(tmp);
     }
@@ -242,7 +243,7 @@ void service_destroy(Service* service)
 #endif
 
     ss_dassert(service->active);
-   atomic_store_int(&service->active, false);
+    atomic_store_int(&service->active, false);
 
     char filename[PATH_MAX + 1];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
@@ -1711,14 +1712,13 @@ void service_shutdown()
 
 void service_destroy_instances(void)
 {
-    spinlock_acquire(&service_spin);
+    // The global list is modified by service_free so we need a copy of it
+    std::vector<Service*> my_services = allServices;
 
-    for (Service* s: allServices)
+    for (Service* s: my_services)
     {
-        service_destroy(s);
+        service_free(s);
     }
-
-    spinlock_release(&service_spin);
 }
 
 /**
