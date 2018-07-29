@@ -41,7 +41,7 @@
 #include <maxscale/json_api.h>
 #include <mysqld_error.h>
 
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/externcmd.h"
 #include "internal/monitor.h"
 #include "internal/modules.h"
@@ -144,7 +144,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PAR
 
     for (auto&& s: mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
-        fix_object_name(&s[0]);
+        fix_object_name(s);
         monitor_add_server(mon, server_find_by_unique_name(s.c_str()));
     }
 

@@ -50,7 +50,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>
 
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/event.hh"
 #include "internal/filter.hh"
 #include "internal/modules.h"
@@ -548,6 +548,14 @@ void fix_object_name(char *name)
     squeeze_whitespace(name);
     trim(name);
     replace_whitespace(name);
+}
+
+void fix_object_name(std::string& name)
+{
+    char buf[name.size() + 1];
+    strcpy(buf, name.c_str());
+    fix_object_name(buf);
+    name.assign(buf);
 }
 
 static bool is_empty_string(const char* str)
@@ -3206,9 +3214,9 @@ int configure_new_service(CONFIG_CONTEXT *obj)
     Service *service = static_cast<Service*>(obj->element);
     ss_dassert(service);
 
-    for (auto&& a: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+    for (auto&& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
-        fix_object_name(&a[0]);
+        fix_object_name(a);
 
         if (SERVER* s = server_find_by_unique_name(a.c_str()))
         {
@@ -3246,9 +3254,9 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
     bool err = false;
 
     // TODO: Use server list parameter type for this
-    for (auto&& s: mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+    for (auto&& s : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
-        fix_object_name(&s[0]);
+        fix_object_name(s);
         SERVER* server = server_find_by_unique_name(s.c_str());
 
         if (!server)

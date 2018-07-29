@@ -44,7 +44,7 @@
 #include "internal/monitor.h"
 #include "internal/poll.h"
 #include "internal/routingworker.hh"
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/service.hh"
 
 

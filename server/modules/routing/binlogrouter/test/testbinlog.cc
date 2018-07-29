@@ -42,7 +42,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.hh>
 #include "../../../../core/internal/modules.h"
-#include "../../../../core/internal/config.h"
+#include "../../../../core/internal/config.hh"
 
 #include <maxscale/protocol/mysql.h>
 #include <ini.h>

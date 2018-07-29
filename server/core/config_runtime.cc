@@ -34,7 +34,7 @@
 #include <maxscale/users.h>
 #include <maxscale/router.h>
 
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/monitor.h"
 #include "internal/modules.h"
 #include "internal/filter.hh"

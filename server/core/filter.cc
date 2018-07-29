@@ -37,7 +37,7 @@
 #include <maxscale/json_api.h>
 #include <algorithm>
 
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/modules.h"
 #include "internal/service.hh"
 

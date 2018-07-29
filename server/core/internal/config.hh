@@ -21,8 +21,6 @@
 #include <maxscale/ssl.h>
 #include <maxscale/jansson.h>
 
-MXS_BEGIN_DECLS
-
 #define DEFAULT_NBPOLLS             3    /**< Default number of non block polls before we block */
 #define DEFAULT_POLLSLEEP           1000 /**< Default poll wait time (milliseconds) */
 #define DEFAULT_NTHREADS            1    /**< Default number of polling threads */
@@ -182,6 +180,7 @@ void config_add_module_params_json(const MXS_MODULE* mod,
  * @param name Object name to fix
  */
 void fix_object_name(char *name);
+void fix_object_name(std::string& name);
 
 /**
  * @brief Serialize global options
@@ -200,5 +199,3 @@ bool config_global_serialize();
 bool export_config_file(const char* filename);
 
 bool is_normal_server_parameter(const char *param);
-
-MXS_END_DECLS

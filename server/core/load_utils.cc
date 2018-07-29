@@ -41,7 +41,7 @@
 #include <maxscale/query_classifier.h>
 
 #include "internal/modules.h"
-#include "internal/config.h"
+#include "internal/config.hh"
 
 namespace
 {

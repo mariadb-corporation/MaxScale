@@ -55,7 +55,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/routingworker.h>
 
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/service.hh"
@@ -1243,7 +1243,7 @@ bool service_set_filters(Service* service, const char* filters)
 
     for (auto&& f: mxs::strtok(filters, "|"))
     {
-        fix_object_name(&f[0]);
+        fix_object_name(f);
 
         if (FilterDef* def = filter_find(f.c_str()))
         {

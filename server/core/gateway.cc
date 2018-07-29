@@ -56,7 +56,7 @@
 #include <maxscale/random_jkiss.h>
 
 #include "internal/admin.hh"
-#include "internal/config.h"
+#include "internal/config.hh"
 #include "internal/maxscale.h"
 #include "internal/modules.h"
 #include "internal/monitor.h"
