@@ -28,12 +28,13 @@ public:
     int    num_samples() const;
     void   reset();
     CumulativeAverage& operator+=(const CumulativeAverage& rhs);
-    CumulativeAverage operator+(const CumulativeAverage& rhs) const;
 private:
     double m_ave = 0;
     int    m_num_samples = 0;
     int    m_num_last_added = 0;
 };
+
+CumulativeAverage operator+(const CumulativeAverage& rhs, const CumulativeAverage& lhs);
 
 /** Exponential Moving Average. */
 class EMAverage
@@ -54,9 +55,9 @@ public:
 private:
     const double  m_min_alpha;
     const double  m_max_alpha;
-    int     m_sample_max;
-    int     m_num_samples = 0;
-    double  m_ave = 0;
+    int           m_sample_max;
+    int           m_num_samples = 0;
+    double        m_ave = 0;
 };
 
 } // maxbase

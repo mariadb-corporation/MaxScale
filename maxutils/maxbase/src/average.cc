@@ -43,15 +43,15 @@ int CumulativeAverage::num_samples() const
     return m_num_samples;
 }
 
-CumulativeAverage &CumulativeAverage::operator+=(const CumulativeAverage &rhs)
+CumulativeAverage &CumulativeAverage::operator+=(const CumulativeAverage& rhs)
 {
     this->add(rhs.m_ave, rhs.m_num_samples);
     return *this;
 }
 
-CumulativeAverage CumulativeAverage::operator+(const CumulativeAverage &rhs) const
+CumulativeAverage operator+(const CumulativeAverage& lhs, const CumulativeAverage& rhs)
 {
-    return CumulativeAverage(*this) += rhs;
+    return CumulativeAverage(lhs) += rhs;
 }
 
 void CumulativeAverage::reset()
@@ -84,7 +84,7 @@ void EMAverage::add(double ave, int num_samples)
     }
 }
 
-void EMAverage::add(const CumulativeAverage &ca)
+void EMAverage::add(const CumulativeAverage& ca)
 {
     add(ca.average(), ca.num_samples());
 }
