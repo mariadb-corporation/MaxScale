@@ -430,6 +430,7 @@ qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
 
     int32_t result = QC_QUERY_INVALID;
 
+    QCInfoCacheScope scope(query);
     this_unit.classifier->qc_parse(query, collect, &result);
 
     return (qc_parse_result_t)result;
