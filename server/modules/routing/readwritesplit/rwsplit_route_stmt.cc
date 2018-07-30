@@ -38,47 +38,6 @@ using namespace maxscale;
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
 
-/**
- * Find out which of the two backend servers has smaller value for select
- * criteria property.
- *
- * @param cand  previously selected candidate
- * @param new   challenger
- * @param sc    select criteria
- *
- * @return pointer to backend reference of that backend server which has smaller
- * value in selection criteria. If either reference pointer is NULL then the
- * other reference pointer value is returned.
- */
-static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t sc)
-{
-    int (*p)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[sc];
-
-    if (!a)
-    {
-        return b;
-    }
-    else if (!b)
-    {
-        return a;
-    }
-
-    // Prefer servers that are not busy executing session commands
-    bool a_busy = a->in_use() && a->has_session_commands();
-    bool b_busy = b->in_use() && b->has_session_commands();
-
-    if (a_busy && !b_busy)
-    {
-        return b;
-    }
-    else if (!a_busy && b_busy)
-    {
-        return a;
-    }
-
-    return p(a, b) <= 0 ? a : b;
-}
-
 void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 {
     mxb_assert(target);
@@ -582,45 +541,36 @@ SRWBackend RWSplitSession::get_hinted_backend(char *name)
 
 SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
 {
-    SRWBackend rval;
+    // create a list of useable backends (includes masters, function name is a bit off),
+    // then feed that list to compare.
+    BackendSPtrVec candidates;
     auto counts = get_slave_counts(m_backends, m_current_master);
 
-    for (auto it = m_backends.begin(); it != m_backends.end(); it++)
+    for (auto& backend : m_backends)
     {
-        auto& backend = *it;
+        bool can_take_slave_into_use = backend->is_slave()
+                                       && !backend->in_use()
+                                       && can_recover_servers()
+                                       && backend->can_connect()
+                                       && counts.second < m_router->max_slave_count();
 
-        if ((backend->is_master() || backend->is_slave()) && // Either a master or a slave
-            rpl_lag_is_ok(backend, max_rlag)) // Not lagging too much
+        bool master_or_slave = backend->is_master() || backend->is_slave();
+        bool is_useable      = backend->in_use() || can_take_slave_into_use;
+        bool not_a_slacker   = rpl_lag_is_ok(backend, max_rlag);
+
+        bool server_is_candidate = master_or_slave && is_useable && not_a_slacker;
+
+        if (server_is_candidate)
         {
-            if (backend->in_use() || (can_recover_servers() && backend->can_connect()))
-            {
-                if (!rval)
-                {
-                    // No previous candidate, accept any valid server (includes master)
-                    if ((backend->is_master() && backend == m_current_master) ||
-                        backend->is_slave())
-                    {
-                        rval = backend;
-                    }
-                }
-                else if (backend->in_use() || counts.second < m_router->max_slave_count())
-                {
-                    if (!m_config.master_accept_reads && rval->is_master())
-                    {
-                        // Pick slaves over masters with master_accept_reads=false
-                        rval = backend;
-                    }
-                    else
-                    {
-                        // Compare the two servers and pick the best one
-                        rval = compare_backends(rval, backend, m_config.slave_selection_criteria);
-                    }
-                }
-            }
+            candidates.push_back(&backend);
         }
     }
 
-    return rval;
+    BackendSPtrVec::const_iterator rval = find_best_backend(candidates,
+                                  m_config.slave_selection_criteria,
+                                  m_config.master_accept_reads);
+
+    return (rval == candidates.end()) ? SRWBackend() : **rval;
 }
 
 SRWBackend RWSplitSession::get_master_backend()

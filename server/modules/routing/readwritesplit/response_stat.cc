@@ -49,7 +49,7 @@ void ResponseStat::query_ended()
 
     if (++m_sample_count == m_num_filter_samples)
     {
-        std::sort(begin(m_samples), end(m_samples));
+        std::sort(m_samples.begin(), m_samples.end());
         maxbase::Duration new_sample = m_samples[m_num_filter_samples / 2];
         m_average.add(std::chrono::duration<double>(new_sample).count());
         m_sample_count = 0;

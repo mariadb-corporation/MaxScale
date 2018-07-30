@@ -45,48 +45,6 @@ static bool valid_for_slave(const SRWBackend& backend, const SRWBackend& master)
            (!master || backend != master);
 }
 
-/**
- * @brief Find the best slave candidate
- *
- * This function iterates through @c backend and tries to find the best backend
- * reference that is not in use. @c cmpfun will be called to compare the backends.
- *
- * @param rses   Router client session
- * @param master The master server
- * @param cmpfun qsort() compatible comparison function
- *
- * @return The best slave backend reference or NULL if no candidates could be found
- */
-static SRWBackend get_slave_candidate(const SRWBackendList& backends, const SRWBackend& master,
-                                      int (*cmpfun)(const SRWBackend&, const SRWBackend&))
-{
-    SRWBackend candidate;
-
-    for (SRWBackendList::const_iterator it = backends.begin();
-         it != backends.end(); it++)
-    {
-        const SRWBackend& backend = *it;
-
-        if (!backend->in_use() && backend->can_connect() &&
-            valid_for_slave(backend, master))
-        {
-            if (candidate)
-            {
-                if (cmpfun(candidate, backend) > 0)
-                {
-                    candidate = backend;
-                }
-            }
-            else
-            {
-                candidate = backend;
-            }
-        }
-    }
-
-    return candidate;
-}
-
 /** Compare number of connections from this router in backend servers */
 static int backend_cmp_router_conn(const SRWBackend& a, const SRWBackend& b)
 {
@@ -223,6 +181,104 @@ int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&) =
     backend_cmp_response_time
 };
 
+// This is still the current compare method. The response-time compare, along with anything
+// using weights, have to change to use the whole array at once to be correct. Id est, everything
+// will change to use the whole array in the next iteration.
+static BackendSPtrVec::const_iterator run_comparison(const BackendSPtrVec& candidates,
+                                                     select_criteria_t sc)
+{
+    if (candidates.empty()) return candidates.end();
+
+    auto best = candidates.begin();
+
+    for (auto rival = std::next(best);
+         rival != candidates.end();
+         rival = std::next(rival))
+    {
+        if (criteria_cmpfun[sc](**best, **rival) > 0)
+        {
+            best = rival;
+        }
+    }
+
+    return best;
+}
+
+/**
+ * @brief Find the best slave candidate for a new connection.
+ *
+ * @param bends  backends
+ * @param master the master server
+ * @param sc     which select_criteria_t to use
+ *
+ * @return The best slave backend reference or null if no candidates could be found
+ */
+static SRWBackend get_slave_candidate(const SRWBackendList& bends,
+                                      const SRWBackend& master,
+                                      select_criteria_t sc)
+{
+    // TODO, nantti, see if this and get_slave_backend can be combined to a single function
+    BackendSPtrVec backends;
+    for (auto& b : bends)  // match intefaces. TODO, should go away in the future.
+    {
+        backends.push_back(const_cast<SRWBackend*>(&b));
+    }
+    BackendSPtrVec candidates;
+
+    for (auto& backend : backends)
+    {
+        if (!(*backend)->in_use()
+            && (*backend)->can_connect()
+            && valid_for_slave(*backend, master))
+        {
+            candidates.push_back(backend);
+        }
+    }
+
+    return !candidates.empty() ? **run_comparison(candidates, sc) : SRWBackend();
+
+}
+
+BackendSPtrVec::const_iterator find_best_backend(const BackendSPtrVec& backends,
+                                                 select_criteria_t sc,
+                                                 bool masters_accept_reads)
+{
+    // Divide backends to priorities. The set of highest priority backends will then compete.
+    std::map<int, BackendSPtrVec> priority_map;;
+    int best_priority {INT_MAX}; // low numbers are high priority
+
+    for (auto& pSBackend : backends)
+    {
+        auto& backend   = **pSBackend;
+        bool is_busy    = backend.in_use() && backend.has_session_commands();
+        bool acts_slave = backend.is_slave() || (backend.is_master() && masters_accept_reads);
+
+        int priority;
+        if (acts_slave)
+        {
+            if (!is_busy)
+            {
+                priority = 1;  // highest priority, idle servers
+            }
+            else
+            {
+                priority = 13; // lowest priority, busy servers
+            }
+        }
+        else
+        {
+            priority = 2;  // idle masters with masters_accept_reads==false
+        }
+
+        priority_map[priority].push_back(pSBackend);
+        best_priority = std::min(best_priority, priority);
+    }
+
+    auto best = run_comparison(priority_map[best_priority], sc);
+
+    return std::find(backends.begin(), backends.end(), *best);
+}
+
 /**
  * @brief Log server connections
  *
@@ -351,10 +407,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
         return false;
     }
 
-    /** Check slave selection criteria and set compare function */
-    select_criteria_t select_criteria = cnf.slave_selection_criteria;
-    auto cmpfun = criteria_cmpfun[select_criteria];
-    mxb_assert(cmpfun);
+    auto select_criteria = cnf.slave_selection_criteria;
 
     if (mxs_log_is_priority_enabled(LOG_INFO))
     {
@@ -389,9 +442,9 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     if (slaves_connected < max_nslaves)
     {
         /** Connect to all possible slaves */
-        for (SRWBackend backend(get_slave_candidate(backends, master, cmpfun));
+        for (SRWBackend backend(get_slave_candidate(backends, master, select_criteria));
              backend && slaves_connected < max_nslaves;
-             backend = get_slave_candidate(backends, master, cmpfun))
+             backend = get_slave_candidate(backends, master, select_criteria))
         {
             if (backend->can_connect() && backend->connect(session, sescmd_list))
             {

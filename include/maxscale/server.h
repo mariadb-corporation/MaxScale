@@ -20,6 +20,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/jansson.h>
+#include <maxbase/average.hh>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 
@@ -30,7 +31,7 @@ MXS_BEGIN_DECLS
 #define MAX_SERVER_MONPW_LEN   1024
 #define MAX_SERVER_VERSION_LEN 256
 
-#define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
+#define MAX_NUM_SLAVES 128      /**< Maximum number of slaves under a single server*/
 
 /**
  * Server configuration parameters names
@@ -58,10 +59,10 @@ const int MXS_RLAG_UNDEFINED = -1;
  */
 typedef struct server_params
 {
-    char *name;                 /**< Parameter name */
-    char *value;                /**< Parameter value */
-    bool active;                /**< Whether the parameter is valid */
-    struct server_params *next; /**< Next Paramter in the linked list */
+    char*                 name;     /**< Parameter name */
+    char*                 value;    /**< Parameter value */
+    bool                  active;   /**< Whether the parameter is valid */
+    struct server_params* next;     /**< Next Paramter in the linked list */
 } SERVER_PARAM;
 
 /**
@@ -69,13 +70,13 @@ typedef struct server_params
  */
 typedef struct
 {
-    int n_connections;    /**< Number of connections */
-    int n_current;        /**< Current connections */
-    int n_current_ops;    /**< Current active operations */
-    int n_persistent;     /**< Current persistent pool */
-    uint64_t n_new_conn;  /**< Times the current pool was empty */
-    uint64_t n_from_pool; /**< Times when a connection was available from the pool */
-    uint64_t packets;     /**< Number of packets routed to this server */
+    int      n_connections; /**< Number of connections */
+    int      n_current;     /**< Current connections */
+    int      n_current_ops; /**< Current active operations */
+    int      n_persistent;  /**< Current persistent pool */
+    uint64_t n_new_conn;    /**< Times the current pool was empty */
+    uint64_t n_from_pool;   /**< Times when a connection was available from the pool */
+    uint64_t packets;       /**< Number of packets routed to this server */
 } SERVER_STATS;
 
 /**
@@ -119,49 +120,55 @@ static uint64_t server_encode_version(const SERVER_VERSION* server_version)
 typedef struct server
 {
     // Base settings
-    char           *name;          /**< Server config name */
+    char*          name;                            /**< Server config name */
     char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
-    unsigned short port;           /**< Server port */
-    char           *protocol;      /**< Backend protocol module name */
-    char           *authenticator; /**< Authenticator module name */
+    unsigned short port;                            /**< Server port */
+    char*          protocol;                        /**< Backend protocol module name */
+    char*          authenticator;                   /**< Authenticator module name */
     // Other settings
-    char           monuser[MAX_SERVER_MONUSER_LEN]; /**< Monitor username, overrides monitor setting */
-    char           monpw[MAX_SERVER_MONPW_LEN]; /**< Monitor password, overrides monitor setting  */
-    long           persistpoolmax; /**< Maximum size of persistent connections pool */
-    long           persistmaxtime; /**< Maximum number of seconds connection can live */
-    bool           proxy_protocol; /**< Send proxy-protocol header to backends when connecting
-                                    *   routing sessions. */
-    SERVER_PARAM   *parameters;    /**< Additional custom parameters which may affect routing decisions. */
+    char monuser[MAX_SERVER_MONUSER_LEN];   /**< Monitor username, overrides monitor setting */
+    char monpw[MAX_SERVER_MONPW_LEN];       /**< Monitor password, overrides monitor setting  */
+    long persistpoolmax;                    /**< Maximum size of persistent connections pool */
+    long persistmaxtime;                    /**< Maximum number of seconds connection can live */
+    bool proxy_protocol;                    /**< Send proxy-protocol header to backends when connecting
+                                             *   routing sessions. */
+    SERVER_PARAM* parameters;               /**< Additional custom parameters which may affect routing
+                                             * decisions. */
     // Base variables
-    SPINLOCK       lock;           /**< Access lock. Required when modifying server status or settings. */
-    bool           is_active;      /**< Server is active and has not been "destroyed" */
-    void           *auth_instance; /**< Authenticator instance data */
-    SSL_LISTENER   *server_ssl;    /**< SSL data */
-    DCB            **persistent;   /**< List of unused persistent connections to the server */
-    uint8_t        charset;        /**< Server character set. Read from backend and sent to client. */
+    SPINLOCK      lock;         /**< Access lock. Required when modifying server status or settings. */
+    bool          is_active;    /**< Server is active and has not been "destroyed" */
+    void*         auth_instance;/**< Authenticator instance data */
+    SSL_LISTENER* server_ssl;   /**< SSL data */
+    DCB**         persistent;   /**< List of unused persistent connections to the server */
+    uint8_t       charset;      /**< Server character set. Read from backend and sent to client. */
     // Statistics and events
     SERVER_STATS   stats;          /**< The server statistics, e.g. number of connections */
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
     int            last_event;     /**< The last event that occurred on this server */
     int64_t        triggered_at;   /**< Time when the last event was triggered */
     // Status descriptors. Updated automatically by a monitor or manually by the admin
-    uint64_t       status;         /**< Current status flag bitmap */
-    int            maint_request;  /**< Is admin requesting Maintenance=ON/OFF on the server? */
-    char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string as given by backend */
-    uint64_t       version;        /**< Server version numeric representation */
-    server_type_t  server_type;    /**< Server type (MariaDB or MySQL), deduced from version string */
-    long           node_id;        /**< Node id, server_id for M/S or local_index for Galera */
-    int            rlag;           /**< Replication Lag for Master/Slave replication */
-    unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
-    long           master_id;      /**< Master server id of this node */
+    uint64_t      status;                                   /**< Current status flag bitmap */
+    int           maint_request;                            /**< Is admin requesting Maintenance=ON/OFF on the
+                                                             * server? */
+    char          version_string[MAX_SERVER_VERSION_LEN];   /**< Server version string as given by backend */
+    uint64_t      version;                                  /**< Server version numeric representation */
+    server_type_t server_type;                              /**< Server type (MariaDB or MySQL), deduced from
+                                                             * version string */
+    long          node_id;                                  /**< Node id, server_id for M/S or local_index for
+                                                             * Galera */
+    int           rlag;                                     /**< Replication Lag for Master/Slave replication
+                                                             * */
+    unsigned long node_ts;                                  /**< Last timestamp set from M/S monitor module */
+    long          master_id;                                /**< Master server id of this node */
     // Misc fields
-    bool           master_err_is_logged; /**< If node failed, this indicates whether it is logged. Only used
-                                          *   by rwsplit. TODO: Move to rwsplit */
-    bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
-    MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
+    bool master_err_is_logged;                  /**< If node failed, this indicates whether it is logged. Only
+                                                 * used
+                                                 *   by rwsplit. TODO: Move to rwsplit */
+    bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
+    MxsDiskSpaceThreshold* disk_space_threshold;/**< Disk space thresholds */
     // TODO, this is a plain ptr to a C++ class. Soonish, when the server is new/deleted
     // this will become a std::unique ptr. But not in this commit.
-    maxbase::EMAverage* response_time; /**< for calculating average response time */
+    maxbase::EMAverage* response_time;      /**< for calculating average response time */
 } SERVER;
 
 /**
@@ -169,30 +176,53 @@ typedef struct server
  * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
  */
 // Bits used by most monitors
-#define SERVER_RUNNING              (1 << 0)  /**<< The server is up and running */
-#define SERVER_MAINT                (1 << 1)  /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR           (1 << 2)  /**<< Authentication error from monitor */
-#define SERVER_MASTER               (1 << 3)  /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE                (1 << 4)  /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_RUNNING    (1 << 0)              /**<< The server is up and running */
+#define SERVER_MAINT      (1 << 1)              /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR (1 << 2)              /**<< Authentication error from monitor */
+#define SERVER_MASTER     (1 << 3)              /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE      (1 << 4)              /**<< The server is a slave, i.e. can handle reads */
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER  (1 << 5)  /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY                (1 << 6)  /**<< Server is a relay */
-#define SERVER_WAS_MASTER           (1 << 7)  /**<< Server was a master but lost all slaves. */
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 5)     /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY               (1 << 6)     /**<< Server is a relay */
+#define SERVER_WAS_MASTER          (1 << 7)     /**<< Server was a master but lost all slaves. */
 // Bits used by other monitors
-#define SERVER_JOINED               (1 << 8)  /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB                  (1 << 9) /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS    (1 << 10) /**<< Server Master stickiness */
+#define SERVER_JOINED            (1 << 8)   /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB               (1 << 9)   /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS (1 << 10)  /**<< Server Master stickiness */
 // Bits providing general information
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31) /**<< The disk space of the server is exhausted */
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 31)   /**<< The disk space of the server is exhausted */
 
-#define STRSRVSTATUS(s) (server_is_master(s)  ? "RUNNING MASTER" :      \
-                         (server_is_slave(s)   ? "RUNNING SLAVE" :      \
-                          (server_is_joined(s)  ? "RUNNING JOINED" :    \
-                           (server_is_ndb(s)     ? "RUNNING NDB" :      \
-                            ((server_is_running(s) && server_is_in_maint(s)) ? "RUNNING MAINTENANCE" : \
-                             (server_is_relay(s) ? "RUNNING RELAY" : \
-                              (server_is_usable(s) ? "RUNNING (only)" : \
-                               (server_is_down(s) ? "DOWN" : "UNKNOWN STATUS"))))))))
+#define STRSRVSTATUS(s) \
+    (server_is_master(s)  ? "RUNNING MASTER"        \
+                          : (server_is_slave(s)   ? "RUNNING SLAVE"        \
+                                                  : (server_is_joined(s)  ? "RUNNING JOINED"      \
+                                                                          : (server_is_ndb(s)     ? \
+                                                                             "RUNNING NDB"        \
+                                                                                                  : (( \
+                                                                                                         server_is_running( \
+                                                                                                             s) \
+                                                                                                         && \
+                                                                                                         server_is_in_maint( \
+                                                                                                             s)) \
+                                                                                                     ? \
+                                                                                                     "RUNNING MAINTENANCE"   \
+                                                                                                     : ( \
+                                                                                                         server_is_relay( \
+                                                                                                             s) \
+                                                                                                         ? \
+                                                                                                         "RUNNING RELAY"   \
+                                                                                                         : ( \
+                                                                                                             server_is_usable( \
+                                                                                                                 s) \
+                                                                                                             ? \
+                                                                                                             "RUNNING (only)"   \
+                                                                                                             : ( \
+                                                                                                                 server_is_down( \
+                                                                                                                     s) \
+                                                                                                                 ? \
+                                                                                                                 "DOWN" \
+                                                                                                                 : \
+                                                                                                                 "UNKNOWN STATUS"))))))))
 
 /**
  * Is the server valid and active?
@@ -223,7 +253,7 @@ inline bool server_is_usable(const SERVER* server)
 
 inline bool status_is_running(uint64_t status)
 {
-    return (status & SERVER_RUNNING);
+    return status & SERVER_RUNNING;
 }
 
 /**
@@ -303,8 +333,8 @@ inline bool server_is_slave(const SERVER* server)
 
 inline bool status_is_relay(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT)) == \
-            (SERVER_RUNNING | SERVER_RELAY);
+    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT))    \
+           == (SERVER_RUNNING | SERVER_RELAY);
 }
 
 inline bool server_is_relay(const SERVER* server)
@@ -314,8 +344,8 @@ inline bool server_is_relay(const SERVER* server)
 
 inline bool status_is_joined(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) ==
-            (SERVER_RUNNING | SERVER_JOINED);
+    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT))
+           == (SERVER_RUNNING | SERVER_JOINED);
 }
 
 /**
@@ -341,14 +371,14 @@ inline bool server_is_ndb(const SERVER* server)
 
 inline bool server_is_in_cluster(const SERVER* server)
 {
-    return ((server->status &
-            (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0);
+    return (server->status
+            & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0;
 }
 
 inline bool status_is_slave_of_ext_master(uint64_t status)
 {
-    return ((status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER)) ==
-            (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER));
+    return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
+           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
 }
 
 inline bool server_is_slave_of_ext_master(const SERVER* server)
@@ -358,7 +388,7 @@ inline bool server_is_slave_of_ext_master(const SERVER* server)
 
 inline bool status_is_disk_space_exhausted(uint64_t status)
 {
-    return (status & SERVER_DISK_SPACE_EXHAUSTED);
+    return status & SERVER_DISK_SPACE_EXHAUSTED;
 }
 
 inline bool server_is_disk_space_exhausted(const SERVER* server)
@@ -378,7 +408,7 @@ inline bool server_is_disk_space_exhausted(const SERVER* server)
  *
  * @return       The newly created server or NULL if an error occurred
  */
-extern SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params);
+extern SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params);
 
 /**
  * @brief Serialize a server to a file
@@ -390,7 +420,16 @@ extern SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params);
  * @param server Server to serialize
  * @return False if the serialization of the server fails, true if it was successful
  */
-bool server_serialize(const SERVER *server);
+bool server_serialize(const SERVER* server);
+
+/**
+ * @brief Add a server parameter
+ *
+ * @param server Server where the parameter is added
+ * @param name Parameter name
+ * @param value Parameter value
+ */
+void server_add_parameter(SERVER* server, const char* name, const char* value);
 
 /**
  * @brief Remove a server parameter
@@ -399,7 +438,7 @@ bool server_serialize(const SERVER *server);
  * @param name The name of the parameter to remove
  * @return True if a parameter was removed
  */
-bool server_remove_parameter(SERVER *server, const char *name);
+bool server_remove_parameter(SERVER* server, const char* name);
 
 /**
  * @brief Set server parameter
@@ -416,7 +455,7 @@ void server_set_parameter(SERVER *server, const char *name, const char *value);
  * @param server Server to check
  * @return True if the server points to a local MaxScale service
  */
-bool server_is_mxs_service(const SERVER *server);
+bool server_is_mxs_service(const SERVER* server);
 
 /**
  * @brief Convert a server to JSON format
@@ -445,7 +484,7 @@ json_t* server_list_to_json(const char* host);
  *
  * @return True, if the provided string is valid and the threshold could be set.
  */
-bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold);
+bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_threshold);
 
 /**
  * @brief Add a response average to the server response average.
@@ -455,35 +494,38 @@ bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_thre
  * @param num_samples Number of samples the average consists of.
  *
  */
-void server_add_response_average(SERVER *server, double ave, int num_samples);
+void server_add_response_average(SERVER* server, double ave, int num_samples);
 
-extern int server_free(SERVER *server);
-extern SERVER *server_find_by_unique_name(const char *name);
-extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
-extern SERVER *server_find(const char *servname, unsigned short port);
-extern char *server_status(const SERVER *);
-extern void server_clear_set_status_nolock(SERVER *server, uint64_t bits_to_clear, uint64_t bits_to_set);
-extern void server_set_status_nolock(SERVER *server, uint64_t bit);
-extern void server_clear_status_nolock(SERVER *server, uint64_t bit);
-extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
-extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
-extern size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size);
-extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
-extern DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol,
-                                  int id);
-extern void server_update_address(SERVER *server, const char *address);
-extern void server_update_port(SERVER *server,  unsigned short port);
-extern uint64_t server_map_status(const char *str);
-extern void server_set_version_string(SERVER* server, const char* version_string);
-extern void server_set_version(SERVER* server, const char* version_string, uint64_t version);
+extern int     server_free(SERVER* server);
+extern SERVER* server_find_by_unique_name(const char* name);
+extern int     server_find_by_unique_names(char** server_names, int size, SERVER*** output);
+extern SERVER* server_find(const char* servname, unsigned short port);
+extern char*   server_status(const SERVER*);
+extern void    server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set);
+extern void    server_set_status_nolock(SERVER* server, uint64_t bit);
+extern void    server_clear_status_nolock(SERVER* server, uint64_t bit);
+extern void    server_transfer_status(SERVER* dest_server, const SERVER* source_server);
+extern void    server_add_mon_user(SERVER* server, const char* user, const char* passwd);
+extern size_t  server_get_parameter(const SERVER* server, const char* name, char* out, size_t size);
+extern void    server_update_credentials(SERVER* server, const char* user, const char* passwd);
+extern DCB*    server_get_persistent(SERVER* server,
+                                     const char* user,
+                                     const char* ip,
+                                     const char* protocol,
+                                     int id);
+extern void     server_update_address(SERVER* server, const char* address);
+extern void     server_update_port(SERVER* server, unsigned short port);
+extern uint64_t server_map_status(const char* str);
+extern void     server_set_version_string(SERVER* server, const char* version_string);
+extern void     server_set_version(SERVER* server, const char* version_string, uint64_t version);
 extern uint64_t server_get_version(const SERVER* server);
 
-extern void printServer(const SERVER *);
+extern void printServer(const SERVER*);
 extern void printAllServers();
-extern void dprintAllServers(DCB *);
-extern void dprintAllServersJson(DCB *);
-extern void dprintServer(DCB *, const SERVER *);
-extern void dprintPersistentDCBs(DCB *, const SERVER *);
-extern void dListServers(DCB *);
+extern void dprintAllServers(DCB*);
+extern void dprintAllServersJson(DCB*);
+extern void dprintServer(DCB*, const SERVER*);
+extern void dprintPersistentDCBs(DCB*, const SERVER*);
+extern void dListServers(DCB*);
 
 MXS_END_DECLS

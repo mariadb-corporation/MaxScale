@@ -382,6 +382,25 @@ mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
  */
 std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBackend& master);
 
+
+/* TODO, hopefully temporary */
+using BackendSPtrVec = std::vector<mxs::SRWBackend*>;
+
+/**
+ * Find the best backend based on categorizing the servers, and then applying
+ * selection criteria to the best category.
+ *
+ * @param backends: vector of SRWBackend
+ * @param sc:       which select_criteria_t to use
+ * @param master_accept_reads: NOTE: even if this is false, in some cases a master can
+ *                             still be selected for reads.
+ *
+ * @return Valid iterator into argument backends, or end(backends) if empty
+ */
+BackendSPtrVec::const_iterator find_best_backend(const BackendSPtrVec& backends,
+                                                 select_criteria_t sc,
+                                                 bool masters_accept_reads);
+
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
