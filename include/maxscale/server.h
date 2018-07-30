@@ -183,7 +183,7 @@ enum
 #define SERVER_SLAVE                (1 << 4)  /**<< The server is a slave, i.e. can handle reads */
 // Bits used by MariaDB Monitor (mostly)
 #define SERVER_SLAVE_OF_EXT_MASTER  (1 << 5)  /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY_MASTER         (1 << 6)  /**<< Server is a relay master */
+#define SERVER_RELAY                (1 << 6)  /**<< Server is a relay */
 #define SERVER_WAS_MASTER           (1 << 7)  /**<< Server was a master but lost all slaves. */
 #define SERVER_WAS_SLAVE            (1 << 8)  /**<< Server was a slave but lost its master. */
 // Bits used by other monitors
@@ -286,8 +286,7 @@ inline bool server_is_master(const SERVER* server)
 
 inline bool status_is_slave(uint64_t status)
 {
-    return ((status & (SERVER_RUNNING | SERVER_MAINT)) == SERVER_RUNNING) &&
-            ((status & SERVER_SLAVE) || (status & SERVER_WAS_SLAVE));
+    return (status & (SERVER_RUNNING | SERVER_SLAVE | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_SLAVE);
 }
 
 /**
@@ -303,8 +302,8 @@ inline bool server_is_slave(const SERVER* server)
 
 inline bool status_is_relay(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_MAINT)) == \
-            (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE);
+    return (status & (SERVER_RUNNING | SERVER_RELAY | SERVER_MAINT)) == \
+            (SERVER_RUNNING | SERVER_RELAY);
 }
 
 inline bool server_is_relay(const SERVER* server)
@@ -312,13 +311,23 @@ inline bool server_is_relay(const SERVER* server)
     return status_is_relay(server->status);
 }
 
+inline bool status_is_joined(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) ==
+            (SERVER_RUNNING | SERVER_JOINED);
+}
+
 /**
  * Is the server joined Galera node? The server must be running and joined.
  */
 inline bool server_is_joined(const SERVER* server)
 {
-    return ((server->status & (SERVER_RUNNING | SERVER_JOINED | SERVER_MAINT)) ==
-            (SERVER_RUNNING | SERVER_JOINED));
+    return status_is_joined(server->status);
+}
+
+inline bool status_is_ndb(uint64_t status)
+{
+    return (status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB);
 }
 
 /**
@@ -326,12 +335,13 @@ inline bool server_is_joined(const SERVER* server)
  */
 inline bool server_is_ndb(const SERVER* server)
 {
-    return ((server->status & (SERVER_RUNNING | SERVER_NDB | SERVER_MAINT)) == (SERVER_RUNNING | SERVER_NDB));
+    return status_is_ndb(server->status);
 }
 
 inline bool server_is_in_cluster(const SERVER* server)
 {
-    return ((server->status & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB)) != 0);
+    return ((server->status &
+            (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0);
 }
 
 inline bool server_is_slave_of_ext_master(const SERVER* server)

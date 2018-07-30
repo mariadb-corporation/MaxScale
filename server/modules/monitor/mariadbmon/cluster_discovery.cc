@@ -640,7 +640,7 @@ void MariaDBMonitor::assign_server_roles()
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
     const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_WAS_SLAVE |
-                                 SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXT_MASTER;
+                                 SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER;
     for (auto server : m_servers)
     {
         server->clear_status(remove_bits);
@@ -657,7 +657,7 @@ void MariaDBMonitor::assign_server_roles()
             if (m_master->is_running())
             {
                 // Master is running, assign bits for valid replication.
-                m_master->clear_status(SLAVE_BITS | SERVER_RELAY_MASTER);
+                m_master->clear_status(SLAVE_BITS | SERVER_RELAY);
                 m_master->set_status(MASTER_BITS);
                 // Run another graph search, this time assigning slaves.
                 reset_node_index_info();
@@ -813,7 +813,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
         // Finally, if the node itself is a running slave and has slaves of its own, label it as relay.
         if (parent_has_live_link && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_slaves)
         {
-            parent->set_status(SERVER_RELAY_MASTER);
+            parent->set_status(SERVER_RELAY);
         }
         // If the node is a binlog relay, remove any slave bits that may have been set.
         // Relay master bit can stay.

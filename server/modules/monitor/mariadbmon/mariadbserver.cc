@@ -809,7 +809,7 @@ void MariaDBServer::monitor_server()
 bool MariaDBServer::update_slave_status(string* errmsg_out)
 {
     /** Clear old states */
-    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER | SERVER_SLAVE_OF_EXT_MASTER);
+    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER);
 
     bool rval = false;
     if (do_show_slave_status(errmsg_out))

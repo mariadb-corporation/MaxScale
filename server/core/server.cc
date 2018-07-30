@@ -695,63 +695,67 @@ dListServers(DCB *dcb)
  * @param server The server to return the status of
  * @return A string representation of the status flags
  */
-char *
-server_status(const SERVER *server)
+char* server_status(const SERVER *server)
 {
-    char    *status = NULL;
-
-    if (NULL == server || (status = (char *)MXS_MALLOC(512)) == NULL)
-    {
-        return NULL;
-    }
-
+    ss_dassert(server);
     uint64_t server_status = server->status;
-    status[0] = 0;
-    if (server_status & SERVER_MAINT)
+
+    string result;
+    string separator;
+
+    // Helper function.
+    auto concatenate_if = [&result, &separator](bool condition, const string& desc)
     {
-        strcat(status, "Maintenance, ");
-    }
-    if (server_status & SERVER_MASTER)
+        if (condition)
+        {
+            result += separator + desc;
+            separator = ", ";
+        }
+    };
+
+    // TODO: The following values should be revisited at some point, but since they are printed by
+    // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
+    // should not change, but this is more dependant on the monitors and have already changed.
+    const string maintenance = "Maintenance";
+    const string master = "Master";
+    const string relay = "Relay Master";
+    const string slave = "Slave";
+    const string synced = "Synced";
+    const string ndb = "NDB";
+    const string slave_ext = "Slave of External Server";
+    const string sticky = "Master Stickiness";
+    const string auth_err = "Auth Error";
+    const string running = "Running";
+    const string down = "Down";
+
+    // Maintenance is usually set by user so is printed first.
+    concatenate_if(status_is_in_maint(server_status), maintenance);
+    // Master cannot be a relay or a slave.
+    if (status_is_master(server_status))
     {
-        strcat(status, "Master, ");
-    }
-    if (server_status & SERVER_RELAY_MASTER)
-    {
-        strcat(status, "Relay Master, ");
-    }
-    if (server_status & SERVER_SLAVE)
-    {
-        strcat(status, "Slave, ");
-    }
-    if (server_status & SERVER_JOINED)
-    {
-        strcat(status, "Synced, ");
-    }
-    if (server_status & SERVER_NDB)
-    {
-        strcat(status, "NDB, ");
-    }
-    if (server_status & SERVER_SLAVE_OF_EXT_MASTER)
-    {
-        strcat(status, "Slave of External Server, ");
-    }
-    if (server_status & SERVER_MASTER_STICKINESS)
-    {
-        strcat(status, "Master Stickiness, ");
-    }
-    if (server_status & SERVER_AUTH_ERROR)
-    {
-        strcat(status, "Auth Error, ");
-    }
-    if (server_status & SERVER_RUNNING)
-    {
-        strcat(status, "Running");
+        concatenate_if(true, master);
     }
     else
     {
-        strcat(status, "Down");
+        // Relays are typically slaves as well. The binlog server may be an exception.
+        concatenate_if(status_is_relay(server_status), relay);
+        concatenate_if(status_is_slave(server_status), slave);
     }
-    return status;
+
+    // The following Galera and Cluster bits may be combined with master/slave.
+    concatenate_if(status_is_joined(server_status), synced);
+    concatenate_if(status_is_ndb(server_status), ndb);
+    // May be combined with other MariaDB monitor flags.
+    concatenate_if(server_status & SERVER_SLAVE_OF_EXT_MASTER, slave_ext);
+
+    // Should this be printed only if server is master?
+    concatenate_if(server_status & SERVER_MASTER_STICKINESS, sticky);
+
+    concatenate_if(server_status & SERVER_AUTH_ERROR, auth_err);
+    concatenate_if(status_is_running(server_status), running);
+    concatenate_if(status_is_down(server_status), down);
+
+    return MXS_STRDUP(result.c_str());
 }
 
 /**
