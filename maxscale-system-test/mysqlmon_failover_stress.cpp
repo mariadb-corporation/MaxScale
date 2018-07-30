@@ -515,12 +515,14 @@ void run(TestConnections& test)
 
         while (time(NULL) - start < TEST_DURATION)
         {
+            test.set_timeout(20);
             test.maxscales->wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
             if (master_id > 0 && master_id <= 4)
             {
+                test.set_timeout(20);
                 cout << "\nStopping node: " << master_id << endl;
                 test.repl->stop_node(master_id - 1);
 
@@ -530,6 +532,7 @@ void run(TestConnections& test)
                 test.maxscales->wait_for_monitor();
                 list_servers(test);
 
+                test.set_timeout(20);
                 test.maxscales->wait_for_monitor();
                 cout << "\nStarting node: " << master_id << endl;
                 test.repl->start_node(master_id - 1);

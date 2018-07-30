@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <linux/limits.h>
 #include "testconnections.h"
 #include "fw_copy_rules.h"
 
@@ -65,10 +66,12 @@ int main(int argc, char** argv)
         /** Create rule file with syntax error */
         truncate(temp_rules, 0);
         create_rule(rules_failure[i], users_ok[0]);
-        copy_rules(&test, (char*)temp_rules, (char*)test_dir);
+        char buf[PATH_MAX + 1];
+        copy_rules(&test, (char*)temp_rules, (char*)getcwd(buf, sizeof(buf)));
 
         test.tprintf("Testing rule: %s\n", rules_failure[i]);
         test.add_result(test.maxscales->start_maxscale(0) == 0, "MaxScale should fail to start");
+        test.maxscales->stop_maxscale(0);
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */

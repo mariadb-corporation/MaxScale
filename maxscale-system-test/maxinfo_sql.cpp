@@ -61,20 +61,27 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 100; i++)
     {
+        test.set_timeout(60);
         for (auto a : commands)
         {
             test.try_query(conn, "%s", a.c_str());
         }
     }
 
+    test.stop_timeout();
+
     mysql_close(conn);
 
     run = false;
+
+    test.set_timeout(60);
 
     for (auto& a : threads)
     {
         a.join();
     }
+
+    test.stop_timeout();
 
     return test.global_result;
 }
