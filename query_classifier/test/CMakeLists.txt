@@ -24,6 +24,9 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_executable(compare compare.cc testreader.cc)
   target_link_libraries(compare maxscale-common)
 
+  add_executable(qc_cache qc_cache.cc)
+  target_link_libraries(qc_cache maxscale-common)
+
   add_executable(version_sensitivity version_sensitivity.cc)
   target_link_libraries(version_sensitivity maxscale-common)
 
