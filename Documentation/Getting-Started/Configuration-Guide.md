@@ -574,6 +574,29 @@ Arguments for the query classifier. What arguments are accepted depends on the
 particular query classifier being used. The default query classifier -
 _qc_sqlite_ - supports the following arguments:
 
+#### `query_classifier_cache_size`
+
+If present, enables and specifies the maximum size of the query classifier cache.
+
+If the query classifier cache has been enabled, MaxScale will, after a statement
+has been parsed, store the classification result using the canonicalized version
+of the statement as the key.
+
+When the classification result for a statement is needed, MaxScale will first
+canonicalize the statement and check whether the result can be found in the cache.
+If it can, the statement will not be parsed at all but the cached result is used.
+
+The configuration parameter takes one integer that specifies the maximum size
+of the cache. The size of the cache can be specifed as explained [here](#sizes).
+```
+# 1MB query classifier cache
+query_classifier_cache=1MB
+```
+
+Note that MaxScale uses a separate cache for each worker thread. So, the total
+amount of memory used at most by the cache is obtained by multiplying the
+size specified here, with the number the worker threads used.
+
 ##### `log_unrecognized_statements`
 
 An integer argument taking the following values:
