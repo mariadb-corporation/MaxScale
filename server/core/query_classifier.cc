@@ -14,6 +14,8 @@
 #include "internal/query_classifier.h"
 #include <inttypes.h>
 #include <algorithm>
+#include <atomic>
+#include <random>
 #include <unordered_map>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -47,19 +49,42 @@ struct type_name_info
 const char DEFAULT_QC_NAME[] = "qc_sqlite";
 const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
-static struct this_unit
+class ThisUnit
 {
+public:
+    ThisUnit()
+        : classifier(nullptr)
+        , qc_trx_parse_using(QC_TRX_PARSE_USING_PARSER)
+        , qc_sql_mode(QC_SQL_MODE_DEFAULT)
+        , m_cache_max_size(std::numeric_limits<int64_t>::max())
+    {
+    }
+
+    ThisUnit(const ThisUnit&) = delete;
+    ThisUnit& operator=(const ThisUnit&) = delete;
+
     QUERY_CLASSIFIER*    classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
     qc_sql_mode_t        qc_sql_mode;
-    int64_t              cache_max_size;
-} this_unit =
-{
-    nullptr,                   // classifier
-    QC_TRX_PARSE_USING_PARSER, // qc_trx_parse_using
-    QC_SQL_MODE_DEFAULT,       // qc_sql_mode
-    INT64_MAX                  // cache_max_size; TODO: Make this configurable
+
+    int64_t cache_max_size() const
+    {
+        // In principle, std::memory_order_acquire should be used here, but that causes
+        // a performance penalty of ~5% when running a sysbench test.
+        return m_cache_max_size.load(std::memory_order_relaxed);
+    }
+
+    void set_cache_max_size(int64_t cache_max_size)
+    {
+        // In principle, std::memory_order_release should be used here.
+        m_cache_max_size.store(cache_max_size, std::memory_order_relaxed);
+    }
+
+private:
+    std::atomic<int64_t> m_cache_max_size;
 };
+
+static ThisUnit this_unit;
 
 class QCInfoCache;
 
@@ -85,7 +110,9 @@ public:
     QCInfoCache& operator=(const QCInfoCache&) = delete;
 
     QCInfoCache()
+        : m_reng(m_rdev())
     {
+        memset(&m_stats, 0, sizeof(m_stats));
     }
 
     ~QCInfoCache()
@@ -120,14 +147,20 @@ public:
                 ss_dassert(this_unit.classifier);
                 this_unit.classifier->qc_info_dup(entry.pInfo);
                 pInfo = entry.pInfo;
+
+                ++m_stats.hits;
             }
             else
             {
                 // If the sql_mode has changed, we discard the existing result.
-                ss_dassert(this_unit.classifier);
-                this_unit.classifier->qc_info_close(entry.pInfo);
-                m_infos.erase(i);
+                erase(i);
+
+                ++m_stats.misses;
             }
+        }
+        else
+        {
+            ++m_stats.misses;
         }
 
         return pInfo;
@@ -138,25 +171,32 @@ public:
         ss_dassert(peek(canonical_stmt) == nullptr);
         ss_dassert(this_unit.classifier);
 
-        this_unit.classifier->qc_info_dup(pInfo);
+        int64_t cache_max_size = this_unit.cache_max_size();
+        int64_t size = canonical_stmt.size();
 
-        m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode));
+        if (size <= cache_max_size)
+        {
+            int64_t required_space = (m_stats.size + size) - cache_max_size;
+
+            if (required_space > 0)
+            {
+                make_space(required_space);
+            }
+
+            if (m_stats.size + size <= cache_max_size)
+            {
+                this_unit.classifier->qc_info_dup(pInfo);
+
+                m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode));
+
+                ++m_stats.inserts;
+            }
+        }
     }
 
-    void erase(const std::string& canonical_stmt)
+    void get_stats(QC_CACHE_STATS* pStats)
     {
-        auto i = m_infos.find(canonical_stmt);
-        ss_dassert(i != m_infos.end());
-
-        if (i != m_infos.end())
-        {
-            QC_STMT_INFO* pInfo = i->second.pInfo;
-
-            ss_dassert(this_unit.classifier);
-            this_unit.classifier->qc_info_close(pInfo);
-
-            m_infos.erase(i);
-        }
+        *pStats = m_stats;
     }
 
 private:
@@ -174,12 +214,79 @@ private:
 
     typedef std::unordered_map<std::string, Entry> InfosByStmt;
 
-    InfosByStmt m_infos;
+    void erase(InfosByStmt::iterator& i)
+    {
+        ss_dassert(i != m_infos.end());
+
+        m_stats.size -= i->first.size();
+
+        ss_dassert(this_unit.classifier);
+        this_unit.classifier->qc_info_close(i->second.pInfo);
+
+        m_infos.erase(i);
+
+        ++m_stats.evictions;
+    }
+
+    bool erase(const std::string& canonical_stmt)
+    {
+        bool erased = false;
+
+        auto i = m_infos.find(canonical_stmt);
+        ss_dassert(i != m_infos.end());
+
+        if (i != m_infos.end())
+        {
+            erase(i);
+            erased = true;
+        }
+
+        return erased;
+    }
+
+    void make_space(int64_t required_space)
+    {
+        int64_t freed_space = 0;
+
+        std::uniform_int_distribution<> dis(0, m_infos.bucket_count() - 1);
+
+        while ((freed_space < required_space) && !m_infos.empty())
+        {
+            freed_space += evict(dis);
+        }
+    }
+
+    int64_t evict(std::uniform_int_distribution<>& dis)
+    {
+        int64_t freed_space = 0;
+
+        int bucket = dis(m_reng);
+        ss_dassert((bucket >= 0) && (bucket < static_cast<int>(m_infos.bucket_count())));
+
+        auto i = m_infos.begin(bucket);
+
+        // We just remove the first entry in the bucket. In the general case
+        // there will be just one.
+        if (i != m_infos.end(bucket))
+        {
+            freed_space += i->first.size();
+
+            ss_debug(bool erased =) erase(i->first);
+            ss_dassert(erased);
+        }
+
+        return freed_space;
+    }
+
+    InfosByStmt        m_infos;
+    QC_CACHE_STATS     m_stats;
+    std::random_device m_rdev;
+    std::mt19937       m_reng;
 };
 
 bool use_cached_result()
 {
-    return atomic_load_int64(&this_unit.cache_max_size) != 0;
+    return this_unit.cache_max_size() != 0;
 }
 
 bool has_not_been_parsed(GWBUF* pStmt)
@@ -293,7 +400,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
                 MXS_NOTICE("Query classification results are not cached.");
             }
 
-            this_unit.cache_max_size = cache_max_size;
+            this_unit.set_cache_max_size(cache_max_size);
         }
         else
         {
@@ -1088,4 +1195,21 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     {
         this_unit.qc_sql_mode = sql_mode;
     }
+}
+
+bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
+{
+    QC_TRACE();
+
+    bool rv = false;
+
+    QCInfoCache* pInfo_cache = this_thread.pInfo_cache;
+
+    if (pInfo_cache && use_cached_result())
+    {
+        pInfo_cache->get_stats(pStats);
+        rv = true;
+    }
+
+    return rv;
 }

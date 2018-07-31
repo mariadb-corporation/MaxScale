@@ -435,12 +435,24 @@ typedef struct query_classifier
 } QUERY_CLASSIFIER;
 
 /**
- * QC_CACHE specifies the limits of the query classification cache.
+ * QC_CACHE_PROPERTIES specifies the limits of the query classification cache.
  */
 typedef struct QC_CACHE_PROPERTIES
 {
     int64_t max_size;  /** The maximum size of the cache. */
 } QC_CACHE_PROPERTIES;
+
+/**
+ * QC_CACHE_STATS provides statistics of the cache.
+ */
+typedef struct QC_CACHE_STATS
+{
+    int64_t size;      /** The current size of the cache. */
+    int64_t inserts;   /** The number of inserts. */
+    int64_t hits;      /** The number of hits. */
+    int64_t misses;    /** The number of misses. */
+    int64_t evictions; /** The number of evictions. */
+} QC_CACHE_STATS;
 
 /**
  * Loads and sets up the default query classifier.
@@ -849,5 +861,14 @@ void qc_set_server_version(uint64_t version);
  *         version = major * 10000 + minor * 100 + patch
  */
 uint64_t qc_get_server_version();
+
+/**
+ * Get cache statistics for the calling thread.
+ *
+ * @param stats[out]  Cache statistics.
+ *
+ * @return True, if caching is enabled, false otherwise.
+ */
+bool qc_get_cache_stats(QC_CACHE_STATS* stats);
 
 MXS_END_DECLS
