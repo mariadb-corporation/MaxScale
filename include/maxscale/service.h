@@ -32,7 +32,6 @@
 #include <maxscale/server.h>
 #include <maxscale/listener.h>
 #include <maxscale/filter.h>
-#include <maxscale/resultset.h>
 #include <maxscale/config.h>
 #include <maxscale/jansson.h>
 
@@ -248,8 +247,6 @@ void       dprintService(DCB *dcb, SERVICE *service);
 void       dListServices(DCB *dcb);
 void       dListListeners(DCB *dcb);
 int        serviceSessionCountAll(void);
-RESULTSET* serviceGetList(void);
-RESULTSET* serviceGetListenerList(void);
 
 /**
  * Get the capabilities of the servive.

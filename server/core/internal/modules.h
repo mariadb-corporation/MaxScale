@@ -19,7 +19,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/resultset.h>
 #include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
@@ -84,13 +83,6 @@ void printModules();
  * Diagnostic routine to display all the loaded modules
  */
 void dprintAllModules(DCB *);
-
-/**
- * @brief Return a resultset that has the current set of modules in it
- *
- * @return A Result set
- */
-RESULTSET *moduleGetList();
 
 typedef struct mxs_module_iterator
 {

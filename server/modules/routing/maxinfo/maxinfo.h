@@ -32,8 +32,7 @@
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/resultset.hh>
 
 struct maxinfo_session;
 
@@ -137,9 +136,7 @@ extern void     maxinfo_free_tree(MAXINFO_TREE *);
 extern void     maxinfo_execute(DCB *, MAXINFO_TREE *);
 extern void         maxinfo_send_error(DCB *, int, const char  *);
 extern void         maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
-extern RESULTSET    *maxinfo_variables();
-extern RESULTSET    *maxinfo_status();
-
-MXS_END_DECLS
+extern ResultSet    *maxinfo_variables();
+extern ResultSet    *maxinfo_status();
 
 #endif

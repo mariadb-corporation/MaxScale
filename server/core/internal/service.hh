@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/service.h>
+#include <maxscale/resultset.hh>
 
 /**
  * @file service.h - MaxScale internal service functions
@@ -351,3 +352,6 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
  * @return Array of service links
  */
 json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
+
+ResultSet* serviceGetList(void);
+ResultSet* serviceGetListenerList(void);

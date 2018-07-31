@@ -21,9 +21,9 @@
 #include <time.h>
 
 #include <maxscale/atomic.h>
+#include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/resultset.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.h>
 

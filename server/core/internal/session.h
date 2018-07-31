@@ -59,8 +59,6 @@ void session_link_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
  */
 void session_unlink_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
 
-RESULTSET *sessionGetList(SESSIONLISTFILTER);
-
 void printAllSessions();
 void printSession(MXS_SESSION *);
 

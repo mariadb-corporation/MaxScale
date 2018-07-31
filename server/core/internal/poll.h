@@ -18,7 +18,7 @@
 
 #include <maxscale/poll.h>
 
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 
 MXS_BEGIN_DECLS
 
@@ -42,6 +42,6 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-RESULTSET       *eventTimesGetList();
+ResultSet       *eventTimesGetList();
 
 MXS_END_DECLS

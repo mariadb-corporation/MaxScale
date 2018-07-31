@@ -21,7 +21,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/resultset.h>
 #include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
@@ -480,6 +479,5 @@ extern void dprintAllServersJson(DCB *);
 extern void dprintServer(DCB *, const SERVER *);
 extern void dprintPersistentDCBs(DCB *, const SERVER *);
 extern void dListServers(DCB *);
-extern RESULTSET *serverGetList();
 
 MXS_END_DECLS

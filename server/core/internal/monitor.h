@@ -81,7 +81,6 @@ void monitor_show(DCB *, MXS_MONITOR *);
 void monitor_show_all(DCB *);
 
 void monitor_list(DCB *);
-RESULTSET *monitor_get_list();
 
 bool monitor_add_server(MXS_MONITOR *mon, SERVER *server);
 void monitor_remove_server(MXS_MONITOR *mon, SERVER *server);

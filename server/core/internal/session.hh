@@ -14,6 +14,8 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/session.h>
+#include <maxscale/resultset.hh>
+#include <maxscale/utils.hh>
 
 namespace maxscale
 {
@@ -37,3 +39,5 @@ struct RegistryTraits<MXS_SESSION>
 };
 
 }
+
+ResultSet *sessionGetList();
