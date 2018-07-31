@@ -12,6 +12,7 @@
  */
 
 #include "internal/query_classifier.h"
+#include <inttypes.h>
 #include <algorithm>
 #include <unordered_map>
 #include <maxscale/alloc.h>
@@ -51,13 +52,13 @@ static struct this_unit
     QUERY_CLASSIFIER*    classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
     qc_sql_mode_t        qc_sql_mode;
-    int32_t              use_cached_result;
+    int64_t              cache_max_size;
 } this_unit =
 {
-    nullptr,
-    QC_TRX_PARSE_USING_PARSER,
-    QC_SQL_MODE_DEFAULT,
-    1  // TODO: Make this configurable
+    nullptr,                   // classifier
+    QC_TRX_PARSE_USING_PARSER, // qc_trx_parse_using
+    QC_SQL_MODE_DEFAULT,       // qc_sql_mode
+    INT64_MAX                  // cache_max_size; TODO: Make this configurable
 };
 
 class QCInfoCache;
@@ -178,7 +179,7 @@ private:
 
 bool use_cached_result()
 {
-    return atomic_load_int32(&this_unit.use_cached_result) != 0;
+    return atomic_load_int64(&this_unit.cache_max_size) != 0;
 }
 
 bool has_not_been_parsed(GWBUF* pStmt)
@@ -279,18 +280,20 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
         {
             this_unit.qc_sql_mode = sql_mode;
 
-            bool use_cached_result = (cache_properties != nullptr);
+            int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
+            ss_dassert(cache_max_size >= 0);
 
-            if (use_cached_result)
+            if (cache_max_size)
             {
-                MXS_NOTICE("Query classification results are cached and reused.");
+                MXS_NOTICE("Query classification results are cached and reused, "
+                           "cache max size: %" PRIi64 "", cache_max_size);
             }
             else
             {
                 MXS_NOTICE("Query classification results are not cached.");
             }
 
-            this_unit.use_cached_result = use_cached_result;
+            this_unit.cache_max_size = cache_max_size;
         }
         else
         {

@@ -439,6 +439,7 @@ typedef struct query_classifier
  */
 typedef struct QC_CACHE_PROPERTIES
 {
+    int64_t max_size;  /** The maximum size of the cache. */
 } QC_CACHE_PROPERTIES;
 
 /**

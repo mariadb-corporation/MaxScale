@@ -127,7 +127,7 @@ const char CN_PORT[]                          = "port";
 const char CN_PROTOCOL[]                      = "protocol";
 const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
-const char CN_QUERY_CLASSIFIER_CACHE[]        = "query_classifier_cache";
+const char CN_QUERY_CLASSIFIER_CACHE_SIZE[]   = "query_classifier_cache_size";
 const char CN_QUERY_RETRIES[]                 = "query_retries";
 const char CN_QUERY_RETRY_TIMEOUT[]           = "query_retry_timeout";
 const char CN_RELATIONSHIPS[]                 = "relationships";
@@ -2119,9 +2119,17 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.qc_args = MXS_STRDUP_A(value);
     }
-    else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE) == 0)
+    else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE_SIZE) == 0)
     {
-        static QC_CACHE_PROPERTIES cache_properties;
+        static QC_CACHE_PROPERTIES cache_properties = { INT64_MAX };
+
+        cache_properties.max_size = get_suffixed_size(value);
+
+        if (cache_properties.max_size < 0)
+        {
+            // Someone got carried away; we'll just silently adjust the value.
+            cache_properties.max_size = INT64_MAX;
+        }
 
         gateway.qc_cache_properties = &cache_properties;
     }
