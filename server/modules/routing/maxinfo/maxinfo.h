@@ -136,7 +136,7 @@ extern void     maxinfo_free_tree(MAXINFO_TREE *);
 extern void     maxinfo_execute(DCB *, MAXINFO_TREE *);
 extern void         maxinfo_send_error(DCB *, int, const char  *);
 extern void         maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
-extern ResultSet    *maxinfo_variables();
-extern ResultSet    *maxinfo_status();
+extern std::unique_ptr<ResultSet> maxinfo_variables();
+extern std::unique_ptr<ResultSet> maxinfo_status();
 
 #endif

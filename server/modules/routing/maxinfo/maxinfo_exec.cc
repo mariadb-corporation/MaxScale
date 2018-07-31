@@ -39,7 +39,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.hh>
 #include <maxscale/service.h>
@@ -47,10 +47,13 @@
 #include <maxscale/version.h>
 
 #include "../../../core/internal/maxscale.h"
-#include "../../../core/internal/modules.h"
+#include "../../../core/internal/modules.hh"
 #include "../../../core/internal/monitor.h"
-#include "../../../core/internal/poll.h"
-#include "../../../core/internal/session.h"
+#include "../../../core/internal/monitor.hh"
+#include "../../../core/internal/poll.hh"
+#include "../../../core/internal/session.hh"
+#include "../../../core/internal/server.hh"
+#include "../../../core/internal/service.hh"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
@@ -117,15 +120,7 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = serviceGetList()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    serviceGetList()->write(dcb);
 }
 
 /**
@@ -137,15 +132,7 @@ exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = serviceGetListenerList()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    serviceGetListenerList()->write(dcb);
 }
 
 /**
@@ -157,15 +144,7 @@ exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = sessionGetList(SESSION_LIST_ALL)) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    sessionGetList()->write(dcb);
 }
 
 /**
@@ -177,15 +156,7 @@ exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = sessionGetList(SESSION_LIST_CONNECTION)) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    sessionGetList()->write(dcb);
 }
 
 /**
@@ -197,15 +168,7 @@ exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = serverGetList()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    serverGetList()->write(dcb);
 }
 
 /**
@@ -217,15 +180,7 @@ exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = moduleGetList()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    moduleGetList()->write(dcb);
 }
 
 /**
@@ -237,15 +192,7 @@ exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = monitor_get_list()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    monitor_get_list()->write(dcb);
 }
 
 /**
@@ -257,15 +204,7 @@ exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET *set;
-
-    if ((set = eventTimesGetList()) == NULL)
-    {
-        return;
-    }
-
-    resultset_stream_mysql(set, dcb);
-    resultset_free(set);
+    eventTimesGetList()->write(dcb);
 }
 
 /**
@@ -845,11 +784,25 @@ static struct
     { NULL, 0,  NULL }
 };
 
-typedef struct
+std::string value_to_string(int type, STATSFUNC func)
 {
-    int  index;
-    const char *like;
-} VARCONTEXT;
+    std::string value;
+
+    if (type == VT_STRING)
+    {
+        if (char* str = (char*)func())
+        {
+            value = str;
+        }
+    }
+    else
+    {
+        value = std::to_string((int64_t)func());
+    }
+
+    return value;
+}
+
 /**
  * Callback function to populate rows of the show variable
  * command
@@ -857,44 +810,15 @@ typedef struct
  * @param data  The context point
  * @return  The next row or NULL if end of rows
  */
-static RESULT_ROW *
-variable_row(RESULTSET *result, void *data)
+static void variable_row(std::unique_ptr<ResultSet>& set, const char* like)
 {
-    VARCONTEXT *context = (VARCONTEXT *)data;
-    RESULT_ROW *row;
-    char buf[80];
-
-    if (variables[context->index].name)
+    for (int i = 0; variables[i].name; i++)
     {
-        if (context->like &&
-            maxinfo_pattern_match(context->like,
-                                  variables[context->index].name))
+        if (!like || !maxinfo_pattern_match(like, variables[i].name))
         {
-            context->index++;
-            return variable_row(result, data);
+            set->add_row({variables[i].name, value_to_string(variables[i].type, variables[i].func)});
         }
-        row = resultset_make_row(result);
-        resultset_row_set(row, 0, variables[context->index].name);
-        switch (variables[context->index].type)
-        {
-        case VT_STRING:
-            resultset_row_set(row, 1,
-                              (char *)(*variables[context->index].func)());
-            break;
-        case VT_INT:
-            snprintf(buf, 80, "%ld",
-                     (long)(*variables[context->index].func)());
-            resultset_row_set(row, 1, buf);
-            break;
-        default:
-            ss_dassert(!true);
-        }
-        context->index++;
-        return row;
     }
-    // We only get to this point once all variables have been printed
-    MXS_FREE(data);
-    return NULL;
 }
 
 /**
@@ -906,34 +830,9 @@ variable_row(RESULTSET *result, void *data)
 static void
 exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
 {
-    RESULTSET *result;
-    VARCONTEXT *context;
-
-    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
-    {
-        return;
-    }
-
-    if (filter)
-    {
-        context->like = filter->value;
-    }
-    else
-    {
-        context->like = NULL;
-    }
-    context->index = 0;
-
-    if ((result = resultset_create(variable_row, context)) == NULL)
-    {
-        maxinfo_send_error(dcb, 0, "No resources available");
-        MXS_FREE(context);
-        return;
-    }
-    resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
-    resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
-    resultset_stream_mysql(result, dcb);
-    resultset_free(result);
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
+    variable_row(set, filter ? filter->value : NULL);
+    set->write(dcb);
 }
 
 /**
@@ -941,26 +840,11 @@ exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
  *
  * @return Variables as a result set
  */
-RESULTSET *
-maxinfo_variables()
+std::unique_ptr<ResultSet> maxinfo_variables()
 {
-    RESULTSET *result;
-    VARCONTEXT *context;
-    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
-    {
-        return NULL;
-    }
-    context->like = NULL;
-    context->index = 0;
-
-    if ((result = resultset_create(variable_row, context)) == NULL)
-    {
-        MXS_FREE(context);
-        return NULL;
-    }
-    resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
-    resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
-    return result;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
+    variable_row(set, NULL);
+    return set;
 }
 
 /**
@@ -1129,44 +1013,15 @@ static struct
  * @param data  The context point
  * @return  The next row or NULL if end of rows
  */
-static RESULT_ROW *
-status_row(RESULTSET *result, void *data)
+static void status_row(std::unique_ptr<ResultSet>& set, const char* like)
 {
-    VARCONTEXT *context = (VARCONTEXT *)data;
-    RESULT_ROW *row;
-    char buf[80];
-
-    if (status[context->index].name)
+    for (int i = 0; status[i].name; i++)
     {
-        if (context->like &&
-            maxinfo_pattern_match(context->like,
-                                  status[context->index].name))
+        if (!like || !maxinfo_pattern_match(like, status[i].name))
         {
-            context->index++;
-            return status_row(result, data);
+            set->add_row({status[i].name, value_to_string(status[i].type, status[i].func)});
         }
-        row = resultset_make_row(result);
-        resultset_row_set(row, 0, status[context->index].name);
-        switch (status[context->index].type)
-        {
-        case VT_STRING:
-            resultset_row_set(row, 1,
-                              (char *)(*status[context->index].func)());
-            break;
-        case VT_INT:
-            snprintf(buf, 80, "%" PRId64,
-                     (int64_t)(*status[context->index].func)());
-            resultset_row_set(row, 1, buf);
-            break;
-        default:
-            ss_dassert(!true);
-        }
-        context->index++;
-        return row;
     }
-    // We only get to this point once all status elements have been printed
-    MXS_FREE(data);
-    return NULL;
 }
 
 /**
@@ -1175,37 +1030,11 @@ status_row(RESULTSET *result, void *data)
  * @param dcb       The DCB connected to the client
  * @param filter    A potential like clause or NULL
  */
-static void
-exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
+static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
 {
-    RESULTSET *result;
-    VARCONTEXT *context;
-
-    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
-    {
-        return;
-    }
-
-    if (filter)
-    {
-        context->like = filter->value;
-    }
-    else
-    {
-        context->like = NULL;
-    }
-    context->index = 0;
-
-    if ((result = resultset_create(status_row, context)) == NULL)
-    {
-        maxinfo_send_error(dcb, 0, "No resources available");
-        MXS_FREE(context);
-        return;
-    }
-    resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
-    resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
-    resultset_stream_mysql(result, dcb);
-    resultset_free(result);
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
+    status_row(set, filter ? filter->value : NULL);
+    set->write(dcb);
 }
 
 /**
@@ -1213,28 +1042,12 @@ exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
  *
  * @return The show status data as a result set
  */
-RESULTSET *
-maxinfo_status()
+std::unique_ptr<ResultSet> maxinfo_status()
 {
-    RESULTSET   *result;
-    VARCONTEXT   *context;
-    if ((context = static_cast<VARCONTEXT*>(MXS_MALLOC(sizeof(VARCONTEXT)))) == NULL)
-    {
-        return NULL;
-    }
-    context->like = NULL;
-    context->index = 0;
-
-    if ((result = resultset_create(status_row, context)) == NULL)
-    {
-        MXS_FREE(context);
-        return NULL;
-    }
-    resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
-    resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
-    return result;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
+    status_row(set, NULL);
+    return set;
 }
-
 
 /**
  * Execute a select command parse tree and return the result set

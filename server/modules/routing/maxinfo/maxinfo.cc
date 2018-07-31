@@ -45,9 +45,9 @@
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 #include <maxscale/version.h>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 #include <maxscale/protocol/mysql.h>
@@ -55,14 +55,14 @@
 #include "../../../core/internal/modules.h"
 #include "../../../core/internal/monitor.h"
 #include "../../../core/internal/session.h"
-#include "../../../core/internal/poll.h"
+#include "../../../core/internal/session.hh"
+#include "../../../core/internal/poll.hh"
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 
 static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
-static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWBUF *queue);
 static int maxinfo_send_ok(DCB *dcb);
 
 /* The router entry points */
@@ -310,7 +310,8 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 
     if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
     {
-        return handle_url(instance, session, queue);
+        gwbuf_free(queue);
+        return 0;
     }
     if (session->queue)
     {
@@ -462,29 +463,6 @@ maxinfo_ping(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
 }
 
 /**
- * Populate the version comment with the MaxScale version
- *
- * @param   result  The result set
- * @param   data    Pointer to int which is row count
- * @return  The populated row
- */
-static RESULT_ROW *
-version_comment(RESULTSET *result, void *data)
-{
-    int *context = (int *)data;
-    RESULT_ROW *row;
-
-    if (*context == 0)
-    {
-        (*context)++;
-        row = resultset_make_row(result);
-        resultset_row_set(row, 0, MAXSCALE_VERSION);
-        return row;
-    }
-    return NULL;
-}
-
-/**
  * The hardwired select @@vercom response
  *
  * @param dcb   The DCB of the client
@@ -492,43 +470,9 @@ version_comment(RESULTSET *result, void *data)
 static void
 respond_vercom(DCB *dcb)
 {
-    RESULTSET *result;
-    int context = 0;
-
-    if ((result = resultset_create(version_comment, &context)) == NULL)
-    {
-        maxinfo_send_error(dcb, 0, "No resources available");
-        return;
-    }
-    resultset_add_column(result, "@@version_comment", 40, COL_TYPE_VARCHAR);
-    resultset_stream_mysql(result, dcb);
-    resultset_free(result);
-}
-
-/**
- * Populate the version comment with the MaxScale version
- *
- * @param   result  The result set
- * @param   data    Pointer to int which is row count
- * @return  The populated row
- */
-static RESULT_ROW *
-starttime_row(RESULTSET *result, void *data)
-{
-    int *context = (int *)data;
-    RESULT_ROW *row;
-    struct tm tm;
-    static char buf[40];
-
-    if (*context == 0)
-    {
-        (*context)++;
-        row = resultset_make_row(result);
-        sprintf(buf, "%u", (unsigned int)maxscale_started());
-        resultset_row_set(row, 0, buf);
-        return row;
-    }
-    return NULL;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"@@version_comment"});
+    set->add_row({MAXSCALE_VERSION});
+    set->write(dcb);
 }
 
 /**
@@ -539,17 +483,9 @@ starttime_row(RESULTSET *result, void *data)
 static void
 respond_starttime(DCB *dcb)
 {
-    RESULTSET *result;
-    int context = 0;
-
-    if ((result = resultset_create(starttime_row, &context)) == NULL)
-    {
-        maxinfo_send_error(dcb, 0, "No resources available");
-        return;
-    }
-    resultset_add_column(result, "starttime", 40, COL_TYPE_VARCHAR);
-    resultset_stream_mysql(result, dcb);
-    resultset_free(result);
+    std::unique_ptr<ResultSet> set = ResultSet::create({"starttime"});
+    set->add_row({std::to_string(maxscale_started())});
+    set->write(dcb);
 }
 
 /**
@@ -651,72 +587,16 @@ maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
  * Session all result set
  * @return A resultset for all sessions
  */
-static RESULTSET *
-maxinfoSessionsAll()
+static std::unique_ptr<ResultSet> maxinfoSessionsAll()
 {
-    return sessionGetList(SESSION_LIST_ALL);
+    return sessionGetList();
 }
 
 /**
  * Client session result set
  * @return A resultset for all sessions
  */
-static RESULTSET *
-maxinfoClientSessions()
+static std::unique_ptr<ResultSet> maxinfoClientSessions()
 {
-    return sessionGetList(SESSION_LIST_CONNECTION);
-}
-
-typedef RESULTSET *(*RESULTSETFUNC)();
-
-/**
- * Table that maps a URI to a function to call to
- * to obtain the result set related to that URI
- */
-static struct uri_table
-{
-    const char     *uri;
-    RESULTSETFUNC   func;
-} supported_uri[] =
-{
-    { "/services", serviceGetList },
-    { "/listeners", serviceGetListenerList },
-    { "/modules", moduleGetList },
-    { "/monitors", monitor_get_list },
-    { "/sessions", maxinfoSessionsAll },
-    { "/clients", maxinfoClientSessions },
-    { "/servers", serverGetList },
-    { "/variables", maxinfo_variables },
-    { "/status", maxinfo_status },
-    { "/event/times", eventTimesGetList },
-    { NULL, NULL }
-};
-
-/**
- * We have data from the client, this is a HTTP URL
- *
- * @param instance  The router instance
- * @param session   The router session returned from the newSession call
- * @param queue     The queue of data buffers to route
- * @return The number of bytes sent
- */
-static  int
-handle_url(INFO_INSTANCE *instance, INFO_SESSION *session, GWBUF *queue)
-{
-    char *uri;
-    int i;
-    RESULTSET *set;
-
-    uri = (char *)GWBUF_DATA(queue);
-    for (i = 0; supported_uri[i].uri; i++)
-    {
-        if (strcmp(uri, supported_uri[i].uri) == 0)
-        {
-            set = (*supported_uri[i].func)();
-            resultset_stream_json(set, session->dcb);
-            resultset_free(set);
-        }
-    }
-    gwbuf_free(queue);
-    return 1;
+    return sessionGetList();
 }

@@ -35,7 +35,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>
-#include "internal/poll.h"
+#include "internal/poll.hh"
 #include "internal/routingworker.hh"
 
 using maxscale::Worker;
@@ -231,92 +231,28 @@ poll_get_stat(POLL_STAT what)
     return RoutingWorker::get_one_statistic(what);
 }
 
-namespace
-{
-
-struct EVENT_TIMES_CB_DATA
-{
-    int rowno;
-    Worker::STATISTICS stats;
-};
-
-}
-
-/**
- * Provide a row to the result set that defines the event queue statistics
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-eventTimesRowCallback(RESULTSET *set, void *v)
-{
-    EVENT_TIMES_CB_DATA* data = (EVENT_TIMES_CB_DATA*)v;
-
-    char buf[40];
-    RESULT_ROW *row;
-
-    if (data->rowno >= Worker::STATISTICS::N_QUEUE_TIMES)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    row = resultset_make_row(set);
-    if (data->rowno == 0)
-    {
-        resultset_row_set(row, 0, "< 100ms");
-    }
-    else if (data->rowno == Worker::STATISTICS::N_QUEUE_TIMES - 1)
-    {
-        snprintf(buf, 39, "> %2d00ms", Worker::STATISTICS::N_QUEUE_TIMES);
-        buf[39] = '\0';
-        resultset_row_set(row, 0, buf);
-    }
-    else
-    {
-        snprintf(buf, 39, "%2d00 - %2d00ms", data->rowno, data->rowno + 1);
-        buf[39] = '\0';
-        resultset_row_set(row, 0, buf);
-    }
-
-    snprintf(buf, 39, "%u", data->stats.qtimes[data->rowno]);
-    buf[39] = '\0';
-    resultset_row_set(row, 1, buf);
-    snprintf(buf, 39, "%u", data->stats.exectimes[data->rowno]);
-    buf[39] = '\0';
-    resultset_row_set(row, 2, buf);
-    data->rowno++;
-    return row;
-}
-
 /**
  * Return a result set that has the current set of services in it
  *
  * @return A Result set
  */
-RESULTSET *
-eventTimesGetList()
+std::unique_ptr<ResultSet> eventTimesGetList()
 {
-    RESULTSET *set;
-    EVENT_TIMES_CB_DATA *data;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Duration", "No. Events Queued", "No. Events Executed"});
+    char buf[40];
+    Worker::STATISTICS stats = RoutingWorker::get_statistics();
 
-    if ((data = (EVENT_TIMES_CB_DATA*)MXS_MALLOC(sizeof(EVENT_TIMES_CB_DATA))) == NULL)
+    set->add_row({"< 100ms", std::to_string(stats.qtimes[0]), std::to_string(stats.exectimes[0])});
+
+    for (int i = 1; i < Worker::STATISTICS::N_QUEUE_TIMES - 1; i++)
     {
-        return NULL;
+        snprintf(buf, sizeof(buf), "%2d00 - %2d00ms", i, i + 1);
+        set->add_row({buf, std::to_string(stats.qtimes[i]), std::to_string(stats.exectimes[i])});
     }
 
-    data->rowno = 0;
-    data->stats = RoutingWorker::get_statistics();
-
-    if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Duration", 20, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "No. Events Queued", 12, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "No. Events Executed", 12, COL_TYPE_VARCHAR);
+    int idx = Worker::STATISTICS::N_QUEUE_TIMES - 1;
+    snprintf(buf, sizeof(buf), "> %2d00ms", Worker::STATISTICS::N_QUEUE_TIMES);
+    set->add_row({buf, std::to_string(stats.qtimes[idx]), std::to_string(stats.exectimes[idx])});
 
     return set;
 }

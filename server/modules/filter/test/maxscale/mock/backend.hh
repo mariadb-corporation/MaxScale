@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <map>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 #include "routersession.hh"
 
 namespace maxscale
@@ -160,10 +160,6 @@ public:
     }
 
     void handle_statement(RouterSession* pSession, GWBUF* pStatement);
-
-    virtual RESULT_ROW* create_row(RESULTSET* pResult_set);
-
-    static RESULT_ROW* create_row(RESULTSET* pResult_set, void* pThis);
 
     int  m_counter;
     bool m_created;

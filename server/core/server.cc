@@ -42,7 +42,7 @@
 #include <maxscale/server.hh>
 
 #include "internal/monitor.h"
-#include "internal/poll.h"
+#include "internal/poll.hh"
 #include "internal/routingworker.hh"
 #include "internal/config.hh"
 #include "internal/service.hh"
@@ -1021,79 +1021,27 @@ size_t server_get_parameter(const SERVER *server, const char *name, char* out, s
 }
 
 /**
- * Provide a row to the result set that defines the set of servers
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-serverRowCallback(RESULTSET *set, void *data)
-{
-    int *rowno = (int *)data;
-    int i = 0;
-    char *stat = NULL, buf[20];
-    RESULT_ROW *row = NULL;
-    SERVER *server = NULL;
-
-    spinlock_acquire(&server_spin);
-    server = allServers;
-    while (i < *rowno && server)
-    {
-        i++;
-        server = server->next;
-    }
-    if (server == NULL)
-    {
-        spinlock_release(&server_spin);
-        MXS_FREE(data);
-        return NULL;
-    }
-    (*rowno)++;
-    if (server_is_active(server))
-    {
-        row = resultset_make_row(set);
-        resultset_row_set(row, 0, server->name);
-        resultset_row_set(row, 1, server->address);
-        sprintf(buf, "%d", server->port);
-        resultset_row_set(row, 2, buf);
-        sprintf(buf, "%d", server->stats.n_current);
-        resultset_row_set(row, 3, buf);
-        stat = server_status(server);
-        resultset_row_set(row, 4, stat);
-        MXS_FREE(stat);
-    }
-    spinlock_release(&server_spin);
-    return row;
-}
-
-/**
  * Return a resultset that has the current set of servers in it
  *
  * @return A Result set
  */
-RESULTSET *
-serverGetList()
+std::unique_ptr<ResultSet> serverGetList()
 {
-    RESULTSET *set;
-    int *data;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+    spinlock_acquire(&server_spin);
 
-    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
+    for (SERVER* server = allServers; server; server = server->next)
     {
-        return NULL;
+        if (server_is_active(server))
+        {
+            char* stat = server_status(server);
+            set->add_row({server->name, server->address, std::to_string(server->port),
+                         std::to_string(server->stats.n_current), stat});
+            MXS_FREE(stat);
+        }
     }
-    *data = 0;
-    if ((set = resultset_create(serverRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Server", 20, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Address", 15, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Port", 5, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Connections", 8, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Status", 20, COL_TYPE_VARCHAR);
 
+    spinlock_release(&server_spin);
     return set;
 }
 

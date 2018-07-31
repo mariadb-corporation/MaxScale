@@ -40,4 +40,4 @@ struct RegistryTraits<MXS_SESSION>
 
 }
 
-ResultSet *sessionGetList();
+std::unique_ptr<ResultSet> sessionGetList();

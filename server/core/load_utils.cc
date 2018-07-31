@@ -15,8 +15,6 @@
  * @file load_utils.c Utility functions for loading of modules
  */
 
-#include "internal/modules.h"
-
 #include <sys/param.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +38,7 @@
 #include <maxscale/monitor.h>
 #include <maxscale/query_classifier.h>
 
-#include "internal/modules.h"
+#include "internal/modules.hh"
 #include "internal/config.hh"
 
 namespace
@@ -580,6 +578,29 @@ json_t* module_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
+static const char* module_status_to_string(LOADED_MODULE* ptr)
+{
+    switch (ptr->info->status)
+    {
+        case MXS_MODULE_IN_DEVELOPMENT:
+            return "In Development";
+
+        case MXS_MODULE_ALPHA_RELEASE:
+            return "Alpha";
+
+        case MXS_MODULE_BETA_RELEASE:
+            return "Beta";
+
+        case MXS_MODULE_GA:
+            return "GA";
+
+        case MXS_MODULE_EXPERIMENTAL:
+            return "Experimental";
+    };
+
+    return "Unknown";
+}
+
 /**
  * Provide a row to the result set that defines the set of modules
  *
@@ -587,70 +608,24 @@ json_t* module_list_to_json(const char* host)
  * @param data  The index of the row to send
  * @return The next row or NULL
  */
-static RESULT_ROW *
-moduleRowCallback(RESULTSET *set, void *data)
+static void moduleRowCallback(std::unique_ptr<ResultSet>& set)
 {
-    int *rowno = (int *)data;
-    int i = 0;;
-    char *stat, buf[20];
-    RESULT_ROW *row;
-    LOADED_MODULE *ptr;
 
-    ptr = registered;
-    while (i < *rowno && ptr)
+    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
-        i++;
-        ptr = ptr->next;
+        char buf[40];
+        snprintf(buf, sizeof(buf), "%d.%d.%d",
+                 ptr->info->api_version.major,
+                 ptr->info->api_version.minor,
+                 ptr->info->api_version.patch);
+        set->add_row({ptr->module, ptr->type, ptr->version, buf, module_status_to_string(ptr)});
     }
-    if (ptr == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, ptr->module);
-    resultset_row_set(row, 1, ptr->type);
-    resultset_row_set(row, 2, ptr->version);
-    snprintf(buf, 19, "%d.%d.%d", ptr->info->api_version.major,
-             ptr->info->api_version.minor,
-             ptr->info->api_version.patch);
-    buf[19] = '\0';
-    resultset_row_set(row, 3, buf);
-    resultset_row_set(row, 4, ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
-                      ? "In Development"
-                      : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
-                         ? "Alpha"
-                         : (ptr->info->status == MXS_MODULE_BETA_RELEASE
-                            ? "Beta"
-                            : (ptr->info->status == MXS_MODULE_GA
-                               ? "GA"
-                               : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
-                                  ? "Experimental" : "Unknown")))));
-    return row;
 }
 
-RESULTSET *moduleGetList()
+std::unique_ptr<ResultSet> moduleGetList()
 {
-    RESULTSET       *set;
-    int             *data;
-
-    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
-    {
-        return NULL;
-    }
-    *data = 0;
-    if ((set = resultset_create(moduleRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Module Name", 18, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Module Type", 12, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Version", 10, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "API Version", 8, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Status", 15, COL_TYPE_VARCHAR);
-
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Module Name", "Module Type", "Version", "API Version", "Status"});
+    moduleRowCallback(set);
     return set;
 }
 

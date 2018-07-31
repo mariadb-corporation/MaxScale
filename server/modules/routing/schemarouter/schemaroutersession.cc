@@ -21,6 +21,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/resultset.hh>
 
 namespace schemarouter
 {
@@ -884,46 +885,24 @@ bool detect_show_shards(GWBUF* query)
 }
 
 /**
- * Callback for the shard list result set creation
- */
-RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
-{
-    ServerMap* pContent = (ServerMap*)data;
-    RESULT_ROW* rval = resultset_make_row(rset);
-
-    if (rval)
-    {
-        resultset_row_set(rval, 0, pContent->begin()->first.c_str());
-        resultset_row_set(rval, 1, pContent->begin()->second->name);
-        pContent->erase(pContent->begin());
-    }
-
-    return rval;
-}
-
-/**
  * Send a result set of all shards and their locations to the client.
  * @param rses Router client session
  * @return 0 on success, -1 on error
  */
 bool SchemaRouterSession::send_shards()
 {
-    bool rval = false;
-
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"});
     ServerMap pContent;
     m_shard.get_content(pContent);
-    RESULTSET* rset = resultset_create(shard_list_cb, &pContent);
 
-    if (rset)
+    for (auto&& a : pContent)
     {
-        resultset_add_column(rset, "Database", MYSQL_DATABASE_MAXLEN, COL_TYPE_VARCHAR);
-        resultset_add_column(rset, "Server", MYSQL_DATABASE_MAXLEN, COL_TYPE_VARCHAR);
-        resultset_stream_mysql(rset, m_client);
-        resultset_free(rset);
-        rval = true;
+        set->add_row({a.first, a.second->name});
     }
 
-    return rval;
+    set->write(m_client);
+
+    return true;
 }
 
 /**
@@ -1678,34 +1657,6 @@ enum route_target get_shard_route_target(uint32_t qtype)
 }
 
 /**
- * Callback for the database list streaming.
- * @param rset Result set which is being processed
- * @param data Pointer to struct string_array containing the database names
- * @return New resultset row or NULL if no more data is available. If memory allocation
- * failed, NULL is returned.
- */
-RESULT_ROW *result_set_cb(struct resultset * rset, void *data)
-{
-    RESULT_ROW *row = resultset_make_row(rset);
-    std::list<std::string>* arr = (std::list<std::string>*) data;
-
-    if (row)
-    {
-        if (arr->size() > 0 && resultset_row_set(row, 0, arr->begin()->c_str()))
-        {
-            arr->erase(arr->begin());
-        }
-        else
-        {
-            resultset_free_row(row);
-            row = NULL;
-        }
-    }
-
-    return row;
-}
-
-/**
  * Generates a custom SHOW DATABASES result set from all the databases in the
  * hashtable. Only backend servers that are up and in a proper state are listed
  * in it.
@@ -1727,15 +1678,15 @@ bool SchemaRouterSession::send_databases()
             list.push_back(db);
         }
     }
-    RESULTSET* resultset = resultset_create(result_set_cb, &list);
 
-    if (resultset_add_column(resultset, "Database", MYSQL_DATABASE_MAXLEN,
-                             COL_TYPE_VARCHAR))
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
+
+    for (auto&& a : list)
     {
-        resultset_stream_mysql(resultset, m_client);
-        rval = true;
+        set->add_row({a});
     }
-    resultset_free(resultset);
+
+    set->write(m_client);
 
     return rval;
 }
@@ -1779,18 +1730,19 @@ bool SchemaRouterSession::send_tables(GWBUF* pPacket)
             list.push_back(table);
         }
     }
+
     if (!list.empty())
     {
-        RESULTSET* resultset = resultset_create(result_set_cb, &list);
+        std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
 
-        if (resultset_add_column(resultset, "Table", MYSQL_DATABASE_MAXLEN,
-                                 COL_TYPE_VARCHAR))
+        for (auto&& a : list)
         {
-            resultset_stream_mysql(resultset, m_client);
-            rval = true;
+            set->add_row({a});
         }
-        resultset_free(resultset);
+
+        set->write(m_client);
     }
+
     MXS_FREE(query);
     return rval;
 }

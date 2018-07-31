@@ -26,7 +26,7 @@
 
 #include <sys/stat.h>
 
-#include "../internal/poll.h"
+#include "../internal/poll.hh"
 #include "../internal/routingworker.hh"
 #include "../internal/statistics.h"
 

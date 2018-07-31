@@ -20,4 +20,4 @@
 
 #include <maxscale/resultset.hh>
 
-ResultSet *monitor_get_list();
+std::unique_ptr<ResultSet> monitor_get_list();

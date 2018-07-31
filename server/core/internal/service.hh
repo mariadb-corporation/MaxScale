@@ -353,5 +353,5 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
  */
 json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
 
-ResultSet* serviceGetList(void);
-ResultSet* serviceGetListenerList(void);
+std::unique_ptr<ResultSet> serviceGetList(void);
+std::unique_ptr<ResultSet> serviceGetListenerList(void);

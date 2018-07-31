@@ -21,4 +21,4 @@
  *
  * @return A Result set
  */
-ResultSet *moduleGetList();
+std::unique_ptr<ResultSet> moduleGetList();

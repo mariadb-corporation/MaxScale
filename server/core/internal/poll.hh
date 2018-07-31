@@ -13,14 +13,12 @@
  */
 
 /**
- * @file core/maxscale/poll.h - The private poll interface
+ * The private poll header
  */
 
+#include <maxscale/cppdefs.hh>
 #include <maxscale/poll.h>
-
 #include <maxscale/resultset.hh>
-
-MXS_BEGIN_DECLS
 
 struct mxs_worker;
 
@@ -42,6 +40,4 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-ResultSet       *eventTimesGetList();
-
-MXS_END_DECLS
+std::unique_ptr<ResultSet> eventTimesGetList();

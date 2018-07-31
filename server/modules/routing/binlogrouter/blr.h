@@ -35,6 +35,7 @@
 #include <maxscale/service.h>
 #include <maxscale/sqlite3.h>
 #include <maxscale/thread.h>
+#include <maxscale/mysql_binlog.h>
 
 MXS_BEGIN_DECLS
 
@@ -66,9 +67,6 @@ MXS_BEGIN_DECLS
 #define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
 #define BLR_REPORT_REP_HEADER            0x02
 #define BLR_CHECK_ONLY                   0x04
-
-/* MariaDB GTID string len */
-#define GTID_MAX_LEN 42
 
 /* GTID slite3 query buffer size */
 #define GTID_SQL_BUFFER_SIZE 1024

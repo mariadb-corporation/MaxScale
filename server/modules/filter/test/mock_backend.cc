@@ -218,13 +218,10 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
 
     if (op == QUERY_OP_SELECT)
     {
-        RESULTSET* pResult_set = resultset_create(ResultSetBackend::create_row, this);
-        resultset_add_column(pResult_set, "a", 4, COL_TYPE_VARCHAR);
-
+        std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
+        set->add_row({std::to_string(++m_counter)});
         ResultSetDCB dcb;
-
-        resultset_stream_mysql(pResult_set, &dcb);
-        resultset_free(pResult_set);
+        set->write(&dcb);
 
         enqueue_response(pSession, dcb.create_response());
     }
@@ -232,29 +229,6 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
     {
         enqueue_response(pSession, create_ok_response());
     }
-}
-
-RESULT_ROW* ResultSetBackend::create_row(RESULTSET* pResult_set)
-{
-    RESULT_ROW* pRow = NULL;
-
-    if (!m_created)
-    {
-        pRow = resultset_make_row(pResult_set);
-        char buffer[32];
-        sprintf(buffer, "%d", ++m_counter);
-        resultset_row_set(pRow, 0, buffer);
-
-        m_created = true;
-    }
-
-    return pRow;
-}
-
-//static
-RESULT_ROW* ResultSetBackend::create_row(RESULTSET* pResult_set, void* pThis)
-{
-    return static_cast<ResultSetBackend*>(pThis)->create_row(pResult_set);
 }
 
 } // mock

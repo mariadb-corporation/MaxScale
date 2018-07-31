@@ -18,4 +18,4 @@
 
 #include <maxscale/resultset.hh>
 
-ResultSet* serverGetList();
+std::unique_ptr<ResultSet> serverGetList();

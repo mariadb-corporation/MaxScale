@@ -40,7 +40,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
@@ -285,7 +285,7 @@ static int httpd_read_event(DCB* dcb)
     }
     if (strcmp(url, "/services") == 0)
     {
-        RESULTSET *set, *seviceGetList();
+        ResultSet *set, *seviceGetList();
         if ((set = serviceGetList()) != NULL)
         {
             resultset_stream_json(set, dcb);

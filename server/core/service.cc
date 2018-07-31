@@ -42,7 +42,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
-#include <maxscale/resultset.h>
+#include <maxscale/resultset.hh>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
@@ -1742,145 +1742,29 @@ serviceSessionCountAll()
 }
 
 /**
- * Provide a row to the result set that defines the set of service
- * listeners
- *
- * TODO: Replace these
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-serviceListenerRowCallback(RESULTSET *set, void *data)
-{
-    int *rowno = (int *)data;
-    int i = 0;;
-    char buf[20];
-    RESULT_ROW *row;
-    /* TODO: Fix this
-    SERVICE *service;
-    SERV_LISTENER *lptr = NULL;
-
-    spinlock_acquire(&service_spin);
-    service = allServices;
-    if (service)
-    {
-        lptr = service->ports;
-    }
-    while (i < *rowno && service)
-    {
-        lptr = service->ports;
-        while (i < *rowno && lptr)
-        {
-            if ((lptr = lptr->next) != NULL)
-            {
-                i++;
-            }
-        }
-        if (i < *rowno)
-        {
-            service = service->next;
-            if (service && (lptr = service->ports) != NULL)
-            {
-                i++;
-            }
-        }
-    }
-    if (lptr == NULL)
-    {
-        spinlock_release(&service_spin);
-        MXS_FREE(data);
-        return NULL;
-    }
-    (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, service->name);
-    resultset_row_set(row, 1, lptr->protocol);
-    resultset_row_set(row, 2, (lptr && lptr->address) ? lptr->address : "*");
-    sprintf(buf, "%d", lptr->port);
-    resultset_row_set(row, 3, buf);
-    resultset_row_set(row, 4, listener_state_to_string(lptr));
-    spinlock_release(&service_spin);
-    return row;
-    */
-    return NULL;
-}
-
-/**
  * Return a resultset that has the current set of services in it
  *
  * @return A Result set
  */
-RESULTSET *
-serviceGetListenerList()
+std::unique_ptr<ResultSet> serviceGetListenerList()
 {
-    RESULTSET *set;
-    /* TODO: Fix this
-    int *data;
-
-    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
-    {
-        return NULL;
-    }
-    *data = 0;
-    if ((set = resultset_create(serviceListenerRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Protocol Module", 20, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Address", 15, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Port", 5, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "State", 8, COL_TYPE_VARCHAR);
-    return set;
-     */
-    return NULL;
-}
-
-/**
- * Provide a row to the result set that defines the set of services
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-serviceRowCallback(RESULTSET *set, void *data)
-{
-    int *rowno = (int *)data;
-    int i = 0;
-    char buf[20];
-    RESULT_ROW *row;
-    /* TODO: Fix this
-    SERVICE *service;
-
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port", "State"});
     spinlock_acquire(&service_spin);
-    service = allServices;
-    while (i < *rowno && service)
+
+    for (Service* service : allServices)
     {
-        i++;
-        service = service->next;
+        LISTENER_ITERATOR iter;
+
+        for (SERV_LISTENER* lptr = listener_iterator_init(service, &iter);
+             lptr; lptr = listener_iterator_next(&iter))
+        {
+            set->add_row({service->name, lptr->protocol, lptr->address,
+                         std::to_string(lptr->port), listener_state_to_string(lptr)});
+        }
     }
-    if (service == NULL)
-    {
-        spinlock_release(&service_spin);
-        MXS_FREE(data);
-        return NULL;
-    }
-    (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, service->name);
-    resultset_row_set(row, 1, service->routerModule);
-    sprintf(buf, "%d", service->stats.n_current);
-    resultset_row_set(row, 2, buf);
-    sprintf(buf, "%d", service->stats.n_sessions);
-    resultset_row_set(row, 3, buf);
+
     spinlock_release(&service_spin);
-    return row;
-    */
-    return NULL;
+    return set;
 }
 
 /**
@@ -1888,27 +1772,18 @@ serviceRowCallback(RESULTSET *set, void *data)
  *
  * @return A Result set
  */
-RESULTSET *
-serviceGetList()
+std::unique_ptr<ResultSet> serviceGetList()
 {
-    RESULTSET *set;
-    int *data;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions", "Total Sessions"});
+    spinlock_acquire(&service_spin);
 
-    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
+    for (Service* s : allServices)
     {
-        return NULL;
+        set->add_row({s->name, s->routerModule, std::to_string(s->stats.n_current),
+                     std::to_string(s->stats.n_sessions)});
     }
-    *data = 0;
-    if ((set = resultset_create(serviceRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Router Module", 20, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "No. Sessions", 10, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Total Sessions", 10, COL_TYPE_VARCHAR);
 
+    spinlock_release(&service_spin);
     return set;
 }
 

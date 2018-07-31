@@ -43,7 +43,7 @@
 
 #include "internal/config.hh"
 #include "internal/externcmd.h"
-#include "internal/monitor.h"
+#include "internal/monitor.hh"
 #include "internal/modules.h"
 
 /** Schema version, journals must have a matching version */
@@ -751,67 +751,22 @@ bool monitor_set_network_timeout(MXS_MONITOR *mon, int type, int value, const ch
 }
 
 /**
- * Provide a row to the result set that defines the set of monitors
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-monitorRowCallback(RESULTSET *set, void *data)
-{
-    int *rowno = (int *)data;
-    int i = 0;;
-    char buf[20];
-    RESULT_ROW *row;
-    MXS_MONITOR *ptr;
-
-    spinlock_acquire(&monLock);
-    ptr = allMonitors;
-    while (i < *rowno && ptr)
-    {
-        i++;
-        ptr = ptr->next;
-    }
-    if (ptr == NULL)
-    {
-        spinlock_release(&monLock);
-        MXS_FREE(data);
-        return NULL;
-    }
-    (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, ptr->name);
-    resultset_row_set(row, 1, ptr->state & MONITOR_STATE_RUNNING
-                      ? "Running" : "Stopped");
-    spinlock_release(&monLock);
-    return row;
-}
-
-/**
  * Return a resultset that has the current set of monitors in it
  *
  * @return A Result set
  */
-RESULTSET *
-monitor_get_list()
+std::unique_ptr<ResultSet> monitor_get_list()
 {
-    RESULTSET *set;
-    int *data;
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
+    spinlock_acquire(&monLock);
 
-    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
+    for (MXS_MONITOR* ptr = allMonitors; ptr; ptr = ptr->next)
     {
-        return NULL;
+        const char* state = ptr->state & MONITOR_STATE_RUNNING ? "Running" : "Stopped";
+        set->add_row({ptr->name, state});
     }
-    *data = 0;
-    if ((set = resultset_create(monitorRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-    resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Status", 10, COL_TYPE_VARCHAR);
 
+    spinlock_release(&monLock);
     return set;
 }
 

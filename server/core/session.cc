@@ -807,77 +807,19 @@ session_get_user(const MXS_SESSION *session)
     return (session && session->client_dcb) ? session->client_dcb->user : NULL;
 }
 
-/**
- * Callback structure for the session list extraction
- */
-typedef struct
-{
-    int index;
-    int current;
-    SESSIONLISTFILTER filter;
-    RESULT_ROW *row;
-    RESULTSET *set;
-} SESSIONFILTER;
-
 bool dcb_iter_cb(DCB *dcb, void *data)
 {
-    SESSIONFILTER *cbdata = (SESSIONFILTER*)data;
-
-    if (cbdata->current < cbdata->index)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
-        if (cbdata->filter == SESSION_LIST_ALL ||
-            (cbdata->filter == SESSION_LIST_CONNECTION &&
-             (dcb->session->state != SESSION_STATE_LISTENER)))
-        {
-            cbdata->current++;
-        }
-    }
-    else
-    {
+        ResultSet* set = static_cast<ResultSet*>(data);
+        MXS_SESSION *ses = dcb->session;
         char buf[20];
-        MXS_SESSION *list_session = dcb->session;
+        snprintf(buf, sizeof(buf), "%p", ses);
 
-        cbdata->index++;
-        cbdata->row = resultset_make_row(cbdata->set);
-        snprintf(buf, sizeof(buf), "%p", list_session);
-        resultset_row_set(cbdata->row, 0, buf);
-        resultset_row_set(cbdata->row, 1, ((list_session->client_dcb && list_session->client_dcb->remote)
-                                           ? list_session->client_dcb->remote : ""));
-        resultset_row_set(cbdata->row, 2, (list_session->service && list_session->service->name
-                                           ? list_session->service->name : ""));
-        resultset_row_set(cbdata->row, 3, session_state(list_session->state));
-        return false;
+        set->add_row({buf, ses->client_dcb->remote, ses->service->name, session_state(ses->state)});
     }
+
     return true;
-}
-
-/**
- * Provide a row to the result set that defines the set of sessions
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static RESULT_ROW *
-sessionRowCallback(RESULTSET *set, void *data)
-{
-    SESSIONFILTER *cbdata = (SESSIONFILTER*)data;
-    RESULT_ROW *row = NULL;
-
-    cbdata->current = 0;
-    dcb_foreach(dcb_iter_cb, cbdata);
-
-    if (cbdata->row)
-    {
-        row = cbdata->row;
-        cbdata->row = NULL;
-    }
-    else
-    {
-        MXS_FREE(cbdata);
-    }
-
-    return row;
 }
 
 /**
@@ -890,38 +832,12 @@ sessionRowCallback(RESULTSET *set, void *data)
  * so we suppress the warning. In fact, the function call results in return
  * of the set structure which includes a pointer to data
  */
-
-/*lint -e429 */
-RESULTSET *
-sessionGetList(SESSIONLISTFILTER filter)
+std::unique_ptr<ResultSet> sessionGetList()
 {
-    RESULTSET *set;
-    SESSIONFILTER *data;
-
-    if ((data = (SESSIONFILTER *)MXS_MALLOC(sizeof(SESSIONFILTER))) == NULL)
-    {
-        return NULL;
-    }
-    data->index = 0;
-    data->filter = filter;
-    data->current = 0;
-    data->row = NULL;
-
-    if ((set = resultset_create(sessionRowCallback, data)) == NULL)
-    {
-        MXS_FREE(data);
-        return NULL;
-    }
-
-    data->set = set;
-    resultset_add_column(set, "Session", 16, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Client", 15, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "Service", 15, COL_TYPE_VARCHAR);
-    resultset_add_column(set, "State", 15, COL_TYPE_VARCHAR);
-
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Session", "Client", "Service", "State"});
+    dcb_foreach(dcb_iter_cb, set.get());
     return set;
 }
-/*lint +e429 */
 
 mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses)
 {

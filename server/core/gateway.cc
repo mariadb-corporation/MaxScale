@@ -60,7 +60,7 @@
 #include "internal/maxscale.h"
 #include "internal/modules.h"
 #include "internal/monitor.h"
-#include "internal/poll.h"
+#include "internal/poll.hh"
 #include "internal/routingworker.hh"
 #include "internal/service.hh"
 #include "internal/statistics.h"
