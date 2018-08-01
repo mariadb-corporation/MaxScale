@@ -14,7 +14,6 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/monitor.hh>
-#include <maxscale/thread.hh>
 
 /**
  * @file grmon.hh A MySQL Group Replication cluster monitor
