@@ -26,4 +26,6 @@ namespace maxscale
 
 std::string extract_sql(GWBUF* buffer, size_t len = -1);
 
+std::string get_canonical(GWBUF* querybuf);
+
 }

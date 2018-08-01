@@ -1350,7 +1350,10 @@ bool is_negation(const std::string& str)
     return rval;
 }
 
-char* modutil_get_canonical(GWBUF* querybuf)
+namespace maxscale
+{
+
+std::string get_canonical(GWBUF* querybuf)
 {
     std::string rval;
     mxs::Buffer buf(querybuf);
@@ -1492,7 +1495,15 @@ char* modutil_get_canonical(GWBUF* querybuf)
     }
 
     buf.release();
-    return MXS_STRDUP(rval.c_str());
+
+    return rval;
+}
+
+}
+
+char* modutil_get_canonical(GWBUF* querybuf)
+{
+    return MXS_STRDUP(maxscale::get_canonical(querybuf).c_str());
 }
 
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
