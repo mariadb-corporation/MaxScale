@@ -215,7 +215,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
  *
  * @return True if filter was destroyed
  */
-bool runtime_destroy_filter(FilterDef* filter);
+bool runtime_destroy_filter(const SFilterDef& filter);
 
 /**
  * @brief Destroy a monitor
@@ -283,9 +283,9 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
  *
  * @param json JSON defining the filter
  *
- * @return Created filter or NULL on error
+ * @return True if filter was created, false on error
  */
-FilterDef* runtime_create_filter_from_json(json_t* json);
+bool runtime_create_filter_from_json(json_t* json);
 
 /**
  * @brief Create a new service from JSON
