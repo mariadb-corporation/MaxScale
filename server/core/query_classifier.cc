@@ -20,7 +20,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modutil.h>
+#include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/platform.h>
 #include <maxscale/utils.h>
@@ -325,20 +325,14 @@ public:
     {
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
-            char* zCanonical = qc_get_canonical(m_pStmt);
+            m_canonical = mxs::get_canonical(m_pStmt);
 
-            if (zCanonical)
+            QC_STMT_INFO* pInfo = this_thread.pInfo_cache->get(m_canonical);
+
+            if (pInfo)
             {
-                m_canonical = zCanonical;
-                MXS_FREE(zCanonical);
-
-                QC_STMT_INFO* pInfo = this_thread.pInfo_cache->get(m_canonical);
-
-                if (pInfo)
-                {
-                    gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
-                    m_canonical.clear();
-                }
+                gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
+                m_canonical.clear(); // Signals that nothing needs to be added in the destructor.
             }
         }
     }
