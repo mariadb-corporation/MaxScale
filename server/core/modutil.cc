@@ -1239,7 +1239,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
 static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, const std::string& str)
 {
     ss_dassert(it != end);
-    for (auto s_it = str.begin(); s_it != str.end(); s_it++, it++)
+    for (auto s_it = str.begin(); s_it != str.end(); ++s_it, ++it)
     {
         if (it == end || *it != *s_it)
         {
@@ -1369,7 +1369,7 @@ std::string get_canonical(GWBUF* querybuf)
     } my_state = NONE;
 
     for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1); // Skip packet header and command
-         it != buf.end(); it++)
+         it != buf.end(); ++it)
     {
         if (*it == '\\')
         {
@@ -1412,7 +1412,7 @@ std::string get_canonical(GWBUF* querybuf)
                 if (is_next(it, buf.end(), "*/"))
                 {
                     // Comment end marker, return to normal parsing
-                    it++;
+                    ++it;
                     my_state = NONE;
                 }
                 break;
@@ -1420,7 +1420,7 @@ std::string get_canonical(GWBUF* querybuf)
             case UNTIL_NEWLINE:
                 if (is_next(it, buf.end(), "\r\n"))
                 {
-                    it++;
+                    ++it;
                     my_state = NONE;
                 }
                 else if (is_next(it, buf.end(), "\n") || is_next(it, buf.end(), "\r"))
