@@ -944,7 +944,7 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
     int total_users = -1;
     bool no_active_servers = true;
 
-    for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
+    for (server = service->dbref; !service_should_stop && server; server = server->next)
     {
         if (!SERVER_REF_IS_ACTIVE(server) || !server_is_active(server->server) ||
             (skip_local && server_is_mxs_service(server->server)))

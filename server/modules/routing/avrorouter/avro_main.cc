@@ -328,7 +328,7 @@ static bool conversion_task_ctl(Avro *inst, bool start)
 {
     bool rval = false;
 
-    if (!inst->service->svc_do_shutdown)
+    if (!service_should_stop)
     {
         Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
         std::auto_ptr<ConversionCtlTask> task(new (std::nothrow) ConversionCtlTask(inst, start));

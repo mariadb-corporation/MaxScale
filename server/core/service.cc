@@ -125,7 +125,6 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->ports = NULL;
     service->dbref = NULL;
     service->n_dbref = 0;
-    service->svc_do_shutdown = false;
     service->filters = NULL;
     service->n_filters = 0;
     service->weightby[0] = '\0';
@@ -482,7 +481,7 @@ int serviceStartAllPorts(Service* service)
 
     if (port)
     {
-        while (!service->svc_do_shutdown && port)
+        while (!service_should_stop && port)
         {
             listeners += serviceStartPort(service, port);
             port = port->next;
@@ -639,7 +638,7 @@ int service_launch_all()
             error = true;
         }
 
-        if (ptr->svc_do_shutdown)
+        if (service_should_stop)
         {
             break;
         }
@@ -1698,16 +1697,11 @@ serviceEnableLocalhostMatchWildcardHost(Service *service, int action)
     return 1;
 }
 
+volatile sig_atomic_t service_should_stop = 0;
+
 void service_shutdown()
 {
-    spinlock_acquire(&service_spin);
-
-    for (Service* s: allServices)
-    {
-        s->svc_do_shutdown = true;
-    }
-
-    spinlock_release(&service_spin);
+    service_should_stop = 1;
 }
 
 void service_destroy_instances(void)

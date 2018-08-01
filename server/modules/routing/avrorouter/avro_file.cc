@@ -463,7 +463,7 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
 
     ss_dassert(router->binlog_fd != -1);
 
-    while (!router->service->svc_do_shutdown)
+    while (!service_should_stop)
     {
         avro_binlog_end_t rc;
         REP_HEADER hdr;
