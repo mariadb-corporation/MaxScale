@@ -221,7 +221,6 @@ int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_servers);
 int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
-int configure_new_service(CONFIG_CONTEXT *obj);
 void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p);
 
 static const char *config_file = NULL;
@@ -1505,6 +1504,8 @@ process_config_context(CONFIG_CONTEXT *context)
         return false;
     }
 
+    std::set<std::string> monitored_servers;
+
     /**
      * Process the data and create the services defined in the data.
      */
@@ -1521,35 +1522,13 @@ process_config_context(CONFIG_CONTEXT *context)
         {
             error_count += create_new_filter(obj);
         }
-    }
-
-    if (error_count == 0)
-    {
-        /*
-         * Now we have created the services, servers and filters and we can add the
-         * servers and filters to the services. Monitors are also created at this point
-         * because they require a set of servers to monitor.
-         */
-
-        std::set<std::string> monitored_servers;
-
-        for (CONFIG_CONTEXT* obj : objects)
+        else if (type == CN_LISTENER)
         {
-            std::string type = config_get_string(obj->parameters, CN_TYPE);
-            ss_dassert(!type.empty());
-
-            if (type == CN_SERVICE)
-            {
-                error_count += configure_new_service(obj);
-            }
-            else if (type == CN_LISTENER)
-            {
-                error_count += create_new_listener(obj);
-            }
-            else if (type == CN_MONITOR)
-            {
-                error_count += create_new_monitor(obj, monitored_servers);
-            }
+            error_count += create_new_listener(obj);
+        }
+        else if (type == CN_MONITOR)
+        {
+            error_count += create_new_monitor(obj, monitored_servers);
         }
     }
 
@@ -3405,11 +3384,45 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
     if (service)
     {
-        obj->element = service;
+        int error_count = 0;
+
+        for (auto&& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+        {
+            fix_object_name(a);
+
+            if (SERVER * s = server_find_by_unique_name(a.c_str()))
+            {
+                serviceAddBackend(service, s);
+            }
+            else
+            {
+                MXS_ERROR("Unable to find server '%s' that is configured as part "
+                          "of service '%s'.", a.c_str(), obj->object);
+                error_count++;
+            }
+        }
+
+        if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
+        {
+            if (!service_set_filters(service, filters))
+            {
+                error_count++;
+            }
+        }
+
+        if (error_count == 0)
+        {
+            obj->element = service;
+        }
+        else
+        {
+            service_free(service);
+            service = nullptr;
+        }
     }
     else
     {
-        MXS_ERROR("Service creation failed.");
+        MXS_ERROR("Service '%s' creation failed.", obj->object);
     }
 
     return service ? 0 : 1;
@@ -3486,46 +3499,6 @@ int create_new_server(CONFIG_CONTEXT *obj)
     }
 
     return error;
-}
-
-/**
- * Configure a new service after all objects have been created
- *
- * @param obj The service configuration context
- *
- * @return Number of errors
- */
-int configure_new_service(CONFIG_CONTEXT *obj)
-{
-    int error_count = 0;
-    Service *service = static_cast<Service*>(obj->element);
-    ss_dassert(service);
-
-    for (auto&& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
-    {
-        fix_object_name(a);
-
-        if (SERVER* s = server_find_by_unique_name(a.c_str()))
-        {
-            serviceAddBackend(service, s);
-        }
-        else
-        {
-            MXS_ERROR("Unable to find server '%s' that is configured as part "
-                      "of service '%s'.", a.c_str(), obj->object);
-            error_count++;
-        }
-    }
-
-    if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
-    {
-        if (!service_set_filters(service, filters))
-        {
-            error_count++;
-        }
-    }
-
-    return error_count;
 }
 
 /**
