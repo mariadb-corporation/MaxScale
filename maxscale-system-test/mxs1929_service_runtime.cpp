@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 
     auto maxctrl = [&](string cmd, bool print = true)
     {
+        test.set_timeout(60);
         auto rv = test.maxscales->ssh_output("maxctrl " + cmd);
 
         if (rv.first != 0 && print)
