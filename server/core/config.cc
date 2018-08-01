@@ -1505,11 +1505,8 @@ process_config_context(CONFIG_CONTEXT *context)
         return false;
     }
 
-    std::set<std::string> monitored_servers;
-
     /**
-     * Process the data and create the services and servers defined
-     * in the data.
+     * Process the data and create the services defined in the data.
      */
     for (CONFIG_CONTEXT* obj : objects)
     {
