@@ -38,17 +38,17 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     m_gtid_pos(""),
     m_wait_gtid(NONE),
     m_next_seq(0),
-    m_qc(this, session, m_config->use_sql_variables_in),
+    m_qc(this, session, m_config.use_sql_variables_in),
     m_retry_duration(0),
     m_is_replay_active(false),
     m_can_replay_trx(true)
 {
-    if (m_config->rw_max_slave_conn_percent)
+    if (m_config.rw_max_slave_conn_percent)
     {
         int n_conn = 0;
-        double pct = (double)m_config->rw_max_slave_conn_percent / 100.0;
+        double pct = (double)m_config.rw_max_slave_conn_percent / 100.0;
         n_conn = MXS_MAX(floor((double)m_nbackends * pct), 1);
-        m_config->max_slave_connections = n_conn;
+        m_config.max_slave_connections = n_conn;
     }
 }
 
@@ -359,7 +359,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
 
 GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF *writebuf, SRWBackend& backend)
 {
-    if (m_config->causal_reads)
+    if (m_config.causal_reads)
     {
         if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
         {
@@ -480,7 +480,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
             poll_fake_hangup_event(backend_dcb);
         }
     }
-    else if (m_config->transaction_replay && m_can_replay_trx &&
+    else if (m_config.transaction_replay && m_can_replay_trx &&
              session_trx_is_active(m_client->session))
     {
         if (!backend->has_session_commands())
@@ -498,7 +498,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
             size_t size{m_trx.size() + m_current_query.length()};
             // A transaction is open and it is eligible for replaying
-            if (size < m_config->trx_max_size)
+            if (size < m_config.trx_max_size)
             {
                 /** Transaction size is OK, store the statement for replaying and
                  * update the checksum of the result */
@@ -540,7 +540,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
 
-        if (m_config->causal_reads)
+        if (m_config.causal_reads)
         {
             // The reply should never be complete while we are still waiting for the header.
             ss_dassert(m_wait_gtid != WAITING_FOR_HEADER);
@@ -579,7 +579,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (m_is_replay_active)
     {
-        ss_dassert(m_config->transaction_replay);
+        ss_dassert(m_config.transaction_replay);
 
         if (m_expected_responses == 0)
         {
@@ -606,7 +606,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
             return;
         }
     }
-    else if (m_config->transaction_replay && session_trx_is_ending(m_client->session))
+    else if (m_config.transaction_replay && session_trx_is_ending(m_client->session))
     {
         MXS_INFO("Transaction complete");
         m_trx.close();
@@ -668,7 +668,7 @@ bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (!m_is_replay_active && m_config->transaction_replay && m_can_replay_trx)
+    if (!m_is_replay_active && m_config.transaction_replay && m_can_replay_trx)
     {
         if (m_trx.have_stmts() || m_current_query.get())
         {
@@ -766,7 +766,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                      * can't be sure whether it was executed or not. In this
                      * case the safest thing to do is to close the client
                      * connection. */
-                    if (m_config->master_failure_mode != RW_FAIL_INSTANTLY)
+                    if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
                     {
                         can_continue = true;
                     }
@@ -782,7 +782,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                         can_continue = true;
                         retry_query(m_current_query.release());
                     }
-                    else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
+                    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
                     {
                         /** In error_on_write mode, the session can continue even
                          * if the master is lost. Send a read-only error to
@@ -895,7 +895,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
          */
         GWBUF *stored = m_current_query.release();
 
-        if (stored && m_config->retry_failed_reads)
+        if (stored && m_config.retry_failed_reads)
         {
             MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
             retry_query(stored, 0);
@@ -935,7 +935,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
-    if (m_recv_sescmd > 0 && m_config->disable_sescmd_history)
+    if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
     {
         succp = m_router->have_enough_servers();
     }

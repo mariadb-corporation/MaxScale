@@ -116,7 +116,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
     {
         // TODO: Append to the already stored session command instead of disabling history
         MXS_INFO("Large session write, have to disable session command history");
-        m_config->disable_sescmd_history = true;
+        m_config.disable_sescmd_history = true;
 
         continue_large_session_write(querybuf, qtype);
         result = true;

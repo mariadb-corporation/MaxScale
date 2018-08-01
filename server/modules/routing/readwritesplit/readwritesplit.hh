@@ -201,8 +201,6 @@ struct Config
     bool              optimistic_trx;            /**< Enable optimistic transactions */
 };
 
-typedef std::shared_ptr<Config> SConfig;
-
 /**
  * The statistics for this router instance
  */
@@ -229,11 +227,11 @@ class RWSplit: public mxs::Router<RWSplit, RWSplitSession>
     RWSplit& operator=(const RWSplit&);
 
 public:
-    RWSplit(SERVICE* service, SConfig config);
+    RWSplit(SERVICE* service, const Config& config);
     ~RWSplit();
 
     SERVICE* service() const;
-    SConfig config() const;
+    const Config& config() const;
     Stats&   stats();
     const Stats&   stats() const;
     int max_slave_count() const;
@@ -303,15 +301,15 @@ public:
 private:
 
     // Update configuration
-    void store_config(SConfig config);
+    void store_config(const Config& config);
     void update_local_config() const;
-    SConfig* get_local_config() const;
+    Config* get_local_config() const;
 
     // Called when worker local data needs to be updated
     static void update_config(void* data);
 
     SERVICE*           m_service; /**< Service where the router belongs*/
-    SConfig            m_config;
+    Config             m_config;
     mutable std::mutex m_lock; /**< Protects updates of m_config */
     Stats              m_stats;
 
