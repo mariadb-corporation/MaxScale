@@ -149,7 +149,9 @@ public:
                                               *  read-only. */
     NodeData        m_node;                 /**< Replication topology data */
     SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings */
+    ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings. These are not
+                                              *  normally queried from the server, call
+                                              * 'update_replication_settings' before use. */
     bool            m_print_update_errormsg;/**< Should an update error be printed. */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
@@ -196,9 +198,10 @@ public:
     /**
      * Query a few miscellaneous replication settings.
      *
+     * @param error_out Query error output
      * @return True on success
      */
-    bool update_replication_settings();
+    bool update_replication_settings(std::string* error_out = NULL);
 
     /**
      * Query and save server_id, read_only and (if 10.X) gtid_domain_id.
@@ -214,7 +217,7 @@ public:
      * @param print_on Print warnings or not
      * @return True if log_bin is on
      */
-    bool check_replication_settings(print_repl_warnings_t print_warnings = WARNINGS_ON);
+    bool check_replication_settings(print_repl_warnings_t print_warnings = WARNINGS_ON) const;
 
     /**
      * Wait until server catches up to the target gtid. Only considers gtid domains common to this server
@@ -227,6 +230,21 @@ public:
      * @return True, if target gtid was reached within allotted time
      */
     bool wait_until_gtid(const GtidList& target, int timeout, json_t** err_out);
+
+    /**
+     * Is the server replicating (or trying to) from the target server.
+     *
+     * @param target Immediate master or relay server
+     * @return True if replicating
+     */
+    bool is_replicating_from(const MariaDBServer* target);
+
+    /**
+     * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
+     *
+     * @return True if server has binary log enabled
+     */
+    bool binlog_on() const;
 
     /**
      * Check if server is a running master.
@@ -272,6 +290,11 @@ public:
      * Is the server a relay master.
      */
     bool is_relay_master() const;
+
+    /**
+     * Is the server low on disk space?
+     */
+    bool is_low_on_disk_space() const;
 
     /**
      * Check if server has the given bits on in 'pending_status'.
@@ -369,6 +392,23 @@ public:
      * or an error occurred.
      */
     bool failover_wait_relay_log(int seconds_remaining, json_t** err_out);
+
+    /**
+     * Is the server a valid demotion target?
+     *
+     * @param reason_out Output explaining why server cannot be demoted
+     * @return True if server can be demoted by switchover
+     */
+    bool can_be_demoted(std::string* reason_out);
+
+    /**
+     * Is the server a valid promotion target?
+     *
+     * @param demotion_target Which server would be demoted
+     * @param reason_out Output explaining why server cannot be promoted
+     * @return True if server can be promoted by switchover
+     */
+    bool can_be_promoted(const MariaDBServer* demotion_target, std::string* reason_out);
 
     /**
      * Read the file contents and send them as sql queries to the server. Any data returned by the queries is

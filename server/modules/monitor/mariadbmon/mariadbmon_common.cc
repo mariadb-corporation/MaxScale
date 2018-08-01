@@ -19,3 +19,15 @@ const int64_t SERVER_ID_UNKNOWN = -1;
 const int64_t GTID_DOMAIN_UNKNOWN = -1;
 /** Default port */
 const int PORT_UNKNOWN = 0;
+
+using std::string;
+
+DelimitedPrinter::DelimitedPrinter(const string& separator)
+    : m_separator(separator)
+{}
+
+void DelimitedPrinter::cat(string& target, const string& addition)
+{
+    target += m_current_separator + addition;
+    m_current_separator = m_separator;
+}

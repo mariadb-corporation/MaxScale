@@ -20,6 +20,8 @@
 #define MXS_MODULE_NAME "mariadbmon"
 
 #include <maxscale/cppdefs.hh>
+
+#include <string>
 #include <maxscale/json_api.h>
 
 /** Utility macro for printing both MXS_ERROR and json error */
@@ -35,3 +37,25 @@
 extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
 extern const int PORT_UNKNOWN;
+
+// Helper class for concatenating strings with a delimiter.
+class DelimitedPrinter
+{
+private:
+    DelimitedPrinter(const DelimitedPrinter&) = delete;
+    DelimitedPrinter& operator = (const DelimitedPrinter&) = delete;
+    DelimitedPrinter() = delete;
+public:
+    DelimitedPrinter(const std::string& separator);
+
+    /**
+     * Add to string.
+     *
+     * @param target String to modify
+     * @param addition String to add. The delimiter is printed before the addition.
+     */
+    void cat(std::string& target, const std::string& addition);
+private:
+    const std::string m_separator;
+    std::string m_current_separator;
+};

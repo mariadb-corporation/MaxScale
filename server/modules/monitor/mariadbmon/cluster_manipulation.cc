@@ -21,45 +21,60 @@
 using std::string;
 using maxscale::string_printf;
 
+static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
+                                    "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
+
 static void print_redirect_errors(MariaDBServer* first_server, const ServerArray& servers,
                                   json_t** err_out);
 
-bool MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+/**
+ * Run a manual switchover, promoting a new master server and demoting the existing master.
+ *
+ * @param promotion_server The server which should be promoted. If null, monitor will autoselect.
+ * @param demotion_server The server which should be demoted. Can be null for autoselect, in which case
+ * monitor will select the cluster master server. Otherwise must be a valid master server or a relay.
+ * @param error_out Error output
+ * @return True, if switchover was performed successfully
+ */
+bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotion_server, json_t** error_out)
 {
-    /* It's possible for either current_master, or both new_master & current_master to be NULL, which means
-     * autoselect. Only autoselecting new_master is not possible. Autoselection will happen at the actual
-     * switchover function. */
-    MariaDBServer *found_new_master = NULL, *found_curr_master = NULL;
-    auto ok_to_switch = switchover_check(new_master, current_master, &found_new_master, &found_curr_master,
-                                         error_out);
+    /* The server parameters may be null, in which case the monitor will autoselect.
+     *
+     * Manual commands (as well as automatic ones) are ran at the end of a normal monitor loop,
+     * so server states can be assumed to be up-to-date.
+     */
+    MariaDBServer* promotion_target = NULL;
+    MariaDBServer* demotion_target = NULL;
+    auto ok_to_switch = switchover_prepare(promotion_server, demotion_server,
+                                           &promotion_target, &demotion_target, error_out);
 
     bool rval = false;
     if (ok_to_switch)
     {
-        bool switched = do_switchover(&found_curr_master, &found_new_master, error_out);
-        const char AUTOSELECT[] = "<autoselect>";
-        const char* curr_master_name = found_curr_master ? found_curr_master->name() : AUTOSELECT;
-        const char* new_master_name = found_new_master ? found_new_master->name() : AUTOSELECT;
-
+        bool switched = do_switchover(demotion_target, promotion_target, error_out);
         if (switched)
         {
-            MXS_NOTICE("Switchover %s -> %s performed.", curr_master_name, new_master_name);
+            MXS_NOTICE("Switchover %s -> %s performed.", demotion_target->name(), promotion_target->name());
             rval = true;
         }
         else
         {
-            string format = "Switchover %s -> %s failed";
+            string msg = string_printf("Switchover %s -> %s failed",
+                                       demotion_target->name(), promotion_target->name());
             bool failover_setting = config_get_bool(m_monitor->parameters, CN_AUTO_FAILOVER);
             if (failover_setting)
             {
                 disable_setting(CN_AUTO_FAILOVER);
-                format += ", automatic failover has been disabled.";
+                msg += ", automatic failover has been disabled";
             }
-            format += ".";
-            PRINT_MXS_JSON_ERROR(error_out, format.c_str(), curr_master_name, new_master_name);
+            msg += ".";
+            PRINT_MXS_JSON_ERROR(error_out, "%s", msg.c_str());
         }
     }
-
+    else
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Switchover cancelled.");
+    }
     return rval;
 }
 
@@ -446,96 +461,35 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
 
 /**
  * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
- * intermediate step fails, the cluster may be left without a master.
+ * intermediate step fails, the cluster may be left without a master and manual intervention is
+ * required to fix things.
  *
- * @param current_master Handle to current master server. If null, the autoselected server is written here.
- * @param new_master Handle to slave which should be promoted. If null, the autoselected server is written
- * here.
+ * @param demotion_target Server to demote
+ * @param promotion_target Server to promote
  * @param err_out json object for error printing. Can be NULL.
- * @return True if successful. If false, the cluster can be in various situations depending on which step
- * failed. In practice, manual intervention is usually required on failure.
+ * @return True if successful. If false, replication may be broken.
  */
-bool MariaDBMonitor::do_switchover(MariaDBServer** current_master, MariaDBServer** new_master,
+bool MariaDBMonitor::do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target,
                                    json_t** err_out)
 {
-    ss_dassert(current_master && new_master);
-    MariaDBServer* demotion_target = NULL;
-    if (*current_master == NULL)
-    {
-        // Autoselect current master.
-        if (m_master && m_master->is_master())
-        {
-            demotion_target = m_master;
-            *current_master = demotion_target;
-        }
-        else
-        {
-            PRINT_MXS_JSON_ERROR(err_out, "Could not autoselect current master for switchover. Cluster does "
-                                 "not have a master or master is in maintenance.");
-            return false;
-        }
-    }
-    else
-    {
-        // No need to check a given current master, it has already been checked.
-        demotion_target = *current_master;
-    }
-
-    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
-        return false;
-    }
+    ss_dassert(demotion_target && promotion_target);
 
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
     int seconds_remaining = m_switchover_timeout;
     time_t start_time = time(NULL);
 
-    // Step 1: Save all slaves except promotion target to an array. If we have a
-    // user-defined master candidate, check it. Otherwise, autoselect.
-    MariaDBServer* promotion_target = NULL;
+    // Step 1: Save all slaves except promotion target to an array.
     ServerArray redirectable_slaves;
-    if (*new_master == NULL)
+    for (MariaDBServer* redirectable : demotion_target->m_node.children)
     {
-        // Autoselect new master.
-        promotion_target = select_new_master(&redirectable_slaves, err_out);
-        if (promotion_target)
+        // TODO: Again check valid replication here
+        if (redirectable != promotion_target && redirectable->is_replicating_from(demotion_target) &&
+            redirectable->uses_gtid())
         {
-            *new_master = promotion_target;
-        }
-        else
-        {
-            PRINT_MXS_JSON_ERROR(err_out, "Could not autoselect new master for switchover.");
-            return false;
+            redirectable_slaves.push_back(redirectable);
         }
     }
-    else
-    {
-        // Check user-given new master. Some checks have already been performed but more is needed.
-        if (switchover_check_preferred_master(*new_master, err_out))
-        {
-            promotion_target = *new_master;
-            /* User-given candidate is good. Update info on all slave servers.
-             * The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
-             * path analogous with failover_select_new_master(). The later functions can then assume that
-             * slave server info is up to date. If the master is replicating from external master, it is
-             * updated by update_slave_info() but not added to array. */
-            for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-            {
-                MariaDBServer* server = *iter;
-                if (server != promotion_target && server->update_slave_info() && server != demotion_target)
-                {
-                    redirectable_slaves.push_back(server);
-                }
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
-    ss_dassert(demotion_target && promotion_target);
 
     bool rval = false;
     // Step 2: Set read-only to on, flush logs, update master gtid:s
@@ -1058,11 +1012,16 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
             {
                 // If no new master yet, accept any valid candidate. Otherwise check.
                 if (current_best == NULL ||
-                    is_candidate_better(current_best, cand, m_master_gtid_domain, &current_best_reason))
+                    is_candidate_better(cand, current_best, m_master_gtid_domain, &current_best_reason))
                 {
                     // The server has been selected for promotion, for now.
                     current_best = cand;
                     master_vector_index = slaves_out->size() - 1;
+                    if (!current_best_reason.empty())
+                    {
+                        current_best_reason = string_printf("Selected '%s' because %s", current_best->name(),
+                                                        current_best_reason.c_str());
+                    }
                 }
             }
         }
@@ -1088,7 +1047,7 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
             MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
             break;
         }
-        else if (is_candidate_better(current_best, excluded_info, m_master_gtid_domain))
+        else if (is_candidate_better(excluded_info, current_best, m_master_gtid_domain))
         {
             // Print a warning if this server is actually a better candidate than the previous best.
             const char EXCLUDED_CAND[] = "Server '%s' is superior to current best candidate '%s', "
@@ -1108,6 +1067,110 @@ MariaDBServer* MariaDBMonitor::select_new_master(ServerArray* slaves_out, json_t
         // If there was a specific reason this server was selected, print it now. It's possible that all
         // were equally good, in that case no need to print.
         MXS_NOTICE("%s", current_best_reason.c_str());
+    }
+    return current_best;
+}
+
+
+MariaDBServer* MariaDBMonitor::switchover_select_promotion(MariaDBServer* demotion_target, json_t** err_out)
+{
+    /* Select a new master candidate. Selects the one with the latest event in relay log.
+     * If multiple slaves have same number of events, select the one with most processed events. */
+
+    if (!demotion_target->m_node.children.empty())
+    {
+        MXS_NOTICE("Selecting a server to promote and replace '%s'. Candidates are: %s.",
+                   demotion_target->name(),
+                   monitored_servers_to_string(demotion_target->m_node.children).c_str());
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "'%s' does not have any slaves to promote.", demotion_target->name());
+        return NULL;
+    }
+
+    // Servers that cannot be selected because of exclusion, but seem otherwise ok.
+    ServerArray valid_but_excluded;
+
+    string all_reasons;
+    DelimitedPrinter printer("\n");
+    // The valid promotion candidates are the slaves replicating directly from the demotion target.
+    ServerArray candidates;
+    for (MariaDBServer* cand : demotion_target->m_node.children)
+    {
+        string reason;
+        if (!cand->can_be_promoted(demotion_target, &reason))
+        {
+            string msg = string_printf("'%s' cannot be selected because %s", cand->name(), reason.c_str());
+            printer.cat(all_reasons, msg);
+        }
+        else if (server_is_excluded(cand))
+        {
+            valid_but_excluded.push_back(cand);
+            string msg = string_printf("'%s' cannot be selected because it is excluded.", cand->name());
+            printer.cat(all_reasons, msg);
+        }
+        else
+        {
+            candidates.push_back(cand);
+        }
+    }
+
+    MariaDBServer* current_best = NULL;
+    if (candidates.empty())
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "No suitable promotion candidate found:\n%s", all_reasons.c_str());
+    }
+    else
+    {
+        current_best = candidates.front();
+        candidates.erase(candidates.begin());
+        if (!all_reasons.empty())
+        {
+            MXS_WARNING("Some servers were disqualified for promotion:\n%s", all_reasons.c_str());
+        }
+    }
+
+    // Check which candidate is best
+    string current_best_reason;
+    for (MariaDBServer* cand : candidates)
+    {
+        if (is_candidate_better(cand, current_best, m_master_gtid_domain, &current_best_reason))
+        {
+            // Select the server for promotion, for now.
+            current_best = cand;
+        }
+    }
+
+    // Check if any of the excluded servers would be better than the best candidate. Only print one item.
+    for (MariaDBServer* excluded_info : valid_but_excluded)
+    {
+        const char* excluded_name = excluded_info->name();
+        if (current_best == NULL)
+        {
+            const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
+                                              "but cannot be selected as it's excluded.";
+            MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
+            break;
+        }
+        else if (is_candidate_better(excluded_info, current_best, m_master_gtid_domain))
+        {
+            // Print a warning if this server is actually a better candidate than the previous best.
+            const char EXCLUDED_CAND[] = "Server '%s' is superior to current best candidate '%s', "
+                                         "but cannot be selected as it's excluded. This may lead to "
+                                         "loss of data if '%s' is ahead of other servers.";
+            MXS_WARNING(EXCLUDED_CAND, excluded_name, current_best->name(), excluded_name);
+            break;
+        }
+    }
+
+    if (current_best)
+    {
+        // If there was a specific reason this server was selected, print it now. If the first candidate
+        // was chosen (likely all servers were equally good), do not print.
+        string msg = string_printf("Selected '%s'", current_best->name());
+        msg += current_best_reason.empty() ? "." : (" because " + current_best_reason);
+        MXS_NOTICE("%s", msg.c_str());
     }
     return current_best;
 }
@@ -1133,17 +1196,16 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
 /**
  * Is the candidate a better choice for master than the previous best?
  *
- * @param current_best_info Server info of current best choice
  * @param candidate_info Server info of new candidate
+ * @param current_best_info Server info of current best choice
  * @param gtid_domain Which domain to compare
  * @param reason_out Why is the candidate better than current_best
  * @return True if candidate is better
  */
-bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
+bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                                          uint32_t gtid_domain, std::string* reason_out)
 {
-    string reason = string("'") + candidate->name() + "' is the best candidate because it ";
-
+    string reason;
     bool is_better = false;
     uint64_t cand_io = candidate->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
     uint64_t curr_io = current_best->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
@@ -1151,7 +1213,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
     if (cand_io > curr_io)
     {
         is_better = true;
-        reason += "has received more events.";
+        reason = "it has received more events.";
     }
     // If io sequences are identical ...
     else if (cand_io == curr_io)
@@ -1162,7 +1224,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
         if (cand_processed > curr_processed)
         {
             is_better = true;
-            reason += "has processed more events.";
+            reason = "it has processed more events.";
         }
         // If gtid positions are identical ...
         else if (cand_processed == curr_processed)
@@ -1173,7 +1235,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
             if (cand_updates && !curr_updates)
             {
                 is_better = true;
-                reason += "has 'log_slave_updates' on.";
+                reason = "it has 'log_slave_updates' on.";
             }
             // If both have log_slave_updates on ...
             else if (cand_updates && curr_updates)
@@ -1184,7 +1246,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
                 if (cand_disk_ok && !curr_disk_ok)
                 {
                     is_better = true;
-                    reason += "is not low on disk space.";
+                    reason = "it is not low on disk space.";
                 }
             }
         }
@@ -1195,77 +1257,6 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* current_best, cons
         *reason_out = reason;
     }
     return is_better;
-}
-
-/**
- * Check that the given server is a master and it's the only master.
- *
- * @param suggested_curr_master     The server to check, given by user.
- * @param error_out                 On output, error object if function failed.
- * @return True if current master seems ok. False, if there is some error with the
- * specified current master.
- */
-bool MariaDBMonitor::switchover_check_current(const MariaDBServer* suggested_curr_master,
-                                              json_t** error_out) const
-{
-    ss_dassert(suggested_curr_master);
-    bool server_is_master = false;
-    MariaDBServer* extra_master = NULL; // A master server which is not the suggested one
-
-    for (auto iter = m_servers.begin(); iter != m_servers.end() && extra_master == NULL; iter++)
-    {
-        MariaDBServer* server = *iter;
-        if (server->is_master())
-        {
-            if (server == suggested_curr_master)
-            {
-                server_is_master = true;
-            }
-            else
-            {
-                extra_master = server;
-            }
-        }
-    }
-
-    if (!server_is_master)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
-                             suggested_curr_master->name());
-    }
-    else if (extra_master)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
-                             extra_master->name());
-    }
-    return server_is_master && !extra_master;
-}
-
-/**
- * Check whether specified new master is acceptable.
- *
- * @param monitored_server      The server to check against.
- * @param error                 On output, error object if function failed.
- *
- * @return True, if suggested new master is a viable promotion candidate.
- */
-bool MariaDBMonitor::switchover_check_new(const MariaDBServer* new_master_cand, json_t** error)
-{
-    bool is_master = new_master_cand->is_master();
-    bool is_slave = new_master_cand->is_slave();
-
-    if (is_master)
-    {
-        const char IS_MASTER[] = "Specified new master '%s' is already the current master.";
-        PRINT_MXS_JSON_ERROR(error, IS_MASTER, new_master_cand->name());
-    }
-    else if (!is_slave)
-    {
-        const char NOT_SLAVE[] = "Specified new master '%s' is not a slave.";
-        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, new_master_cand->name());
-    }
-
-    return !is_master && is_slave;
 }
 
 /**
@@ -1345,9 +1336,6 @@ bool MariaDBMonitor::failover_check(string* error_out)
 */
 void MariaDBMonitor::handle_auto_failover()
 {
-    const char RE_ENABLE_FMT[] = "To re-enable automatic failover, manually set '%s' to 'true' for monitor "
-                                 "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-
     string cluster_issues;
     // TODO: Only check this when topology has changed.
     if (!cluster_supports_failover(&cluster_issues))
@@ -1357,8 +1345,9 @@ void MariaDBMonitor::handle_auto_failover()
                                 "%s\n\n"
                                 "Automatic failover has been disabled. It should only be enabled after the "
                                 "above issues have been resolved.";
-        string problems = string_printf(PROBLEMS, cluster_issues.c_str());
-        string total_msg = problems + " " + string_printf(RE_ENABLE_FMT, CN_AUTO_FAILOVER, m_monitor->name);
+        string p1 = string_printf(PROBLEMS, cluster_issues.c_str());
+        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
+        string total_msg = p1 + " " + p2;
         MXS_ERROR("%s", total_msg.c_str());
         m_auto_failover = false;
         disable_setting(CN_AUTO_FAILOVER);
@@ -1426,12 +1415,7 @@ void MariaDBMonitor::handle_auto_failover()
                 failed_master->m_server_base->new_event = false;
                 if (!do_failover(NULL))
                 {
-                    const string FAILED = "Automatic failover failed, disabling automatic failover.";
-                    string error_msg = FAILED + " " +
-                        string_printf(RE_ENABLE_FMT, CN_AUTO_FAILOVER, m_monitor->name);
-                    MXS_ERROR("%s", error_msg.c_str());
-                    m_auto_failover = false;
-                    disable_setting(CN_AUTO_FAILOVER);
+                    report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
                 }
             }
             else
@@ -1441,7 +1425,7 @@ void MariaDBMonitor::handle_auto_failover()
                 if (m_warn_failover_precond)
                 {
                     MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
-                        "suppressed. Errors: \n%s", error_msg.c_str());
+                                "suppressed. Errors: \n%s", error_msg.c_str());
                     m_warn_failover_precond = false;
                 }
             }
@@ -1570,71 +1554,130 @@ static void print_redirect_errors(MariaDBServer* first_server, const ServerArray
 
 /**
  * Check cluster and parameters for suitability to switchover. Also writes found servers to output pointers.
- * If a server parameter is NULL, the corresponding output parameter is not written to.
  *
- * @param new_master New master requested by the user. Can be null for autoselect.
- * @param current_master Current master given by the user. Can be null for autoselect.
- * @param new_master_out Where to write found new master.
- * @param current_master_out Where to write found current master.
- * @param error_out Error output, can be null.
- * @return True if cluster is suitable and server parameters were valid and found.
+ * @param promotion_server The server which should be promoted. If null, monitor will autoselect.
+ * @param demotion_server The server which should be demoted. Can be null for autoselect.
+ * @param promotion_target_out Output for promotion target
+ * @param demotion_target_out Output for demotion target
+ * @param error_out Error output
+ * @return True if cluster is suitable and server parameters were valid
  */
-bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master,
-                                      MariaDBServer** new_master_out, MariaDBServer** current_master_out,
-                                      json_t** error_out)
+bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server,
+                                        MariaDBServer** promotion_target_out,
+                                        MariaDBServer** demotion_target_out,
+                                        json_t** error_out)
 {
-    bool new_master_ok = true, current_master_ok = true;
+    // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
+    // first since the promotion target depends on it.
+    ss_dassert(promotion_target_out && demotion_target_out &&
+               !*promotion_target_out && !*demotion_target_out);
     const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
-    // Check that both servers are ok if specified. Null is a valid value.
-    if (new_master)
+
+    MariaDBServer* demotion_target = NULL;
+    string demotion_msg;
+    if (demotion_server)
     {
-        auto mon_new_master = mon_get_monitored_server(m_monitor, new_master);
-        if (mon_new_master == NULL)
+        // Manual select.
+        MariaDBServer* demotion_candidate = get_server(demotion_server);
+        if (demotion_candidate == NULL)
         {
-            new_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->name, m_monitor->name);
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, demotion_server->name, m_monitor->name);
+        }
+        else if (!demotion_candidate->can_be_demoted(&demotion_msg))
+        {
+            PRINT_MXS_JSON_ERROR(error_out,  "'%s' is not a valid demotion target for switchover: %s",
+                                 demotion_candidate->name(), demotion_msg.c_str());
         }
         else
         {
-            MariaDBServer* found_new_master = get_server_info(mon_new_master);
-            if (switchover_check_new(found_new_master, error_out))
+            demotion_target = demotion_candidate;
+        }
+    }
+    else
+    {
+        // Autoselect current master as demotion target.
+        if (m_master == NULL)
+        {
+            const char msg[] = "Can not autoselect a demotion target for switchover: cluster does "
+                               "not have a master.";
+            PRINT_MXS_JSON_ERROR(error_out, msg);
+        }
+        else if (!m_master->can_be_demoted(&demotion_msg))
+        {
+            const char msg[] = "Can not autoselect '%s' as a demotion target for switchover: %s";
+            PRINT_MXS_JSON_ERROR(error_out, msg, m_master->name(), demotion_msg.c_str());
+        }
+        else
+        {
+            demotion_target = m_master;
+        }
+    }
+
+    MariaDBServer* promotion_target = NULL;
+    if (demotion_target)
+    {
+        string promotion_msg;
+        if (promotion_server)
+        {
+            // Manual select.
+            MariaDBServer* promotion_candidate = get_server(promotion_server);
+            if (promotion_candidate == NULL)
             {
-                *new_master_out = found_new_master;
+                PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, promotion_server->name, m_monitor->name);
+            }
+            else if (!promotion_candidate->can_be_promoted(demotion_target, &promotion_msg))
+            {
+                const char msg[] = "'%s' is not a valid promotion target for switchover: %s";
+                PRINT_MXS_JSON_ERROR(error_out, msg, promotion_candidate->name(), promotion_msg.c_str());
             }
             else
             {
-                new_master_ok = false;
+                promotion_target = promotion_candidate;
+            }
+        }
+        else
+        {
+            // Autoselect. More involved than the autoselecting the demotion target.
+            MariaDBServer* promotion_candidate = switchover_select_promotion(demotion_target, error_out);
+            if (promotion_candidate)
+            {
+                promotion_target = promotion_candidate;
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Could not autoselect promotion target for switchover.");
             }
         }
     }
 
-    if (current_master)
+    bool gtid_domain_ok = false;
+    if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
     {
-        auto mon_curr_master = mon_get_monitored_server(m_monitor, current_master);
-        if (mon_curr_master == NULL)
-        {
-            current_master_ok = false;
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->name, m_monitor->name);
-        }
-        else
-        {
-            MariaDBServer* found_curr_master = get_server_info(mon_curr_master);
-            if (switchover_check_current(found_curr_master, error_out))
-            {
-                *current_master_out = get_server_info(mon_curr_master);
-            }
-            else
-            {
-                current_master_ok = false;
-            }
-        }
+        PRINT_MXS_JSON_ERROR(error_out, "Cluster gtid domain is unknown. Cannot switchover.");
+    }
+    else
+    {
+        gtid_domain_ok = true;
     }
 
     // Check that all slaves are using gtid-replication.
-    bool gtid_ok = true;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    bool gtid_ok = slaves_using_gtid(error_out);
+
+    if (demotion_target && promotion_target && gtid_domain_ok && gtid_ok)
     {
-        MariaDBServer* server = *iter;
+        *demotion_target_out = demotion_target;
+        *promotion_target_out = promotion_target;
+        return true;
+    }
+    return false;
+}
+
+bool MariaDBMonitor::slaves_using_gtid(json_t** error_out)
+{
+    // Check that all slaves are using gtid-replication.
+    bool gtid_ok = true;
+    for (MariaDBServer* server : m_servers)
+    {
         string gtid_error;
         if (server->is_slave() && !server->uses_gtid(&gtid_error))
         {
@@ -1642,8 +1685,7 @@ bool MariaDBMonitor::switchover_check(SERVER* new_master, SERVER* current_master
             PRINT_MXS_JSON_ERROR(error_out, "%s", gtid_error.c_str());
         }
     }
-
-    return new_master_ok && current_master_ok && gtid_ok;
+    return gtid_ok;
 }
 
 void MariaDBMonitor::enforce_read_only_on_slaves()
@@ -1677,6 +1719,68 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
             !server->is_master() && !server->is_relay_master())
         {
             server->set_status(SERVER_MAINT);
+            m_cluster_modified = true;
         }
     }
+}
+
+void MariaDBMonitor::handle_low_disk_space_master()
+{
+    if (m_master && m_master->is_master() && m_master->is_low_on_disk_space())
+    {
+        if (m_warn_switchover_precond)
+        {
+            MXS_WARNING("Master server '%s' is low on disk space. Attempting to switch it with a slave.",
+                        m_master->name());
+        }
+
+        // Looks like the master should be swapped out. Before trying it, check if there is even
+        // a likely valid slave to swap to.
+        MariaDBServer* demotion_target = NULL;
+        MariaDBServer* promotion_target = NULL;
+        auto ok_to_switch = switchover_prepare(NULL, m_master->m_server_base->server,
+                                               &promotion_target, &demotion_target, NULL);
+
+        if (ok_to_switch)
+        {
+            m_warn_switchover_precond = true;
+            bool switched = do_switchover(demotion_target, promotion_target, NULL);
+            if (switched)
+            {
+                MXS_NOTICE("Switchover %s -> %s performed.", demotion_target->name(), promotion_target->name());
+            }
+            else
+            {
+                report_and_disable("switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+                                   &m_switchover_on_low_disk_space);
+            }
+        }
+        else
+        {
+            // Switchover was not attempted because of errors, however these errors are not permanent.
+            // Servers were not modified, so it's ok to try this again.
+            if (m_warn_switchover_precond)
+            {
+                MXS_WARNING("Not performing automatic switchover. Will keep retrying with this message "
+                            "suppressed.");
+                m_warn_switchover_precond = false;
+            }
+        }
+    }
+    else
+    {
+        m_warn_switchover_precond = true;
+    }
+}
+
+void MariaDBMonitor::report_and_disable(const string& operation, const string& setting_name,
+                                        bool* setting_var)
+{
+    string p1 = string_printf("Automatic %s failed, disabling automatic %s.", operation.c_str(),
+                              operation.c_str());
+    string p2 = string_printf(RE_ENABLE_FMT, operation.c_str(), setting_name.c_str(), m_monitor->name);
+    string error_msg = p1 + " " + p2;
+    MXS_ERROR("%s", error_msg.c_str());
+    *setting_var = false;
+    disable_setting(setting_name.c_str());
 }

@@ -31,9 +31,11 @@
 #include "../../../core/internal/monitor.h"
 
 using std::string;
+using maxscale::string_printf;
 
 // Config parameter names
 const char * const CN_AUTO_FAILOVER       = "auto_failover";
+const char * const CN_SWITCHOVER_ON_LOW_DISK_SPACE = "switchover_on_low_disk_space";
 const char * const CN_PROMOTION_SQL_FILE  = "promotion_sql_file";
 const char * const CN_DEMOTION_SQL_FILE   = "demotion_sql_file";
 
@@ -42,7 +44,6 @@ static const char CN_FAILCOUNT[]                    = "failcount";
 static const char CN_ENFORCE_READONLY[]             = "enforce_read_only_slaves";
 static const char CN_NO_PROMOTE_SERVERS[]           = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[]             = "failover_timeout";
-static const char CN_SWITCHOVER_ON_LOW_DISK_SPACE[] = "switchover_on_low_disk_space";
 static const char CN_SWITCHOVER_TIMEOUT[]           = "switchover_timeout";
 static const char CN_DETECT_STANDALONE_MASTER[]     = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
@@ -63,9 +64,9 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_topology_changed(true)
     , m_cluster_modified(false)
-    , m_switchover_on_low_disk_space(false)
     , m_log_no_master(true)
     , m_warn_failover_precond(true)
+    , m_warn_switchover_precond(true)
     , m_warn_cannot_rejoin(true)
     , m_warn_current_master_invalid(true)
     , m_warn_have_better_master(true)
@@ -141,6 +142,23 @@ MariaDBServer* MariaDBMonitor::get_server(int64_t id)
 {
     auto found = m_servers_by_id.find(id);
     return (found != m_servers_by_id.end()) ? (*found).second : NULL;
+}
+
+/**
+ * Get the equivalent MariaDBServer.
+ *
+ * @param server Which server to search for
+ * @return MariaDBServer if found, NULL otherwise
+ */
+MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
+{
+    MariaDBServer* found = NULL;
+    auto mon_server = mon_get_monitored_server(m_monitor, server);
+    if (mon_server)
+    {
+        found = get_server_info(mon_server);
+    }
+    return found;
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
@@ -486,11 +504,6 @@ void MariaDBMonitor::tick()
         measure_replication_lag();
     }
 
-    if (m_maintenance_on_low_disk_space)
-    {
-        set_low_disk_slaves_maintenance();
-    }
-
     // Update shared status. The next functions read the shared status. TODO: change the following
     // functions to read "pending_status" instead.
     for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
@@ -554,6 +567,19 @@ void MariaDBMonitor::process_state_changes()
         if (m_enforce_read_only_slaves && !m_cluster_modified)
         {
             enforce_read_only_on_slaves();
+        }
+
+        /* Set low disk space slaves to maintenance.
+         */
+        if (m_maintenance_on_low_disk_space && !m_cluster_modified)
+        {
+            set_low_disk_slaves_maintenance();
+        }
+
+        /* Check if the master server is on low disk space and act on it. */
+        if (m_switchover_on_low_disk_space && !m_cluster_modified)
+        {
+            handle_low_disk_space_master();
         }
     }
 }
@@ -1037,12 +1063,13 @@ bool MariaDBMonitor::execute_manual_command(std::function<void (void)> command, 
     return rval;
 }
 
-bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server, SERVER* demotion_server,
+                                           json_t** error_out)
 {
     bool rval = false;
-    bool send_ok = execute_manual_command([this, &rval, new_master, current_master, error_out]()
+    bool send_ok = execute_manual_command([this, &rval, promotion_server, demotion_server, error_out]()
     {
-        rval = manual_switchover(new_master, current_master, error_out);
+        rval = manual_switchover(promotion_server, demotion_server, error_out);
     }, error_out);
     return send_ok && rval;
 }
@@ -1092,9 +1119,9 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     {
         MXS_MONITOR* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon->instance);
-        SERVER* new_master = (args->argc >= 2) ? args->argv[1].value.server : NULL;
-        SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        rval = handle->run_manual_switchover(new_master, current_master, error_out);
+        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
+        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
+        rval = handle->run_manual_switchover(promotion_server, demotion_server, error_out);
     }
     return rval;
 }

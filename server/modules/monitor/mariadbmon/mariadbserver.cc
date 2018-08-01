@@ -276,17 +276,22 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
     return rval;
 }
 
-bool MariaDBServer::update_replication_settings()
+bool MariaDBServer::update_replication_settings(std::string* error_out)
 {
     static const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
+    string query_error;
     bool rval = false;
-    auto result = execute_query(query);
+    auto result = execute_query(query, &query_error);
     if (result.get() != NULL && result->next_row())
     {
         m_rpl_settings.gtid_strict_mode = result->get_bool(0);
         m_rpl_settings.log_bin = result->get_bool(1);
         m_rpl_settings.log_slave_updates = result->get_bool(2);
         rval = true;
+    }
+    else if (error_out)
+    {
+        *error_out = query_error;
     }
     return rval;
 }
@@ -349,7 +354,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     return rval;
 }
 
-bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings)
+bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings) const
 {
     bool rval = true;
     const char* servername = name();
@@ -433,6 +438,11 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
     return gtid_reached;
 }
 
+bool MariaDBServer::binlog_on() const
+{
+    return m_rpl_settings.log_bin;
+}
+
 bool MariaDBServer::is_master() const
 {
     return status_is_master(m_server_base->pending_status);
@@ -466,6 +476,11 @@ bool MariaDBServer::is_in_maintenance() const
 bool MariaDBServer::is_relay_master() const
 {
     return status_is_relay(m_server_base->pending_status);
+}
+
+bool MariaDBServer::is_low_on_disk_space() const
+{
+    return status_is_disk_space_exhausted(m_server_base->pending_status);
 }
 
 bool MariaDBServer::has_status(uint64_t bits) const
@@ -943,6 +958,96 @@ bool MariaDBServer::sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, c
         }
     }
     return rval;
+}
+
+/**
+ * Check if the server can be demoted.
+ *
+ * @param reason_out Output for the reason server cannot be demoted
+ * @return True, if suggested new master is a viable demotion candidate
+ */
+bool MariaDBServer::can_be_demoted(string* reason_out)
+{
+    bool demotable = false;
+    string reason;
+    string query_error;
+
+    // TODO: Add relay server support
+    if (!is_master())
+    {
+        reason =  "it is not the current master or it is in maintenance.";
+    }
+    else if (!update_replication_settings(&query_error))
+    {
+        reason = string_printf("it could not be queried: '%s'.", query_error.c_str());
+    }
+    else if (!binlog_on())
+    {
+        reason = "its binary log is disabled.";
+    }
+    else if (m_gtid_binlog_pos.empty())
+    {
+        reason = "it does not have a 'gtid_binlog_pos'.";
+    }
+    else
+    {
+        demotable = true;
+    }
+
+    if (!demotable && reason_out)
+    {
+        *reason_out = reason;
+    }
+    return demotable;
+}
+
+/**
+ * Check if the server can be promoted.
+ *
+ * @param demotion_target The server this should be promoted to
+ * @param reason_out Output for the reason server cannot be promoted
+ * @return True, if suggested new master is a viable promotion candidate
+ */
+bool MariaDBServer::can_be_promoted(const MariaDBServer* demotion_target, std::string* reason_out)
+{
+    bool promotable = false;
+    string reason;
+    string query_error;
+
+    if (is_master())
+    {
+        reason = "it is already the master.";
+    }
+    // TODO: Check that the correct slave connection is working properly in case of switchover.
+    // For failover the connection may be in CONNECTING-stage.
+    else if (!is_replicating_from(demotion_target))
+    {
+        reason = string_printf("it is not replicating from '%s'.", demotion_target->name());
+    }
+    else if (!update_replication_settings(&query_error))
+    {
+        string_printf("it could not be queried: '%s'.", query_error.c_str());
+    }
+    else if (!binlog_on())
+    {
+        reason = "its binary log is disabled.";
+    }
+    else
+    {
+        promotable = true;
+    }
+
+    if (!promotable && reason_out)
+    {
+        *reason_out = reason;
+    }
+    return promotable;
+}
+
+bool MariaDBServer::is_replicating_from(const MariaDBServer* target)
+{
+    // Not properly implemented yet, TODO
+    return is_slave();
 }
 
 string SlaveStatus::to_string() const

@@ -25,6 +25,7 @@
 #include "mariadbserver.hh"
 
 extern const char * const CN_AUTO_FAILOVER;
+extern const char * const CN_SWITCHOVER_ON_LOW_DISK_SPACE;
 extern const char * const CN_PROMOTION_SQL_FILE;
 extern const char * const CN_DEMOTION_SQL_FILE;
 
@@ -177,6 +178,7 @@ private:
     bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master
                                           *   outside of a cycle. */
     bool m_warn_failover_precond;        /**< Print failover preconditions error message? */
+    bool m_warn_switchover_precond;      /**< Print switchover preconditions error message? */
     bool m_warn_cannot_rejoin;           /**< Print warning if auto_rejoin fails because of invalid gtid:s? */
     bool m_warn_current_master_invalid;  /**< Print warning if current master is not valid? */
     bool m_warn_have_better_master;      /**< Print warning if the current master is not the best one? */
@@ -190,6 +192,7 @@ private:
     bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
+    MariaDBServer* get_server(SERVER* server);
     bool execute_manual_command(GenericFunction command, json_t** error_out);
     std::string diagnostics_to_string() const;
     json_t* diagnostics_to_json() const;
@@ -218,21 +221,21 @@ private:
     void update_master_cycle_info();
     void set_low_disk_slaves_maintenance();
     void assign_new_master(MariaDBServer* new_master);
+    bool slaves_using_gtid(json_t** error_out);
 
     // Switchover methods
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
-    bool switchover_check(SERVER* new_master, SERVER* current_master,
+    bool switchover_prepare(SERVER* new_master, SERVER* current_master,
                           MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                           json_t** error_out);
-    bool switchover_check_new(const MariaDBServer* new_master_cand, json_t** error);
-    bool switchover_check_current(const MariaDBServer* suggested_curr_master, json_t** error_out) const;
-    bool do_switchover(MariaDBServer** current_master, MariaDBServer** new_master, json_t** err_out);
+    bool do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target, json_t** error_out);
     bool switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out);
     bool switchover_demote_master(MariaDBServer* current_master,
                                   json_t** err_out);
     bool switchover_wait_slaves_catchup(const ServerArray& slaves, const GtidList& gtid, int total_timeout,
                                         json_t** err_out);
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
+    void handle_low_disk_space_master();
 
     // Failover methods
     bool manual_failover(json_t** output);
@@ -252,8 +255,9 @@ private:
 
     // Methods common to failover/switchover/rejoin
     MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
+    MariaDBServer* switchover_select_promotion(MariaDBServer* current_master, json_t** err_out);
     bool server_is_excluded(const MariaDBServer* server);
-    bool is_candidate_better(const MariaDBServer* current_best, const MariaDBServer* candidate,
+    bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              uint32_t gtid_domain, std::string* reason_out = NULL);
     bool promote_new_master(MariaDBServer* new_master, json_t** err_out);
     int redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
@@ -262,6 +266,7 @@ private:
     bool start_external_replication(MariaDBServer* new_master, json_t** err_out);
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                     int seconds_remaining);
+    void report_and_disable(const std::string& operation, const std::string& setting_name, bool* setting_var);
 
     // Other methods
     void disable_setting(const std::string& setting);

@@ -350,9 +350,14 @@ inline bool server_is_slave_of_ext_master(const SERVER* server)
             (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER));
 }
 
+inline bool status_is_disk_space_exhausted(uint64_t status)
+{
+    return (status & SERVER_DISK_SPACE_EXHAUSTED);
+}
+
 inline bool server_is_disk_space_exhausted(const SERVER* server)
 {
-    return (server->status & SERVER_DISK_SPACE_EXHAUSTED);
+    return status_is_disk_space_exhausted(server->status);
 }
 
 /**
