@@ -19,46 +19,6 @@
 
 #include <maxscale/modutil.h>
 
-/**
- * Detect loops in the filter chain.
- */
-bool recursive_tee_usage(std::set<std::string>& services, SERVICE* service)
-{
-    if (!services.insert(service->name).second)
-    {
-        /** The service name was already in the set */
-        return true;
-    }
-
-    for (int i = 0; i < service->n_filters; i++)
-    {
-        const char* module = filter_def_get_module_name(service->filters[i]);
-
-        if (strcmp(module, "tee") == 0)
-        {
-            /*
-             * Found a Tee filter, recurse down its path
-             * if the service name isn't already in the hashtable.
-             */
-            Tee* inst = (Tee*)filter_def_get_instance(service->filters[i]);
-
-            if (inst == NULL)
-            {
-                /**
-                 * This tee instance hasn't been initialized yet and full
-                 * resolution of recursion cannot be done now.
-                 */
-            }
-            else if (recursive_tee_usage(services, inst->get_service()))
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 TeeSession::TeeSession(MXS_SESSION* session, LocalClient* client,
                        pcre2_code* match, pcre2_match_data* md_match,
                        pcre2_code* exclude, pcre2_match_data* md_exclude):
@@ -73,15 +33,6 @@ TeeSession::TeeSession(MXS_SESSION* session, LocalClient* client,
 
 TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
 {
-    std::set<std::string> services;
-
-    if (recursive_tee_usage(services, my_instance->get_service()))
-    {
-        MXS_ERROR("%s: Recursive use of tee filter in service.",
-                  session->service->name);
-        return NULL;
-    }
-
     LocalClient* client = NULL;
     pcre2_code* match = NULL;
     pcre2_code* exclude = NULL;

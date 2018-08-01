@@ -226,16 +226,6 @@ typedef struct mxs_filter_def
 } MXS_FILTER_DEF;
 
 /**
- * Lookup a filter definition using the unique section name in
- * the configuration file.
- *
- * @param name The name of a filter.
- *
- * @return A filter definition or NULL if not found.
- */
-MXS_FILTER_DEF *filter_def_find(const char *name);
-
-/**
  * Get the name of a filter definition. This corresponds to
  * to a filter section in the configuration file.
  *

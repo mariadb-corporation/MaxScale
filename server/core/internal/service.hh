@@ -15,6 +15,10 @@
 #include <maxscale/service.h>
 #include <maxscale/resultset.hh>
 
+#include <vector>
+
+#include "filter.hh"
+
 /**
  * @file service.h - MaxScale internal service functions
  */
@@ -25,11 +29,13 @@
  * These functions should only be called by the MaxScale core.
  */
 
-// The internal service representation. Currently it only inherits the SERVICE struct.
+// The internal service representation
 class Service: public SERVICE
 {
 public:
     ~Service();
+
+    std::vector<SFilterDef> filters; /**< Ordered list of filters */
 };
 
 /**
@@ -161,7 +167,7 @@ bool service_server_in_use(const SERVER *server);
  *
  * @return True if at least one service uses the filter
  */
-bool service_filter_in_use(const MXS_FILTER_DEF *filter);
+bool service_filter_in_use(const SFilterDef& filter);
 
 /** Update the server weights used by services */
 void service_update_weights();
@@ -353,7 +359,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
  *
  * @return Array of service links
  */
-json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
+json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
 
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);

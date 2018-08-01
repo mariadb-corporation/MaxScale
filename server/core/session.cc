@@ -199,7 +199,6 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
         session->tail.clientReply = session_reply;
 
         if (SESSION_STATE_TO_BE_FREED != session->state
-            && service->n_filters > 0
             && !session_setup_filters(session))
         {
             session->state = SESSION_STATE_TO_BE_FREED;
@@ -561,7 +560,7 @@ dprintSession(DCB *dcb, MXS_SESSION *print_session)
         for (i = 0; i < print_session->n_filters; i++)
         {
             FilterDef* filter = static_cast<FilterDef*>(print_session->filters[i].filter);
-            dcb_printf(dcb, "\tFilter: %s\n", filter->name);
+            dcb_printf(dcb, "\tFilter: %s\n", filter->name.c_str());
             filter->obj->diagnostics(print_session->filters[i].instance,
                                      print_session->filters[i].session, dcb);
         }
@@ -653,51 +652,51 @@ session_state(mxs_session_state_t state)
 static int
 session_setup_filters(MXS_SESSION *session)
 {
-    SERVICE *service = session->service;
+    Service* service = static_cast<Service*>(session->service);
     MXS_DOWNSTREAM *head;
     MXS_UPSTREAM *tail;
-    int i;
+    int i = 0;
 
-    if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(service->n_filters,
+    if (service->filters.empty())
+    {
+        return 1;
+    }
+
+    if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(service->filters.size(),
                                                         sizeof(SESSION_FILTER))) == NULL)
     {
         return 0;
     }
-    session->n_filters = service->n_filters;
-    for (i = service->n_filters - 1; i >= 0; i--)
+
+    session->n_filters = service->filters.size();
+
+    for (auto r = service->filters.rbegin(); r != service->filters.rend(); r++)
     {
-        if (service->filters[i] == NULL)
+        if ((head = filter_apply(*r, session, &session->head)) == NULL)
         {
-            MXS_ERROR("Service '%s' contians an unresolved filter.", service->name);
+            MXS_ERROR("Failed to create filter '%s' for service '%s'.\n",
+                      filter_def_get_name(r->get()), service->name);
             return 0;
         }
-        if ((head = filter_apply((FilterDef*)service->filters[i], session,
-                                 &session->head)) == NULL)
-        {
-            MXS_ERROR("Failed to create filter '%s' for "
-                      "service '%s'.\n",
-                      filter_def_get_name(service->filters[i]),
-                      service->name);
-            return 0;
-        }
-        session->filters[i].filter = service->filters[i];
+        session->filters[i].filter = r->get();
         session->filters[i].session = head->session;
         session->filters[i].instance = head->instance;
+        i++;
         session->head = *head;
         MXS_FREE(head);
     }
 
-    for (i = 0; i < service->n_filters; i++)
+    for (auto r = service->filters.begin(); r != service->filters.end(); r++)
     {
-        if ((tail = filter_upstream((FilterDef*)service->filters[i],
-                                    session->filters[i].session,
-                                    &session->tail)) == NULL)
+        if ((tail = filter_upstream(*r, session->filters[i].session, &session->tail)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
-                      filter_def_get_name(service->filters[i]),
+                      filter_def_get_name(r->get()),
                       service->name);
             return 0;
         }
+
+        i--;
 
         /*
          * filter_upstream may simply return the 3 parameter if

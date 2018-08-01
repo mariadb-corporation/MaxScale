@@ -1850,9 +1850,13 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_FILTER:
+    {
         fix_object_name(arg);
-        rval = (unsigned long)filter_def_find(arg);
+        auto f = filter_find(arg);
+        // This will cause problems in the long run
+        rval = (unsigned long) (f ? f.get() : NULL);
         break;
+    }
 
     case ARG_TYPE_NUMERIC:
 

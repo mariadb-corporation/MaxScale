@@ -1035,9 +1035,9 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     mxs::SpinLockGuard guard(crt_lock);
     bool rval = false;
 
-    if (filter_def_find(name) == NULL)
+    if (!filter_find(name))
     {
-        FilterDef* filter = NULL;
+        SFilterDef filter;
         CONFIG_CONTEXT ctx{(char*)""};
         ctx.parameters = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
@@ -1048,7 +1048,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
                 config_replace_param(&ctx, p->name, p->value);
             }
 
-            if ((filter = filter_alloc(name, module, ctx.parameters)) == NULL)
+            if (!(filter = filter_alloc(name, module, ctx.parameters)))
             {
                 runtime_error("Could not create filter '%s' with module '%s'", name, module);
             }
@@ -1077,7 +1077,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     return rval;
 }
 
-bool runtime_destroy_filter(FilterDef* filter)
+bool runtime_destroy_filter(const SFilterDef& filter)
 {
     ss_dassert(filter);
     bool rval = false;
@@ -1091,7 +1091,7 @@ bool runtime_destroy_filter(FilterDef* filter)
     else
     {
         runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
-                      "first", filter->name);
+                      "first", filter->name.c_str());
     }
 
     return rval;
@@ -1438,7 +1438,7 @@ static bool filter_to_service_relation_is_valid(const std::string& type, const s
 
 static bool service_to_filter_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return type == CN_FILTERS && filter_def_find(value.c_str());
+    return type == CN_FILTERS && filter_find(value.c_str());
 }
 
 static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
@@ -1898,9 +1898,9 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     return rval;
 }
 
-FilterDef* runtime_create_filter_from_json(json_t* json)
+bool runtime_create_filter_from_json(json_t* json)
 {
-    FilterDef* rval = NULL;
+    bool rval = false;
 
     if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service}))
     {
@@ -1908,11 +1908,7 @@ FilterDef* runtime_create_filter_from_json(json_t* json)
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
         MXS_CONFIG_PARAMETER* params = extract_parameters_from_json(json);
 
-        if (runtime_create_filter(name, module, params))
-        {
-            rval = filter_find(name);
-            ss_dassert(rval);
-        }
+        rval = runtime_create_filter(name, module, params);
 
         config_parameter_free(params);
     }

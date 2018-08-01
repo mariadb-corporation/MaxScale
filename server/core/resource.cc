@@ -104,7 +104,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
     {
         if ((path == ":service" && service_find(target.c_str())) ||
             (path == ":server" && server_find_by_unique_name(target.c_str())) ||
-            (path == ":filter" && filter_def_find(target.c_str())) ||
+            (path == ":filter" && filter_find(target.c_str())) ||
             (path == ":monitor" && monitor_find(target.c_str())) ||
             (path == ":module" && get_module(target.c_str(), NULL)) ||
             (path == ":inetuser" && admin_inet_user_exists(target.c_str())) ||
@@ -486,7 +486,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
 
 HttpResponse cb_delete_filter(const HttpRequest& request)
 {
-    FilterDef* filter = filter_find(request.uri_part(1).c_str());
+    auto filter = filter_find(request.uri_part(1).c_str());
     ss_dassert(filter);
 
     if (runtime_destroy_filter(filter))
@@ -549,7 +549,7 @@ HttpResponse cb_all_filters(const HttpRequest& request)
 
 HttpResponse cb_get_filter(const HttpRequest& request)
 {
-    FilterDef* filter = filter_find(request.uri_part(1).c_str());
+    auto filter = filter_find(request.uri_part(1).c_str());
     ss_dassert(filter);
     return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
 }

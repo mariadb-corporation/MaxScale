@@ -340,8 +340,9 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
             break;
 
         case MODULECMD_ARG_FILTER:
-            if ((arg->value.filter = filter_def_find((char*)value)))
+            if (auto f = filter_find((char*)value))
             {
+                arg->value.filter = f.get();
                 const char* orig_name = filter_def_get_module_name(arg->value.filter);
                 const char* eff_name = mxs_module_get_effective_name(orig_name);
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain, eff_name) == 0)

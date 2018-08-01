@@ -118,8 +118,6 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->ports = NULL;
     service->dbref = NULL;
     service->n_dbref = 0;
-    service->filters = NULL;
-    service->n_filters = 0;
     service->weightby[0] = '\0';
     spinlock_init(&service->spin);
 
@@ -211,7 +209,6 @@ Service::~Service()
     config_parameter_free(svc_config_param);
     MXS_FREE(name);
     MXS_FREE(routerModule);
-    MXS_FREE(filters);
     MXS_FREE(rate_limits);
 }
 
@@ -1234,18 +1231,18 @@ void service_set_retry_interval(Service *service, int value)
 bool service_set_filters(Service* service, const char* filters)
 {
     bool rval = true;
-    std::vector<MXS_FILTER_DEF*> flist;
+    std::vector<SFilterDef> flist;
     uint64_t capabilities = 0;
 
     for (auto& f: mxs::strtok(filters, "|"))
     {
         fix_object_name(f);
 
-        if (FilterDef* def = filter_find(f.c_str()))
+        if (auto def = filter_find(f.c_str()))
         {
             flist.push_back(def);
 
-            const MXS_MODULE* module = get_module(def->module, MODULE_FILTER);
+            const MXS_MODULE* module = get_module(def->module.c_str(), MODULE_FILTER);
             ss_dassert(module);
             capabilities |= module->module_capabilities;
 
@@ -1263,10 +1260,7 @@ bool service_set_filters(Service* service, const char* filters)
 
     if (rval)
     {
-        service->filters = (MXS_FILTER_DEF**)MXS_MALLOC((flist.size() + 1) * sizeof(MXS_FILTER_DEF*));
-        std::copy(flist.begin(), flist.end(), service->filters);
-        service->n_filters = flist.size();
-        service->filters[service->n_filters] = NULL;
+        service->filters = flist;
         service->capabilities |= capabilities;
     }
 
@@ -1362,13 +1356,14 @@ void dprintService(DCB *dcb, SERVICE *svc)
                asctime_r(localtime_r(&service->stats.started, &result), timebuf));
     dcb_printf(dcb, "\tRoot user access:                    %s\n",
                service->enable_root ? "Enabled" : "Disabled");
-    if (service->n_filters)
+    if (!service->filters.empty())
     {
         dcb_printf(dcb, "\tFilter chain:                ");
-        for (i = 0; i < service->n_filters; i++)
+        const char* sep = "";
+        for (const auto& f : service->filters)
         {
-            dcb_printf(dcb, "%s %s ", filter_def_get_name(service->filters[i]),
-                       i + 1 < service->n_filters ? "|" : "");
+            dcb_printf(dcb, "%s %s ", f->name.c_str(), sep);
+            sep = "|";
         }
         dcb_printf(dcb, "\n");
     }
@@ -1930,23 +1925,21 @@ bool service_server_in_use(const SERVER *server)
     return rval;
 }
 
-bool service_filter_in_use(const MXS_FILTER_DEF *filter)
+bool service_filter_in_use(const SFilterDef& filter)
 {
     ss_dassert(filter);
     bool rval = false;
 
     spinlock_acquire(&service_spin);
 
-    for (Service *service: allServices)
+    for (Service *service : allServices)
     {
         spinlock_acquire(&service->spin);
-        for (int i = 0; i < service->n_filters; i++)
+
+        if (std::find(service->filters.begin(),
+                      service->filters.end(), filter) != service->filters.end())
         {
-            if (service->filters[i] == filter)
-            {
-                rval = true;
-                break;
-            }
+            rval = true;
         }
 
         spinlock_release(&service->spin);
@@ -2315,18 +2308,20 @@ json_t* service_attributes(const SERVICE* service)
     return attr;
 }
 
-json_t* service_relationships(const SERVICE* service, const char* host)
+json_t* service_relationships(const SERVICE* svc, const char* host)
 {
+    const Service* service = static_cast<const Service*>(svc);
+
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    if (service->n_filters)
+    if (!service->filters.empty())
     {
         json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
-        for (int i = 0; i < service->n_filters; i++)
+        for (const auto& f : service->filters)
         {
-            mxs_json_add_relation(filters, filter_def_get_name(service->filters[i]), CN_FILTERS);
+            mxs_json_add_relation(filters, f->name.c_str(), CN_FILTERS);
         }
 
         json_object_set_new(rel, CN_FILTERS, filters);
@@ -2418,7 +2413,7 @@ json_t* service_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
-json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
+json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 {
     json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
 
@@ -2428,9 +2423,9 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
     {
         spinlock_acquire(&service->spin);
 
-        for (int i = 0; i < service->n_filters; i++)
+        for (const auto& f : service->filters)
         {
-            if (service->filters[i] == filter)
+            if (f == filter)
             {
                 mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }

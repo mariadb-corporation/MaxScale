@@ -46,7 +46,7 @@
 static int
 test1()
 {
-    FilterDef  *f1, *f2;
+    SFilterDef  f1, f2;
 
     if ((f1 = filter_alloc("test1", "qlafilter", NULL)) == NULL)
     {
@@ -79,16 +79,13 @@ test1()
 static int
 test2()
 {
-    FilterDef  *f1;
+    SFilterDef  f1;
 
     if ((f1 = filter_alloc("test1", "qlafilter", NULL)) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
     }
-    filter_add_parameter(f1, "name1", "value1");
-    filter_add_parameter(f1, "name2", "value2");
-    filter_add_parameter(f1, "name3", "value3");
 
     filter_free(f1);
     return 0;
@@ -102,7 +99,7 @@ test2()
 static int
 test3()
 {
-    FilterDef  *f1;
+    SFilterDef  f1;
     char        name[40];
     int     i, n_filters = 1000;
 
@@ -119,7 +116,7 @@ test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if (!(f1 = filter_find(name)))
         {
             fprintf(stderr, "filter_find: test 3 failed.\n");
             return 1;
@@ -128,13 +125,13 @@ test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if (!(f1 = filter_find(name)))
         {
             fprintf(stderr, "filter_find: test 3 failed.\n");
             return 1;
         }
         filter_free(f1);
-        if ((f1 = filter_find(name)) != NULL)
+        if ((f1 = filter_find(name)))
         {
             fprintf(stderr,
                     "filter_find: test 3 failed - found deleted filter.\n");

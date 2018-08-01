@@ -139,6 +139,7 @@ FilterDef::~FilterDef()
  */
 void filter_free(const SFilterDef& filter)
 {
+    ss_dassert(filter);
     // Removing the filter from the list will trigger deletion once it's no longer in use
     Guard guard(filter_lock);
     auto it = std::remove(all_filters.begin(), all_filters.end(), filter);
@@ -162,11 +163,13 @@ SFilterDef filter_find(const char *name)
 
 bool filter_can_be_destroyed(const SFilterDef& filter)
 {
+    ss_dassert(filter);
     return !service_filter_in_use(filter);
 }
 
 void filter_destroy(const SFilterDef& filter)
 {
+    ss_dassert(filter);
     ss_dassert(filter_can_be_destroyed(filter));
     ss_info_dassert(!true, "Not yet implemented");
 }
@@ -188,18 +191,21 @@ void filter_destroy_instances()
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    ss_dassert(filter);
     return filter->name.c_str();
 }
 
 const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    ss_dassert(filter);
     return filter->module.c_str();
 }
 
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
+    ss_dassert(filter);
     return filter->filter;
 }
 
@@ -252,6 +258,7 @@ dprintAllFilters(DCB *dcb)
  */
 void dprintFilter(DCB *dcb, const SFilterDef& filter)
 {
+    ss_dassert(filter);
     dcb_printf(dcb, "FilterDef %p (%s)\n", filter.get(), filter->name.c_str());
     dcb_printf(dcb, "\tModule:      %s\n", filter->module.c_str());
     if (filter->obj && filter->filter)
@@ -299,6 +306,7 @@ dListFilters(DCB *dcb)
 void
 filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
 {
+    ss_dassert(filter);
     CONFIG_CONTEXT ctx = {};
     ctx.object = (char*)"";
 
@@ -321,6 +329,7 @@ filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
  */
 MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
+    ss_dassert(filter);
     MXS_DOWNSTREAM *me;
 
     if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
@@ -355,6 +364,7 @@ MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS
  */
 MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream)
 {
+    ss_dassert(filter);
     MXS_UPSTREAM *me = NULL;
 
     /*
@@ -382,6 +392,7 @@ MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fses
 
 json_t* filter_parameters_to_json(const SFilterDef&  filter)
 {
+    ss_dassert(filter);
     json_t* rval = json_object();
 
     /** Add custom module parameters */
@@ -393,6 +404,7 @@ json_t* filter_parameters_to_json(const SFilterDef&  filter)
 
 json_t* filter_json_data(const SFilterDef&  filter, const char* host)
 {
+    ss_dassert(filter);
     json_t* rval = json_object();
 
     json_object_set_new(rval, CN_ID, json_string(filter->name.c_str()));
@@ -426,6 +438,7 @@ json_t* filter_json_data(const SFilterDef&  filter, const char* host)
 
 json_t* filter_to_json(const SFilterDef&  filter, const char* host)
 {
+    ss_dassert(filter);
     string self = MXS_JSON_API_FILTERS;
     self += filter->name;
     return mxs_json_resource(host, self.c_str(), filter_json_data(filter, host));
@@ -503,6 +516,7 @@ json_t* FilterSession::diagnostics_json() const
 
 static bool create_filter_config(const SFilterDef& filter, const char *filename)
 {
+    ss_dassert(filter);
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
@@ -535,6 +549,7 @@ static bool create_filter_config(const SFilterDef& filter, const char *filename)
 
 bool filter_serialize(const SFilterDef& filter)
 {
+    ss_dassert(filter);
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
