@@ -196,7 +196,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
 
 void service_free(Service* service)
 {
-    ss_dassert(atomic_load_int(&service->client_count) == 0);
+    ss_dassert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
     ss_dassert(!service->active || maxscale_teardown_in_progress());
 
     spinlock_acquire(&service_spin);
