@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     for (int j = 0; j < r; j++)
     {
-        for (int i = 0; i < iterations; i++)
+        for (int i = 0; i < iterations && Test->global_result == 0; i++)
         {
             Test->set_timeout(10);
             Test->try_query(Test->maxscales->routers[0][j], (char*) "set autocommit=0;");

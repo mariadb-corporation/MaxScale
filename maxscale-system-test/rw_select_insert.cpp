@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < 100 && Test->global_result == 0; i++)
     {
         Test->set_timeout(20);
         Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     Test->tprintf("Doing 100 inserts\n");
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < 100 && Test->global_result == 0; i++)
     {
         Test->set_timeout(20);
         Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
