@@ -1482,12 +1482,30 @@ process_config_context(CONFIG_CONTEXT *context)
         }
     }
 
-    if (resolve_dependencies(objects))
+    int error_count = 0;
+
+    /**
+     * Build the servers first to keep them in configuration file order. As
+     * servers can't have references, this is safe to do as the first step.
+     */
+    for (CONFIG_CONTEXT* obj : objects)
+    {
+        std::string type = config_get_string(obj->parameters, CN_TYPE);
+        ss_dassert(!type.empty());
+
+        if (type == CN_SERVER)
+        {
+            error_count += create_new_server(obj);
+        }
+    }
+
+    // Resolve any remaining dependencies between the objects
+    if (resolve_dependencies(objects) || error_count)
     {
         return false;
     }
 
-    int error_count = 0;
+    std::set<std::string> monitored_servers;
 
     /**
      * Process the data and create the services and servers defined
@@ -1501,10 +1519,6 @@ process_config_context(CONFIG_CONTEXT *context)
         if (type == CN_SERVICE)
         {
             error_count += create_new_service(obj);
-        }
-        else if (type == CN_SERVER)
-        {
-            error_count += create_new_server(obj);
         }
         else if (type == CN_FILTER)
         {
