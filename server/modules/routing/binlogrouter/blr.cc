@@ -262,7 +262,6 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
                     " Server section is no longer required.",
                     service->name);
 
-        server_free(service->dbref->server);
         MXS_FREE(service->dbref);
         service->dbref = NULL;
     }
@@ -794,7 +793,6 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
             MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
                       inst->service->name);
 
-            server_free(service->dbref->server);
             MXS_FREE(service->dbref);
             sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
@@ -930,8 +928,6 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
             {
                 /* Free SSL data */
                 blr_free_ssl_data(inst);
-
-                server_free(service->dbref->server);
                 MXS_FREE(service->dbref);
                 service->dbref = NULL;
             }

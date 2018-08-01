@@ -42,6 +42,7 @@
 // This is pretty ugly but it's required to test internal functions
 #include "../config.cc"
 #include "../server.cc"
+#include "../internal/server.hh"
 
 static mxs::ParamList params(
 {
@@ -107,7 +108,7 @@ test1()
     printAllServers();
     mxs_log_flush_sync();
     ss_dfprintf(stderr, "\t..done\nFreeing Server.");
-    ss_info_dassert(0 != server_free(server), "Free should succeed");
+    server_free((Server*)server);
     ss_dfprintf(stderr, "\t..done\n");
     return 0;
 
@@ -167,7 +168,6 @@ bool test_serialize()
 
     /** We should have two identical servers */
     SERVER *created = server_find_by_unique_name(name);
-    TEST(created->next == server, "We should end up with two servers");
 
     rename(config_name, old_config_name);
 

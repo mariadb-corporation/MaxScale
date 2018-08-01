@@ -133,7 +133,6 @@ typedef struct server
     SERVER_PARAM   *parameters;    /**< Additional custom parameters which may affect routing decisions. */
     // Base variables
     SPINLOCK       lock;           /**< Access lock. Required when modifying server status or settings. */
-    struct  server *next;          /**< Next server in global server list */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     void           *auth_instance; /**< Authenticator instance data */
     SSL_LISTENER   *server_ssl;    /**< SSL data */
@@ -467,7 +466,6 @@ json_t* server_list_to_json(const char* host);
  */
 bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold);
 
-extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
 extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);

@@ -16,6 +16,15 @@
  * Internal header for the server type
  */
 
+#include <maxscale/server.h>
 #include <maxscale/resultset.hh>
 
 std::unique_ptr<ResultSet> serverGetList();
+
+// Private server implementation
+class Server: public SERVER
+{
+    // TODO: Move everything here
+};
+
+void server_free(Server *server);
