@@ -229,8 +229,9 @@ Br,
 
 ## 9. Send release email to mailing list
 
-Email maxscale@googlegroups.com with a mail containing the following. Replace
-`x.y.z` with the correct version.
+After the KB has been updated and the binaries are visible on the downloads
+page, email maxscale@googlegroups.com with a mail containing the
+following. Replace `x.y.z` with the correct version.
 
 Subject: `MariaDB MaxScale x.y.z available for download`
 
