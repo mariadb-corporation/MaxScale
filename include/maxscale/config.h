@@ -227,7 +227,6 @@ typedef struct config_context
 {
     char                  *object;     /**< The name of the object being configured */
     MXS_CONFIG_PARAMETER  *parameters; /**< The list of parameter values */
-    void                  *element;    /**< The element created from the data */
     bool                   was_persisted; /**< True if this object was persisted */
     struct config_context *next;       /**< Next pointer in the linked list */
 } CONFIG_CONTEXT;

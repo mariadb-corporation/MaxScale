@@ -519,7 +519,6 @@ CONFIG_CONTEXT* config_context_create(const char *section)
         ctx->was_persisted = is_persisted_config;
         ctx->parameters = NULL;
         ctx->next = NULL;
-        ctx->element = NULL;
     }
 
     return ctx;
@@ -3410,11 +3409,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
             }
         }
 
-        if (error_count == 0)
-        {
-            obj->element = service;
-        }
-        else
+        if (error_count != 0)
         {
             service_free(service);
             service = nullptr;
@@ -3559,8 +3554,6 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
         return 1;
     }
 
-    obj->element = monitor;
-
     int error_count = 0;
 
     // TODO: Parse this in the configuration
@@ -3677,11 +3670,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     {
         config_add_defaults(obj, mod->parameters);
 
-        if (MXS_FILTER_DEF* filter = filter_alloc(obj->object, module, obj->parameters))
-        {
-            obj->element = filter;
-        }
-        else
+        if (!filter_alloc(obj->object, module, obj->parameters))
         {
             MXS_ERROR("Failed to create filter '%s'. Memory allocation failed.",
                       obj->object);
