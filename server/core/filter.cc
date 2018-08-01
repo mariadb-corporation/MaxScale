@@ -106,7 +106,7 @@ FilterDef* filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMET
         filter_free_parameters(filter);
         MXS_FREE(my_name);
         MXS_FREE(my_module);
-        MXS_FREE(filter);
+        delete filter;
         return NULL;
     }
 
