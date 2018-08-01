@@ -172,7 +172,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
     uint64_t bitvalue = 0;
     bool ok = true;
 
-    for (auto&& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {

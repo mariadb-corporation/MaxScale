@@ -323,7 +323,7 @@ static void log_router_options_not_supported(SERVICE* service, MXS_CONFIG_PARAME
 {
     std::stringstream ss;
 
-    for (auto&& a: mxs::strtok(p->value, ", \t"))
+    for (const auto& a: mxs::strtok(p->value, ", \t"))
     {
         ss << a << "\n";
     }

@@ -1237,7 +1237,7 @@ bool service_set_filters(Service* service, const char* filters)
     std::vector<MXS_FILTER_DEF*> flist;
     uint64_t capabilities = 0;
 
-    for (auto&& f: mxs::strtok(filters, "|"))
+    for (auto& f: mxs::strtok(filters, "|"))
     {
         fix_object_name(f);
 

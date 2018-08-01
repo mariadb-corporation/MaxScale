@@ -895,7 +895,7 @@ bool SchemaRouterSession::send_shards()
     ServerMap pContent;
     m_shard.get_content(pContent);
 
-    for (auto&& a : pContent)
+    for (const auto& a : pContent)
     {
         set->add_row({a.first, a.second->name});
     }
@@ -1559,7 +1559,7 @@ bool SchemaRouterSession::send_databases()
 
     std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
 
-    for (auto&& a : list)
+    for (const auto& a : list)
     {
         set->add_row({a});
     }
@@ -1613,7 +1613,7 @@ bool SchemaRouterSession::send_tables(GWBUF* pPacket)
     {
         std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
 
-        for (auto&& a : list)
+        for (const auto& a : list)
         {
             set->add_row({a});
         }

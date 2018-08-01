@@ -1155,7 +1155,7 @@ const MXS_MODULE* get_module(CONFIG_CONTEXT* obj, const char* param_name, const 
     return module ? get_module(module, module_type) : NULL;
 }
 
-std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(CONFIG_CONTEXT* obj)
+std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const CONFIG_CONTEXT* obj)
 {
     std::string type = config_get_string(obj->parameters, CN_TYPE);
 
@@ -1190,7 +1190,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(CONFIG_
 }
 
 CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
-                               CONFIG_CONTEXT* obj, std::string name)
+                               const CONFIG_CONTEXT* obj, std::string name)
 {
     CONFIG_CONTEXT* rval = nullptr;
 
@@ -1220,7 +1220,7 @@ CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
 }
 
 std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CONTEXT*>& objects,
-                                                     CONFIG_CONTEXT* obj)
+                                                     const CONFIG_CONTEXT* obj)
 {
     std::unordered_set<CONFIG_CONTEXT*> rval;
     const MXS_MODULE_PARAM* params;
@@ -1229,7 +1229,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
 
     // Astyle really hates this style. Could be worked around with --keep-one-line-blocks
     // but it would keep all one line blocks intact.
-    for (auto&& p :
+    for (const auto& p :
          {
              params, module->parameters
          })
@@ -1407,7 +1407,7 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
     int errors = 0;
     std::unordered_map<CONFIG_CONTEXT*, std::unordered_set < CONFIG_CONTEXT*>> g;
 
-    for (auto&& obj : objects)
+    for (const auto& obj : objects)
     {
         auto deps = get_dependencies(objects, obj);
 
@@ -1426,7 +1426,7 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
     {
         std::vector<CONFIG_CONTEXT*> result;
 
-        for (auto&& group : get_graph_cycles<CONFIG_CONTEXT*>(g))
+        for (const auto& group : get_graph_cycles<CONFIG_CONTEXT*>(g))
         {
             if (group.size() > 1)
             {
@@ -3386,7 +3386,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     {
         int error_count = 0;
 
-        for (auto&& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+        for (auto& a : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
         {
             fix_object_name(a);
 
@@ -3514,7 +3514,7 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
     bool err = false;
 
     // TODO: Use server list parameter type for this
-    for (auto&& s : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
+    for (auto& s : mxs::strtok(config_get_string(obj->parameters, CN_SERVERS), ","))
     {
         fix_object_name(s);
         SERVER* server = server_find_by_unique_name(s.c_str());
@@ -4555,7 +4555,7 @@ namespace maxscale
 ParamList::ParamList(std::initializer_list<std::pair<const char*, const char*>> list,
                      const MXS_MODULE_PARAM* module_params)
 {
-    for (auto&& a : list)
+    for (const auto& a : list)
     {
         config_add_param(&m_ctx, a.first, a.second);
     }

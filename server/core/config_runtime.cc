@@ -1810,7 +1810,7 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
         }
         else
         {
-            for (auto&& a: paths)
+            for (const auto& a: paths)
             {
                 if (!(value = mxs_json_pointer(json, a.c_str())))
                 {
@@ -1822,7 +1822,7 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
                 }
             }
 
-            for (auto&& a: relationships)
+            for (const auto& a: relationships)
             {
                 StringSet relations;
                 if (extract_relations(json, relations, a.first, a.second))

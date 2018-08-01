@@ -33,7 +33,7 @@ Config::Config(MXS_CONFIG_PARAMETER* conf):
     // TODO: Don't process this in the router
     if (MXS_CONFIG_PARAMETER* p = config_get_param(conf, "ignore_databases"))
     {
-        for (auto&& a: mxs::strtok(p->value, ", \t"))
+        for (const auto& a: mxs::strtok(p->value, ", \t"))
         {
             ignored_dbs.insert(a);
         }

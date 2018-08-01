@@ -161,7 +161,7 @@ static int mysql_send_row(DCB *dcb, const std::vector<std::string>& row, int seq
     *ptr++ = (len >> 16) & 0xff;
     *ptr++ = seqno;
 
-    for (auto&& a : row)
+    for (const auto& a : row)
     {
         *ptr++ = a.length();
         memcpy(ptr, a.c_str(), a.length());
@@ -193,14 +193,14 @@ void ResultSet::write(DCB* dcb)
 
     uint8_t seqno = 2; // The second packet after field count
 
-    for (auto&& c : m_columns)
+    for (const auto& c : m_columns)
     {
         mysql_send_columndef(dcb, c, seqno++);
     }
 
     mysql_send_eof(dcb, seqno++);
 
-    for (auto&& r : m_rows)
+    for (const auto& r : m_rows)
     {
         mysql_send_row(dcb, r, seqno++);
     }

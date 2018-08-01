@@ -142,7 +142,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PAR
     mon->disk_space_check_interval = config_get_integer(params, CN_DISK_SPACE_CHECK_INTERVAL);
     spinlock_init(&mon->lock);
 
-    for (auto&& s: mxs::strtok(config_get_string(params, CN_SERVERS), ","))
+    for (auto& s: mxs::strtok(config_get_string(params, CN_SERVERS), ","))
     {
         fix_object_name(s);
         monitor_add_server(mon, server_find_by_unique_name(s.c_str()));

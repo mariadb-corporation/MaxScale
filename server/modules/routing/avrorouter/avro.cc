@@ -76,9 +76,9 @@ void Avro::read_source_service_options(SERVICE* source)
         }
     }
 
-    for (auto&& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
-        auto&& kv = mxs::strtok(opt, "=");
+        auto kv = mxs::strtok(opt, "=");
 
         if (kv[0] == "binlogdir")
         {
