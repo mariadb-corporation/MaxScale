@@ -1018,10 +1018,12 @@ protected:
 
 size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data)
 {
-    return RoutingWorker::broadcast(std::auto_ptr<FunctionTask>(new FunctionTask([&]()
+    std::auto_ptr<FunctionTask> task(new FunctionTask([cb, data]()
     {
         cb(data);
-    })));
+    }));
+
+    return RoutingWorker::broadcast(task);
 }
 
 uint64_t mxs_rworker_create_key()
