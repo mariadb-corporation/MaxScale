@@ -1382,11 +1382,13 @@ printDCB(DCB *dcb)
     {
         printf("\tQueued write data:    %u\n", gwbuf_length(dcb->writeq));
     }
-    char *statusname = server_status(dcb->server);
-    if (statusname)
+    if (dcb->server)
     {
-        printf("\tServer status:            %s\n", statusname);
-        MXS_FREE(statusname);
+        if (char *statusname = server_status(dcb->server))
+        {
+            printf("\tServer status:            %s\n", statusname);
+            MXS_FREE(statusname);
+        }
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
@@ -1486,11 +1488,14 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
         dcb_printf(pdcb, "\tQueued write data:  %d\n",
                    gwbuf_length(dcb->writeq));
     }
-    char *statusname = server_status(dcb->server);
-    if (statusname)
+    if (dcb->server)
     {
-        dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-        MXS_FREE(statusname);
+        char *statusname = server_status(dcb->server);
+        if (statusname)
+        {
+            dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
+            MXS_FREE(statusname);
+        }
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
@@ -1637,11 +1642,14 @@ dprintDCB(DCB *pdcb, DCB *dcb)
     {
         dcb_printf(pdcb, "\tDelayed write data: %d\n", gwbuf_length(dcb->delayq));
     }
-    char *statusname = server_status(dcb->server);
-    if (statusname)
+    if (dcb->server)
     {
-        dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-        MXS_FREE(statusname);
+        char *statusname = server_status(dcb->server);
+        if (statusname)
+        {
+            dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
+            MXS_FREE(statusname);
+        }
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
