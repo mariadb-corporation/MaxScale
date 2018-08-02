@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -21,6 +22,20 @@
 #include <maxscale/debug.h>
 #include <maxscale/jansson.h>
 #include <maxscale/utils.hh>
+
+namespace std
+{
+
+template<>
+struct default_delete<json_t>
+{
+    void operator()(json_t* pJson)
+    {
+        json_decref(pJson);
+    }
+};
+
+}
 
 namespace maxscale
 {
@@ -117,4 +132,5 @@ static inline std::string json_to_string(json_t* json)
 
     return ss.str();
 }
+
 }
