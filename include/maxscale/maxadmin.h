@@ -13,10 +13,11 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/paths.h>
 
 MXS_BEGIN_DECLS
 
-#define MAXADMIN_DEFAULT_SOCKET                "/tmp/maxadmin.sock"
+#define MAXADMIN_DEFAULT_SOCKET                MXS_DEFAULT_MAXADMIN_SOCKET
 
 #define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN 7
 #define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG     "default"

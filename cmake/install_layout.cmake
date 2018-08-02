@@ -13,6 +13,7 @@ set(MAXSCALE_CONFDIR /etc CACHE PATH "Configuration file installation path (/etc
 # Default values for directories and subpaths where files are searched. These
 # are used in `include/maxscale/paths.h.in`.
 set(DEFAULT_PID_SUBPATH "run/maxscale" CACHE PATH "Default PID file subpath")
+set(DEFAULT_MAXADMIN_SOCKET_FILE "maxadmin.sock" CACHE PATH "Default maxadmin socket filename")
 set(DEFAULT_LOG_SUBPATH "log/maxscale" CACHE PATH "Default log subpath")
 set(DEFAULT_DATA_SUBPATH "lib/maxscale" CACHE PATH "Default datadir subpath")
 set(DEFAULT_LIB_SUBPATH "${MAXSCALE_LIBDIR}" CACHE PATH "Default library subpath")
@@ -25,6 +26,7 @@ set(DEFAULT_MODULE_CONFIG_SUBPATH "${DEFAULT_CONFIG_SUBPATH}/maxscale.modules.d"
 set(DEFAULT_CONNECTOR_PLUGIN_SUBPATH "lib/plugin" CACHE PATH "Default connector plugin subpath")
 
 set(DEFAULT_PIDDIR ${MAXSCALE_VARDIR}/${DEFAULT_PID_SUBPATH} CACHE PATH "Default PID file directory")
+set(DEFAULT_MAXADMIN_SOCKET ${DEFAULT_PIDDIR}/${DEFAULT_MAXADMIN_SOCKET_FILE} CACHE PATH "Default MaxAdmin socket path")
 set(DEFAULT_LOGDIR ${MAXSCALE_VARDIR}/${DEFAULT_LOG_SUBPATH} CACHE PATH "Default log directory")
 set(DEFAULT_DATADIR ${MAXSCALE_VARDIR}/${DEFAULT_DATA_SUBPATH} CACHE PATH "Default datadir path")
 set(DEFAULT_LIBDIR ${CMAKE_INSTALL_PREFIX}/${DEFAULT_LIB_SUBPATH}/ CACHE PATH "Default library path")
