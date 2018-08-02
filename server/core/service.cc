@@ -151,14 +151,13 @@ static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
 
 Service::Service(const std::string& service_name, const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params):
-    rate_limits(config_threadcount()),
     m_name(service_name),
     m_router_name(router_name),
     m_user(config_get_string(params, CN_USER)),
     m_password(config_get_string(params, CN_PASSWORD)),
     m_weightby(config_get_string(params, CN_WEIGHTBY)),
-    m_version_string(get_version_string(params))
-
+    m_version_string(get_version_string(params)),
+    m_rate_limits(config_threadcount())
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
     ss_dassert(module);
@@ -196,6 +195,29 @@ Service::Service(const std::string& service_name, const std::string& router_name
     log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
     strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
     session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
+
+    /**
+     * At service start last update is set to config->users_refresh_time seconds earlier.
+     * This way MaxScale could try reloading users just after startup. But only if user
+     * refreshing has not been turned off.
+     */
+    MXS_CONFIG* cnf = config_get_global_options();
+
+    // Defaults for disabled reloading of users
+    bool warned = true;
+    bool last = time(NULL);
+
+    if (cnf->users_refresh_time != INT32_MAX)
+    {
+        last -= cnf->users_refresh_time;
+        warned = false;
+    }
+
+    for (auto& a : m_rate_limits)
+    {
+        a.last = last;
+        a.warned = warned;
+    }
 }
 
 Service::~Service()
@@ -402,34 +424,6 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
         default:
             break;
         }
-    }
-
-    MXS_CONFIG* config = config_get_global_options();
-    time_t last;
-    bool warned;
-
-    /**
-     * At service start last update is set to config->users_refresh_time seconds earlier.
-     * This way MaxScale could try reloading users just after startup. But only if user
-     * refreshing has not been turned off.
-     */
-    if (config->users_refresh_time == INT32_MAX)
-    {
-        last = time(NULL);
-        warned = true;  // So that there will not be a refresh rate warning.
-    }
-    else
-    {
-        last = time(NULL) - config->users_refresh_time;
-        warned = false;
-    }
-
-    int nthreads = config_threadcount();
-
-    for (int i = 0; i < nthreads; ++i)
-    {
-        service->rate_limits[i].last = last;
-        service->rate_limits[i].warned = warned;
     }
 
     if (port->listener->func.listen(port->listener, config_bind))
@@ -1327,6 +1321,75 @@ void dListListeners(DCB *dcb)
     }
 }
 
+bool Service::refresh_users()
+{
+    bool ret = true;
+    int self = mxs_rworker_get_current_id();
+    ss_dassert(self >= 0);
+    time_t now = time(NULL);
+
+    // Use unique_lock instead of lock_guard to make the locking conditional
+    std::unique_lock<std::mutex> guard(lock, std::defer_lock);
+
+    if ((capabilities & ACAP_TYPE_ASYNC) == 0)
+    {
+        // Use only one rate limitation for synchronous authenticators to keep
+        // rate limitations synchronous as well
+        self = 0;
+        guard.lock();
+    }
+
+    MXS_CONFIG* config = config_get_global_options();
+
+    /* Check if refresh rate limit has been exceeded */
+    if (now < m_rate_limits[self].last + config->users_refresh_time)
+    {
+        if (!m_rate_limits[self].warned)
+        {
+            MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
+                        "load of users' table.",
+                        m_name.c_str(), config->users_refresh_time);
+            m_rate_limits[self].warned = true;
+        }
+    }
+    else
+    {
+        m_rate_limits[self].last = now;
+        m_rate_limits[self].warned = false;
+
+        LISTENER_ITERATOR iter;
+
+        for (SERV_LISTENER *listener = listener_iterator_init(this, &iter);
+             listener; listener = listener_iterator_next(&iter))
+        {
+            /** Load the authentication users before before starting the listener */
+            if (listener_is_active(listener) && listener->listener &&
+                listener->listener->authfunc.loadusers)
+            {
+                switch (listener->listener->authfunc.loadusers(listener))
+                {
+                case MXS_AUTH_LOADUSERS_FATAL:
+                    MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
+                              " authentication will not work.", m_name.c_str(), listener->name);
+                    ret = false;
+                    break;
+
+                case MXS_AUTH_LOADUSERS_ERROR:
+                    MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                                " might not work.", m_name.c_str(), listener->name);
+                    ret = false;
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
 /**
  * Refresh the database users for the service
  * This function replaces the MySQL users used by the service with the latest
@@ -1339,73 +1402,7 @@ int service_refresh_users(SERVICE *svc)
 {
     Service* service = static_cast<Service*>(svc);
     ss_dassert(service);
-    int ret = 1;
-    int self = mxs_rworker_get_current_id();
-    ss_dassert(self >= 0);
-    time_t now = time(NULL);
-
-    // Use unique_lock instead of lock_guard to make the locking conditional
-    std::unique_lock<std::mutex> guard(service->lock, std::defer_lock);
-
-    if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
-    {
-        // Use only one rate limitation for synchronous authenticators to keep
-        // rate limitations synchronous as well
-        self = 0;
-        guard.lock();
-    }
-
-    MXS_CONFIG* config = config_get_global_options();
-
-    /* Check if refresh rate limit has been exceeded */
-    if (now < service->rate_limits[self].last + config->users_refresh_time)
-    {
-        if (!service->rate_limits[self].warned)
-        {
-            MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
-                        "load of users' table.",
-                        service->name, config->users_refresh_time);
-            service->rate_limits[self].warned = true;
-        }
-    }
-    else
-    {
-        service->rate_limits[self].last = now;
-        service->rate_limits[self].warned = false;
-
-
-        ret = 0;
-        LISTENER_ITERATOR iter;
-
-        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
-             listener; listener = listener_iterator_next(&iter))
-        {
-            /** Load the authentication users before before starting the listener */
-            if (listener_is_active(listener) && listener->listener &&
-                listener->listener->authfunc.loadusers)
-            {
-                switch (listener->listener->authfunc.loadusers(listener))
-                {
-                case MXS_AUTH_LOADUSERS_FATAL:
-                    MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                              " authentication will not work.", service->name, listener->name);
-                    ret = 1;
-                    break;
-
-                case MXS_AUTH_LOADUSERS_ERROR:
-                    MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                                " might not work.", service->name, listener->name);
-                    ret = 1;
-                    break;
-
-                default:
-                    break;
-                }
-            }
-        }
-    }
-
-    return ret;
+    return service->refresh_users() ? 0 : 1;
 }
 
 void service_add_parameters(Service *service, const MXS_CONFIG_PARAMETER *param)

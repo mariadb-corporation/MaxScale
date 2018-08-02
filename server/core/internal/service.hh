@@ -25,7 +25,7 @@
  * @file service.h - MaxScale internal service functions
  */
 
-struct UserLoadLimit
+struct LastUserLoad
 {
     time_t last = 0;   // The last time the users were loaded
     bool   warned = false; // Has a warning been logged
@@ -36,6 +36,7 @@ class Service: public SERVICE
 {
 public:
     using FilterList = std::vector<SFilterDef>;
+    using RateLimits = std::vector<LastUserLoad>;
 
     Service(const std::string& name, const std::string& router, MXS_CONFIG_PARAMETER* params);
 
@@ -91,12 +92,18 @@ public:
         return !m_filters.empty();
     }
 
+    /**
+     * Reload users for all listeners
+     *
+     * @return True if loading of users was successful
+     */
+    bool refresh_users();
+
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
 
     // TODO: Make these private
     mutable std::mutex         lock;
-    std::vector<UserLoadLimit> rate_limits; /**< The refresh rate limits for users of each thread */
 
 private:
     FilterList  m_filters;        /**< Ordered list of filters */
@@ -106,6 +113,7 @@ private:
     std::string m_password;       /**< Password */
     std::string m_weightby;       /**< Weighting parameter name */
     std::string m_version_string; /**< Version string sent to clients */
+    RateLimits  m_rate_limits;    /**< The refresh rate limits for users of each thread */
 };
 
 /**
