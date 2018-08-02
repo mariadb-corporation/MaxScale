@@ -92,18 +92,18 @@ int64_t MariaDBServer::relay_log_events()
                                                             GtidList::MISSING_DOMAIN_LHS_ADD) : 0;
 }
 
-std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
+std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
 {
     auto conn = m_server_base->con;
-    std::auto_ptr<QueryResult> rval;
+    std::unique_ptr<QueryResult> rval;
     MYSQL_RES *result = NULL;
     if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
     {
-        rval = std::auto_ptr<QueryResult>(new QueryResult(result));
+        rval = std::unique_ptr<QueryResult>(new QueryResult(result));
     }
     else if (errmsg_out)
     {
-        *errmsg_out = string("Query '") + query + "' failed: '" + mysql_error(conn) + "'.";
+        *errmsg_out = string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
     }
     return rval;
 }

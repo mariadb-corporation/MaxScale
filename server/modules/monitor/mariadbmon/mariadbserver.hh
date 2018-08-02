@@ -168,15 +168,14 @@ public:
     int64_t relay_log_events();
 
     /**
-     * Execute a query which returns data. The results are returned as an auto-pointer to a QueryResult
-     * object.
+     * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
+     * object. The column names of the results are assumed unique.
      *
      * @param query The query
      * @param errmsg_out Where to store an error message if query fails. Can be null.
-     * @return Pointer to query results, or an empty auto-ptr on failure. Currently, the column names of the
-     * results are assumed unique.
+     * @return Pointer to query results, or an empty pointer on failure
      */
-    std::auto_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
+    std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
 
     /**
      * Update server slave connection information.
