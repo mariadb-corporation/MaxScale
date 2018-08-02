@@ -657,20 +657,21 @@ session_setup_filters(MXS_SESSION *session)
     MXS_UPSTREAM *tail;
     int i = 0;
 
-    if (service->filters.empty())
+    if (!service->has_filters())
     {
         return 1;
     }
 
-    if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(service->filters.size(),
-                                                        sizeof(SESSION_FILTER))) == NULL)
+    auto filters = service->get_filters();
+
+    if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(filters.size(), sizeof(SESSION_FILTER))) == NULL)
     {
         return 0;
     }
 
-    session->n_filters = service->filters.size();
+    session->n_filters = filters.size();
 
-    for (auto r = service->filters.rbegin(); r != service->filters.rend(); r++)
+    for (auto r = filters.rbegin(); r != filters.rend(); r++)
     {
         if ((head = filter_apply(*r, session, &session->head)) == NULL)
         {
@@ -686,7 +687,7 @@ session_setup_filters(MXS_SESSION *session)
         MXS_FREE(head);
     }
 
-    for (auto r = service->filters.begin(); r != service->filters.end(); r++)
+    for (auto r = filters.begin(); r != filters.end(); r++)
     {
         if ((tail = filter_upstream(*r, session->filters[i].session, &session->tail)) == NULL)
         {

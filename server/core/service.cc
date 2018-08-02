@@ -1048,20 +1048,11 @@ int service_enable_root(Service *svc, int action)
     return 1;
 }
 
-/**
- * Set the filters used by the service
- *
- * @param service The service itself
- * @param filters The filters to use separated by the pipe character |
- *
- * @return True if loading and creating all filters was successful. False if a
- *         filter module was not found or the instance creation failed.
- */
-bool service_set_filters(Service* service, const char* filters)
+bool Service::set_filters(const std::string& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
-    uint64_t capabilities = 0;
+    uint64_t my_capabilities = 0;
 
     for (auto& f : mxs::strtok(filters, "|"))
     {
@@ -1073,28 +1064,48 @@ bool service_set_filters(Service* service, const char* filters)
 
             const MXS_MODULE* module = get_module(def->module.c_str(), MODULE_FILTER);
             ss_dassert(module);
-            capabilities |= module->module_capabilities;
+            my_capabilities |= module->module_capabilities;
 
             if (def->obj->getCapabilities)
             {
-                capabilities |= def->obj->getCapabilities(def->filter);
+                my_capabilities |= def->obj->getCapabilities(def->filter);
             }
         }
         else
         {
-            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), service->name);
+            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), name);
             rval = false;
         }
     }
 
     if (rval)
     {
-        Guard guard(service->lock);
-        service->filters = flist;
-        service->capabilities |= capabilities;
+        Guard guard(lock);
+        m_filters = flist;
+        capabilities |= my_capabilities;
     }
 
     return rval;
+}
+
+std::vector<SFilterDef> Service::get_filters() const
+{
+    Guard guard(lock);
+    return m_filters;
+}
+
+/**
+ * Set the filters used by the service
+ *
+ * @param service The service itself
+ * @param filters The filters to use separated by the pipe character |
+ *
+ * @return True if loading and creating all filters was successful. False if a
+ *         filter module was not found or the instance creation failed.
+ */
+bool service_set_filters(Service* service, const char* filters)
+{
+    return service->set_filters(filters);
 }
 
 Service* service_internal_find(const char *name)
@@ -1178,11 +1189,13 @@ void dprintService(DCB *dcb, SERVICE *svc)
                asctime_r(localtime_r(&service->stats.started, &result), timebuf));
     dcb_printf(dcb, "\tRoot user access:                    %s\n",
                service->enable_root ? "Enabled" : "Disabled");
-    if (!service->filters.empty())
+    auto filters = service->get_filters();
+
+    if (!filters.empty())
     {
         dcb_printf(dcb, "\tFilter chain:                ");
         const char* sep = "";
-        for (const auto& f : service->filters)
+        for (const auto& f : filters)
         {
             dcb_printf(dcb, "%s %s ", f->name.c_str(), sep);
             sep = "|";
@@ -1692,12 +1705,12 @@ bool service_filter_in_use(const SFilterDef& filter)
 
     for (Service* service : all_services)
     {
-        Guard guard(service->lock);
-
-        if (std::find(service->filters.begin(),
-                      service->filters.end(), filter) != service->filters.end())
+        for (const auto& f : service->get_filters())
         {
-            return true;
+            if (filter == f)
+            {
+                return true;
+            }
         }
     }
 
@@ -2055,18 +2068,16 @@ json_t* service_attributes(const SERVICE* service)
     return attr;
 }
 
-json_t* service_relationships(const SERVICE* svc, const char* host)
+json_t* Service::json_relationships(const char* host) const
 {
-    const Service* service = static_cast<const Service*>(svc);
-
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    if (!service->filters.empty())
+    if (!m_filters.empty())
     {
         json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
-        for (const auto& f : service->filters)
+        for (const auto& f : m_filters)
         {
             mxs_json_add_relation(filters, f->name.c_str(), CN_FILTERS);
         }
@@ -2074,11 +2085,11 @@ json_t* service_relationships(const SERVICE* svc, const char* host)
         json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    if (have_active_servers(service))
+    if (have_active_servers(this))
     {
         json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
 
-        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        for (SERVER_REF* ref = dbref; ref; ref = ref->next)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
@@ -2101,7 +2112,7 @@ json_t* service_json_data(const SERVICE* svc, const char* host)
     json_object_set_new(rval, CN_ID, json_string(service->name));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
     json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
-    json_object_set_new(rval, CN_RELATIONSHIPS, service_relationships(service, host));
+    json_object_set_new(rval, CN_RELATIONSHIPS, service->json_relationships(host));
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name));
 
     return rval;
@@ -2162,9 +2173,7 @@ json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 
     for (Service* service : all_services)
     {
-        Guard guard(service->lock);
-
-        for (const auto& f : service->filters)
+        for (const auto& f : service->get_filters())
         {
             if (f == filter)
             {
@@ -2321,7 +2330,8 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_STRIP_DB_ESC,
         CN_USER,
         CN_VERSION_STRING,
-        CN_WEIGHTBY
+        CN_WEIGHTBY,
+        CN_FILTERS
     };
 
     return names.find(name) != names.end();
@@ -2414,6 +2424,10 @@ bool Service::update_basic_parameter(const std::string& key, const std::string& 
     {
         retry_start = config_truth_value(value.c_str());
         valid = true;
+    }
+    else if (key == CN_FILTERS)
+    {
+        valid = set_filters(value);
     }
 
     return valid;

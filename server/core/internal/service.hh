@@ -58,8 +58,42 @@ public:
      */
     bool update_basic_parameter(const std::string& name, const std::string& value);
 
-    std::vector<SFilterDef> filters; /**< Ordered list of filters */
+    /**
+     * Set the list of filters for this service
+     *
+     * @param filters Filters to set
+     *
+     * @return True if filters were all found and were valid
+     */
+    bool set_filters(const std::string& filters);
+
+    /**
+     * Get the list of filters this service uses
+     *
+     * @note This locks the service
+     *
+     * @return A list of filters or an empty list of no filters are in use
+     */
+    std::vector<SFilterDef> get_filters() const;
+
+    inline bool has_filters() const
+    {
+        /**
+         * Note: Temporarily used to check whether filters are available. This is
+         * not thread-safe but can be replaced with a check to worker local data to
+         * make it so.
+         */
+        return !m_filters.empty();
+    }
+
+    // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
+    json_t* json_relationships(const char* host) const;
+
+    // TODO: Make private
     mutable std::mutex      lock;
+
+private:
+    std::vector<SFilterDef> m_filters; /**< Ordered list of filters */
 };
 
 /**
