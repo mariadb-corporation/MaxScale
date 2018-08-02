@@ -13,15 +13,19 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <functional>
 #include <map>
-#include <unordered_set>
 #include <memory>
+#include <unordered_set>
+
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
 #include <maxscale/worker.h>
-#include "messagequeue.hh"
 #include <maxscale/workertask.hh>
+
+#include "messagequeue.hh"
 
 namespace maxscale
 {
@@ -487,11 +491,12 @@ class Worker : public MXS_WORKER
     Worker& operator = (const Worker&) = delete;
 
 public:
-    typedef WORKER_STATISTICS     STATISTICS;
-    typedef WorkerTask            Task;
-    typedef WorkerDisposableTask  DisposableTask;
-    typedef WorkerLoad            Load;
-    typedef WorkerTimer           Timer;
+    typedef WORKER_STATISTICS      STATISTICS;
+    typedef WorkerTask             Task;
+    typedef WorkerDisposableTask   DisposableTask;
+    typedef WorkerLoad             Load;
+    typedef WorkerTimer            Timer;
+    typedef std::function<void ()> GenericFunction;
 
     /**
      * A delegating timer that delegates the timer tick handling
@@ -744,6 +749,29 @@ public:
     {
         return post(std::auto_ptr<DisposableTask>(sTask.release()), mode);
     }
+
+    /**
+     * Execute a funcion in a worker
+     *
+     * @param func The function to call
+     * @param pSem If non-NULL, will be posted once the task's `execute` return.
+     * @param mode Execution mode
+     *
+     * @return True, if task was posted to the worker
+     */
+    bool post(GenericFunction func, Semaphore* pSem, enum execute_mode_t mode);
+
+    /**
+     * Execute function on worker
+     *
+     * This is a convenience wrapper of `post` with automatic waiting on the
+     * semaphore.
+     *
+     * @param func Function to execute
+     *
+     * @return True if function was executed on the worker
+     */
+    bool execute(GenericFunction func);
 
     /**
      * Post a message to a worker.

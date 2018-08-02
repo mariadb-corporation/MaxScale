@@ -239,17 +239,19 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
      * should not be written to by any other thread. To prevent this, have the monitor thread
      * print the diagnostics to a string. */
     string diag_str;
-    // 'execute_worker_task' is not a const method, although the task we are sending is.
+
+    // 'execute' is not a const method, although the task we are sending is.
     MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
-    bool func_ran = mutable_ptr->execute_worker_task([this, &diag_str]
+    auto func = [this, &diag_str]
     {
         diag_str = diagnostics_to_string();
-    });
+    };
 
-    if (!func_ran)
+    if (!mutable_ptr->execute(func))
     {
         diag_str = DIAG_ERROR;
     }
+
     dcb_printf(dcb, "%s", diag_str.c_str());
 }
 
@@ -287,15 +289,16 @@ json_t* MariaDBMonitor::diagnostics_json() const
     ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     json_t* rval = NULL;
     MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
-    bool func_ran = mutable_ptr->execute_worker_task([this, &rval]
+    auto func = [this, &rval]
     {
         rval = diagnostics_to_json();
-    });
+    };
 
-    if (!func_ran)
+    if (!mutable_ptr->execute(func))
     {
         rval = mxs_json_error_append(rval, "%s", DIAG_ERROR);
     }
+
     return rval;
 }
 

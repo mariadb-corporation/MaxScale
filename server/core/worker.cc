@@ -477,6 +477,51 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
+bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
+{
+
+    class CustomTask : public maxscale::WorkerTask
+    {
+    public:
+
+        CustomTask(GenericFunction func)
+            : m_func(func)
+        {
+        }
+
+    private:
+        GenericFunction m_func;
+
+        void execute(maxscale::Worker& worker)
+        {
+            m_func();
+
+            // The task needs to delete itself only after the task has been executed
+            delete this;
+        }
+    };
+
+    bool rval = false;
+    CustomTask* task = new (std::nothrow) CustomTask(func);
+
+    if (task)
+    {
+        if (!(rval = post(task, pSem, mode)))
+        {
+            // Posting the task failed, it needs to be deleted now
+            delete task;
+        }
+    }
+
+    return rval;
+}
+
+bool Worker::execute(GenericFunction func)
+{
+    Semaphore sem;
+    return post(func, &sem, EXECUTE_AUTO) && sem.wait();
+}
+
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.

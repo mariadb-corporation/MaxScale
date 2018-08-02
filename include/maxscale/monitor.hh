@@ -22,7 +22,7 @@ namespace maxscale
 {
 
 class MonitorInstance : public  MXS_MONITOR_INSTANCE
-                      , private maxscale::Worker
+                      , protected maxscale::Worker
 {
 public:
     MonitorInstance(const MonitorInstance&) = delete;
@@ -112,8 +112,6 @@ public:
     virtual json_t* diagnostics_json() const;
 
 protected:
-    typedef std::function<void ()> GenericFunction;
-
     MonitorInstance(MXS_MONITOR* pMonitor);
 
     const std::string& script() const { return m_script; }
@@ -209,16 +207,6 @@ protected:
      * The default implementation will call @mon_process_state_changes.
      */
     virtual void process_state_changes();
-
-    /**
-     * Execute a task in the worker thread of this monitor.
-     *
-     * @param func The task which should be executed, wrapped in a function object.
-     * @param mode Execution mode. If EXECUTE_AUTO, the function will only return once the task has
-     * been executed. Otherwise, the task will be queued and the function returns immediately.
-     * @return True, if task was sent to the worker
-     */
-    bool execute_worker_task(GenericFunction func, execute_mode_t mode = Worker::EXECUTE_AUTO);
 
     MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
