@@ -580,7 +580,7 @@ monitor_show(DCB *dcb, MXS_MONITOR *monitor)
 
     if (monitor->instance)
     {
-        if (monitor->api->diagnostics)
+        if (monitor->api->diagnostics && monitor->state == MONITOR_STATE_RUNNING)
         {
             monitor->api->diagnostics(monitor->instance, dcb);
         }
@@ -1830,7 +1830,8 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-    if (monitor->instance && monitor->api->diagnostics_json)
+    if (monitor->instance && monitor->api->diagnostics_json &&
+        monitor->state == MONITOR_STATE_RUNNING)
     {
         json_t* diag = monitor->api->diagnostics_json(monitor->instance);
 
