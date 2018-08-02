@@ -190,6 +190,7 @@ public:
                 m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode));
 
                 ++m_stats.inserts;
+                m_stats.size += size;
             }
         }
     }
