@@ -28,6 +28,7 @@
 #include <maxscale/cdefs.h>
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,6 +65,7 @@
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.h"
 #include "../../../core/internal/filter.hh"
+#include "../../../core/internal/routingworker.hh"
 
 #define MAXARGS 14
 
@@ -138,6 +140,7 @@ struct subcommand
 
 static void telnetdShowUsers(DCB *);
 static void show_log_throttling(DCB *);
+static void show_qc_all(DCB*);
 
 static void showVersion(DCB *dcb)
 {
@@ -248,6 +251,12 @@ struct subcommand showoptions[] =
         "\n"
         "Example: show persistent db-server-1",
         {ARG_TYPE_SERVER}
+    },
+    {
+        "qcs", 0, 0, (FN)show_qc_all,
+        "Show query classifier statistics",
+        "Usage: show qcs",
+        {0}
     },
     {
         "server", 1, 1, (FN)dprintServer,
@@ -2416,6 +2425,56 @@ show_log_throttling(DCB *dcb)
     mxs_log_get_throttling(&t);
 
     dcb_printf(dcb, "%lu %lu %lu\n", t.count, t.window_ms, t.suppress_ms);
+}
+
+static void
+show_qc_all(DCB* dcb)
+{
+    std::vector<QC_CACHE_STATS> all_stats(config_threadcount());
+
+    class GetQCStats : public mxs::Worker::Task
+    {
+    public:
+        GetQCStats(std::vector<QC_CACHE_STATS>* pAll_stats)
+            : m_all_stats(*pAll_stats)
+        {
+        }
+
+        void execute(mxs::Worker& worker)
+        {
+            int id = mxs::RoutingWorker::get_current_id();
+            ss_dassert(id >= 0);
+
+            QC_CACHE_STATS& stats = m_all_stats[id];
+
+            qc_get_cache_stats(&stats);
+        }
+
+    private:
+        std::vector<QC_CACHE_STATS>& m_all_stats;
+    };
+
+    GetQCStats get_qc_stats(&all_stats);
+
+    mxs::RoutingWorker::execute_concurrently(get_qc_stats);
+
+    dcb_printf(dcb, " ID | Size       | Inserts    | Hits       | Misses     | Evictions  |\n");
+    dcb_printf(dcb, "----+------------+------------+------------+------------+------------+\n");
+
+    int id = 0;
+    for (const auto& stats : all_stats)
+    {
+        dcb_printf(dcb,
+                   "%3d |"
+                   " %10" PRIi64 " |"
+                   " %10" PRIi64 " |"
+                   " %10" PRIi64 " |"
+                   " %10" PRIi64 " |"
+                   " %10" PRIi64 " |\n",
+                   id, stats.size, stats.inserts, stats.hits, stats.misses, stats.evictions);
+    }
+
+    dcb_printf(dcb, "\n");
 }
 
 /**
