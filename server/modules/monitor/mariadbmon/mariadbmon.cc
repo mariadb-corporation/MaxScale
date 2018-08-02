@@ -958,12 +958,17 @@ void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
  *
  * @param setting_name Setting to disable
  */
-void MariaDBMonitor::disable_setting(const char* setting)
+void MariaDBMonitor::disable_setting(const std::string& setting)
 {
-    MXS_CONFIG_PARAMETER p = {};
-    p.name = const_cast<char*>(setting);
-    p.value = const_cast<char*>("false");
-    monitor_add_parameters(m_monitor, &p);
+    Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
+
+    worker->post([=]()
+    {
+        MXS_CONFIG_PARAMETER p = {};
+        p.name = const_cast<char*>(setting.c_str());
+        p.value = const_cast<char*>("false");
+        monitor_add_parameters(m_monitor, &p);
+    }, NULL, EXECUTE_AUTO);
 }
 
 /**

@@ -264,7 +264,7 @@ private:
                                     int seconds_remaining);
 
     // Other methods
-    void disable_setting(const char* setting);
+    void disable_setting(const std::string& setting);
     bool check_sql_files();
     void enforce_read_only_on_slaves();
 };
