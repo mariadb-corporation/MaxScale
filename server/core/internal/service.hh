@@ -26,8 +26,10 @@
  */
 
 // The internal service representation. Currently it only inherits the SERVICE struct.
-struct Service: public SERVICE
+class Service: public SERVICE
 {
+public:
+    ~Service();
 };
 
 /**

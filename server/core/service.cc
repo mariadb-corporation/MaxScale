@@ -95,14 +95,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     Service* service = new (std::nothrow) Service;
     SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
                                                                          sizeof(*rate_limits));
-    if (!my_name || !my_router || !service || !rate_limits)
-    {
-        MXS_FREE(my_name);
-        MXS_FREE(my_router);
-        MXS_FREE(rate_limits);
-        delete service;
-        return NULL;
-    }
+    MXS_ABORT_IF_FALSE(my_name && my_router && service && rate_limits);
 
     const MXS_MODULE* module = get_module(my_router, MODULE_ROUTER);
     ss_dassert(module);
@@ -178,7 +171,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
         service->active = false;
-        service_free(service);
+        delete service;
         return NULL;
     }
 
@@ -194,6 +187,34 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     return service;
 }
 
+Service::~Service()
+{
+    while (auto tmp = ports)
+    {
+        ports = ports->next;
+        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
+        listener_free(tmp);
+    }
+
+    if (router && router_instance && router->destroyInstance)
+    {
+        router->destroyInstance(router_instance);
+    }
+
+    while (SERVER_REF* tmp = dbref)
+    {
+        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
+        dbref = dbref->next;
+        MXS_FREE(tmp);
+    }
+
+    config_parameter_free(svc_config_param);
+    MXS_FREE(name);
+    MXS_FREE(routerModule);
+    MXS_FREE(filters);
+    MXS_FREE(rate_limits);
+}
+
 void service_free(Service* service)
 {
     ss_dassert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
@@ -201,35 +222,10 @@ void service_free(Service* service)
 
     spinlock_acquire(&service_spin);
     auto it = std::remove(allServices.begin(), allServices.end(), service);
+    ss_dassert(it != allServices.end());
     allServices.erase(it);
     spinlock_release(&service_spin);
 
-    while (service->ports)
-    {
-        auto tmp = service->ports;
-        service->ports = service->ports->next;
-        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
-        listener_free(tmp);
-    }
-
-    if (service->router && service->router_instance && service->router->destroyInstance)
-    {
-        service->router->destroyInstance(service->router_instance);
-    }
-
-    while (service->dbref)
-    {
-        SERVER_REF* tmp = service->dbref;
-        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
-        service->dbref = service->dbref->next;
-        MXS_FREE(tmp);
-    }
-
-    config_parameter_free(service->svc_config_param);
-    MXS_FREE(service->name);
-    MXS_FREE(service->routerModule);
-    MXS_FREE(service->filters);
-    MXS_FREE(service->rate_limits);
     delete service;
 }
 
