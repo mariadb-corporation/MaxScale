@@ -10,6 +10,10 @@ In versions 2.1.2 and earlier, the configuration files are limited to 1024
 characters per line. This limitation was increased to 16384 characters in
 MaxScale 2.1.3.
 
+In versions 2.2.12 and earlier, the section names in the configuration files
+were limited to 49 characters. This limitation was increased to 1023 characters
+in MaxScale 2.2.13.
+
 ## Security limitiations
 
 ### MariaDB 10.2
