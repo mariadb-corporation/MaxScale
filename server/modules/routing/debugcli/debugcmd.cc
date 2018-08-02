@@ -2430,33 +2430,9 @@ show_log_throttling(DCB *dcb)
 static void
 show_qc_all(DCB* dcb)
 {
-    std::vector<QC_CACHE_STATS> all_stats(config_threadcount());
+    std::vector<QC_CACHE_STATS> all_stats;
 
-    class GetQCStats : public mxs::Worker::Task
-    {
-    public:
-        GetQCStats(std::vector<QC_CACHE_STATS>* pAll_stats)
-            : m_all_stats(*pAll_stats)
-        {
-        }
-
-        void execute(mxs::Worker& worker)
-        {
-            int id = mxs::RoutingWorker::get_current_id();
-            ss_dassert(id >= 0);
-
-            QC_CACHE_STATS& stats = m_all_stats[id];
-
-            qc_get_cache_stats(&stats);
-        }
-
-    private:
-        std::vector<QC_CACHE_STATS>& m_all_stats;
-    };
-
-    GetQCStats get_qc_stats(&all_stats);
-
-    mxs::RoutingWorker::execute_concurrently(get_qc_stats);
+    mxs::RoutingWorker::get_all_qc_stats(all_stats);
 
     dcb_printf(dcb, " ID | Size       | Inserts    | Hits       | Misses     | Evictions  |\n");
     dcb_printf(dcb, "----+------------+------------+------------+------------+------------+\n");
