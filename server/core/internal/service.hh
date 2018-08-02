@@ -36,6 +36,28 @@ class Service: public SERVICE
 public:
     ~Service();
 
+    /**
+     * Check if name matches a basic service parameter
+     *
+     * Basic parameters are common to all services. These include, for example, the
+     * `user` and `password` parameters.
+     *
+     * @return True if the parameter is a basic service parameter
+     */
+    bool is_basic_parameter(const std::string& name);
+
+    /**
+     * Update a basic service parameter
+     *
+     * Update a parameter that is common to all services.
+     *
+     * @param name    Name of the parameter to update
+     * @param value   The new value of the parameter
+     *
+     * @return True if the parameter and its value were valid
+     */
+    bool update_basic_parameter(const std::string& name, const std::string& value);
+
     std::vector<SFilterDef> filters; /**< Ordered list of filters */
     mutable std::mutex      lock;
 };
@@ -152,8 +174,8 @@ bool service_serialize(const Service *service);
 /**
  * Internal utility functions
  */
-bool     service_all_services_have_listeners(void);
-bool      service_isvalid(Service *service);
+bool service_all_services_have_listeners(void);
+bool service_isvalid(Service *service);
 
 /**
  * Check if a service uses @c servers
@@ -211,14 +233,6 @@ void service_remove_parameter(Service *service, const char* key);
  * @param value   Parameter value
  */
 void service_replace_parameter(Service *service, const char* key, const char* value);
-
-/**
- * @brief Set listener rebinding interval
- *
- * @param service Service to configure
- * @param value String value o
- */
-void service_set_retry_interval(Service *service, int value);
 
 // Internal search function
 Service* service_internal_find(const char *name);
@@ -291,17 +305,8 @@ bool service_port_is_used(unsigned short port);
  */
 bool service_has_named_listener(Service *service, const char *name);
 
-// Deprecated setters
-int   serviceSetUser(Service *service, const char *user, const char *auth);
-int   serviceSetTimeout(Service *service, int val);
-int   serviceSetConnectionLimits(Service *service, int max, int queued, int timeout);
-void  serviceSetRetryOnFailure(Service *service, const char* value);
-void  serviceWeightBy(Service *service, const char *weightby);
-int   serviceEnableLocalhostMatchWildcardHost(Service *service, int action);
-int   serviceStripDbEsc(Service* service, int action);
-int   serviceAuthAllServers(Service *service, int action);
-void  serviceSetVersionString(Service *service, const char* value);
-int   serviceEnableRootUser(Service *service, int action);
+// Required by MaxAdmin
+int service_enable_root(Service *service, int action);
 
 /**
  * @brief Convert a service to JSON

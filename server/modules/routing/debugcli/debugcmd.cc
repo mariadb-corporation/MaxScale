@@ -2490,7 +2490,7 @@ restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
 static void
 enable_service_root(DCB *dcb, SERVICE *service)
 {
-    serviceEnableRootUser((Service*)service, 1);
+    service_enable_root((Service*)service, 1);
 }
 
 /**
@@ -2502,7 +2502,7 @@ enable_service_root(DCB *dcb, SERVICE *service)
 static void
 disable_service_root(DCB *dcb, SERVICE *service)
 {
-    serviceEnableRootUser((Service*)service, 0);
+    service_enable_root((Service*)service, 0);
 }
 
 struct log_action_entry

@@ -131,28 +131,29 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
     service->session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
 
-    serviceWeightBy(service, config_get_string(params, CN_WEIGHTBY));
-    serviceSetUser(service, config_get_string(params, CN_USER),
-                   config_get_string(params, CN_PASSWORD));
+    snprintf(service->weightby, sizeof(service->weightby), "%s",
+             config_get_string(params, CN_WEIGHTBY));
+    snprintf(service->credentials.name, sizeof(service->credentials.name), "%s",
+             config_get_string(params, CN_USER));
+    snprintf(service->credentials.authdata, sizeof(service->credentials.authdata), "%s",
+             config_get_string(params, CN_PASSWORD));
 
     std::string version_string = config_get_string(params, CN_VERSION_STRING);
 
-    if (!version_string.empty())
+    if (version_string.empty())
+    {
+        version_string = config_get_global_options()->version_string;
+    }
+    else if (version_string[0] != '5')
     {
         /** Add the 5.5.5- string to the start of the version string if
          * the version string starts with "10.".
          * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-        if (version_string[0] != '5')
-        {
-            version_string = "5.5.5-" + version_string;
-        }
+        version_string = "5.5.5-" + version_string;
+    }
 
-        serviceSetVersionString(service, version_string.c_str());
-    }
-    else if (config_get_global_options()->version_string)
-    {
-        serviceSetVersionString(service, config_get_global_options()->version_string);
-    }
+    snprintf(service->version_string, sizeof(service->version_string), "%s",
+             version_string.c_str());
 
     if (service->conn_idle_timeout)
     {
@@ -1007,33 +1008,6 @@ bool serviceHasBackend(Service *service, SERVER *server)
 }
 
 /**
- * Set the service user that is used to log in to the backebd servers
- * associated with this service.
- *
- * @param service       The service we are setting the data for
- * @param user          The user name to use for connections
- * @param auth          The authentication data we need, e.g. MySQL SHA1 password
- * @return      0 on failure
- */
-int serviceSetUser(Service *service, const char *user, const char *auth)
-{
-    if (service->credentials.name != user)
-    {
-        snprintf(service->credentials.name,
-                 sizeof(service->credentials.name), "%s", user);
-    }
-
-    if (service->credentials.authdata != auth)
-    {
-        snprintf(service->credentials.authdata,
-                 sizeof(service->credentials.authdata), "%s", auth);
-    }
-
-    return 1;
-}
-
-
-/**
  * Get the service user that is used to log in to the backebd servers
  * associated with this service.
  *
@@ -1046,10 +1020,6 @@ int
 serviceGetUser(SERVICE *svc, char **user, char **auth)
 {
     Service* service = static_cast<Service*>(svc);
-    if (service->credentials.name == NULL || service->credentials.authdata == NULL)
-    {
-        return 0;
-    }
     *user = service->credentials.name;
     *auth = service->credentials.authdata;
     return 1;
@@ -1064,7 +1034,7 @@ serviceGetUser(SERVICE *svc, char **user, char **auth)
  * @return              0 on failure
  */
 
-int serviceEnableRootUser(Service *svc, int action)
+int service_enable_root(Service *svc, int action)
 {
     Service* service = static_cast<Service*>(svc);
 
@@ -1076,126 +1046,6 @@ int serviceEnableRootUser(Service *svc, int action)
     service->enable_root = action;
 
     return 1;
-}
-
-/**
- * Enable/Disable loading the user data from only one server or all of them
- *
- * @param service       The service we are setting the data for
- * @param action        1 for all servers, 0 for single server
- * @return              0 on failure
- */
-
-int
-serviceAuthAllServers(Service *service, int action)
-{
-    if (action != 0 && action != 1)
-    {
-        return 0;
-    }
-
-    service->users_from_all = action;
-
-    return 1;
-}
-
-/**
- * Whether to strip escape characters from the name of the database the client
- * is connecting to.
- * @param service Service to configure
- * @param action 0 for disabled, 1 for enabled
- * @return 1 if successful, 0 on error
- */
-int serviceStripDbEsc(Service* service, int action)
-{
-    if (action != 0 && action != 1)
-    {
-        return 0;
-    }
-
-    service->strip_db_esc = action;
-
-    return 1;
-}
-
-
-/**
- * Sets the session timeout for the service.
- * @param service Service to configure
- * @param val Timeout in seconds
- * @return 1 on success, 0 when the value is invalid
- */
-int
-serviceSetTimeout(Service *service, int val)
-{
-
-    if (val < 0)
-    {
-        return 0;
-    }
-
-    /** Enable the session timeout checks if and only if at least one service is
-     * configured with a idle timeout. */
-    if ((service->conn_idle_timeout = val))
-    {
-        dcb_enable_session_timeouts();
-    }
-
-    return 1;
-}
-
-void serviceSetVersionString(Service *service, const char* value)
-{
-    if (service->version_string != value)
-    {
-        snprintf(service->version_string, sizeof(service->version_string), "%s", value);
-    }
-}
-
-/**
- * Sets the connection limits, if any, for the service.
- * @param service Service to configure
- * @param max The maximum number of client connections at any one time
- * @param queued    The maximum number of connections to queue up when
- *                  max_connections clients are already connected
- * @param timeout   Maximum amount of time to wait for a connection to
- *                  become available.
- * @return 1 on success, 0 when the values are invalid
- */
-int
-serviceSetConnectionLimits(Service *service, int max, int queued, int timeout)
-{
-
-    if (max < 0 || queued < 0)
-    {
-        return 0;
-    }
-
-    service->max_connections = max;
-
-    ss_info_dassert(queued == 0, "Queued connections not implemented.");
-    ss_info_dassert(timeout == 0, "Queued connections not implemented.");
-
-    return 1;
-}
-
-/**
- * Enable or disable the restarting of the service on failure.
- * @param service Service to configure
- * @param value A string representation of a boolean value
- */
-void serviceSetRetryOnFailure(Service *service, const char* value)
-{
-    if (value)
-    {
-        service->retry_start = config_truth_value(value);
-    }
-}
-
-void service_set_retry_interval(Service *service, int value)
-{
-    ss_dassert(value > 0);
-    service->max_retry_interval = value;
 }
 
 /**
@@ -1614,20 +1464,6 @@ void service_replace_parameter(Service *service, const char* key, const char* va
 }
 
 /**
- * Set the weighting parameter for the service
- *
- * @param       service         The service pointer
- * @param       weightby        The parameter name to weight the routing by
- */
-void serviceWeightBy(Service *service, const char *weightby)
-{
-    if (service->weightby != weightby)
-    {
-        snprintf(service->weightby, sizeof(service->weightby), "%s", weightby);
-    }
-}
-
-/**
  * Return the parameter the wervice shoudl use to weight connections
  * by
  * @param service               The Service pointer
@@ -1636,28 +1472,6 @@ const char* serviceGetWeightingParameter(SERVICE *svc)
 {
     Service* service = static_cast<Service*>(svc);
     return service->weightby;
-}
-
-/**
- * Enable/Disable localhost authentication match criteria
- * associated with this service.
- *
- * @param service       The service we are setting the data for
- * @param action        1 for enable, 0 for disable access
- * @return              0 on failure
- */
-
-int
-serviceEnableLocalhostMatchWildcardHost(Service *service, int action)
-{
-    if (action != 0 && action != 1)
-    {
-        return 0;
-    }
-
-    service->localhost_match_wildcard_host = action;
-
-    return 1;
 }
 
 volatile sig_atomic_t service_should_stop = 0;
@@ -2498,4 +2312,118 @@ bool service_thread_init()
     }
 
     return true;
+}
+
+bool Service::is_basic_parameter(const std::string& name)
+{
+    static const std::set<std::string> names =
+    {
+        CN_AUTH_ALL_SERVERS,
+        CN_CONNECTION_TIMEOUT,
+        CN_ENABLE_ROOT_USER,
+        CN_LOCALHOST_MATCH_WILDCARD_HOST,
+        CN_LOG_AUTH_WARNINGS,
+        CN_MAX_CONNECTIONS,
+        CN_MAX_RETRY_INTERVAL,
+        CN_PASSWORD,
+        CN_RETRY_ON_FAILURE,
+        CN_STRIP_DB_ESC,
+        CN_USER,
+        CN_VERSION_STRING,
+        CN_WEIGHTBY
+    };
+
+    return names.find(name) != names.end();
+}
+
+bool Service::update_basic_parameter(const std::string& key, const std::string& value)
+{
+    bool valid = false;
+
+    if (key == CN_USER)
+    {
+        valid = true;
+        snprintf(credentials.name, sizeof(credentials.name), "%s", value.c_str());
+    }
+    else if (key == CN_PASSWORD)
+    {
+        snprintf(credentials.authdata, sizeof(credentials.authdata), "%s", value.c_str());
+        valid = true;
+    }
+    else if (key == CN_ENABLE_ROOT_USER)
+    {
+        enable_root = config_truth_value(value.c_str());
+        valid = true;
+    }
+    else if (key == CN_MAX_RETRY_INTERVAL)
+    {
+        int i = std::stoi(value);
+
+        if (i > 0)
+        {
+            max_retry_interval = i;
+            valid = true;
+        }
+    }
+    else if (key == CN_MAX_CONNECTIONS)
+    {
+        int i = std::stoi(value);
+
+        if (i > 0)
+        {
+            max_connections = i;
+            valid = true;
+        }
+    }
+    else if (key == CN_CONNECTION_TIMEOUT)
+    {
+        int i = std::stoi(value);
+
+        if (i > 0)
+        {
+            valid = true;
+
+            if ((conn_idle_timeout = i))
+            {
+                dcb_enable_session_timeouts();
+            }
+        }
+    }
+    else if (key == CN_AUTH_ALL_SERVERS)
+    {
+        users_from_all = config_truth_value(value.c_str());
+        valid = true;
+    }
+    else if (key == CN_STRIP_DB_ESC)
+    {
+        strip_db_esc = config_truth_value(value.c_str());
+        valid = true;
+    }
+    else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
+    {
+        localhost_match_wildcard_host = config_truth_value(value.c_str());
+        valid = true;
+    }
+    else if (key == CN_VERSION_STRING)
+    {
+        snprintf(version_string, sizeof(version_string), "%s", value.c_str());
+        valid = true;
+    }
+    else if (key == CN_WEIGHTBY)
+    {
+        snprintf(weightby, sizeof(weightby), "%s", value.c_str());
+        valid = true;
+    }
+    else if (key == CN_LOG_AUTH_WARNINGS)
+    {
+        log_auth_warnings = config_truth_value(value.c_str());
+        valid = true;
+    }
+    else if (key == CN_RETRY_ON_FAILURE)
+    {
+        retry_start = config_truth_value(value.c_str());
+        valid = true;
+    }
+
+    return valid;
 }

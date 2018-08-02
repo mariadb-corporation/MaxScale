@@ -607,86 +607,9 @@ bool runtime_alter_service(Service *service, const char* zKey, const char* zValu
 
     mxs::SpinLockGuard guard(crt_lock);
 
-    if (key == CN_USER)
+    if (service->is_basic_parameter(key))
     {
-        valid = true;
-        serviceSetUser(service, value.c_str(), service->credentials.authdata);
-    }
-    else if (key == CN_PASSWORD)
-    {
-        valid = true;
-        serviceSetUser(service, service->credentials.name, value.c_str());
-    }
-    else if (key == CN_ENABLE_ROOT_USER)
-    {
-        valid = true;
-        serviceEnableRootUser(service, config_truth_value(value.c_str()));
-    }
-    else if (key == CN_MAX_RETRY_INTERVAL)
-    {
-        long i = get_positive_int(zValue);
-        if (i)
-        {
-            valid = true;
-            service_set_retry_interval(service, i);
-        }
-    }
-    else if (key == CN_MAX_CONNECTIONS)
-    {
-        long i = get_positive_int(zValue);
-        if (i)
-        {
-            valid = true;
-            // TODO: Once connection queues are implemented, use correct values
-            const int queued_connections = 0; // At most this many pending connections.
-            const int timeout = 0;            // Wait at most this much for a connection.
-            serviceSetConnectionLimits(service, i, queued_connections, timeout);
-        }
-    }
-    else if (key == CN_CONNECTION_TIMEOUT)
-    {
-        long i = get_positive_int(zValue);
-        if (i)
-        {
-            valid = true;
-            serviceSetTimeout(service, i);
-        }
-    }
-    else if (key == CN_AUTH_ALL_SERVERS)
-    {
-        valid = true;
-        serviceAuthAllServers(service, config_truth_value(value.c_str()));
-    }
-    else if (key == CN_STRIP_DB_ESC)
-    {
-        valid = true;
-        serviceStripDbEsc(service, config_truth_value(value.c_str()));
-    }
-    else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
-    {
-        valid = true;
-        serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(value.c_str()));
-    }
-    else if (key == CN_VERSION_STRING)
-    {
-        valid = true;
-        serviceSetVersionString(service, value.c_str());
-    }
-    else if (key == CN_WEIGHTBY)
-    {
-        valid = true;
-        serviceWeightBy(service, value.c_str());
-    }
-    else if (key == CN_LOG_AUTH_WARNINGS)
-    {
-        valid = true;
-        // TODO: Move this inside the service source
-        service->log_auth_warnings = config_truth_value(value.c_str());
-    }
-    else if (key == CN_RETRY_ON_FAILURE)
-    {
-        valid = true;
-        serviceSetRetryOnFailure(service, value.c_str());
+        valid = service->update_basic_parameter(key, value);
     }
     else if (config_param_is_valid(module->parameters, key.c_str(), value.c_str(), NULL) ||
              key == CN_ROUTER_OPTIONS)
