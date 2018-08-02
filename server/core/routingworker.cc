@@ -461,7 +461,7 @@ bool RoutingWorker::pre_run()
 {
     this_thread.current_worker_id = m_id;
 
-    bool rv = modules_thread_init() && service_thread_init();
+    bool rv = modules_thread_init() && service_thread_init() && qc_thread_init(QC_INIT_SELF);
 
     if (!rv)
     {
