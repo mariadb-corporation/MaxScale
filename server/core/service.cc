@@ -1764,52 +1764,66 @@ bool service_filter_in_use(const SFilterDef& filter)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_service_config(const SERVICE *service, const char *filename)
+bool Service::dump_config(const char *filename) const
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
-                  filename, service->name, errno, mxs_strerror(errno));
+                  filename, m_name.c_str(), errno, mxs_strerror(errno));
         return false;
     }
 
     /**
      * TODO: Check for return values on all of the dprintf calls
      */
-    dprintf(file, "[%s]\n", service->name);
+    dprintf(file, "[%s]\n", m_name.c_str());
     dprintf(file, "%s=service\n", CN_TYPE);
-    dprintf(file, "%s=%s\n", CN_ROUTER, service->routerModule);
-    dprintf(file, "%s=%s\n", CN_USER, service->user);
-    dprintf(file, "%s=%s\n", CN_PASSWORD, service->password);
-    dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, service->enable_root ? "true" : "false");
-    dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, service->max_retry_interval);
-    dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, service->max_connections);
-    dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, service->conn_idle_timeout);
-    dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, service->users_from_all ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_ROUTER, m_router_name.c_str());
+    dprintf(file, "%s=%s\n", CN_USER, m_user.c_str());
+    dprintf(file, "%s=%s\n", CN_PASSWORD, m_password.c_str());
+    dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, enable_root ? "true" : "false");
+    dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, max_retry_interval);
+    dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, max_connections);
+    dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, conn_idle_timeout);
+    dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, users_from_all ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, strip_db_esc ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST,
-            service->localhost_match_wildcard_host ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, service->retry_start ? "true" : "false");
+            localhost_match_wildcard_host ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, log_auth_warnings ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, retry_start ? "true" : "false");
 
-    if (*service->version_string)
+    if (!m_filters.empty())
     {
-        dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
+        dprintf(file, "%s=", CN_FILTERS);
+        const char *sep = "";
+
+        for (const auto& f : m_filters)
+        {
+            dprintf(file, "%s%s", sep, f->name.c_str());
+            sep = ",";
+        }
+
+        dprintf(file, "\n");
     }
 
-    if (*service->weightby)
+    if (!m_version_string.empty())
     {
-        dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
+        dprintf(file, "%s=%s\n", CN_VERSION_STRING, version_string);
     }
 
-    if (service->dbref)
+    if (!m_weightby.empty())
+    {
+        dprintf(file, "%s=%s\n", CN_WEIGHTBY, weightby);
+    }
+
+    if (dbref)
     {
         dprintf(file, "%s=", CN_SERVERS);
         const char *sep = "";
 
-        for (SERVER_REF *db = service->dbref; db; db = db->next)
+        for (SERVER_REF *db = dbref; db; db = db->next)
         {
             if (SERVER_REF_IS_ACTIVE(db))
             {
@@ -1840,7 +1854,7 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     };
 
     // Dump router specific parameters
-    for (auto p = service->svc_config_param; p; p = p->next)
+    for (auto p = svc_config_param; p; p = p->next)
     {
         if (common_params.count(p->name) == 0)
         {
@@ -1865,42 +1879,7 @@ bool service_serialize(const Service *service)
         MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
                   filename, errno, mxs_strerror(errno));
     }
-    else if (create_service_config(service, filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
-    }
-
-    return rval;
-}
-
-bool service_serialize_servers(const SERVICE *service)
-{
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
-             service->name);
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    else if (create_service_config(service, filename))
+    else if (service->dump_config(filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);

@@ -100,6 +100,15 @@ public:
      */
     bool refresh_users();
 
+    /**
+     * Dump service configuration into a file
+     *
+     * @param filename File where the configuration should be written
+     *
+     * @return True on success
+     */
+    bool dump_config(const char *filename) const;
+
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
 
