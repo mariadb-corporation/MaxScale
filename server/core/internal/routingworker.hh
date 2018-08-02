@@ -16,6 +16,7 @@
 
 #include <unordered_map>
 
+#include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/worker.hh>
 
@@ -353,6 +354,13 @@ public:
             m_local_data.erase(data);
         }
     }
+
+    /**
+     * Provides QC statistics of all workers
+     *
+     * @param all_stats  Vector that on return will contain the statistics of all workers.
+     */
+    static void get_all_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
 
 private:
     const int    m_id;       /*< The id of the worker. */

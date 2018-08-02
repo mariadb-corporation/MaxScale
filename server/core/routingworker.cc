@@ -868,6 +868,36 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
     return rv;
 }
 
+//static
+void RoutingWorker::get_all_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
+{
+    class Task : public mxs::Worker::Task
+    {
+    public:
+        Task(std::vector<QC_CACHE_STATS>* pAll_stats)
+            : m_all_stats(*pAll_stats)
+        {
+            m_all_stats.resize(config_threadcount());
+        }
+
+        void execute(mxs::Worker& worker)
+        {
+            int id = mxs::RoutingWorker::get_current_id();
+            ss_dassert(id >= 0);
+
+            QC_CACHE_STATS& stats = m_all_stats[id];
+
+            qc_get_cache_stats(&stats);
+        }
+
+    private:
+        std::vector<QC_CACHE_STATS>& m_all_stats;
+    };
+
+    Task task(&all_stats);
+    mxs::RoutingWorker::execute_concurrently(task);
+}
+
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
