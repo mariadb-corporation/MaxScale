@@ -15,8 +15,9 @@
 #include <maxscale/service.h>
 #include <maxscale/resultset.hh>
 
-#include <vector>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "filter.hh"
 
@@ -24,16 +25,20 @@
  * @file service.h - MaxScale internal service functions
  */
 
-/**
- * Service life cycle management
- *
- * These functions should only be called by the MaxScale core.
- */
+struct UserLoadLimit
+{
+    time_t last = 0;   // The last time the users were loaded
+    bool   warned = false; // Has a warning been logged
+};
 
 // The internal service representation
 class Service: public SERVICE
 {
 public:
+    using FilterList = std::vector<SFilterDef>;
+
+    Service(const std::string& name, const std::string& router, MXS_CONFIG_PARAMETER* params);
+
     ~Service();
 
     /**
@@ -89,12 +94,25 @@ public:
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
 
-    // TODO: Make private
-    mutable std::mutex      lock;
+    // TODO: Make these private
+    mutable std::mutex         lock;
+    std::vector<UserLoadLimit> rate_limits; /**< The refresh rate limits for users of each thread */
 
 private:
-    std::vector<SFilterDef> m_filters; /**< Ordered list of filters */
+    FilterList  m_filters;        /**< Ordered list of filters */
+    std::string m_name;           /**< Name of the service */
+    std::string m_router_name;    /**< Router module */
+    std::string m_user;           /**< Username */
+    std::string m_password;       /**< Password */
+    std::string m_weightby;       /**< Weighting parameter name */
+    std::string m_version_string; /**< Version string sent to clients */
 };
+
+/**
+ * Service life cycle management
+ *
+ * These functions should only be called by the MaxScale core.
+ */
 
 /**
  * @brief Allocate a new service

@@ -90,70 +90,13 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    char *my_name = MXS_STRDUP(name);
-    char *my_router = MXS_STRDUP(router);
-    Service* service = new (std::nothrow) Service;
-    SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
-                                                                          sizeof(*rate_limits));
-    MXS_ABORT_IF_FALSE(my_name && my_router && service && rate_limits);
+    Service* service = new (std::nothrow) Service(name, router, params);
 
-    const MXS_MODULE* module = get_module(my_router, MODULE_ROUTER);
-    ss_dassert(module);
-
-    service->router = router_api;
-    service->capabilities = module->module_capabilities;
-    service->client_count = 0;
-    service->n_dbref = 0;
-    service->name = my_name;
-    service->routerModule = my_router;
-    service->svc_config_param = NULL;
-    service->svc_config_version = 0;
-    service->rate_limits = rate_limits;
-    service->stats.started = time(0);
-    service->stats.n_failed_starts = 0;
-    service->stats.n_current = 0;
-    service->stats.n_sessions = 0;
-    service->state = SERVICE_STATE_ALLOC;
-    service->active = true;
-    service->ports = NULL;
-    service->dbref = NULL;
-    service->n_dbref = 0;
-    service->weightby[0] = '\0';
-
-    service->max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
-    service->users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
-    service->localhost_match_wildcard_host = config_get_bool(params, CN_LOCALHOST_MATCH_WILDCARD_HOST);
-    service->retry_start = config_get_bool(params, CN_RETRY_ON_FAILURE);
-    service->enable_root = config_get_bool(params, CN_ENABLE_ROOT_USER);
-    service->conn_idle_timeout = config_get_integer(params, CN_CONNECTION_TIMEOUT);
-    service->max_connections = config_get_integer(params, CN_MAX_CONNECTIONS);
-    service->log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
-    service->strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
-    service->session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
-
-    snprintf(service->weightby, sizeof(service->weightby), "%s",
-             config_get_string(params, CN_WEIGHTBY));
-    snprintf(service->credentials.name, sizeof(service->credentials.name), "%s",
-             config_get_string(params, CN_USER));
-    snprintf(service->credentials.authdata, sizeof(service->credentials.authdata), "%s",
-             config_get_string(params, CN_PASSWORD));
-
-    std::string version_string = config_get_string(params, CN_VERSION_STRING);
-
-    if (version_string.empty())
+    if (service == nullptr)
     {
-        version_string = config_get_global_options()->version_string;
+        MXS_OOM();
+        return NULL;
     }
-    else if (version_string[0] != '5')
-    {
-        /** Add the 5.5.5- string to the start of the version string if
-         * the version string starts with "10.".
-         * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-        version_string = "5.5.5-" + version_string;
-    }
-
-    snprintf(service->version_string, sizeof(service->version_string), "%s",
-             version_string.c_str());
 
     if (service->conn_idle_timeout)
     {
@@ -184,6 +127,77 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     return service;
 }
 
+static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
+{
+
+    std::string version_string = config_get_string(params, CN_VERSION_STRING);
+
+    if (version_string.empty() && config_get_global_options()->version_string)
+    {
+        version_string = config_get_global_options()->version_string;
+    }
+    else if (version_string[0] != '5')
+    {
+        /**
+         * Add the 5.5.5- string to the start of the version string if the version
+         * string starts with "10.".  This mimics MariaDB 10.0 which adds 5.5.5-
+         * for backwards compatibility.
+         */
+        version_string = "5.5.5-" + version_string;
+    }
+
+    return version_string;
+}
+
+Service::Service(const std::string& service_name, const std::string& router_name,
+                 MXS_CONFIG_PARAMETER* params):
+    rate_limits(config_threadcount()),
+    m_name(service_name),
+    m_router_name(router_name),
+    m_user(config_get_string(params, CN_USER)),
+    m_password(config_get_string(params, CN_PASSWORD)),
+    m_weightby(config_get_string(params, CN_WEIGHTBY)),
+    m_version_string(get_version_string(params))
+
+{
+    const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
+    ss_dassert(module);
+    ss_dassert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
+
+    router = (MXS_ROUTER_OBJECT*)module->module_object;
+    capabilities = module->module_capabilities;
+    client_count = 0;
+    n_dbref = 0;
+    // TODO: Remove once the name and router module are not directly visible to modules
+    name = m_name.c_str();
+    routerModule = m_router_name.c_str();
+    svc_config_param = NULL;
+    svc_config_version = 0;
+    stats.started = time(0);
+    stats.n_failed_starts = 0;
+    stats.n_current = 0;
+    stats.n_sessions = 0;
+    state = SERVICE_STATE_ALLOC;
+    active = true;
+    ports = NULL;
+    dbref = NULL;
+    n_dbref = 0;
+    snprintf(user, sizeof(user), "%s", m_user.c_str());
+    snprintf(password, sizeof(password), "%s", m_password.c_str());
+    snprintf(weightby, sizeof(weightby), "%s", m_weightby.c_str());
+
+    max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
+    users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
+    localhost_match_wildcard_host = config_get_bool(params, CN_LOCALHOST_MATCH_WILDCARD_HOST);
+    retry_start = config_get_bool(params, CN_RETRY_ON_FAILURE);
+    enable_root = config_get_bool(params, CN_ENABLE_ROOT_USER);
+    conn_idle_timeout = config_get_integer(params, CN_CONNECTION_TIMEOUT);
+    max_connections = config_get_integer(params, CN_MAX_CONNECTIONS);
+    log_auth_warnings = config_get_bool(params, CN_LOG_AUTH_WARNINGS);
+    strip_db_esc = config_get_bool(params, CN_STRIP_DB_ESC);
+    session_track_trx_state = config_get_bool(params, CN_SESSION_TRACK_TRX_STATE);
+}
+
 Service::~Service()
 {
     while (auto tmp = ports)
@@ -206,9 +220,6 @@ Service::~Service()
     }
 
     config_parameter_free(svc_config_param);
-    MXS_FREE(name);
-    MXS_FREE(routerModule);
-    MXS_FREE(rate_limits);
 }
 
 void service_free(Service* service)
@@ -1018,8 +1029,8 @@ bool serviceHasBackend(Service *service, SERVER *server)
 void serviceGetUser(SERVICE *svc, const char **user, const char **auth)
 {
     Service* service = static_cast<Service*>(svc);
-    *user = service->credentials.name;
-    *auth = service->credentials.authdata;
+    *user = service->user;
+    *auth = service->password;
 }
 
 /**
@@ -1738,8 +1749,8 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     dprintf(file, "[%s]\n", service->name);
     dprintf(file, "%s=service\n", CN_TYPE);
     dprintf(file, "%s=%s\n", CN_ROUTER, service->routerModule);
-    dprintf(file, "%s=%s\n", CN_USER, service->credentials.name);
-    dprintf(file, "%s=%s\n", CN_PASSWORD, service->credentials.authdata);
+    dprintf(file, "%s=%s\n", CN_USER, service->user);
+    dprintf(file, "%s=%s\n", CN_PASSWORD, service->password);
     dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, service->enable_root ? "true" : "false");
     dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, service->max_retry_interval);
     dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, service->max_connections);
@@ -1956,8 +1967,8 @@ json_t* service_parameters_to_json(const SERVICE* service)
     string options{config_get_string(service->svc_config_param, "router_options")};
 
     json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
-    json_object_set_new(rval, CN_USER, json_string(service->credentials.name));
-    json_object_set_new(rval, CN_PASSWORD, json_string(service->credentials.authdata));
+    json_object_set_new(rval, CN_USER, json_string(service->user));
+    json_object_set_new(rval, CN_PASSWORD, json_string(service->password));
 
     json_object_set_new(rval, CN_ENABLE_ROOT_USER, json_boolean(service->enable_root));
     json_object_set_new(rval, CN_MAX_RETRY_INTERVAL, json_integer(service->max_retry_interval));
@@ -2340,12 +2351,14 @@ bool Service::update_basic_parameter(const std::string& key, const std::string& 
 
     if (key == CN_USER)
     {
+        m_user = value;
+        snprintf(user, sizeof(user), "%s", value.c_str());
         valid = true;
-        snprintf(credentials.name, sizeof(credentials.name), "%s", value.c_str());
     }
     else if (key == CN_PASSWORD)
     {
-        snprintf(credentials.authdata, sizeof(credentials.authdata), "%s", value.c_str());
+        m_password = value;
+        snprintf(password, sizeof(password), "%s", value.c_str());
         valid = true;
     }
     else if (key == CN_ENABLE_ROOT_USER)
@@ -2404,11 +2417,13 @@ bool Service::update_basic_parameter(const std::string& key, const std::string& 
     }
     else if (key == CN_VERSION_STRING)
     {
+        m_version_string = value;
         snprintf(version_string, sizeof(version_string), "%s", value.c_str());
         valid = true;
     }
     else if (key == CN_WEIGHTBY)
     {
+        m_weightby = value;
         snprintf(weightby, sizeof(weightby), "%s", value.c_str());
         valid = true;
     }

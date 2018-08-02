@@ -58,28 +58,6 @@ typedef struct
     int    n_current;       /**< Current number of sessions */
 } SERVICE_STATS;
 
-/**
- * The service user structure holds the information that is needed
- for this service to allow the gateway to login to the backend
- database and extact information such as the user table or other
- database status or configuration data.
-*/
-typedef struct
-{
-    char name[MAX_SERVICE_USER_LEN];     /**< The user name to use to extract information */
-    char authdata[MAX_SERVICE_PASSWORD_LEN]; /**< The authentication data requied */
-} SERVICE_USER;
-
-/**
- * The service refresh rate holds the counter and last load time_t
- for this service to load users data from the backend database
-*/
-typedef struct
-{
-    time_t last;   /*<< When was the users loaded the last time. */
-    bool   warned; /**< Has it been warned that the limit has been exceeded. */
-} SERVICE_REFRESH_RATE;
-
 typedef struct server_ref_t
 {
     struct server_ref_t *next; /**< Next server reference */
@@ -121,19 +99,20 @@ typedef struct server_ref_t
  */
 typedef struct service
 {
-    char *name;                        /**< The service name */
+    const char* name;                  /**< The service name */
     int state;                         /**< The service state */
     int client_count;                  /**< Number of connected clients */
     int max_connections;               /**< Maximum client connections */
     SERV_LISTENER *ports;              /**< Linked list of ports and protocols
                                         * that this service will listen on */
-    char *routerModule;                /**< Name of router module to use */
+    const char* routerModule;          /**< Name of router module to use */
     struct mxs_router_object *router;  /**< The router we are using */
     struct mxs_router *router_instance;/**< The router instance for this service */
     char version_string[MAX_SERVICE_VERSION_LEN]; /**< version string for this service listeners */
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */
-    SERVICE_USER credentials;          /**< The cedentials of the service user */
+    char user[MAX_SERVICE_USER_LEN];   /**< The user name to use to extract information */
+    char password[MAX_SERVICE_PASSWORD_LEN]; /**< The authentication data requied */
     SERVICE_STATS stats;               /**< The service statistics */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */
@@ -144,7 +123,6 @@ typedef struct service
     bool strip_db_esc;                 /**< Remove the '\' characters from database names
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
-    SERVICE_REFRESH_RATE *rate_limits; /**< The refresh rate limits for users of each thread */
     int64_t conn_idle_timeout;         /**< Session timeout in seconds */
     char weightby[MAX_SERVICE_WEIGHTBY_LEN]; /**< Service weighting parameter name */
     bool retry_start;                  /**< If starting of the service should be retried later */
