@@ -16,6 +16,7 @@
 #include <maxscale/resultset.hh>
 
 #include <vector>
+#include <mutex>
 
 #include "filter.hh"
 
@@ -36,6 +37,7 @@ public:
     ~Service();
 
     std::vector<SFilterDef> filters; /**< Ordered list of filters */
+    mutable std::mutex      lock;
 };
 
 /**

@@ -134,7 +134,6 @@ typedef struct service
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */
     SERVICE_USER credentials;          /**< The cedentials of the service user */
-    SPINLOCK spin;                     /**< The service spinlock */
     SERVICE_STATS stats;               /**< The service statistics */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */

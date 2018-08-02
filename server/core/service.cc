@@ -46,7 +46,6 @@
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
@@ -70,12 +69,13 @@
 using std::string;
 using std::set;
 using namespace maxscale;
+using Guard = std::lock_guard<std::mutex>;
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
 
-static SPINLOCK service_spin = SPINLOCK_INIT;
-static std::vector<Service*> allServices;
+static std::mutex service_spin;
+static std::vector<Service*> all_services;
 
 static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
@@ -119,7 +119,6 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     service->dbref = NULL;
     service->n_dbref = 0;
     service->weightby[0] = '\0';
-    spinlock_init(&service->spin);
 
     service->max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
     service->users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
@@ -178,9 +177,8 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
         service->capabilities |= router_api->getCapabilities(service->router_instance);
     }
 
-    spinlock_acquire(&service_spin);
-    allServices.push_back(service);
-    spinlock_release(&service_spin);
+    Guard guard(service_spin);
+    all_services.push_back(service);
 
     return service;
 }
@@ -217,11 +215,12 @@ void service_free(Service* service)
     ss_dassert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
     ss_dassert(!service->active || maxscale_teardown_in_progress());
 
-    spinlock_acquire(&service_spin);
-    auto it = std::remove(allServices.begin(), allServices.end(), service);
-    ss_dassert(it != allServices.end());
-    allServices.erase(it);
-    spinlock_release(&service_spin);
+    {
+        Guard guard(service_spin);
+        auto it = std::remove(all_services.begin(), all_services.end(), service);
+        ss_dassert(it != all_services.end());
+        all_services.erase(it);
+    }
 
     delete service;
 }
@@ -262,22 +261,8 @@ void service_destroy(Service* service)
  */
 bool service_isvalid(Service *service)
 {
-    bool rval = false;
-
-    spinlock_acquire(&service_spin);
-
-    for (Service* s: allServices)
-    {
-        if (s == service)
-        {
-            rval = true;
-            break;
-        }
-    }
-
-    spinlock_release(&service_spin);
-
-    return rval;
+    Guard guard(service_spin);
+    return std::find(all_services.begin(), all_services.end(), service) != all_services.end();
 }
 
 static inline void close_port(SERV_LISTENER *port)
@@ -549,8 +534,7 @@ bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
 {
     ss_dassert(service->state != SERVICE_STATE_FAILED);
     bool rval = true;
-
-    spinlock_acquire(&service->spin);
+    Guard guard(service->lock);
 
     if (serviceStartPort(service, port) == 0)
     {
@@ -559,7 +543,6 @@ bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
         rval = false;
     }
 
-    spinlock_release(&service->spin);
 
     return rval;
 }
@@ -615,12 +598,12 @@ int service_launch_all()
 {
     int n = 0, i;
     bool error = false;
-    int num_svc = allServices.size();
+    int num_svc = all_services.size();
 
     MXS_NOTICE("Starting a total of %d services...", num_svc);
 
     int curr_svc = 1;
-    for (Service* ptr: allServices)
+    for (Service* ptr: all_services)
     {
         n += (i = serviceInitialize(ptr));
         MXS_NOTICE("Service '%s' started (%d/%d)", ptr->name, curr_svc++, num_svc);
@@ -932,7 +915,7 @@ bool serviceAddBackend(SERVICE *svc, SERVER *server)
         if (new_ref)
         {
             rval = true;
-            spinlock_acquire(&service->spin);
+            Guard guard(service->lock);
 
             service->n_dbref++;
 
@@ -968,7 +951,6 @@ bool serviceAddBackend(SERVICE *svc, SERVER *server)
                 atomic_synchronize();
                 service->dbref = new_ref;
             }
-            spinlock_release(&service->spin);
         }
     }
 
@@ -986,7 +968,7 @@ bool serviceAddBackend(SERVICE *svc, SERVER *server)
  */
 void serviceRemoveBackend(Service *service, const SERVER *server)
 {
-    spinlock_acquire(&service->spin);
+    Guard guard(service->lock);
 
     for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
     {
@@ -997,8 +979,6 @@ void serviceRemoveBackend(Service *service, const SERVER *server)
             break;
         }
     }
-
-    spinlock_release(&service->spin);
 }
 
 /**
@@ -1012,7 +992,7 @@ bool serviceHasBackend(Service *service, SERVER *server)
 {
     SERVER_REF *ptr;
 
-    spinlock_acquire(&service->spin);
+    Guard guard(service->lock);
     ptr = service->dbref;
     while (ptr)
     {
@@ -1022,7 +1002,6 @@ bool serviceHasBackend(Service *service, SERVER *server)
         }
         ptr = ptr->next;
     }
-    spinlock_release(&service->spin);
 
     return ptr != NULL;
 }
@@ -1260,6 +1239,7 @@ bool service_set_filters(Service* service, const char* filters)
 
     if (rval)
     {
+        Guard guard(service->lock);
         service->filters = flist;
         service->capabilities |= capabilities;
     }
@@ -1271,9 +1251,9 @@ Service* service_internal_find(const char *name)
 {
     Service* service = nullptr;
 
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* s: allServices)
+    for (Service* s: all_services)
     {
         if (strcmp(s->name, name) == 0 && atomic_load_int(&s->active))
         {
@@ -1281,8 +1261,6 @@ Service* service_internal_find(const char *name)
             break;
         }
     }
-
-    spinlock_release(&service_spin);
 
     return service;
 }
@@ -1307,14 +1285,12 @@ SERVICE* service_find(const char *servname)
 void
 dprintAllServices(DCB *dcb)
 {
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* s: allServices)
+    for (Service* s: all_services)
     {
         dprintService(dcb, s);
     }
-
-    spinlock_release(&service_spin);
 }
 
 /**
@@ -1400,9 +1376,9 @@ dListServices(DCB *dcb)
 {
     const char HORIZ_SEPARATOR[] = "--------------------------+-------------------"
                                    "+--------+----------------+-------------------\n";
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    if (!allServices.empty())
+    if (!all_services.empty())
     {
         dcb_printf(dcb, "Services.\n");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
@@ -1410,7 +1386,7 @@ dListServices(DCB *dcb)
                    "Service Name", "Router Module");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
     }
-    for (Service* service: allServices)
+    for (Service* service: all_services)
     {
         ss_dassert(service->stats.n_current >= 0);
         dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
@@ -1437,11 +1413,10 @@ dListServices(DCB *dcb)
         }
         dcb_printf(dcb, "\n");
     }
-    if (!allServices.empty())
+    if (!all_services.empty())
     {
         dcb_printf(dcb, "%s\n", HORIZ_SEPARATOR);
     }
-    spinlock_release(&service_spin);
 }
 
 /**
@@ -1454,10 +1429,9 @@ dListListeners(DCB *dcb)
 {
     SERVICE *service;
     SERV_LISTENER *port;
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-
-    if (!allServices.empty())
+    if (!all_services.empty())
     {
         dcb_printf(dcb, "Listeners.\n");
         dcb_printf(dcb, "---------------------+---------------------+"
@@ -1467,7 +1441,7 @@ dListListeners(DCB *dcb)
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
     }
-    for (Service* service: allServices)
+    for (Service* service: all_services)
     {
         LISTENER_ITERATOR iter;
 
@@ -1484,12 +1458,11 @@ dListListeners(DCB *dcb)
             }
         }
     }
-    if (!allServices.empty())
+    if (!all_services.empty())
     {
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n\n");
     }
-    spinlock_release(&service_spin);
 }
 
 /**
@@ -1500,20 +1473,24 @@ dListListeners(DCB *dcb)
  * @param service Service to reload
  * @return 0 on success and 1 on error
  */
-int service_refresh_users(SERVICE *service)
+int service_refresh_users(SERVICE *svc)
 {
+    Service* service = static_cast<Service*>(svc);
     ss_dassert(service);
     int ret = 1;
     int self = mxs_rworker_get_current_id();
     ss_dassert(self >= 0);
     time_t now = time(NULL);
 
+    // Use unique_lock instead of lock_guard to make the locking conditional
+    std::unique_lock<std::mutex> guard(service->lock, std::defer_lock);
+
     if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
     {
-        spinlock_acquire(&service->spin);
         // Use only one rate limitation for synchronous authenticators to keep
         // rate limitations synchronous as well
         self = 0;
+        guard.lock();
     }
 
     MXS_CONFIG* config = config_get_global_options();
@@ -1564,11 +1541,6 @@ int service_refresh_users(SERVICE *service)
                 }
             }
         }
-    }
-
-    if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
-    {
-        spinlock_release(&service->spin);
     }
 
     return ret;
@@ -1698,7 +1670,7 @@ void service_shutdown()
 void service_destroy_instances(void)
 {
     // The global list is modified by service_free so we need a copy of it
-    std::vector<Service*> my_services = allServices;
+    std::vector<Service*> my_services = all_services;
 
     for (Service* s: my_services)
     {
@@ -1715,13 +1687,12 @@ int
 serviceSessionCountAll()
 {
     int rval = 0;
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-    for (Service* service: allServices)
+    for (Service* service: all_services)
     {
         rval += service->stats.n_current;
     }
-    spinlock_release(&service_spin);
 
     return rval;
 }
@@ -1734,9 +1705,9 @@ serviceSessionCountAll()
 std::unique_ptr<ResultSet> serviceGetListenerList()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port", "State"});
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* service : allServices)
+    for (Service* service : all_services)
     {
         LISTENER_ITERATOR iter;
 
@@ -1748,7 +1719,6 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
         }
     }
 
-    spinlock_release(&service_spin);
     return set;
 }
 
@@ -1760,15 +1730,14 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
 std::unique_ptr<ResultSet> serviceGetList()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions", "Total Sessions"});
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* s : allServices)
+    for (Service* s : all_services)
     {
         set->add_row({s->name, s->routerModule, std::to_string(s->stats.n_current),
                      std::to_string(s->stats.n_sessions)});
     }
 
-    spinlock_release(&service_spin);
     return set;
 }
 
@@ -1790,9 +1759,9 @@ static bool service_internal_restart(void *data)
 bool service_all_services_have_listeners()
 {
     bool rval = true;
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* service: allServices)
+    for (Service* service: all_services)
     {
         LISTENER_ITERATOR iter;
         SERV_LISTENER *listener = listener_iterator_init(service, &iter);
@@ -1804,7 +1773,6 @@ bool service_all_services_have_listeners()
         }
     }
 
-    spinlock_release(&service_spin);
     return rval;
 }
 
@@ -1884,75 +1852,51 @@ static void service_calculate_weights(SERVICE *service)
 
 void service_update_weights()
 {
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service *service: allServices)
+    for (Service *service: all_services)
     {
         service_calculate_weights(service);
     }
-
-    spinlock_release(&service_spin);
 }
 
 bool service_server_in_use(const SERVER *server)
 {
-    bool rval = false;
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-
-    for (Service *service: allServices)
+    for (Service *service: all_services)
     {
-        spinlock_acquire(&service->spin);
+        Guard guard(service->lock);
 
-        for (SERVER_REF *ref = service->dbref; ref && !rval; ref = ref->next)
+        for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
         {
             if (ref->active && ref->server == server)
             {
-                rval = true;
+                return true;
             }
-        }
-
-        spinlock_release(&service->spin);
-
-        if (rval)
-        {
-            break;
         }
     }
 
-    spinlock_release(&service_spin);
-
-    return rval;
+    return false;
 }
 
 bool service_filter_in_use(const SFilterDef& filter)
 {
     ss_dassert(filter);
-    bool rval = false;
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-
-    for (Service *service : allServices)
+    for (Service *service : all_services)
     {
-        spinlock_acquire(&service->spin);
+        Guard guard(service->lock);
 
         if (std::find(service->filters.begin(),
                       service->filters.end(), filter) != service->filters.end())
         {
-            rval = true;
-        }
-
-        spinlock_release(&service->spin);
-
-        if (rval)
-        {
-            break;
+            return true;
         }
     }
 
-    spinlock_release(&service_spin);
-
-    return rval;
+    return false;
 }
 
 /**
@@ -2143,9 +2087,9 @@ void service_print_users(DCB *dcb, const SERVICE *service)
 bool service_port_is_used(unsigned short port)
 {
     bool rval = false;
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (SERVICE *service: allServices)
+    for (SERVICE *service: all_services)
     {
         LISTENER_ITERATOR iter;
 
@@ -2164,8 +2108,6 @@ bool service_port_is_used(unsigned short port)
             break;
         }
     }
-
-    spinlock_release(&service_spin);
 
     return rval;
 }
@@ -2345,19 +2287,17 @@ json_t* service_relationships(const SERVICE* svc, const char* host)
     return rel;
 }
 
-json_t* service_json_data(const SERVICE* service, const char* host)
+json_t* service_json_data(const SERVICE* svc, const char* host)
 {
+    const Service* service = static_cast<const Service*>(svc);
     json_t* rval = json_object();
-
-    spinlock_acquire(&service->spin);
+    Guard guard(service->lock);
 
     json_object_set_new(rval, CN_ID, json_string(service->name));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
     json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
     json_object_set_new(rval, CN_RELATIONSHIPS, service_relationships(service, host));
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name));
-
-    spinlock_release(&service->spin);
 
     return rval;
 }
@@ -2395,10 +2335,9 @@ json_t* service_listener_to_json(const Service* service, const char* name, const
 json_t* service_list_to_json(const char* host)
 {
     json_t* arr = json_array();
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-
-    for (Service *service: allServices)
+    for (Service *service: all_services)
     {
         json_t* svc = service_json_data(service, host);
 
@@ -2408,20 +2347,17 @@ json_t* service_list_to_json(const char* host)
         }
     }
 
-    spinlock_release(&service_spin);
-
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
 json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 {
     json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    Guard guard(service_spin);
 
-    spinlock_acquire(&service_spin);
-
-    for (Service *service: allServices)
+    for (Service *service: all_services)
     {
-        spinlock_acquire(&service->spin);
+        Guard guard(service->lock);
 
         for (const auto& f : service->filters)
         {
@@ -2430,11 +2366,7 @@ json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
                 mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }
         }
-
-        spinlock_release(&service->spin);
     }
-
-    spinlock_release(&service_spin);
 
     return rel;
 }
@@ -2443,11 +2375,11 @@ json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
     std::vector<std::string> names;
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service *service: allServices)
+    for (Service *service: all_services)
     {
-        spinlock_acquire(&service->spin);
+        Guard guard(service->lock);
 
         for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
         {
@@ -2456,11 +2388,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
                 names.push_back(service->name);
             }
         }
-
-        spinlock_release(&service->spin);
     }
-
-    spinlock_release(&service_spin);
 
     json_t* rel = NULL;
 
@@ -2559,17 +2487,15 @@ uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
 
 bool service_thread_init()
 {
-    spinlock_acquire(&service_spin);
+    Guard guard(service_spin);
 
-    for (Service* service: allServices)
+    for (Service* service: all_services)
     {
         if (service->capabilities & ACAP_TYPE_ASYNC)
         {
             service_refresh_users(service);
         }
     }
-
-    spinlock_release(&service_spin);
 
     return true;
 }
