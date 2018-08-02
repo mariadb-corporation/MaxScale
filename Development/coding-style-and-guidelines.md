@@ -107,10 +107,20 @@ typedef enum { ... } gwbuf_type_t;
 typedef enum gwbuf_type { ... } gwbuf_type_t;
 ```
 ### structs
+A `struct` must be a POD type. It must have no non-POD members and it must
+not have any member functions. Whether a `struct` has been declared in a C
+or C++ header file, it must be declared as if it would be used from C.
+
+In a C header, a `struct` is declared as:
 ```
-struct gw_protocol { ... };
-typedef struct { ... } GW_PROTOCOL;
-typedef struct gw_protocol { ... } GW_PROTOCOL;
+typedef struct SOME_TYPE { ... } SOME_TYPE;
+```
+With this arrangement it is possible to refer to the type using `SOME_TYPE`
+or `struct SOME_TYPE` from both C and C++ code.
+
+In a C++ header, a `struct` is declared without the typedef.
+```
+struct SOME_TYPE;
 ```
 
 ### functions
