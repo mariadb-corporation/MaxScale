@@ -76,11 +76,12 @@ public:
     /**
      * Get the list of filters this service uses
      *
-     * @note This locks the service
+     * @note This can lock the service if this is the first time this worker
+     *       accesses the filter list
      *
      * @return A list of filters or an empty list of no filters are in use
      */
-    std::vector<SFilterDef> get_filters() const;
+    const FilterList& get_filters() const;
 
     inline bool has_filters() const
     {
@@ -114,6 +115,20 @@ private:
     std::string m_weightby;       /**< Weighting parameter name */
     std::string m_version_string; /**< Version string sent to clients */
     RateLimits  m_rate_limits;    /**< The refresh rate limits for users of each thread */
+    uint64_t    m_wkey;           /**< Key for worker local data */
+
+    // Get the worker local filter list
+    FilterList* get_local_filters() const;
+
+    // Update the local filter list on the current worker
+    void update_local_filters();
+
+    // Callback for updating the local filter list
+    static void update_filters_cb(void* data)
+    {
+        Service* service = static_cast<Service*>(data);
+        service->update_local_filters();
+    }
 };
 
 /**
