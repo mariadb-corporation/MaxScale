@@ -94,7 +94,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
     char *my_router = MXS_STRDUP(router);
     Service* service = new (std::nothrow) Service;
     SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
-                                                                         sizeof(*rate_limits));
+                                                                          sizeof(*rate_limits));
     MXS_ABORT_IF_FALSE(my_name && my_router && service && rate_limits);
 
     const MXS_MODULE* module = get_module(my_router, MODULE_ROUTER);
@@ -604,14 +604,14 @@ int service_launch_all()
     MXS_NOTICE("Starting a total of %d services...", num_svc);
 
     int curr_svc = 1;
-    for (Service* ptr: all_services)
+    for (Service* service : all_services)
     {
-        n += (i = serviceInitialize(ptr));
-        MXS_NOTICE("Service '%s' started (%d/%d)", ptr->name, curr_svc++, num_svc);
+        n += (i = serviceInitialize(service));
+        MXS_NOTICE("Service '%s' started (%d/%d)", service->name, curr_svc++, num_svc);
 
         if (i == 0)
         {
-            MXS_ERROR("Failed to start service '%s'.", ptr->name);
+            MXS_ERROR("Failed to start service '%s'.", service->name);
             error = true;
         }
 
@@ -1063,7 +1063,7 @@ bool service_set_filters(Service* service, const char* filters)
     std::vector<SFilterDef> flist;
     uint64_t capabilities = 0;
 
-    for (auto& f: mxs::strtok(filters, "|"))
+    for (auto& f : mxs::strtok(filters, "|"))
     {
         fix_object_name(f);
 
@@ -1099,20 +1099,17 @@ bool service_set_filters(Service* service, const char* filters)
 
 Service* service_internal_find(const char *name)
 {
-    Service* service = nullptr;
-
     Guard guard(service_spin);
 
-    for (Service* s: all_services)
+    for (Service* s : all_services)
     {
         if (strcmp(s->name, name) == 0 && atomic_load_int(&s->active))
         {
-            service = s;
-            break;
+            return s;
         }
     }
 
-    return service;
+    return nullptr;
 }
 
 /**
@@ -1137,7 +1134,7 @@ dprintAllServices(DCB *dcb)
 {
     Guard guard(service_spin);
 
-    for (Service* s: all_services)
+    for (Service* s : all_services)
     {
         dprintService(dcb, s);
     }
@@ -1155,7 +1152,6 @@ void dprintService(DCB *dcb, SERVICE *svc)
     SERVER_REF *server = service->dbref;
     struct tm result;
     char timebuf[30];
-    int i;
 
     dcb_printf(dcb, "\tService:                             %s\n", service->name);
     dcb_printf(dcb, "\tRouter:                              %s\n", service->routerModule);
@@ -1235,36 +1231,34 @@ dListServices(DCB *dcb)
         dcb_printf(dcb, "%-25s | %-17s | #Users | Total Sessions | Backend databases\n",
                    "Service Name", "Router Module");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
-    }
-    for (Service* service: all_services)
-    {
-        ss_dassert(service->stats.n_current >= 0);
-        dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
-                   service->name, service->routerModule,
-                   service->stats.n_current, service->stats.n_sessions);
 
-        SERVER_REF* server_ref = service->dbref;
-        bool first = true;
-        while (server_ref)
+        for (Service* service : all_services)
         {
-            if (SERVER_REF_IS_ACTIVE(server_ref))
+            ss_dassert(service->stats.n_current >= 0);
+            dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
+                       service->name, service->routerModule,
+                       service->stats.n_current, service->stats.n_sessions);
+
+            SERVER_REF* server_ref = service->dbref;
+            bool first = true;
+            while (server_ref)
             {
-                if (first)
+                if (SERVER_REF_IS_ACTIVE(server_ref))
                 {
-                    dcb_printf(dcb, "%s", server_ref->server->name);
+                    if (first)
+                    {
+                        dcb_printf(dcb, "%s", server_ref->server->name);
+                    }
+                    else
+                    {
+                        dcb_printf(dcb, ", %s", server_ref->server->name);
+                    }
+                    first = false;
                 }
-                else
-                {
-                    dcb_printf(dcb, ", %s", server_ref->server->name);
-                }
-                first = false;
+                server_ref = server_ref->next;
             }
-            server_ref = server_ref->next;
+            dcb_printf(dcb, "\n");
         }
-        dcb_printf(dcb, "\n");
-    }
-    if (!all_services.empty())
-    {
         dcb_printf(dcb, "%s\n", HORIZ_SEPARATOR);
     }
 }
@@ -1274,11 +1268,8 @@ dListServices(DCB *dcb)
  *
  * @param dcb           DCB to print the service list to.
  */
-void
-dListListeners(DCB *dcb)
+void dListListeners(DCB *dcb)
 {
-    SERVICE *service;
-    SERV_LISTENER *port;
     Guard guard(service_spin);
 
     if (!all_services.empty())
@@ -1291,7 +1282,7 @@ dListListeners(DCB *dcb)
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
     }
-    for (Service* service: all_services)
+    for (Service* service : all_services)
     {
         LISTENER_ITERATOR iter;
 
@@ -1486,7 +1477,7 @@ void service_destroy_instances(void)
     // The global list is modified by service_free so we need a copy of it
     std::vector<Service*> my_services = all_services;
 
-    for (Service* s: my_services)
+    for (Service* s : my_services)
     {
         service_free(s);
     }
@@ -1503,7 +1494,7 @@ serviceSessionCountAll()
     int rval = 0;
     Guard guard(service_spin);
 
-    for (Service* service: all_services)
+    for (Service* service : all_services)
     {
         rval += service->stats.n_current;
     }
@@ -1529,7 +1520,7 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
              lptr; lptr = listener_iterator_next(&iter))
         {
             set->add_row({service->name, lptr->protocol, lptr->address,
-                         std::to_string(lptr->port), listener_state_to_string(lptr)});
+                          std::to_string(lptr->port), listener_state_to_string(lptr)});
         }
     }
 
@@ -1549,7 +1540,7 @@ std::unique_ptr<ResultSet> serviceGetList()
     for (Service* s : all_services)
     {
         set->add_row({s->name, s->routerModule, std::to_string(s->stats.n_current),
-                     std::to_string(s->stats.n_sessions)});
+                      std::to_string(s->stats.n_sessions)});
     }
 
     return set;
@@ -1575,7 +1566,7 @@ bool service_all_services_have_listeners()
     bool rval = true;
     Guard guard(service_spin);
 
-    for (Service* service: all_services)
+    for (Service* service : all_services)
     {
         LISTENER_ITERATOR iter;
         SERV_LISTENER *listener = listener_iterator_init(service, &iter);
@@ -1668,7 +1659,7 @@ void service_update_weights()
 {
     Guard guard(service_spin);
 
-    for (Service *service: all_services)
+    for (Service* service : all_services)
     {
         service_calculate_weights(service);
     }
@@ -1678,7 +1669,7 @@ bool service_server_in_use(const SERVER *server)
 {
     Guard guard(service_spin);
 
-    for (Service *service: all_services)
+    for (Service* service : all_services)
     {
         Guard guard(service->lock);
 
@@ -1699,7 +1690,7 @@ bool service_filter_in_use(const SFilterDef& filter)
     ss_dassert(filter);
     Guard guard(service_spin);
 
-    for (Service *service : all_services)
+    for (Service* service : all_services)
     {
         Guard guard(service->lock);
 
@@ -1903,7 +1894,7 @@ bool service_port_is_used(unsigned short port)
     bool rval = false;
     Guard guard(service_spin);
 
-    for (SERVICE *service: all_services)
+    for (Service* service : all_services)
     {
         LISTENER_ITERATOR iter;
 
@@ -2151,7 +2142,7 @@ json_t* service_list_to_json(const char* host)
     json_t* arr = json_array();
     Guard guard(service_spin);
 
-    for (Service *service: all_services)
+    for (Service* service : all_services)
     {
         json_t* svc = service_json_data(service, host);
 
@@ -2169,7 +2160,7 @@ json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
     json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
     Guard guard(service_spin);
 
-    for (Service *service: all_services)
+    for (Service* service : all_services)
     {
         Guard guard(service->lock);
 
@@ -2191,7 +2182,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     std::vector<std::string> names;
     Guard guard(service_spin);
 
-    for (Service *service: all_services)
+    for (Service* service : all_services)
     {
         Guard guard(service->lock);
 
@@ -2303,7 +2294,7 @@ bool service_thread_init()
 {
     Guard guard(service_spin);
 
-    for (Service* service: all_services)
+    for (Service* service : all_services)
     {
         if (service->capabilities & ACAP_TYPE_ASYNC)
         {
