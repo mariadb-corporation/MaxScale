@@ -108,9 +108,11 @@ http_auth_authenticate(DCB *dcb)
 {
     int rval = 1;
     HTTP_AUTH *ses = (HTTP_AUTH*)dcb->data;
-    char *user, *pw;
-    serviceGetUser(dcb->service, &user, &pw);
-    pw = decrypt_password(pw);
+    const char* user;
+    const char* password;
+
+    serviceGetUser(dcb->service, &user, &password);
+    char* pw = decrypt_password(password);
 
     if (ses && strcmp(ses->user, user) == 0 && strcmp(ses->pw, pw) == 0)
     {

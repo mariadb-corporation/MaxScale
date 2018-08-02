@@ -599,11 +599,14 @@ static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
  */
 int gssapi_auth_load_users(SERV_LISTENER *listener)
 {
-    char *user, *pw;
+    const char* user;
+    const char* password;
     int rval = MXS_AUTH_LOADUSERS_ERROR;
     GSSAPI_INSTANCE *inst = (GSSAPI_INSTANCE*)listener->auth_instance;
+    serviceGetUser(listener->service, &user, &password);
+    char* pw;
 
-    if (serviceGetUser(listener->service, &user, &pw) && (pw = decrypt_password(pw)))
+    if ((pw = decrypt_password(password)))
     {
         bool no_active_servers = true;
 

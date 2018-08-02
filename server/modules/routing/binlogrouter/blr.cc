@@ -240,9 +240,11 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
     uuid_t defuuid;
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
+    const char* user;
+    const char* password;
+    serviceGetUser(service, &user, &password);
 
-    if (!service->credentials.name[0] ||
-        !service->credentials.authdata[0])
+    if (!user[0] || !password[0])
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",
@@ -287,8 +289,8 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
     inst->master = NULL;
     inst->client = NULL;
 
-    inst->user = MXS_STRDUP_A(service->credentials.name);
-    inst->password = MXS_STRDUP_A(service->credentials.authdata);
+    inst->user = MXS_STRDUP_A(user);
+    inst->password = MXS_STRDUP_A(password);
     inst->retry_count = 0;
     inst->m_errno = 0;
     inst->m_errmsg = NULL;

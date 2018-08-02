@@ -540,37 +540,32 @@ mysql_auth_free_client_data(DCB *dcb)
  */
 static bool add_service_user(SERV_LISTENER *port)
 {
-    char *user = NULL;
-    char *pw = NULL;
+    const char *user = NULL;
+    const char *password = NULL;
     bool rval = false;
 
-    if (serviceGetUser(port->service, &user, &pw))
+    serviceGetUser(port->service, &user, &password);
+
+    char* pw;
+
+    if ((pw = decrypt_password(password)))
     {
-        pw = decrypt_password(pw);
+        char *newpw = create_hex_sha1_sha1_passwd(pw);
 
-        if (pw)
+        if (newpw)
         {
-            char *newpw = create_hex_sha1_sha1_passwd(pw);
-
-            if (newpw)
-            {
-                MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
-                sqlite3* handle = get_handle(inst);
-                add_mysql_user(handle, user, "%", "", "Y", newpw);
-                add_mysql_user(handle, user, "localhost", "", "Y", newpw);
-                MXS_FREE(newpw);
-                rval = true;
-            }
-            MXS_FREE(pw);
+            MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
+            sqlite3* handle = get_handle(inst);
+            add_mysql_user(handle, user, "%", "", "Y", newpw);
+            add_mysql_user(handle, user, "localhost", "", "Y", newpw);
+            MXS_FREE(newpw);
+            rval = true;
         }
-        else
-        {
-            MXS_ERROR("[%s] Failed to decrypt service user password.", port->service->name);
-        }
+        MXS_FREE(pw);
     }
     else
     {
-        MXS_ERROR("[%s] Failed to retrieve service credentials.", port->service->name);
+        MXS_ERROR("[%s] Failed to decrypt service user password.", port->service->name);
     }
 
     return rval;

@@ -432,18 +432,11 @@ cdc_set_service_user(SERV_LISTENER *listener)
     SERVICE *service = listener->service;
     char *dpwd = NULL;
     char *newpasswd = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
+    const char *service_user = NULL;
+    const char *service_passwd = NULL;
 
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        MXS_ERROR("failed to get service user details for service %s",
-                  service->name);
-
-        return 1;
-    }
-
-    dpwd = decrypt_password(service->credentials.authdata);
+    serviceGetUser(service, &service_user, &service_passwd);
+    dpwd = decrypt_password(service_passwd);
 
     if (!dpwd)
     {
@@ -466,7 +459,10 @@ cdc_set_service_user(SERV_LISTENER *listener)
     }
 
     /* add service user */
-    (void)users_add(listener->users, service->credentials.name, newpasswd, USER_ACCOUNT_ADMIN);
+    const char* user;
+    const char* password;
+    serviceGetUser(service, &user, &password);
+    users_add(listener->users, user, newpasswd, USER_ACCOUNT_ADMIN);
 
     MXS_FREE(newpasswd);
     MXS_FREE(dpwd);

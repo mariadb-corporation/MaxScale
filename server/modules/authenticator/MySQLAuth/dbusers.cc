@@ -727,14 +727,10 @@ bool check_service_permissions(SERVICE* service)
         return true;
     }
 
-    char *user, *password;
+    const char* user;
+    const char* password;
 
-    if (serviceGetUser(service, &user, &password) == 0)
-    {
-        MXS_ERROR("[%s] Service is missing the user credentials for authentication.",
-                  service->name);
-        return false;
-    }
+    serviceGetUser(service, &user, &password);
 
     char *dpasswd = decrypt_password(password);
     bool rval = false;
@@ -919,14 +915,11 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
  */
 static int get_users(SERV_LISTENER *listener, bool skip_local)
 {
-    char *service_user = NULL;
-    char *service_passwd = NULL;
+    const char *service_user = NULL;
+    const char *service_passwd = NULL;
     SERVICE *service = listener->service;
 
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        return -1;
-    }
+    serviceGetUser(service, &service_user, &service_passwd);
 
     char *dpwd = decrypt_password(service_passwd);
 

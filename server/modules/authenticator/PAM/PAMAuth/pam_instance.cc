@@ -185,10 +185,13 @@ int PamInstance::load_users(SERVICE* service)
     const unsigned int PAM_USERS_QUERY_NUM_FIELDS  = 5;
 #endif
 
-    char *user, *pw;
+    const char* user;
+    const char* password;
+    serviceGetUser(service, &user, &password);
     int rval = MXS_AUTH_LOADUSERS_ERROR;
+    char* pw;
 
-    if (serviceGetUser(service, &user, &pw) && (pw = decrypt_password(pw)))
+    if ((pw = decrypt_password(password)))
     {
         for (SERVER_REF *servers = service->dbref; servers; servers = servers->next)
         {

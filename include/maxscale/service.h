@@ -222,7 +222,7 @@ bool serviceStartListener(SERVICE *service, const char *name);
 bool serviceAddBackend(SERVICE *service, SERVER *server);
 
 // Used by authenticators
-int   serviceGetUser(SERVICE *service, char **user, char **auth);
+void serviceGetUser(SERVICE *service, const char **user, const char **auth);
 
 // Used by routers
 const char* serviceGetWeightingParameter(SERVICE *service);

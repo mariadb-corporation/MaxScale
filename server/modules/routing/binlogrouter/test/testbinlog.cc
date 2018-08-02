@@ -167,10 +167,12 @@ int main(int argc, char **argv)
 
         return 1;
     }
-
+    const char* user;
+    const char* password;
+    serviceGetUser(service, &user, &password);
     inst->service = service;
-    inst->user = MXS_STRDUP_A(service->credentials.name);
-    inst->password = MXS_STRDUP_A(service->credentials.authdata);
+    inst->user = MXS_STRDUP_A(user);
+    inst->password = MXS_STRDUP_A(password);
 
     MXS_NOTICE("testbinlog v1.0");
 

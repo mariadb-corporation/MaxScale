@@ -1008,21 +1008,18 @@ bool serviceHasBackend(Service *service, SERVER *server)
 }
 
 /**
- * Get the service user that is used to log in to the backebd servers
+ * Get the service user that is used to log in to the backend servers
  * associated with this service.
  *
  * @param service       The service we are setting the data for
  * @param user          The user name to use for connections
  * @param auth          The authentication data we need, e.g. MySQL SHA1 password
- * @return              0 on failure
  */
-int
-serviceGetUser(SERVICE *svc, char **user, char **auth)
+void serviceGetUser(SERVICE *svc, const char **user, const char **auth)
 {
     Service* service = static_cast<Service*>(svc);
     *user = service->credentials.name;
     *auth = service->credentials.authdata;
-    return 1;
 }
 
 /**
