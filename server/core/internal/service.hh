@@ -83,16 +83,6 @@ public:
      */
     const FilterList& get_filters() const;
 
-    inline bool has_filters() const
-    {
-        /**
-         * Note: Temporarily used to check whether filters are available. This is
-         * not thread-safe but can be replaced with a check to worker local data to
-         * make it so.
-         */
-        return !m_filters.empty();
-    }
-
     /**
      * Reload users for all listeners
      *

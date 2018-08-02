@@ -653,16 +653,13 @@ static int
 session_setup_filters(MXS_SESSION *session)
 {
     Service* service = static_cast<Service*>(session->service);
-    MXS_DOWNSTREAM *head;
-    MXS_UPSTREAM *tail;
-    int i = 0;
 
-    if (!service->has_filters())
+    auto filters = service->get_filters();
+
+    if (filters.empty())
     {
         return 1;
     }
-
-    auto filters = service->get_filters();
 
     if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(filters.size(), sizeof(SESSION_FILTER))) == NULL)
     {
@@ -671,38 +668,38 @@ session_setup_filters(MXS_SESSION *session)
 
     session->n_filters = filters.size();
 
-    for (auto r = filters.rbegin(); r != filters.rend(); r++)
+    for (ssize_t i = (ssize_t)filters.size() - 1; i >= 0; i--)
     {
-        if ((head = filter_apply(*r, session, &session->head)) == NULL)
+        MXS_DOWNSTREAM* head = filter_apply(filters[i], session, &session->head);
+
+        if (head == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.\n",
-                      filter_def_get_name(r->get()), service->name);
+                      filter_def_get_name(filters[i].get()), service->name);
             return 0;
         }
-        session->filters[i].filter = r->get();
+
+        session->filters[i].filter = filters[i].get();
         session->filters[i].session = head->session;
         session->filters[i].instance = head->instance;
-        i++;
         session->head = *head;
         MXS_FREE(head);
     }
 
-    for (auto r = filters.begin(); r != filters.end(); r++)
+    for (size_t i = 0; i < filters.size(); i++)
     {
-        if ((tail = filter_upstream(*r, session->filters[i].session, &session->tail)) == NULL)
+        MXS_UPSTREAM* tail = filter_upstream(filters[i], session->filters[i].session, &session->tail);
+
+        if (tail == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
-                      filter_def_get_name(r->get()),
-                      service->name);
+                      filter_def_get_name(filters[i].get()), service->name);
             return 0;
         }
 
-        i--;
-
-        /*
-         * filter_upstream may simply return the 3 parameter if
-         * the filter has no upstream entry point. So no need
-         * to copy the contents or free tail in this case.
+        /**
+         * filter_upstream may simply return the 3 parameter if the filter has no
+         * upstream entry point. So no need to copy the contents or free tail in this case.
          */
         if (tail != &session->tail)
         {
