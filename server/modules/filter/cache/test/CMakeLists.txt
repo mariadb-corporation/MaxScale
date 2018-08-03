@@ -43,14 +43,14 @@ add_executable(test_cacheoptions
   )
 target_link_libraries(test_cacheoptions maxscale-common)
 
-add_test(TestCache_rules testrules)
+add_test(test_cache_rules testrules)
 
-add_test(TestCache_inmemory_keygeneration testkeygeneration storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
+add_test(test_cache_inmemory_keygeneration testkeygeneration storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
 
 #usage: testrawstorage storage-module [threads [time [items [min-size [max-size]]]]]\n"
-add_test(TestCache_storage_inmemory testrawstorage storage_inmemory 0 10 1000 1024 1024000)
+add_test(test_cache_storage_inmemory testrawstorage storage_inmemory 0 10 1000 1024 1024000)
 
 #usage: testlrustorage storage-module [threads [time [items [min-size [max-size]]]]]\n"
-add_test(TestCache_lru_inmemory testlrustorage storage_inmemory 0 10 1000 1024 1024000)
+add_test(test_cache_lru_inmemory testlrustorage storage_inmemory 0 10 1000 1024 1024000)
 
-add_test(TestCache_options test_cacheoptions)
+add_test(test_cache_options test_cacheoptions)

@@ -1,5 +1,5 @@
 if(BUILD_TESTS)
   add_executable(testbinlogrouter testbinlog.cc ../blr.cc ../blr_slave.cc ../blr_master.cc ../blr_file.cc ../blr_cache.cc ../blr_event.cc)
   target_link_libraries(testbinlogrouter maxscale-common ${PCRE_LINK_FLAGS} uuid)
-  add_test(NAME TestBinlogRouter COMMAND ./testbinlogrouter WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME test_binlogrouter COMMAND ./testbinlogrouter WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
