@@ -211,10 +211,10 @@ exports.builder = function(yargs) {
         })
 
     // Create filter
-        .command('filter <name> <module> <params...>', 'Create a new filter', function(yargs) {
+        .command('filter <name> <module> [params...]', 'Create a new filter', function(yargs) {
             return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
                                 'given as the filter parameters.')
-                .usage('Usage: filter <name> <router> <params...>')
+                .usage('Usage: filter <name> <module> [params...]')
         }, function(argv) {
 
             var filter = {
