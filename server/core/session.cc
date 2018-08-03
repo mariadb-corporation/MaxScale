@@ -264,12 +264,15 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
     dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->poll.owner = session->client_dcb->poll.owner;
-    session->dcb_set->insert(dcb);
+
+    Session* ses = static_cast<Session*>(session);
+    ses->link_backend_dcb(dcb);
 }
 
 void session_unlink_backend_dcb(MXS_SESSION *session, DCB *dcb)
 {
-    session->dcb_set->erase(dcb);
+    Session* ses = static_cast<Session*>(session);
+    ses->unlink_backend_dcb(dcb);
     session_put_ref(session);
 }
 
@@ -1039,36 +1042,8 @@ bool session_add_variable(MXS_SESSION*               session,
                           session_variable_handler_t handler,
                           void*                      context)
 {
-    bool added = false;
-
-    static const char PREFIX[] = "@MAXSCALE.";
-
-    if (strncasecmp(name, PREFIX, sizeof(PREFIX) - 1) == 0)
-    {
-        string key(name);
-
-        std::transform(key.begin(), key.end(), key.begin(), tolower);
-
-        if (session->variables->find(key) == session->variables->end())
-        {
-            SESSION_VARIABLE variable;
-            variable.handler = handler;
-            variable.context = context;
-
-            session->variables->insert(std::make_pair(key, variable));
-            added = true;
-        }
-        else
-        {
-            MXS_ERROR("Session variable '%s' has been added already.", name);
-        }
-    }
-    else
-    {
-        MXS_ERROR("Session variable '%s' is not of the correct format.", name);
-    }
-
-    return added;
+    Session* pSession = static_cast<Session*>(session);
+    return pSession->add_variable(name, handler, context);
 }
 
 char* session_set_variable_value(MXS_SESSION* session,
@@ -1077,62 +1052,16 @@ char* session_set_variable_value(MXS_SESSION* session,
                                  const char* value_begin,
                                  const char* value_end)
 {
-    char* rv = NULL;
-
-    string key(name_begin, name_end - name_begin);
-
-    transform(key.begin(), key.end(), key.begin(), tolower);
-
-    SessionVarsByName::iterator i = session->variables->find(key);
-
-    if (i != session->variables->end())
-    {
-        rv = i->second.handler(i->second.context, key.c_str(), value_begin, value_end);
-    }
-    else
-    {
-        const char FORMAT[] = "Attempt to set unknown MaxScale user variable %.*s";
-
-        int name_length = name_end - name_begin;
-        int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
-
-        rv = static_cast<char*>(MXS_MALLOC(len + 1));
-
-        if (rv)
-        {
-            sprintf(rv, FORMAT, name_length, name_begin);
-        }
-
-        MXS_WARNING(FORMAT, name_length, name_begin);
-    }
-
-    return rv;
+    Session* pSession = static_cast<Session*>(session);
+    return pSession->set_variable_value(name_begin, name_end, value_begin, value_end);
 }
 
 bool session_remove_variable(MXS_SESSION* session,
                              const char*  name,
                              void**       context)
 {
-    bool removed = false;
-
-    string key(name);
-
-    transform(key.begin(), key.end(), key.begin(), toupper);
-
-    SessionVarsByName::iterator i = session->variables->find(key);
-
-    if (i != session->variables->end())
-    {
-        if (context)
-        {
-            *context = i->second.context;
-        }
-
-        session->variables->erase(i);
-        removed = true;
-    }
-
-    return removed;
+    Session* pSession = static_cast<Session*>(session);
+    return pSession->remove_variable(name, context);
 }
 
 void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *buffer)
@@ -1196,80 +1125,16 @@ session_dump_statements_t session_get_dump_statements()
     return dump_statements;
 }
 
-void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
+void session_retain_statement(MXS_SESSION* session, GWBUF* pBuffer)
 {
-    if (retain_last_statements)
-    {
-        size_t len = gwbuf_length(pBuffer);
-
-        if (len > MYSQL_HEADER_LEN)
-        {
-            uint8_t header[MYSQL_HEADER_LEN + 1];
-            uint8_t* pHeader = NULL;
-
-            if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
-            {
-                pHeader = GWBUF_DATA(pBuffer);
-            }
-            else
-            {
-                gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
-                pHeader = header;
-            }
-
-            if (MYSQL_GET_COMMAND(pHeader) == MXS_COM_QUERY)
-            {
-                ss_dassert(pSession->last_statements->size() <= retain_last_statements);
-
-                if (pSession->last_statements->size() == retain_last_statements)
-                {
-                    pSession->last_statements->pop_back();
-                }
-
-                std::vector<uint8_t> stmt(len - MYSQL_HEADER_LEN - 1);
-                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN + 1, len - (MYSQL_HEADER_LEN + 1), &stmt.front());
-
-                pSession->last_statements->push_front(stmt);
-            }
-        }
-    }
+    Session* pSession = static_cast<Session*>(session);
+    pSession->retain_statement(pBuffer);
 }
 
-void session_dump_statements(MXS_SESSION* pSession)
+void session_dump_statements(MXS_SESSION* session)
 {
-    if (retain_last_statements)
-    {
-        int n = pSession->last_statements->size();
-
-        uint64_t id = session_get_current_id();
-
-        if ((id != 0) && (id != pSession->ses_id))
-        {
-            MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
-                        "The session id in the subsequent dumped statements is the wrong one.",
-                        id, pSession->ses_id);
-        }
-
-        for (auto i = pSession->last_statements->rbegin(); i != pSession->last_statements->rend(); ++i)
-        {
-            int len = i->size();
-            const char* pStmt = (char*) &i->front();
-
-            if (id != 0)
-            {
-                MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
-            }
-            else
-            {
-                // We are in a context where we do not have a current session, so we need to
-                // log the session id ourselves.
-
-                MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", pSession->ses_id, n, len, pStmt);
-            }
-
-            --n;
-        }
-    }
+    Session* pSession = static_cast<Session*>(session);
+    pSession->dump_statements();
 }
 
 class DelayedRoutingTask
@@ -1381,5 +1246,172 @@ const char* session_get_close_reason(const MXS_SESSION* session)
         default:
             ss_dassert(!true);
             return "Internal error";
+    }
+}
+
+void Session::dump_statements() const
+{
+    if (retain_last_statements)
+    {
+        int n = m_last_statements.size();
+
+        uint64_t id = session_get_current_id();
+
+        if ((id != 0) && (id != ses_id))
+        {
+            MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
+                        "The session id in the subsequent dumped statements is the wrong one.",
+                        id, ses_id);
+        }
+
+        for (auto i = m_last_statements.rbegin(); i != m_last_statements.rend(); ++i)
+        {
+            int len = i->size();
+            const char* pStmt = (char*)&i->front();
+
+            if (id != 0)
+            {
+                MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
+            }
+            else
+            {
+                // We are in a context where we do not have a current session, so we need to
+                // log the session id ourselves.
+
+                MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", ses_id, n, len, pStmt);
+            }
+
+            --n;
+        }
+    }
+}
+
+bool Session::add_variable(const char* name, session_variable_handler_t handler, void* context)
+{
+    bool added = false;
+
+    static const char PREFIX[] = "@MAXSCALE.";
+
+    if (strncasecmp(name, PREFIX, sizeof(PREFIX) - 1) == 0)
+    {
+        string key(name);
+
+        std::transform(key.begin(), key.end(), key.begin(), tolower);
+
+        if (m_variables.find(key) == m_variables.end())
+        {
+            SESSION_VARIABLE variable;
+            variable.handler = handler;
+            variable.context = context;
+
+            m_variables.insert(std::make_pair(key, variable));
+            added = true;
+        }
+        else
+        {
+            MXS_ERROR("Session variable '%s' has been added already.", name);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Session variable '%s' is not of the correct format.", name);
+    }
+
+    return added;
+}
+
+char* Session::set_variable_value(const char* name_begin, const char* name_end,
+                                  const char* value_begin, const char* value_end)
+{
+    char* rv = NULL;
+
+    string key(name_begin, name_end - name_begin);
+
+    transform(key.begin(), key.end(), key.begin(), tolower);
+
+    auto it = m_variables.find(key);
+
+    if (it != m_variables.end())
+    {
+        rv = it->second.handler(it->second.context, key.c_str(), value_begin, value_end);
+    }
+    else
+    {
+        const char FORMAT[] = "Attempt to set unknown MaxScale user variable %.*s";
+
+        int name_length = name_end - name_begin;
+        int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
+
+        rv = static_cast<char*>(MXS_MALLOC(len + 1));
+
+        if (rv)
+        {
+            sprintf(rv, FORMAT, name_length, name_begin);
+        }
+
+        MXS_WARNING(FORMAT, name_length, name_begin);
+    }
+
+    return rv;
+}
+
+bool Session::remove_variable(const char* name, void** context)
+{
+    bool removed = false;
+    string key(name);
+
+    transform(key.begin(), key.end(), key.begin(), toupper);
+    auto it = m_variables.find(key);
+
+    if (it != m_variables.end())
+    {
+        if (context)
+        {
+            *context = it->second.context;
+        }
+
+        m_variables.erase(it);
+        removed = true;
+    }
+
+    return removed;
+}
+
+void Session::retain_statement(GWBUF* pBuffer)
+{
+    if (retain_last_statements)
+    {
+        size_t len = gwbuf_length(pBuffer);
+
+        if (len > MYSQL_HEADER_LEN)
+        {
+            uint8_t header[MYSQL_HEADER_LEN + 1];
+            uint8_t* pHeader = NULL;
+
+            if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
+            {
+                pHeader = GWBUF_DATA(pBuffer);
+            }
+            else
+            {
+                gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
+                pHeader = header;
+            }
+
+            if (MYSQL_GET_COMMAND(pHeader) == MXS_COM_QUERY)
+            {
+                ss_dassert(m_last_statements.size() <= retain_last_statements);
+
+                if (m_last_statements.size() == retain_last_statements)
+                {
+                    m_last_statements.pop_back();
+                }
+
+                std::vector<uint8_t> stmt(len - MYSQL_HEADER_LEN - 1);
+                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN + 1, len - (MYSQL_HEADER_LEN + 1), &stmt.front());
+
+                m_last_statements.push_front(stmt);
+            }
+        }
     }
 }

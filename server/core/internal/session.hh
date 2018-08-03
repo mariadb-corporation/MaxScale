@@ -59,6 +59,31 @@ typedef std::unordered_set<DCB*> DCBSet;
 
 class Session: public MXS_SESSION
 {
+public:
+    bool add_variable(const char* name, session_variable_handler_t handler, void* context);
+    char* set_variable_value(const char* name_begin, const char* name_end,
+                             const char* value_begin, const char* value_end);
+    bool remove_variable(const char* name, void** context);
+    void retain_statement(GWBUF* pBuffer);
+    void dump_statements() const;
+
+    void link_backend_dcb(DCB* dcb)
+    {
+        ss_dassert(m_dcb_set.count(dcb) == 0);
+        m_dcb_set.insert(dcb);
+    }
+
+    void unlink_backend_dcb(DCB* dcb)
+    {
+        ss_dassert(m_dcb_set.count(dcb) == 1);
+        m_dcb_set.erase(dcb);
+    }
+
+    const DCBSet& dcb_set() const
+    {
+        return m_dcb_set;
+    }
+
 private:
     SessionVarsByName m_variables;
     SessionStmtQueue  m_last_statements; /*< The N last statements by the client */
