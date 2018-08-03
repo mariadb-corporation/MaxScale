@@ -356,11 +356,36 @@ public:
     }
 
     /**
+     * Provides QC statistics of one workers
+     *
+     * @param id[in]       Id of worker.
+     * @param pStats[out]  The QC statistics of that worker.
+     *
+     * return True, if @c id referred to a worker, false otherwise.
+     */
+    static bool get_qc_stats(int id, QC_CACHE_STATS* pStats);
+
+    /**
      * Provides QC statistics of all workers
      *
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
-    static void get_all_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
+    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
+
+    /**
+     * Provides QC statistics of all workers as a Json object for use in the REST-API.
+     */
+    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost);
+
+    /**
+     * Provides QC statistics of one worker as a Json object for use in the REST-API.
+     *
+     * @param zHost  The name of the MaxScale host.
+     * @param id     An id of a worker.
+     *
+     * @return A json object if @c id refers to a worker, NULL otherwise.
+     */
+    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
 private:
     const int    m_id;       /*< The id of the worker. */

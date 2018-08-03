@@ -2436,7 +2436,7 @@ show_qc_all(DCB* dcb)
 {
     std::vector<QC_CACHE_STATS> all_stats;
 
-    mxs::RoutingWorker::get_all_qc_stats(all_stats);
+    mxs::RoutingWorker::get_qc_stats(all_stats);
 
     dcb_printf(dcb, " ID | Size       | Inserts    | Hits       | Misses     | Evictions  |\n");
     dcb_printf(dcb, "----+------------+------------+------------+------------+------------+\n");

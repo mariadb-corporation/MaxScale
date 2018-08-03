@@ -869,7 +869,40 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
 }
 
 //static
-void RoutingWorker::get_all_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
+bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
+{
+    class Task : public mxs::Worker::Task
+    {
+    public:
+        Task(QC_CACHE_STATS* pStats)
+            : m_stats(*pStats)
+        {
+        }
+
+        void execute(mxs::Worker&)
+        {
+            qc_get_cache_stats(&m_stats);
+        }
+
+    private:
+        QC_CACHE_STATS& m_stats;
+    };
+
+    RoutingWorker* pWorker = RoutingWorker::get(id);
+
+    if (pWorker)
+    {
+        Semaphore sem;
+        Task task(pStats);
+        pWorker->post(&task, &sem);
+        sem.wait();
+    }
+
+    return pWorker != nullptr;
+}
+
+//static
+void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 {
     class Task : public mxs::Worker::Task
     {
@@ -896,6 +929,75 @@ void RoutingWorker::get_all_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 
     Task task(&all_stats);
     mxs::RoutingWorker::execute_concurrently(task);
+}
+
+namespace
+{
+
+json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
+{
+    json_t* pStats = json_object();
+    json_object_set_new(pStats, "size", json_integer(stats.size));
+    json_object_set_new(pStats, "inserts", json_integer(stats.inserts));
+    json_object_set_new(pStats, "hits", json_integer(stats.hits));
+    json_object_set_new(pStats, "misses", json_integer(stats.misses));
+    json_object_set_new(pStats, "evictions", json_integer(stats.evictions));
+
+    json_t* pAttributes = json_object();
+    json_object_set_new(pAttributes, "stats", pStats);
+
+    json_t* pSelf = mxs_json_self_link(zHost, "qc_stats", std::to_string(id).c_str());
+
+    json_t* pJson = json_object();
+    json_object_set_new(pJson, CN_ID, json_string(std::to_string(id).c_str()));
+    json_object_set_new(pJson, CN_TYPE, json_string("qc_stats"));
+    json_object_set_new(pJson, CN_ATTRIBUTES, pAttributes);
+    json_object_set_new(pJson, CN_LINKS, pSelf);
+
+    return pJson;
+}
+
+}
+
+//static
+std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, int id)
+{
+    std::unique_ptr<json_t> sStats;
+
+    QC_CACHE_STATS stats;
+
+    if (get_qc_stats(id, &stats))
+    {
+        json_t* pJson = qc_stats_to_json(zHost, id, stats);
+
+        stringstream self;
+        self << MXS_JSON_API_QC_STATS << id;
+
+        sStats = std::unique_ptr<json_t>(mxs_json_resource(zHost, self.str().c_str(), pJson));
+    }
+
+    return sStats;
+}
+
+//static
+std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
+{
+    vector<QC_CACHE_STATS> all_stats;
+
+    get_qc_stats(all_stats);
+
+    std::unique_ptr<json_t> sAll_stats(json_array());
+
+    int id = 0;
+    for (const auto& stats : all_stats)
+    {
+        json_t* pJson = qc_stats_to_json(zHost, id, stats);
+
+        json_array_append_new(sAll_stats.get(), pJson);
+        ++id;
+    }
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_STATS, sAll_stats.release()));
 }
 
 }
