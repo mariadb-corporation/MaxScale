@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <new>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>

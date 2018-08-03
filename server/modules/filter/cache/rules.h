@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <jansson.h>
 #include <memory>
+#include <vector>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include <maxscale/pcre2.h>

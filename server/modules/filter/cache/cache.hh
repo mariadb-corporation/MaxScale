@@ -16,6 +16,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include "cachefilter.h"
