@@ -14,6 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -870,5 +871,12 @@ uint64_t qc_get_server_version();
  * @return True, if caching is enabled, false otherwise.
  */
 bool qc_get_cache_stats(QC_CACHE_STATS* stats);
+
+/**
+ * Get cache statistics for the calling thread.
+ *
+ * @return An object if caching is enabled, NULL otherwise.
+ */
+json_t* qc_get_cache_stats_as_json();
 
 MXS_END_DECLS

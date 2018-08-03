@@ -973,7 +973,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, i
         stringstream self;
         self << MXS_JSON_API_QC_STATS << id;
 
-        sStats = std::unique_ptr<json_t>(mxs_json_resource(zHost, self.str().c_str(), pJson));
+        sStats.reset(mxs_json_resource(zHost, self.str().c_str(), pJson));
     }
 
     return sStats;
@@ -1087,6 +1087,13 @@ public:
         json_object_set_new(load, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
         json_object_set_new(load, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
         json_object_set_new(pStats, "load", load);
+
+        json_t* qc = qc_get_cache_stats_as_json();
+
+        if (qc)
+        {
+            json_object_set_new(pStats, "query_classifier_cache", qc);
+        }
 
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
