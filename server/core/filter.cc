@@ -48,8 +48,11 @@ using Guard = std::lock_guard<std::mutex>;
 
 using namespace maxscale;
 
-static std::mutex filter_lock; /**< Protects the list of all filters */
-static std::vector<SFilterDef> all_filters; /**< The list of all filters */
+static struct
+{
+    std::mutex lock;
+    std::vector<SFilterDef> filters;
+} this_unit;
 
 /**
  * Free filter parameters
@@ -91,8 +94,8 @@ SFilterDef filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMET
 
     if (filter)
     {
-        Guard guard(filter_lock);
-        all_filters.push_back(filter);
+        Guard guard(this_unit.lock);
+        this_unit.filters.push_back(filter);
     }
     else
     {
@@ -141,16 +144,16 @@ void filter_free(const SFilterDef& filter)
 {
     ss_dassert(filter);
     // Removing the filter from the list will trigger deletion once it's no longer in use
-    Guard guard(filter_lock);
-    auto it = std::remove(all_filters.begin(), all_filters.end(), filter);
-    all_filters.erase(it);
+    Guard guard(this_unit.lock);
+    auto it = std::remove(this_unit.filters.begin(), this_unit.filters.end(), filter);
+    this_unit.filters.erase(it);
 }
 
 SFilterDef filter_find(const char *name)
 {
-    Guard guard(filter_lock);
+    Guard guard(this_unit.lock);
 
-    for (const auto& filter : all_filters)
+    for (const auto& filter : this_unit.filters)
     {
         if (filter->name == name)
         {
@@ -176,9 +179,9 @@ void filter_destroy(const SFilterDef& filter)
 
 void filter_destroy_instances()
 {
-    Guard guard(filter_lock);
+    Guard guard(this_unit.lock);
 
-    for (const auto& filter : all_filters)
+    for (const auto& filter : this_unit.filters)
     {
         // NOTE: replace this with filter_destroy
         if (filter->obj->destroyInstance)
@@ -233,9 +236,9 @@ filter_standard_parameter(const char *name)
 void
 dprintAllFilters(DCB *dcb)
 {
-    Guard guard(filter_lock);
+    Guard guard(this_unit.lock);
 
-    for (const auto& ptr : all_filters)
+    for (const auto& ptr : this_unit.filters)
     {
         dcb_printf(dcb, "FilterDef %p (%s)\n", ptr.get(), ptr->name.c_str());
         dcb_printf(dcb, "\tModule:      %s\n", ptr->module.c_str());
@@ -274,9 +277,9 @@ void dprintFilter(DCB *dcb, const SFilterDef& filter)
 void
 dListFilters(DCB *dcb)
 {
-    Guard guard(filter_lock);
+    Guard guard(this_unit.lock);
 
-    if (!all_filters.empty())
+    if (!this_unit.filters.empty())
     {
         dcb_printf(dcb, "FilterDefs\n");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
@@ -284,7 +287,7 @@ dListFilters(DCB *dcb)
                    "FilterDef", "Module");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
 
-        for (const auto& ptr : all_filters)
+        for (const auto& ptr : this_unit.filters)
         {
             dcb_printf(dcb, "%-19s | %-15s | ",
                        ptr->name.c_str(), ptr->module.c_str());
@@ -448,9 +451,9 @@ json_t* filter_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
-    Guard guard(filter_lock);
+    Guard guard(this_unit.lock);
 
-    for (const auto& f : all_filters)
+    for (const auto& f : this_unit.filters)
     {
         json_t* json = filter_json_data(f, host);
 
