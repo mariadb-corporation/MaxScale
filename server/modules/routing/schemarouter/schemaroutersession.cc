@@ -334,13 +334,9 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         /** Create the response to the SHOW DATABASES from the mapped databases */
         if (qc_query_is_type(type, QUERY_TYPE_SHOW_DATABASES))
         {
-            if (send_databases())
-            {
-                ret = 1;
-            }
-
+            send_databases();
             gwbuf_free(pPacket);
-            return ret;
+            return 1;
         }
         else if (qc_query_is_type(type, QUERY_TYPE_SHOW_TABLES))
         {
@@ -1542,38 +1538,34 @@ enum route_target get_shard_route_target(uint32_t qtype)
  * @param client Router client session
  * @return True if the sending of the database list was successful, otherwise false
  */
-bool SchemaRouterSession::send_databases()
+void SchemaRouterSession::send_databases()
 {
-    bool rval = false;
     ServerMap dblist;
-    std::list<std::string> list;
+    std::list<std::string> db_names;
     m_shard.get_content(dblist);
     for (ServerMap::iterator it = dblist.begin(); it != dblist.end(); it++)
     {
         std::string db = it->first.substr(0, it->first.find("."));
-        if (std::find(list.begin(), list.end(), db) == list.end())
+        if (std::find(db_names.begin(), db_names.end(), db) == db_names.end())
         {
-            list.push_back(db);
+            db_names.push_back(db);
         }
     }
 
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Database"});
 
-    for (const auto& a : list)
+    for (const auto& name : db_names)
     {
-        set->add_row({a});
+        set->add_row({name});
     }
 
     set->write(m_client);
-
-    return rval;
 }
 
 bool SchemaRouterSession::send_tables(GWBUF* pPacket)
 {
     char *query = modutil_get_SQL(pPacket);
     char *tmp;
-    bool rval = false;
     std::string database;
 
     if ((tmp = strcasestr(query, "from")))
@@ -1587,42 +1579,41 @@ bool SchemaRouterSession::send_tables(GWBUF* pPacket)
     if (database.empty())
     {
         MXS_FREE(query);
-        return rval;
+        return false;
     }
+
     ServerMap tablelist;
-    std::list<std::string> list;
+    std::list<std::string> table_names;
     m_shard.get_content(tablelist);
 
     for (ServerMap::iterator it = tablelist.begin(); it != tablelist.end(); it++)
     {
-        std::size_t pos;
+        std::size_t pos = it->first.find(".");
         // If the database is empty ignore it
-        if ((pos = it->first.find(".") == std::string::npos))
+        if (pos == std::string::npos)
         {
             continue;
         }
         std::string db = it->first.substr(0, pos);
+
         if (db.compare(database) == 0)
         {
             std::string table = it->first.substr(pos + 1);
-            list.push_back(table);
+            table_names.push_back(table);
         }
     }
 
-    if (!list.empty())
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
+
+    for (const auto& name : table_names)
     {
-        std::unique_ptr<ResultSet> set = ResultSet::create({"Table"});
-
-        for (const auto& a : list)
-        {
-            set->add_row({a});
-        }
-
-        set->write(m_client);
+        set->add_row({name});
     }
+
+    set->write(m_client);
 
     MXS_FREE(query);
-    return rval;
+    return true;
 }
 
 bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type)

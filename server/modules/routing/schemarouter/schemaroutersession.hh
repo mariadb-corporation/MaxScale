@@ -140,7 +140,7 @@ private:
                                  enum route_target& route_target);
 
     /** Shard mapping functions */
-    bool                 send_databases();
+    void                 send_databases();
     bool                 send_shards();
     bool                 send_tables(GWBUF* pPacket);
     void                 query_databases();
