@@ -136,9 +136,12 @@ static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
 
     std::string version_string = config_get_string(params, CN_VERSION_STRING);
 
-    if (version_string.empty() && config_get_global_options()->version_string)
+    if (version_string.empty())
     {
-        version_string = config_get_global_options()->version_string;
+        if (config_get_global_options()->version_string)
+        {
+            version_string = config_get_global_options()->version_string;
+        }
     }
     else if (version_string[0] != '5')
     {
@@ -1813,12 +1816,12 @@ bool Service::dump_config(const char *filename) const
 
     if (!m_version_string.empty())
     {
-        dprintf(file, "%s=%s\n", CN_VERSION_STRING, version_string);
+        dprintf(file, "%s=%s\n", CN_VERSION_STRING, m_version_string.c_str());
     }
 
     if (!m_weightby.empty())
     {
-        dprintf(file, "%s=%s\n", CN_WEIGHTBY, weightby);
+        dprintf(file, "%s=%s\n", CN_WEIGHTBY, m_weightby.c_str());
     }
 
     if (dbref)
