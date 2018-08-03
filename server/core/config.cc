@@ -37,6 +37,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>

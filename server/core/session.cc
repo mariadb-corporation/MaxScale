@@ -67,7 +67,7 @@ static void session_add_to_all_list(MXS_SESSION *session);
 static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
-                                       MXS_SESSION* session);
+                                       MXS_SESSION* session, uint64_t id);
 static void session_deliver_response(MXS_SESSION* session);
 
 /**
@@ -79,25 +79,6 @@ static void session_deliver_response(MXS_SESSION* session);
  */
 static int session_reply(MXS_FILTER *inst, MXS_FILTER_SESSION *session, GWBUF *data);
 
-/**
- * @brief Initialize a session
- *
- * This routine puts initial values into the fields of the session pointed to
- * by the parameter.
- *
- * @param *session    Pointer to the session to be initialized
- */
-static void
-session_initialize(MXS_SESSION *session)
-{
-    memset(session, 0, sizeof(MXS_SESSION));
-
-    session->ses_chk_top = CHK_NUM_SESSION;
-    session->state = SESSION_STATE_ALLOC;
-    session->last_statements = new SessionStmtQueue;
-    session->ses_chk_tail = CHK_NUM_SESSION;
-}
-
 MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
 {
     return session_alloc_with_id(service, client_dcb, session_get_next_id());
@@ -105,39 +86,28 @@ MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
 
 MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t id)
 {
-    MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
-    SessionVarsByName *session_variables = new (std::nothrow) SessionVarsByName;
-    DCBSet* dcb_set = new (std::nothrow) DCBSet;
+    Session *session = new (std::nothrow) Session;
 
-    if ((session == NULL) || (session_variables == NULL) || (dcb_set == NULL))
+    if (session == nullptr)
     {
-        MXS_FREE(session);
-        delete session_variables;
-        delete dcb_set;
         return NULL;
     }
 
-    session_initialize(session);
-    session->variables = session_variables;
-    session->dcb_set = dcb_set;
-    session->ses_id = id;
-    return session_alloc_body(service, client_dcb, session);
+    return session_alloc_body(service, client_dcb, session, id);
 }
 
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
-                                       MXS_SESSION* session)
+                                       MXS_SESSION* session, uint64_t id)
 {
-    session->service = service;
+    session->ses_chk_top = CHK_NUM_SESSION;
+    session->state = SESSION_STATE_READY;
+    session->ses_id = id;
     session->client_dcb = client_dcb;
+    session->router_session = NULL;
     session->stats.connect = time(0);
-    session->qualifies_for_pooling = false;
-    session->close_reason = SESSION_CLOSE_NONE;
-
-    MXS_CONFIG *config = config_get_global_options();
-    // If MaxScale is running in Oracle mode, then autocommit needs to
-    // initially be off.
-    bool autocommit = (config->qc_sql_mode == QC_SQL_MODE_ORACLE) ? false : true;
-    session_set_autocommit(session, autocommit);
+    session->service = service;
+    memset(&session->head, 0, sizeof(session->head));
+    memset(&session->tail, 0, sizeof(session->tail));
 
     /*<
      * Associate the session to the client DCB and set the reference count on
@@ -145,16 +115,25 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
      * session. There is no need to protect this or use atomic add as the
      * session has not been made available to the other threads at this
      * point.
+     *
+     * Note: Strictly speaking, we do have to increment it with a relaxed atomic
+     *       operation but in practice it doesn't matter.
      */
     session->refcount = 1;
-    /*<
-     * This indicates that session is ready to be shared with backend
-     * DCBs. Note that this doesn't mean that router is initialized yet!
-     */
-    session->state = SESSION_STATE_READY;
-
     session->trx_state = SESSION_TRX_INACTIVE;
-    session->autocommit = true;
+
+    MXS_CONFIG *config = config_get_global_options();
+    // If MaxScale is running in Oracle mode, then autocommit needs to
+    // initially be off.
+    bool autocommit = (config->qc_sql_mode == QC_SQL_MODE_ORACLE) ? false : true;
+    session_set_autocommit(session, autocommit);
+
+    session->client_protocol_data = 0;
+    session->qualifies_for_pooling = false;
+    memset(&session->response, 0, sizeof(session->response));
+    session->close_reason = SESSION_CLOSE_NONE;
+    session->ses_chk_tail = CHK_NUM_SESSION;
+
     /*
      * Only create a router session if we are not the listening DCB or an
      * internal DCB. Creating a router session may create a connection to
@@ -240,7 +219,10 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     atomic_add(&service->stats.n_current, 1);
     CHK_SESSION(session);
 
+    // Store the session in the client DCB even if the session creation fails.
+    // It will be freed later on when the DCB is closed.
     client_dcb->session = session;
+
     return (session->state == SESSION_STATE_TO_BE_FREED) ? NULL : session;
 }
 
@@ -432,10 +414,7 @@ session_final_free(MXS_SESSION *session)
         session_dump_statements(session);
     }
 
-    delete session->variables;
-    delete session->last_statements;
-    delete session->dcb_set;
-    MXS_FREE(session);
+    delete session;
 }
 
 /**

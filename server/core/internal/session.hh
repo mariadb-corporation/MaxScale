@@ -13,6 +13,13 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <deque>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include <maxscale/session.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/utils.hh>
@@ -39,5 +46,23 @@ struct RegistryTraits<MXS_SESSION>
 };
 
 }
+
+typedef struct SESSION_VARIABLE
+{
+    session_variable_handler_t handler;
+    void*                      context;
+} SESSION_VARIABLE;
+
+typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
+typedef std::deque<std::vector<uint8_t>> SessionStmtQueue;
+typedef std::unordered_set<DCB*> DCBSet;
+
+class Session: public MXS_SESSION
+{
+private:
+    SessionVarsByName m_variables;
+    SessionStmtQueue  m_last_statements; /*< The N last statements by the client */
+    DCBSet            m_dcb_set;         /*< Set of associated backend DCBs */
+};
 
 std::unique_ptr<ResultSet> sessionGetList();

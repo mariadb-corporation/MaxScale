@@ -27,19 +27,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.h>
 
-#ifdef __cplusplus
-#include <unordered_map>
-#include <unordered_set>
-#include <string>
-#include <deque>
-#include <vector>
-typedef std::deque<std::vector<uint8_t> > SessionStmtQueue;
-typedef std::unordered_set<DCB*> DCBSet;
-#else
-typedef void SessionStmtQueue;
-typedef void DCBSet;
-#endif
-
 MXS_BEGIN_DECLS
 
 struct dcb;
@@ -177,18 +164,6 @@ typedef char* (*session_variable_handler_t)(void* context,
                                             const char* value_begin,
                                             const char* value_end);
 
-#ifdef __cplusplus
-typedef struct session_variable
-{
-    session_variable_handler_t handler;
-    void*                      context;
-} SESSION_VARIABLE;
-
-typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-#else
-typedef void SessionVarsByName;
-#endif
-
 /**
  * The session status block
  *
@@ -218,14 +193,11 @@ typedef struct session
     bool                    autocommit;       /*< Whether autocommit is on. */
     intptr_t                client_protocol_data; /*< Owned and managed by the client protocol. */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
-    SessionVarsByName*      variables;        /*< @maxscale variables associated with this session */
     struct
     {
         MXS_UPSTREAM up; /*< Upward component to receive buffer. */
         GWBUF* buffer;   /*< Buffer to deliver to up. */
     } response;                               /*< Shortcircuited response */
-    SessionStmtQueue*      last_statements;   /*< The N last statements by the client */
-    DCBSet*                dcb_set;           /*< Set of associated backend DCBs */
     session_close_t        close_reason;      /*< Reason why the session was closed */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
