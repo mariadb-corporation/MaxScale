@@ -75,8 +75,11 @@ using UniqueLock = std::unique_lock<std::mutex>;
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
 
-static std::mutex service_spin;
-static std::vector<Service*> all_services;
+static struct
+{
+    std::mutex lock;
+    std::vector<Service*> services;
+} this_unit;
 
 static bool service_internal_restart(void *data);
 static void service_calculate_weights(SERVICE *service);
@@ -122,8 +125,8 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
         service->capabilities |= router_api->getCapabilities(service->router_instance);
     }
 
-    LockGuard guard(service_spin);
-    all_services.push_back(service);
+    LockGuard guard(this_unit.lock);
+    this_unit.services.push_back(service);
 
     return service;
 }
@@ -254,10 +257,10 @@ void service_free(Service* service)
     ss_dassert(!service->active || maxscale_teardown_in_progress());
 
     {
-        LockGuard guard(service_spin);
-        auto it = std::remove(all_services.begin(), all_services.end(), service);
-        ss_dassert(it != all_services.end());
-        all_services.erase(it);
+        LockGuard guard(this_unit.lock);
+        auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), service);
+        ss_dassert(it != this_unit.services.end());
+        this_unit.services.erase(it);
     }
 
     delete service;
@@ -299,8 +302,8 @@ void service_destroy(Service* service)
  */
 bool service_isvalid(Service *service)
 {
-    LockGuard guard(service_spin);
-    return std::find(all_services.begin(), all_services.end(), service) != all_services.end();
+    LockGuard guard(this_unit.lock);
+    return std::find(this_unit.services.begin(), this_unit.services.end(), service) != this_unit.services.end();
 }
 
 static inline void close_port(SERV_LISTENER *port)
@@ -608,12 +611,12 @@ int service_launch_all()
 {
     int n = 0, i;
     bool error = false;
-    int num_svc = all_services.size();
+    int num_svc = this_unit.services.size();
 
     MXS_NOTICE("Starting a total of %d services...", num_svc);
 
     int curr_svc = 1;
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         n += (i = serviceInitialize(service));
         MXS_NOTICE("Service '%s' started (%d/%d)", service->name, curr_svc++, num_svc);
@@ -1147,9 +1150,9 @@ bool service_set_filters(Service* service, const char* filters)
 
 Service* service_internal_find(const char *name)
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* s : all_services)
+    for (Service* s : this_unit.services)
     {
         if (strcmp(s->name, name) == 0 && atomic_load_int(&s->active))
         {
@@ -1180,9 +1183,9 @@ SERVICE* service_find(const char *servname)
 void
 dprintAllServices(DCB *dcb)
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* s : all_services)
+    for (Service* s : this_unit.services)
     {
         dprintService(dcb, s);
     }
@@ -1272,9 +1275,9 @@ dListServices(DCB *dcb)
 {
     const char HORIZ_SEPARATOR[] = "--------------------------+-------------------"
                                    "+--------+----------------+-------------------\n";
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    if (!all_services.empty())
+    if (!this_unit.services.empty())
     {
         dcb_printf(dcb, "Services.\n");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
@@ -1282,7 +1285,7 @@ dListServices(DCB *dcb)
                    "Service Name", "Router Module");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
 
-        for (Service* service : all_services)
+        for (Service* service : this_unit.services)
         {
             ss_dassert(service->stats.n_current >= 0);
             dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
@@ -1320,9 +1323,9 @@ dListServices(DCB *dcb)
  */
 void dListListeners(DCB *dcb)
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    if (!all_services.empty())
+    if (!this_unit.services.empty())
     {
         dcb_printf(dcb, "Listeners.\n");
         dcb_printf(dcb, "---------------------+---------------------+"
@@ -1332,7 +1335,7 @@ void dListListeners(DCB *dcb)
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
     }
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
 
@@ -1349,7 +1352,7 @@ void dListListeners(DCB *dcb)
             }
         }
     }
-    if (!all_services.empty())
+    if (!this_unit.services.empty())
     {
         dcb_printf(dcb, "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n\n");
@@ -1528,7 +1531,7 @@ void service_shutdown()
 void service_destroy_instances(void)
 {
     // The global list is modified by service_free so we need a copy of it
-    std::vector<Service*> my_services = all_services;
+    std::vector<Service*> my_services = this_unit.services;
 
     for (Service* s : my_services)
     {
@@ -1545,9 +1548,9 @@ int
 serviceSessionCountAll()
 {
     int rval = 0;
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         rval += service->stats.n_current;
     }
@@ -1563,9 +1566,9 @@ serviceSessionCountAll()
 std::unique_ptr<ResultSet> serviceGetListenerList()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port", "State"});
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
 
@@ -1588,9 +1591,9 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
 std::unique_ptr<ResultSet> serviceGetList()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions", "Total Sessions"});
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* s : all_services)
+    for (Service* s : this_unit.services)
     {
         set->add_row({s->name, s->routerModule, std::to_string(s->stats.n_current),
                       std::to_string(s->stats.n_sessions)});
@@ -1617,9 +1620,9 @@ static bool service_internal_restart(void *data)
 bool service_all_services_have_listeners()
 {
     bool rval = true;
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
         SERV_LISTENER *listener = listener_iterator_init(service, &iter);
@@ -1710,9 +1713,9 @@ static void service_calculate_weights(SERVICE *service)
 
 void service_update_weights()
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         service_calculate_weights(service);
     }
@@ -1720,9 +1723,9 @@ void service_update_weights()
 
 bool service_server_in_use(const SERVER *server)
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LockGuard guard(service->lock);
 
@@ -1741,9 +1744,9 @@ bool service_server_in_use(const SERVER *server)
 bool service_filter_in_use(const SFilterDef& filter)
 {
     ss_dassert(filter);
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         for (const auto& f : service->get_filters())
         {
@@ -1924,9 +1927,9 @@ void service_print_users(DCB *dcb, const SERVICE *service)
 bool service_port_is_used(unsigned short port)
 {
     bool rval = false;
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
 
@@ -2170,9 +2173,9 @@ json_t* service_listener_to_json(const Service* service, const char* name, const
 json_t* service_list_to_json(const char* host)
 {
     json_t* arr = json_array();
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         json_t* svc = service_json_data(service, host);
 
@@ -2188,9 +2191,9 @@ json_t* service_list_to_json(const char* host)
 json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 {
     json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         for (const auto& f : service->get_filters())
         {
@@ -2208,9 +2211,9 @@ json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
     std::vector<std::string> names;
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         LockGuard guard(service->lock);
 
@@ -2320,9 +2323,9 @@ uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
 
 bool service_thread_init()
 {
-    LockGuard guard(service_spin);
+    LockGuard guard(this_unit.lock);
 
-    for (Service* service : all_services)
+    for (Service* service : this_unit.services)
     {
         if (service->capabilities & ACAP_TYPE_ASYNC)
         {
