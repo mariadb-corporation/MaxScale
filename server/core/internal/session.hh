@@ -24,6 +24,9 @@
 #include <maxscale/resultset.hh>
 #include <maxscale/utils.hh>
 
+#include "filter.hh"
+#include "service.hh"
+
 namespace maxscale
 {
 /**
@@ -57,9 +60,37 @@ typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
 typedef std::deque<std::vector<uint8_t>> SessionStmtQueue;
 typedef std::unordered_set<DCB*> DCBSet;
 
+// Class that holds the session specific filter data
+class SessionFilter
+{
+public:
+
+    SessionFilter(const SFilterDef& f):
+        filter(f),
+        instance(nullptr),
+        session(nullptr)
+    {
+    }
+
+    SFilterDef          filter;
+    MXS_FILTER*         instance;
+    MXS_FILTER_SESSION* session;
+};
+
 class Session: public MXS_SESSION
 {
 public:
+    using FilterList = std::vector<SessionFilter>;
+
+    ~Session();
+
+    bool setup_filters(Service* service);
+
+    const FilterList& get_filters() const
+    {
+        return m_filters;
+    }
+
     bool add_variable(const char* name, session_variable_handler_t handler, void* context);
     char* set_variable_value(const char* name_begin, const char* name_end,
                              const char* value_begin, const char* value_end);
@@ -85,6 +116,7 @@ public:
     }
 
 private:
+    FilterList        m_filters;
     SessionVarsByName m_variables;
     SessionStmtQueue  m_last_statements; /*< The N last statements by the client */
     DCBSet            m_dcb_set;         /*< Set of associated backend DCBs */

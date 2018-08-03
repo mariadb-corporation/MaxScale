@@ -91,17 +91,6 @@ typedef struct
 } MXS_SESSION_STATS;
 
 /**
- * Structure used to track the filter instances and sessions of the filters
- * that are in use within a session.
- */
-typedef struct
-{
-    struct mxs_filter_def *filter;
-    struct mxs_filter *instance;
-    struct mxs_filter_session *session;
-} SESSION_FILTER;
-
-/**
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
@@ -184,8 +173,6 @@ typedef struct session
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
     struct service          *service;         /*< The service this session is using */
-    int                     n_filters;        /*< Number of filter sessions */
-    SESSION_FILTER          *filters;         /*< The filters in use within this session */
     MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
     MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
     int                     refcount;         /*< Reference count on the session */
