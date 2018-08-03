@@ -59,3 +59,9 @@ private:
     const std::string m_separator;
     std::string m_current_separator;
 };
+
+enum class ClusterOperation
+{
+    SWITCHOVER,
+    FAILOVER
+};

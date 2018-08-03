@@ -743,44 +743,26 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
         bool has_slaves = false;
         for (MariaDBServer* slave : parent->m_node.children)
         {
-            // The slave node may have several slave connections, need to find the one that is
-            // connected to the parent. This section is quite similar to the one in
-            // 'build_replication_graph', although here we require that the sql thread is running.
-
             // If the slave has an index, it has already been visited and labelled master/slave.
             // Even when this is the case, the node has to be checked to get correct
             // [Relay Master] labels.
 
             // Need to differentiate between stale and running slave connections.
-            bool found_slave_conn = false;
-            bool conn_is_live = false;
-            bool slave_is_running = !slave->is_down();
-            for (SlaveStatus& ss : slave->m_slave_status)
+            bool found_slave_conn = false; // slave->parent connection exists
+            bool conn_is_live = false; // live connection chain slave->cluster_master exists
+            auto sstatus = slave->slave_connection_status(parent);
+            if (sstatus)
             {
-                auto master_id = ss.master_server_id;
-                auto io_running = ss.slave_io_running;
-                // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
-                if (master_id > 0 && master_id == parent->m_server_id && ss.slave_sql_running)
+                if (sstatus->slave_io_running == SlaveStatus::SLAVE_IO_YES)
                 {
-                    // Would it be possible to have the parent down while IO is still connected? Perhaps
-                    // if the slave is slow to update the connection status.
-                    if (io_running == SlaveStatus::SLAVE_IO_YES)
-                    {
-                        found_slave_conn = true;
-                        // Check that a live connection chain exists from cluster master to the slave.
-                        conn_is_live = parent_has_live_link && slave_is_running;
-                        break;
-                    }
-                    else if (io_running == SlaveStatus::SLAVE_IO_CONNECTING &&
-                             slave->had_status(SERVER_WAS_SLAVE))
-                    {
-                        // Stale connection. TODO: The SERVER_WAS_SLAVE check above is not enough in
-                        // several situations. The previously observed live slave connections
-                        // need to be saved distinctly to avoid a SERVER_WAS_SLAVE bit from one
-                        // connection from affecting another.
-                        found_slave_conn = true;
-                        break;
-                    }
+                    found_slave_conn = true;
+                    // Would it be possible to have the parent down while IO is still connected?
+                    // Perhaps, if the slave is slow to update the connection status.
+                    conn_is_live = parent_has_live_link && slave->is_running();
+                }
+                else if (sstatus->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING)
+                {
+                    found_slave_conn = true;
                 }
             }
 

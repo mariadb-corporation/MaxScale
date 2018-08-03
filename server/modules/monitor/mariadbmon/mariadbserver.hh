@@ -231,12 +231,14 @@ public:
     bool wait_until_gtid(const GtidList& target, int timeout, json_t** err_out);
 
     /**
-     * Is the server replicating (or trying to) from the target server.
+     * Find slave connection to the target server. If the IO thread is trying to connect
+     * ("Connecting"), the connection is only accepted if the 'Master_Server_Id' is known to be correct.
+     * If the IO or the SQL thread is stopped, the connection is not returned.
      *
      * @param target Immediate master or relay server
-     * @return True if replicating
+     * @return The slave status info of the slave thread, or NULL if not found or not accepted
      */
-    bool is_replicating_from(const MariaDBServer* target);
+    const SlaveStatus* slave_connection_status(const MariaDBServer* target);
 
     /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
@@ -393,25 +395,35 @@ public:
     bool failover_wait_relay_log(int seconds_remaining, json_t** err_out);
 
     /**
-     * Is the server a valid demotion target?
+     * Check if the server can be demoted by switchover.
      *
      * @param reason_out Output explaining why server cannot be demoted
-     * @return True if server can be demoted by switchover
+     * @return True if server can be demoted
      */
-    bool can_be_demoted(std::string* reason_out);
+    bool can_be_demoted_switchover(std::string* reason_out);
 
     /**
-     * Is the server a valid promotion target?
+     * Check if the server can be demoted by failover.
      *
-     * @param demotion_target Which server would be demoted
-     * @param reason_out Output explaining why server cannot be promoted
-     * @return True if server can be promoted by switchover
+     * @param operation Switchover or failover
+     * @param reason_out Output explaining why server cannot be demoted
+     * @return True if server can be demoted
      */
-    bool can_be_promoted(const MariaDBServer* demotion_target, std::string* reason_out);
+    bool can_be_demoted_failover(std::string* reason_out);
 
     /**
-     * Read the file contents and send them as sql queries to the server. Any data returned by the queries is
-     * discarded.
+     * Check if the server can be promoted by switchover or failover.
+     *
+     * @param op Switchover or failover
+     * @param demotion_target The server this should be promoted to
+     * @param reason_out Output for the reason server cannot be promoted
+     * @return True, if suggested new master is a viable promotion candidate
+     */
+    bool can_be_promoted(ClusterOperation op, const MariaDBServer* demotion_target, std::string* reason_out);
+
+    /**
+     * Read the file contents and send them as sql queries to the server. Any data
+     * returned by the queries is discarded.
      *
      * @param server Server to send queries to
      * @param path Text file path.

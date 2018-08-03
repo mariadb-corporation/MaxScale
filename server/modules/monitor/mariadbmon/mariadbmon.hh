@@ -221,7 +221,7 @@ private:
     void update_master_cycle_info();
     void set_low_disk_slaves_maintenance();
     void assign_new_master(MariaDBServer* new_master);
-    bool slaves_using_gtid(json_t** error_out);
+    bool slaves_using_gtid(const MariaDBServer* master_server, json_t** error_out);
 
     // Switchover methods
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
@@ -242,8 +242,9 @@ private:
     void handle_auto_failover();
     bool cluster_supports_failover(std::string* reasons_out);
     bool slave_receiving_events();
-    bool failover_check(std::string* error_out);
-    bool do_failover(json_t** err_out);
+    bool failover_prepare(MariaDBServer** promotion_target_out, MariaDBServer** demotion_target_out,
+                          json_t** error_out);
+    bool do_failover(MariaDBServer* promotion_target, MariaDBServer* demotion_target, json_t** err_out);
 
     // Rejoin methods
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
@@ -254,8 +255,8 @@ private:
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
     // Methods common to failover/switchover/rejoin
-    MariaDBServer* select_new_master(ServerArray* slaves_out, json_t** err_out);
-    MariaDBServer* switchover_select_promotion(MariaDBServer* current_master, json_t** err_out);
+    MariaDBServer* select_promotion_target(ClusterOperation op, MariaDBServer* current_master,
+                                           json_t** err_out);
     bool server_is_excluded(const MariaDBServer* server);
     bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              uint32_t gtid_domain, std::string* reason_out = NULL);
@@ -267,6 +268,9 @@ private:
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                     int seconds_remaining);
     void report_and_disable(const std::string& operation, const std::string& setting_name, bool* setting_var);
+    bool check_gtid_replication(const MariaDBServer* demotion_target, json_t** error_out);
+    ServerArray get_redirectables(const MariaDBServer* promotion_target,
+                                  const MariaDBServer* demotion_target);
 
     // Other methods
     void disable_setting(const std::string& setting);

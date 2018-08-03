@@ -960,13 +960,7 @@ bool MariaDBServer::sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, c
     return rval;
 }
 
-/**
- * Check if the server can be demoted.
- *
- * @param reason_out Output for the reason server cannot be demoted
- * @return True, if suggested new master is a viable demotion candidate
- */
-bool MariaDBServer::can_be_demoted(string* reason_out)
+bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
 {
     bool demotable = false;
     string reason;
@@ -1001,32 +995,63 @@ bool MariaDBServer::can_be_demoted(string* reason_out)
     return demotable;
 }
 
-/**
- * Check if the server can be promoted.
- *
- * @param demotion_target The server this should be promoted to
- * @param reason_out Output for the reason server cannot be promoted
- * @return True, if suggested new master is a viable promotion candidate
- */
-bool MariaDBServer::can_be_promoted(const MariaDBServer* demotion_target, std::string* reason_out)
+bool MariaDBServer::can_be_demoted_failover(string* reason_out)
+{
+    bool demotable = false;
+    string reason;
+
+    if (is_master())
+    {
+        reason =  "it is a running master.";
+    }
+    else if (is_running())
+    {
+        reason =  "it is running.";
+    }
+    else if (m_gtid_binlog_pos.empty())
+    {
+        reason = "it does not have a 'gtid_binlog_pos'.";
+    }
+    else
+    {
+        demotable = true;
+    }
+
+    if (!demotable && reason_out)
+    {
+        *reason_out = reason;
+    }
+    return demotable;
+}
+
+bool MariaDBServer::can_be_promoted(ClusterOperation op,
+                                    const MariaDBServer* demotion_target,
+                                    std::string* reason_out)
 {
     bool promotable = false;
     string reason;
     string query_error;
 
+    auto sstatus = slave_connection_status(demotion_target);
     if (is_master())
     {
         reason = "it is already the master.";
     }
-    // TODO: Check that the correct slave connection is working properly in case of switchover.
-    // For failover the connection may be in CONNECTING-stage.
-    else if (!is_replicating_from(demotion_target))
+    else if (sstatus == NULL)
     {
         reason = string_printf("it is not replicating from '%s'.", demotion_target->name());
     }
+    else if (sstatus->gtid_io_pos.empty())
+    {
+        reason = string_printf("its slave connection to '%s' is not using gtid.", demotion_target->name());
+    }
+    else if (op == ClusterOperation::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
+    {
+        reason = string_printf("its slave connection to '%s' is broken.", demotion_target->name());
+    }
     else if (!update_replication_settings(&query_error))
     {
-        string_printf("it could not be queried: '%s'.", query_error.c_str());
+        reason = string_printf("it could not be queried: '%s'.", query_error.c_str());
     }
     else if (!binlog_on())
     {
@@ -1044,10 +1069,37 @@ bool MariaDBServer::can_be_promoted(const MariaDBServer* demotion_target, std::s
     return promotable;
 }
 
-bool MariaDBServer::is_replicating_from(const MariaDBServer* target)
+const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* target)
 {
-    // Not properly implemented yet, TODO
-    return is_slave();
+    // The slave node may have several slave connections, need to find the one that is
+    // connected to the parent. This section is quite similar to the one in
+    // 'build_replication_graph', although here we require that the sql thread is running.
+    auto master_server_id = target->m_server_id;
+    SlaveStatus* rval = NULL;
+    for (SlaveStatus& ss : m_slave_status)
+    {
+        auto master_id = ss.master_server_id;
+        auto io_running = ss.slave_io_running;
+        // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
+        if (master_id > 0 && master_id == master_server_id && ss.slave_sql_running)
+        {
+            if (io_running == SlaveStatus::SLAVE_IO_YES)
+            {
+                rval = &ss;
+                break;
+            }
+            else if (io_running == SlaveStatus::SLAVE_IO_CONNECTING && had_status(SERVER_WAS_SLAVE))
+            {
+                // Stale connection. TODO: The SERVER_WAS_SLAVE check above is not enough in
+                // several situations. The previously observed live slave connections
+                // need to be saved distinctly to avoid a SERVER_WAS_SLAVE bit from one
+                // connection from affecting another.
+                rval = &ss;
+                break;
+            }
+        }
+    }
+    return rval;
 }
 
 string SlaveStatus::to_string() const
