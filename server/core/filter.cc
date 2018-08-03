@@ -146,6 +146,7 @@ void filter_free(const SFilterDef& filter)
     // Removing the filter from the list will trigger deletion once it's no longer in use
     Guard guard(this_unit.lock);
     auto it = std::remove(this_unit.filters.begin(), this_unit.filters.end(), filter);
+    ss_dassert(it != this_unit.filters.end());
     this_unit.filters.erase(it);
 }
 
@@ -174,7 +175,7 @@ void filter_destroy(const SFilterDef& filter)
 {
     ss_dassert(filter);
     ss_dassert(filter_can_be_destroyed(filter));
-    ss_info_dassert(!true, "Not yet implemented");
+    filter_free(filter);
 }
 
 void filter_destroy_instances()
