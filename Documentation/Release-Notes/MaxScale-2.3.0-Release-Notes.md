@@ -10,6 +10,13 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### `query_retries`
+
+The default value of `query_retries` was changed from 0 to 1. This turns
+on failure tolerant queries for monitors and authenticators which prevents
+failures due to network problems. A single reconnection attempt is made to
+keep responsiveness high even with default values.
+
 ### Session Command History
 
 The _readwritesplit_ session command history is now enabled mby default but it

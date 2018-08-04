@@ -209,8 +209,9 @@ auth_write_timeout=10
 
 #### `query_retries`
 
-The number of times an interrupted internal query will be retried. This feature
-was added in MaxScale 2.1.10 and is disabled by default.
+The number of times an interrupted internal query will be retried. The default
+is to retry the query once. This feature was added in MaxScale 2.1.10 and was
+disabled by default until MaxScale 2.3.0.
 
 An interrupted query is any query that is interrupted by a network
 error. Connection timeouts are included in network errors and thus is it
