@@ -1,6 +1,8 @@
 [maxscale]
 threads=###threads###
 log_info=1
+query_retries=5
+query_retry_timeout=20
 
 [MySQL Monitor]
 type=monitor
