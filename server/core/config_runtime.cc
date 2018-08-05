@@ -40,6 +40,7 @@
 #include "internal/filter.hh"
 
 typedef std::set<std::string> StringSet;
+typedef std::vector<std::string> StringVector;
 
 static mxs::SpinLock crt_lock;
 
@@ -1138,9 +1139,9 @@ static MXS_CONFIG_PARAMETER* extract_parameters_from_json(json_t* json)
     return ctx.parameters;
 }
 
-static bool extract_relations(json_t* json, StringSet& relations,
-                              const char* relation_type,
-                              JsonValidator relation_check)
+static bool extract_ordered_relations(json_t* json, StringVector& relations,
+                                      const char* relation_type,
+                                      JsonValidator relation_check)
 {
     bool rval = true;
     json_t* arr = mxs_json_pointer(json, relation_type);
@@ -1163,7 +1164,7 @@ static bool extract_relations(json_t* json, StringSet& relations,
 
                 if (relation_check(type_value, id_value))
                 {
-                    relations.insert(id_value);
+                    relations.push_back(id_value);
                 }
                 else
                 {
@@ -1177,6 +1178,16 @@ static bool extract_relations(json_t* json, StringSet& relations,
         }
     }
 
+    return rval;
+}
+
+static bool extract_relations(json_t* json, StringSet& relations,
+                              const char* relation_type,
+                              JsonValidator relation_check)
+{
+    StringVector values;
+    bool rval = extract_ordered_relations(json, values, relation_type, relation_check);
+    relations.insert(values.begin(), values.end());
     return rval;
 }
 
@@ -1685,6 +1696,11 @@ static bool object_relation_is_valid(const std::string& type, const std::string&
     return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
 }
 
+static bool filter_relation_is_valid(const std::string& type, const std::string& value)
+{
+    return type == CN_FILTERS && filter_find(value.c_str());
+}
+
 //
 // Constants for validate_object_json
 //
@@ -1909,6 +1925,37 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
     return rval;
 }
 
+bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new_json)
+{
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    {
+        // No relationships defined, nothing to change
+        return true;
+    }
+
+    bool rval = false;
+    StringVector old_relations;
+    StringVector new_relations;
+    const char* filter_relation = MXS_JSON_PTR_RELATIONSHIPS_FILTERS;
+
+    if (extract_ordered_relations(old_json, old_relations, filter_relation, filter_relation_is_valid) &&
+        extract_ordered_relations(new_json, new_relations, filter_relation, filter_relation_is_valid))
+    {
+        if (old_relations == new_relations || service->set_filters(new_relations))
+        {
+            // Either no change in relationships took place or we successfully
+            // updated the filter relationships
+            rval = true;
+        }
+    }
+    else
+    {
+        runtime_error("Invalid object relations for '%s'", service->name);
+    }
+
+    return rval;
+}
+
 bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 {
     bool rval = false;
@@ -2023,7 +2070,8 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
-        object_to_server_relations(service->name, old_json.get(), new_json))
+        object_to_server_relations(service->name, old_json.get(), new_json) &&
+        service_to_filter_relations(service, old_json.get(), new_json))
     {
         rval = true;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
