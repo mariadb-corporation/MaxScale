@@ -3404,7 +3404,9 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
         if (char* filters = config_get_value(obj->parameters, CN_FILTERS))
         {
-            if (!service_set_filters(service, filters))
+            auto flist = mxs::strtok(filters, "|");
+
+            if (!service->set_filters(flist))
             {
                 error_count++;
             }

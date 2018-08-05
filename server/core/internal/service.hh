@@ -71,7 +71,7 @@ public:
      *
      * @return True if filters were all found and were valid
      */
-    bool set_filters(const std::string& filters);
+    bool set_filters(const std::vector<std::string>& filters);
 
     /**
      * Get the list of filters this service uses
@@ -310,9 +310,6 @@ void service_replace_parameter(Service *service, const char* key, const char* va
 
 // Internal search function
 Service* service_internal_find(const char *name);
-
-// Assign filters to service
-bool  service_set_filters(Service *service, const char* filters);
 
 /**
  * @brief Check if a service uses a server

@@ -1060,13 +1060,13 @@ int service_enable_root(Service *svc, int action)
     return 1;
 }
 
-bool Service::set_filters(const std::string& filters)
+bool Service::set_filters(const std::vector<std::string>& filters)
 {
     bool rval = true;
     std::vector<SFilterDef> flist;
     uint64_t my_capabilities = 0;
 
-    for (auto& f : mxs::strtok(filters, "|"))
+    for (auto f : filters)
     {
         fix_object_name(f);
 
@@ -1135,20 +1135,6 @@ void Service::update_local_filters()
 const Service::FilterList& Service::get_filters() const
 {
     return *get_local_filters();
-}
-
-/**
- * Set the filters used by the service
- *
- * @param service The service itself
- * @param filters The filters to use separated by the pipe character |
- *
- * @return True if loading and creating all filters was successful. False if a
- *         filter module was not found or the instance creation failed.
- */
-bool service_set_filters(Service* service, const char* filters)
-{
-    return service->set_filters(filters);
 }
 
 Service* service_internal_find(const char *name)
@@ -2453,10 +2439,6 @@ bool Service::update_basic_parameter(const std::string& key, const std::string& 
     {
         retry_start = config_truth_value(value.c_str());
         valid = true;
-    }
-    else if (key == CN_FILTERS)
-    {
-        valid = set_filters(value);
     }
 
     return valid;
