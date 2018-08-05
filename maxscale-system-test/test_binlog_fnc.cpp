@@ -142,6 +142,9 @@ void test_binlog(TestConnections* Test)
         get_row(Test->repl->nodes[i], query);
     }
 
+    Test->repl->disconnect();
+    Test->repl->connect();
+
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->tprintf("Checking data from node %d (%s)", i, Test->repl->IP[i]);
