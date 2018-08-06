@@ -601,6 +601,17 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
     CONFIG_CONTEXT *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT *ptr = cntxt;
 
+    const std::set<std::string> legacy_parameters{"passwd"};
+
+    if (is_persisted_config && legacy_parameters.count(name))
+    {
+        /**
+         * Ignore legacy parameters in persisted configurations. Needs to be
+         * done to make upgrades from pre-2.3 versions work.
+         */
+        return 1;
+    }
+
     if (is_empty_string(value))
     {
         if (is_persisted_config)
