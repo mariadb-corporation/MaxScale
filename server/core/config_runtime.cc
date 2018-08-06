@@ -1258,7 +1258,8 @@ static inline const char* get_string_or_null(json_t* json, const char* path)
 
     return rval;
 }
-static inline bool is_string_or_null(json_t* json, const char* path)
+
+bool runtime_is_string_or_null(json_t* json, const char* path)
 {
     bool rval = true;
     json_t* value = mxs_json_pointer(json, path);
@@ -1272,7 +1273,7 @@ static inline bool is_string_or_null(json_t* json, const char* path)
     return rval;
 }
 
-static inline bool is_bool_or_null(json_t* json, const char* path)
+bool runtime_is_bool_or_null(json_t* json, const char* path)
 {
     bool rval = true;
     json_t* value = mxs_json_pointer(json, path);
@@ -1286,7 +1287,7 @@ static inline bool is_bool_or_null(json_t* json, const char* path)
     return rval;
 }
 
-static inline bool is_count_or_null(json_t* json, const char* path)
+bool runtime_is_count_or_null(json_t* json, const char* path)
 {
     bool rval = true;
     json_t* value = mxs_json_pointer(json, path);
@@ -1452,11 +1453,11 @@ static bool validate_ssl_json(json_t* params)
 {
     bool rval = true;
 
-    if (is_string_or_null(params, CN_SSL_KEY) &&
-        is_string_or_null(params, CN_SSL_CERT) &&
-        is_string_or_null(params, CN_SSL_CA_CERT) &&
-        is_string_or_null(params, CN_SSL_VERSION) &&
-        is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
+    if (runtime_is_string_or_null(params, CN_SSL_KEY) &&
+        runtime_is_string_or_null(params, CN_SSL_CERT) &&
+        runtime_is_string_or_null(params, CN_SSL_CA_CERT) &&
+        runtime_is_string_or_null(params, CN_SSL_VERSION) &&
+        runtime_is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
     {
         if ((mxs_json_pointer(params, CN_SSL_KEY) ||
              mxs_json_pointer(params, CN_SSL_CERT) ||
@@ -2172,16 +2173,16 @@ bool validate_logs_json(json_t* json)
 
     if (param && json_is_object(param))
     {
-        rval = is_bool_or_null(param, "highprecision") &&
-               is_bool_or_null(param, "maxlog") &&
-               is_bool_or_null(param, "syslog") &&
-               is_bool_or_null(param, "log_info") &&
-               is_bool_or_null(param, "log_warning") &&
-               is_bool_or_null(param, "log_notice") &&
-               is_bool_or_null(param, "log_debug") &&
-               is_count_or_null(param, "throttling/count") &&
-               is_count_or_null(param, "throttling/suppress_ms") &&
-               is_count_or_null(param, "throttling/window_ms");
+        rval = runtime_is_bool_or_null(param, "highprecision") &&
+               runtime_is_bool_or_null(param, "maxlog") &&
+               runtime_is_bool_or_null(param, "syslog") &&
+               runtime_is_bool_or_null(param, "log_info") &&
+               runtime_is_bool_or_null(param, "log_warning") &&
+               runtime_is_bool_or_null(param, "log_notice") &&
+               runtime_is_bool_or_null(param, "log_debug") &&
+               runtime_is_count_or_null(param, "throttling/count") &&
+               runtime_is_count_or_null(param, "throttling/suppress_ms") &&
+               runtime_is_count_or_null(param, "throttling/window_ms");
     }
 
     return rval;
@@ -2280,10 +2281,10 @@ static bool validate_listener_json(json_t* json)
     {
         runtime_error("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
     }
-    else if (is_count_or_null(param, CN_PORT) &&
-             is_string_or_null(param, CN_ADDRESS) &&
-             is_string_or_null(param, CN_AUTHENTICATOR) &&
-             is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS) &&
+    else if (runtime_is_count_or_null(param, CN_PORT) &&
+             runtime_is_string_or_null(param, CN_ADDRESS) &&
+             runtime_is_string_or_null(param, CN_AUTHENTICATOR) &&
+             runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS) &&
              validate_ssl_json(param))
     {
         rval = true;
@@ -2460,11 +2461,11 @@ bool validate_maxscale_json(json_t* json)
 
     if (param)
     {
-        rval = is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT) &&
-               is_count_or_null(param, CN_AUTH_READ_TIMEOUT) &&
-               is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
-               is_bool_or_null(param, CN_ADMIN_AUTH) &&
-               is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES);
+        rval = runtime_is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT) &&
+               runtime_is_count_or_null(param, CN_AUTH_READ_TIMEOUT) &&
+               runtime_is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
+               runtime_is_bool_or_null(param, CN_ADMIN_AUTH) &&
+               runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES);
     }
 
     return rval;
@@ -2547,7 +2548,7 @@ bool validate_qc_json(json_t* json)
 
     if (param && json_is_object(param))
     {
-        rval = is_count_or_null(param, "cache_size");
+        rval = runtime_is_count_or_null(param, "cache_size");
     }
 
     return rval;

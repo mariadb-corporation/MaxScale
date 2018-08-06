@@ -398,3 +398,34 @@ bool runtime_alter_maxscale_from_json(json_t* new_json);
  * @return True if the core parameters are valid and were successfully applied
  */
 bool runtime_alter_qc_from_json(json_t* new_json);
+
+/**
+ * Returns whether value at specified path is a string or NULL.
+ *
+ * @param json  A JSON object.
+ * @param path  A path into that object.
+ *
+ * @return True, if the requirement is fulfilled, false otherwise.
+ */
+bool runtime_is_string_or_null(json_t* json, const char* path);
+
+/**
+ * Returns whether value at specified path is a boolean or NULL.
+ *
+ * @param json  A JSON object.
+ * @param path  A path into that object.
+ *
+ * @return True, if the requirement is fulfilled, false otherwise.
+ */
+bool runtime_is_bool_or_null(json_t* json, const char* path);
+
+/**
+ * Returns whether value at specified path is a positive integer
+ * or NULL.
+ *
+ * @param json  A JSON object.
+ * @param path  A path into that object.
+ *
+ * @return True, if the requirement is fulfilled, false otherwise.
+ */
+bool runtime_is_count_or_null(json_t* json, const char* path);
