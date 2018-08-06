@@ -205,7 +205,7 @@ bool MessageQueue::post(const Message& message) const
                     }
                     else
                     {
-                        sched_yield()
+                        sched_yield();
                     }
                 }
             }
