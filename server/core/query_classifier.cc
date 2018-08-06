@@ -27,6 +27,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/utils.h>
 
+#include "internal/config_runtime.h"
 #include "internal/modules.h"
 #include "internal/trxboundaryparser.hh"
 
@@ -1258,15 +1259,54 @@ json_t* qc_get_cache_stats_as_json()
 std::unique_ptr<json_t> qc_as_json(const char* zHost)
 {
     json_t* pParams = json_object();
-    json_object_set_new(pParams, "cache_size", json_integer(this_unit.cache_max_size()));
+    json_object_set_new(pParams, CN_CACHE_SIZE, json_integer(this_unit.cache_max_size()));
 
     json_t* pAttributes = json_object();
     json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
 
     json_t* pSelf = json_object();
-    json_object_set_new(pSelf, CN_ID, json_string("query_classifier"));
-    json_object_set_new(pSelf, CN_TYPE, json_string("query_classifier"));
+    json_object_set_new(pSelf, CN_ID, json_string(CN_QUERY_CLASSIFIER));
+    json_object_set_new(pSelf, CN_TYPE, json_string(CN_QUERY_CLASSIFIER));
     json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC, pSelf));
+}
+
+namespace
+{
+
+json_t* get_params(json_t* pJson)
+{
+    json_t* pParams = mxs_json_pointer(pJson, MXS_JSON_PTR_PARAMETERS);
+
+    if (pParams && json_is_object(pParams))
+    {
+        if (!runtime_is_count_or_null(pParams, CN_CACHE_SIZE))
+        {
+            pParams = nullptr;
+        }
+    }
+
+    return pParams;
+}
+
+}
+
+bool qc_alter_from_json(json_t* pJson)
+{
+    json_t* pParams = get_params(pJson);
+
+    if (pParams)
+    {
+        json_t* pValue;
+
+        if ((pValue = mxs_json_pointer(pParams, CN_CACHE_SIZE)))
+        {
+            QC_CACHE_PROPERTIES cache_properties = { json_integer_value(pValue) };
+
+            qc_set_cache_properties(&cache_properties);
+        }
+    }
+
+    return pParams != nullptr;
 }

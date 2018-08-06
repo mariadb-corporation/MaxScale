@@ -38,12 +38,22 @@ typedef enum qc_trx_parse_using
 uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use);
 
 /**
- * Generic query classifier information.
+ * Common query classifier properties as JSON.
  *
  * @param zHost  The MaxScale host.
  *
- * @return A json object containing information.
+ * @return A json object containing properties.
  */
 std::unique_ptr<json_t> qc_as_json(const char* zHost);
+
+/**
+ * Alter common query classifier properties.
+ *
+ * @param pJson  A JSON object.
+ *
+ * @return True, if the object was valid and parameters could be changed,
+ *         false otherwise.
+ */
+bool qc_alter_from_json(json_t* pJson);
 
 MXS_END_DECLS

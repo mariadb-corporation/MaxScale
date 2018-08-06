@@ -2541,39 +2541,7 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
     return rval;
 }
 
-bool validate_qc_json(json_t* json)
-{
-    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-    bool rval = false;
-
-    if (param && json_is_object(param))
-    {
-        rval = runtime_is_count_or_null(param, "cache_size");
-    }
-
-    return rval;
-}
-
-// TODO: Expose everything needed so that this function could be
-// TODO: part of the query classifier API. 
 bool runtime_alter_qc_from_json(json_t* json)
 {
-    bool rval = false;
-
-    if (validate_qc_json(json))
-    {
-        rval = true;
-
-        json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        json_t* value;
-
-        if ((value = mxs_json_pointer(param, "cache_size")))
-        {
-            QC_CACHE_PROPERTIES cache_properties = { json_integer_value(value) };
-
-            qc_set_cache_properties(&cache_properties);
-        }
-    }
-
-    return rval;
+    return qc_alter_from_json(json);
 }
