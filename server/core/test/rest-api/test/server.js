@@ -80,13 +80,13 @@ describe("Server Relationships", function() {
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
-        var body = {data: null}
+        var body = {monitors: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors", { json: body })
             .should.be.rejected
     });
 
     it("remove relationships with `relationships` endpoint", function() {
-        var body = {data: []}
+        var body = {data: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors", { json: body })
             .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
             .then((res) => {
@@ -96,9 +96,16 @@ describe("Server Relationships", function() {
             })
     });
 
-    it("remove relationships", function() {
+    it("remove with malformed relationships", function() {
         rel_server.data.relationships["services"] = null
         rel_server.data.relationships["monitors"] = null
+        return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
+            .should.be.rejected
+    });
+
+    it("remove relationships", function() {
+        rel_server.data.relationships["services"] = {data: null}
+        rel_server.data.relationships["monitors"] = {data: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
     });

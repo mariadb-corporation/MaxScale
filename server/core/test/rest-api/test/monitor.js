@@ -47,11 +47,18 @@ describe("Monitor Relationships", function() {
             .should.be.fulfilled
     })
 
+    it("remove with malformed relationships", function() {
+        var mon = {data: {relationships: {servers: null}}}
+        return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
+            .should.be.rejected
+            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+            .then((res) => {
+                res.data.relationships.should.have.keys("servers")
+            })
+    });
+
     it("remove relationships from old monitor", function() {
-        var mon = { data: {
-            relationships: {
-                servers: null
-            }}}
+        var mon = {data: {relationships: {servers: {data: null}}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
         .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
         .then((res) => {
@@ -79,7 +86,7 @@ describe("Monitor Relationships", function() {
     });
 
     it("move relationships back to old monitor", function() {
-        var mon = {data: {relationships: {servers: null}}}
+        var mon = {data: {relationships: {servers: {data: null}}}}
         return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
             .then(() => request.get(base_url + "/monitors/" + monitor.data.id, { json: true }))
             .then((res) => {
@@ -125,7 +132,7 @@ describe("Monitor Relationships", function() {
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
-        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: null}})
+        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {servers: null}})
             .should.be.rejected
     })
 
@@ -137,7 +144,7 @@ describe("Monitor Relationships", function() {
             { id: "server4", type: "servers" }
         ]}
 
-        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: []}})
+        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: null}})
         .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: old}))
         .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
         .then((res) => {

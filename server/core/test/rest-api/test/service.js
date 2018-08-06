@@ -64,12 +64,12 @@ describe("Service", function() {
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
-        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {data: null}})
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {servers: null}})
             .should.be.rejected
     })
 
     it("remove service relationship via `relationships` endpoint", function() {
-        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: []}})
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: null}})
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("servers")
