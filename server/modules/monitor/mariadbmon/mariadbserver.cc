@@ -33,12 +33,6 @@ namespace
     const char NO[] = "No";
 }
 
-SlaveStatus::SlaveStatus()
-    : master_server_id(SERVER_ID_UNKNOWN)
-    , master_port(PORT_UNKNOWN)
-    , slave_io_running(SLAVE_IO_NO)
-    , slave_sql_running(false)
-{}
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
@@ -220,7 +214,8 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         slave_status_new.push_back(sstatus_row);
     }
 
-    if (!sstatus_arrays_topology_equal(slave_status_new, m_slave_status))
+    sstatus_array_set_conn_status(&slave_status_new);
+    if (!sstatus_array_topology_equal(slave_status_new))
     {
         m_topology_changed = true;
     }
@@ -929,28 +924,29 @@ void MariaDBServer::set_status(uint64_t bits)
 }
 
 /**
- * Compare if two slave status arrays are equal. Only compares the parts relevant for building replication
- * topology: master server id:s and slave connection io states.
+ * Compare if the given slave status array is equal to the one stored in the MariaDBServer.
+ * Only compares the parts relevant for building replication topology: master server id:s and
+ * slave connection io states.
  *
- * @param lhs Left hand side
- * @param rhs Right hand side
+ * @param new_slave_status Right hand side
  * @return True if equal
  */
-bool MariaDBServer::sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, const SlaveStatusArray& rhs)
+bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status)
 {
     bool rval = true;
-    if (lhs.size() != rhs.size())
+    const SlaveStatusArray& old_slave_status = m_slave_status;
+    if (old_slave_status.size() != new_slave_status.size())
     {
         rval = false;
     }
     else
     {
-        for (size_t i = 0; i < lhs.size(); i++)
+        for (size_t i = 0; i < old_slave_status.size(); i++)
         {
             // It's enough to check just the following two items, as these are used in
             // 'build_replication_graph'.
-            if (lhs[i].slave_io_running != rhs[i].slave_io_running ||
-                lhs[i].master_server_id != rhs[i].master_server_id)
+            if (old_slave_status[i].slave_io_running != new_slave_status[i].slave_io_running ||
+                old_slave_status[i].master_server_id != new_slave_status[i].master_server_id)
             {
                 rval = false;
                 break;
@@ -958,6 +954,74 @@ bool MariaDBServer::sstatus_arrays_topology_equal(const SlaveStatusArray& lhs, c
         }
     }
     return rval;
+}
+
+/**
+ * Compare the new slave status info to the old and set connection status.
+ *
+ * @param new_slave_status The slave status just queried from the server.
+ */
+void MariaDBServer::sstatus_array_set_conn_status(SlaveStatusArray* new_slave_status)
+{
+    // Helper function. Checks if the connection in the new row is to the same server than in the old row
+    // sets connection status if yes.
+    auto compare_and_set = [](const SlaveStatus& old_row, SlaveStatus& new_row) -> bool
+    {
+        if (new_row.master_host == old_row.master_host && new_row.master_port == old_row.master_port)
+        {
+            // Was the correct connection. Even in this case the server id:s could be wrong if the
+            // slave connection was cleared and remade between monitor loops.
+            if (new_row.master_server_id == old_row.master_server_id && old_row.seen_connected)
+            {
+                new_row.seen_connected = true;
+            }
+            return true;
+        }
+        return false;
+    };
+
+    SlaveStatusArray& new_sstatus = *new_slave_status;
+    // Iterate through the new slave status array. If IO thread is connected, master server id is ok.
+    // If IO thread is "Connecting" check the previous slave status array for the connection status.
+    for (size_t i = 0; i < new_sstatus.size(); i++)
+    {
+        SlaveStatus& new_row = new_sstatus[i];
+        if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_YES)
+        {
+            ss_dassert(new_row.master_server_id > 0);
+            new_row.seen_connected = true;
+        }
+        else if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING)
+        {
+            // Usually the same slave connection can be found from the same index in the previous slave
+            // status array, but this is not 100% (e.g. dba has just added a new connection).
+            bool need_search = false;
+            if (i < m_slave_status.size())
+            {
+                SlaveStatus& old_row = m_slave_status[i];
+                if (!compare_and_set(old_row, new_row))
+                {
+                    need_search = true;
+                }
+            }
+            else
+            {
+                need_search = true;
+            }
+
+            if (need_search)
+            {
+                // The correct connection was not found where it should have been. Try looping.
+                for (const SlaveStatus& old_row : m_slave_status)
+                {
+                    if (compare_and_set(old_row, new_row))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
@@ -1074,29 +1138,17 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     // The slave node may have several slave connections, need to find the one that is
     // connected to the parent. This section is quite similar to the one in
     // 'build_replication_graph', although here we require that the sql thread is running.
-    auto master_server_id = target->m_server_id;
-    SlaveStatus* rval = NULL;
-    for (SlaveStatus& ss : m_slave_status)
+    auto target_id = target->m_server_id;
+    const SlaveStatus* rval = NULL;
+    for (const SlaveStatus& ss : m_slave_status)
     {
         auto master_id = ss.master_server_id;
-        auto io_running = ss.slave_io_running;
         // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
-        if (master_id > 0 && master_id == master_server_id && ss.slave_sql_running)
+        if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected &&
+            ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
         {
-            if (io_running == SlaveStatus::SLAVE_IO_YES)
-            {
-                rval = &ss;
-                break;
-            }
-            else if (io_running == SlaveStatus::SLAVE_IO_CONNECTING && had_status(SERVER_WAS_SLAVE))
-            {
-                // Stale connection. TODO: The SERVER_WAS_SLAVE check above is not enough in
-                // several situations. The previously observed live slave connections
-                // need to be saved distinctly to avoid a SERVER_WAS_SLAVE bit from one
-                // connection from affecting another.
-                rval = &ss;
-                break;
-            }
+            rval = &ss;
+            break;
         }
     }
     return rval;
