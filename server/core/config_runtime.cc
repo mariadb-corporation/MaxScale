@@ -1385,7 +1385,8 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
 bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL &&
+        mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS) == NULL)
     {
         /** No change to relationships */
         return true;
@@ -1633,7 +1634,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 
 bool object_to_server_relations(const char* target, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS) == NULL)
     {
         /** No change to relationships */
         return true;

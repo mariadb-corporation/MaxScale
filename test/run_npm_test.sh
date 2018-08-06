@@ -27,6 +27,9 @@ cp -t $testdir -r $srcdir/test/*
 # Copy test sources to test workspace
 cp -t $testdir -r $testsrc/*
 
+# Required by MaxCtrl (not super pretty)
+cp -t $testdir/.. $srcdir/VERSION*.cmake
+
 # Copy required docker-compose files to the MaxScale directory and bring MariaDB
 # servers up. This is an asynchronous process.
 cd $maxscaledir

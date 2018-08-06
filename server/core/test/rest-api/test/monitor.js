@@ -57,6 +57,15 @@ describe("Monitor Relationships", function() {
             })
     });
 
+    it("missing relationships are not removed", function() {
+        var mon = {data: {relationships: {}}}
+        return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then((res) => {
+            res.data.relationships.should.have.keys("servers")
+        })
+    });
+
     it("remove relationships from old monitor", function() {
         var mon = {data: {relationships: {servers: {data: null}}}}
         return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})

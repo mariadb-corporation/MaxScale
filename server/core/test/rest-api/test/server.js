@@ -101,6 +101,20 @@ describe("Server Relationships", function() {
         rel_server.data.relationships["monitors"] = null
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.rejected
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                res.data.relationships.should.have.keys("services")
+            })
+    });
+
+    it("missing relationships are not removed", function() {
+        rel_server.data.relationships = {}
+        return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
+            .should.be.fulfilled
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                res.data.relationships.should.have.keys("services")
+            })
     });
 
     it("remove relationships", function() {
@@ -108,6 +122,11 @@ describe("Server Relationships", function() {
         rel_server.data.relationships["monitors"] = {data: null}
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                res.data.relationships.should.not.have.keys("services")
+                res.data.relationships.should.not.have.keys("monitors")
+            })
     });
 
     it("destroy server", function() {
