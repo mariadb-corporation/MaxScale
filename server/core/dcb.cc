@@ -240,18 +240,23 @@ dcb_final_free(DCB *dcb)
         CHK_SESSION(local_session);
         if (SESSION_STATE_DUMMY != local_session->state)
         {
-            bool is_client_dcb = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ||
-                                  DCB_ROLE_SERVICE_LISTENER == dcb->dcb_role ||
-                                  DCB_ROLE_INTERNAL == dcb->dcb_role);
-
-            session_unlink_backend_dcb(local_session, dcb);
-
-            if (is_client_dcb)
+            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
             {
-                /** The client DCB is only freed once all other DCBs that the session
+                session_unlink_backend_dcb(local_session, dcb);
+            }
+            else
+            {
+                /**
+                 * The client DCB is only freed once all other DCBs that the session
                  * uses have been freed. This will guarantee that the authentication
                  * data will be usable for all DCBs even if the client DCB has already
-                 * been closed. */
+                 * been closed.
+                 */
+
+                ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
+                           dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER ||
+                           dcb->dcb_role == DCB_ROLE_INTERNAL);
+                session_put_ref(local_session);
                 return;
             }
         }
