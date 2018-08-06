@@ -24,7 +24,7 @@
 #include <string>
 #include <maxscale/json_api.h>
 
-/** Utility macro for printing both MXS_ERROR and json error */
+/** Utility macros for printing both MXS_ERROR and json error */
 #define PRINT_MXS_JSON_ERROR(err_out, format, ...)\
     do {\
        MXS_ERROR(format, ##__VA_ARGS__);\
@@ -33,6 +33,12 @@
             *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__);\
        }\
     } while (false)
+
+#define PRINT_ERROR_IF(log_mode, err_out, format, ...)\
+    if (log_mode == Log::ON)\
+    {\
+        PRINT_MXS_JSON_ERROR(err_out, format, ##__VA_ARGS__);\
+    }\
 
 extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
@@ -64,4 +70,10 @@ enum class ClusterOperation
 {
     SWITCHOVER,
     FAILOVER
+};
+
+enum class Log
+{
+    OFF,
+    ON
 };

@@ -221,13 +221,12 @@ private:
     void update_master_cycle_info();
     void set_low_disk_slaves_maintenance();
     void assign_new_master(MariaDBServer* new_master);
-    bool slaves_using_gtid(const MariaDBServer* master_server, json_t** error_out);
 
     // Switchover methods
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
-    bool switchover_prepare(SERVER* new_master, SERVER* current_master,
-                          MariaDBServer** new_master_out, MariaDBServer** current_master_out,
-                          json_t** error_out);
+    bool switchover_prepare(SERVER* new_master, SERVER* current_master, Log log_mode,
+                            MariaDBServer** new_master_out, MariaDBServer** current_master_out,
+                            json_t** error_out);
     bool do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target, json_t** error_out);
     bool switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out);
     bool switchover_demote_master(MariaDBServer* current_master,
@@ -242,8 +241,8 @@ private:
     void handle_auto_failover();
     bool cluster_supports_failover(std::string* reasons_out);
     bool slave_receiving_events();
-    bool failover_prepare(MariaDBServer** promotion_target_out, MariaDBServer** demotion_target_out,
-                          json_t** error_out);
+    bool failover_prepare(Log log_mode, MariaDBServer** promotion_target_out,
+                          MariaDBServer** demotion_target_out, json_t** error_out);
     bool do_failover(MariaDBServer* promotion_target, MariaDBServer* demotion_target, json_t** err_out);
 
     // Rejoin methods
@@ -255,8 +254,9 @@ private:
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
     // Methods common to failover/switchover/rejoin
-    MariaDBServer* select_promotion_target(ClusterOperation op, MariaDBServer* current_master,
-                                           json_t** err_out);
+    MariaDBServer* select_promotion_target(MariaDBServer* current_master,
+                                           ClusterOperation op, Log log_mode,
+                                           json_t** error_out);
     bool server_is_excluded(const MariaDBServer* server);
     bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              uint32_t gtid_domain, std::string* reason_out = NULL);
@@ -268,7 +268,7 @@ private:
     bool wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                     int seconds_remaining);
     void report_and_disable(const std::string& operation, const std::string& setting_name, bool* setting_var);
-    bool check_gtid_replication(const MariaDBServer* demotion_target, json_t** error_out);
+    bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target, json_t** error_out);
     ServerArray get_redirectables(const MariaDBServer* promotion_target,
                                   const MariaDBServer* demotion_target);
 
