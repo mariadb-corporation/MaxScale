@@ -48,8 +48,6 @@ struct RegistryTraits<MXS_SESSION>
     }
 };
 
-}
-
 typedef struct SESSION_VARIABLE
 {
     session_variable_handler_t handler;
@@ -121,5 +119,7 @@ private:
     SessionStmtQueue  m_last_statements; /*< The N last statements by the client */
     DCBSet            m_dcb_set;         /*< Set of associated backend DCBs */
 };
+
+}
 
 std::unique_ptr<ResultSet> sessionGetList();

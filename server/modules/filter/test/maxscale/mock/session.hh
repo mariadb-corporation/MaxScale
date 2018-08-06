@@ -13,9 +13,10 @@
  */
 
 #include "mock.hh"
-#include <maxscale/session.h>
 #include <maxscale/protocol/mysql.h>
 #include "client.hh"
+
+#include "../../../core/internal/session.hh"
 
 namespace maxscale
 {
@@ -27,7 +28,7 @@ namespace mock
  * The class Session provides a mock MXS_SESSION that can be used when
  * testing.
  */
-class Session : public MXS_SESSION
+class Session : public mxs::Session
 {
     Session(const Session&);
     Session& operator = (Session&);
