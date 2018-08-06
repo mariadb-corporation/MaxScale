@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <maxscale/query_classifier.h>
+#include <maxscale/jansson.hh>
 
 MXS_BEGIN_DECLS
 
@@ -35,5 +36,14 @@ typedef enum qc_trx_parse_using
  * @see qc_get_trx_type_mask
  */
 uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use);
+
+/**
+ * Generic query classifier information.
+ *
+ * @param zHost  The MaxScale host.
+ *
+ * @return A json object containing information.
+ */
+std::unique_ptr<json_t> qc_as_json(const char* zHost);
 
 MXS_END_DECLS

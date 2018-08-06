@@ -389,3 +389,12 @@ bool runtime_remove_user(const char* id, enum user_type type);
  * @return True if the core parameters are valid and were successfully applied
  */
 bool runtime_alter_maxscale_from_json(json_t* new_json);
+
+/**
+ * @brief Alter core query classifier parameters from JSON.
+ *
+ * @param new_json  JSON defining the new parameters.
+ *
+ * @return True if the core parameters are valid and were successfully applied
+ */
+bool runtime_alter_qc_from_json(json_t* new_json);

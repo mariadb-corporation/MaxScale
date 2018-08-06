@@ -13,29 +13,30 @@
 #include "internal/resource.hh"
 
 #include <list>
-#include <sstream>
 #include <map>
+#include <sstream>
 
+#include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
-#include <maxscale/jansson.hh>
-#include <maxscale/spinlock.hh>
-#include <maxscale/json_api.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
-#include <maxscale/adminusers.h>
+#include <maxscale/jansson.hh>
+#include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/server.hh>
+#include <maxscale/spinlock.hh>
 
+#include "internal/config_runtime.h"
+#include "internal/filter.hh"
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
-#include "internal/session.h"
-#include "internal/filter.hh"
-#include "internal/monitor.h"
-#include "internal/service.hh"
-#include "internal/config_runtime.h"
 #include "internal/modules.h"
+#include "internal/monitor.h"
+#include "internal/query_classifier.hh"
 #include "internal/routingworker.hh"
+#include "internal/service.hh"
+#include "internal/session.h"
 
 using std::list;
 using std::map;
@@ -426,6 +427,18 @@ HttpResponse cb_alter_logs(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_alter_qc(const HttpRequest& request)
+{
+    ss_dassert(request.get_json());
+
+    if (runtime_alter_qc_from_json(request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
@@ -624,6 +637,11 @@ HttpResponse cb_flush(const HttpRequest& request)
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
+}
+
+HttpResponse cb_qc(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, qc_as_json(request.host()).release());
 }
 
 HttpResponse cb_thread(const HttpRequest& request)
@@ -889,6 +907,7 @@ public:
         m_get.push_back(SResource(new Resource(cb_get_session, 2, "sessions", ":session")));
 
         m_get.push_back(SResource(new Resource(cb_maxscale, 1, "maxscale")));
+        m_get.push_back(SResource(new Resource(cb_qc, 2, "maxscale", "query_classifier")));
         m_get.push_back(SResource(new Resource(cb_all_threads, 2, "maxscale", "threads")));
         m_get.push_back(SResource(new Resource(cb_thread, 3, "maxscale", "threads", ":thread")));
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
@@ -936,6 +955,7 @@ public:
         m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
         m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
         m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
+        m_patch.push_back(SResource(new Resource(cb_alter_qc, 2, "maxscale", "query_classifier")));
 
         /** Update resource relationships directly */
         m_patch.push_back(SResource(new Resource(cb_alter_server_service_relationship, 4,

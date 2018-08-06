@@ -15,14 +15,14 @@
 
 #include "internal/config_runtime.h"
 
-#include <strings.h>
-#include <string>
-#include <sstream>
-#include <set>
-#include <iterator>
 #include <algorithm>
-#include <tuple>
 #include <functional>
+#include <iterator>
+#include <set>
+#include <sstream>
+#include <string>
+#include <strings.h>
+#include <tuple>
 #include <vector>
 
 #include <maxscale/atomic.h>
@@ -31,14 +31,15 @@
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
 #include <maxscale/platform.h>
+#include <maxscale/router.h>
 #include <maxscale/spinlock.hh>
 #include <maxscale/users.h>
-#include <maxscale/router.h>
 
 #include "internal/config.hh"
-#include "internal/monitor.h"
-#include "internal/modules.h"
 #include "internal/filter.hh"
+#include "internal/modules.h"
+#include "internal/monitor.h"
+#include "internal/query_classifier.hh"
 
 typedef std::set<std::string> StringSet;
 typedef std::vector<std::string> StringVector;
@@ -2533,6 +2534,43 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
             {
                 rval = false;
             }
+        }
+    }
+
+    return rval;
+}
+
+bool validate_qc_json(json_t* json)
+{
+    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+    bool rval = false;
+
+    if (param && json_is_object(param))
+    {
+        rval = is_count_or_null(param, "cache_size");
+    }
+
+    return rval;
+}
+
+// TODO: Expose everything needed so that this function could be
+// TODO: part of the query classifier API. 
+bool runtime_alter_qc_from_json(json_t* json)
+{
+    bool rval = false;
+
+    if (validate_qc_json(json))
+    {
+        rval = true;
+
+        json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+        json_t* value;
+
+        if ((value = mxs_json_pointer(param, "cache_size")))
+        {
+            QC_CACHE_PROPERTIES cache_properties = { json_integer_value(value) };
+
+            qc_set_cache_properties(&cache_properties);
         }
     }
 
