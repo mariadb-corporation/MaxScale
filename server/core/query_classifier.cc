@@ -19,6 +19,8 @@
 #include <unordered_map>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/json_api.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
@@ -1192,6 +1194,27 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     }
 }
 
+bool qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)
+{
+    properties->max_size = this_unit.cache_max_size();
+
+    return properties->max_size != 0;
+}
+
+void qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
+{
+    if (properties->max_size >= 0)
+    {
+        this_unit.set_cache_max_size(properties->max_size);
+    }
+    else
+    {
+        MXS_WARNING("Ignored attempt to set size of query classifier "
+                    "cache to a negative value: %" PRIi64 ".",
+                    properties->max_size);
+    }
+}
+
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
 {
     QC_TRACE();
@@ -1230,4 +1253,20 @@ json_t* qc_get_cache_stats_as_json()
     }
 
     return pStats;
+}
+
+std::unique_ptr<json_t> qc_as_json(const char* zHost)
+{
+    json_t* pParams = json_object();
+    json_object_set_new(pParams, "cache_size", json_integer(this_unit.cache_max_size()));
+
+    json_t* pAttributes = json_object();
+    json_object_set_new(pAttributes, CN_PARAMETERS, pParams);
+
+    json_t* pSelf = json_object();
+    json_object_set_new(pSelf, CN_ID, json_string("query_classifier"));
+    json_object_set_new(pSelf, CN_TYPE, json_string("query_classifier"));
+    json_object_set_new(pSelf, CN_ATTRIBUTES, pAttributes);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC, pSelf));
 }
