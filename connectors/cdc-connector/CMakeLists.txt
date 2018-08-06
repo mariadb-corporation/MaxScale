@@ -2,10 +2,12 @@
 add_library(cdc_connector SHARED cdc_connector.cpp)
 target_link_libraries(cdc_connector ${JANSSON_LIBRARIES} crypto)
 set_target_properties(cdc_connector PROPERTIES VERSION "1.0.0")
+add_dependencies(cdc_connector jansson)
 
 # Static version of the library
 add_library(cdc_connector_static STATIC cdc_connector.cpp)
 set_target_properties(cdc_connector_static PROPERTIES OUTPUT_NAME cdc_connector)
+add_dependencies(cdc_connector_static jansson)
 
 install_dev_library(cdc_connector cdc-connector)
 install_dev_library(cdc_connector_static cdc-connector)
