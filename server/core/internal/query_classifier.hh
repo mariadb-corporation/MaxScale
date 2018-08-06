@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <maxscale/query_classifier.h>
 
 MXS_BEGIN_DECLS

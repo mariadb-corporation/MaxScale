@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/query_classifier.h"
+#include "internal/query_classifier.hh"
 #include <inttypes.h>
 #include <algorithm>
 #include <atomic>
