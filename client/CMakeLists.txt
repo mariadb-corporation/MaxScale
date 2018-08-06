@@ -1,4 +1,6 @@
 add_executable(maxadmin maxadmin.c)
+add_dependencies(maxadmin maxutils)
+
 find_library(HIST edit)
 if(HIST)
   message(STATUS "Building MaxAdmin with editline: ${HIST}")
