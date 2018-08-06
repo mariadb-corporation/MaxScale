@@ -39,6 +39,30 @@ const maxscale_params = [
     'passive'
 ]
 
+function setFilters(host, argv){
+
+    if (argv.filters.length == 0) {
+        // We're removing all filters from the service
+        argv.filters = null
+    } else {
+        // Convert the list into relationships
+        argv.filters.forEach(function(value, i, arr){
+            arr[i] = {id: value, type: 'filters'}
+        })
+    }
+
+    var payload = {
+        data: {
+            id: argv.service,
+            type: 'services'
+        }
+    }
+
+    _.set(payload, 'data.relationships.filters.data', argv.filters)
+
+    return doAsyncRequest(host, 'services/' + argv.service, null, {method: 'PATCH', body: payload})
+}
+
 exports.command = 'alter <command>'
 exports.desc = 'Alter objects'
 exports.handler = function() {}
@@ -67,6 +91,21 @@ exports.builder = function(yargs) {
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
+            })
+        })
+        .command('service filters <service> [filters...]', 'Alter filters of a service', function(yargs) {
+            return yargs.epilog('The order of the filters given as the second parameter will also be the order ' +
+                                'in which queries pass through the filter chain. If no filters are given, all ' +
+                                'existing filters are removed from the service.' +
+                                '\n\n' +
+                                'For example, the command `maxctrl alter service filters my-service A B C` ' +
+                                'will set the filter chain for the service `my-service` so that A gets the ' +
+                                'query first after which it is passed to B and finally to C. This behavior is ' +
+                                'the same as if the `filters=A|B|C` parameter was defined for the service.')
+            .usage('Usage: alter service filters <service> [filters...]')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return setFilters(host, argv)
             })
         })
         .command('logging <key> <value>', 'Alter logging parameters', function(yargs) {
