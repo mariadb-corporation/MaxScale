@@ -221,10 +221,13 @@ exports.builder = function(yargs) {
                 'data': {
                     'id': argv.name,
                     'attributes': {
-                        'module': argv.module,
-                        'parameters': argv.params.reduce(to_obj, {})
+                        'module': argv.module
                     }
                 }
+            }
+
+            if (argv.params) {
+                filter.data.attributes.parameters = argv.params.reduce(to_obj, {})
             }
 
             maxctrl(argv, function(host) {
