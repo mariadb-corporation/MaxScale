@@ -31,13 +31,17 @@ to localhost as well.
 type=service
 router=maxinfo
 user=monitor
-passwd=EBD2F49C3B375812A8CDEBA632ED8BBC
+passwd=my_secret
 ```
 
 The listener section defines the protocol, port and other information needed
 to create a listener for the service. To listen on a port using the MySQL
 protocol a section as shown below should be added to the configuration
 file.
+
+In this example we use a cleartext password `my_secret`. For increased
+security the password can be encrypted as explained
+[here](../Getting-Started/Configuration-Guide.md#encrypting-passwords).
 
 ```
 [MaxInfo Listener]
@@ -83,9 +87,9 @@ MySQL status and ping requests. These may be used for simple monitoring of
 MariaDB MaxScale.
 
 ```
-% mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz ping
+% mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pmy_secret ping
 mysqld is alive
-% mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz status
+% mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pmy_secret status
 Uptime: 72  Threads: 1  Sessions: 11
 %
 ```
