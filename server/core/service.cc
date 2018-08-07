@@ -1094,7 +1094,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
     {
         UniqueLock guard(lock);
         m_filters = flist;
-        capabilities |= capabilities;
+        capabilities |= my_capabilities;
         guard.unlock();
 
         // Broadcast a message to other workers to update their filter lists
