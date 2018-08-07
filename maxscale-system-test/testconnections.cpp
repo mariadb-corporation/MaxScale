@@ -363,6 +363,12 @@ TestConnections::~TestConnections()
     {
         delete galera;
     }
+
+    if (global_result)
+    {
+        // This causes the test to fail if a core dump is found
+        exit(1);
+    }
 }
 
 void TestConnections::report_result(const char *format, va_list argp)
