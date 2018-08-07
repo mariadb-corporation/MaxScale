@@ -866,18 +866,20 @@ uint64_t qc_get_server_version();
 /**
  * Get the cache properties.
  *
- * @param properties[out]  Cache properties.
- *
- * @return True, if caching is enabled, false otherwise.
+ * @param[out] properties  Cache properties.
  */
-bool qc_get_cache_properties(QC_CACHE_PROPERTIES* properties);
+void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties);
 
 /**
  * Set the cache properties.
  *
- * @param properties[in]  Cache properties.
+ * @param properties  Cache properties.
+ *
+ * @return True, if the properties could be set, false if at least
+ *         one property is invalid or if the combination of property
+ *         values is invalid.
  */
-void qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties);
+bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties);
 
 /**
  * Get cache statistics for the calling thread.

@@ -1195,25 +1195,28 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     }
 }
 
-bool qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)
+void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties)
 {
     properties->max_size = this_unit.cache_max_size();
-
-    return properties->max_size != 0;
 }
 
-void qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
+bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
 {
+    bool rv = false;
+
     if (properties->max_size >= 0)
     {
         this_unit.set_cache_max_size(properties->max_size);
+        rv = true;
     }
     else
     {
-        MXS_WARNING("Ignored attempt to set size of query classifier "
-                    "cache to a negative value: %" PRIi64 ".",
-                    properties->max_size);
+        MXS_ERROR("Ignoring attempt to set size of query classifier "
+                  "cache to a negative value: %" PRIi64 ".",
+                  properties->max_size);
     }
+
+    return rv;
 }
 
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
@@ -1294,19 +1297,36 @@ json_t* get_params(json_t* pJson)
 
 bool qc_alter_from_json(json_t* pJson)
 {
+    bool rv = false;
+
     json_t* pParams = get_params(pJson);
 
     if (pParams)
     {
+        rv = true;
+
+        QC_CACHE_PROPERTIES cache_properties;
+        qc_get_cache_properties(&cache_properties);
+
         json_t* pValue;
 
         if ((pValue = mxs_json_pointer(pParams, CN_CACHE_SIZE)))
         {
-            QC_CACHE_PROPERTIES cache_properties = { json_integer_value(pValue) };
+            cache_properties.max_size = json_integer_value(pValue);
 
-            qc_set_cache_properties(&cache_properties);
+            if (cache_properties.max_size < 0)
+            {
+                // TODO: Log error here, but expose (config_runtime.cc) runtime_error() first.
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            ss_debug(bool set =) qc_set_cache_properties(&cache_properties);
+            ss_dassert(set);
         }
     }
 
-    return pParams != nullptr;
+    return rv;
 }
