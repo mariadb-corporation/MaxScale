@@ -27,6 +27,9 @@ cp -t $testdir -r $srcdir/test/*
 # Copy test sources to test workspace
 cp -t $testdir -r $testsrc/*
 
+# Required by MaxCtrl (not super pretty)
+cp -t $testdir/.. $srcdir/VERSION*.cmake
+
 # Copy required docker-compose files to the MaxScale directory and bring MariaDB
 # servers up. This is an asynchronous process.
 cd $maxscaledir
@@ -35,7 +38,7 @@ docker-compose up -d || exit 1
 
 # Install dependencies
 cd $testdir
-npm install
+npm install || exit 1
 
 # Configure and install MaxScale
 cd $maxscaledir
@@ -49,9 +52,9 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_CDC=Y \
       -DTARGET_COMPONENT=all \
       -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
-      -DDEFAULT_ADMIN_USER=`whoami`
+      -DDEFAULT_ADMIN_USER=`whoami` || exit 1
 
-make install
+make install || exit 1
 
 # Create required directories (we could run the postinst script but it's a bit too invasive)
 mkdir -p $maxscaledir/lib64/maxscale

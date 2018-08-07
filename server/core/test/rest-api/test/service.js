@@ -20,12 +20,27 @@ describe("Service", function() {
     });
 
 
-    it("remove service relationship", function() {
+    it("missing relationships are not removed", function() {
         return request.get(base_url + "/services/RW-Split-Router")
             .then(function(resp) {
                 var svc = JSON.parse(resp)
                 delete svc.data.relationships["servers"]
-                delete svc.data.relationships["servers"]
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
+            })
+            .then(function(resp) {
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.should.not.be.empty
+            })
+    });
+
+    it("remove service relationship", function() {
+        return request.get(base_url + "/services/RW-Split-Router")
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.servers.data = null
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
@@ -64,12 +79,12 @@ describe("Service", function() {
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
-        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {data: null}})
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {servers: null}})
             .should.be.rejected
     })
 
     it("remove service relationship via `relationships` endpoint", function() {
-        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: []}})
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: null}})
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("servers")

@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <tuple>
 #include <functional>
+#include <vector>
 
 #include <maxscale/atomic.h>
 #include <maxscale/clock.h>
@@ -1316,6 +1317,28 @@ static bool is_valid_resource_body(json_t* json)
         runtime_error("No '%s' field defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
+    else
+    {
+        // Check that the relationship JSON is well-formed
+        const std::vector<const char*> relations =
+        {
+            MXS_JSON_PTR_RELATIONSHIPS "/servers",
+            MXS_JSON_PTR_RELATIONSHIPS "/services",
+            MXS_JSON_PTR_RELATIONSHIPS "/monitors",
+            MXS_JSON_PTR_RELATIONSHIPS "/filters",
+        };
+
+        for (auto it = relations.begin(); it != relations.end(); it++)
+        {
+            json_t* j = mxs_json_pointer(json, *it);
+
+            if (j && !json_is_object(j))
+            {
+                runtime_error("Relationship '%s' is not an object",*it);
+                rval = false;
+            }
+        }
+    }
 
     return rval;
 }
@@ -1555,7 +1578,8 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
 bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL &&
+        mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS) == NULL)
     {
         /** No change to relationships */
         return true;
@@ -1661,9 +1685,9 @@ static bool is_valid_relationship_body(json_t* json)
         runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
-    else if (!json_is_array(obj))
+    else if (!json_is_array(obj) && !json_is_null(obj))
     {
-        runtime_error("Field '%s' is not an array", MXS_JSON_PTR_DATA);
+        runtime_error("Field '%s' is not an array or null", MXS_JSON_PTR_DATA);
         rval = false;
     }
 
@@ -1886,7 +1910,7 @@ Service* runtime_create_service_from_json(json_t* json)
 
 bool object_to_server_relations(const char* target, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
+    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS) == NULL)
     {
         /** No change to relationships */
         return true;
