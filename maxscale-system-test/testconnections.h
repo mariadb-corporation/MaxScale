@@ -519,6 +519,25 @@ public:
      */
     void process_template(int m, const char *src, const char *dest = "/etc/maxscale.cnf");
 
+    /**
+     * Execute a MaxCtrl command
+     *
+     * @param cmd  Command to execute, without the `maxctrl` part
+     * @param m    MaxScale node to execute the command on
+     * @param sudo Run the command as root
+     *
+     * @return The exit code and output of MaxCtrl
+     */
+    std::pair<int, std::string> maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    {
+        return maxscales->ssh_output("maxctrl " + cmd, m, sudo);
+    }
+
+    void check_maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    {
+        auto result = maxctrl(cmd, m, sudo);
+        assert(result.first == 0, "Command '%s' should work: %s", cmd.c_str(), result.second.c_str());
+    }
 
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
