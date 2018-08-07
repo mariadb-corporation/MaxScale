@@ -52,7 +52,7 @@ port=9003
 ```
 
 To listen with the HTTP protocol and hence return JSON documents a section
-as should below is required.
+as shown below is required.
 
 ```
 [MaxInfo JSON Listener]
@@ -294,7 +294,7 @@ mysql>
 ## Show clients
 
 The show clients command reports a row for every client application
-connected to MariaDB MaxScale. Like clauses are not available of the show
+connected to MariaDB MaxScale. `Like` clauses cannot be used in the show
 clients command.
 
 ```
@@ -427,7 +427,7 @@ mysql>
 Each row represents a time interval, in 100ms increments, with the counts
 representing the number of events that were in the event queue for the
 length of time that row represents and the number of events that were
-executing of the time indicated by the row.
+executing at the time indicated by the row.
 
 # JSON Interface
 
