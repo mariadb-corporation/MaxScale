@@ -535,6 +535,8 @@ add_test_script(masking_mysqltest masking_mysqltest_driver.sh masking_mysqltest 
 
 add_test_script(masking_user masking_user.sh masking_mysqltest LABELS maskingfilter REPL_BACKEND)
 
+add_test_executable(masking_auto_firewall.cpp masking_auto_firewall masking_auto_firewall LABELS masking REPL_BACKEND)
+
 # Test of Cache filter - basics
 add_test_script(cache_basic cache_basic.sh cache_basic LABELS cachefilter REPL_BACKEND)
 

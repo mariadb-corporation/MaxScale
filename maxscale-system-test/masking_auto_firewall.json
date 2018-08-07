@@ -1,0 +1,12 @@
+{
+    "rules": [
+        {
+            "replace": {
+                "column": "a"
+            },
+            "with": {
+                "fill": "X"
+            }
+        }
+    ]
+}
