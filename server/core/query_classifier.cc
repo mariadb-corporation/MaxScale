@@ -1313,12 +1313,9 @@ bool qc_alter_from_json(json_t* pJson)
         if ((pValue = mxs_json_pointer(pParams, CN_CACHE_SIZE)))
         {
             cache_properties.max_size = json_integer_value(pValue);
-
-            if (cache_properties.max_size < 0)
-            {
-                // TODO: Log error here, but expose (config_runtime.cc) runtime_error() first.
-                rv = false;
-            }
+            // If runtime_is_count_or_null() did its job, then we will not
+            // get here if the value is negative.
+            ss_dassert(cache_properties.max_size >= 0);
         }
 
         if (rv)
