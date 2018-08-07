@@ -52,10 +52,7 @@ thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
 typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
 typedef std::pair<const char*, JsonValidator> Relationship;
 
-/** Attributes need to be in the declaration */
-static void runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
-
-static void runtime_error(const char* fmt, ...)
+void config_runtime_error(const char* fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -145,8 +142,8 @@ bool runtime_link_server(SERVER *server, const char *target)
         }
         else
         {
-            runtime_error("Service '%s' already uses server '%s'",
-                          service->name, server->name);
+            config_runtime_error("Service '%s' already uses server '%s'",
+                                 service->name, server->name);
         }
     }
     else if (monitor)
@@ -158,7 +155,7 @@ bool runtime_link_server(SERVER *server, const char *target)
         }
         else
         {
-            runtime_error("Server '%s' is already monitored", server->name);
+            config_runtime_error("Server '%s' is already monitored", server->name);
         }
     }
 
@@ -253,19 +250,19 @@ bool runtime_create_server(const char *name, const char *address, const char *po
             }
             else
             {
-                runtime_error("Failed to create server '%s', see error log for more details", name);
+                config_runtime_error("Failed to create server '%s', see error log for more details", name);
             }
 
             config_parameter_free(ctx.parameters);
         }
         else
         {
-            runtime_error("Server creation failed when loading protocol module '%s'", protocol);
+            config_runtime_error("Server creation failed when loading protocol module '%s'", protocol);
         }
     }
     else
     {
-        runtime_error("Server '%s' already exists", name);
+        config_runtime_error("Server '%s' already exists", name);
     }
 
     return rval;
@@ -280,7 +277,7 @@ bool runtime_destroy_server(SERVER *server)
     {
         const char* err = "Cannot destroy server '%s' as it is used by at least "
                           "one service or monitor";
-        runtime_error(err, server->name);
+        config_runtime_error(err, server->name);
         MXS_ERROR(err, server->name);
     }
     else
@@ -479,7 +476,7 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     }
     else
     {
-        runtime_error("Invalid server parameter: %s=%s", key, value);
+        config_runtime_error("Invalid server parameter: %s=%s", key, value);
     }
 
     return valid;
@@ -593,7 +590,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     }
     else
     {
-        runtime_error("Invalid monitor parameter: %s", key);
+        config_runtime_error("Invalid monitor parameter: %s", key);
     }
 
     return valid;
@@ -638,19 +635,19 @@ bool runtime_alter_service(Service *service, const char* zKey, const char* zValu
                 {
                     service_replace_parameter(service, key.c_str(), old_value.c_str());
                 }
-                runtime_error("Reconfiguration of service '%s' failed. See log "
-                              "file for more details.", service->name);
+                config_runtime_error("Reconfiguration of service '%s' failed. See log "
+                                     "file for more details.", service->name);
             }
         }
         else
         {
-            runtime_error("Router '%s' does not support reconfiguration.",
-                          service->routerModule);
+            config_runtime_error("Router '%s' does not support reconfiguration.",
+                                 service->routerModule);
         }
     }
     else
     {
-        runtime_error("Invalid service parameter: %s=%s", key.c_str(), zValue);
+        config_runtime_error("Invalid service parameter: %s=%s", key.c_str(), zValue);
         MXS_ERROR("Unknown parameter for service '%s': %s=%s",
                   service->name, key.c_str(), value.c_str());
     }
@@ -684,7 +681,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_CONNECT_TIMEOUT, value);
+            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_CONNECT_TIMEOUT, value);
         }
     }
     else if (key == CN_AUTH_READ_TIMEOUT)
@@ -699,7 +696,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_READ_TIMEOUT, value);
+            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_READ_TIMEOUT, value);
         }
     }
     else if (key == CN_AUTH_WRITE_TIMEOUT)
@@ -714,7 +711,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
+            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
         }
     }
     else if (key == CN_ADMIN_AUTH)
@@ -731,7 +728,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_AUTH, value);
+            config_runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_AUTH, value);
         }
     }
     else if (key == CN_ADMIN_LOG_AUTH_FAILURES)
@@ -748,7 +745,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
+            config_runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
         }
     }
     else if (key == CN_PASSIVE)
@@ -772,12 +769,12 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         }
         else
         {
-            runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
+            config_runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
         }
     }
     else
     {
-        runtime_error("Unknown global parameter: %s=%s", name, value);
+        config_runtime_error("Unknown global parameter: %s=%s", name, value);
     }
 
     if (rval)
@@ -834,7 +831,7 @@ bool runtime_create_listener(Service *service, const char *name, const char *add
             (ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth, verify_ssl)) == NULL)
         {
             MXS_ERROR("SSL initialization for listener '%s' failed.", name);
-            runtime_error("SSL initialization for listener '%s' failed.", name);
+            config_runtime_error("SSL initialization for listener '%s' failed.", name);
         }
         else
         {
@@ -854,19 +851,19 @@ bool runtime_create_listener(Service *service, const char *name, const char *add
                 else
                 {
                     MXS_ERROR("Listener '%s' was created but failed to start it.", name);
-                    runtime_error("Listener '%s' was created but failed to start it.", name);
+                    config_runtime_error("Listener '%s' was created but failed to start it.", name);
                 }
             }
             else
             {
                 MXS_ERROR("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
-                runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
+                config_runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
             }
         }
     }
     else
     {
-        runtime_error("Listener '%s' already exists", name);
+        config_runtime_error("Listener '%s' already exists", name);
     }
 
     return rval;
@@ -889,16 +886,16 @@ bool runtime_destroy_listener(Service *service, const char *name)
         }
         else
         {
-            runtime_error("Persisted configuration file for listener '%s' was not "
-                          "found. This means that the listener was not created at "
-                          "runtime. Remove the listener manually from the correct "
-                          "configuration file.", name);
+            config_runtime_error("Persisted configuration file for listener '%s' was not "
+                                 "found. This means that the listener was not created at "
+                                 "runtime. Remove the listener manually from the correct "
+                                 "configuration file.", name);
         }
     }
     else if (!service_remove_listener(service, name))
     {
         MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
-        runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
+        config_runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
     }
     else
     {
@@ -929,7 +926,7 @@ bool runtime_create_monitor(const char *name, const char *module)
         {
             if ((monitor = monitor_create(name, module, params)) == NULL)
             {
-                runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+                config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
             }
 
             config_parameter_free(params);
@@ -944,13 +941,13 @@ bool runtime_create_monitor(const char *name, const char *module)
             }
             else
             {
-                runtime_error("Failed to serialize monitor '%s'", name);
+                config_runtime_error("Failed to serialize monitor '%s'", name);
             }
         }
     }
     else
     {
-        runtime_error("Can't create monitor '%s', it already exists", name);
+        config_runtime_error("Can't create monitor '%s', it already exists", name);
     }
 
     return rval;
@@ -976,7 +973,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
 
             if (!(filter = filter_alloc(name, module, ctx.parameters)))
             {
-                runtime_error("Could not create filter '%s' with module '%s'", name, module);
+                config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
             }
 
             config_parameter_free(ctx.parameters);
@@ -991,13 +988,13 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
             }
             else
             {
-                runtime_error("Failed to serialize filter '%s'", name);
+                config_runtime_error("Failed to serialize filter '%s'", name);
             }
         }
     }
     else
     {
-        runtime_error("Can't create filter '%s', it already exists", name);
+        config_runtime_error("Can't create filter '%s', it already exists", name);
     }
 
     return rval;
@@ -1016,8 +1013,8 @@ bool runtime_destroy_filter(const SFilterDef& filter)
     }
     else
     {
-        runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
-                      "first", filter->name.c_str());
+        config_runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
+                             "first", filter->name);
     }
 
     return rval;
@@ -1043,7 +1040,7 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
 
             if ((service = service_alloc(name, router, ctx.parameters)) == NULL)
             {
-                runtime_error("Could not create service '%s' with module '%s'", name, router);
+                config_runtime_error("Could not create service '%s' with module '%s'", name, router);
             }
 
             config_parameter_free(ctx.parameters);
@@ -1058,13 +1055,13 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
             }
             else
             {
-                runtime_error("Failed to serialize service '%s'", name);
+                config_runtime_error("Failed to serialize service '%s'", name);
             }
         }
     }
     else
     {
-        runtime_error("Can't create service '%s', it already exists", name);
+        config_runtime_error("Can't create service '%s', it already exists", name);
     }
 
     return rval;
@@ -1083,8 +1080,8 @@ bool runtime_destroy_service(Service* service)
     }
     else
     {
-        runtime_error("Service '%s' cannot be destroyed: Remove all servers and "
-                      "destroy all listeners first", service->name);
+        config_runtime_error("Service '%s' cannot be destroyed: Remove all servers and "
+                             "destroy all listeners first", service->name);
     }
 
     return rval;
@@ -1266,7 +1263,7 @@ bool runtime_is_string_or_null(json_t* json, const char* path)
 
     if (value && !json_is_string(value))
     {
-        runtime_error("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
+        config_runtime_error("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -1280,7 +1277,7 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
 
     if (value && !json_is_boolean(value))
     {
-        runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
+        config_runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
         rval = false;
     }
 
@@ -1296,12 +1293,12 @@ bool runtime_is_count_or_null(json_t* json, const char* path)
     {
         if (!json_is_integer(value))
         {
-            runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
+            config_runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
             rval = false;
         }
         else if (json_integer_value(value) <= 0)
         {
-            runtime_error("Parameter '%s' is not a positive integer", path);
+            config_runtime_error("Parameter '%s' is not a positive integer", path);
             rval = false;
         }
     }
@@ -1316,7 +1313,7 @@ static bool is_valid_resource_body(json_t* json)
 
     if (mxs_json_pointer(json, MXS_JSON_PTR_DATA) == NULL)
     {
-        runtime_error("No '%s' field defined", MXS_JSON_PTR_DATA);
+        config_runtime_error("No '%s' field defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
     else
@@ -1354,27 +1351,27 @@ static bool server_contains_required_fields(json_t* json)
 
     if (!id)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
     }
     else if (!json_is_string(id))
     {
-        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
     }
     else if (!address)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_ADDRESS);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_ADDRESS);
     }
     else if (!json_is_string(address))
     {
-        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
     }
     else if (!port)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_PORT);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_PORT);
     }
     else if (!json_is_integer(port))
     {
-        runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
+        config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
     }
     else
     {
@@ -1466,8 +1463,8 @@ static bool validate_ssl_json(json_t* params)
              !mxs_json_pointer(params, CN_SSL_CERT) ||
              !mxs_json_pointer(params, CN_SSL_CA_CERT)))
         {
-            runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters",
-                          CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
+            config_runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters",
+                                 CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
             rval = false;
         }
 
@@ -1476,7 +1473,7 @@ static bool validate_ssl_json(json_t* params)
 
         if (ssl_version_str && string_to_ssl_method_type(ssl_version_str) == SERVICE_SSL_UNKNOWN)
         {
-            runtime_error("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
+            config_runtime_error("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
             rval = false;
         }
     }
@@ -1519,8 +1516,8 @@ static bool process_ssl_parameters(SERVER* server, json_t* params)
 
             if (!runtime_enable_server_ssl(server, key, cert, ca, version, depth, verify))
             {
-                runtime_error("Failed to initialize SSL for server '%s'. See "
-                              "error log for more details.", server->name);
+                config_runtime_error("Failed to initialize SSL for server '%s'. See "
+                                     "error log for more details.", server->name);
                 rval = false;
             }
         }
@@ -1571,7 +1568,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
         }
         else
         {
-            runtime_error("Invalid relationships in request JSON");
+            config_runtime_error("Invalid relationships in request JSON");
         }
     }
 
@@ -1684,12 +1681,12 @@ static bool is_valid_relationship_body(json_t* json)
 
     if (!obj)
     {
-        runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
+        config_runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
         rval = false;
     }
     else if (!json_is_array(obj) && !json_is_null(obj))
     {
-        runtime_error("Field '%s' is not an array or null", MXS_JSON_PTR_DATA);
+        config_runtime_error("Field '%s' is not an array", MXS_JSON_PTR_DATA);
         rval = false;
     }
 
@@ -1767,11 +1764,11 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
     {
         if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
         {
-            runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
+            config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
         }
         else if (!json_is_string(value))
         {
-            runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
+            config_runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
         }
         else
         {
@@ -1779,11 +1776,11 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
             {
                 if (!(value = mxs_json_pointer(json, a.c_str())))
                 {
-                    runtime_error("Invalid value for '%s'", a.c_str());
+                    config_runtime_error("Invalid value for '%s'", a.c_str());
                 }
                 else if (!json_is_string(value))
                 {
-                    runtime_error("Value '%s' is not a string", a.c_str());
+                    config_runtime_error("Value '%s' is not a string", a.c_str());
                 }
             }
 
@@ -1945,7 +1942,7 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
     }
     else
     {
-        runtime_error("Invalid object relations for '%s'", target);
+        config_runtime_error("Invalid object relations for '%s'", target);
     }
 
     return rval;
@@ -2150,11 +2147,12 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
                     if (!is_dynamic_param(key))
                     {
-                        runtime_error("Runtime modifications to static service parameters is not supported: %s=%s", key, v.c_str());
+                        config_runtime_error("Runtime modifications to static service "
+                                             "parameters is not supported: %s=%s", key, v.c_str());
                     }
                     else
                     {
-                        runtime_error("Parameter '%s' cannot be modified at runtime", key);
+                        config_runtime_error("Parameter '%s' cannot be modified at runtime", key);
                     }
 
                     rval = false;
@@ -2267,19 +2265,19 @@ static bool validate_listener_json(json_t* json)
 
     if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
     {
-        runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
+        config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
     }
     else if (!json_is_string(param))
     {
-        runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
+        config_runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
     }
     else if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
     {
-        runtime_error("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
+        config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
     }
     else if (!json_is_object(param))
     {
-        runtime_error("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
+        config_runtime_error("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
     }
     else if (runtime_is_count_or_null(param, CN_PORT) &&
              runtime_is_string_or_null(param, CN_ADDRESS) &&
@@ -2345,31 +2343,31 @@ bool validate_user_json(json_t* json)
 
     if (!id)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
     }
     else if (!json_is_string(id))
     {
-        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
     }
     else if (!type)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
     }
     else if (!json_is_string(type))
     {
-        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
     }
     else if (!account)
     {
-        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
+        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
     }
     else if (!json_is_string(account))
     {
-        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
+        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
     }
     else if (json_to_account_type(account) == USER_ACCOUNT_UNKNOWN)
     {
-        runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
+        config_runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
     }
     else
     {
@@ -2377,11 +2375,11 @@ bool validate_user_json(json_t* json)
         {
             if (!password)
             {
-                runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
+                config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
             }
             else if (!json_is_string(password))
             {
-                runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
+                config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
             }
             else
             {
@@ -2394,8 +2392,8 @@ bool validate_user_json(json_t* json)
         }
         else
         {
-            runtime_error("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE,
-                          json_string_value(type));
+            config_runtime_error("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE,
+                                 json_string_value(type));
         }
     }
 
@@ -2426,7 +2424,7 @@ bool runtime_create_user_from_json(json_t* json)
         }
         else if (err)
         {
-            runtime_error("Failed to add user '%s': %s", user, err);
+            config_runtime_error("Failed to add user '%s': %s", user, err);
         }
     }
 
@@ -2448,7 +2446,7 @@ bool runtime_remove_user(const char* id, enum user_type type)
     }
     else
     {
-        runtime_error("Failed to remove user '%s': %s", id, err);
+        config_runtime_error("Failed to remove user '%s': %s", id, err);
     }
 
     return rval;

@@ -26,6 +26,18 @@
 #include "service.hh"
 #include "filter.hh"
 
+
+/**
+ * @brief Log error to be returned to client
+ *
+ * This function logs an error message that later will be returned to
+ * the client. Note that each call to this function will overwrite
+ * an already logged error message.
+ *
+ * @param fmt  Printf format string.
+ */
+void config_runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
+
 /**
  * @brief Create a new server
  *
