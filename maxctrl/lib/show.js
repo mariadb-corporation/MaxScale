@@ -78,6 +78,30 @@ const module_fields = [
     {'Commands': 'attributes.commands'}
 ]
 
+const thread_fields = [
+    {'Id': 'id'},
+    {'Accepts': 'attributes.stats.accepts'},
+    {'Reads': 'attributes.stats.reads'},
+    {'Writes': 'attributes.stats.writes'},
+    {'Hangups': 'attributes.stats.hangups'},
+    {'Errors': 'attributes.stats.errors'},
+    {'Blocking polls': 'attributes.stats.blocking_polls'},
+    {'Avg event queue length': 'attributes.stats.avg_event_queue_length'},
+    {'Max event queue length': 'attributes.stats.max_event_queue_length'},
+    {'Max exec time': 'attributes.stats.max_exec_time'},
+    {'Max queue time': 'attributes.stats.max_queue_time'},
+    {'Current FDs': 'attributes.stats.current_descriptors'},
+    {'Total FDs': 'attributes.stats.total_descriptors'},
+    {'Load (1s)': 'attributes.stats.load.last_second'},
+    {'Load (1m)': 'attributes.stats.load.last_minute'},
+    {'Load (1h)': 'attributes.stats.load.last_hour'},
+    {'QC cache size': 'attributes.stats.query_classifier_cache.size'},
+    {'QC cache inserts': 'attributes.stats.query_classifier_cache.inserts'},
+    {'QC cache hits': 'attributes.stats.query_classifier_cache.hits'},
+    {'QC cache misses': 'attributes.stats.query_classifier_cache.misses'},
+    {'QC cache evictions': 'attributes.stats.query_classifier_cache.evictions'},
+]
+
 exports.command = 'show <command>'
 exports.desc = 'Show objects'
 exports.handler = function() {}
@@ -212,18 +236,20 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('threads', 'Show worker thread information', function(yargs) {
-            return yargs.usage('Usage: show threads')
+        .command('thread <thread>', 'Show thread', function(yargs) {
+            return yargs.epilog('Show detailed information about a worker thread.')
+                .usage('Usage: show thread <thread>')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'maxscale/threads', [
-                    {'ID': 'id'},
-                    {'Current File Descriptors': 'attributes.stats.current_descriptors'},
-                    {'Total File Descriptors': 'attributes.stats.total_descriptors'},
-                    {'Load Percentage (1s)': 'attributes.stats.load.last_second'},
-                    {'Load Percentage (1m)': 'attributes.stats.load.last_minute'},
-                    {'Load Percentage (1h)': 'attributes.stats.load.last_hour'}
-                ])
+                return getResource(host, 'maxscale/threads/' + argv.thread, thread_fields)
+            })
+        })
+        .command('threads', 'Show all threads', function(yargs) {
+            return yargs.epilog('Show detailed information about all worker threads.')
+                .usage('Usage: show threads')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return getCollectionAsResource(host, 'maxscale/threads', thread_fields)
             })
         })
         .command('logging', 'Show MaxScale logging information', function(yargs) {
