@@ -134,6 +134,8 @@ MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PAR
     mon->interval = config_get_integer(params, CN_MONITOR_INTERVAL);
     mon->journal_max_age = config_get_integer(params, CN_JOURNAL_MAX_AGE);
     mon->script_timeout = config_get_integer(params, CN_SCRIPT_TIMEOUT);
+    mon->script = config_get_string(params, CN_SCRIPT);
+    mon->events = config_get_enum(params, CN_EVENTS, mxs_monitor_event_enum_values);
     mon->check_maintenance_flag = MAINTENANCE_FLAG_NOCHECK;
     mon->ticks = 0;
     mon->parameters = NULL;
@@ -1077,13 +1079,13 @@ const char* mon_get_event_name(mxs_monitor_event_t event)
 {
     for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
     {
-        if (mxs_monitor_event_enum_values[i].enum_value & event)
+        if (mxs_monitor_event_enum_values[i].enum_value == event)
         {
             return mxs_monitor_event_enum_values[i].name;
         }
     }
 
-    ss_dassert(false);
+    ss_dassert(!true);
     return "undefined_event";
 }
 
@@ -1788,7 +1790,6 @@ static const char* monitor_state_to_string(int state)
 json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
-
     json_object_set_new(rval, CN_USER, json_string(monitor->user));
     json_object_set_new(rval, CN_PASSWORD, json_string(monitor->password));
     json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
@@ -1797,18 +1798,14 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
     json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
+    // TODO: print disk_space_threshold
+    json_object_set_new(rval, CN_DISK_SPACE_CHECK_INTERVAL, json_integer(monitor->disk_space_check_interval));
+    json_object_set_new(rval, CN_SCRIPT, json_string(monitor->script));
     json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
-
+    // TODO: print events
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
     config_add_module_params_json(mod, monitor->parameters, config_monitor_params, rval);
-
-    /** Don't show the default value for events if no script is defined */
-    if (json_object_get(rval, CN_SCRIPT) == NULL)
-    {
-        json_object_del(rval, CN_EVENTS);
-    }
-
     return rval;
 }
 
@@ -2486,7 +2483,6 @@ MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     , m_state(MXS_MONITOR_STOPPED)
     , m_shutdown(0)
     , m_checked(false)
-    , m_events(0)
     , m_loop_called(0)
 {
 }
@@ -2524,35 +2520,7 @@ void MonitorInstance::diagnostics(DCB* pDcb) const
 
 json_t* MonitorInstance::diagnostics_json() const
 {
-    json_t* pJson = json_object();
-
-    if (!m_script.empty())
-    {
-        json_object_set_new(pJson, CN_SCRIPT, json_string(m_script.c_str()));
-
-        string events;
-
-        const MXS_ENUM_VALUE* pValue = mxs_monitor_event_enum_values;
-
-        while (pValue->name)
-        {
-            if (pValue->enum_value & m_events)
-            {
-                if (!events.empty())
-                {
-                    events += ",";
-                }
-
-                events += pValue->enum_value;
-            }
-
-            ++pValue;
-        }
-
-        json_object_set_new(pJson, CN_EVENTS, json_string(events.c_str()));
-    }
-
-    return pJson;
+    return NULL;
 }
 
 bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
@@ -2578,8 +2546,6 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 
         if (m_checked)
         {
-            m_script = config_get_string(pParams, CN_SCRIPT);
-            m_events = config_get_enum(pParams, CN_EVENTS, mxs_monitor_event_enum_values);
             m_master = NULL;
 
             if (configure(pParams))
@@ -2889,7 +2855,7 @@ void MonitorInstance::post_loop()
 
 void MonitorInstance::process_state_changes()
 {
-    mon_process_state_changes(m_monitor, m_script.empty() ? NULL : m_script.c_str(), m_events);
+    mon_process_state_changes(m_monitor, m_monitor->script, m_monitor->events);
 }
 
 bool MonitorInstance::pre_run()

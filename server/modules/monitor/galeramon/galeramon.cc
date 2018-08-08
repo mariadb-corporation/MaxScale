@@ -764,19 +764,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
             {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
             {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }

@@ -218,9 +218,6 @@ typedef enum
     NEW_NDB_EVENT     = (1 << 21), /**< new_ndb */
 } mxs_monitor_event_t;
 
-// Bitmask value that matches all events, used for the "all" enum value
-static const uint64_t ALL_MONITOR_EVENTS = ~0;
-
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
@@ -267,46 +264,14 @@ struct mxs_monitor
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
+    const char* script;      /**< Launchable script. */
+    uint64_t events;         /**< Enabled monitor events. */
     uint8_t journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
     int64_t disk_space_check_interval; /**< How often should a disk space check be made at most. */
     uint64_t ticks; /**< Number of performed monitoring intervals */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
-
-static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
-{
-    {"master_down", MASTER_DOWN_EVENT},
-    {"master_up", MASTER_UP_EVENT},
-    {"slave_down", SLAVE_DOWN_EVENT},
-    {"slave_up", SLAVE_UP_EVENT},
-    {"server_down", SERVER_DOWN_EVENT},
-    {"server_up", SERVER_UP_EVENT},
-    {"synced_down", SYNCED_DOWN_EVENT},
-    {"synced_up", SYNCED_UP_EVENT},
-    {"donor_down", DONOR_DOWN_EVENT},
-    {"donor_up", DONOR_UP_EVENT},
-    {"ndb_down", NDB_DOWN_EVENT},
-    {"ndb_up", NDB_UP_EVENT},
-    {"lost_master", LOST_MASTER_EVENT},
-    {"lost_slave", LOST_SLAVE_EVENT},
-    {"lost_synced", LOST_SYNCED_EVENT},
-    {"lost_donor", LOST_DONOR_EVENT},
-    {"lost_ndb", LOST_NDB_EVENT},
-    {"new_master", NEW_MASTER_EVENT},
-    {"new_slave", NEW_SLAVE_EVENT},
-    {"new_synced", NEW_SYNCED_EVENT},
-    {"new_donor", NEW_DONOR_EVENT},
-    {"new_ndb", NEW_NDB_EVENT},
-    {"all", ALL_MONITOR_EVENTS},
-    {NULL}
-};
-
-/** Default value for the `events` parameter */
-static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,slave_down,"
-                                                      "slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,"
-                                                      "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
-                                                      "new_master,new_slave,new_synced,new_donor,new_ndb";
 
 /**
  * Monitor configuration parameters names

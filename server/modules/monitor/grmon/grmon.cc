@@ -150,19 +150,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             NULL, /* Thread init. */
             NULL, /* Thread finish. */
             {
-                {
-                    "script",
-                    MXS_MODULE_PARAM_PATH,
-                    NULL,
-                    MXS_MODULE_OPT_PATH_X_OK
-                },
-                {
-                    "events",
-                    MXS_MODULE_PARAM_ENUM,
-                    MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                    MXS_MODULE_OPT_NONE,
-                    mxs_monitor_event_enum_values
-                },
                 {MXS_END_MODULE_PARAMS}
             }
         };

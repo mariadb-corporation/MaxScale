@@ -171,8 +171,6 @@ private:
                                            *   maintenance. */
 
     // Other settings
-    std::string m_script;                /**< Script to call when state changes occur on servers */
-    uint64_t m_events;                   /**< enabled events */
     bool m_log_no_master;                /**< Should it be logged that there is no master */
     bool m_warn_no_valid_in_cycle;       /**< Log a warning when a replication cycle has no valid master */
     bool m_warn_no_valid_outside_cycle;  /**< Log a warning when a replication topology has no valid master

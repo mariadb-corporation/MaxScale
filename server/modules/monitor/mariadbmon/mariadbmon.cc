@@ -209,8 +209,6 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     m_ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     m_detect_standalone_master = config_get_bool(params, CN_DETECT_STANDALONE_MASTER);
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
-    m_script = config_get_string(params, "script");
-    m_events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     m_failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     m_switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
     m_auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
@@ -324,26 +322,6 @@ json_t* MariaDBMonitor::diagnostics_to_json() const
 {
     json_t* rval = json_object();
     json_object_set_new(rval, "monitor_id", json_integer(m_id));
-    json_object_set_new(rval, "detect_stale_master", json_boolean(m_detect_stale_master));
-    json_object_set_new(rval, "detect_stale_slave", json_boolean(m_detect_stale_slave));
-    json_object_set_new(rval, "detect_replication_lag", json_boolean(m_detect_replication_lag));
-    json_object_set_new(rval, CN_DETECT_STANDALONE_MASTER, json_boolean(m_detect_standalone_master));
-    json_object_set_new(rval, CN_FAILCOUNT, json_integer(m_failcount));
-    json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(m_auto_failover));
-    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(m_failover_timeout));
-    json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(m_switchover_timeout));
-    json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(m_auto_rejoin));
-    json_object_set_new(rval, CN_ENFORCE_READONLY, json_boolean(m_enforce_read_only_slaves));
-
-    if (!m_script.empty())
-    {
-        json_object_set_new(rval, "script", json_string(m_script.c_str()));
-    }
-    if (m_excluded_servers.size() > 0)
-    {
-        string list = monitored_servers_to_string(m_excluded_servers);
-        json_object_set_new(rval, CN_NO_PROMOTE_SERVERS, json_string(list.c_str()));
-    }
 
     if (!m_servers.empty())
     {
@@ -1283,19 +1261,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED},
             {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
             {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, "90"},
             {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, "90"},

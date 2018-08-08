@@ -114,9 +114,6 @@ public:
 protected:
     MonitorInstance(MXS_MONITOR* pMonitor);
 
-    const std::string& script() const { return m_script; }
-    uint64_t           events() const { return m_events; }
-
     /**
      * @brief Should the monitor shut down?
      *
@@ -215,8 +212,6 @@ private:
     int32_t     m_state;       /**< The current state of the monitor. */
     int32_t     m_shutdown;    /**< Non-zero if the monitor should shut down. */
     bool        m_checked;     /**< Whether server access has been checked. */
-    std::string m_script;      /**< Launchable script. */
-    uint64_t    m_events;      /**< Enabled monitor events. */
     Semaphore   m_semaphore;   /**< Semaphore for synchronizing with monitor thread. */
     int64_t     m_loop_called; /**< When was the loop called the last time. */
 
