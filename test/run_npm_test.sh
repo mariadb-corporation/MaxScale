@@ -54,7 +54,7 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
       -DDEFAULT_ADMIN_USER=`whoami` || exit 1
 
-make install || exit 1
+make -j $(grep -c processor /proc/cpuinfo) install || exit 1
 
 # Create required directories (we could run the postinst script but it's a bit too invasive)
 mkdir -p $maxscaledir/lib64/maxscale
