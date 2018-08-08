@@ -3423,12 +3423,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
                 error_count++;
             }
         }
-
-        if (error_count != 0)
-        {
-            service_free(service);
-            service = nullptr;
-        }
     }
     else
     {
