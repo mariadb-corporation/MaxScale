@@ -45,6 +45,8 @@
 typedef std::set<std::string> StringSet;
 typedef std::vector<std::string> StringVector;
 
+using std::tie;
+
 static mxs::SpinLock crt_lock;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
@@ -103,19 +105,22 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
  * @param module_type Type of the module (MODULE_ROUTER, MODULE_PROTOCOL etc.)
  * @param object_type Type of the object (server, service, listener etc.)
  *
- * @return List of default parameters or NULL on error
+ * @return Whether loading succeeded and the list of default parameters
  */
-static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_type,
-                                           const char* object_type)
+static std::pair<bool, MXS_CONFIG_PARAMETER*> load_defaults(const char* name,
+                                                            const char* module_type,
+                                                            const char* object_type)
 {
-    MXS_CONFIG_PARAMETER* rval = NULL;
+    bool rval;
+    MXS_CONFIG_PARAMETER* params = NULL;
     CONFIG_CONTEXT ctx = {(char*)""};
 
     if (const MXS_MODULE* mod = get_module(name, module_type))
     {
         config_add_defaults(&ctx, get_type_parameters(object_type));
         config_add_defaults(&ctx, mod->parameters);
-        rval = ctx.parameters;
+        params = ctx.parameters;
+        rval = true;
     }
     else
     {
@@ -123,7 +128,7 @@ static MXS_CONFIG_PARAMETER* load_defaults(const char* name, const char* module_
                   "more details.", name);
     }
 
-    return rval;
+    return {rval, params};
 }
 
 bool runtime_link_server(SERVER *server, const char *target)
@@ -213,9 +218,10 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         }
 
         CONFIG_CONTEXT ctx{(char*)""};
-        ctx.parameters = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+        bool ok;
+        tie(ok, ctx.parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
 
-        if (ctx.parameters)
+        if (ok)
         {
             if (address)
             {
@@ -942,14 +948,21 @@ bool runtime_create_monitor(const char *name, const char *module)
         {
             MXS_DEBUG("Repurposed monitor '%s'", name);
         }
-        else if (MXS_CONFIG_PARAMETER* params = load_defaults(module, MODULE_MONITOR, CN_MONITOR))
+        else
         {
-            if ((monitor = monitor_create(name, module, params)) == NULL)
-            {
-                config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
-            }
+            MXS_CONFIG_PARAMETER* params;
+            bool ok;
+            tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
 
-            config_parameter_free(params);
+            if (ok)
+            {
+                if ((monitor = monitor_create(name, module, params)) == NULL)
+                {
+                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+                }
+
+                config_parameter_free(params);
+            }
         }
 
         if (monitor)
@@ -982,9 +995,10 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
     {
         SFilterDef filter;
         CONFIG_CONTEXT ctx{(char*)""};
-        ctx.parameters = load_defaults(module, MODULE_FILTER, CN_FILTER);
+        bool ok;
+        tie(ok, ctx.parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
-        if (ctx.parameters)
+        if (ok)
         {
             for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
             {
@@ -1049,9 +1063,10 @@ static bool runtime_create_service(const char *name, const char *router, MXS_CON
     {
         Service* service = NULL;
         CONFIG_CONTEXT ctx{(char*)""};
-        ctx.parameters = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
+        bool ok;
+        tie(ok, ctx.parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
-        if (ctx.parameters)
+        if (ok)
         {
             for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
             {
