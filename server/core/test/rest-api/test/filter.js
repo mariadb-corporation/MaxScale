@@ -37,7 +37,7 @@ describe("Filter", function() {
     it("update filter", function() {
         filter.data.attributes.parameters.separator = "|"
         return request.patch(base_url + "/filters/" + filter.data.id, { json: filter})
-            .should.be.fulfilled
+            .should.be.rejected
     });
 
     it("destroy filter", function() {
@@ -63,18 +63,15 @@ describe("Filter Relationships", function() {
     it("request filter", function() {
         return request.get(base_url + "/filters/" + rel_filter.data.id, { json: true })
             .then((res) => {
-                res.data.relationships.services.data.should.have.lengthOf(1)
+                // The service-filter relationships can't be modified from filters
+                res.data.relationships.services.data.should.have.lengthOf(0)
             })
     });
 
     it("add relationships with `relationships` endpoint", function() {
         return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/monitors",
                              { json: { data: [ { id: "Read-Connection-Router", type: "services" }]}})
-            .then(() => request.get(base_url + "/filters/" + rel_filter.data.id, {json: true}))
-            .then((res) => {
-                res.data.relationships.monitors.data.should.have.lengthOf(2)
-                    .that.has.deep.include({ id: "Read-Connection-Router", type: "services" })
-            })
+            .should.be.rejected
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
@@ -86,7 +83,7 @@ describe("Filter Relationships", function() {
     it("remove relationships", function() {
         rel_filter.data.relationships["services"] = null
         return request.patch(base_url + "/filters/" + rel_filter.data.id, {json: rel_filter})
-            .should.be.fulfilled
+            .should.be.rejected
     });
 
     it("destroy filter", function() {
