@@ -3,8 +3,10 @@
   {
         "hostname" : "maxscale",
         "box" : "$box",
+        "memory_size" : "4096",
         "product" : {
-                "name": "maxscale"
+                "name" : "maxscale",
+                "version" : "${old_target}"
         }
 
   }

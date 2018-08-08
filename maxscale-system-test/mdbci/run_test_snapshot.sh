@@ -9,7 +9,7 @@ function checkExitStatus {
         rm $lockFilePath
         echo "Snapshot lock file was deleted due to an error"
         exit 1
-    fi     
+    fi
 }
 
 set -x
@@ -43,32 +43,26 @@ done
 touch ${snapshot_lock_file}
 echo $JOB_NAME-$BUILD_NUMBER >> ${snapshot_lock_file}
 
-export repo_dir=$dir/repo.d/
-
 ${mdbci_dir}/mdbci snapshot revert --path-to-nodes $name --snapshot-name $snapshot_name
 
 if [ $? != 0 ]; then
-	${script_dir}/destroy.sh
+	${mdbci_dir}/mdbci destroy $name
 	${MDBCI_VM_PATH}/scripts/clean_vms.sh $name
 
 	${script_dir}/create_config.sh
-       checkExitStatus $? "Error creating configuration" $snapshot_lock_file
-       . ${script_dir}/configure_backend.sh
-    
+	checkExitStatus $? "Error creating configuration" $snapshot_lock_file
+
 	echo "Creating snapshot from new config"
-	$HOME/mdbci/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
+	${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
 fi
 
 . ${script_dir}/set_env.sh "$name"
 
-${mdbci_dir}/repository-config/maxscale-ci.sh $target repo.d
-
-
 ${mdbci_dir}/mdbci sudo --command 'yum remove maxscale -y' $name/maxscale
 ${mdbci_dir}/mdbci sudo --command 'yum clean all' $name/maxscale
 
-${mdbci_dir}/mdbci setup_repo --product maxscale $name/maxscale --repo-dir $repo_dir 
-${mdbci_dir}/mdbci install_product --product maxscale $name/maxscale --repo-dir $repo_dir
+${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/maxscale
+${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
 
@@ -80,10 +74,11 @@ make
 ./check_backend --restart-galera
 
 checkExitStatus $? "Failed to check backends" $snapshot_lock_file
-
+ulimit -c unlimited
 ctest $test_set -VV -D Nightly
-
+cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
+
 
 # Removing snapshot_lock
 rm ${snapshot_lock_file}

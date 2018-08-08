@@ -8,22 +8,18 @@ export script_dir="$(dirname $(readlink -f $0))"
 # load all needed variables
 . ${script_dir}/set_build_variables.sh
 
-export maxadmin_command=${maxadmin_command:-"maxadmin -pmariadb 'show services'"}
+export maxadmin_command=${maxadmin_command:-"sudo maxadmin show services"}
 
-export old_target=${old_target:-"1.4.3"}
+export old_target=${old_target:-"2.1.9"}
 export old_target=`echo $old_target | sed "s/?//g"`
 
 provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 name=$box-${JOB_NAME}-${BUILD_NUMBER}_upgradetest
 name=`echo $name | sed "s|/|-|g"`
 
-
-cp ${script_dir}/install.json.template ${MDBCI_VM_PATH}/$name.json
-
-  eval "cat <<EOF
+eval "cat <<EOF
 $(<${script_dir}/templates/install.json.template)
 " 2> /dev/null > $MDBCI_VM_PATH/${name}.json
-
 
 while [ -f ~/vagrant_lock ]
 do
@@ -34,25 +30,18 @@ echo $JOB_NAME-$BUILD_NUMBER >> ~/vagrant_lock
 
 # destroying existing box
 if [ -d "install_$box" ]; then
-	cd $MDBCI_VM_PATH/$name
-	vagrant destroy -f
-	cd $dir
+        ${mdbci_dir}/mdbci destroy $name
 fi
 
-${mdbci_dir}/repository-config/generate_all.sh repo.d
-${mdbci_dir}/repository-config/maxscale-release.sh $old_target repo.d
-
 # starting VM for build
-${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json --repo-dir $dir/repo.d generate $name 
+${mdbci_dir}/mdbci --override --template $MDBCI_VM_PATH/$name.json generate $name
 ${mdbci_dir}/mdbci up $name --attempts=1
 if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
 		echo "Error starting VM"
-		cd ${MDBCI_VM_PATH}/$name
 		if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-			vagrant destroy -f
+                        ${mdbci_dir}/mdbci destroy $name
 		fi
-		cd $dir
 		rm ~/vagrant_lock
 		exit 1
 	fi
@@ -69,12 +58,8 @@ export sshopt="$scpopt $sshuser@$IP"
 
 old_version=`ssh $sshopt "maxscale --version" `
 
-rm -rf repo.d
-${mdbci_dir}/repository-config/generate_all.sh repo.d
-${mdbci_dir}/repository-config/maxscale-ci.sh $target repo.d
-
-${mdbci_dir}/mdbci setup_repo --product maxscale --repo-dir $dir/repo.d $name/maxscale
-${mdbci_dir}/mdbci install_product --product maxscale $name/maxscale
+${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/maxscale
+${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 res=$?
 
@@ -92,7 +77,7 @@ scp $scpopt ${script_dir}/cnf/$cnf_file $sshuser@$IP:~/
 
 . ${script_dir}/configure_log_dir.sh
 
-${mdbci_dir}/mdbci ssh --command 'service --help' $name/maxscale
+${mdbci_dir}/mdbci ssh --command 'sudo service --help' $name/maxscale
 if [ $? == 0 ] ; then
 	maxscale_start_cmd="sudo service maxscale start"
 else
@@ -100,19 +85,25 @@ else
 	maxscale_start_cmd="sudo ./maxscale_start.sh 2> /dev/null &"
 fi
 
-
-
 ssh $sshopt "sudo cp $cnf_file /etc/maxscale.cnf"
 ssh $sshopt "$maxscale_start_cmd" &
 pid_to_kill=$!
 
-sleep 10
+for  i in {1..10}
+do
+    sleep 5
+    ssh $sshopt $maxadmin_command
+    maxadm_exit=$?
+    if [ $maxadm_exit == 0 ] ; then
+        break
+    fi
+done
 
-ssh $sshopt $maxadmin_command
-if [ $? != 0 ] ; then
+if [ $maxadm_exit != 0 ] ; then
 	echo "Maxadmin executing error"
 	res=1
 fi
+
 maxadmin_out=`ssh $sshopt $maxadmin_command`
 echo $maxadmin_out | grep "CLI"
 if [ $? != 0 ] ; then
@@ -130,9 +121,7 @@ scp $scpopt $sshuser@$IP:/var/log/maxscale/* $logs_publish_dir
 chmod a+r $logs_publish_dir/*
 
 if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-	cd $MDBCI_VM_PATH/$name
-	vagrant destroy -f
-	cd $dir
+        ${mdbci_dir}/mdbci destroy $name
 fi
 kill $pid_to_kill
 exit $res
