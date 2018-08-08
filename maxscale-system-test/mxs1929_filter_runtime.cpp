@@ -3,7 +3,11 @@
  */
 
 #include "testconnections.h"
+
 #include <iostream>
+#include <thread>
+#include <atomic>
+#include <chrono>
 
 using namespace std;
 
@@ -74,8 +78,58 @@ void visibility(TestConnections& test)
     test.check_maxctrl("alter service-filters svc1 test1");
     test.assert(in_list_filters("svc1"), "Service should use the filter");
 
+    test.check_maxctrl("alter service-filters svc1");
+    test.assert(!in_list_filters("svc1"), "Service should not use the filter");
+
     test.check_maxctrl("destroy filter test1");
     test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
+}
+
+void load(TestConnections& test)
+{
+    std::vector<std::thread> threads;
+    std::atomic<bool> running{true};
+    using std::chrono::milliseconds;
+
+    auto func = [&]()
+    {
+        while (running)
+        {
+            Connection c = test.maxscales->rwsplit();
+            c.connect();
+
+            while (running)
+            {
+                test.assert(c.query("select 1"), "Query should succeed: %s", c.error());
+            }
+        }
+    };
+
+    for (int i = 0; i < 10; i++)
+    {
+        threads.emplace_back(func);
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+        test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
+        test.check_maxctrl("alter service-filters svc1 test1");
+        test.check_maxctrl("alter service-filters svc1");
+        test.check_maxctrl("destroy filter test1");
+        std::cout << ".";
+        std::cout.flush();
+    }
+
+    std::cout << std::endl;
+    running = false;
+
+    for (auto& a : threads)
+    {
+        test.set_timeout(60);
+        a.join();
+    }
+
+    test.stop_timeout();
 }
 
 int main(int argc, char** argv)
@@ -90,6 +144,9 @@ int main(int argc, char** argv)
 
     test.tprintf("Visibility test");
     visibility(test);
+
+    test.tprintf("Load test");
+    load(test);
 
     test.tprintf("Destroying servers, monitors and services");
     destroy_all(test);

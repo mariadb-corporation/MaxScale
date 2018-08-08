@@ -1,6 +1,5 @@
 [maxscale]
 threads=###threads###
-log_info=1
 
 [CLI]
 type=service
