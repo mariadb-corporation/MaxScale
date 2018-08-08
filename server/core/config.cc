@@ -1542,6 +1542,16 @@ process_config_context(CONFIG_CONTEXT *context)
         {
             error_count += create_new_monitor(obj, monitored_servers);
         }
+
+        if (error_count)
+        {
+            /**
+             * We need to stop creating objects after the first error since
+             * any objects that depend on the object that failed would fail in
+             * a very confusing manner.
+             */
+            break;
+        }
     }
 
     if (error_count)
