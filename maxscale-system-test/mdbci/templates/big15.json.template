@@ -222,7 +222,8 @@
         "hostname" : "maxscale",
         "box" : "centos_7_aws_large",
         "product" : {
-                "name": "maxscale"
+                "name" : "maxscale_ci",
+                "version" : "${target}"
         }
 
   }
