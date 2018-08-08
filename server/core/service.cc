@@ -322,6 +322,8 @@ static inline void close_port(SERV_LISTENER *port)
         dcb_close(port->listener);
         port->listener = NULL;
     }
+
+    listener_set_active(port, false);
 }
 
 /**
@@ -555,7 +557,6 @@ bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
     if (serviceStartPort(service, port) == 0)
     {
         /** Failed to start the listener */
-        service_remove_listener(service, port->name);
         rval = false;
     }
 
