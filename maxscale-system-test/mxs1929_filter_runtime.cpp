@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <functional>
 
 using namespace std;
 
@@ -85,13 +86,41 @@ void visibility(TestConnections& test)
     test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
 }
 
-void load(TestConnections& test)
+void do_load_test(TestConnections& test, std::function<void ()> tester, std::function<void (std::atomic<bool>&)> worker)
 {
     std::vector<std::thread> threads;
     std::atomic<bool> running{true};
     using std::chrono::milliseconds;
 
-    auto func = [&]()
+    for (int i = 0; i < 10; i++)
+    {
+        threads.emplace_back(worker, std::ref(running));
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+        tester();
+    }
+
+    running = false;
+
+    for (auto& a : threads)
+    {
+        a.join();
+    }
+}
+
+void load(TestConnections& test)
+{
+    auto tester = [&]()
+    {
+        test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
+        test.check_maxctrl("alter service-filters svc1 test1");
+        test.check_maxctrl("alter service-filters svc1");
+        test.check_maxctrl("destroy filter test1");
+    };
+
+    auto worker = [&](std::atomic<bool>& running)
     {
         while (running)
         {
@@ -105,31 +134,39 @@ void load(TestConnections& test)
         }
     };
 
-    for (int i = 0; i < 10; i++)
-    {
-        threads.emplace_back(func);
-    }
+    do_load_test(test, tester, worker);
+}
 
-    for (int i = 0; i < 10; i++)
+void filter_swap(TestConnections& test)
+{
+    test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
+    test.check_maxctrl("create filter test2 regexfilter \"match=SELECT 1\" \"replace=SELECT 3\"");
+
+    auto tester = [&]()
     {
-        test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
         test.check_maxctrl("alter service-filters svc1 test1");
-        test.check_maxctrl("alter service-filters svc1");
-        test.check_maxctrl("destroy filter test1");
-        std::cout << ".";
-        std::cout.flush();
-    }
+        test.check_maxctrl("alter service-filters svc1 test2");
+    };
 
-    std::cout << std::endl;
-    running = false;
-
-    for (auto& a : threads)
+    auto worker = [&](std::atomic<bool>& running)
     {
-        test.set_timeout(60);
-        a.join();
-    }
+        while (running)
+        {
+            Connection c = test.maxscales->rwsplit();
+            c.connect();
 
-    test.stop_timeout();
+            while (running)
+            {
+                test.assert(c.check("select 1", "1"), "Query should not return 1 as a result");
+            }
+        }
+    };
+
+    do_load_test(test, tester, worker);
+
+    test.check_maxctrl("alter service-filters svc1");
+    test.check_maxctrl("destroy filter test1");
+    test.check_maxctrl("destroy filter test2");
 }
 
 int main(int argc, char** argv)
@@ -137,18 +174,27 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.tprintf("Creating servers, monitors and services");
+    test.set_timeout(180);
     create_all(test);
 
     test.tprintf("Basic test");
+    test.set_timeout(180);
     basic(test);
 
     test.tprintf("Visibility test");
+    test.set_timeout(180);
     visibility(test);
 
     test.tprintf("Load test");
+    test.set_timeout(180);
     load(test);
 
+    test.tprintf("Filter swap test");
+    test.set_timeout(180);
+    filter_swap(test);
+
     test.tprintf("Destroying servers, monitors and services");
+    test.set_timeout(180);
     destroy_all(test);
 
     return test.global_result;
