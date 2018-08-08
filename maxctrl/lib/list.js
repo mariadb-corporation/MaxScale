@@ -158,6 +158,21 @@ exports.builder = function(yargs) {
                 ])
             })
         })
+        .command('threads', 'List threads', function(yargs) {
+            return yargs.epilog('List all worker threads.')
+                .usage('Usage: list threads')
+        }, function(argv) {
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'maxscale/threads', [
+                    {'Id': 'id'},
+                    {'Current FDs': 'attributes.stats.current_descriptors'},
+                    {'Total FDs': 'attributes.stats.total_descriptors'},
+                    {'Load (1s)': 'attributes.stats.load.last_second'},
+                    {'Load (1m)': 'attributes.stats.load.last_minute'},
+                    {'Load (1h)': 'attributes.stats.load.last_hour'}
+                ])
+            })
+        })
         .command('users', 'List created network users', function(yargs) {
             return yargs.epilog('List the users that can be used to connect to the MaxScale REST API.')
                 .usage('Usage: list users')
