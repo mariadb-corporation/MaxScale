@@ -32,7 +32,7 @@ void destroy_all(TestConnections& test)
 void basic(TestConnections& test)
 {
     test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
-    test.check_maxctrl("alter service filters svc1 test1");
+    test.check_maxctrl("alter service-filters svc1 test1");
 
     Connection c = test.maxscales->rwsplit();
     c.connect();
@@ -42,7 +42,7 @@ void basic(TestConnections& test)
     auto res = test.maxctrl("destroy filter test1");
     test.assert(res.first != 0, "Destruction should fail when filter is in use");
 
-    test.check_maxctrl("alter service filters svc1");
+    test.check_maxctrl("alter service-filters svc1");
     test.check_maxctrl("destroy filter test1");
 
     test.assert(c.check("SELECT 1", "2"), "The filter should not yet be destroyed");
@@ -71,7 +71,7 @@ void visibility(TestConnections& test)
     test.assert(in_list_filters("test1"), "The filter should again be visible after recreation");
     test.assert(!in_list_filters("svc1"), "Filter should not be in use");
 
-    test.check_maxctrl("alter service filters svc1 test1");
+    test.check_maxctrl("alter service-filters svc1 test1");
     test.assert(in_list_filters("svc1"), "Service should use the filter");
 
     test.check_maxctrl("destroy filter test1");
