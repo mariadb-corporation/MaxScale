@@ -180,11 +180,7 @@ describe("Create/Destroy Commands", function() {
         return doCommand('create server test-server 127.0.0.1 3306')
             .then(() => verifyCommand('create service test-service readwritesplit user=maxuser password=maxpwd --servers test-server',
                                       'services/test-service'))
-            .then(() => request.get(host + 'services/test-service', {json: true}))
-            .then((res) => {
-                console.log(res)
-                return true
-            })
+            .should.be.fulfilled
     })
 
     it('create filter', function() {
