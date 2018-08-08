@@ -3,6 +3,7 @@ services:
     server1:
         image: mariadb:10.2
         network_mode: "host"
+        container_name: server1
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
         volumes:
@@ -11,6 +12,7 @@ services:
 
     server2:
         image: mariadb:10.2
+        container_name: server2
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
@@ -20,6 +22,7 @@ services:
 
     server3:
         image: mariadb:10.2
+        container_name: server3
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
@@ -29,6 +32,7 @@ services:
 
     server4:
         image: mariadb:10.2
+        container_name: server4
         network_mode: "host"
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
