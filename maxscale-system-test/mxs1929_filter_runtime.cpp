@@ -53,6 +53,31 @@ void basic(TestConnections& test)
     test.assert(c.check("SELECT 1", "1"), "The filter should be destroyed");
 }
 
+void visibility(TestConnections& test)
+{
+    auto in_list_filters = [&](std::string value)
+    {
+        auto res = test.maxctrl("list filters --tsv");
+        return res.second.find(value) != string::npos;
+    };
+
+    test.check_maxctrl("create filter test1 hintfilter");
+    test.assert(in_list_filters("test1"), "The filter should be visible after creation");
+
+    test.check_maxctrl("destroy filter test1");
+    test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
+
+    test.check_maxctrl("create filter test1 hintfilter");
+    test.assert(in_list_filters("test1"), "The filter should again be visible after recreation");
+    test.assert(!in_list_filters("svc1"), "Filter should not be in use");
+
+    test.check_maxctrl("alter service filters svc1 test1");
+    test.assert(in_list_filters("svc1"), "Service should use the filter");
+
+    test.check_maxctrl("destroy filter test1");
+    test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -62,6 +87,9 @@ int main(int argc, char** argv)
 
     test.tprintf("Basic test");
     basic(test);
+
+    test.tprintf("Visibility test");
+    visibility(test);
 
     test.tprintf("Destroying servers, monitors and services");
     destroy_all(test);
