@@ -2123,17 +2123,17 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE_SIZE) == 0)
     {
-        static QC_CACHE_PROPERTIES cache_properties = { INT64_MAX };
+        decltype(gateway.qc_cache_properties.max_size) max_size = get_suffixed_size(value);
 
-        cache_properties.max_size = get_suffixed_size(value);
-
-        if (cache_properties.max_size < 0)
+        if (max_size >= 0)
         {
-            // Someone got carried away; we'll just silently adjust the value.
-            cache_properties.max_size = INT64_MAX;
+            gateway.qc_cache_properties.max_size = max_size;
         }
-
-        gateway.qc_cache_properties = &cache_properties;
+        else
+        {
+            MXS_ERROR("Invalid value for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
+            return 0;
+        }
     }
     else if (strcmp(name, "sql_mode") == 0)
     {
@@ -4199,6 +4199,9 @@ json_t* config_maxscale_to_json(const char* host)
     {
         json_object_set_new(param, CN_QUERY_CLASSIFIER_ARGS, json_string(cnf->qc_args));
     }
+
+    json_object_set_new(param, CN_QUERY_CLASSIFIER_CACHE_SIZE,
+                        json_integer(cnf->qc_cache_properties.max_size));
 
     json_t* attr = json_object();
     time_t started = maxscale_started();

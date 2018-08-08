@@ -16,6 +16,7 @@
 #include "internal/config_runtime.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <functional>
 #include <iterator>
 #include <set>
@@ -770,6 +771,25 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         else
         {
             config_runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
+        }
+    }
+    else if (key == CN_QUERY_CLASSIFIER_CACHE_SIZE)
+    {
+        char* end;
+        long max_size = strtol(value, &end, 10);
+
+        if ((max_size >= 0) && (*end == 0))
+        {
+            MXS_NOTICE("Updated '%s' from %" PRIi64 " to %ld",
+                       CN_QUERY_CLASSIFIER_CACHE_SIZE, cnf.qc_cache_properties.max_size, max_size);
+
+            cnf.qc_cache_properties.max_size = max_size;
+            qc_set_cache_properties(&cnf.qc_cache_properties);
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid size value for '%s': %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
         }
     }
     else
@@ -2463,7 +2483,8 @@ bool validate_maxscale_json(json_t* json)
                runtime_is_count_or_null(param, CN_AUTH_READ_TIMEOUT) &&
                runtime_is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
                runtime_is_bool_or_null(param, CN_ADMIN_AUTH) &&
-               runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES);
+               runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES) &&
+               runtime_is_count_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE);
     }
 
     return rval;

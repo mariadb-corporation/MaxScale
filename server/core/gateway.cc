@@ -1984,7 +1984,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (!qc_setup(cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
+    if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
         const char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);

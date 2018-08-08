@@ -150,6 +150,7 @@ extern const char CN_PORT[];
 extern const char CN_PROTOCOL[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_QUERY_CLASSIFIER_CACHE_SIZE[];
 extern const char CN_QUERY_RETRIES[];
 extern const char CN_QUERY_RETRY_TIMEOUT[];
 extern const char CN_RELATIONSHIPS[];
@@ -259,7 +260,7 @@ typedef struct
                                                         * promoted from a passive to an active */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
-    QC_CACHE_PROPERTIES* qc_cache_properties;          /**< The query classifier cache properties. */
+    QC_CACHE_PROPERTIES qc_cache_properties;           /**< The query classifier cache properties. */
     qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
