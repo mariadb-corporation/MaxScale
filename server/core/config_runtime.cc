@@ -1014,7 +1014,7 @@ bool runtime_destroy_filter(const SFilterDef& filter)
     else
     {
         config_runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
-                             "first", filter->name);
+                             "first", filter->name.c_str());
     }
 
     return rval;
@@ -1333,7 +1333,7 @@ static bool is_valid_resource_body(json_t* json)
 
             if (j && !json_is_object(j))
             {
-                runtime_error("Relationship '%s' is not an object",*it);
+                config_runtime_error("Relationship '%s' is not an object", *it);
                 rval = false;
             }
         }
@@ -1973,7 +1973,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     }
     else
     {
-        runtime_error("Invalid object relations for '%s'", service->name);
+        config_runtime_error("Invalid object relations for '%s'", service->name);
     }
 
     return rval;
