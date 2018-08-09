@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #
-# This script is run after each test block. It kills the two MaxScale processes
-# and cleans up the directories that contain generated files.
+# This script is run after each test block. It kills the two MaxScale processes.
 #
 
 maxscaledir=$MAXSCALE_DIR
@@ -18,12 +17,4 @@ done
 # If it wasn't dead before, now it is
 pkill -9 '^maxscale$'
 
-rm -r $maxscaledir/lib/maxscale
-rm -r $maxscaledir/cache/maxscale
-rm -r $maxscaledir/run/maxscale
-test -f /tmp/maxadmin.sock && rm /tmp/maxadmin.sock
-test -f /tmp/maxadmin2.sock && rm /tmp/maxadmin2.sock
-
-mkdir -m 0755 -p $maxscaledir/lib/maxscale
-mkdir -m 0755 -p $maxscaledir/cache/maxscale
-mkdir -m 0755 -p $maxscaledir/run/maxscale
+exit 0

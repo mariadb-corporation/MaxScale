@@ -224,14 +224,12 @@ describe('Cluster Sync', function() {
                 .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts ' + primary_host))
             // Sync after creation should succeed
                 .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
-            // Destroy the created server, should succeed
-                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
-                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+            // Destroy the created listener, should succeed
+                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2 --hosts ' + primary_host))
+                .then(() => doCommand('cluster sync ' + primary_host + ' --hosts ' + secondary_host))
         } else {
             // MaxScales are on different machines
-
             return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
-            // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
                 .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
                 .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
                 .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
