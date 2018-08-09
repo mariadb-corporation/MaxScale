@@ -771,7 +771,7 @@ public:
      *
      * @return True if function was executed on the worker
      */
-    bool execute(GenericFunction func, enum execute_mode_t mode);
+    bool call(GenericFunction func, enum execute_mode_t mode);
 
     /**
      * Post a message to a worker.

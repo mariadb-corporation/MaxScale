@@ -516,7 +516,7 @@ bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
     return rval;
 }
 
-bool Worker::execute(GenericFunction func, execute_mode_t mode)
+bool Worker::call(GenericFunction func, execute_mode_t mode)
 {
     Semaphore sem;
     return post(func, &sem, mode) && sem.wait();

@@ -263,7 +263,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
         diag_str = diagnostics_to_string();
     };
 
-    if (!mutable_ptr->execute(func, Worker::EXECUTE_AUTO))
+    if (!mutable_ptr->call(func, Worker::EXECUTE_AUTO))
     {
         diag_str = DIAG_ERROR;
     }
@@ -310,7 +310,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
         rval = diagnostics_to_json();
     };
 
-    if (!mutable_ptr->execute(func, Worker::EXECUTE_AUTO))
+    if (!mutable_ptr->call(func, Worker::EXECUTE_AUTO))
     {
         rval = mxs_json_error_append(rval, "%s", DIAG_ERROR);
     }
