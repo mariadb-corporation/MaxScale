@@ -71,15 +71,6 @@ exports.builder = function(yargs) {
                             .then(() => filterResource(res, fields))
                             .then((res) => rawCollectionAsTable(res, fields))
                     })
-
-                return getRawCollection(host, 'servers', fields)
-                    .then((res) => {
-                        res.forEach((i) => {
-                            // The server name will be first
-                            //console.log(i[0])
-                        })
-                        return rawCollectionAsTable(res, fields);
-                    })
             })
         })
         .command('services', 'List services', function(yargs) {

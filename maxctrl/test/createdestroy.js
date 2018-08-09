@@ -198,6 +198,31 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
+    it('destroy service with server relationships', function() {
+        return doCommand('destroy service test-service')
+            .should.be.rejected
+            .then(() => doCommand('unlink service test-service test-server'))
+            .then(() => doCommand('destroy service test-service'))
+            .should.be.fulfilled
+    })
+
+    it('create service with filter relationship', function() {
+        return doCommand('create filter test-filter-1 qlafilter filebase=/tmp/qla')
+            .then(() => verifyCommand('create service test-service-2 readwritesplit user=maxuser password=maxpwd --filters test-filter-1',
+                                      'services/test-service-2'))
+            .then((res) => {
+                res.data.relationships.filters.data.length.should.equal(1)
+            })
+    })
+
+    it('destroy service with filter relationships', function() {
+        return doCommand('destroy service test-service-2')
+            .should.be.rejected
+            .then(() => doCommand('alter service-filters test-service-2'))
+            .then(() => doCommand('destroy service test-service-2'))
+            .should.be.fulfilled
+    })
+
     it('create filter with bad parameters', function() {
         return doCommand('create filter test-filter qlafilter filebase-not-required')
             .should.be.rejected

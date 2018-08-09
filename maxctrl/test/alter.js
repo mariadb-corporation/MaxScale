@@ -44,6 +44,17 @@ describe("Alter Commands", function() {
             })
     })
 
+    it('alter service filters', function() {
+        return verifyCommand('alter service-filters Read-Connection-Router', 'services/Read-Connection-Router')
+            .then(function(res) {
+                res.data.relationships.should.not.have.keys("filters")
+            })
+            .then(() => verifyCommand('alter service-filters Read-Connection-Router QLA', 'services/Read-Connection-Router'))
+            .then(function(res) {
+                res.data.relationships.filters.data.length.should.equal(1)
+            })
+    })
+
     it('will not alter non-existent service parameter', function() {
         return doCommand('alter service Read-Connection-Router turbocharge yes-please')
             .should.be.rejected

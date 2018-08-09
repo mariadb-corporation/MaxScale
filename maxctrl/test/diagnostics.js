@@ -18,6 +18,7 @@ var tests = [
     'show modules',
     'show maxscale',
     'show logging',
+    'show threads',
     'show server server1',
     'show service RW-Split-Router',
     'show monitor MariaDB-Monitor',
