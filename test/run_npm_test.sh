@@ -80,7 +80,7 @@ do
     printf "Waiting for $node to start... "
     for ((i=0; i<60; i++))
     do
-        docker exec -ti $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
+        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
         sleep 1
     done
     echo "Done!"
