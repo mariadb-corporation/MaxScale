@@ -224,6 +224,119 @@ GET /v1/services
 }
 ```
 
+### Create a service
+
+```
+POST /v1/services
+```
+
+Create a new service by defining the resource. The posted object must define at
+least the following fields.
+
+* `data.id`
+  * Name of the service
+
+* `data.type`
+  * Type of the object, must be `services`
+
+* `data.atttributes.router`
+  * The router module to use
+
+* `data.atttributes.parameters.user`
+  * The [`user`](../Getting-Started/Configuration-Guide.md#password) to use
+
+* `data.atttributes.parameters.password`
+  * The [`password`](../Getting-Started/Configuration-Guide.md#password) to use
+
+The `data.attributes.parameters` object is used to define router and service
+parameters. All configuration parameters that can be defined in the
+configuration file can also be added to the parameters object. The exceptions to
+this are the `type`, `router`, `servers` and `filters` parameters which must not
+be defined.
+
+As with other REST API resources, the `data.relationships` field defines the
+relationships of the service to other resources. Services can have two types of
+relationships: `servers` and `filters` relationships.
+
+If the request body defines a valid `relationships` object, the service is
+linked to those resources. For servers, this is equivalent to adding the list of
+server names into the
+[`servers`](../Getting-Started/Configuration-Guide.md#servers) parameter. For
+filters, this is equivalent to adding the filters in the
+`data.relationships.filters.data` array to the
+[`filters`](../Getting-Started/Configuration-Guide.md#filters) parameter in the
+order they appear.
+
+The following example defines a new service with both a server and a filter
+relationship.
+
+```javascript
+{
+    "data": {
+        "id": "my-service",
+        "type": "services",
+        "attributes": {
+            "router": "readwritesplit",
+            "parameters": {
+                "user": "maxuser",
+                "password": "maxpwd"
+            }
+        },
+        "relationships": {
+            "filters": {
+                "data": [
+                    {
+                        "id": "QLA",
+                        "type": "filters"
+                    }
+                ]
+            },
+            "servers": {
+                "data": [
+                    {
+                        "id": "server1",
+                        "type": "servers"
+                    }
+                ]
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+Service is created:
+
+`Status: 204 No Content`
+
+### Destroy a service
+
+```
+DELETE /v1/services/:service
+```
+
+In the URI , the _:service_ must map to a service that is destroyed.
+
+A service can only be destroyed if the service uses no servers or filters and
+all the listeners pointing to the service have been destroyed. This means that
+the `data.relationships` must be an empty object and `data.attributes.listeners`
+must be an empty array in order for the service to qualify for destruction.
+
+Once a service is destroyed, any listeners associated with it will be freed
+after which the ports can be reused by other listeners.
+
+If there are open client connections that use the service when it is destroyed,
+they are allowed to gracefully close before the service is destroyed. This means
+that the destruction of a service can be acknowledged via the REST API before
+the destruction process has fully completed.
+
+#### Response
+
+Service is destroyed:
+
+`Status: 204 No Content`
+
 ### Get service listeners
 
 Get the listeners of a service. The _:name_ in the URI must be a valid service
@@ -368,6 +481,13 @@ defined.
 - [ssl_version](../Getting-Started/Configuration-Guide.md#user-content-ssl_version-1)
 - [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#user-content-ssl_cert_verify_depth-1)
 
+
+#### Response
+
+Listener is created:
+
+`Status: 204 No Content`
+
 ### Destroy a listener
 
 ```
@@ -396,23 +516,14 @@ valid JSON Patch document which is applied to the resource.
 PATCH /v1/services/:name
 ```
 
-The following standard service parameters can be modified.
+All standard service parameters can be modified. Refer to the
+[service](../Getting-Started/Configuration-Guide.md#service) documentation on
+the details of these parameters.
 
-- [user](../Getting-Started/Configuration-Guide.md#user)
-- [password](../Getting-Started/Configuration-Guide.md#password)
-- [enable_root_user](../Getting-Started/Configuration-Guide.md#enable_root_user)
-- [max_retry_interval](../Getting-Started/Configuration-Guide.md#max_retry_interval)
-- [max_connections](../Getting-Started/Configuration-Guide.md#max_connections)
-- [connection_timeout](../Getting-Started/Configuration-Guide.md#connection_timeout)
-- [auth_all_servers](../Getting-Started/Configuration-Guide.md#auth_all_servers)
-- [strip_db_esc](../Getting-Started/Configuration-Guide.md#strip_db_esc)
-- [localhost_match_wildcard_host](../Getting-Started/Configuration-Guide.md#localhost_match_wildcard_host)
-- [version_string](../Getting-Started/Configuration-Guide.md#version_string)
-- [weightby](../Getting-Started/Configuration-Guide.md#weightby)
-- [log_auth_warnings](../Getting-Started/Configuration-Guide.md#log_auth_warnings)
-- [retry_on_failure](../Getting-Started/Configuration-Guide.md#retry_on_failure)
-
-Refer to the documentation on these parameters for valid values.
+In addition to the standard service parameters, router parameters can be updated
+at runtime if the router module supports it. Refer to the individual router
+documentation for more details on whether the router supports it and which
+parameters can be updated at runtime.
 
 #### Response
 
@@ -424,6 +535,7 @@ Service is modified:
 
 ```
 PATCH /v1/services/:name/relationships/servers
+PATCH /v1/services/:name/relationships/filters
 ```
 
 The _:name_ in the URI must map to a service name with all whitespace replaced
@@ -432,7 +544,14 @@ with hyphens.
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define
 the _id_ and _type_ fields of the relationship. This object will replace the
-existing relationships of the service.
+existing relationships of this type for the service. Both `servers` and
+`filters` relationships can be modified.
+
+*Note:* The order of the values in the `filters` relationship will define the
+ order the filters are set up in. The order in which the filters appear in the
+ array will be the order in which the filters are applied to each query. Refer
+ to the [`filters`](../Getting-Started/Configuration-Guide.md#filters) parameter
+ for more details.
 
 The following is an example request and request body that defines a single
 server relationship for a service.
@@ -447,8 +566,9 @@ PATCH /v1/services/my-rw-service/relationships/servers
 }
 ```
 
-All relationships for a service can be deleted by sending an empty array as the
-_data_ field value. The following example removes all servers from a service.
+All relationships for a service can be deleted by sending an empty array or a
+`null` value as the _data_ field value. The following example removes all
+servers from a service.
 
 ```
 PATCH /v1/services/my-rw-service/relationships/servers
