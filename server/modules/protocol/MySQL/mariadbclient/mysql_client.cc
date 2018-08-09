@@ -14,7 +14,7 @@
 
 #define MXS_MODULE_NAME "mariadbclient"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <inttypes.h>
 #include <limits.h>

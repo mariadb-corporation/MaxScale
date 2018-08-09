@@ -32,7 +32,7 @@
 /* The log macros use this definition. */
 #define MXS_MODULE_NAME "RoundRobinRouter"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <vector>
 #include <iostream>

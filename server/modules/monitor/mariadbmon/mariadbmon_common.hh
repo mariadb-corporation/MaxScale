@@ -19,7 +19,7 @@
 
 #define MXS_MODULE_NAME "mariadbmon"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <string>
 #include <maxscale/json_api.h>

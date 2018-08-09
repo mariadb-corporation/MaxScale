@@ -13,7 +13,7 @@
 
 #define MXS_MODULE_NAME "throttlefilter"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 

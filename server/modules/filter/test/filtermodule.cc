@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include "maxscale/filtermodule.hh"
 #include "../../../core/internal/modules.h"
 

@@ -16,7 +16,7 @@
  * @file galeramon.hh - The Galera cluster monitor
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <unordered_map>
 

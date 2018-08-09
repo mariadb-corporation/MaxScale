@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <memory>
 #include <maxscale/query_classifier.h>
 #include "module.hh"

@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/poll_core.h>
 
 namespace maxscale

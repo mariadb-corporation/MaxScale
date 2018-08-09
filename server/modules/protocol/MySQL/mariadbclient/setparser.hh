@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <vector>
 #include <maxscale/customparser.hh>
 #include <maxscale/protocol/mysql.h>

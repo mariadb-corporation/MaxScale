@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <ctype.h>

@@ -13,7 +13,7 @@
  */
 
 #define MXS_MODULE_NAME "dbfwfilter"
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <time.h>
 #include <string>

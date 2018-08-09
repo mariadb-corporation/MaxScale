@@ -13,7 +13,7 @@
  */
 
 #include <string>
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 #include "binlogfiltersession.hh"
 

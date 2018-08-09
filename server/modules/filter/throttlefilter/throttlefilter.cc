@@ -6,7 +6,7 @@
 
 #define MXS_MODULE_NAME "throttlefilter"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
 #include <maxscale/jansson.hh>

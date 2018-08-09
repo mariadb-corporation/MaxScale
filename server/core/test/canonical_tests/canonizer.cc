@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <sys/types.h>
 #include <sys/stat.h>

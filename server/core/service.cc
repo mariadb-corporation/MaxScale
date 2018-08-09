@@ -15,7 +15,7 @@
  * @file service.c  - A representation of a service within MaxScale
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <stdio.h>
 #include <stdlib.h>

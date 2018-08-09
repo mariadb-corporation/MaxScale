@@ -17,7 +17,7 @@
  */
 #define MXS_MODULE_NAME "PAMBackendAuth"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>

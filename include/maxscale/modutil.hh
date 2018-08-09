@@ -16,7 +16,7 @@
  * @file modutil.hh C++ additions/alternatives for modutil.h functions
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.h>
 
 #include <string>

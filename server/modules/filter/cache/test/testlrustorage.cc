@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <iostream>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>

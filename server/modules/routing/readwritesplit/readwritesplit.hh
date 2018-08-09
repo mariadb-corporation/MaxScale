@@ -18,7 +18,7 @@
 
 #define MXS_MODULE_NAME "readwritesplit"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <unordered_set>
 #include <unordered_map>

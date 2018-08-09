@@ -16,7 +16,7 @@
  * The private poll header
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxscale/poll.h>
 #include <maxscale/resultset.hh>
 

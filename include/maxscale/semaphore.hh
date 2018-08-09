@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <errno.h>
 #include <maxscale/semaphore.h>
 #include <maxscale/debug.h>

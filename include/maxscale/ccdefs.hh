@@ -13,7 +13,7 @@
  */
 
 /**
- * @file cppdefs.hh
+ * @file ccdefs.hh
  *
  * This file is to be included first by all C++ headers.
  */

@@ -14,7 +14,7 @@
 
 /** @file REST API resources */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <string>
 #include <deque>

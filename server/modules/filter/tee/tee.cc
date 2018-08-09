@@ -17,7 +17,7 @@
 
 #define MXS_MODULE_NAME "tee"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>

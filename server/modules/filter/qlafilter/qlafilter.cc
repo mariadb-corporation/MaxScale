@@ -23,7 +23,7 @@
 
 #define MXS_MODULE_NAME "qlafilter"
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 
 #include <cmath>
 #include <errno.h>

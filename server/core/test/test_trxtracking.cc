@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <algorithm>
 #include <iostream>
 #include <maxscale/modutil.h>

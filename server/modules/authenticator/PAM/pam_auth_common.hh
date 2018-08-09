@@ -16,7 +16,7 @@
 /**
  * Common declarations for both PAMAuth and PAMBackendAuth
  */
-#include <maxscale/cppdefs.hh>
+#include <maxscale/ccdefs.hh>
 #include <string>
 
 extern const std::string DIALOG;
