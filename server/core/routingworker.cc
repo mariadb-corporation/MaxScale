@@ -604,7 +604,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
         Worker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);
 
-        if (pWorker->post(pTask, pSem))
+        if (pWorker->post(pTask, pSem, EXECUTE_AUTO))
         {
             ++n;
         }
@@ -627,7 +627,7 @@ size_t RoutingWorker::broadcast(std::auto_ptr<DisposableTask> sTask)
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);
 
-        if (pWorker->post_disposable(pTask))
+        if (pWorker->post_disposable(pTask, EXECUTE_AUTO))
         {
             ++n;
         }
@@ -650,7 +650,7 @@ size_t RoutingWorker::execute_serially(Task& task)
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);
 
-        if (pWorker->post(&task, &sem))
+        if (pWorker->post(&task, &sem, EXECUTE_AUTO))
         {
             sem.wait();
             ++n;
@@ -894,7 +894,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
     {
         Semaphore sem;
         Task task(pStats);
-        pWorker->post(&task, &sem);
+        pWorker->post(&task, &sem, EXECUTE_AUTO);
         sem.wait();
     }
 
@@ -998,6 +998,14 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
     }
 
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_STATS, sAll_stats.release()));
+}
+
+// static
+RoutingWorker* RoutingWorker::pick_worker()
+{
+    static int id_generator = 0;
+    int id = this_unit.id_min_worker + (atomic_add(&id_generator, 1) % this_unit.nWorkers);
+    return get(id);
 }
 
 }
@@ -1197,7 +1205,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int id)
     WorkerInfoTask task(zHost, id + 1);
     mxs::Semaphore sem;
 
-    target->post(&task, &sem);
+    target->post(&task, &sem, mxs::Worker::EXECUTE_AUTO);
     sem.wait();
 
     return task.resource(id);
@@ -1208,12 +1216,4 @@ json_t* mxs_rworker_list_to_json(const char* host)
     WorkerInfoTask task(host, config_threadcount());
     RoutingWorker::execute_concurrently(task);
     return task.resource();
-}
-
-// static
-RoutingWorker* RoutingWorker::pick_worker()
-{
-    static int id_generator = 0;
-    int id = this_unit.id_min_worker + (atomic_add(&id_generator, 1) % this_unit.nWorkers);
-    return get(id);
 }

@@ -516,10 +516,10 @@ bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
     return rval;
 }
 
-bool Worker::execute(GenericFunction func)
+bool Worker::execute(GenericFunction func, execute_mode_t mode)
 {
     Semaphore sem;
-    return post(func, &sem, EXECUTE_AUTO) && sem.wait();
+    return post(func, &sem, mode) && sem.wait();
 }
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)

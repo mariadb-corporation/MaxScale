@@ -359,7 +359,8 @@ static void session_free(MXS_SESSION *session)
     {
         // Destroy the service in the main routing worker thread
         mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        main_worker->post(std::auto_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)));
+        main_worker->post(std::auto_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
+                          mxs::Worker::EXECUTE_AUTO);
     }
 }
 

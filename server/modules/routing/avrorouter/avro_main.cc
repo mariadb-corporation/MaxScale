@@ -335,7 +335,7 @@ static bool conversion_task_ctl(Avro *inst, bool start)
 
         if (task.get())
         {
-            worker->post(task);
+            worker->post(task, Worker::EXECUTE_AUTO);
             rval = true;
         }
     }

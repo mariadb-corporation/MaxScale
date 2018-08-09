@@ -730,7 +730,12 @@ public:
      *     MyResult& result = task.result();
      * @endcode
      */
-    bool post(Task* pTask, Semaphore* pSem = NULL, enum execute_mode_t mode = EXECUTE_AUTO);
+    bool post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode);
+
+    bool post(Task* pTask, enum execute_mode_t mode)
+    {
+        return post(pTask, NULL, mode);
+    }
 
     /**
      * Posts a task to a worker for execution.
@@ -742,10 +747,10 @@ public:
      *
      * @attention  Once the task has been executed, it will be deleted.
      */
-    bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode = EXECUTE_AUTO);
+    bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode);
 
     template<class T>
-    bool post(std::auto_ptr<T> sTask, enum execute_mode_t mode = EXECUTE_AUTO)
+    bool post(std::auto_ptr<T> sTask, enum execute_mode_t mode)
     {
         return post(std::auto_ptr<DisposableTask>(sTask.release()), mode);
     }
@@ -768,10 +773,11 @@ public:
      * semaphore.
      *
      * @param func Function to execute
+     * @param mode Execution mode
      *
      * @return True if function was executed on the worker
      */
-    bool execute(GenericFunction func);
+    bool execute(GenericFunction func, enum execute_mode_t mode);
 
     /**
      * Post a message to a worker.
@@ -933,7 +939,7 @@ protected:
         pTask->dec_ref();
     }
 
-    bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
+    bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode);
 
     /**
      * Called by Worker::run() before starting the epoll loop.

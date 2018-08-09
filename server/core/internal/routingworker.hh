@@ -177,6 +177,12 @@ public:
      *            should either not have any sharable data or then it should
      *            have data specific to each worker that can be accessed
      *            without locks.
+     *
+     * @attention The task will be posted to each routing worker using the
+     *            EXECUTE_AUTO execution mode. That is, if the calling thread
+     *            is that of a routing worker, then the task will be executed
+     *            directly without going through the message loop of the worker,
+     *            otherwise the task is delivered via the message loop.
      */
     static size_t broadcast(Task* pTask, Semaphore* pSem = NULL);
 
@@ -194,6 +200,12 @@ public:
      *
      * @attention Once the task has been executed by all workers, it will
      *            be deleted.
+     *
+     * @attention The task will be posted to each routing worker using the
+     *            EXECUTE_AUTO execution mode. That is, if the calling thread
+     *            is that of a routing worker, then the task will be executed
+     *            directly without going through the message loop of the worker,
+     *            otherwise the task is delivered via the message loop.
      */
     static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
 
@@ -215,6 +227,12 @@ public:
      * @warning This function is extremely inefficient and will be slow compared
      * to the other functions. Only use this function when printing thread-specific
      * data to stdout.
+     *
+     * @attention The task will be posted to each routing worker using the
+     *            EXECUTE_AUTO execution mode. That is, if the calling thread
+     *            is that of a routing worker, then the task will be executed
+     *            directly without going through the message loop of the worker,
+     *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_serially(Task& task);
 
@@ -226,6 +244,12 @@ public:
      * @param task  The task to be executed.
      *
      * @return How many workers the task was posted to.
+     *
+     * @attention The task will be posted to each routing worker using the
+     *            EXECUTE_AUTO execution mode. That is, if the calling thread
+     *            is that of a routing worker, then the task will be executed
+     *            directly without going through the message loop of the worker,
+     *            otherwise the task is delivered via the message loop.
      */
     static size_t execute_concurrently(Task& task);
 
