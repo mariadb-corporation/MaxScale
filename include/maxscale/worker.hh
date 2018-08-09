@@ -706,13 +706,14 @@ public:
     }
 
     /**
-     * Posts a task to a worker for execution.
+     * Executes a task on the worker thread.
      *
      * @param pTask  The task to be executed.
      * @param pSem   If non-NULL, will be posted once the task's `execute` return.
      * @param mode   Execution mode
      *
-     * @return True if the task could be posted (i.e. not executed), false otherwise.
+     * @return True if the task could be posted to the worker (i.e. not executed yet),
+               false otherwise.
      *
      * @attention  The instance must remain valid for as long as it takes for the
      *             task to be transferred to the worker and its `execute` function
@@ -730,27 +731,27 @@ public:
      *     MyResult& result = task.result();
      * @endcode
      */
-    bool post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(Task* pTask, Semaphore* pSem, enum execute_mode_t mode);
 
-    bool post(Task* pTask, enum execute_mode_t mode)
+    bool execute(Task* pTask, enum execute_mode_t mode)
     {
-        return post(pTask, NULL, mode);
+        return execute(pTask, NULL, mode);
     }
 
     /**
-     * Posts a task to a worker for execution.
+     * Executes a task on the worker thread.
      *
      * @param pTask  The task to be executed.
      * @param mode   Execution mode
      *
-     * @return True if the task could be posted (i.e. not executed), false otherwise.
+     * @return True if the task could be posted (i.e. not executed yet), false otherwise.
      *
      * @attention  Once the task has been executed, it will be deleted.
      */
-    bool post(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode);
+    bool execute(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode);
 
     /**
-     * Execute a funcion in a worker
+     * Execute a function on the worker thread.
      *
      * @param func The function to call
      * @param pSem If non-NULL, will be posted once the task's `execute` return.
@@ -758,18 +759,16 @@ public:
      *
      * @return True, if task was posted to the worker
      */
-    bool post(GenericFunction func, Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(GenericFunction func, Semaphore* pSem, enum execute_mode_t mode);
 
     /**
-     * Execute function on worker
-     *
-     * This is a convenience wrapper of `post` with automatic waiting on the
-     * semaphore.
+     * Execute function on worker thread and return only when it has
+     * been executed.
      *
      * @param func Function to execute
      * @param mode Execution mode
      *
-     * @return True if function was executed on the worker
+     * @return True if function was executed on the worker.
      */
     bool call(GenericFunction func, enum execute_mode_t mode);
 

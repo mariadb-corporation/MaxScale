@@ -966,7 +966,7 @@ void MariaDBMonitor::disable_setting(const std::string& setting)
 {
     Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
 
-    worker->post([=]()
+    worker->execute([=]()
     {
         MXS_CONFIG_PARAMETER p = {};
         p.name = const_cast<char*>(setting.c_str());

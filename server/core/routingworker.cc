@@ -604,7 +604,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
         Worker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);
 
-        if (pWorker->post(pTask, pSem, EXECUTE_AUTO))
+        if (pWorker->execute(pTask, pSem, EXECUTE_AUTO))
         {
             ++n;
         }
@@ -650,7 +650,7 @@ size_t RoutingWorker::execute_serially(Task& task)
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         ss_dassert(pWorker);
 
-        if (pWorker->post(&task, &sem, EXECUTE_AUTO))
+        if (pWorker->execute(&task, &sem, EXECUTE_AUTO))
         {
             sem.wait();
             ++n;
@@ -894,7 +894,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
     {
         Semaphore sem;
         Task task(pStats);
-        pWorker->post(&task, &sem, EXECUTE_AUTO);
+        pWorker->execute(&task, &sem, EXECUTE_AUTO);
         sem.wait();
     }
 
@@ -1205,7 +1205,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int id)
     WorkerInfoTask task(zHost, id + 1);
     mxs::Semaphore sem;
 
-    target->post(&task, &sem, mxs::Worker::EXECUTE_AUTO);
+    target->execute(&task, &sem, mxs::Worker::EXECUTE_AUTO);
     sem.wait();
 
     return task.resource(id);

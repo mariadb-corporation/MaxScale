@@ -1280,7 +1280,7 @@ HttpResponse resource_handle_request(const HttpRequest& request)
     mxs::Semaphore sem;
     ResourceTask task(request);
 
-    worker->post(&task, &sem, mxs::Worker::EXECUTE_AUTO);
+    worker->execute(&task, &sem, mxs::Worker::EXECUTE_AUTO);
     sem.wait();
 
     return task.result();

@@ -419,7 +419,7 @@ Worker* Worker::get_current()
     return this_thread.pCurrent_worker;
 }
 
-bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
+bool Worker::execute(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
     bool rval = true;
@@ -444,7 +444,7 @@ bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
     return rval;
 }
 
-bool Worker::post(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode)
+bool Worker::execute(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
     return post_disposable(sTask.release(), mode);
@@ -477,7 +477,7 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
-bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
+bool Worker::execute(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
 {
 
     class CustomTask : public maxscale::WorkerTask
@@ -506,7 +506,7 @@ bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
 
     if (task)
     {
-        if (!(rval = post(task, pSem, mode)))
+        if (!(rval = execute(task, pSem, mode)))
         {
             // Posting the task failed, it needs to be deleted now
             delete task;
@@ -519,7 +519,7 @@ bool Worker::post(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
 bool Worker::call(GenericFunction func, execute_mode_t mode)
 {
     Semaphore sem;
-    return post(func, &sem, mode) && sem.wait();
+    return execute(func, &sem, mode) && sem.wait();
 }
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
