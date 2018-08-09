@@ -161,17 +161,15 @@ bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
 bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
 
 /**
- * @brief Add non-standard module type parameters to a JSON object
+ * @brief Add non-standard configuration parameters to a JSON object
  *
- * @param mod         Module whose parameters are inspected
- * @param parameters  List of configuration parameters for the module
- * @param type_params NULL terminated list of default module type parameters
- * @param output      Output JSON object where the parameters are added
+ * @param parameters List of configuration parameter values
+ * @param param_info Configuration parameter type information
+ * @param ignored_params List of parameters which should not be added to the output
+ * @param output Output JSON object where the parameters are added
  */
-void config_add_module_params_json(const MXS_MODULE* mod,
-                                   MXS_CONFIG_PARAMETER* parameters,
-                                   const MXS_MODULE_PARAM* type_params,
-                                   json_t* output);
+void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters, const MXS_MODULE_PARAM* param_info,
+                                   const MXS_MODULE_PARAM* ignored_params, json_t* output);
 
 /**
  * @brief Convert object names to correct format

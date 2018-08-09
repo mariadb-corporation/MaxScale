@@ -1790,22 +1790,12 @@ static const char* monitor_state_to_string(int state)
 json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
-    json_object_set_new(rval, CN_USER, json_string(monitor->user));
-    json_object_set_new(rval, CN_PASSWORD, json_string(monitor->password));
-    json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
-    json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
-    json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
-    json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
-    json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
-    json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
-    // TODO: print disk_space_threshold
-    json_object_set_new(rval, CN_DISK_SPACE_CHECK_INTERVAL, json_integer(monitor->disk_space_check_interval));
-    json_object_set_new(rval, CN_SCRIPT, json_string(monitor->script));
-    json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
-    // TODO: print events
-    /** Add custom module parameters */
+    // The 'monitor->parameters' contain some items which are printed specially and should be ignored here.
+    static const MXS_MODULE_PARAM already_printed[] = {{CN_TYPE}, {CN_MODULE}, {CN_SERVERS}};
+    config_add_module_params_json(monitor->parameters, config_monitor_params, already_printed, rval);
+    /** Add module-specific parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
-    config_add_module_params_json(mod, monitor->parameters, config_monitor_params, rval);
+    config_add_module_params_json(monitor->parameters, mod->parameters, NULL, rval);
     return rval;
 }
 

@@ -31,6 +31,7 @@
 
 #include <fstream>
 #include <functional>
+#include <map>
 #include <numeric>
 #include <set>
 #include <string>
@@ -3360,51 +3361,75 @@ void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
     }
 }
 
-static json_t* param_value_json(const MXS_CONFIG_PARAMETER* param,
-                                const MXS_MODULE* mod)
+/**
+ * Convert a config value to a json object.
+ *
+ * @param param The parameter value to convert
+ * @param param_info Type information for the parameter
+ * @return Json integer, boolean or string
+ */
+static json_t* param_value_to_json(const MXS_CONFIG_PARAMETER* param, const MXS_MODULE_PARAM* param_info)
 {
+    ss_dassert(strcmp(param->name, param_info->name) == 0);
     json_t* rval = NULL;
 
-    for (int i = 0; mod->parameters[i].name; i++)
+    switch (param_info->type)
     {
-        if (strcmp(mod->parameters[i].name, param->name) == 0)
-        {
-            switch (mod->parameters[i].type)
-            {
-            case MXS_MODULE_PARAM_COUNT:
-            case MXS_MODULE_PARAM_INT:
-                rval = json_integer(strtol(param->value, NULL, 10));
-                break;
+    case MXS_MODULE_PARAM_COUNT:
+    case MXS_MODULE_PARAM_INT:
+        rval = json_integer(strtol(param->value, NULL, 10));
+        break;
 
-            case MXS_MODULE_PARAM_BOOL:
-                rval = json_boolean(config_truth_value(param->value));
-                break;
+    case MXS_MODULE_PARAM_BOOL:
+        rval = json_boolean(config_truth_value(param->value));
+        break;
 
-            default:
-                rval = json_string(param->value);
-                break;
-            }
-        }
+    default:
+        rval = json_string(param->value);
+        break;
     }
 
     return rval;
 }
 
-void config_add_module_params_json(const MXS_MODULE* mod, MXS_CONFIG_PARAMETER* parameters,
-                                   const MXS_MODULE_PARAM* type_params, json_t* output)
+void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters, const MXS_MODULE_PARAM* param_info,
+                                   const MXS_MODULE_PARAM* ignored_params, json_t* output)
 {
-    set<string> param_set;
-
-    for (int i = 0; type_params[i].name; i++)
+    set<string> ignore_set;
+    if (ignored_params)
     {
-        param_set.insert(type_params[i].name);
+        for (int i = 0; ignored_params[i].name; i++)
+        {
+            ignore_set.insert(ignored_params[i].name);
+        }
     }
 
-    for (MXS_CONFIG_PARAMETER* p = parameters; p; p = p->next)
+    // The parameter values are added to the json output in the order they are in 'param_info'.
+    // Add the config values to a map and loop through 'param_info'.
+    // 'parameters' is a linked list while the others are null-terminated arrays.
+    std::map<string, const MXS_CONFIG_PARAMETER*> param_values_map;
+    for (const MXS_CONFIG_PARAMETER* param = parameters; param; param = param->next)
     {
-        if (param_set.find(p->name) == param_set.end())
+        ss_dassert(param_values_map.count(param->name) == 0);
+        param_values_map[param->name] = param;
+    }
+
+    for (int i = 0; param_info[i].name; i++)
+    {
+        if (ignore_set.count(param_info[i].name) == 0)
         {
-            json_object_set_new(output, p->name, param_value_json(p, mod));
+            auto item = param_values_map.find(param_info[i].name);
+            if (item != param_values_map.end())
+            {
+                json_object_set_new(output, param_info[i].name,
+                                    param_value_to_json(item->second, &param_info[i]));
+            }
+            else
+            {
+                // The parameter was not set in config and does not have a default value.
+                // Print a null value.
+                json_object_set_new(output, param_info[i].name, json_null());
+            }
         }
     }
 }

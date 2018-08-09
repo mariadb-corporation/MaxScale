@@ -2001,7 +2001,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
-    config_add_module_params_json(mod, service->svc_config_param, config_service_params, rval);
+    config_add_module_params_json(service->svc_config_param, mod->parameters, config_service_params, rval);
 
     return rval;
 }
