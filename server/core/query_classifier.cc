@@ -1238,23 +1238,15 @@ bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
 
 json_t* qc_get_cache_stats_as_json()
 {
-    json_t* pStats;
+    QC_CACHE_STATS stats = {};
+    qc_get_cache_stats(&stats);
 
-    QC_CACHE_STATS stats;
-
-    if (qc_get_cache_stats(&stats))
-    {
-        pStats = json_object();
-
-        if (pStats)
-        {
-            json_object_set_new(pStats, "size", json_integer(stats.size));
-            json_object_set_new(pStats, "inserts", json_integer(stats.inserts));
-            json_object_set_new(pStats, "hits", json_integer(stats.hits));
-            json_object_set_new(pStats, "misses", json_integer(stats.misses));
-            json_object_set_new(pStats, "evictions", json_integer(stats.evictions));
-        }
-    }
+    json_t* pStats = json_object();
+    json_object_set_new(pStats, "size", json_integer(stats.size));
+    json_object_set_new(pStats, "inserts", json_integer(stats.inserts));
+    json_object_set_new(pStats, "hits", json_integer(stats.hits));
+    json_object_set_new(pStats, "misses", json_integer(stats.misses));
+    json_object_set_new(pStats, "evictions", json_integer(stats.evictions));
 
     return pStats;
 }
