@@ -241,17 +241,8 @@ int MySQLSendHandshake(DCB* dcb)
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF *buf;
 
-    /* get the version string from service property if available*/
-    if (dcb->service->version_string[0])
-    {
-        version_string = dcb->service->version_string;
-        len_version_string = strlen(version_string);
-    }
-    else
-    {
-        version_string = (char*)GW_MYSQL_VERSION;
-        len_version_string = strlen(GW_MYSQL_VERSION);
-    }
+    version_string = dcb->service->version_string;
+    len_version_string = strlen(version_string);
 
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 

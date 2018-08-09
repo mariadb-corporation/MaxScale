@@ -29,6 +29,9 @@
 #define MIN_WRITEQ_HIGH_WATER       4096UL /**< Min high water mark of dcb write queue */
 #define MIN_WRITEQ_LOW_WATER        512UL  /**< Min low water mark of dcb write queue */
 
+// Default version string sent to clients
+#define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
+
 /**
  * Maximum length for configuration parameter value.
  */

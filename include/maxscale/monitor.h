@@ -218,6 +218,9 @@ typedef enum
     NEW_NDB_EVENT     = (1 << 21), /**< new_ndb */
 } mxs_monitor_event_t;
 
+// Bitmask value that matches all events, used for the "all" enum value
+static const uint64_t ALL_MONITOR_EVENTS = ~0;
+
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
@@ -295,6 +298,7 @@ static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
     {"new_synced", NEW_SYNCED_EVENT},
     {"new_donor", NEW_DONOR_EVENT},
     {"new_ndb", NEW_NDB_EVENT},
+    {"all", ALL_MONITOR_EVENTS},
     {NULL}
 };
 
