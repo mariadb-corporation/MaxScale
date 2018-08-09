@@ -781,17 +781,26 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_QUERY_CLASSIFIER_CACHE_SIZE)
     {
-        char* end;
-        long max_size = strtol(value, &end, 10);
+        uint64_t max_size;
 
-        if ((max_size >= 0) && (*end == 0))
+        if (get_suffixed_size(value, &max_size))
         {
-            MXS_NOTICE("Updated '%s' from %" PRIi64 " to %ld",
-                       CN_QUERY_CLASSIFIER_CACHE_SIZE, cnf.qc_cache_properties.max_size, max_size);
+            decltype(QC_CACHE_PROPERTIES::max_size) new_size = max_size;
 
-            cnf.qc_cache_properties.max_size = max_size;
-            qc_set_cache_properties(&cnf.qc_cache_properties);
-            rval = true;
+            if (new_size >= 0)
+            {
+                MXS_NOTICE("Updated '%s' from %" PRIi64 " to %lu",
+                           CN_QUERY_CLASSIFIER_CACHE_SIZE,
+                           cnf.qc_cache_properties.max_size, max_size);
+
+                cnf.qc_cache_properties.max_size = new_size;
+                qc_set_cache_properties(&cnf.qc_cache_properties);
+                rval = true;
+            }
+            else
+            {
+                config_runtime_error("Value too large for '%s': %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
+            }
         }
         else
         {
@@ -1314,6 +1323,30 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
     {
         config_runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
         rval = false;
+    }
+
+    return rval;
+}
+
+bool runtime_is_size_or_null(json_t* json, const char* path)
+{
+    bool rval = true;
+    json_t* value = mxs_json_pointer(json, path);
+
+    if (value)
+    {
+        if (!json_is_integer(value) && !json_is_string(value))
+        {
+            config_runtime_error("Parameter '%s' is not an integer or a string but %s",
+                                 path, json_type_to_string(value));
+            rval = false;
+        }
+        else if ((json_is_integer(value) && json_integer_value(value) < 0) ||
+                 (json_is_string(value) && !get_suffixed_size(json_string_value(value), nullptr)))
+        {
+            config_runtime_error("Parameter '%s' is not a valid size", path);
+            rval = false;
+        }
     }
 
     return rval;
@@ -2499,7 +2532,7 @@ bool validate_maxscale_json(json_t* json)
                runtime_is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
                runtime_is_bool_or_null(param, CN_ADMIN_AUTH) &&
                runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES) &&
-               runtime_is_count_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE);
+               runtime_is_size_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE);
     }
 
     return rval;
