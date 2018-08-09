@@ -44,15 +44,11 @@ npm install || exit 1
 cd $maxscaledir
 cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_INSTALL_PREFIX=$maxscaledir \
-      -DBUILD_TESTS=Y \
+      -DBUILD_TESTS=N \
       -DMAXSCALE_VARDIR=$maxscaledir \
-      -DCMAKE_BUILD_TYPE=Debug \
       -DWITH_SCRIPTS=N \
       -DWITH_MAXSCALE_CNF=N \
-      -DBUILD_CDC=Y \
-      -DTARGET_COMPONENT=all \
-      -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
-      -DDEFAULT_ADMIN_USER=`whoami` || exit 1
+      -DBUILD_CDC=N || exit 1
 
 make -j $(grep -c processor /proc/cpuinfo) install || exit 1
 
