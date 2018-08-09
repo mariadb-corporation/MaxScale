@@ -761,9 +761,25 @@ public:
      */
     bool execute(GenericFunction func, Semaphore* pSem, enum execute_mode_t mode);
 
+    bool execute(GenericFunction func, enum execute_mode_t mode)
+    {
+        return execute(func, NULL, mode);
+    }
+
     /**
-     * Execute function on worker thread and return only when it has
-     * been executed.
+     * Executes a task on the worker thread and returns only when the task
+     * has finished.
+     *
+     * @param task   The task to be executed.
+     * @param mode   Execution mode
+     *
+     * @return True if the task was executed on the worker.
+     */
+    bool call(Task& task, enum execute_mode_t mode);
+
+    /**
+     * Executes function on worker thread and returns only when the function
+     * has finished.
      *
      * @param func Function to execute
      * @param mode Execution mode

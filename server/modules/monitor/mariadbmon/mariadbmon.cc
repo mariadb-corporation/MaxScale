@@ -972,7 +972,7 @@ void MariaDBMonitor::disable_setting(const std::string& setting)
         p.name = const_cast<char*>(setting.c_str());
         p.value = const_cast<char*>("false");
         monitor_add_parameters(m_monitor, &p);
-    }, NULL, EXECUTE_AUTO);
+    }, EXECUTE_AUTO);
 }
 
 /**

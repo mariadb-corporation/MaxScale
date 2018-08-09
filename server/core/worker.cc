@@ -516,6 +516,12 @@ bool Worker::execute(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
     return rval;
 }
 
+bool Worker::call(Task& task, execute_mode_t mode)
+{
+    Semaphore sem;
+    return execute(&task, &sem, mode) && sem.wait();
+}
+
 bool Worker::call(GenericFunction func, execute_mode_t mode)
 {
     Semaphore sem;
