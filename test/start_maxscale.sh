@@ -10,7 +10,7 @@ maxscaledir=$MAXSCALE_DIR
 test -z "$MAXSCALE_DIR" && exit 1
 
 # Start MaxScale
-$maxscaledir/bin/maxscale -df $maxscaledir/maxscale.cnf >& $maxscaledir/maxscale.output &
+$maxscaledir/bin/maxscale -df $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale.output &
 pid=$!
 
 # Wait for MaxScale to start
