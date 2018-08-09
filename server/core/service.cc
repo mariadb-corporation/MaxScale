@@ -889,6 +889,11 @@ bool service_can_be_destroyed(Service *service)
         }
     }
 
+    if (!service->get_filters().empty())
+    {
+        rval = false;
+    }
+
     return rval;
 }
 
