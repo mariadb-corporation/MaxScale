@@ -120,6 +120,16 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
+    it('will not create listener with negative port', function() {
+        return doCommand('create listener RW-Split-Router my-listener3 -123')
+            .should.be.rejected
+    })
+
+    it('will not create listener with port that is not a number', function() {
+        return doCommand('create listener RW-Split-Router my-listener3 any-port-is-ok')
+            .should.be.rejected
+    })
+
     it('destroy listener', function() {
         return doCommand('destroy listener RW-Split-Router my-listener')
             .should.be.fulfilled
@@ -165,6 +175,11 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
+    it('create service with bad parameter', function() {
+        return doCommand('create service test-service readwritesplit user-not-required')
+            .should.be.rejected
+    })
+
     it('create service', function() {
         return verifyCommand('create service test-service readwritesplit user=maxuser password=maxpwd',
                             'services/test-service')
@@ -181,6 +196,11 @@ describe("Create/Destroy Commands", function() {
             .then(() => verifyCommand('create service test-service readwritesplit user=maxuser password=maxpwd --servers test-server',
                                       'services/test-service'))
             .should.be.fulfilled
+    })
+
+    it('create filter with bad parameters', function() {
+        return doCommand('create filter test-filter qlafilter filebase-not-required')
+            .should.be.rejected
     })
 
     it('create filter', function() {

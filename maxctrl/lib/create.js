@@ -15,11 +15,20 @@ require('./common.js')()
 // Converts an array of key=value pairs into an object
 function to_obj(obj, value) {
     var kv = value.split('=')
-    if (kv.length < 2) {
-        throw 'Error: Not a key-value parameter: ' + value
-    }
     obj[kv[0]] = kv[1]
     return obj
+}
+
+function validateParams(argv, params) {
+    var rval = null;
+    params.forEach((value) => {
+        var kv = value.split('=')
+        if (!kv || kv.length != 2) {
+            rval = 'Not a key-value parameter: ' + value
+        }
+    })
+
+    return rval
 }
 
 exports.command = 'create <command>'
@@ -182,30 +191,35 @@ exports.builder = function(yargs) {
                                 'are used, they must be defined after the service parameters.')
                 .usage('Usage: service <name> <router> <params...>')
         }, function(argv) {
+            maxctrl(argv, function(host) {
 
-            var service = {
-                'data': {
-                    'id': argv.name,
-                    'attributes': {
-                        'router': argv.router,
-                        'parameters': argv.params.reduce(to_obj, {})
+                err = validateParams(argv, argv.params)
+                if (err) {
+                    return Promise.reject(err)
+                }
+
+                var service = {
+                    'data': {
+                        'id': argv.name,
+                        'attributes': {
+                            'router': argv.router,
+                            'parameters': argv.params.reduce(to_obj, {})
+                        }
                     }
                 }
-            }
 
-            if (argv.servers) {
-                for (i = 0; i < argv.servers.length; i++) {
-                    _.set(service, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
+                if (argv.servers) {
+                    for (i = 0; i < argv.servers.length; i++) {
+                        _.set(service, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
+                    }
                 }
-            }
 
-            if (argv.filters) {
-                for (i = 0; i < argv.filters.length; i++) {
-                    _.set(service, 'data.relationships.filters.data[' + i + ']', {id: argv.filters[i], type: 'filters'})
+                if (argv.filters) {
+                    for (i = 0; i < argv.filters.length; i++) {
+                        _.set(service, 'data.relationships.filters.data[' + i + ']', {id: argv.filters[i], type: 'filters'})
+                    }
                 }
-            }
 
-            maxctrl(argv, function(host) {
                 return doRequest(host, 'services', null, {method: 'POST', body: service})
             })
         })
@@ -216,21 +230,26 @@ exports.builder = function(yargs) {
                                 'given as the filter parameters.')
                 .usage('Usage: filter <name> <module> [params...]')
         }, function(argv) {
+            maxctrl(argv, function(host) {
 
-            var filter = {
-                'data': {
-                    'id': argv.name,
-                    'attributes': {
-                        'module': argv.module
+                var filter = {
+                    'data': {
+                        'id': argv.name,
+                        'attributes': {
+                            'module': argv.module
+                        }
                     }
                 }
-            }
 
-            if (argv.params) {
-                filter.data.attributes.parameters = argv.params.reduce(to_obj, {})
-            }
+                if (argv.params) {
+                    var err = validateParams(argv, argv.params)
+                    if (err) {
+                        return Promise.reject(err)
+                    }
 
-            maxctrl(argv, function(host) {
+                    filter.data.attributes.parameters = argv.params.reduce(to_obj, {})
+                }
+
                 return doRequest(host, 'filters', null, {method: 'POST', body: filter})
             })
         })
@@ -246,33 +265,33 @@ exports.builder = function(yargs) {
             return yargs.epilog('The new listener will be taken into use immediately.')
                 .usage('Usage: create listener <service> <name> <port>')
         }, function(argv) {
+            maxctrl(argv, function(host) {
 
-            if (!Number.isInteger(argv.port)) {
-                throw "'" + argv.port + "' is not a valid value for port"
-            }
+                if (!Number.isInteger(argv.port) || argv.port <= 0) {
+                    return Promise.reject("'" + argv.port + "' is not a valid value for port")
+                }
 
-            var listener = {
-                'data': {
-                    'id': argv.name,
-                    'type': 'listeners',
-                    'attributes': {
-                        'parameters': {
-                            'port': argv.port,
-                            'address': argv.interface,
-                            'protocol': argv.protocol,
-                            'authenticator': argv.authenticator,
-                            'authenticator_options': argv.auth_options,
-                            'ssl_key': argv['tls-key'],
-                            'ssl_cert': argv['tls-cert'],
-                            'ssl_ca_cert': argv['tls-ca-cert'],
-                            'ssl_version': argv['tls-version'],
-                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
+                var listener = {
+                    'data': {
+                        'id': argv.name,
+                        'type': 'listeners',
+                        'attributes': {
+                            'parameters': {
+                                'port': argv.port,
+                                'address': argv.interface,
+                                'protocol': argv.protocol,
+                                'authenticator': argv.authenticator,
+                                'authenticator_options': argv.auth_options,
+                                'ssl_key': argv['tls-key'],
+                                'ssl_cert': argv['tls-cert'],
+                                'ssl_ca_cert': argv['tls-ca-cert'],
+                                'ssl_version': argv['tls-version'],
+                                'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
+                            }
                         }
                     }
                 }
-            }
 
-            maxctrl(argv, function(host) {
                 return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
             })
         })
