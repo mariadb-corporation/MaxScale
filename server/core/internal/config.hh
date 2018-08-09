@@ -21,13 +21,13 @@
 #include <maxscale/ssl.h>
 #include <maxscale/jansson.h>
 
-#define DEFAULT_NBPOLLS             3    /**< Default number of non block polls before we block */
-#define DEFAULT_POLLSLEEP           1000 /**< Default poll wait time (milliseconds) */
-#define DEFAULT_NTHREADS            1    /**< Default number of polling threads */
-#define DEFAULT_QUERY_RETRIES       1    /**< Number of retries for interrupted queries */
-#define DEFAULT_QUERY_RETRY_TIMEOUT 5    /**< Timeout for query retries */
-#define MIN_WRITEQ_HIGH_WATER       4096 /**< Min high water mark of dcb write queue */
-#define MIN_WRITEQ_LOW_WATER        512  /**< Min low water mark of dcb write queue */
+#define DEFAULT_NBPOLLS             3      /**< Default number of non block polls before we block */
+#define DEFAULT_POLLSLEEP           1000   /**< Default poll wait time (milliseconds) */
+#define DEFAULT_NTHREADS            1      /**< Default number of polling threads */
+#define DEFAULT_QUERY_RETRIES       1      /**< Number of retries for interrupted queries */
+#define DEFAULT_QUERY_RETRY_TIMEOUT 5      /**< Timeout for query retries */
+#define MIN_WRITEQ_HIGH_WATER       4096UL /**< Min high water mark of dcb write queue */
+#define MIN_WRITEQ_LOW_WATER        512UL  /**< Min low water mark of dcb write queue */
 
 /**
  * Maximum length for configuration parameter value.
@@ -199,3 +199,17 @@ bool config_global_serialize();
 bool export_config_file(const char* filename);
 
 bool is_normal_server_parameter(const char *param);
+
+/**
+ * Converts a string into the corresponding value, interpreting
+ * IEC or SI prefixes used as suffixes appropriately.
+ *
+ * @param value A numerical string, possibly suffixed by a IEC binary prefix or
+ *              SI prefix.
+ * @param dest  Pointer where the result is stored. If set to NULL, only the
+ *              validity of value is checked.
+ *
+ * @return True on success, false on invalid input in which case contents of
+ *         `dest` are left in an undefined state
+ */
+bool get_suffixed_size(const char* value, uint64_t* dest);

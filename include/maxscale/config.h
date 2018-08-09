@@ -275,8 +275,8 @@ typedef struct
     bool          substitute_variables;                /**< Should environment variables be substituted */
     char*         local_address;                       /**< Local address to use when connecting */
     time_t        users_refresh_time;                  /**< How often the users can be refreshed */
-    uint32_t      writeq_high_water;                   /**< High water mark of dcb write queue */
-    uint32_t      writeq_low_water;                    /**< Low water mark of dcb write queue */
+    uint64_t      writeq_high_water;                   /**< High water mark of dcb write queue */
+    uint64_t      writeq_low_water;                    /**< Low water mark of dcb write queue */
 } MXS_CONFIG;
 
 /**

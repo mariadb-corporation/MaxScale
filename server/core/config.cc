@@ -213,7 +213,6 @@ static void remove_first_last_char(char* value);
 static bool test_regex_string_validity(const char* regex_string, const char* key);
 static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
                                         uint32_t options, uint32_t* output_ovector_size);
-static uint64_t get_suffixed_size(const char* value);
 
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
@@ -1637,8 +1636,10 @@ int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key)
 uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
-
-    return get_suffixed_size(value);
+    uint64_t intval;
+    ss_debug(bool rval = )get_suffixed_size(value, &intval);
+    ss_dassert(rval);
+    return intval;
 }
 
 const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key)
@@ -2048,7 +2049,11 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
     {
-        gateway.thread_stack_size = get_suffixed_size(value);
+        if (!get_suffixed_size(value, &gateway.thread_stack_size))
+        {
+            MXS_WARNING("Invalid value for '%s': %s.", CN_THREAD_STACK_SIZE, value);
+            return 0;
+        }
     }
     else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
     {
@@ -2133,7 +2138,15 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE_SIZE) == 0)
     {
-        decltype(gateway.qc_cache_properties.max_size) max_size = get_suffixed_size(value);
+        uint64_t int_value;
+
+        if (!get_suffixed_size(value, &int_value))
+        {
+            MXS_ERROR("Invalid value for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
+            return 0;
+        }
+
+        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
 
         if (max_size >= 0)
         {
@@ -2141,7 +2154,7 @@ handle_global_item(const char *name, const char *value)
         }
         else
         {
-            MXS_ERROR("Invalid value for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
+            MXS_ERROR("Value too large for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
             return 0;
         }
     }
@@ -2328,25 +2341,37 @@ handle_global_item(const char *name, const char *value)
         }
         else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
         {
-            gateway.writeq_high_water = get_suffixed_size(value);
+            if (!get_suffixed_size(value, &gateway.writeq_high_water))
+            {
+                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
+                return 0;
+            }
+
             if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
             {
-                MXS_WARNING("The specified writeq high water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                MXS_WARNING("The specified writeq high water mark %lu, is smaller "
+                            "than the minimum allowed size %lu. Changing to minimum.",
                             gateway.writeq_high_water, MIN_WRITEQ_HIGH_WATER);
                 gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
             }
-            MXS_NOTICE("Writeq high water mark set to: %d", gateway.writeq_high_water);
+            MXS_NOTICE("Writeq high water mark set to: %lu", gateway.writeq_high_water);
         }
         else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
         {
-            gateway.writeq_low_water = get_suffixed_size(value);
+            if (!get_suffixed_size(value, &gateway.writeq_high_water))
+            {
+                MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
+                return 0;
+            }
+
             if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
             {
-                MXS_WARNING("The specified writeq low water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                MXS_WARNING("The specified writeq low water mark %lu, is smaller "
+                            "than the minimum allowed size %lu. Changing to minimum.",
                             gateway.writeq_low_water, MIN_WRITEQ_LOW_WATER);
                 gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
             }
-            MXS_NOTICE("Writeq low water mark set to: %d", gateway.writeq_low_water);
+            MXS_NOTICE("Writeq low water mark set to: %lu", gateway.writeq_low_water);
         }
         else
         {
@@ -4417,17 +4442,15 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
     return rval;
 }
 
-/**
- * Converts a string into the corresponding value, interpreting
- * IEC or SI prefixes used as suffixes appropriately.
- *
- * @param value A numerical string, possibly suffixed by a IEC
- *              binary prefix or SI prefix.
- *
- * @return The corresponding size.
- */
-static uint64_t get_suffixed_size(const char* value)
+bool get_suffixed_size(const char* value, uint64_t* dest)
 {
+    if (!isdigit(*value))
+    {
+        // This will also catch negative values
+        return false;
+    }
+
+    bool rval = false;
     char *end;
     uint64_t size = strtoll(value, &end, 10);
 
@@ -4485,7 +4508,30 @@ static uint64_t get_suffixed_size(const char* value)
         break;
     }
 
-    return size;
+    const std::set<char> first{ 'T', 't', 'G', 'g', 'M', 'm', 'K', 'k' };
+    const std::set<char> second{ 'I', 'i' };
+
+    if (end[0] == '\0')
+    {
+        rval = true;
+    }
+    else if (end[1] == '\0')
+    {
+        // First character must be valid
+        rval = first.count(end[0]);
+    }
+    else if (end[2] == '\0')
+    {
+        // Both characters have to be valid
+        rval = first.count(end[0]) && second.count(end[1]);
+    }
+
+    if (dest)
+    {
+        *dest = size;
+    }
+
+    return rval;
 }
 
 bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_threshold,
