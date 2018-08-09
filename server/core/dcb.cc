@@ -3309,7 +3309,7 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
         if (task)
         {
             RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
-            worker->post(std::auto_ptr<FakeEventTask>(task), mxs::Worker::EXECUTE_QUEUED);
+            worker->post(std::unique_ptr<FakeEventTask>(task), mxs::Worker::EXECUTE_QUEUED);
         }
         else
         {
@@ -3523,7 +3523,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
                 Worker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
                 ss_dassert(worker);
 
-                if (worker->post(std::auto_ptr<AddDcbToWorker>(task), mxs::Worker::EXECUTE_QUEUED))
+                if (worker->post(std::unique_ptr<AddDcbToWorker>(task), mxs::Worker::EXECUTE_QUEUED))
                 {
                     rv = true;
                 }

@@ -444,7 +444,7 @@ bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
     return rval;
 }
 
-bool Worker::post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode)
+bool Worker::post(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
     return post_disposable(sTask.release(), mode);

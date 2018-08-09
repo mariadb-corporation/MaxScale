@@ -359,7 +359,7 @@ static void session_free(MXS_SESSION *session)
     {
         // Destroy the service in the main routing worker thread
         mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        main_worker->post(std::auto_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
+        main_worker->post(std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
                           mxs::Worker::EXECUTE_AUTO);
     }
 }
@@ -1112,7 +1112,7 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
     {
         Worker* worker = Worker::get_current();
         ss_dassert(worker == session->client_dcb->poll.owner);
-        std::auto_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
+        std::unique_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
 
         // Delay the routing for at least a millisecond
         int32_t delay = 1 + seconds * 1000;

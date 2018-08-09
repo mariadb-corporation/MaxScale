@@ -207,13 +207,7 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
-
-    template<class T>
-    static size_t broadcast(std::auto_ptr<T> sTask)
-    {
-        return broadcast(std::auto_ptr<DisposableTask>(sTask.release()));
-    }
+    static size_t broadcast(std::unique_ptr<DisposableTask> sTask);
 
     /**
      * Executes a task on all workers in serial mode (the task is executed

@@ -747,13 +747,7 @@ public:
      *
      * @attention  Once the task has been executed, it will be deleted.
      */
-    bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode);
-
-    template<class T>
-    bool post(std::auto_ptr<T> sTask, enum execute_mode_t mode)
-    {
-        return post(std::auto_ptr<DisposableTask>(sTask.release()), mode);
-    }
+    bool post(std::unique_ptr<DisposableTask> sTask, enum execute_mode_t mode);
 
     /**
      * Execute a funcion in a worker

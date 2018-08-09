@@ -614,7 +614,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
 }
 
 //static
-size_t RoutingWorker::broadcast(std::auto_ptr<DisposableTask> sTask)
+size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 {
     DisposableTask* pTask = sTask.release();
     Worker::inc_ref(pTask);
@@ -1165,12 +1165,12 @@ protected:
 
 size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data)
 {
-    std::auto_ptr<FunctionTask> task(new FunctionTask([cb, data]()
+    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]()
     {
         cb(data);
     }));
 
-    return RoutingWorker::broadcast(task);
+    return RoutingWorker::broadcast(std::move(task));
 }
 
 uint64_t mxs_rworker_create_key()
@@ -1195,8 +1195,8 @@ void mxs_rworker_delete_data(uint64_t key)
         RoutingWorker::get_current()->delete_data(key);
     };
 
-    std::auto_ptr<FunctionTask> task(new FunctionTask(func));
-    RoutingWorker::broadcast(task);
+    std::unique_ptr<FunctionTask> task(new FunctionTask(func));
+    RoutingWorker::broadcast(std::move(task));
 }
 
 json_t* mxs_rworker_to_json(const char* zHost, int id)
