@@ -88,4 +88,12 @@ module.exports = function() {
                 return request.get(host + resource, {json: true})
             })
     };
+
+    this.sleepFor = function(time) {
+        return new Promise((resolve, reject) => {
+            var timer = setInterval(() => {
+                resolve()
+            }, time)
+        })
+    }
 }
