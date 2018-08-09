@@ -2120,7 +2120,7 @@ bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t*
     return rval;
 }
 
-bool runtime_alter_service_relationships_from_json(Service* service, json_t* json)
+bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json)
 {
     bool rval = false;
     mxs::Closer<json_t*> old_json(service_to_json(service, ""));
@@ -2129,12 +2129,17 @@ bool runtime_alter_service_relationships_from_json(Service* service, json_t* jso
     if (is_valid_relationship_body(json))
     {
         mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
-                                         "relationships", "servers", "data",
+                                         "relationships", type, "data",
                                          json_object_get(json, "data")));
 
-        if (object_to_server_relations(service->name, old_json.get(), j.get()))
+        if (strcmp(type, CN_SERVERS) == 0)
         {
-            rval = true;
+            rval = object_to_server_relations(service->name, old_json.get(), j.get());
+        }
+        else
+        {
+            ss_dassert(strcmp(type, CN_FILTERS) == 0);
+            rval = service_to_filter_relations(service, old_json.get(), j.get());
         }
     }
 

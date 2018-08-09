@@ -407,7 +407,20 @@ HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
     Service* service = service_internal_find(request.uri_part(1).c_str());
     ss_dassert(service && request.get_json());
 
-    if (runtime_alter_service_relationships_from_json(service, request.get_json()))
+    if (runtime_alter_service_relationships_from_json(service, CN_SERVERS, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_service_filter_relationship(const HttpRequest& request)
+{
+    Service* service = service_internal_find(request.uri_part(1).c_str());
+    ss_dassert(service && request.get_json());
+
+    if (runtime_alter_service_relationships_from_json(service, CN_FILTERS, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -966,6 +979,8 @@ public:
                                                  "monitors", ":monitor", "relationships", "servers")));
         m_patch.push_back(SResource(new Resource(cb_alter_service_server_relationship, 4,
                                                  "services", ":service", "relationships", "servers")));
+        m_patch.push_back(SResource(new Resource(cb_alter_service_filter_relationship, 4,
+                                                 "services", ":service", "relationships", "filters")));
 
         /** All patch resources require a request body */
         for (ResourceList::iterator it = m_patch.begin(); it != m_patch.end(); it++)

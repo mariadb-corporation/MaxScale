@@ -83,7 +83,7 @@ describe("Service", function() {
             .should.be.rejected
     })
 
-    it("remove service relationship via `relationships` endpoint", function() {
+    it("remove service→server relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: null}})
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
             .then((res) => {
@@ -91,7 +91,7 @@ describe("Service", function() {
             })
     });
 
-    it("add service relationship via `relationships` endpoint", function() {
+    it("add service→server relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/servers",
                              { json: { data: [
                                  {id: "server1", type: "servers"},
@@ -102,6 +102,26 @@ describe("Service", function() {
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
             .then((res) => {
                 res.data.relationships.servers.data.should.have.lengthOf(4)
+            })
+    });
+
+    it("add service→filter relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/filters",
+                             { json: { data: [
+                                 {id: "QLA", type: "filters"},
+                             ]}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.filters.data.should.have.lengthOf(1)
+            })
+    });
+
+    it("remove service→filter relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/filters",
+                             { json: { data: null}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.should.not.have.keys("filters")
             })
     });
 

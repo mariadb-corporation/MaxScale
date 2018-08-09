@@ -342,11 +342,12 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json);
  * @brief Alter service relationships
  *
  * @param service Service to alter
- * @param json JSON that defines the new relationships
+ * @param type    Type of relationship to alter
+ * @param json    JSON that defines the new relationships
  *
  * @return True if the relationships were successfully modified
  */
-bool runtime_alter_service_relationships_from_json(Service* service, json_t* json);
+bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json);
 
 /**
  * @brief Create a listener from JSON
