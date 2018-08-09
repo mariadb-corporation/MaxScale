@@ -93,5 +93,20 @@ describe("Alter Commands", function() {
             .should.be.rejected
     })
 
+    it('rejects negative size values', function() {
+        return doCommand('alter maxscale query_classifier_cache_size -1M')
+            .should.be.rejected
+    })
+
+    it('rejects bad size values', function() {
+        return doCommand('alter maxscale query_classifier_cache_size all-available-memory')
+            .should.be.rejected
+    })
+
+    it('rejects percentage as a size value', function() {
+        return doCommand('alter maxscale query_classifier_cache_size 50%')
+            .should.be.rejected
+    })
+
     after(stopMaxScale)
 });
