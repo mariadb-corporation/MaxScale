@@ -301,7 +301,6 @@ Worker::Worker()
     : m_epoll_fd(create_epoll_instance())
     , m_state(STOPPED)
     , m_pQueue(NULL)
-    , m_thread(0)
     , m_started(false)
     , m_should_shutdown(false)
     , m_shutdown_initiated(false)
@@ -552,14 +551,22 @@ void Worker::run()
     this_thread.pCurrent_worker = nullptr;
 }
 
-bool Worker::start(size_t stack_size)
+bool Worker::start()
 {
+    ss_dassert(!m_started);
+    ss_dassert(m_thread.get_id() == std::thread::id());
+
     m_started = true;
     m_should_shutdown = false;
     m_shutdown_initiated = false;
 
-    if (!thread_start(&m_thread, &Worker::thread_main, this, stack_size))
+    try
     {
+        m_thread = std::thread(&Worker::thread_main, this);
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("Could not start worker thread: %s", x.what());
         m_started = false;
     }
 
@@ -568,10 +575,12 @@ bool Worker::start(size_t stack_size)
 
 void Worker::join()
 {
+    ss_dassert(m_thread.get_id() != std::thread::id());
+
     if (m_started)
     {
         MXS_INFO("Waiting for worker %p.", this);
-        thread_wait(m_thread);
+        m_thread.join();
         MXS_INFO("Waited for worker %p.", this);
         m_started = false;
     }
@@ -659,10 +668,9 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
  * @param arg A worker.
  */
 //static
-void Worker::thread_main(void* pArg)
+void Worker::thread_main(Worker* pThis)
 {
-    Worker* pWorker = static_cast<Worker*>(pArg);
-    pWorker->run();
+    pThis->run();
 }
 
 bool Worker::pre_run()

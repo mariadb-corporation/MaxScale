@@ -17,6 +17,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <thread>
 #include <unordered_set>
 
 #include <maxscale/platform.h>
@@ -672,12 +673,9 @@ public:
      * This function will start a new thread, in which the `run`
      * function will be executed.
      *
-     * @param stack_size The stack size of the new thread. A value of 0 means
-     *                   that the pthread default should be used.
-     *
      * @return True if the thread could be started, false otherwise.
      */
-    bool start(size_t stack_size = 0);
+    bool start();
 
     /**
      * Waits for the worker to finish.
@@ -1171,7 +1169,7 @@ private:
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
-    static void thread_main(void* arg);
+    static void thread_main(Worker* pThis);
 
     void poll_waitevents();
 
@@ -1193,7 +1191,7 @@ private:
 
     STATISTICS         m_statistics;           /*< Worker statistics. */
     MessageQueue*      m_pQueue;               /*< The message queue of the worker. */
-    THREAD             m_thread;               /*< The thread handle of the worker. */
+    std::thread        m_thread;               /*< The thread object of the worker. */
     bool               m_started;              /*< Whether the thread has been started or not. */
     bool               m_should_shutdown;      /*< Whether shutdown should be performed. */
     bool               m_shutdown_initiated;   /*< Whether shutdown has been initated. */

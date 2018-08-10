@@ -381,7 +381,6 @@ int RoutingWorker::get_current_id()
 bool RoutingWorker::start_threaded_workers()
 {
     bool rv = true;
-    size_t stack_size = config_thread_stack_size();
 
     for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; ++i)
     {
@@ -392,7 +391,7 @@ bool RoutingWorker::start_threaded_workers()
             RoutingWorker* pWorker = this_unit.ppWorkers[i];
             ss_dassert(pWorker);
 
-            if (!pWorker->start(stack_size))
+            if (!pWorker->start())
             {
                 MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
                 rv = false;

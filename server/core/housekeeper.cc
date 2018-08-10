@@ -146,8 +146,15 @@ bool Housekeeper::start()
     sem_init(&res.sem, 0, 0);
     res.ok = false;
 
-    hk->m_thread = std::thread(hkthread, &res);
-    sem_wait(&res.sem);
+    try
+    {
+        hk->m_thread = std::thread(hkthread, &res);
+        sem_wait(&res.sem);
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("Could not start housekeeping thread: %s", x.what());
+    }
 
     sem_destroy(&res.sem);
     return res.ok;
