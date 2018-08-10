@@ -20,5 +20,10 @@ describe("Module Commands", function() {
             .should.be.rejected
     })
 
+    it('call unknown command', function() {
+        return doCommand('call command mariadbmon log')
+            .should.be.rejected
+    })
+
     after(stopMaxScale)
 });

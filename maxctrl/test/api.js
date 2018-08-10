@@ -16,11 +16,19 @@ describe("API", function() {
             })
     })
 
-    it('sums integer values', function() {
+    it('sums zero integer values', function() {
         return doCommand('api get servers data[].attributes.statistics.connections --sum')
             .then((res) => {
                 js = JSON.parse(res)
                 js.should.equal(0)
+            })
+    })
+
+    it('sums non-zero integer values', function() {
+        return doCommand('api get --sum maxscale/threads data[].attributes.stats.reads')
+            .then((res) => {
+                js = JSON.parse(res)
+                js.should.be.a('number')
             })
     })
 

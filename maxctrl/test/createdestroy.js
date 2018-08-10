@@ -239,5 +239,16 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
+    it('create filter with no parameters', function() {
+        return verifyCommand('create filter test-filter hintfilter',
+                            'filters/test-filter')
+            .should.be.fulfilled
+    })
+
+    it('destroy filter with no parameters', function() {
+        return doCommand('destroy filter test-filter')
+            .should.be.fulfilled
+    })
+
     after(stopMaxScale)
 });
