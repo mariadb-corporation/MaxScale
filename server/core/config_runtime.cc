@@ -124,8 +124,8 @@ static std::pair<bool, MXS_CONFIG_PARAMETER*> load_defaults(const char* name,
     }
     else
     {
-        MXS_ERROR("Failed to load module '%s'. See previous error messages for "
-                  "more details.", name);
+        config_runtime_error("Failed to load module '%s': %s", name,
+                             errno ? mxs_strerror(errno) : "See MaxScale logs for details");
     }
 
     return {rval, params};
