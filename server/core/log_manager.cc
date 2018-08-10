@@ -26,6 +26,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <atomic>
+#include <thread>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -35,7 +36,6 @@
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.hh>
-#include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include "internal/mlist.h"
 
@@ -820,11 +820,11 @@ void mxs_log_finish(void)
 
 static struct
 {
-    THREAD thr;
-    std::atomic<bool> running{true};
+    std::thread thr;
+    std::atomic<bool> running{false};
 } log_flusher;
 
-static void log_flush_cb(void* arg)
+static void log_flush_cb()
 {
     while (log_flusher.running)
     {
@@ -835,13 +835,33 @@ static void log_flush_cb(void* arg)
 
 bool mxs_log_start_flush_thr()
 {
-    return thread_start(&log_flusher.thr, log_flush_cb, NULL, 0);
+    ss_dassert(!log_flusher.running);
+    ss_dassert(log_flusher.thr.get_id() == std::thread::id());
+
+    bool started = false;
+
+    try
+    {
+        log_flusher.running.store(true);
+        log_flusher.thr = std::thread(log_flush_cb);
+        started = true;
+    }
+    catch (const std::exception& x)
+    {
+        // Can't log in the log manager.
+        log_flusher.running.store(false);
+    }
+
+    return started;
 }
 
 void mxs_log_stop_flush_thr()
 {
-    log_flusher.running = false;
-    thread_wait(log_flusher.thr);
+    ss_dassert(log_flusher.running);
+    ss_dassert(log_flusher.thr.get_id() != std::thread::id());
+
+    log_flusher.running.store(false);
+    log_flusher.thr.join();
 }
 
 static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
