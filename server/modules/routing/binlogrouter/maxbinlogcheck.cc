@@ -159,7 +159,6 @@ int main(int argc, char **argv)
         printf("ERROR: Failed to open binlog file %s: %s.\n",
                path, strerror(errno));
         MXS_FREE(inst);
-        mxs_log_flush_sync();
         mxs_log_finish();
         exit(EXIT_FAILURE);
     }
@@ -186,7 +185,6 @@ int main(int argc, char **argv)
     if (set_encryption_options(inst, key_file, aes_algo))
     {
         MXS_FREE(inst);
-        mxs_log_flush_sync();
         mxs_log_finish();
         exit(EXIT_FAILURE);
     }
@@ -203,21 +201,16 @@ int main(int argc, char **argv)
         blr_read_events_all_events(inst, &binlog_file, BLR_CHECK_ONLY);
 
         binlog_file.fix = true;
-
-        mxs_log_flush_sync();
     }
 
     /* Now read/check/fix the binary log */
     int ret = blr_read_events_all_events(inst, &binlog_file, debug_out | report_header);
-
-    mxs_log_flush_sync();
 
     MXS_NOTICE("Check retcode: %i, Binlog Pos = %lu", ret, inst->binlog_position);
 
     close(inst->binlog_fd);
     MXS_FREE(inst);
 
-    mxs_log_flush_sync();
     mxs_log_finish();
 
     return ret;

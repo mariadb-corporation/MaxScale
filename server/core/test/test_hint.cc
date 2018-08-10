@@ -40,7 +40,6 @@
  * test1    Allocate table of users and mess around with it
  *
   */
-int mxs_log_flush_sync(void);
 static int
 test1()
 {
@@ -52,7 +51,6 @@ test1()
     char* name = MXS_STRDUP_A("name");
     hint = hint_create_parameter(NULL, name, "value");
     MXS_FREE(name);
-    mxs_log_flush_sync();
     ss_info_dassert(NULL != hint, "New hint list should not be null");
     ss_info_dassert(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
     ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
@@ -61,7 +59,6 @@ test1()
     {
         hint_free(hint);
     }
-    mxs_log_flush_sync();
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;

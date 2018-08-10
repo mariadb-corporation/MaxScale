@@ -45,26 +45,20 @@ static int test1()
     ss_dfprintf(stderr,
                 "testusers : Initialise the user table.");
     users = users_alloc();
-    mxs_log_flush_sync();
     ss_info_dassert(NULL != users, "Allocating user table should not return NULL.");
     ss_dfprintf(stderr, "\t..done\nAdd a user");
     rv = users_add(users, "username", "authorisation", USER_ACCOUNT_ADMIN);
-    mxs_log_flush_sync();
     ss_info_dassert(rv, "Should add one user");
     rv = users_auth(users, "username", "authorisation");
-    mxs_log_flush_sync();
     ss_info_dassert(rv, "Fetch valid user must not return NULL");
     rv = users_auth(users, "username", "newauth");
-    mxs_log_flush_sync();
     ss_info_dassert(rv == 0, "Fetch invalid user must return NULL");
 
     ss_dfprintf(stderr, "\t..done\nAdd another user");
     rv = users_add(users, "username2", "authorisation2", USER_ACCOUNT_ADMIN);
-    mxs_log_flush_sync();
     ss_info_dassert(rv, "Should add one user");
     ss_dfprintf(stderr, "\t..done\nDelete a user.");
     rv = users_delete(users, "username");
-    mxs_log_flush_sync();
     ss_info_dassert(rv, "Should delete just one user");
 
     ss_dfprintf(stderr, "\t..done\nDump users table.");
@@ -79,7 +73,6 @@ static int test1()
 
     ss_dfprintf(stderr, "\t..done\nFree user table.");
     users_free(users);
-    mxs_log_flush_sync();
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;

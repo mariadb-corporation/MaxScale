@@ -2248,8 +2248,6 @@ return_main:
         unlink_pidfile();
     }
 
-    mxs_log_flush_sync();
-
     if (daemon_mode && rc != MAXSCALE_SHUTDOWN)
     {
         /** Notify the parent process that an error has occurred */

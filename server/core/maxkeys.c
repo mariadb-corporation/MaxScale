@@ -109,7 +109,6 @@ int main(int argc, char **argv)
         rval = EXIT_FAILURE;
     }
 
-    mxs_log_flush_sync();
     mxs_log_finish();
 
     return rval;

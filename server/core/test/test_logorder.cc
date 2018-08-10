@@ -113,7 +113,6 @@ int main(int argc, char** argv)
         nanosleep(&ts1, NULL);
     }
 
-    mxs_log_flush();
     mxs_log_finish();
     MXS_FREE(message);
     return 0;

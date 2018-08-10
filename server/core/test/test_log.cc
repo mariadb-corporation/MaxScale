@@ -76,14 +76,8 @@ int main(int argc, char* argv[])
     err = MXS_ERROR("%s", logstr);
     ss_dassert(err == 0);
 
-    err = mxs_log_flush();
-    ss_dassert(err == 0);
-
     logstr = "My name is %s %d years and %d months.";
     err = MXS_INFO(logstr, "TraceyTracey", 3, 7);
-    ss_dassert(err == 0);
-
-    err = mxs_log_flush();
     ss_dassert(err == 0);
 
     logstr = "My name is Tracey Tracey 47 years and 7 months.";
