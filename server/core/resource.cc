@@ -662,7 +662,7 @@ HttpResponse cb_flush(const HttpRequest& request)
     int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 
     // Flush logs
-    if (mxs_log_rotate() == 0)
+    if (mxs_log_rotate())
     {
         code = MHD_HTTP_NO_CONTENT;
     }

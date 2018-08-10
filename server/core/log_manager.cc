@@ -23,10 +23,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <atomic>
 #include <thread>
+
+#include <string>
+#include <mutex>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -37,7 +41,9 @@
 #include <maxscale/session.h>
 #include <maxscale/spinlock.hh>
 #include <maxscale/utils.h>
+
 #include "internal/mlist.h"
+#include "internal/logger.hh"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
@@ -48,6 +54,9 @@
 #if !defined(_GNU_SOURCE)
 # define _GNU_SOURCE
 #endif
+
+using namespace maxscale;
+static std::unique_ptr<Logger> logger;
 
 static const char LOGFILE_NAME_PREFIX[] = "maxscale";
 static const char LOGFILE_NAME_SUFFIX[] = ".log";
@@ -130,7 +139,7 @@ static struct
  * Variable holding the enabled priorities information.
  * Used from logging macros.
  */
-int mxs_log_enabled_priorities = 0;
+int mxs_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -160,13 +169,6 @@ static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
-namespace
-{
-
-class MessageRegistry;
-
-}
-static MessageRegistry* message_registry;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -636,18 +638,6 @@ static bool logmanager_init_nomutex(const char* ident,
         goto return_succ;
     }
 
-    /** Initialize logfile */
-    if (!logfile_init(&lm->lm_logfile, lm, (lm->lm_target == MXS_LOG_TARGET_SHMEM)))
-    {
-        err = 1;
-        goto return_succ;
-    }
-
-    /**
-     * Set global variable
-     */
-    mxs_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
-
     /**
      * Initialize filewriter data and open the log file
      * for each log file type.
@@ -687,52 +677,54 @@ return_succ:
     return succ;
 }
 
-
+static std::unique_ptr<MessageRegistry> message_registry;
 
 /**
- * Initializes log managing routines in MariaDB Corporation MaxScale.
+ * Initializes log manager
  *
  * @param ident  The syslog ident. If NULL, then the program name is used.
- * @param logdir The directory for the log file. If NULL logging will be made to stdout.
- * @param target Whether the log should be written to filesystem or shared memory.
- *               Meaningless if logdir is NULL.
+ * @param logdir The directory for the log file.
+ * @param target Logging target
  *
  * @return true if succeed, otherwise false
  *
  */
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
 {
-    bool succ = false;
+    static bool log_init_done = false;
+    ss_dassert(!log_init_done);
+    log_init_done = true;
 
-    spinlock_acquire(&lmlock);
+    openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
 
-    if (!lm)
+    // Tests mainly pass a NULL logdir with MXS_LOG_TARGET_STDOUT
+    std::string filename = "/dev/null";
+
+    if (logdir)
     {
-        ss_dassert(!message_registry);
-
-        message_registry = new (std::nothrow) MessageRegistry;
-
-        if (message_registry)
-        {
-            succ = logmanager_init_nomutex(ident, logdir, target, log_config.do_maxlog);
-
-            if (!succ)
-            {
-                delete message_registry;
-                message_registry = NULL;
-            }
-        }
-    }
-    else
-    {
-        // TODO: This is not ok. If the parameters are different then
-        // TODO: we pretend something is what it is not.
-        succ = true;
+        filename = std::string(logdir) + "/" + LOGFILE_NAME_PREFIX + LOGFILE_NAME_SUFFIX;
     }
 
-    spinlock_release(&lmlock);
+    message_registry.reset(new (std::nothrow) MessageRegistry);
 
-    return succ;
+    switch (target)
+    {
+        case MXS_LOG_TARGET_FS:
+        case MXS_LOG_TARGET_DEFAULT:
+            logger = FileLogger::create(filename);
+            break;
+
+        case MXS_LOG_TARGET_STDOUT:
+            logger = StdoutLogger::create(filename);
+            break;
+
+        default:
+            ss_dassert(!true);
+            break;
+    }
+
+
+    return logger && message_registry;
 }
 
 /**
@@ -776,9 +768,6 @@ static void logmanager_done_nomutex(void)
     /** Set global pointer NULL to prevent access to freed data. */
     MXS_FREE(lm);
     lm = NULL;
-
-    delete message_registry;
-    message_registry = NULL;
 }
 
 /**
@@ -789,33 +778,9 @@ static void logmanager_done_nomutex(void)
  */
 void mxs_log_finish(void)
 {
-    spinlock_acquire(&lmlock);
-
-    if (lm)
-    {
-        CHK_LOGMANAGER(lm);
-        /** Mark logmanager unavailable */
-        lm->lm_enabled = false;
-
-        /** Wait until all users have left or someone shuts down
-         * logmanager between lock release and acquire.
-         */
-        while (lm != NULL && lm->lm_nlinks != 0)
-        {
-            spinlock_release(&lmlock);
-            sched_yield();
-            spinlock_acquire(&lmlock);
-        }
-
-        /** Shut down if not already shutted down. */
-        if (lm)
-        {
-            ss_dassert(lm->lm_nlinks == 0);
-            logmanager_done_nomutex();
-        }
-    }
-
-    spinlock_release(&lmlock);
+    closelog();
+    logger.reset();
+    message_registry.reset();
 }
 
 static struct
@@ -892,35 +857,22 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
  * @return 0 if succeed, -1 otherwise
  *
  */
-static int logmanager_write_log(int            priority,
-                                enum log_flush flush,
-                                size_t         prefix_len,
-                                size_t         str_len,
-                                const char*    str)
+static int log_write(int            priority,
+                     size_t         prefix_len,
+                     size_t         str_len,
+                     const char*    str)
 {
-    logfile_t*   lf = NULL;
-    char*        wp = NULL;
     int          err = 0;
-    blockbuf_t*  bb = NULL;
-    blockbuf_t*  bb_c = NULL;
     size_t       timestamp_len;
-    int          i;
 
     // The config parameters are copied to local variables, because the values in
     // log_config may change during the course of the function, with would have
     // unpleasant side-effects.
     int do_highprecision = log_config.do_highprecision;
-    int do_maxlog = log_config.do_maxlog;
     int do_syslog = log_config.do_syslog;
 
     ss_dassert(str);
     ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
-    CHK_LOGMANAGER(lm);
-
-    // All messages are now logged to the error log file.
-    lf = &lm->lm_logfile;
-    CHK_LOGFILE(lf);
-
     /** Length of string that will be written, limited by bufsize */
     size_t safe_str_len;
 
@@ -934,31 +886,14 @@ static int logmanager_write_log(int            priority,
     }
 
     bool overflow = false;
-    /** Find out how much can be safely written with current block size */
-    if (timestamp_len - sizeof(char) + str_len > lf->lf_buf_size)
-    {
-        safe_str_len = lf->lf_buf_size;
-        overflow = true;
-    }
-    else
-    {
-        safe_str_len = timestamp_len - sizeof(char) + str_len;
-    }
+    safe_str_len = timestamp_len - sizeof(char) + str_len;
+
     /**
      * Seek write position and register to block buffer.
      * Then print formatted string to write position.
      */
 
-    /** Book space for log string from buffer */
-    if (do_maxlog)
-    {
-        // All messages are now logged to the error log file.
-        wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
-    }
-    else
-    {
-        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + str_len + 1));
-    }
+    char wp[safe_str_len + 1];
 
     if (wp == NULL)
     {
@@ -1023,14 +958,7 @@ static int logmanager_write_log(int            priority,
     }
     wp[safe_str_len - 1] = '\n';
 
-    if (do_maxlog)
-    {
-        blockbuf_unregister(bb);
-    }
-    else
-    {
-        MXS_FREE(wp);
-    }
+    logger->write(wp, safe_str_len);
 
     return err;
 }
@@ -1380,44 +1308,6 @@ static blockbuf_t* blockbuf_init()
 void mxs_log_set_augmentation(int bits)
 {
     log_config.augmentation = bits & MXS_LOG_AUGMENTATION_MASK;
-}
-
-/**
- * Helper for skygw_log_write and friends.
- *
- * @param int        The syslog priority.
- * @param file       The name of the file where the logging was made.
- * @param int        The line where the logging was made.
- * @param function   The function where the logging was made.
- * @param prefix_len The length of the text to be stripped away when syslogging.
- * @param len        Length of str, including terminating NULL.
- * @param str        String
- * @param flush      Whether the message should be flushed.
- *
- * @return 0 if the logging to at least one log succeeded.
- */
-
-static int log_write(int            priority,
-                     const char*    file,
-                     int            line,
-                     const char*    function,
-                     size_t         prefix_len,
-                     size_t         len,
-                     const char*    str,
-                     enum log_flush flush)
-{
-    int rv = -1;
-
-    if (logmanager_register(true))
-    {
-        CHK_LOGMANAGER(lm);
-
-        rv = logmanager_write_log(priority, flush, prefix_len, len, str);
-
-        logmanager_unregister();
-    }
-
-    return rv;
 }
 
 /**
@@ -2671,30 +2561,9 @@ int mxs_log_flush_sync(void)
  * successfully initiated, not whether the actual rotation has been
  * performed.
  */
-int mxs_log_rotate()
+bool mxs_log_rotate()
 {
-    int err = -1;
-
-    if (logmanager_register(false))
-    {
-        CHK_LOGMANAGER(lm);
-
-        logfile_t *lf = logmanager_get_logfile(lm);
-        CHK_LOGFILE(lf);
-
-        MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
-
-        logfile_rotate(lf);
-        err = 0;
-
-        logmanager_unregister();
-    }
-    else
-    {
-        LOG_ERROR("MaxScale Log: Error, Can't register to logmanager, rotating failed.\n");
-    }
-
-    return err;
+    return logger->rotate();
 }
 
 static const char* level_name(int level)
@@ -2895,6 +2764,7 @@ int mxs_log_message(int priority,
 {
     int err = 0;
 
+    ss_dassert(logger && message_registry);
     ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
     int level = priority & LOG_PRIMASK;
@@ -3045,9 +2915,7 @@ int mxs_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
-                enum log_flush flush = level_to_flush(level);
-
-                err = log_write(priority, file, line, function, prefix.len, buffer_len, buffer, flush);
+                err = log_write(priority, prefix.len, buffer_len, buffer);
             }
         }
     }
@@ -3104,6 +2972,7 @@ json_t* get_log_priorities()
 
 json_t* mxs_logs_to_json(const char* host)
 {
+    ss_dassert(logger && message_registry);
     json_t* param = json_object();
     json_object_set_new(param, "highprecision", json_boolean(log_config.do_highprecision));
     json_object_set_new(param, "maxlog", json_boolean(log_config.do_maxlog));
@@ -3118,11 +2987,11 @@ json_t* mxs_logs_to_json(const char* host)
     json_object_set_new(param, "log_notice", json_boolean(mxs_log_priority_is_enabled(LOG_NOTICE)));
     json_object_set_new(param, "log_info", json_boolean(mxs_log_priority_is_enabled(LOG_INFO)));
     json_object_set_new(param, "log_debug", json_boolean(mxs_log_priority_is_enabled(LOG_DEBUG)));
-    json_object_set_new(param, "log_to_shm", json_boolean(config_get_global_options()->log_to_shm));
+    json_object_set_new(param, "log_to_shm", json_boolean(false));
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_PARAMETERS, param);
-    json_object_set_new(attr, "log_file", json_string(lm->lm_filewriter.fwr_file->sf_fname));
+    json_object_set_new(attr, "log_file", json_string(logger->filename()));
     json_object_set_new(attr, "log_priorities", get_log_priorities());
 
     json_t* data = json_object();

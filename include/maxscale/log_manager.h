@@ -109,7 +109,7 @@ void mxs_log_stop_flush_thr();
 
 int mxs_log_flush();
 int mxs_log_flush_sync();
-int mxs_log_rotate();
+bool mxs_log_rotate();
 
 int  mxs_log_set_priority_enabled(int priority, bool enabled);
 void mxs_log_set_syslog_enabled(bool enabled);
