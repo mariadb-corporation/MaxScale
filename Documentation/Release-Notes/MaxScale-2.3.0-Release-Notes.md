@@ -61,6 +61,15 @@ deprecated. If you need to explicitly set the stack size, do so using
 
 ## Dropped Features
 
+### `log_to_shm` parameter and `--log=shm` option
+
+The following commands no longer create the log files in shared memory and will
+be ignored. MaxScale will behave as if `--log=file` was provided when
+`--log=shm` is used. The `log_to_shm` parameter is ignored. Both the parameter
+and the optino value are deprecated and will be removed in a later relesae.
+
+Logs can still be created in shared memory by pointing `logdir` to `/dev/shm`.
+
 ### Configuration Reloading
 
 The deprecated `maxadmin reload config` command has been removed.

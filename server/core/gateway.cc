@@ -952,7 +952,7 @@ static void usage(void)
             "  -e, --export-config=FILE    export configuration to a single file\n"
             "  -d, --nodaemon              enable running in terminal process\n"
             "  -f, --config=FILE           relative or absolute pathname of config file\n"
-            "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout\n"
+            "  -l, --log=[file|stdout]     log to file or stdout\n"
             "                              (default: file)\n"
             "  -L, --logdir=PATH           path to log file directory\n"
             "  -A, --cachedir=PATH         path to cache directory\n"
@@ -1327,7 +1327,6 @@ int main(int argc, char **argv)
     ss_dassert(cnf);
     int      *syslog_enabled = &cnf->syslog; /** Log to syslog */
     int      *maxlog_enabled = &cnf->maxlog; /** Log with MaxScale */
-    int      *log_to_shm = &cnf->log_to_shm; /** Log to shared memory */
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
     bool to_stdout = false;
@@ -1441,19 +1440,17 @@ int main(int argc, char **argv)
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
             {
-                *log_to_shm = false;
-                log_to_shm_configured = true;
+                to_stdout = false;
             }
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
             {
-                *log_to_shm = true;
-                log_to_shm_configured = true;
+                // Removed in 2.3
+                to_stdout = false;
+                fprintf(stderr, "Warning: Use of `--log=shm` is deprecated. Data will be logged to file.\n");
             }
             else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
             {
                 to_stdout = true;
-                *log_to_shm = false;
-                log_to_shm_configured = true;
             }
             else
             {
@@ -1872,10 +1869,6 @@ int main(int argc, char **argv)
         if (to_stdout)
         {
             log_target = MXS_LOG_TARGET_STDOUT;
-        }
-        else if (*log_to_shm)
-        {
-            log_target = MXS_LOG_TARGET_SHMEM;
         }
 
         succp = mxs_log_init(NULL, get_logdir(), log_target);
@@ -2769,10 +2762,8 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_LOG_TO_SHM) == 0)
         {
-            if (!log_to_shm_configured)
-            {
-                cnf->log_to_shm = config_truth_value((char*)value);
-            }
+            fprintf(stderr, "Warning: '%s' has been removed in MaxScale 2.3.0 "
+                    "and will be ignored\n", CN_LOG_TO_SHM);
         }
         else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
         {

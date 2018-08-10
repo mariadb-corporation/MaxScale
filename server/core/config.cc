@@ -2595,7 +2595,6 @@ void config_set_global_defaults()
     gateway.skip_permission_checks = false;
     gateway.syslog = 1;
     gateway.maxlog = 1;
-    gateway.log_to_shm = 0;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = true;
     gateway.admin_log_auth_failures = true;

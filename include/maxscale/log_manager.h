@@ -51,10 +51,9 @@ MXS_BEGIN_DECLS
 
 typedef enum
 {
-    MXS_LOG_TARGET_DEFAULT = 0,
-    MXS_LOG_TARGET_FS      = 1, // File system
-    MXS_LOG_TARGET_SHMEM   = 2, // Shared memory
-    MXS_LOG_TARGET_STDOUT  = 3, // Standard output
+    MXS_LOG_TARGET_DEFAULT,
+    MXS_LOG_TARGET_FS,     // File system
+    MXS_LOG_TARGET_STDOUT, // Standard output
 } mxs_log_target_t;
 
 /**

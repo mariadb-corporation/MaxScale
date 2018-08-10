@@ -301,34 +301,12 @@ disable use the value 0.
 
 #### `log_to_shm`
 
-Enable or disable the writing of the *maxscale.log* file to shared memory. If
-enabled, then the actual log file will be created under `/dev/shm` and a
-symbolic link to that file will be created in the *MaxScale* log directory.
+**Note:** This parameter is deprecated and it is ignored by MaxScale versions
+  2.3.0 and newer. If you want to store the log in shared memory, define the
+  directory with `logdir` in `/dev/shm`.
 
-Logging to shared memory may be appropriate if *log_info* and/or *log_debug* are
-enabled, as logging to a regular file may in that case cause performance
-degradation, due to the amount of data logged. However, as shared memory is a
-scarce resource, logging to shared memory should be used only temporarily and
-not regularly.
-
-Since *MariaDB MaxScale* can log to both file and *syslog* an approach that
-provides maximum flexibility is to enable *syslog* and *log_to_shm*, and to
-disable *maxlog*. That way messages will normally be logged to *syslog*, but if
-there is something to investigate, *log_debug* and *maxlog* can be enabled from
-*maxadmin*, in which case informational messages will be logged to the
-*maxscale.log* file that resides in shared memory. But note that *log_debug*
-messages will only be available if MaxScale has been built in debug mode.
-
-By default, logging to shared memory is disabled.
-
-```
-# Valid options are:
-#       log_to_shm=<0|1>
-log_to_shm=1
-```
-
-To enable logging to shared memory use the value 1 and to disable use the value
-0.
+In older MaxScale versions, the actual log file was created in `/dev/shm` and a
+symbolic link to that file was stored in place of the normal MaxScale log.
 
 #### `log_warning`
 
