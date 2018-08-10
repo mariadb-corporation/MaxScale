@@ -929,30 +929,6 @@ static int logmanager_write_log(int            priority,
      * Then print formatted string to write position.
      */
 
-#if defined (SS_LOG_DEBUG)
-    {
-        char *copy, *tok;
-        int tokval;
-
-        simple_mutex_lock(&msg_mutex, true);
-        copy = MXS_STRDUP_A(str);
-        tok = strtok(copy, "|");
-        tok = strtok(NULL, "|");
-
-        if (strstr(str, "message|") && tok)
-        {
-            tokval = atoi(tok);
-
-            if (prevval > 0)
-            {
-                ss_dassert(tokval == (prevval + 1));
-            }
-            prevval = tokval;
-        }
-        MXS_FREE(copy);
-        simple_mutex_unlock(&msg_mutex);
-    }
-#endif
     /** Book space for log string from buffer */
     if (do_maxlog)
     {
@@ -969,13 +945,6 @@ static int logmanager_write_log(int            priority,
         return -1;
     }
 
-#if defined (SS_LOG_DEBUG)
-    {
-        sprintf(wp, "[msg:%d]", atomic_add(&write_index, 1));
-        safe_str_len -= strlen(wp);
-        wp += strlen(wp);
-    }
-#endif
     /**
      * Write timestamp with at most <timestamp_len> characters
      * to wp.
@@ -1378,11 +1347,6 @@ static blockbuf_t* blockbuf_init()
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
-#if defined(SS_LOG_DEBUG)
-        sprintf(bb->bb_buf, "[block:%d]", atomic_add(&block_start_index, 1));
-        bb->bb_buf_used += strlen(bb->bb_buf);
-        bb->bb_buf_left -= strlen(bb->bb_buf);
-#endif
         CHK_BLOCKBUF(bb);
     }
     return bb;
@@ -2340,12 +2304,6 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             bb->bb_buf_used = 0;
             memset(bb->bb_buf, 0, bb->bb_buf_size);
             bb->bb_state = BB_CLEARED;
-#if defined(SS_LOG_DEBUG)
-            sprintf(bb->bb_buf, "[block:%d]", atomic_add(&block_start_index, 1));
-            bb->bb_buf_used += strlen(bb->bb_buf);
-            bb->bb_buf_left -= strlen(bb->bb_buf);
-#endif
-
         }
         /** Release lock to block buffer */
         simple_mutex_unlock(&bb->bb_mutex);
