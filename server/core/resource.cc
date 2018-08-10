@@ -92,8 +92,31 @@ bool Resource::match(const HttpRequest& request) const
     return rval;
 }
 
+static void remove_null_parameters(json_t* json)
+{
+    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    {
+        const char* key;
+        json_t* value;
+        void* tmp;
+
+        json_object_foreach_safe(parameters, tmp, key, value)
+        {
+            if (json_is_null(value))
+            {
+                json_object_del(parameters, key);
+            }
+        }
+    }
+}
+
 HttpResponse Resource::call(const HttpRequest& request) const
 {
+    if (json_t* json = request.get_json())
+    {
+        remove_null_parameters(json);
+    }
+
     return m_cb(request);
 };
 
