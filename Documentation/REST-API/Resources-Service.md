@@ -331,6 +331,10 @@ they are allowed to gracefully close before the service is destroyed. This means
 that the destruction of a service can be acknowledged via the REST API before
 the destruction process has fully completed.
 
+To find out whether a service is still in use after it has been destroyed, the
+[`sessions`](./Resources-Session.md) resource should be used. If a session for
+the service is still open, it has not yet been destroyed.
+
 #### Response
 
 Service is destroyed:
