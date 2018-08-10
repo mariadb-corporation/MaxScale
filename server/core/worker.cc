@@ -41,6 +41,7 @@
 
 #define WORKER_ABSENT_ID -1
 
+using std::function;
 using std::vector;
 using std::stringstream;
 
@@ -477,20 +478,20 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
-bool Worker::execute(GenericFunction func, Semaphore* pSem, execute_mode_t mode)
+bool Worker::execute(function<void ()> func, Semaphore* pSem, execute_mode_t mode)
 {
 
     class CustomTask : public maxscale::WorkerTask
     {
     public:
 
-        CustomTask(GenericFunction func)
+        CustomTask(function<void ()> func)
             : m_func(func)
         {
         }
 
     private:
-        GenericFunction m_func;
+        function<void ()> m_func;
 
         void execute(maxscale::Worker& worker)
         {
@@ -522,7 +523,7 @@ bool Worker::call(Task& task, execute_mode_t mode)
     return execute(&task, &sem, mode) && sem.wait();
 }
 
-bool Worker::call(GenericFunction func, execute_mode_t mode)
+bool Worker::call(function<void ()> func, execute_mode_t mode)
 {
     Semaphore sem;
     return execute(func, &sem, mode) && sem.wait();

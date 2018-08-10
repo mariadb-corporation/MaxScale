@@ -496,7 +496,6 @@ public:
     typedef WorkerDisposableTask   DisposableTask;
     typedef WorkerLoad             Load;
     typedef WorkerTimer            Timer;
-    typedef std::function<void ()> GenericFunction;
 
     /**
      * A delegating timer that delegates the timer tick handling
@@ -759,9 +758,9 @@ public:
      *
      * @return True, if task was posted to the worker
      */
-    bool execute(GenericFunction func, Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(std::function<void ()> func, Semaphore* pSem, enum execute_mode_t mode);
 
-    bool execute(GenericFunction func, enum execute_mode_t mode)
+    bool execute(std::function<void ()> func, enum execute_mode_t mode)
     {
         return execute(func, NULL, mode);
     }
@@ -786,7 +785,7 @@ public:
      *
      * @return True if function was executed on the worker.
      */
-    bool call(GenericFunction func, enum execute_mode_t mode);
+    bool call(std::function<void ()> func, enum execute_mode_t mode);
 
     /**
      * Post a message to a worker.

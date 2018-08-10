@@ -191,7 +191,7 @@ private:
     MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
     MariaDBServer* get_server(int64_t id);
     MariaDBServer* get_server(SERVER* server);
-    bool execute_manual_command(GenericFunction command, json_t** error_out);
+    bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     std::string diagnostics_to_string() const;
     json_t* diagnostics_to_json() const;
 
