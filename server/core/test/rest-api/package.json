@@ -4,7 +4,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "description": "MaxScale REST API tests",
   "scripts": {
-    "test": "mocha --timeout 30000 --slow 10000"
+    "test": "mocha --exit --timeout 30000 --slow 10000"
   },
   "author": "",
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",
@@ -12,7 +12,7 @@
     "ajv": "^5.5.2",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "mocha": "^3.5.3",
+    "mocha": "^5.2.0",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   }

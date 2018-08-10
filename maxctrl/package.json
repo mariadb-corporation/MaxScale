@@ -5,7 +5,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "nyc mocha --timeout 15000 --slow 10000",
+    "test": "nyc mocha --exit --timeout 15000 --slow 10000",
     "preinstall": "cmake -P configure_version.cmake"
   },
   "keywords": [
@@ -21,16 +21,15 @@
     "lodash": "^4.17.4",
     "lodash-getpath": "^0.2.4",
     "readline-sync": "^1.4.9",
-    "request": "^2.81.0",
+    "request": "^2.88.0",
     "request-promise-native": "^1.0.3",
     "yargs": "^8.0.2"
   },
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "mocha": "^3.5.3",
-    "nyc": "^11.9.0",
-    "strip-ansi": "^4.0.0"
+    "mocha": "^5.2.0",
+    "nyc": "^11.9.0"
   },
   "nyc": {
     "include": [
