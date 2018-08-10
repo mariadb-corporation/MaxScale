@@ -163,13 +163,10 @@ will be used to manage the user connections.
 
 #### `thread_stack_size`
 
-This parameter controls the stack size of the worker threads. The default value
-is 0, which means that the pthread default will be used. The size can be specified
-as explained in detail [here](#sizes).
+Deprecated in 2.3.
 
-```
-thread_stack_size=5Mi
-```
+If you need to explicitly set the stack size, do so using `ulimit -s` before
+starting MaxScale.
 
 #### `auth_connect_timeout`
 

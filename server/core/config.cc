@@ -2060,11 +2060,10 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
     {
-        if (!get_suffixed_size(value, &gateway.thread_stack_size))
-        {
-            MXS_WARNING("Invalid value for '%s': %s.", CN_THREAD_STACK_SIZE, value);
-            return 0;
-        }
+        // DEPRECATED in 2.3, remove in 2.4
+        MXS_WARNING("%s has been deprecated. If you need to explicitly set the stack "
+                    "size, do so with 'ulimit -s' before starting MaxScale.",
+                    CN_THREAD_STACK_SIZE);
     }
     else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
     {

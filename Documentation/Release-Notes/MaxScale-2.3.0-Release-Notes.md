@@ -53,6 +53,12 @@ The use of `router_options` with the binlogrouter module is deprecated in
 MaxScale 2.3 and will be removed in a subsequent release. The
 `router_options` should be converted into separate parameters.
 
+### `thread_stack_size`
+
+The `thread_stack_size` configuration parameter has been deprecated. If
+you need to explicitly set the stack size, do so using `ulimit -s` before
+starting MaxScale.
+
 ## Dropped Features
 
 ### Configuration Reloading
