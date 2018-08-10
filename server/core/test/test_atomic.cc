@@ -14,10 +14,10 @@
 #include <maxscale/cdefs.h>
 
 #include <stdio.h>
+#include <thread>
 
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
-#include <maxscale/thread.h>
 
 
 #define NTHR 10
@@ -77,25 +77,22 @@ void test_cas(void* data)
 
 int run_test(void(*func)(void*))
 {
-    THREAD threads[NTHR];
+    std::thread threads[NTHR];
 
     atomic_store_int32(&expected, 0);
     atomic_store_int32(&running, 1);
 
     for (size_t i = 0; i < NTHR; i++)
     {
-        if (thread_start(&threads[i], func, (void*)(i + 1), 0) == NULL)
-        {
-            ss_dassert(false);
-        }
+        threads[i] = std::thread(func, (void*)(i + 1));
     }
 
-    thread_millisleep(2500);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2500));
     atomic_store_int32(&running, 0);
 
     for (int i = 0; i < NTHR; i++)
     {
-        thread_wait(threads[i]);
+        threads[i].join();
     }
 
     return atomic_load_int32(&expected);

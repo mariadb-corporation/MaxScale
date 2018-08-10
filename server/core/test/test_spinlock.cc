@@ -32,9 +32,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 
 #include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
 
 
 /**
@@ -106,7 +106,7 @@ static int
 test2()
 {
     SPINLOCK    lck;
-    THREAD      handle;
+    std::thread handle;
     struct timespec sleeptime;
 
     sleeptime.tv_sec = 10;
@@ -115,10 +115,10 @@ test2()
     acquire_time = 0;
     spinlock_init(&lck);
     spinlock_acquire(&lck);
-    thread_start(&handle, test2_helper, (void *)&lck, 0);
+    handle = std::thread(test2_helper, (void *)&lck);
     nanosleep(&sleeptime, NULL);
     spinlock_release(&lck);
-    thread_wait(handle);
+    handle.join();
 
     if (acquire_time < 8)
     {
@@ -207,7 +207,7 @@ static int
 test3()
 {
 // SPINLOCK lck;
-    THREAD          handle[THREADS];
+    std::thread     handle[THREADS];
     int             i;
     int             tnum[THREADS];
     time_t          rawtime;
@@ -222,7 +222,7 @@ test3()
     {
         threadrun[i] = 0;
         tnum[i] = i;
-        thread_start(&handle[i], test3_helper, &tnum[i], 0);
+        handle[i] = std::thread(test3_helper, &tnum[i]);
     }
     for (i = 0; i < THREADS; i++)
     {
@@ -234,7 +234,7 @@ test3()
         time ( &rawtime );
         fprintf(stderr, "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n",
                 asctime (localtime ( &rawtime )), i);
-        thread_wait(handle[i]);
+        handle[i].join();
     }
     for (i = 0; i < THREADS; i++)
     {
