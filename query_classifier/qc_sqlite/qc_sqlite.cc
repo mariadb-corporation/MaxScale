@@ -26,6 +26,7 @@
 #include <new>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
@@ -143,6 +144,7 @@ static struct
     qc_sql_mode_t sql_mode;
     qc_parse_as_t parse_as;
     QC_NAME_MAPPING* pFunction_name_mappings;
+    std::mutex lock;
 } this_unit;
 
 /**
@@ -4487,6 +4489,11 @@ static int32_t qc_sqlite_thread_init(void)
     ss_dassert(this_unit.initialized);
     ss_dassert(!this_thread.initialized);
 
+    // Thread initialization must be done behind a global lock. SQLite can perform
+    // global initialization which has a data race in the page cache code.
+    // TODO: Figure out why this happens
+    std::lock_guard<std::mutex> guard(this_unit.lock);
+
     // TODO: It may be sufficient to have a single in-memory database for all threads.
     int rc = sqlite3_open(":memory:", &this_thread.pDb);
     if (rc == SQLITE_OK)
@@ -4546,6 +4553,7 @@ static void qc_sqlite_thread_end(void)
     ss_dassert(this_thread.initialized);
 
     ss_dassert(this_thread.pDb);
+    std::lock_guard<std::mutex> guard(this_unit.lock);
     int rc = sqlite3_close(this_thread.pDb);
 
     if (rc != SQLITE_OK)
