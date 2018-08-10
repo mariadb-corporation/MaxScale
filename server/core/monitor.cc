@@ -2510,7 +2510,7 @@ void MonitorInstance::diagnostics(DCB* pDcb) const
 
 json_t* MonitorInstance::diagnostics_json() const
 {
-    return NULL;
+    return json_object();
 }
 
 bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)

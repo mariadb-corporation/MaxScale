@@ -320,7 +320,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
 
 json_t* MariaDBMonitor::diagnostics_to_json() const
 {
-    json_t* rval = json_object();
+    json_t* rval = MonitorInstance::diagnostics_json();
     json_object_set_new(rval, "monitor_id", json_integer(m_id));
 
     if (!m_servers.empty())
