@@ -17,8 +17,8 @@
 #include <inttypes.h>
 #include <iomanip>
 #include <sstream>
+#include <thread>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/thread.h>
 #include <maxscale/utils.hh>
 
 using std::string;
@@ -410,7 +410,7 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
                 if (seconds_remaining > 0)
                 {
                     // Sleep for a moment, then try again.
-                    thread_millisleep(sleep_ms);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
                     sleep_ms += 100; // Sleep a bit more next iteration.
                 }
             }
@@ -679,7 +679,8 @@ bool MariaDBServer::failover_wait_relay_log(int seconds_remaining, json_t** err_
     {
         MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                  name(), relay_log_events());
-        thread_millisleep(1000); // Sleep for a while before querying server again.
+        // Sleep for a while before querying server again.
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         // TODO: check server version before entering failover.
         // TODO: fix for multisource
         GtidList old_gtid_io_pos = m_slave_status[0].gtid_io_pos;

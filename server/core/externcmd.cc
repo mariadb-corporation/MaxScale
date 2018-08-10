@@ -19,12 +19,12 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <string>
+#include <thread>
 
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/thread.h>
 
 /**
  * Tokenize a string into arguments suitable for a `execvp` call
@@ -303,7 +303,7 @@ int externcmd_execute(EXTERNCMD* cmd)
                 else
                 {
                     // Sleep and try again
-                    thread_millisleep(1);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 break;
 

@@ -49,7 +49,6 @@
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
 #include <maxscale/utils.h>
 
 static GWBUF *blr_make_query(DCB *dcb, char *query);

@@ -75,7 +75,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/platform.h>
-#include <maxscale/thread.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
 #include <maxscale/spinlock.hh>

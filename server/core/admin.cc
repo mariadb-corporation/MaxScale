@@ -28,7 +28,6 @@
 
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
-#include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
