@@ -88,15 +88,28 @@ GET /v1/filters
 
 ### Create a filter
 
-Create a new filter. The request body must define the `/data/id`
-field with the name of the filter, the `/data/type` field with the
-value of `filters` and the `/data/attributes/module` field with the
-filter module for this filter. All of the filter parameters should
-be defined at creation time.
-
 ```
 POST /v1/filters
 ```
+
+Create a new filter. The posted object must define at
+least the following fields.
+
+* `data.id`
+  * Name of the filter
+
+* `data.type`
+  * Type of the object, must be `filters`
+
+* `data.atttributes.module`
+  * The filter module to use
+
+All of the filter parameters should be defined at creation time in the
+`data.atttributes.parameters` object.
+
+As the service to filter relationship is ordered (filters are applied in the
+order they are listed), filter to service relationships cannot be defined at
+creation time.
 
 The following example defines a request body which creates the new filter,
 _test-filter_, and assigns it to a service.
@@ -111,16 +124,6 @@ _test-filter_, and assigns it to a service.
             "parameters": { // Filter parameters
                 "filebase": "/tmp/qla.log"
             }
-        },
-        "relationships": { // List of services that use this filter
-            "services": {
-                "data": [ // This filter is used by one service
-                    {
-                        "id": "service-1",
-                        "type": "services"
-                    }
-                ]
-            }
         }
     }
 }
@@ -129,5 +132,24 @@ _test-filter_, and assigns it to a service.
 #### Response
 
 Filter is created:
+
+`Status: 204 No Content`
+
+### Destroy a filter
+
+```
+DELETE /v1/filters/:filter
+```
+
+The _:filter_ in the URI must map to the name of the filter to be destroyed.
+
+A filter can only be destroyed if no service uses it. This means that the
+`data.relationships` object for the filter must be empty. Note that the service
+→ filter relationship cannot be modified from the filters resource and must be
+done via the services resource.
+
+#### Response
+
+Filter is destroyed:
 
 `Status: 204 No Content`
