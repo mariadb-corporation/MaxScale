@@ -12,10 +12,11 @@
  */
 #include <maxscale/ccdefs.hh>
 
-#include <stdlib.h>
+#include <cstdlib>
+#include <list>
 #include <string.h>
 #include <string>
-#include <list>
+#include <thread>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -27,7 +28,6 @@
 #include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/spinlock.hh>
-#include <maxscale/thread.h>
 
 /**
  * @file housekeeper.cc  Provide a mechanism to run periodic tasks
@@ -42,7 +42,15 @@
  * is incremented every 100ms and can be read with the mxs_clock() function.
  */
 
-static void hkthread(void*);
+// Helper struct used when starting the housekeeper
+struct hkstart_result
+{
+    sem_t sem;
+    bool ok;
+};
+
+
+static void hkthread(hkstart_result*);
 
 // TODO: Move these into a separate file
 static int64_t mxs_clock_ticks = 0; /*< One clock tick is 100 milliseconds */
@@ -104,7 +112,7 @@ public:
     json_t* tasks_json(const char* host);
 
 private:
-    THREAD            m_thread;
+    std::thread       m_thread;
     uint32_t          m_running;
     std::list<Task>   m_tasks;
     mxs::SpinLock     m_lock;
@@ -113,13 +121,6 @@ private:
     {
         return atomic_load_uint32(&m_running);
     }
-};
-
-// Helper struct used to initialize the housekeeper
-struct hkinit_result
-{
-    sem_t sem;
-    bool ok;
 };
 
 // The Housekeeper instance
@@ -138,29 +139,27 @@ bool Housekeeper::init()
 
 bool Housekeeper::start()
 {
-    struct hkinit_result res;
+    ss_dassert(hk); // init() has been called.
+    ss_dassert(hk->m_thread.get_id() == std::thread::id()); // start has not been called.
+
+    struct hkstart_result res;
     sem_init(&res.sem, 0, 0);
     res.ok = false;
 
-    if (hk && thread_start(&hk->m_thread, hkthread, &res, 0) != NULL)
-    {
-        sem_wait(&res.sem);
-    }
-    else
-    {
-        MXS_ALERT("Failed to start housekeeper thread.");
-    }
+    hk->m_thread = std::thread(hkthread, &res);
+    sem_wait(&res.sem);
 
     sem_destroy(&res.sem);
     return res.ok;
 }
+
 void Housekeeper::run()
 {
     while (is_running())
     {
         for (int i = 0; i < 10; i++)
         {
-            thread_millisleep(100);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             atomic_add_int64(&mxs_clock_ticks, 1);
         }
 
@@ -188,8 +187,11 @@ void Housekeeper::run()
 
 void Housekeeper::stop()
 {
+    ss_dassert(hk); // init() has been called.
+    ss_dassert(hk->m_thread.get_id() != std::thread::id()); // start has been called.
+
     atomic_store_uint32(&m_running, 0);
-    thread_wait(m_thread);
+    m_thread.join();
 }
 
 void Housekeeper::add(const Task& task)
@@ -267,24 +269,24 @@ void hktask_remove(const char *name)
     hk->remove(name);
 }
 
-void hkthread(void *data)
+void hkthread(hkstart_result* res)
 {
-    struct hkinit_result* res = (struct hkinit_result*)data;
     res->ok = qc_thread_init(QC_INIT_BOTH);
 
     if (!res->ok)
     {
-        MXS_ERROR("Could not initialize housekeeper thread.");
+        MXS_ERROR("Could not initialize query classifier in housekeeper thread.");
     }
 
     sem_post(&res->sem);
 
     if (res->ok)
     {
+        MXS_NOTICE("Housekeeper thread started.");
         hk->run();
+        qc_thread_end(QC_INIT_BOTH);
     }
 
-    qc_thread_end(QC_INIT_BOTH);
     MXS_NOTICE("Housekeeper shutting down.");
 }
 
