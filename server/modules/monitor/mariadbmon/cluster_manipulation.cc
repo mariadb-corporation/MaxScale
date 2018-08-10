@@ -836,7 +836,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
         {
             if (!first_round)
             {
-                thread_millisleep(500);
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
 
             // Erasing elements from an array, so iterate from last to first

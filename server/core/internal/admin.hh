@@ -17,8 +17,6 @@
 #include <string>
 #include <microhttpd.h>
 
-#include <maxscale/thread.h>
-
 class Client
 {
     Client(const Client&);

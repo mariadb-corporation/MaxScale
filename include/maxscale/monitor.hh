@@ -15,7 +15,6 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/monitor.h>
 #include <maxscale/semaphore.hh>
-#include <maxscale/thread.h>
 #include <maxscale/worker.hh>
 
 namespace maxscale

@@ -3377,16 +3377,16 @@ static inline void dcb_sanity_check(DCB* dcb)
 
     if (dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_UNDEFINED)
     {
-        MXS_ERROR("%lu [poll_add_dcb] Error : existing state of dcb %p "
+        MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this should be impossible, crashing.",
-                  thread_self(), dcb, STRDCBSTATE(dcb->state));
+                  dcb, STRDCBSTATE(dcb->state));
         raise(SIGABRT);
     }
     else if (dcb->state == DCB_STATE_POLLING || dcb->state == DCB_STATE_LISTENING)
     {
-        MXS_ERROR("%lu [poll_add_dcb] Error : existing state of dcb %p "
+        MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
                   "is %s, but this is probably an error, not crashing.",
-                  thread_self(), dcb, STRDCBSTATE(dcb->state));
+                  dcb, STRDCBSTATE(dcb->state));
     }
 }
 

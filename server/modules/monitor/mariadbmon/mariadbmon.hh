@@ -20,7 +20,6 @@
 #include <vector>
 
 #include <maxscale/monitor.hh>
-#include <maxscale/thread.h>
 
 #include "mariadbserver.hh"
 

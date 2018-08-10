@@ -14,7 +14,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/monitor.hh>
-#include <maxscale/thread.h>
 
 /**
  * @file mmmon.hh - The Multi-Master monitor
