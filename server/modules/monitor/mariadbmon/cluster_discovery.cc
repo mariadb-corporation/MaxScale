@@ -30,8 +30,6 @@ static bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database);
 
 static const char HB_TABLE_NAME[] = "maxscale_schema.replication_heartbeat";
 static const int64_t MASTER_BITS = SERVER_MASTER | SERVER_WAS_MASTER;
-static const int64_t SLAVE_BITS = SERVER_SLAVE | SERVER_WAS_SLAVE;
-
 
 /**
  * Generic depth-first search. Iterates through child nodes (slaves) and runs the 'visit_func' on the nodes.
@@ -639,8 +637,8 @@ void MariaDBMonitor::assign_server_roles()
 {
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_WAS_SLAVE |
-                                 SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER;
+    const uint64_t remove_bits = SERVER_MASTER | SERVER_WAS_MASTER | SERVER_SLAVE | SERVER_RELAY |
+                                 SERVER_SLAVE_OF_EXT_MASTER;
     for (auto server : m_servers)
     {
         server->clear_status(remove_bits);
@@ -657,7 +655,7 @@ void MariaDBMonitor::assign_server_roles()
             if (m_master->is_running())
             {
                 // Master is running, assign bits for valid replication.
-                m_master->clear_status(SLAVE_BITS | SERVER_RELAY);
+                m_master->clear_status(SERVER_SLAVE | SERVER_RELAY);
                 m_master->set_status(MASTER_BITS);
                 // Run another graph search, this time assigning slaves.
                 reset_node_index_info();
@@ -782,11 +780,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
                     slave->clear_status(MASTER_BITS);
                     if (slave->is_running())
                     {
-                        slave->set_status(SLAVE_BITS);
-                    }
-                    else if (allow_stale_slaves)
-                    {
-                        slave->set_status(SERVER_WAS_SLAVE);
+                        slave->set_status(SERVER_SLAVE);
                     }
                 }
             }
@@ -801,7 +795,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
         // Relay master bit can stay.
         if (parent->m_version == MariaDBServer::version::BINLOG_ROUTER)
         {
-            parent->clear_status(SLAVE_BITS);
+            parent->clear_status(SERVER_SLAVE);
         }
     }
 }

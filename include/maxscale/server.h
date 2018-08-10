@@ -184,11 +184,10 @@ enum
 #define SERVER_SLAVE_OF_EXT_MASTER  (1 << 5)  /**<< Server is slave of a non-monitored master */
 #define SERVER_RELAY                (1 << 6)  /**<< Server is a relay */
 #define SERVER_WAS_MASTER           (1 << 7)  /**<< Server was a master but lost all slaves. */
-#define SERVER_WAS_SLAVE            (1 << 8)  /**<< Server was a slave but lost its master. */
 // Bits used by other monitors
-#define SERVER_JOINED               (1 << 9)  /**<< The server is joined in a Galera cluster */
-#define SERVER_NDB                  (1 << 10) /**<< The server is part of a MySQL cluster setup */
-#define SERVER_MASTER_STICKINESS    (1 << 11) /**<< Server Master stickiness */
+#define SERVER_JOINED               (1 << 8)  /**<< The server is joined in a Galera cluster */
+#define SERVER_NDB                  (1 << 9) /**<< The server is part of a MySQL cluster setup */
+#define SERVER_MASTER_STICKINESS    (1 << 10) /**<< Server Master stickiness */
 // Bits providing general information
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 31) /**<< The disk space of the server is exhausted */
 
