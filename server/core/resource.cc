@@ -1249,39 +1249,17 @@ static HttpResponse handle_request(const HttpRequest& request)
     return rval;
 }
 
-class ResourceTask: public mxs::Worker::Task
-{
-public:
-    ResourceTask(const HttpRequest& request):
-        m_request(request)
-    {
-    }
-
-    void execute(mxs::Worker& worker)
-    {
-        m_response = handle_request(m_request);
-    }
-
-    HttpResponse result()
-    {
-        return m_response;
-    }
-
-private:
-    const HttpRequest& m_request;
-    HttpResponse m_response;
-};
-
 }
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
     mxs::Worker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-    mxs::Semaphore sem;
-    ResourceTask task(request);
 
-    worker->execute(&task, &sem, mxs::Worker::EXECUTE_AUTO);
-    sem.wait();
+    HttpResponse response;
+    worker->call([&request, &response]()
+                 {
+                     response = handle_request(request);
+                 }, mxs::Worker::EXECUTE_AUTO);
 
-    return task.result();
+    return response;
 }
