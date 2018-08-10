@@ -29,25 +29,27 @@ mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/log/maxscale
 
+if [ "`whoami`" == "root" ]
+then
+    user_opt="-U root"
+fi
+
 # Start MaxScale
-$maxscaledir/bin/maxscale -df $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale1.output &
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale1.output
 
 # Wait for the first MaxScale to start
-for ((i=0;i<60;i++))
+for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxadmin help >& /dev/null && break
+    $maxscaledir/bin/maxctrl list servers >& /dev/null && break
     sleep 0.1
 done
 
 # Start a second maxscale
-$maxscaledir/bin/maxscale -df $maxscaledir/maxscale_secondary.cnf &>> $maxscaledir/maxscale2.output &
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale_secondary.cnf &>> $maxscaledir/maxscale2.output
 
 # Wait for the second MaxScale to start
-for ((i=0;i<60;i++))
+for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxadmin -S /tmp/maxadmin2.sock help >& /dev/null && break
+    $maxscaledir/bin/maxctrl --hosts 127.0.0.1:8990 list servers >& /dev/null && break
     sleep 0.1
 done
-
-# Give MaxScale some time to settle
-sleep 1

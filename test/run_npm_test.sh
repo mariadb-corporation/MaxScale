@@ -30,6 +30,9 @@ cp -t $testdir -r $testsrc/*
 # Required by MaxCtrl (not super pretty)
 cp -t $testdir/.. $srcdir/VERSION*.cmake
 
+# This avoids running npm as root if we're executing the tests as root (MaxCtrl specific)
+(cd $testdir && test -f configure_version.cmake && cmake -P configure_version.cmake)
+
 # Copy required docker-compose files to the MaxScale directory and bring MariaDB
 # servers up. This is an asynchronous process.
 cd $maxscaledir
