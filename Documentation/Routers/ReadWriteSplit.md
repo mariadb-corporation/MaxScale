@@ -29,6 +29,10 @@ the name is used later as a reference in a listener section.
 For more details about the standard service parameters, refer to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
+Starting with 2.3, all router parameters can be configured at runtime. Use
+`maxctrl alter service` to modify them. The changed configuration will only be
+taken into use by new sessions.
+
 ## Parameters
 
 ### `max_slave_connections`
