@@ -1,6 +1,5 @@
 [maxscale]
 threads=4
-log_info=1
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/secondary/log/maxscale/
 datadir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale

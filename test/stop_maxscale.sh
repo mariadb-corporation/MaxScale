@@ -8,13 +8,15 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
-for ((i=0;i<200;i++))
+pkill '^maxscale$'
+
+for ((i=0;i<100;i++))
 do
-    pkill '^maxscale$' || break
+    pgrep '^maxscale$' &> /dev/null || break
     sleep 0.1
 done
 
 # If it wasn't dead before, now it is
-pkill -9 '^maxscale$'
+pgrep '^maxscale$' &> /dev/null && pkill -11 '^maxscale$'
 
 exit 0
