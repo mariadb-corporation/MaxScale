@@ -874,6 +874,7 @@ void MariaDBServer::update_server_version()
         }
         else
         {
+            m_version = version::OLD;
             MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
                       "The server is ignored by the monitor. Server version: '%s'.", name(),
                       srv->version_string);

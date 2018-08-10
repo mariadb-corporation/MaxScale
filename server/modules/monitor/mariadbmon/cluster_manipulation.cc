@@ -1355,7 +1355,10 @@ bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
     // Gtid-replication is required, and a server version which supports it.
     for (MariaDBServer* server : m_servers)
     {
-        if (server->m_version != MariaDBServer::version::MARIADB_100)
+        // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
+        // would deactivate failover.
+        if (server->m_version != MariaDBServer::version::UNKNOWN &&
+            server->m_version != MariaDBServer::version::MARIADB_100)
         {
             *reasons_out += separator + string_printf("The version of server '%s' is not supported. Failover "
                                                       "requires MariaDB 10.X.", server->name());

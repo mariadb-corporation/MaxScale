@@ -123,7 +123,8 @@ public:
     typedef std::vector<SlaveStatus> SlaveStatusArray;
     enum class version
     {
-        UNKNOWN,            /* Anything older than 5.5. These are no longer supported by the monitor. */
+        UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
+        OLD,                /* Anything older than 5.5. These are no longer supported by the monitor. */
         MARIADB_MYSQL_55,   /* MariaDB 5.5 series or MySQL 5.5 and later. Does not have gtid (on MariaDB) so
                              * all gtid-related features (failover etc.) are disabled. */
         MARIADB_100,        /* MariaDB 10.0 and greater. In practice though, 10.0.2 or greater is assumed.

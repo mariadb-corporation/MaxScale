@@ -356,7 +356,9 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
             server.update_server_version();
         }
 
-        if (server.m_version != MariaDBServer::version::UNKNOWN)
+        if (server.m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
+            server.m_version == MariaDBServer::version::MARIADB_100 ||
+            server.m_version == MariaDBServer::version::BINLOG_ROUTER)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
             if (server.had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
