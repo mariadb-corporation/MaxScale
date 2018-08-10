@@ -81,11 +81,11 @@ else
         sudo yum -y install centos-release-scl || \
             sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
-        sudo yum -y install devtoolset-4-gcc-c++
-        source /opt/rh/devtoolset-4/enable
+        sudo yum -y install devtoolset-6-gcc-c++
+        source /opt/rh/devtoolset-6/enable
 
         # Enable it by default
-        echo "source /opt/rh/devtoolset-4/enable" >> ~/.bashrc
+        echo "source /opt/rh/devtoolset-6/enable" >> ~/.bashrc
     fi
   fi
 
