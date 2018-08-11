@@ -86,6 +86,14 @@ else
 
         # Enable it by default
         echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
+    else
+        # Installed for REST API and MaxCtrl unit tests
+        sudo yum -y install docker epel-release
+        sudo yum -y install docker-compose
+        sudo groupadd docker
+        sudo usermod -a -G docker `whoami`
+        sudo sed -i 's/--selinux-enabled/--selinux-enabled=false/' /etc/sysconfig/docker
+        sudo systemctl start docker
     fi
   fi
 

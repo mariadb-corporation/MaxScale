@@ -16,6 +16,22 @@ if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
 then
     # All tests must pass otherwise the build is considered a failure
     ctest --output-on-failure || exit 1
+
+    # See if docker is installed and run REST API and MaxCtrl tests if it is
+    command -v docker
+    if [ $? -eq 0 ]
+    then
+        export SKIP_SHUTDOWN=Y
+        make test_rest_api && make test_maxctrl
+        rc=$?
+        #docker ps -aq|xargs docker rm -vf
+
+        if [ $rc -ne 0 ]
+        then
+            cat maxscale_test/*.output maxscale_test/log/maxscale/*.log
+            exit 1
+        fi
+    fi
 fi
 
 # Never strip binaries

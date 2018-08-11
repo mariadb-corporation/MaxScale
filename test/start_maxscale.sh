@@ -25,11 +25,14 @@ then
 fi
 
 # Start MaxScale
-$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale.output
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale.output || exit 1
 
 # Wait for MaxScale to start
 for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxctrl list servers >& /dev/null && break
+    $maxscaledir/bin/maxctrl list servers >& /dev/null && exit 0
     sleep 0.1
 done
+
+# MaxScale failed to start, exit with an error
+exit 1

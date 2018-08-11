@@ -84,7 +84,17 @@ do
         docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
         sleep 1
     done
-    echo "Done!"
+
+    docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null
+
+    if [ $? -ne 0 ]
+    then
+        echo "failed to start $node, error is:"
+        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1"
+        exit 1
+    else
+        echo "Done!"
+    fi
 done
 
 # Go to the test directory

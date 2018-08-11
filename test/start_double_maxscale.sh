@@ -35,21 +35,20 @@ then
 fi
 
 # Start MaxScale
-$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale1.output
-
-# Wait for the first MaxScale to start
-for ((i=0;i<150;i++))
-do
-    $maxscaledir/bin/maxctrl list servers >& /dev/null && break
-    sleep 0.1
-done
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale1.output || exit 1
 
 # Start a second maxscale
-$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale_secondary.cnf &>> $maxscaledir/maxscale2.output
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale_secondary.cnf &>> $maxscaledir/maxscale2.output || exit 1
 
-# Wait for the second MaxScale to start
+# Wait for the MaxScales to start
+
 for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxctrl --hosts 127.0.0.1:8990 list servers >& /dev/null && break
+    $maxscaledir/bin/maxctrl list servers >& /dev/null && \
+    $maxscaledir/bin/maxctrl --hosts 127.0.0.1:8990 list servers >& /dev/null && \
+        exit 0
     sleep 0.1
 done
+
+# MaxScales failed to start, exit with an error
+exit 1
