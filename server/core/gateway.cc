@@ -411,8 +411,6 @@ sigfatal_handler(int i)
 
     mxb::dump_stacktrace(cb);
 
-    mxs_log_flush_sync();
-
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
     signal_set(i, SIG_DFL);
@@ -2111,14 +2109,6 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (!mxs_log_start_flush_thr())
-    {
-        const char* logerr = "Failed to start log flushing thread.";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
     /*<
      * Start the routing workers running in their own thread.
      */
@@ -2205,8 +2195,6 @@ int main(int argc, char **argv)
     RoutingWorker::finish();
     Worker::finish();
     MessageQueue::finish();
-
-    mxs_log_stop_flush_thr();
 
     /*< Call finish on all modules. */
     modules_process_finish();

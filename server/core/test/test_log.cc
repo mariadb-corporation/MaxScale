@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include "../internal/skygw_utils.h"
 #include <maxscale/log_manager.h>
+#include <maxscale/debug.h>
 
 static void skygw_log_enable(int priority)
 {
@@ -35,13 +35,8 @@ static void skygw_log_disable(int priority)
 int main(int argc, char* argv[])
 {
     int              err = 0;
-    const char*            logstr;
-
-    int              i;
+    const char*      logstr;
     bool             succp;
-    skygw_message_t* mes;
-    simple_mutex_t*  mtx;
-    size_t           nactive;
     time_t           t;
     struct tm        tm;
     char             c;

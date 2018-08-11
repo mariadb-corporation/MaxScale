@@ -109,7 +109,6 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     cout << "Logging " << n_generate << " messages with throttling as " << throttling << "," << endl;
 
     mxs_log_set_throttling(&throttling); // Causes message to be logged.
-    mxs_log_flush_sync();
 
     ifstream in(logfile.c_str());
     in.seekg(0, ios_base::end);
@@ -144,8 +143,6 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
         int rc = sem_wait(&u_semfinish);
         ensure(rc == 0);
     }
-
-    mxs_log_flush_sync();
 
     for (size_t i = 0; i < N_THREADS; ++i)
     {
@@ -247,7 +244,7 @@ int main(int argc, char* argv[])
 
         // 20 messages * N_THREADS, and since we are logging INFO messages, we should
         // get 20 * N_THREADS messages.
-        if (!run(t, LOG_INFO, 20, 20 * N_THREADS + 1)) // There will be 1 info message about log flushing.
+        if (!run(t, LOG_INFO, 20, 20 * N_THREADS))
         {
             rc = EXIT_FAILURE;
         }

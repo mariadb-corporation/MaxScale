@@ -539,15 +539,7 @@ struct subcommand shutdownoptions[] =
 
 static void sync_logs(DCB *dcb)
 {
-    if (mxs_log_flush_sync() == 0)
-    {
-        dcb_printf(dcb, "Logs flushed to disk\n");
-    }
-    else
-    {
-        dcb_printf(dcb, "Failed to flush logs to disk. Read the error log for "
-                   "more details.\n");
-    }
+    dcb_printf(dcb, "This command is deprecated: it does nothing.\n");
 }
 
 struct subcommand syncoptions[] =

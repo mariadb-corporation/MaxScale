@@ -28,12 +28,12 @@ MXS_BEGIN_DECLS
         const char *debug_expr = #exp;  /** The MXS_ERROR marco doesn't seem to like stringification */ \
         MXS_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
         fprintf(stderr, "debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-        mxs_log_flush_sync(); raise(SIGABRT);} } while (false)
+        raise(SIGABRT);} } while (false)
 #define ss_info_dassert(exp,info) do { if(!(exp)){\
         const char *debug_expr = #exp; \
         MXS_ERROR("debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, info, debug_expr); \
         fprintf(stderr, "debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, info, debug_expr); \
-        mxs_log_flush_sync();raise(SIGABRT);} } while (false)
+        raise(SIGABRT);} } while (false)
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush

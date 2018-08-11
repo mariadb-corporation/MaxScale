@@ -26,7 +26,6 @@ add_library(maxscale-common SHARED
   mariadb.cc
   maxscale_pcre2.cc
   misc.cc
-  mlist.cc
   messagequeue.cc
   modulecmd.cc
   modutil.cc
@@ -48,7 +47,6 @@ add_library(maxscale-common SHARED
   service.cc
   session.cc
   session_command.cc
-  skygw_utils.cc
   spinlock.cc
   ssl.cc
   statistics.cc
