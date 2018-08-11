@@ -295,6 +295,12 @@ public:
         return get_row(m_conn, q);
     }
 
+    std::string field(std::string q)
+    {
+        Row r = get_row(m_conn, q);
+        return r.empty() ? std::string() : r[0];
+    }
+
     const char* error() const
     {
         return mysql_error(m_conn);

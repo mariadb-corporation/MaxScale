@@ -872,7 +872,7 @@ add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND
 #add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Testing slaves who have lost their master and how MaxScale works with them
-add_test_executable(stale_slaves.cpp stale_slaves replication LABELS mysqlmon REPL_BACKEND)
+add_test_executable(stale_slaves.cpp stale_slaves stale_slaves LABELS mysqlmon REPL_BACKEND)
 
 # Run sysbech test and block one slave during test execution
 add_test_executable(sysbench_kill_slave.cpp sysbench_kill_slave replication LABELS UNSTABLE HEAVY REPL_BACKEND)

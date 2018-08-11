@@ -2,105 +2,80 @@
  * @file stale_slaves.cpp Testing slaves who have lost their master and how MaxScale works with them
  *
  * When the master server is blocked and slaves lose their master, they should
- * still be available for read queries. When a slave with no master fails, it should not
- * be assigned slave status again. Once the master comes back, all slaves should get slave
- * status if replication is running.
+ * still be available for read queries. Once the master comes back, all slaves
+ * should get slave status if replication is running.
  */
 
-
-#include <iostream>
 #include "testconnections.h"
+
+#include <algorithm>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 int main(int argc, char **argv)
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections test(argc, argv);
+    vector<string> ids;
 
-    char server_id[test->repl->N][1024];
-
-    test->repl->connect();
-    /** Get server_id for each node */
-    for (int i = 0; i < test->repl->N; i++)
+    test.repl->connect();
+    for (int i = 0; i < test.repl->N; i++)
     {
-        sprintf(server_id[i], "%d", test->repl->get_server_id(i));
+        ids.push_back(test.repl->get_server_id_str(i));
     }
 
-    test->tprintf("Block the master and try a read query\n");
-    test->repl->block_node(0);
-    sleep(15);
-    test->maxscales->connect_readconn_slave(0);
-    char first_slave[1024];
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", first_slave);
-
-    int found = -1;
-
-    for (int i = 0; i < test->repl->N; i++)
+    auto get_id = [&]()
     {
-        if (strcmp(server_id[i], first_slave) == 0)
+        Connection c = test.maxscales->readconn_slave();
+        test.assert(c.connect(), "Connection should be OK: %s", c.error());
+        string res = c.field("SELECT @@server_id");
+        test.assert(!res.empty(), "Field should not be empty: %s", c.error());
+        return res;
+    };
+
+    auto in_use = [&](string id)
+    {
+        for (int i = 0; i < 2 * test.repl->N; i++)
         {
-            found = i;
-            break;
+            if (get_id() == id)
+            {
+                return true;
+            }
         }
-    }
 
-    test->add_result(found < 0, "No server with ID '%s' found.", first_slave);
+        return false;
+    };
 
-    test->tprintf("Blocking node %d\n", found + 1);
-    test->repl->block_node(found);
-    sleep(15);
+    test.tprintf("Blocking the master and doing a read query");
+    test.repl->block_node(0);
+    test.maxscales->wait_for_monitor();
 
-    test->tprintf("Blocked the slave that replied to us, expecting a different slave\n");
-    test->maxscales->connect_readconn_slave(0);
-    char second_slave[1024];
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
-    test->add_result(strcmp(first_slave, second_slave) == 0,
-                     "Server IDs match when they shouldn't: %s - %s",
-                     first_slave, second_slave);
+    string first = get_id();
+    auto it = find(begin(ids), end(ids), first);
+    test.assert(it != end(ids), "ID should be found");
+    int node = distance(begin(ids), it);
 
-    test->tprintf("Unblocking the slave that replied\n");
-    test->repl->unblock_node(found);
-    sleep(15);
+    test.tprintf("Blocking the slave that replied to us");
+    test.repl->block_node(node);
+    test.maxscales->wait_for_monitor();
+    test.assert(!in_use(first), "The first slave should not be in use");
 
-    test->tprintf("Unblocked the slave, still expecting a different slave\n");
-    test->maxscales->connect_readconn_slave(0);
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
-    test->add_result(strcmp(first_slave, second_slave) == 0,
-                     "Server IDs match when they shouldn't: %s - %s",
-                     first_slave, second_slave);
+    test.tprintf("Unblocking all nodes");
+    test.repl->unblock_all_nodes();
+    test.maxscales->wait_for_monitor();
+    test.assert(in_use(first), "The first slave should be in use");
 
-    test->tprintf("Unblocking all nodes\n");
-    test->repl->unblock_all_nodes();
-    sleep(15);
+    test.tprintf("Stopping replication on first slave");
+    execute_query(test.repl->nodes[node], "STOP SLAVE");
+    test.maxscales->wait_for_monitor();
+    test.assert(!in_use(first), "The first slave should not be in use");
 
-    test->tprintf("Unblocked all nodes, expecting the server ID of the first slave server\n");
-    test->maxscales->connect_readconn_slave(0);
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
-    test->add_result(strcmp(first_slave, second_slave) != 0,
-                     "Server IDs don't match when they should: %s - %s",
-                     first_slave, second_slave);
+    test.tprintf("Starting replication on first slave");
+    execute_query(test.repl->nodes[node], "START SLAVE");
+    test.maxscales->wait_for_monitor();
+    test.assert(in_use(first), "The first slave should be in use");
+    test.repl->disconnect();
 
-    test->tprintf("Stopping replication on node %d\n", found + 1);
-    execute_query(test->repl->nodes[found], "stop slave");
-    sleep(15);
-
-    test->tprintf("Stopped replication, expecting a different slave\n");
-    test->maxscales->connect_readconn_slave(0);
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
-    test->add_result(strcmp(first_slave, second_slave) == 0,
-                     "Server IDs match when they shouldn't: %s - %s",
-                     first_slave, second_slave);
-
-    test->tprintf("Starting replication on node %d\n", found + 1);
-    execute_query(test->repl->nodes[found], "start slave");
-    sleep(15);
-
-    test->tprintf("Started replication, expecting the server ID of the first slave server\n");
-    test->maxscales->connect_readconn_slave(0);
-    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
-    test->add_result(strcmp(first_slave, second_slave) != 0,
-                     "Server IDs don't match when they should: %s - %s",
-                     first_slave, second_slave);
-
-    int rval = test->global_result;
-    delete test;
-    return rval;
+    return test.global_result;
 }
