@@ -192,6 +192,7 @@ Service::Service(const std::string& service_name, const std::string& router_name
     snprintf(user, sizeof(user), "%s", m_user.c_str());
     snprintf(password, sizeof(password), "%s", m_password.c_str());
     snprintf(weightby, sizeof(weightby), "%s", m_weightby.c_str());
+    snprintf(version_string, sizeof(version_string), "%s", m_version_string.c_str());
 
     max_retry_interval = config_get_integer(params, CN_MAX_RETRY_INTERVAL);
     users_from_all = config_get_bool(params, CN_AUTH_ALL_SERVERS);
