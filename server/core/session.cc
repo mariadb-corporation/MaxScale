@@ -58,7 +58,22 @@ static uint64_t next_session_id = 1;
 static uint32_t retain_last_statements = 0;
 static session_dump_statements_t dump_statements = SESSION_DUMP_STATEMENTS_NEVER;
 
-static struct session session_dummy_struct;
+namespace
+{
+
+static struct session dummy_session()
+{
+    struct session session = {};
+    session.ses_chk_top = CHK_NUM_SESSION;
+    session.ses_chk_tail = CHK_NUM_SESSION;
+    session.state = SESSION_STATE_DUMMY;
+    session.refcount = 1;
+    return session;
+}
+
+}
+
+static struct session session_dummy_struct = dummy_session();
 
 static void session_initialize(void *session);
 static int session_setup_filters(MXS_SESSION *session);
@@ -237,19 +252,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
 MXS_SESSION *
 session_set_dummy(DCB *client_dcb)
 {
-    MXS_SESSION *session;
-
-    session = &session_dummy_struct;
-    session->ses_chk_top = CHK_NUM_SESSION;
-    session->ses_chk_tail = CHK_NUM_SESSION;
-    session->service = NULL;
-    session->client_dcb = NULL;
-    memset(&session->stats, 0, sizeof(MXS_SESSION_STATS));
-    session->stats.connect = 0;
-    session->state = SESSION_STATE_DUMMY;
-    session->refcount = 1;
-    session->ses_id = 0;
-
+    MXS_SESSION* session = &session_dummy_struct;
     client_dcb->session = session;
     return session;
 }
