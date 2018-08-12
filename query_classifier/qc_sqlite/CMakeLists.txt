@@ -20,7 +20,7 @@ add_dependencies(qc_sqlite maxscale_sqlite)
 # in sqlite-src-3110100/configure.
 # In configure we have defined SQLITE_OMIT_VIRTUALTABLE, but it cannot be defined here,
 # although conceptually is should, as one needed static function in case will be missing.
-add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA )
+add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA -DSQLITE_DEFAULT_MEMSTATUS=0)
 
 set_target_properties(qc_sqlite PROPERTIES VERSION "1.0.0")
 set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/qc_sqlite.map)
