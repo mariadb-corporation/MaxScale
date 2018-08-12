@@ -1014,6 +1014,8 @@ int main(int argc, char* argv[])
             {
                 cerr << "error: Could not setup query classifier." << endl;
             }
+
+            mxs_log_finish();
         }
     }
     else

@@ -96,6 +96,7 @@ int main(int argc, char **argv)
 
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
+    atexit(mxs_log_finish);
 
     mxs_log_set_priority_enabled(LOG_NOTICE, false);
     mxs_log_set_priority_enabled(LOG_ERR, true);

@@ -169,6 +169,7 @@ int main(int argc, char **argv)
 
     // We ignore potential errors.
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
+    atexit(mxs_log_finish);
     mxs_log_set_augmentation(0);
     mxs_log_set_priority_enabled(LOG_DEBUG, debug_out);
 

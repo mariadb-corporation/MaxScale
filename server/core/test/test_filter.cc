@@ -147,10 +147,13 @@ main(int argc, char **argv)
 {
     int result = 0;
     set_libdir(MXS_STRDUP_A("../../modules/filter/qlafilter/"));
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
 
     result += test1();
     result += test2();
     result += test3();
+
+    mxs_log_finish();
 
     exit(result);
 }

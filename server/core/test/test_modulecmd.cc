@@ -465,6 +465,7 @@ int main(int argc, char **argv)
 {
     int rc = 0;
 
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     mxs::MessageQueue::init();
 
     rc += test_arguments();
@@ -476,5 +477,6 @@ int main(int argc, char **argv)
     rc += test_domain_matching("mariadbmon", "mysqlmon",   "test_domain_matching2");
     rc += test_output();
 
+    mxs_log_finish();
     return rc;
 }

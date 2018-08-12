@@ -40,6 +40,7 @@ void init_test_env(char *path)
     {
         exit(1);
     }
+    atexit(mxs_log_finish);
     dcb_global_init();
     set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);

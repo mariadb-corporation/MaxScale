@@ -305,6 +305,7 @@ int main()
         {
             rc = (MaskingRulesTester::test_account_handling() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
         }
+        mxs_log_finish();
     }
 
     return rc;

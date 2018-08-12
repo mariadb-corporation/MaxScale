@@ -53,7 +53,6 @@ test1()
     int         result;
     int         argc = 3;
 
-    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     init_test_env(NULL);
 
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));

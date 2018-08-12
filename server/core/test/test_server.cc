@@ -182,6 +182,7 @@ int main(int argc, char **argv)
      * allocation from failing if multiple modules from different directories are
      * loaded in one core function call.
      */
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/NullAuthAllow/"));
     load_module("NullAuthAllow", MODULE_AUTHENTICATOR);
     set_libdir(MXS_STRDUP_A("../../modules/protocol/HTTPD/"));
@@ -196,5 +197,6 @@ int main(int argc, char **argv)
         result++;
     }
 
+    mxs_log_finish();
     exit(result);
 }

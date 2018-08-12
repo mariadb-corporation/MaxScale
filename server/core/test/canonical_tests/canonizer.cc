@@ -37,6 +37,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
+    atexit(mxs_log_finish);
+
     if (!utils_init())
     {
         cout << "Utils library init failed." << endl;

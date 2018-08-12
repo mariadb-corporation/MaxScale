@@ -1859,9 +1859,6 @@ int main(int argc, char **argv)
             goto return_main;
         }
 
-        mxs_log_set_syslog_enabled(*syslog_enabled);
-        mxs_log_set_maxlog_enabled(*maxlog_enabled);
-
         mxs_log_target_t log_target = MXS_LOG_TARGET_FS;
 
         if (to_stdout)
@@ -1876,6 +1873,9 @@ int main(int argc, char **argv)
             rc = MAXSCALE_BADCONFIG;
             goto return_main;
         }
+
+        mxs_log_set_syslog_enabled(*syslog_enabled);
+        mxs_log_set_maxlog_enabled(*maxlog_enabled);
     }
 
     if (!config_load_global(cnf_file_path))

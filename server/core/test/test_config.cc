@@ -379,6 +379,7 @@ int main(int argc, char **argv)
         result += test_add_parameter();
         result += test_required_parameters();
         result += test_disk_space_threshold();
+        mxs_log_finish();
     }
     else
     {
