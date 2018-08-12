@@ -17,19 +17,12 @@
 MXS_BEGIN_DECLS
 
 /**
- * @brief Initialize the random number generator
- *
- * Uses /dev/urandom if available, and warms the generator up with 1000 iterations.
- */
-void random_jkiss_init(void);
-
-/**
  * @brief Return a pseudo-random number
  *
  * Return a pseudo-random number that satisfies major tests for random sequences.
  *
  * @return A random number
  */
-unsigned int random_jkiss(void);
+unsigned int mxs_random(void);
 
 MXS_END_DECLS

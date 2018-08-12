@@ -35,7 +35,7 @@
 #include <maxscale/modulecmd.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>

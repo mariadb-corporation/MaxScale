@@ -53,7 +53,7 @@
 #include <maxscale/session.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 
 #include "internal/admin.hh"
 #include "internal/config.hh"
@@ -1782,9 +1782,6 @@ int main(int argc, char **argv)
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
-
-    /** Initialize the random number generator */
-    random_jkiss_init();
 
     if (!utils_init())
     {

@@ -21,7 +21,7 @@
 #include <sched.h>
 #include <semaphore.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 
 using std::cerr;
 using std::cout;
@@ -161,7 +161,6 @@ int main(int argc, char* argv[])
     int rc;
 
     std::ios::sync_with_stdio();
-    random_jkiss_init();
     rc = sem_init(&u_semstart, 0, 0);
     ensure(rc == 0);
 

@@ -22,7 +22,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 #include <maxscale/utils.h>
 
 #include "internal/secrets.h"
@@ -35,7 +35,7 @@
 static unsigned char
 secrets_randomchar()
 {
-    return (char) ((random_jkiss() % ('~' - ' ')) + ' ');
+    return (char) ((mxs_random() % ('~' - ' ')) + ' ');
 }
 
 static int

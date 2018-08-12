@@ -48,7 +48,7 @@
 #include <maxscale/limits.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/poll.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 #include <maxscale/secrets.h>
 #include <maxscale/session.h>
 
@@ -161,7 +161,7 @@ char *gw_strend(register const char *s)
  *****************************************/
 static char gw_randomchar()
 {
-    return (char)((random_jkiss() % 78) + 30);
+    return (char)((mxs_random() % 78) + 30);
 }
 
 /*****************************************

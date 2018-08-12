@@ -36,7 +36,7 @@ add_library(maxscale-common SHARED
   poll.cc
   queryclassifier.cc
   query_classifier.cc
-  random_jkiss.cc
+  random.cc
   resultset.cc
   resource.cc
   router.cc

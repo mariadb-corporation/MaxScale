@@ -32,7 +32,7 @@
 
 #include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/random_jkiss.h>
+#include <maxscale/random.h>
 #include <maxscale/alloc.h>
 
 #include "internal/secrets.h"
@@ -162,8 +162,6 @@ int main(int argc, char **argv)
     mxs_log_set_priority_enabled(LOG_NOTICE, false);
     mxs_log_set_priority_enabled(LOG_INFO, false);
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
-
-    random_jkiss_init();
 
     size_t len = strlen(password);
 
