@@ -25,7 +25,6 @@
 #include <maxscale/debug.h>
 #include <maxscale/json_api.h>
 #include <maxscale/session.h>
-#include <maxscale/spinlock.hh>
 #include <maxscale/utils.h>
 
 #include "internal/logger.hh"
@@ -159,8 +158,7 @@ class MessageRegistryStats
 {
 public:
     MessageRegistryStats()
-        : m_lock(SPINLOCK_INIT)
-        , m_first_ms(time_monotonic_ms())
+        : m_first_ms(time_monotonic_ms())
         , m_last_ms(0)
         , m_count(0)
     {
@@ -172,7 +170,7 @@ public:
 
         uint64_t now_ms = time_monotonic_ms();
 
-        spinlock_acquire(&m_lock);
+        std::lock_guard<std::mutex> guard(m_lock);
 
         ++m_count;
 
@@ -226,16 +224,14 @@ public:
 
         m_last_ms = now_ms;
 
-        spinlock_release(&m_lock);
-
         return rv;
     }
 
 private:
-    SPINLOCK m_lock;
-    uint64_t m_first_ms; /** The time when the error was logged the first time in this window. */
-    uint64_t m_last_ms;  /** The time when the error was logged the last time. */
-    size_t   m_count;    /** How many times the error has been reported within this window. */
+    std::mutex m_lock;
+    uint64_t   m_first_ms; /** The time when the error was logged the first time in this window. */
+    uint64_t   m_last_ms;  /** The time when the error was logged the last time. */
+    size_t     m_count;    /** How many times the error has been reported within this window. */
 };
 
 }
@@ -288,23 +284,13 @@ public:
 
     Stats& get_stats(const Key& key)
     {
-        mxs::SpinLockGuard guard(m_lock);
-
-        auto i = m_registry.find(key);
-
-        if (i == m_registry.end())
-        {
-            Stats stats;
-
-            i = m_registry.insert(std::make_pair(key, stats)).first;
-        }
-
-        return i->second;
+        std::lock_guard<std::mutex> guard(m_lock);
+        return m_registry[key];
     }
 
 private:
-    mxs::SpinLock                       m_lock;
-    std::unordered_map<Key, Stats>      m_registry;
+    std::mutex                     m_lock;
+    std::unordered_map<Key, Stats> m_registry;
 };
 
 }
