@@ -22,21 +22,10 @@
 #include <sstream>
 #include <sys/timerfd.h>
 
-#include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
-#include <maxscale/config.h>
 #include <maxscale/clock.h>
-#include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/platform.h>
 #include <maxscale/semaphore.hh>
-#include <maxscale/json_api.h>
-#include <maxscale/utils.hh>
-
-#include "internal/dcb.h"
-#include "internal/modules.h"
-#include "internal/service.hh"
-#include "internal/statistics.h"
 
 #define WORKER_ABSENT_ID -1
 
