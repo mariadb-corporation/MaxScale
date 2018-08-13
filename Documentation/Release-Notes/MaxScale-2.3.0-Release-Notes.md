@@ -55,9 +55,9 @@ MaxScale 2.3 and will be removed in a subsequent release. The
 
 ### `thread_stack_size`
 
-The `thread_stack_size` configuration parameter has been deprecated. If
-you need to explicitly set the stack size, do so using `ulimit -s` before
-starting MaxScale.
+The `thread_stack_size` configuration parameter is ignored and has been
+deprecated. If you need to explicitly set the stack size, do so using
+`ulimit -s` before starting MaxScale.
 
 ## Dropped Features
 

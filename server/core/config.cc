@@ -2061,8 +2061,8 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
     {
         // DEPRECATED in 2.3, remove in 2.4
-        MXS_WARNING("%s has been deprecated. If you need to explicitly set the stack "
-                    "size, do so with 'ulimit -s' before starting MaxScale.",
+        MXS_WARNING("%s is ignored and has been deprecated. If you need to explicitly "
+                    "set the stack size, do so with 'ulimit -s' before starting MaxScale.",
                     CN_THREAD_STACK_SIZE);
     }
     else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)

@@ -163,7 +163,7 @@ will be used to manage the user connections.
 
 #### `thread_stack_size`
 
-Deprecated in 2.3.
+Ignored and deprecated in 2.3.
 
 If you need to explicitly set the stack size, do so using `ulimit -s` before
 starting MaxScale.
