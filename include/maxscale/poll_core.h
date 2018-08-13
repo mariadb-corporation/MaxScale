@@ -18,7 +18,6 @@
 
 #include <maxscale/cdefs.h>
 #include <sys/epoll.h>
-#include <maxscale/atomic.h>
 
 MXS_BEGIN_DECLS
 

@@ -13,8 +13,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/poll.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
