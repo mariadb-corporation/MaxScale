@@ -51,7 +51,6 @@ add_library(maxscale-common SHARED
   spinlock.cc
   ssl.cc
   statistics.cc
-  thread.cc
   users.cc
   utils.cc
   worker.cc
