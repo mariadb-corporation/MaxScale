@@ -34,7 +34,6 @@
 #include <maxscale/secrets.h>
 #include <maxscale/service.h>
 #include <maxscale/sqlite3.h>
-#include <maxscale/thread.h>
 #include <maxscale/mysql_binlog.h>
 
 MXS_BEGIN_DECLS
@@ -535,7 +534,7 @@ typedef struct router_slave
     /*< lsi: Last Sent Information */
     blr_thread_role_t lsi_sender_role;
     /*< Master or slave code sent */
-    THREAD            lsi_sender_tid;
+    uint64_t          lsi_sender_tid;
     /*< Who sent */
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1];
     /*< Which binlog file */

@@ -36,6 +36,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <pthread.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/buffer.h>
@@ -1739,7 +1741,7 @@ bool blr_send_event(blr_thread_role_t role,
                   slave->serverid,
                   binlog_name,
                   binlog_pos,
-                  (uint64_t)thread_self(),
+                  (uint64_t)pthread_self(),
                   ROLETOSTR(role),
                   (uint64_t)slave->lsi_sender_tid,
                   ROLETOSTR(slave->lsi_sender_role),
@@ -1792,7 +1794,7 @@ bool blr_send_event(blr_thread_role_t role,
         strcpy(slave->lsi_binlog_name, binlog_name);
         slave->lsi_binlog_pos = binlog_pos;
         slave->lsi_sender_role = role;
-        slave->lsi_sender_tid = thread_self();
+        slave->lsi_sender_tid = pthread_self();
     }
     else
     {
