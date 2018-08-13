@@ -114,8 +114,8 @@ typedef struct service
     char user[MAX_SERVICE_USER_LEN];   /**< The user name to use to extract information */
     char password[MAX_SERVICE_PASSWORD_LEN]; /**< The authentication data requied */
     SERVICE_STATS stats;               /**< The service statistics */
-    int enable_root;                   /**< Allow root user  access */
-    int localhost_match_wildcard_host; /**< Match localhost against wildcard */
+    bool enable_root;                   /**< Allow root user  access */
+    bool localhost_match_wildcard_host; /**< Match localhost against wildcard */
     MXS_CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
     int svc_config_version;            /**<  Version number of configuration */
     bool svc_do_shutdown;              /**< tells the service to exit loops etc. */

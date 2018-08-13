@@ -828,7 +828,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
 
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
     sqlite3* handle = get_handle(instance);
-    bool anon_user = false;
     int users = 0;
 
     if (query)
@@ -856,13 +855,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
                     add_mysql_user(handle, row[0], row[1], row[2],
                                    row[3] && strcmp(row[3], "Y") == 0, row[4]);
                     users++;
-
-                    if (row[0] && *row[0] == '\0')
-                    {
-                        /** Empty username is used for the anonymous user. This means
-                         that localhost does not match wildcard host. */
-                        anon_user = true;
-                    }
                 }
 
                 mysql_free_result(result);
@@ -874,12 +866,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
         }
 
         MXS_FREE(query);
-    }
-
-    /** Set the parameter if it is not configured by the user */
-    if (service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
-    {
-        service->localhost_match_wildcard_host = anon_user ? 0 : 1;
     }
 
     /** Load the list of databases */

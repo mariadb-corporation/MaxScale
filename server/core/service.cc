@@ -1782,16 +1782,20 @@ bool Service::dump_config(const char *filename) const
     dprintf(file, "%s=%s\n", CN_ROUTER, m_router_name.c_str());
     dprintf(file, "%s=%s\n", CN_USER, m_user.c_str());
     dprintf(file, "%s=%s\n", CN_PASSWORD, m_password.c_str());
-    dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, enable_root ? "true" : "false");
-    dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, max_retry_interval);
-    dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, max_connections);
-    dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, conn_idle_timeout);
-    dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, users_from_all ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, strip_db_esc ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST,
-            localhost_match_wildcard_host ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, log_auth_warnings ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, retry_start ? "true" : "false");
+
+    const MXS_MODULE_PARAM* mp = config_service_params;
+
+    dump_param(mp, file, CN_ENABLE_ROOT_USER, enable_root);
+    dump_param(mp, file, CN_MAX_RETRY_INTERVAL, max_retry_interval);
+    dump_param(mp, file, CN_MAX_CONNECTIONS, max_connections);
+    dump_param(mp, file, CN_CONNECTION_TIMEOUT, conn_idle_timeout);
+    dump_param(mp, file, CN_AUTH_ALL_SERVERS, users_from_all);
+    dump_param(mp, file, CN_STRIP_DB_ESC, strip_db_esc);
+    dump_param(mp, file, CN_LOCALHOST_MATCH_WILDCARD_HOST, localhost_match_wildcard_host);
+    dump_param(mp, file, CN_LOG_AUTH_WARNINGS, log_auth_warnings);
+    dump_param(mp, file, CN_RETRY_ON_FAILURE, retry_start);
+    dump_param(mp, file, CN_VERSION_STRING, m_version_string);
+    dump_param(mp, file, CN_WEIGHTBY, m_weightby);
 
     if (!m_filters.empty())
     {
@@ -1805,16 +1809,6 @@ bool Service::dump_config(const char *filename) const
         }
 
         dprintf(file, "\n");
-    }
-
-    if (!m_version_string.empty())
-    {
-        dprintf(file, "%s=%s\n", CN_VERSION_STRING, m_version_string.c_str());
-    }
-
-    if (!m_weightby.empty())
-    {
-        dprintf(file, "%s=%s\n", CN_WEIGHTBY, m_weightby.c_str());
     }
 
     if (dbref)
@@ -1852,12 +1846,16 @@ bool Service::dump_config(const char *filename) const
         CN_SERVERS
     };
 
+    const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
+    ss_dassert(mod);
+    mp = mod->parameters;
+
     // Dump router specific parameters
     for (auto p = svc_config_param; p; p = p->next)
     {
         if (common_params.count(p->name) == 0)
         {
-            dprintf(file, "%s=%s\n", p->name, p->value);
+            dump_param(mp, file, p->name, p->value);
         }
     }
 
