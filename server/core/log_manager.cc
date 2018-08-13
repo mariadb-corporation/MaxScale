@@ -21,17 +21,16 @@
 #include <string>
 #include <mutex>
 
+#include <maxbase/error.h>
+#include <maxbase/logger.hh>
+
 #include <maxscale/config.h>
 #include <maxscale/debug.h>
 #include <maxscale/json_api.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.h>
 
-#include "internal/logger.hh"
-
-using namespace maxscale;
-
-static std::unique_ptr<Logger> logger;
+static std::unique_ptr<mxb::Logger> logger;
 
 const std::string LOGFILE_NAME = "maxscale.log";
 
@@ -329,11 +328,11 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
     {
         case MXS_LOG_TARGET_FS:
         case MXS_LOG_TARGET_DEFAULT:
-            logger = FileLogger::create(filename);
+            logger = mxb::FileLogger::create(filename);
             break;
 
         case MXS_LOG_TARGET_STDOUT:
-            logger = StdoutLogger::create(filename);
+            logger = mxb::StdoutLogger::create(filename);
             break;
 
         default:
@@ -864,13 +863,7 @@ int mxs_log_message(int priority,
 
 const char* mxs_strerror(int error)
 {
-    static thread_local char errbuf[MXS_STRERROR_BUFLEN];
-#ifdef HAVE_GLIBC
-    return strerror_r(error, errbuf, sizeof(errbuf));
-#else
-    strerror_r(error, errbuf, sizeof(errbuf));
-    return errbuf;
-#endif
+    return mxb_strerror(error);
 }
 
 json_t* get_log_priorities()

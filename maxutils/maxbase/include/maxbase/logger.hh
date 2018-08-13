@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 
 #include <string>
 #include <mutex>
@@ -20,7 +20,7 @@
 
 #include <unistd.h>
 
-namespace maxscale
+namespace maxbase
 {
 
 // Minimal logger interface

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/logger.hh"
+#include <maxbase/logger.hh>
 
 #include <syslog.h>
 #include <fcntl.h>
@@ -22,7 +22,10 @@
 #include <cstdio>
 #include <ctime>
 
-#include <maxscale/debug.h>
+#include <maxbase/error.h>
+
+// TODO: move <maxscale/debug.h> into maxbase
+#define ss_dassert(a)
 
 /**
  * Error logging for the logger itself.
@@ -44,7 +47,7 @@ int open_fd(const std::string& filename)
 
     if (fd == -1)
     {
-        LOG_ERROR("Failed to open file '%s': %d, %s\n", filename.c_str(), errno, mxs_strerror(errno));
+        LOG_ERROR("Failed to open file '%s': %d, %s\n", filename.c_str(), errno, mxb_strerror(errno));
     }
 
     return fd;
@@ -68,7 +71,7 @@ bool should_log_error()
 
 }
 
-namespace maxscale
+namespace maxbase
 {
 
 //
@@ -122,7 +125,7 @@ bool FileLogger::write(const char* msg, int len)
         {
             if (should_log_error()) // Coarse error suppression
             {
-                LOG_ERROR("Failed to write to log: %d, %s\n", errno, mxs_strerror(errno));
+                LOG_ERROR("Failed to write to log: %d, %s\n", errno, mxb_strerror(errno));
             }
 
             rval = false;
@@ -194,7 +197,7 @@ bool FileLogger::write_header()
     if (!ok)
     {
         LOG_ERROR("Error: Writing log header failed due to %d, %s\n",
-                  errno, mxs_strerror(errno));
+                  errno, mxb_strerror(errno));
     }
 
     return ok;
@@ -228,7 +231,7 @@ bool FileLogger::write_footer(const char* suffix)
     if (!ok)
     {
         LOG_ERROR("Error: Writing log footer failed due to %d, %s\n",
-                  errno, mxs_strerror(errno));
+                  errno, mxb_strerror(errno));
     }
 
     return ok;
