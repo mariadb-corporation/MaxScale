@@ -353,227 +353,73 @@ void mxs_log_finish(void)
     closelog();
 }
 
-//
-// TODO: The timestamp generation still needs some work
-//
-
-static const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
-/** One for terminating '\0' */
-static const size_t timestamp_len = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 3 + 1);
-
-static const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-/** One for terminating '\0' */
-static const size_t timestamp_len_hp = (4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 3 + 3  + 1);
-
-size_t get_timestamp_len(void)
+std::string get_timestamp(void)
 {
-    return timestamp_len;
-}
-
-size_t get_timestamp_len_hp(void)
-{
-    return timestamp_len_hp;
-}
-
-/**
- * @node Generate and write a timestamp to location passed as argument
- * by using at most tslen characters.
- *
- * Parameters:
- * @param p_ts - in, use
- *          Write position in memory. Must be filled with at least
- *          <timestamp_len> zeroes
- *
- * @return Length of string written to p_ts. Length includes terminating '\0'.
- *
- *
- * @details (write detailed description here)
- *
- */
-size_t snprint_timestamp(char* p_ts, size_t tslen)
-{
-    time_t t;
+    time_t t = time(NULL);
     struct tm tm;
-    size_t rval;
-    struct timeval tv;
-    if (p_ts == NULL)
-    {
-        rval = 0;
-        goto retblock;
-    }
-
-    /** Generate timestamp */
-
-    t = time(NULL);
     localtime_r(&t, &tm);
-    snprintf(p_ts, tslen, timestamp_formatstr,
+    const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
+    int required = snprintf(NULL, 0, timestamp_formatstr,
+                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                            tm.tm_min, tm.tm_sec);
+    char buf[required + 1];
+
+    snprintf(buf, sizeof(buf), timestamp_formatstr,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
              tm.tm_min, tm.tm_sec);
-    rval = strlen(p_ts) * sizeof (char);
-retblock:
-    return rval;
+
+    return buf;
 }
 
-/**
- * @node Generate and write a timestamp to location passed as argument
- * by using at most tslen characters. This will use millisecond precision.
- *
- * Parameters:
- * @param p_ts - in, use
- *          Write position in memory. Must be filled with at least
- *          <timestamp_len> zeroes
- *
- * @return Length of string written to p_ts. Length includes terminating '\0'.
- *
- *
- * @details (write detailed description here)
- *
- */
-size_t snprint_timestamp_hp(char* p_ts, size_t tslen)
+std::string get_timestamp_hp(void)
 {
-    time_t t;
-    struct tm tm;
-    size_t rval;
     struct timeval tv;
-    int usec;
-    if (p_ts == NULL)
-    {
-        rval = 0;
-        goto retblock;
-    }
-
-    /** Generate timestamp */
-
     gettimeofday(&tv, NULL);
+    struct tm tm;
     localtime_r(&tv.tv_sec, &tm);
-    usec = tv.tv_usec / 1000;
-    snprintf(p_ts, tslen, timestamp_formatstr_hp,
+    int usec = tv.tv_usec / 1000;
+
+    const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
+    int required = snprintf(NULL, 0, timestamp_formatstr_hp,
+                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                            tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
+
+    char buf[required + 1];
+
+    snprintf(buf, sizeof(buf), timestamp_formatstr_hp,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
              tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
-    rval = strlen(p_ts) * sizeof (char);
-retblock:
-    return rval;
+
+    return buf;
 }
 
 /**
- * Finds write position from block buffer for log string and writes there.
- *
- * Parameters:
+ * write a message to the MaxScale log
  *
  * @param priority      Syslog priority
- * @param flush         indicates whether log string must be written to disk
- *                      immediately
- * @param prefix_len    length of prefix to be stripped away when syslogging
- * @param str_len       length of formatted string (including terminating NULL).
- * @param str           string to be written to log
+ * @param str           string to be written to log (null terminated)
  *
- * @return 0 if succeed, -1 otherwise
- *
+ * @return 0 on succeess, -1 on error
  */
-static int log_write(int            priority,
-                     size_t         prefix_len,
-                     size_t         str_len,
-                     const char*    str)
+static int log_write(int priority, const char* str)
 {
-    int          err = 0;
-    size_t       timestamp_len;
-
-    // The config parameters are copied to local variables, because the values in
-    // log_config may change during the course of the function, with would have
-    // unpleasant side-effects.
-    int do_highprecision = log_config.do_highprecision;
-    int do_syslog = log_config.do_syslog;
-
     ss_dassert(str);
     ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
-    /** Length of string that will be written, limited by bufsize */
-    size_t safe_str_len;
 
-    if (do_highprecision)
+    std::string msg = log_config.do_highprecision ? get_timestamp_hp() : get_timestamp();
+    msg += str;
+
+    // Remove any user-generated newlines.
+    // This is safe to do as we know the message is not full of newlines
+    while (msg.back() == '\n')
     {
-        timestamp_len = get_timestamp_len_hp();
-    }
-    else
-    {
-        timestamp_len = get_timestamp_len();
-    }
-
-    bool overflow = false;
-    safe_str_len = timestamp_len - sizeof(char) + str_len;
-
-    /**
-     * Seek write position and register to block buffer.
-     * Then print formatted string to write position.
-     */
-
-    char wp[safe_str_len + 1];
-
-    if (wp == NULL)
-    {
-        return -1;
+        msg.pop_back();
     }
 
-    /**
-     * Write timestamp with at most <timestamp_len> characters
-     * to wp.
-     * Returned timestamp_len doesn't include terminating null.
-     */
-    if (do_highprecision)
-    {
-        timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
-    }
-    else
-    {
-        timestamp_len = snprint_timestamp(wp, timestamp_len);
-    }
+    // Add a final newline into the message
+    msg.push_back('\n');
 
-    /**
-     * Write next string to overwrite terminating null character
-     * of the timestamp string.
-     */
-    snprintf(wp + timestamp_len,
-             safe_str_len - timestamp_len,
-             "%s",
-             str);
-
-    /** Add an ellipsis to an overflowing message to signal truncation. */
-    if (overflow && safe_str_len > 4)
-    {
-        memset(wp + safe_str_len - 4, '.', 3);
-    }
-    /** write to syslog */
-    if (do_syslog)
-    {
-        // Strip away the timestamp and the prefix (e.g. "error : ").
-        const char *message = wp + timestamp_len + prefix_len;
-
-        switch (priority & LOG_PRIMASK)
-        {
-        case LOG_EMERG:
-        case LOG_ALERT:
-        case LOG_CRIT:
-        case LOG_ERR:
-        case LOG_WARNING:
-        case LOG_NOTICE:
-        case LOG_INFO:
-            syslog(priority, "%s", message);
-            break;
-
-        default:
-            // LOG_DEBUG messages are never written to syslog.
-            break;
-        }
-    }
-    /** remove double line feed */
-    if (wp[safe_str_len - 2] == '\n')
-    {
-        wp[safe_str_len - 2] = ' ';
-    }
-    wp[safe_str_len - 1] = '\n';
-
-    logger->write(wp, safe_str_len);
-
-    return err;
+    return logger->write(msg.c_str(), msg.length()) ? 0 : -1;
 }
 
 /**
@@ -936,7 +782,6 @@ int mxs_log_message(int priority,
                 buffer_len += augmentation_len;
                 buffer_len += message_len;
                 buffer_len += suppression_len;
-                buffer_len += 1; // Trailing NULL
 
                 if (buffer_len > MAX_LOGSTRLEN)
                 {
@@ -944,10 +789,10 @@ int mxs_log_message(int priority,
                     buffer_len = MAX_LOGSTRLEN;
 
                     ss_dassert(prefix.len + session_len + modname_len +
-                               augmentation_len + message_len + suppression_len + 1 == buffer_len);
+                               augmentation_len + message_len + suppression_len == buffer_len);
                 }
 
-                char buffer[buffer_len];
+                char buffer[buffer_len + 1];
 
                 char *prefix_text = buffer;
                 char *session_text = prefix_text + prefix.len;
@@ -999,7 +844,13 @@ int mxs_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
-                err = log_write(priority, prefix.len, buffer_len, buffer);
+                if (log_config.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
+                {
+                    // Debug messages are never logged into syslog
+                    syslog(priority, "%s", session_text);
+                }
+
+                err = log_write(priority, buffer);
             }
         }
     }
