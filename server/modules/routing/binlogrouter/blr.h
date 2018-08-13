@@ -27,6 +27,8 @@
 #include <stdint.h>
 #include <zlib.h>
 
+#include <thread>
+
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <maxscale/protocol/mysql.h>
@@ -534,7 +536,7 @@ typedef struct router_slave
     /*< lsi: Last Sent Information */
     blr_thread_role_t lsi_sender_role;
     /*< Master or slave code sent */
-    uint64_t          lsi_sender_tid;
+    std::thread::id   lsi_sender_tid;
     /*< Who sent */
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1];
     /*< Which binlog file */

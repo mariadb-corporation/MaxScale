@@ -36,7 +36,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include <pthread.h>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -1732,18 +1732,23 @@ bool blr_send_event(blr_thread_role_t role,
     if ((strcmp(slave->lsi_binlog_name, binlog_name) == 0) &&
         (slave->lsi_binlog_pos == binlog_pos))
     {
+        std::stringstream t1;
+        std::stringstream t2;
+        t1 << std::this_thread::get_id();
+        t2 << slave->lsi_sender_tid;
+
         MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', position %u: "
-                  "thread %lu in the role of %s could not send the event, "
-                  "the event has already been sent by thread %lu in the role of %s. "
+                  "thread %s in the role of %s could not send the event, "
+                  "the event has already been sent by thread %s in the role of %s. "
                   "%u bytes buffered for writing in DCB %p. %lu events received from master.",
                   slave->dcb->remote,
                   dcb_get_port(slave->dcb),
                   slave->serverid,
                   binlog_name,
                   binlog_pos,
-                  (uint64_t)pthread_self(),
+                  t1.str().c_str(),
                   ROLETOSTR(role),
-                  (uint64_t)slave->lsi_sender_tid,
+                  t2.str().c_str(),
                   ROLETOSTR(slave->lsi_sender_role),
                   gwbuf_length(slave->dcb->writeq), slave->dcb,
                   slave->router->stats.n_binlogs);
@@ -1794,7 +1799,7 @@ bool blr_send_event(blr_thread_role_t role,
         strcpy(slave->lsi_binlog_name, binlog_name);
         slave->lsi_binlog_pos = binlog_pos;
         slave->lsi_sender_role = role;
-        slave->lsi_sender_tid = pthread_self();
+        slave->lsi_sender_tid = std::this_thread::get_id();
     }
     else
     {
