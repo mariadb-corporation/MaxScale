@@ -18,6 +18,7 @@
 #include <string>
 #include <thread>
 
+#include <maxbase/semaphore.h>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/clock.h>
@@ -25,7 +26,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/spinlock.hh>
 

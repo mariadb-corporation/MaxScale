@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <errno.h>
-#include <maxscale/semaphore.h>
+#include <maxbase/semaphore.h>
 #include <maxscale/debug.h>
 
 namespace maxscale
