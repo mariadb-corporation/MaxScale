@@ -22,8 +22,6 @@
 
 struct mxs_worker;
 
-#define MAX_EVENTS 1000
-
 enum poll_message
 {
     POLL_MSG_CLEAN_PERSISTENT = 0x01

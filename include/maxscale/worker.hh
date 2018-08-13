@@ -564,8 +564,7 @@ public:
     /**
      * Initialize the worker mechanism.
      *
-     * To be called once at process startup. This will cause as many workers
-     * to be created as the number of threads defined.
+     * To be called once at process startup.
      *
      * @return True if the initialization succeeded, false otherwise.
      */
@@ -574,13 +573,23 @@ public:
     /**
      * Finalize the worker mechanism.
      *
-     * To be called once at process shutdown. This will cause all workers
-     * to be destroyed. When the function is called, no worker should be
-     * running anymore.
+     * To be called once at process shutdown.
      */
     static void finish();
 
-    Worker();
+    enum
+    {
+        MAX_EVENTS = 1000
+    };
+
+    /**
+     * Constructs a worker.
+     *
+     * @param max_events  The maximum number of events that can be returned by
+     *                    one call to epoll_wait.
+     */
+    Worker(int max_events = MAX_EVENTS);
+
     virtual ~Worker();
 
     int load(Load::counter_t counter)
@@ -1189,6 +1198,7 @@ private:
     typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
     typedef std::unordered_map<uint32_t, DelayedCall*>      DelayedCallsById;
 
+    uint32_t           m_max_events;           /*< Maximum numer of events in each epoll_wait call. */
     STATISTICS         m_statistics;           /*< Worker statistics. */
     MessageQueue*      m_pQueue;               /*< The message queue of the worker. */
     std::thread        m_thread;               /*< The thread object of the worker. */

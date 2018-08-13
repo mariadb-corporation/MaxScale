@@ -35,7 +35,6 @@
 
 #include "internal/dcb.h"
 #include "internal/modules.h"
-#include "internal/poll.hh"
 #include "internal/service.hh"
 #include "internal/statistics.h"
 
@@ -280,7 +279,9 @@ namespace
 
 int create_epoll_instance()
 {
-    int fd = ::epoll_create(MAX_EVENTS);
+    // Since Linux kernel 2.6.8, the size argument is ignored, but must be positive.
+
+    int fd = ::epoll_create(1);
 
     if (fd == -1)
     {
@@ -297,9 +298,10 @@ int create_epoll_instance()
 //static
 uint32_t Worker::s_next_delayed_call_id = 1;
 
-Worker::Worker()
+Worker::Worker(int max_events)
     : m_epoll_fd(create_epoll_instance())
     , m_state(STOPPED)
+    , m_max_events(max_events)
     , m_pQueue(NULL)
     , m_started(false)
     , m_should_shutdown(false)
@@ -308,6 +310,8 @@ Worker::Worker()
     , m_nTotal_descriptors(0)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
 {
+    ss_dassert(max_events > 0);
+
     if (m_epoll_fd != -1)
     {
         m_pQueue = MessageQueue::create(this);
@@ -733,7 +737,7 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
  */
 void Worker::poll_waitevents()
 {
-    struct epoll_event events[MAX_EVENTS];
+    struct epoll_event events[m_max_events];
 
     m_state = IDLE;
 
@@ -761,7 +765,7 @@ void Worker::poll_waitevents()
         }
 
         m_load.about_to_wait(now);
-        nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, timeout);
+        nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
         m_load.about_to_work();
 
         if (nfds == -1 && errno != EINTR)
