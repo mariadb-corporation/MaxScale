@@ -27,6 +27,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <set>
+#include <map>
 
 #include <ini.h>
 #include <openssl/opensslconf.h>
@@ -90,6 +92,8 @@ static bool     datadir_defined = false; /*< If the datadir was already set */
 /* The data directory we created for this gateway instance */
 static char     pidfile[PATH_MAX + 1] = "";
 static int pidfd = PIDFD_CLOSED;
+/* Map containing paths to directory locks with their fds */
+static std::map<std::string, int> directory_locks;
 
 /**
  * If MaxScale is started to run in daemon process the value is true.
@@ -145,6 +149,9 @@ static std::string redirect_output_to;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static int write_pid_file(); /* write MaxScale pidfile */
+static bool lock_dir(const std::string& path);
+static bool lock_directories();
+static void unlock_directories();
 static void unlink_pidfile(void); /* remove pidfile */
 static void unlock_pidfile();
 static bool file_write_header(FILE* outfile);
@@ -1328,7 +1335,7 @@ int main(int argc, char **argv)
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
     bool to_stdout = false;
-    void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
+    void   (*exitfunp[5])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, unlock_directories, NULL };
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
@@ -2000,6 +2007,12 @@ int main(int argc, char **argv)
         }
 
         pid_file_created = true;
+
+        if (!lock_directories())
+        {
+            rc = MAXSCALE_ALREADYRUNNING;
+            goto return_main;
+        }
     }
 
     if (!redirect_output_to.empty())
@@ -2209,6 +2222,7 @@ int main(int argc, char **argv)
 
     utils_end();
     cleanup_process_datadir();
+    unlock_directories();
     MXS_NOTICE("MaxScale shutdown completed.");
 
     if (unload_modules_at_exit)
@@ -3216,3 +3230,68 @@ static bool init_sqlite3()
 
     return rv;
 }
+
+static bool lock_dir(const std::string& path)
+{
+    std::string lock = path + "/maxscale.lock";
+    int fd = open(lock.c_str(), O_WRONLY | O_CREAT, 0777);
+    std::string pid = std::to_string(getpid());
+
+    if (fd == -1)
+    {
+        MXS_ERROR("Failed to open lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        return false;
+    }
+
+    if (lockf(fd, F_TLOCK, 0) == -1)
+    {
+        if (errno == EACCES || errno == EAGAIN)
+        {
+            MXS_ERROR("Failed to lock directory with file '%s', another process is holding a lock on it. "
+                      "Please confirm that no other MaxScale process is using the "
+                      "directory %s", lock.c_str(), path.c_str());
+        }
+        else
+        {
+            MXS_ERROR("Failed to lock file %s. %s", lock.c_str(), mxs_strerror(errno));
+        }
+        close(fd);
+        return false;
+    }
+
+    if (ftruncate(fd, 0) == -1)
+    {
+        MXS_ERROR("Failed to truncate lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        close(fd);
+        unlink(lock.c_str());
+        return false;
+    }
+
+    if (write(fd, pid.c_str(), pid.length()) == -1)
+    {
+        MXS_ERROR("Failed to write into lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        close(fd);
+        unlink(lock.c_str());
+        return false;
+    }
+
+    directory_locks.insert(std::pair<std::string, int>(lock, fd));
+
+    return true;
+}
+
+bool lock_directories()
+{
+    std::set<std::string> paths{get_cachedir(), get_datadir()};
+    return std::all_of(paths.begin(), paths.end(), lock_dir);
+}
+
+static void unlock_directories()
+{
+    std::for_each(directory_locks.begin(), directory_locks.end(),
+            [&](std::pair<std::string, int> pair) {
+            close(pair.second);
+            unlink(pair.first.c_str());
+    });
+}
+
