@@ -4666,4 +4666,32 @@ MXS_CONFIG_PARAMETER* ParamList::params()
     return m_ctx.parameters;
 }
 
+
+void dump_if_changed(const MXS_MODULE_PARAM* params, int file,
+                     const std::string& key, const std::string& value)
+{
+    for (int i = 0; params[i].name; i++)
+    {
+        if (params[i].name == key)
+        {
+            /**
+             * This detects only exact matches, not ones that are logically equivalent
+             * but lexicographically different e.g. 1 and true. This might not
+             * be a bad thing: it'll distinct user defined values from defaults.
+             */
+
+            if (!params[i].default_value || value != params[i].default_value)
+            {
+                if (dprintf(file, "%s=%s\n", key.c_str(), value.c_str()) == -1)
+                {
+                    MXS_ERROR("Failed to serialize service value: %d, %s",
+                              errno, mxs_strerror(errno));
+                }
+            }
+
+            break;
+        }
+    }
+}
+
 }
