@@ -610,16 +610,6 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 {
     switch  (msg.id())
     {
-    case MXS_WORKER_MSG_PING:
-        {
-            ss_dassert(msg.arg1() == 0);
-            char* zArg2 = reinterpret_cast<char*>(msg.arg2());
-            const char* zMessage = zArg2 ? zArg2 : "Alive and kicking";
-            MXS_NOTICE("Worker[%p]: %s.", this, zMessage);
-            MXS_FREE(zArg2);
-        }
-        break;
-
     case MXS_WORKER_MSG_SHUTDOWN:
         {
             MXS_INFO("Worker %p received shutdown message.", this);

@@ -23,15 +23,6 @@ typedef struct mxs_worker
 enum mxs_worker_msg_id
 {
     /**
-     * Ping message.
-     *
-     * arg1: 0
-     * arg2: NULL or pointer to dynamically allocated NULL-terminated string,
-     *       to be freed by worker.
-     */
-    MXS_WORKER_MSG_PING,
-
-    /**
      * Shutdown message.
      *
      * arg1: 0

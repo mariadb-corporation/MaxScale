@@ -907,9 +907,21 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
 /**
  * The subcommands of the ping command.
  */
+namespace
+{
+
+void ping(MXS_WORKER* worker, void* arg)
+{
+    MXS_NOTICE("Worker[%p]: Alive and kicking.", worker);
+}
+
+}
+
 void ping_workers(DCB* dcb)
 {
-    int n = mxs_rworker_broadcast_message(MXS_WORKER_MSG_PING, 0, 0);
+    intptr_t arg1 = reinterpret_cast<intptr_t>(ping);
+
+    int n = mxs_rworker_broadcast_message(MXS_WORKER_MSG_CALL, arg1, 0);
 
     dcb_printf(dcb, "Broadcasted ping message to %d workers.\n", n);
 }
