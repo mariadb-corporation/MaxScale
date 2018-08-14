@@ -491,116 +491,96 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
 {
-    mxs::SpinLockGuard guard(crt_lock);
-    bool valid = false;
+    mxs::SpinLockGuard guard(crt_lock);;
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
+
+    if (!config_param_is_valid(config_monitor_params, key, value, NULL) &&
+        !config_param_is_valid(mod->parameters, key, value, NULL))
+    {
+        config_runtime_error("Invalid monitor parameter: %s", key);
+        return false;
+    }
+    else if (!value[0])
+    {
+        config_runtime_error("Empty value for parameter: %s", key);
+        return false;
+    }
+
+    monitor_stop(monitor);
+    monitor_set_parameter(monitor, key, value);
 
     if (strcmp(key, CN_USER) == 0)
     {
-        valid = true;
         monitor_add_user(monitor, value, monitor->password);
     }
     else if (strcmp(key, CN_PASSWORD) == 0)
     {
-        valid = true;
         monitor_add_user(monitor, monitor->user, value);
     }
     else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
             monitor_set_interval(monitor, ival);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
-            monitor_set_network_timeout(monitor, MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_CONNECT_TIMEOUT, ival,
+                                        CN_BACKEND_CONNECT_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
-            monitor_set_network_timeout(monitor, MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_WRITE_TIMEOUT, ival,
+                                        CN_BACKEND_WRITE_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
-            monitor_set_network_timeout(monitor, MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
+            monitor_set_network_timeout(monitor, MONITOR_READ_TIMEOUT, ival,
+                                        CN_BACKEND_READ_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
-            monitor_set_network_timeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
+            monitor_set_network_timeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival,
+                                        CN_BACKEND_CONNECT_ATTEMPTS);
         }
     }
     else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
             monitor_set_journal_max_age(monitor, ival);
         }
     }
     else if (strcmp(key, CN_SCRIPT_TIMEOUT) == 0)
     {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (auto ival = get_positive_int(value))
         {
-            valid = true;
             monitor_set_script_timeout(monitor, ival);
         }
     }
-    else  if (config_param_is_valid(mod->parameters, key, value, NULL))
-    {
-        /** We're modifying module specific parameters and we need to stop the monitor */
-        monitor_stop(monitor);
-
-        if (monitor_remove_parameter(monitor, key) || value[0])
-        {
-            /** Either we're removing an existing parameter or adding a new one */
-            valid = true;
-
-            if (value[0])
-            {
-                MXS_CONFIG_PARAMETER p = {};
-                p.name = const_cast<char*>(key);
-                p.value = const_cast<char*>(value);
-                monitor_add_parameters(monitor, &p);
-            }
-        }
-
-        monitor_start(monitor, monitor->parameters);
-    }
-
-    if (valid)
-    {
-        monitor_serialize(monitor);
-        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
-    }
     else
     {
-        config_runtime_error("Invalid monitor parameter: %s", key);
+        // This should be a module specific parameter
+        ss_dassert(config_param_is_valid(mod->parameters, key, value, NULL));
     }
 
-    return valid;
+    monitor_serialize(monitor);
+    monitor_start(monitor, monitor->parameters);
+    MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
+
+    return true;
 }
 
 bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)

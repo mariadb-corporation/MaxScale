@@ -882,6 +882,15 @@ void monitor_add_parameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
     spinlock_release(&monitor->lock);
 }
 
+void monitor_set_parameter(MXS_MONITOR *monitor, const char* key, const char* value)
+{
+    monitor_remove_parameter(monitor, key);
+    MXS_CONFIG_PARAMETER p = {};
+    p.name = const_cast<char*>(key);
+    p.value = const_cast<char*>(value);
+    monitor_add_parameters(monitor, &p);
+}
+
 bool monitor_remove_parameter(MXS_MONITOR *monitor, const char *key)
 {
     MXS_CONFIG_PARAMETER *prev = NULL;
@@ -1796,20 +1805,6 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     /** Add module-specific parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
     config_add_module_params_json(monitor->parameters, mod->parameters, NULL, rval);
-
-    // As the parameters of the monitor aren't updated after startup, these
-    // need to be set explicitly
-    json_object_set_new(rval, CN_USER, json_string(monitor->user));
-    json_object_set_new(rval, CN_PASSWORD, json_string(monitor->password));
-    json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
-    json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
-    json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
-    json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
-    json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
-    json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
-    json_object_set_new(rval, CN_DISK_SPACE_CHECK_INTERVAL, json_integer(monitor->disk_space_check_interval));
-    json_object_set_new(rval, CN_SCRIPT, json_string(monitor->script));
-    json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
 
     return rval;
 }

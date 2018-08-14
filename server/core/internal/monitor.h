@@ -118,6 +118,7 @@ void monitor_remove_server(MXS_MONITOR *mon, SERVER *server);
 void monitor_add_user(MXS_MONITOR *, const char *, const char *);
 void monitor_add_parameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
 bool monitor_remove_parameter(MXS_MONITOR *monitor, const char *key);
+void monitor_set_parameter(MXS_MONITOR *monitor, const char* key, const char* value);
 
 void monitor_set_interval (MXS_MONITOR *, unsigned long);
 bool monitor_set_network_timeout(MXS_MONITOR *, int, int, const char*);
