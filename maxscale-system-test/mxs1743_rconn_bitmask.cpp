@@ -10,28 +10,31 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
+    auto do_test = [&]()
+    {
+        test.set_timeout(20);
+        test.maxscales->connect();
+        test.try_query(test.maxscales->conn_master[0], "SELECT 1");
+        test.maxscales->disconnect();
+        test.stop_timeout();
+    };
+
     test.tprintf("Testing with both master and slave up");
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_master[0], "SELECT 1");
-    test.maxscales->disconnect();
+    do_test();
 
     test.tprintf("Testing with only the master");
     test.repl->block_node(0);
-    sleep(5);
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_master[0], "SELECT 1");
-    test.maxscales->disconnect();
+    test.maxscales->wait_for_monitor();
+    do_test();
     test.repl->unblock_node(0);
-    sleep(5);
+    test.maxscales->wait_for_monitor();
 
     test.tprintf("Testing with only the slave");
     test.repl->block_node(1);
-    sleep(5);
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_master[0], "SELECT 1");
-    test.maxscales->disconnect();
+    test.maxscales->wait_for_monitor();
+    do_test();
     test.repl->unblock_node(1);
-    sleep(5);
+    test.maxscales->wait_for_monitor();
 
     test.tprintf("Checking that both the master and slave are used");
     std::vector<MYSQL*> connections;
@@ -45,10 +48,12 @@ int main(int argc, char** argv)
     for (int i = 0; i < 20; i++)
     {
         // Open a connection and make sure it works
+        test.set_timeout(20);
         MYSQL* conn = open_conn(test.maxscales->readconn_master_port[0], test.maxscales->IP[0],
                                 "mxs1743", "mxs1743", false);
         test.try_query(conn, "SELECT 1");
         connections.push_back(conn);
+        test.stop_timeout();
     }
 
     // Give the connections a few seconds to establish
