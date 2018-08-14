@@ -514,7 +514,6 @@ void hashtable_get_stats(void* table,
     if (table != NULL)
     {
         ht = (HASHTABLE *)table;
-        CHK_HASHTABLE(ht);
         hashtable_read_lock(ht);
 
         for (i = 0; i < ht->hashsize; i++)

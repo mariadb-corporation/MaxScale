@@ -395,8 +395,6 @@ cdc_protocol_init(DCB* dcb)
     /* memory allocation here */
     p->state = CDC_STATE_WAIT_FOR_AUTH;
 
-    CHK_PROTOCOL(p);
-
     return p;
 }
 

@@ -518,8 +518,6 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
 
     if (readbuf)
     {
-        CHK_GWBUF(readbuf);
-
         size_t totalbuflen = gwbuf_length(readbuf);
         if (totalbuflen >= MYSQL_HEADER_LEN)
         {
@@ -781,7 +779,6 @@ void modutil_reply_parse_error(DCB*     backend_dcb,
                                char*    errstr,
                                uint32_t flags)
 {
-    CHK_DCB(backend_dcb);
     modutil_reply_routing_error(backend_dcb, 1064, "42000", errstr, flags);
 }
 
@@ -798,7 +795,6 @@ void modutil_reply_auth_error(DCB*     backend_dcb,
                               char*    errstr,
                               uint32_t flags)
 {
-    CHK_DCB(backend_dcb);
     modutil_reply_routing_error(backend_dcb, 1045, "28000", errstr, flags);
 }
 
@@ -821,7 +817,6 @@ static void modutil_reply_routing_error(DCB*        backend_dcb,
                                         uint32_t    flags)
 {
     GWBUF* buf;
-    CHK_DCB(backend_dcb);
 
     buf = modutil_create_mysql_err_msg(1, 0, error, state, errstr);
     MXS_FREE(errstr);

@@ -614,7 +614,6 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
                                       bool* pSuccess)
 {
     ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    CHK_DCB(pProblem);
     SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL) // Should never happen
@@ -824,8 +823,6 @@ bool SchemaRouterSession::have_servers()
  */
 SSRBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
 {
-    CHK_DCB(dcb);
-
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->dcb() == dcb)

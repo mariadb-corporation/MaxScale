@@ -359,7 +359,6 @@ static bool parse_query(GWBUF* querybuf)
     char* query_str = NULL;
     parsing_info_t* pi;
 
-    CHK_GWBUF(querybuf);
     /** Do not parse without releasing previous parse info first */
     ss_dassert(!query_is_parsed(querybuf));
 
@@ -440,7 +439,6 @@ retblock:
  */
 static bool query_is_parsed(GWBUF* buf)
 {
-    CHK_GWBUF(buf);
     return (buf != NULL && GWBUF_IS_PARSED(buf));
 }
 
@@ -1804,7 +1802,6 @@ static void parsing_info_done(void* ptr)
 static void parsing_info_set_plain_str(void* ptr, char* str)
 {
     parsing_info_t* pi = (parsing_info_t *) ptr;
-    CHK_PARSING_INFO(pi);
 
     pi->pi_query_plain_str = str;
 }

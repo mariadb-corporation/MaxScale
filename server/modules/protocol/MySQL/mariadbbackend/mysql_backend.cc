@@ -468,7 +468,6 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
 static int
 gw_read_backend_event(DCB *dcb)
 {
-    CHK_DCB(dcb);
     if (dcb->persistentstart)
     {
         /** If a DCB gets a read event when it's in the persistent pool, it is
@@ -483,10 +482,7 @@ gw_read_backend_event(DCB *dcb)
         return 0;
     }
 
-    CHK_SESSION(dcb->session);
-
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
-    CHK_PROTOCOL(proto);
 
     MXS_DEBUG("Read dcb %p fd %d protocol state %d, %s.", dcb, dcb->fd,
               proto->protocol_auth_state, STRPROTOCOLSTATE(proto->protocol_auth_state));
@@ -611,7 +607,6 @@ static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *err
 static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
 {
     MXS_SESSION *session = dcb->session;
-    CHK_SESSION(session);
 
     do_handle_error(dcb, ERRACT_REPLY_CLIENT,
                     "Authentication with backend failed. Session will be closed.");
@@ -637,8 +632,6 @@ static inline bool session_ok_to_route(DCB *dcb)
 
         if (client_protocol)
         {
-            CHK_PROTOCOL(client_protocol);
-
             if (client_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
             {
                 rval = true;
@@ -775,8 +768,6 @@ gw_read_and_write(DCB *dcb)
     MXS_SESSION *session = dcb->session;
     int nbytes_read;
     int return_code = 0;
-
-    CHK_SESSION(session);
 
     /* read available backend data */
     return_code = dcb_read(dcb, &read_buffer, 0);
@@ -1114,8 +1105,6 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
     MySQLProtocol *backend_protocol = static_cast<MySQLProtocol*>(dcb->protocol);
     int rc = 0;
 
-    CHK_DCB(dcb);
-
     if (dcb->was_persistent)
     {
         ss_dassert(!dcb->fakeq);
@@ -1284,9 +1273,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  */
 static int gw_error_backend_event(DCB *dcb)
 {
-    CHK_DCB(dcb);
     MXS_SESSION *session = dcb->session;
-    CHK_SESSION(session);
 
     if (session->state == SESSION_STATE_DUMMY)
     {
@@ -1337,9 +1324,7 @@ static int gw_error_backend_event(DCB *dcb)
  */
 static int gw_backend_hangup(DCB *dcb)
 {
-    CHK_DCB(dcb);
     MXS_SESSION *session = dcb->session;
-    CHK_SESSION(session);
 
     if (dcb->persistentstart)
     {
@@ -1374,7 +1359,6 @@ static int gw_backend_hangup(DCB *dcb)
  */
 static int gw_backend_close(DCB *dcb)
 {
-    CHK_DCB(dcb);
     ss_dassert(dcb->session);
 
     /** Send COM_QUIT to the backend being closed */
@@ -1385,7 +1369,6 @@ static int gw_backend_close(DCB *dcb)
     mysql_protocol_done(dcb);
 
     MXS_SESSION* session = dcb->session;
-    CHK_SESSION(session);
 
     /**
      * If session state is SESSION_STATE_STOPPING, start closing client session.

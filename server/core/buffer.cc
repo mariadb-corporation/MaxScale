@@ -88,7 +88,6 @@ gwbuf_alloc(unsigned int size)
     rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
     rval->server = NULL;
-    CHK_GWBUF(rval);
 retblock:
     if (rval == NULL)
     {
@@ -232,7 +231,6 @@ gwbuf_free(GWBUF *buf)
 
     while (buf)
     {
-        CHK_GWBUF(buf);
         nextbuf = buf->next;
         gwbuf_free_one(buf);
         buf = nextbuf;
@@ -311,7 +309,6 @@ gwbuf_clone_one(GWBUF *buf)
     rval->gwbuf_type = buf->gwbuf_type;
     rval->tail = rval;
     rval->next = NULL;
-    CHK_GWBUF(rval);
 #if defined(BUFFER_TRACE)
     gwbuf_add_to_hashtable(rval);
 #endif
@@ -378,7 +375,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
 {
     GWBUF* clonebuf;
 
-    CHK_GWBUF(buf);
     ss_dassert(start_offset + length <= GWBUF_LENGTH(buf));
 
     if ((clonebuf = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
@@ -396,7 +392,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     clonebuf->hint = NULL;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
-    CHK_GWBUF(clonebuf);
 #if defined(BUFFER_TRACE)
     gwbuf_add_to_hashtable(clonebuf);
 #endif
@@ -582,7 +577,6 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
     {
         return head;
     }
-    CHK_GWBUF(head);
     head->tail->next = tail;
     head->tail = tail->tail;
 
@@ -594,7 +588,6 @@ gwbuf_consume(GWBUF *head, unsigned int length)
 {
     while (head && length > 0)
     {
-        CHK_GWBUF(head);
         unsigned int buflen = GWBUF_LENGTH(head);
 
         GWBUF_CONSUME(head, length);
@@ -623,7 +616,6 @@ gwbuf_length(const GWBUF *head)
 
     if (head)
     {
-        CHK_GWBUF(head);
     }
     while (head)
     {
@@ -649,9 +641,7 @@ GWBUF *
 gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
 {
     GWBUF *rval = head;
-    CHK_GWBUF(head);
     GWBUF_RTRIM(head, n_bytes);
-    CHK_GWBUF(head);
 
     if (GWBUF_EMPTY(head))
     {
@@ -666,7 +656,6 @@ void gwbuf_set_type(GWBUF* buf, uint32_t type)
     /** Set type consistenly to all buffers on the list */
     while (buf != NULL)
     {
-        CHK_GWBUF(buf);
         buf->gwbuf_type |= type;
         buf = buf->next;
     }
@@ -677,7 +666,6 @@ void gwbuf_add_buffer_object(GWBUF* buf,
                              void*  data,
                              void (*donefun_fp)(void *))
 {
-    CHK_GWBUF(buf);
     buffer_object_t* newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
     MXS_ABORT_IF_NULL(newb);
 
@@ -699,8 +687,6 @@ void gwbuf_add_buffer_object(GWBUF* buf,
 
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 {
-    CHK_GWBUF(buf);
-
     buffer_object_t* bo = buf->sbuf->bufobj;
 
     while (bo != NULL && bo->bo_id != id)

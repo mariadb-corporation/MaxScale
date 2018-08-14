@@ -270,7 +270,6 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
 SRWBackend& RWSplitSession::get_backend_from_dcb(DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    CHK_DCB(dcb);
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -736,7 +735,6 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                                  mxs_error_action_t action, bool *succp)
 {
     ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    CHK_DCB(problem_dcb);
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 
@@ -881,7 +879,6 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
     SRWBackend& backend = get_backend_from_dcb(backend_dcb);
     MXS_SESSION* ses = backend_dcb->session;
     bool route_stored = false;
-    CHK_SESSION(ses);
 
     if (backend->is_waiting_result())
     {
@@ -968,7 +965,6 @@ void RWSplitSession::handle_error_reply_client(DCB *backend_dcb, GWBUF *errmsg)
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
-        CHK_DCB(m_client);
         m_client->func.write(m_client, gwbuf_clone(errmsg));
     }
 }

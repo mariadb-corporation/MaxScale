@@ -300,7 +300,6 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     int client_auth_packet_size = 0;
 
     protocol = DCB_PROTOCOL(dcb, CDC_protocol);
-    CHK_PROTOCOL(protocol);
     if (dcb->data == NULL)
     {
         if (NULL == (client_data = (CDC_session *)MXS_CALLOC(1, sizeof(CDC_session))))

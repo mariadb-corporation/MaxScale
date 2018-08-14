@@ -51,8 +51,6 @@ void Backend::close(close_type type)
 
         if (in_use())
         {
-            CHK_DCB(m_dcb);
-
             /** Clean operation counter in bref and in SERVER */
             if (is_waiting_result())
             {
@@ -84,8 +82,6 @@ bool Backend::execute_session_command()
     {
         return false;
     }
-
-    CHK_DCB(m_dcb);
 
     SSessionCommand& sescmd = m_session_commands.front();
     GWBUF *buffer = sescmd->deep_copy_buffer();

@@ -377,7 +377,6 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     MYSQL_session *client_data = NULL;
     int client_auth_packet_size = 0;
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-    CHK_PROTOCOL(protocol);
 
     client_data = (MYSQL_session *)dcb->data;
 

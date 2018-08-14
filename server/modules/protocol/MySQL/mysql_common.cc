@@ -67,7 +67,6 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->fd = fd;
     p->owner_dcb = dcb;
     p->protocol_state = MYSQL_PROTOCOL_ACTIVE;
-    CHK_PROTOCOL(p);
 return_p:
     return p;
 }
@@ -155,7 +154,6 @@ int mysql_send_com_quit(DCB*   dcb,
     GWBUF *buf;
     int nbytes = 0;
 
-    CHK_DCB(dcb);
     ss_dassert(packet_number <= 255);
 
     if (dcb == NULL)
@@ -585,8 +583,6 @@ bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 {
     bool rval = true;
-    CHK_DCB(dcb);
-    CHK_SESSION(dcb->session);
 
     if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {

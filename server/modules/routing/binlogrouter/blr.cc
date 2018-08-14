@@ -1185,8 +1185,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     inst->slaves = slave;
     spinlock_release(&inst->lock);
 
-    CHK_CLIENT_RSES(slave);
-
     return reinterpret_cast<MXS_ROUTER_SESSION*>(slave);
 }
 
@@ -1293,7 +1291,6 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
         blr_master_reconnect(router);
         return;
     }
-    CHK_CLIENT_RSES(slave);
 
     /**
      * Lock router client session for secure read and update.
@@ -2416,8 +2413,6 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE *rses)
 {
     bool succp = false;
 
-    CHK_CLIENT_RSES(rses);
-
     spinlock_acquire(&rses->rses_lock);
     succp = true;
 
@@ -2440,7 +2435,6 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE *rses)
  */
 static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 {
-    CHK_CLIENT_RSES(rses);
     spinlock_release(&rses->rses_lock);
 }
 

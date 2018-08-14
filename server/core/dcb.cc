@@ -223,7 +223,6 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
 static void
 dcb_final_free(DCB *dcb)
 {
-    CHK_DCB(dcb);
     ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED ||
                     dcb->state == DCB_STATE_ALLOC,
                     "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
@@ -235,7 +234,6 @@ dcb_final_free(DCB *dcb)
          */
         MXS_SESSION *local_session = dcb->session;
         dcb->session = NULL;
-        CHK_SESSION(local_session);
         if (SESSION_STATE_DUMMY != local_session->state)
         {
             if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
@@ -577,8 +575,6 @@ int dcb_read(DCB   *dcb,
         return dcb_read_SSL(dcb, head);
     }
 
-    CHK_DCB(dcb);
-
     if (dcb->fd <= 0)
     {
         MXS_ERROR("Read failed, dcb is closed.");
@@ -739,8 +735,6 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
     GWBUF *buffer;
     int nsingleread = 0, nreadtotal = 0;
     int start_length = gwbuf_length(*head);
-
-    CHK_DCB(dcb);
 
     if (dcb->fd <= 0)
     {
@@ -1102,8 +1096,6 @@ static void log_illegal_dcb(DCB *dcb)
  */
 void dcb_close(DCB *dcb)
 {
-    CHK_DCB(dcb);
-
 #if defined(SS_DEBUG)
     RoutingWorker* current = RoutingWorker::get_current();
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->poll.owner);
@@ -1314,7 +1306,6 @@ dcb_maybe_add_persistent(DCB *dcb)
         {
             MXS_SESSION *local_session = dcb->session;
             session_set_dummy(dcb);
-            CHK_SESSION(local_session);
             if (SESSION_STATE_DUMMY != local_session->state)
             {
                 session_unlink_backend_dcb(local_session, dcb);
@@ -2047,11 +2038,9 @@ dcb_persistent_clean_count(DCB *dcb, int id, bool cleanall)
         DCB *persistentdcb, *nextdcb;
         DCB *disposals = NULL;
 
-        CHK_SERVER(server);
         persistentdcb = server->persistent[id];
         while (persistentdcb)
         {
-            CHK_DCB(persistentdcb);
             nextdcb = persistentdcb->nextpersistent;
             if (cleanall
                 || persistentdcb-> dcb_errhandle_called
@@ -3000,8 +2989,6 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     ss_dassert(owner == RoutingWorker::get_current() ||
                dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
-    CHK_DCB(dcb);
-
     uint32_t rc = MXS_POLL_NOP;
 
     /* It isn't obvious that this is impossible */
@@ -3371,8 +3358,6 @@ dcb_session_check(DCB *dcb, const char *function)
 /** DCB Sanity checks */
 static inline void dcb_sanity_check(DCB* dcb)
 {
-    CHK_DCB(dcb);
-
     if (dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_UNDEFINED)
     {
         MXS_ERROR("[poll_add_dcb] Error : existing state of dcb %p "
@@ -3626,7 +3611,6 @@ int poll_remove_dcb(DCB *dcb)
 {
     int dcbfd, rc = 0;
     struct  epoll_event ev;
-    CHK_DCB(dcb);
 
     /*< It is possible that dcb has already been removed from the set */
     if (dcb->state == DCB_STATE_NOPOLLING)

@@ -281,7 +281,6 @@ static void handleError(MXS_ROUTER         *instance,
 
     if (session->state == SESSION_STATE_ROUTER_READY)
     {
-        CHK_DCB(client_dcb);
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
     }
 

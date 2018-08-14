@@ -495,7 +495,6 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
          */
         if (backend_dcb != NULL)
         {
-            CHK_DCB(backend_dcb);
             dcb_close(backend_dcb);
         }
     }
@@ -763,8 +762,6 @@ static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
-        CHK_DCB(client_dcb);
-
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
     }
 

@@ -421,7 +421,6 @@ int gw_read_client_event(DCB* dcb)
     uint32_t nbytes_read = 0;
     uint32_t max_bytes = 0;
 
-    CHK_DCB(dcb);
     if (dcb->dcb_role != DCB_ROLE_CLIENT_HANDLER)
     {
         MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
@@ -429,7 +428,6 @@ int gw_read_client_event(DCB* dcb)
     }
 
     protocol = (MySQLProtocol *)dcb->protocol;
-    CHK_PROTOCOL(protocol);
 
     MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 
@@ -740,7 +738,6 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
         if (session != NULL)
         {
-            CHK_SESSION(session);
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
@@ -1015,7 +1012,6 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     uint64_t capabilities = 0;
 
     session = dcb->session;
-    CHK_SESSION(session);
     session_state_value = session->state;
     if (session_state_value != SESSION_STATE_ROUTER_READY)
     {
@@ -1156,7 +1152,6 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     MXS_SESSION *session = dcb->session;
     uint8_t *payload = GWBUF_DATA(read_buffer);
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    CHK_PROTOCOL(proto);
     int return_code = 0;
 
     /** Reset error handler when routing of the new query begins */
@@ -1309,8 +1304,6 @@ int gw_write_client_event(DCB *dcb)
 {
     MySQLProtocol *protocol = NULL;
 
-    CHK_DCB(dcb);
-
     ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
 
     if (dcb == NULL)
@@ -1328,7 +1321,6 @@ int gw_write_client_event(DCB *dcb)
         goto return_1;
     }
     protocol = (MySQLProtocol *)dcb->protocol;
-    CHK_PROTOCOL(protocol);
 
     if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
@@ -1337,13 +1329,6 @@ int gw_write_client_event(DCB *dcb)
     }
 
 return_1:
-#if defined(SS_DEBUG)
-    if (dcb->state == DCB_STATE_POLLING ||
-        dcb->state == DCB_STATE_NOPOLLING)
-    {
-        CHK_PROTOCOL(protocol);
-    }
-#endif
     return 1;
 }
 
@@ -1381,8 +1366,6 @@ int gw_MySQLAccept(DCB *listener)
 {
     DCB *client_dcb;
 
-    CHK_DCB(listener);
-
     while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         gw_process_one_new_client(client_dcb);
@@ -1396,7 +1379,6 @@ static void gw_process_one_new_client(DCB *client_dcb)
 {
     MySQLProtocol *protocol;
 
-    CHK_DCB(client_dcb);
     protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
 
     if (protocol == NULL)
@@ -1406,7 +1388,6 @@ static void gw_process_one_new_client(DCB *client_dcb)
         MXS_ERROR("Failed to create protocol object for client connection.");
         return;
     }
-    CHK_PROTOCOL(protocol);
     client_dcb->protocol = protocol;
 
     //send handshake to the client_dcb
@@ -1449,8 +1430,6 @@ static int gw_error_client_event(DCB* dcb)
 {
     MXS_SESSION* session;
 
-    CHK_DCB(dcb);
-
     session = dcb->session;
 
     if (session != NULL && session->state == SESSION_STATE_STOPPING)
@@ -1469,7 +1448,6 @@ retblock:
 
 static int gw_client_close(DCB *dcb)
 {
-    CHK_DCB(dcb);
     ss_dassert(dcb->protocol);
 
     if (mysql_protocol_done(dcb))
@@ -1500,12 +1478,10 @@ static int gw_client_close(DCB *dcb)
  */
 static int gw_client_hangup_event(DCB *dcb)
 {
-    CHK_DCB(dcb);
     MXS_SESSION* session = dcb->session;
 
     if (session)
     {
-        CHK_SESSION(session);
         if (session->state != SESSION_STATE_DUMMY && !session_valid_for_pool(session))
         {
             if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
@@ -1638,7 +1614,6 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
             packetbuf = gwbuf_make_contiguous(packetbuf);
 
-            CHK_GWBUF(packetbuf);
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
             /**

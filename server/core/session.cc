@@ -228,7 +228,6 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     }
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
-    CHK_SESSION(session);
 
     // Store the session in the client DCB even if the session creation fails.
     // It will be freed later on when the DCB is closed.
@@ -365,7 +364,6 @@ static void session_free(MXS_SESSION *session)
 
 static void session_final_free(MXS_SESSION *session)
 {
-    CHK_SESSION(session);
     ss_dassert(session->refcount == 0);
 
     session->state = SESSION_STATE_TO_BE_FREED;
