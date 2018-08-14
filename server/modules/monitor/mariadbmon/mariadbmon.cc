@@ -1014,7 +1014,7 @@ bool MariaDBMonitor::check_sql_files()
 bool MariaDBMonitor::execute_manual_command(std::function<void (void)> command, json_t** error_out)
 {
     bool rval = false;
-    if (state() != MXS_MONITOR_RUNNING)
+    if (state() != MONITOR_STATE_RUNNING)
     {
         PRINT_MXS_JSON_ERROR(error_out, "The monitor is not running, cannot execute manual command.");
     }

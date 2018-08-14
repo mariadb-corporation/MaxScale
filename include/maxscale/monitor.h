@@ -159,25 +159,17 @@ typedef enum monitor_capability
 /** Monitor's poll frequency */
 #define MXS_MON_BASE_INTERVAL_MS 100
 
-#define MXS_MONITOR_RUNNING 1
-#define MXS_MONITOR_STOPPING 2
-#define MXS_MONITOR_STOPPED 3
-
 #define MXS_MONITOR_DEFAULT_ID 1UL // unsigned long value
 
 #define MAX_MONITOR_USER_LEN     512
 #define MAX_MONITOR_PASSWORD_LEN 512
 
-/**
- * Monitor state bit mask values
- */
+// Monitor state enum
 typedef enum
 {
-    MONITOR_STATE_ALLOC     = 0x00,
-    MONITOR_STATE_RUNNING   = 0x01,
-    MONITOR_STATE_STOPPING  = 0x02,
-    MONITOR_STATE_STOPPED   = 0x04,
-    MONITOR_STATE_FREED     = 0x08
+    MONITOR_STATE_RUNNING,
+    MONITOR_STATE_STOPPING,
+    MONITOR_STATE_STOPPED
 } monitor_state_t;
 
 /* Return type of mon_ping_or_connect_to_db(). */

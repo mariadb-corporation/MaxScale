@@ -83,6 +83,7 @@ static SPINLOCK monLock = SPINLOCK_INIT;
 static void monitor_server_free_all(MXS_MONITORED_SERVER *servers);
 static void remove_server_journal(MXS_MONITOR *monitor);
 static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
+static const char* monitor_state_to_string(monitor_state_t state);
 
 /** Server type specific bits */
 static uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB;
@@ -123,7 +124,7 @@ MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PAR
 
     mon->api = api;
     mon->active = true;
-    mon->state = MONITOR_STATE_ALLOC;
+    mon->state = MONITOR_STATE_STOPPED;
     mon->name = my_name;
     mon->module_name = my_module;
     mon->monitored_servers = NULL;
@@ -203,7 +204,6 @@ monitor_destroy(MXS_MONITOR *mon)
     }
     spinlock_release(&monLock);
     mon->api->destroyInstance(mon->instance);
-    mon->state = MONITOR_STATE_FREED;
     delete mon->disk_space_threshold;
     config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->monitored_servers);
@@ -237,8 +237,8 @@ monitor_start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     {
         spinlock_acquire(&monitor->lock);
 
-        // Only start the monitor if it's newly created or currently stopped.
-        if (monitor->state == MONITOR_STATE_ALLOC || monitor->state == MONITOR_STATE_STOPPED)
+        // Only start the monitor if it's stopped.
+        if (monitor->state == MONITOR_STATE_STOPPED)
         {
             if (journal_is_stale(monitor, monitor->journal_max_age))
             {
@@ -538,30 +538,9 @@ monitor_show_all(DCB *dcb)
 void
 monitor_show(DCB *dcb, MXS_MONITOR *monitor)
 {
-    const char *state;
-
-    switch (monitor->state)
-    {
-    case MONITOR_STATE_RUNNING:
-        state = "Running";
-        break;
-    case MONITOR_STATE_STOPPING:
-        state = "Stopping";
-        break;
-    case MONITOR_STATE_STOPPED:
-        state = "Stopped";
-        break;
-    case MONITOR_STATE_ALLOC:
-        state = "Allocated";
-        break;
-    default:
-        state = "Unknown";
-        break;
-    }
-
     dcb_printf(dcb, "Monitor:                %p\n", monitor);
     dcb_printf(dcb, "Name:                   %s\n", monitor->name);
-    dcb_printf(dcb, "State:                  %s\n", state);
+    dcb_printf(dcb, "State:                  %s\n", monitor_state_to_string(monitor->state));
     dcb_printf(dcb, "Times monitored:        %lu\n", monitor->ticks);
     dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->interval);
     dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
@@ -1774,7 +1753,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
     }
 }
 
-static const char* monitor_state_to_string(int state)
+static const char* monitor_state_to_string(monitor_state_t state)
 {
     switch (state)
     {
@@ -1786,9 +1765,6 @@ static const char* monitor_state_to_string(int state)
 
     case MONITOR_STATE_STOPPED:
         return "Stopped";
-
-    case MONITOR_STATE_ALLOC:
-        return "Allocated";
 
     default:
         ss_dassert(false);
@@ -2480,7 +2456,7 @@ namespace maxscale
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_monitor(pMonitor)
     , m_master(NULL)
-    , m_state(MXS_MONITOR_STOPPED)
+    , m_state(MONITOR_STATE_STOPPED)
     , m_shutdown(0)
     , m_checked(false)
     , m_loop_called(0)
@@ -2499,14 +2475,14 @@ int32_t MonitorInstance::state() const
 void MonitorInstance::stop()
 {
     // This is always called in single-thread context.
-    ss_dassert(m_state == MXS_MONITOR_RUNNING);
+    ss_dassert(m_state == MONITOR_STATE_RUNNING);
 
-    if (state() == MXS_MONITOR_RUNNING)
+    if (state() == MONITOR_STATE_RUNNING)
     {
-        atomic_store_int32(&m_state, MXS_MONITOR_STOPPING);
+        atomic_store_int32(&m_state, MONITOR_STATE_STOPPING);
         Worker::shutdown();
         Worker::join();
-        atomic_store_int32(&m_state, MXS_MONITOR_STOPPED);
+        atomic_store_int32(&m_state, MONITOR_STATE_STOPPED);
     }
     else
     {
@@ -2528,9 +2504,9 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
     bool started = false;
 
     ss_dassert(Worker::state() == Worker::STOPPED);
-    ss_dassert(m_state == MXS_MONITOR_STOPPED);
+    ss_dassert(m_state == MONITOR_STATE_STOPPED);
 
-    if (state() == MXS_MONITOR_STOPPED)
+    if (state() == MONITOR_STATE_STOPPED)
     {
         if (!m_checked)
         {
@@ -2562,7 +2538,7 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
                     // state has been updated.
                     m_semaphore.wait();
 
-                    started = (atomic_load_int32(&m_state) == MXS_MONITOR_RUNNING);
+                    started = (atomic_load_int32(&m_state) == MONITOR_STATE_RUNNING);
 
                     if (!started)
                     {
@@ -2866,7 +2842,7 @@ bool MonitorInstance::pre_run()
     {
         rv = true;
 
-        atomic_store_int32(&m_state, MXS_MONITOR_RUNNING);
+        atomic_store_int32(&m_state, MONITOR_STATE_RUNNING);
         m_semaphore.post();
 
         load_server_journal(m_monitor, &m_master);

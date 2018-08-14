@@ -52,7 +52,7 @@ public:
      */
     bool is_running() const
     {
-        return state() == MXS_MONITOR_RUNNING;
+        return state() == MONITOR_STATE_RUNNING;
     }
 
     /**
