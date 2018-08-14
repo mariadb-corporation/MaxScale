@@ -23,7 +23,6 @@
 #include <sys/timerfd.h>
 
 #include <maxbase/atomic.h>
-#include <maxscale/clock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/semaphore.hh>
 
@@ -721,6 +720,21 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
     raise(SIGABRT);
 }
 
+namespace
+{
+
+long time_in_100ms_ticks()
+{
+    using TenthSecondDuration = std::chrono::duration<long, std::ratio<1,10>>;
+
+    auto dur = std::chrono::steady_clock::now().time_since_epoch();
+    auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
+
+    return tenth.count();
+}
+
+}
+
 /**
  * The main polling loop
  */
@@ -797,12 +811,12 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
-        uint64_t cycle_start = mxs_clock();
+        uint64_t cycle_start = time_in_100ms_ticks();
 
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
-            int64_t started = mxs_clock();
+            int64_t started = time_in_100ms_ticks();
             int64_t qtime = started - cycle_start;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
@@ -846,7 +860,7 @@ void Worker::poll_waitevents()
             }
 
             /** Calculate event execution statistics */
-            qtime = mxs_clock() - started;
+            qtime = time_in_100ms_ticks() - started;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
             {
@@ -854,7 +868,7 @@ void Worker::poll_waitevents()
             }
             else
             {
-                m_statistics.exectimes[qtime % STATISTICS::N_QUEUE_TIMES]++;
+                m_statistics.exectimes[qtime]++;
             }
 
             m_statistics.maxexectime = MXS_MAX(m_statistics.maxexectime, qtime);
