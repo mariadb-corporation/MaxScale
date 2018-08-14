@@ -496,9 +496,6 @@ typedef struct slave_encryption_ctx
  */
 typedef struct router_slave
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t     rses_chk_top;
-#endif
     DCB             *dcb;            /*< The slave server DCB */
     int             state;           /*< The state of this slave */
     uint32_t        binlog_pos;      /*< Binlog position for this slave */
@@ -550,9 +547,6 @@ typedef struct router_slave
     sqlite3           *gtid_maps;     /*< GTID storage client handle, read only*/
     MARIADB_GTID_INFO f_info;         /*< GTID info for file name prefix */
     bool              annotate_rows;  /*< MariaDB 10 Slave requests ANNOTATE_ROWS */
-#if defined(SS_DEBUG)
-    skygw_chk_t     rses_chk_tail;
-#endif
 } ROUTER_SLAVE;
 
 

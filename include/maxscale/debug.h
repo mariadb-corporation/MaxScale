@@ -51,43 +51,6 @@ MXS_BEGIN_DECLS
 
 #define CHK_NUM_BASE 101
 
-typedef enum skygw_chk_t
-{
-    CHK_NUM_SLIST = CHK_NUM_BASE,
-    CHK_NUM_SLIST_NODE,
-    CHK_NUM_SLIST_CURSOR,
-    CHK_NUM_MLIST,
-    CHK_NUM_MLIST_NODE,
-    CHK_NUM_MLIST_CURSOR,
-    CHK_NUM_QUERY_TEST,
-    CHK_NUM_LOGFILE,
-    CHK_NUM_FILEWRITER,
-    CHK_NUM_THREAD,
-    CHK_NUM_SIMPLE_MUTEX,
-    CHK_NUM_MESSAGE,
-    CHK_NUM_RWLOCK,
-    CHK_NUM_FNAMES,
-    CHK_NUM_LOGMANAGER,
-    CHK_NUM_FILE,
-    CHK_NUM_BLOCKBUF,
-    CHK_NUM_HASHTABLE,
-    CHK_NUM_DCB,
-    CHK_NUM_PROTOCOL,
-    CHK_NUM_SESSION,
-    CHK_NUM_SERVER,
-    CHK_NUM_ROUTER_SES,
-    CHK_NUM_MY_SESCMD,
-    CHK_NUM_ROUTER_PROPERTY,
-    CHK_NUM_SESCMD_CUR,
-    CHK_NUM_BACKEND,
-    CHK_NUM_BACKEND_REF,
-    CHK_NUM_PREP_STMT,
-    CHK_NUM_PINFO,
-    CHK_NUM_MYSQLSES,
-    CHK_NUM_ADMINSES,
-    CHK_NUM_MANAGED_LIST
-} skygw_chk_t;
-
 # define STRBOOL(b) ((b) ? "true" : "false")
 
 # define STRQTYPE(t)    ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" : \
@@ -234,9 +197,6 @@ typedef enum skygw_chk_t
                                "Unknown DCB reason")))))))
 
 #define CHK_MLIST(l) {                                                  \
-        ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&          \
-                         l->mlist_chk_tail == CHK_NUM_MLIST),           \
-                        "Single-linked list structure under- or overflow"); \
         if (l->mlist_first == NULL) {                                   \
             ss_info_dassert(l->mlist_nodecount == 0,                    \
                             "List head is NULL but element counter is not zero."); \
@@ -260,15 +220,9 @@ typedef enum skygw_chk_t
 
 
 #define CHK_MLIST_NODE(n) {                                             \
-        ss_info_dassert((n->mlnode_chk_top == CHK_NUM_MLIST_NODE &&     \
-                         n->mlnode_chk_tail == CHK_NUM_MLIST_NODE),     \
-                        "Single-linked list node under- or overflow");  \
     }
 
 #define CHK_MLIST_CURSOR(c) {                                           \
-        ss_info_dassert(c->mlcursor_chk_top == CHK_NUM_MLIST_CURSOR &&  \
-                        c->mlcursor_chk_tail == CHK_NUM_MLIST_CURSOR,   \
-                        "List cursor under- or overflow");              \
         ss_info_dassert(c->mlcursor_list != NULL,                       \
                         "List cursor doesn't have list");               \
         ss_info_dassert(c->mlcursor_pos != NULL ||                      \
@@ -278,9 +232,6 @@ typedef enum skygw_chk_t
     }
 
 #define CHK_SLIST(l) {                                                  \
-        ss_info_dassert((l->slist_chk_top ==  CHK_NUM_SLIST &&          \
-                         l->slist_chk_tail == CHK_NUM_SLIST),           \
-                        "Single-linked list structure under- or overflow"); \
         if (l->slist_head == NULL) {                                    \
             ss_info_dassert(l->slist_nelems == 0,                       \
                             "List head is NULL but element counter is not zero."); \
@@ -304,15 +255,9 @@ typedef enum skygw_chk_t
 
 
 #define CHK_SLIST_NODE(n) {                                             \
-        ss_info_dassert((n->slnode_chk_top == CHK_NUM_SLIST_NODE &&     \
-                         n->slnode_chk_tail == CHK_NUM_SLIST_NODE),     \
-                        "Single-linked list node under- or overflow");  \
     }
 
 #define CHK_SLIST_CURSOR(c) {                                           \
-        ss_info_dassert(c->slcursor_chk_top == CHK_NUM_SLIST_CURSOR &&  \
-                        c->slcursor_chk_tail == CHK_NUM_SLIST_CURSOR,   \
-                        "List cursor under- or overflow");              \
         ss_info_dassert(c->slcursor_list != NULL,                       \
                         "List cursor doesn't have list");               \
         ss_info_dassert(c->slcursor_pos != NULL ||                      \
@@ -322,15 +267,9 @@ typedef enum skygw_chk_t
     }
 
 #define CHK_QUERY_TEST(q) {                                     \
-        ss_info_dassert(q->qt_chk_top == CHK_NUM_QUERY_TEST &&  \
-                        q->qt_chk_tail == CHK_NUM_QUERY_TEST,   \
-                        "Query test under- or overflow.");      \
     }
 
 #define CHK_LOGFILE(lf) {                                       \
-        ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&    \
-                        lf->lf_chk_tail == CHK_NUM_LOGFILE,     \
-                        "Logfile struct under- or overflow");   \
         ss_info_dassert(lf->lf_filepath != NULL &&              \
                         lf->lf_name_prefix != NULL &&           \
                         lf->lf_name_suffix != NULL &&           \
@@ -339,27 +278,15 @@ typedef enum skygw_chk_t
     }
 
 #define CHK_FILEWRITER(fwr) {                                       \
-        ss_info_dassert(fwr->fwr_chk_top == CHK_NUM_FILEWRITER &&   \
-                        fwr->fwr_chk_tail == CHK_NUM_FILEWRITER,    \
-                        "File writer struct under- or overflow");   \
     }
 
 #define CHK_THREAD(thr) {                                       \
-        ss_info_dassert(thr->sth_chk_top == CHK_NUM_THREAD &&   \
-                        thr->sth_chk_tail == CHK_NUM_THREAD,    \
-                        "Thread struct under- or overflow");    \
     }
 
 #define CHK_SIMPLE_MUTEX(sm) {                                      \
-        ss_info_dassert(sm->sm_chk_top == CHK_NUM_SIMPLE_MUTEX &&   \
-                        sm->sm_chk_tail == CHK_NUM_SIMPLE_MUTEX,    \
-                        "Simple mutex struct under- or overflow");  \
     }
 
 #define CHK_MESSAGE(mes) {                                      \
-        ss_info_dassert(mes->mes_chk_top == CHK_NUM_MESSAGE &&  \
-                        mes->mes_chk_tail == CHK_NUM_MESSAGE,   \
-                        "Message struct under- or overflow");   \
     }
 
 
@@ -377,63 +304,34 @@ typedef enum skygw_chk_t
     }
 
 #define CHK_FNAMES_CONF(fn) {                                           \
-        ss_info_dassert(fn->fn_chk_top == CHK_NUM_FNAMES &&             \
-                        fn->fn_chk_tail == CHK_NUM_FNAMES,              \
-                        "File names confs struct under- or overflow");  \
     }
 
 #define CHK_LOGMANAGER(lm) {                                        \
-        ss_info_dassert(lm->lm_chk_top == CHK_NUM_LOGMANAGER &&     \
-                        lm->lm_chk_tail == CHK_NUM_LOGMANAGER,      \
-                        "Log manager struct under- or overflow");   \
     }
 
 #define CHK_FILE(f) {                                       \
-        ss_info_dassert(f->sf_chk_top == CHK_NUM_FILE &&    \
-                        f->sf_chk_tail == CHK_NUM_FILE,     \
-                        "File struct under- or overflow");  \
     }
 
 
 #define CHK_BLOCKBUF(bb) {                                  \
-        ss_info_dassert(bb->bb_chk_top == CHK_NUM_BLOCKBUF, \
-                        "Block buf under- or overflow");    \
     }
 
 #define CHK_HASHTABLE(t) {                                      \
-        ss_info_dassert(t->ht_chk_top == CHK_NUM_HASHTABLE &&   \
-                        t->ht_chk_tail == CHK_NUM_HASHTABLE,    \
-                        "Hashtable under- or overflow");        \
     }
 
 #define CHK_MANAGED_LIST(l) {                                           \
-        ss_info_dassert(l->list_entry_chk_top == CHK_NUM_MANAGED_LIST && \
-                        l->list_entry_chk_tail == CHK_NUM_MANAGED_LIST, \
-                        "Managed list under- or overflow");             \
     }
 
 #define CHK_DCB(d) {                                        \
-        ss_info_dassert(d->dcb_chk_top == CHK_NUM_DCB &&    \
-                        d->dcb_chk_tail == CHK_NUM_DCB,     \
-                        "Dcb under- or overflow");          \
     }
 
 #define CHK_PROTOCOL(p) {                                           \
-        ss_info_dassert(p->protocol_chk_top == CHK_NUM_PROTOCOL &&  \
-                        p->protocol_chk_tail == CHK_NUM_PROTOCOL,   \
-                        "Protocol under- or overflow");             \
     }
 
 #define CHK_SESSION(s) {                                        \
-        ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&    \
-                        s->ses_chk_tail == CHK_NUM_SESSION,     \
-                        "Session under- or overflow");          \
     }
 
 #define CHK_SERVER(s) {                                         \
-        ss_info_dassert(s->server_chk_top == CHK_NUM_SERVER &&  \
-                        s->server_chk_tail == CHK_NUM_SERVER,   \
-                        "Server under- or overflow");           \
     }
 
 #define CHK_GWBUF(b) {                                              \
@@ -442,63 +340,33 @@ typedef enum skygw_chk_t
     }
 
 #define CHK_CLIENT_RSES(r) {                                            \
-        ss_info_dassert((r)->rses_chk_top == CHK_NUM_ROUTER_SES &&      \
-                        (r)->rses_chk_tail == CHK_NUM_ROUTER_SES,       \
-                        "Router client session has invalid check fields"); \
     }
 
 #define CHK_RSES_PROP(p) {                                              \
-        ss_info_dassert((p)->rses_prop_chk_top == CHK_NUM_ROUTER_PROPERTY && \
-                        (p)->rses_prop_chk_tail == CHK_NUM_ROUTER_PROPERTY, \
-                        "Router property has invalid check fields");    \
     }
 
 #define CHK_MYSQL_SESCMD(s) {                                           \
-        ss_info_dassert((s)->my_sescmd_chk_top == CHK_NUM_MY_SESCMD &&  \
-                        (s)->my_sescmd_chk_tail == CHK_NUM_MY_SESCMD,   \
-                        "Session command has invalid check fields");    \
     }
 
 #define CHK_SESCMD_CUR(c) {                                             \
-        ss_info_dassert((c)->scmd_cur_chk_top == CHK_NUM_SESCMD_CUR &&  \
-                        (c)->scmd_cur_chk_tail == CHK_NUM_SESCMD_CUR,   \
-                        "Session command cursor has invalid check fields"); \
     }
 
 #define CHK_BACKEND(b) {                                        \
-        ss_info_dassert((b)->be_chk_top == CHK_NUM_BACKEND &&   \
-                        (b)->be_chk_tail == CHK_NUM_BACKEND,    \
-                        "BACKEND has invalid check fields");    \
     }
 
 #define CHK_BACKEND_REF(r) {                                            \
-        ss_info_dassert((r)->bref_chk_top == CHK_NUM_BACKEND_REF &&     \
-                        (r)->bref_chk_tail == CHK_NUM_BACKEND_REF,      \
-                        "Backend reference has invalid check fields");  \
     }
 
 #define CHK_PREP_STMT(p) {                                              \
-        ss_info_dassert((p)->pstmt_chk_top == CHK_NUM_PREP_STMT &&      \
-                        (p)->pstmt_chk_tail == CHK_NUM_PREP_STMT,       \
-                        "Prepared statement struct has invalid check fields"); \
     }
 
 #define CHK_PARSING_INFO(p) {                                           \
-        ss_info_dassert((p)->pi_chk_top == CHK_NUM_PINFO &&             \
-                        (p)->pi_chk_tail == CHK_NUM_PINFO,              \
-                        "Parsing info struct has invalid check fields"); \
     }
 
 #define CHK_MYSQL_SESSION(s) {                                          \
-        ss_info_dassert((s)->myses_chk_top == CHK_NUM_MYSQLSES &&       \
-                        (s)->myses_chk_tail == CHK_NUM_MYSQLSES,        \
-                        "MYSQL session struct has invalid check fields"); \
     }
 
 #define CHK_ADMIN_SESSION(s) {                                          \
-        ss_info_dassert((s)->adminses_chk_top == CHK_NUM_ADMINSES &&    \
-                        (s)->adminses_chk_tail == CHK_NUM_ADMINSES,     \
-                        "Admin session struct has invalid check fields"); \
     }
 
 

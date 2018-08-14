@@ -27,9 +27,7 @@ Session::Session(Client* pClient)
 
     memset(pSession, 0, sizeof(MXS_SESSION));
 
-    pSession->ses_chk_top = CHK_NUM_SESSION;
     pSession->state = SESSION_STATE_ALLOC;
-    pSession->ses_chk_tail = CHK_NUM_SESSION;
 
     pSession->client_dcb = &m_client_dcb;
 

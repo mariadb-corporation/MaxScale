@@ -139,17 +139,11 @@ typedef enum
  */
 typedef struct mysql_session
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t myses_chk_top;
-#endif
     uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(password) */
     char user[MYSQL_USER_MAXLEN + 1];               /*< username       */
     char db[MYSQL_DATABASE_MAXLEN + 1];             /*< database       */
     int  auth_token_len;                            /*< token length   */
     uint8_t *auth_token;                            /*< token          */
-#if defined(SS_DEBUG)
-    skygw_chk_t myses_chk_tail;
-#endif
 } MYSQL_session;
 
 /** Protocol packing macros. */
@@ -320,9 +314,6 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  */
 typedef struct
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t            protocol_chk_top;
-#endif
     int                    fd;                           /*< The socket descriptor */
     struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
     mxs_mysql_cmd_t        current_command;              /*< Current command being executed */
@@ -340,9 +331,6 @@ typedef struct
     bool                   changing_user;
     uint32_t               num_eof_packets;              /*< Encountered eof packet number, used for check packet type */
     bool                   large_query;                  /*< Whether to ignore the command byte of the next packet*/
-#if defined(SS_DEBUG)
-    skygw_chk_t            protocol_chk_tail;
-#endif
 } MySQLProtocol;
 
 typedef struct

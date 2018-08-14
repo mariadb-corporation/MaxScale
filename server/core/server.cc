@@ -144,10 +144,6 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
                     address, sizeof(server->address));
     }
 
-#if defined(SS_DEBUG)
-    server->server_chk_top = CHK_NUM_SERVER;
-    server->server_chk_tail = CHK_NUM_SERVER;
-#endif
     server->name = my_name;
     server->port = config_get_integer(params, CN_PORT);
     server->protocol = my_protocol;

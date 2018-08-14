@@ -133,9 +133,6 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
 #define MAX_QUERYBUF_SIZE 2048
 typedef struct parsing_info_st : public QC_STMT_INFO
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_top;
-#endif
     void* pi_handle; /*< parsing info object pointer */
     char* pi_query_plain_str; /*< query as plain string */
     void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
@@ -149,9 +146,6 @@ typedef struct parsing_info_st : public QC_STMT_INFO
     qc_parse_result_t result;
     int32_t type_mask;
     NAME_MAPPING* function_name_mappings;
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_tail;
-#endif
 } parsing_info_t;
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
@@ -1717,10 +1711,6 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
         goto retblock;
     }
 
-#if defined(SS_DEBUG)
-    pi->pi_chk_top = CHK_NUM_PINFO;
-    pi->pi_chk_tail = CHK_NUM_PINFO;
-#endif
     /** Set handle and free function to parsing info struct */
     pi->pi_handle = mysql;
     pi->pi_done_fp = donefun;

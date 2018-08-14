@@ -127,7 +127,6 @@ static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userd
 
 void dcb_global_init()
 {
-    this_unit.dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
     this_unit.dcb_initialized.fd = DCBFD_CLOSED;
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
@@ -135,7 +134,6 @@ void dcb_global_init()
     this_unit.dcb_initialized.high_water_reached = false;
     this_unit.dcb_initialized.low_water = config_writeq_low_water();
     this_unit.dcb_initialized.high_water = config_writeq_high_water();
-    this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();
 

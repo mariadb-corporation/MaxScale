@@ -1151,11 +1151,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         return NULL;
     }
 
-#if defined(SS_DEBUG)
-    slave->rses_chk_top = CHK_NUM_ROUTER_SES;
-    slave->rses_chk_tail = CHK_NUM_ROUTER_SES;
-#endif
-
     memset(&slave->stats, 0, sizeof(SLAVE_STATS));
     atomic_add(&inst->stats.n_slaves, 1);
     slave->state = BLRS_CREATED;        /* Set initial state of the slave */

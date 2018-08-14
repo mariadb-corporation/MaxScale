@@ -78,16 +78,10 @@ typedef struct cdc_session
  */
 typedef struct  cdc_protocol
 {
-#ifdef SS_DEBUG
-    skygw_chk_t protocol_chk_top;
-#endif
     int state;                      /*< CDC protocol state          */
     char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
     SPINLOCK lock;                  /*< Protocol structure lock     */
     char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
-#ifdef SS_DEBUG
-    skygw_chk_t protocol_chk_tail;
-#endif
 } CDC_protocol;
 
 /* routines */

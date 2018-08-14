@@ -145,10 +145,6 @@ hashtable_alloc_real(HASHTABLE* target,
         rval->ht_isflat = true;
     }
 
-#if defined(SS_DEBUG)
-    rval->ht_chk_top = CHK_NUM_HASHTABLE;
-    rval->ht_chk_tail = CHK_NUM_HASHTABLE;
-#endif
     rval->hashsize = size > 0 ? size : 1;
     rval->hashfn = hashfn;
     rval->cmpfn = cmpfn;

@@ -395,10 +395,6 @@ cdc_protocol_init(DCB* dcb)
     /* memory allocation here */
     p->state = CDC_STATE_WAIT_FOR_AUTH;
 
-#ifdef SS_DEBUG
-    p->protocol_chk_tail = p->protocol_chk_top = CHK_NUM_PROTOCOL;
-#endif
-
     CHK_PROTOCOL(p);
 
     return p;

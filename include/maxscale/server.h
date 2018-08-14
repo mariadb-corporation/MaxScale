@@ -114,9 +114,6 @@ static uint64_t server_encode_version(const SERVER_VERSION* server_version)
  */
 typedef struct server
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t     server_chk_top;
-#endif
     // Base settings
     char           *name;          /**< Server config name */
     char           address[MAX_SERVER_ADDRESS_LEN]; /**< Server hostname/IP-address */
@@ -159,9 +156,6 @@ typedef struct server
                                           *   by rwsplit. TODO: Move to rwsplit */
     bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
-#if defined(SS_DEBUG)
-    skygw_chk_t    server_chk_tail;
-#endif
 } SERVER;
 
 enum

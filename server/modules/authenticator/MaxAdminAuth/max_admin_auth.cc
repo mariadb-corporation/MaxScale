@@ -123,10 +123,6 @@ max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     if ((session_data = (ADMIN_session *)MXS_CALLOC(1, sizeof(ADMIN_session))) != NULL)
     {
         int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
-#if defined(SS_DEBUG)
-        session_data->adminses_chk_top = CHK_NUM_ADMINSES;
-        session_data->adminses_chk_tail = CHK_NUM_ADMINSES;
-#endif
         memcpy(session_data->user, GWBUF_DATA(buf), user_len);
         session_data->validated = false;
         dcb->data = (void *)session_data;

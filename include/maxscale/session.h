@@ -165,7 +165,6 @@ typedef char* (*session_variable_handler_t)(void* context,
  */
 typedef struct session
 {
-    skygw_chk_t             ses_chk_top;
     mxs_session_state_t     state;            /*< Current descriptor state */
     uint64_t                ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
@@ -186,7 +185,6 @@ typedef struct session
         GWBUF* buffer;   /*< Buffer to deliver to up. */
     } response;                               /*< Shortcircuited response */
     session_close_t        close_reason;      /*< Reason why the session was closed */
-    skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
 /**

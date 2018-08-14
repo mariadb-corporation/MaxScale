@@ -20,11 +20,9 @@ void initialize_dcb(DCB* pDcb)
 {
     memset(pDcb, 0, sizeof(DCB));
 
-    pDcb->dcb_chk_top = CHK_NUM_DCB;
     pDcb->fd = DCBFD_CLOSED;
     pDcb->state = DCB_STATE_ALLOC;
     pDcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
-    pDcb->dcb_chk_tail = CHK_NUM_DCB;
 }
 
 }

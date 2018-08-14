@@ -132,7 +132,6 @@ typedef enum
 typedef struct dcb
 {
     MXS_POLL_DATA   poll;
-    skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     dcb_role_t      dcb_role;
     int             fd;             /**< The descriptor */
@@ -185,7 +184,6 @@ typedef struct dcb
     } thread;
     uint32_t        n_close;         /** How many times dcb_close has been called. */
     char            *path;           /** If a Unix socket, the path it was bound to. */
-    skygw_chk_t     dcb_chk_tail;
 } DCB;
 
 /**

@@ -64,8 +64,6 @@ namespace
 static struct session dummy_session()
 {
     struct session session = {};
-    session.ses_chk_top = CHK_NUM_SESSION;
-    session.ses_chk_tail = CHK_NUM_SESSION;
     session.state = SESSION_STATE_DUMMY;
     session.refcount = 1;
     return session;
@@ -114,7 +112,6 @@ MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t i
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
                                        MXS_SESSION* session, uint64_t id)
 {
-    session->ses_chk_top = CHK_NUM_SESSION;
     session->state = SESSION_STATE_READY;
     session->ses_id = id;
     session->client_dcb = client_dcb;
@@ -147,7 +144,6 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->qualifies_for_pooling = false;
     memset(&session->response, 0, sizeof(session->response));
     session->close_reason = SESSION_CLOSE_NONE;
-    session->ses_chk_tail = CHK_NUM_SESSION;
 
     /*
      * Only create a router session if we are not the listening DCB or an

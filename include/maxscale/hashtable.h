@@ -71,9 +71,6 @@ typedef void (*HASHFREEFN)(void *);
  */
 typedef struct hashtable
 {
-#if defined(SS_DEBUG)
-    skygw_chk_t ht_chk_top;
-#endif
     int hashsize;                 /**< The number of HASHENTRIES */
     HASHENTRIES **entries;        /**< The entries themselves */
     HASHHASHFN hashfn;            /**< The hash function */
@@ -87,9 +84,6 @@ typedef struct hashtable
     int writelock;                /**< The table is locked by a writer */
     bool ht_isflat;               /**< Indicates whether hashtable is in stack or heap */
     int n_elements;               /**< Number of added elements */
-#if defined(SS_DEBUG)
-    skygw_chk_t ht_chk_tail;
-#endif
 } HASHTABLE;
 
 extern HASHTABLE *hashtable_alloc(int, HASHHASHFN hashfn, HASHCMPFN cmpfn);

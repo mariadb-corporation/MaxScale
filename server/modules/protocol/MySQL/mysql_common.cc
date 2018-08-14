@@ -39,14 +39,6 @@ MYSQL_session* mysql_session_alloc()
 {
     MYSQL_session* ses = (MYSQL_session*)MXS_CALLOC(1, sizeof(MYSQL_session));
 
-    if (ses)
-    {
-#ifdef SS_DEBUG
-        ses->myses_chk_top = CHK_NUM_MYSQLSES;
-        ses->myses_chk_tail = CHK_NUM_MYSQLSES;
-#endif
-    }
-
     return ses;
 }
 
@@ -71,10 +63,6 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->changing_user = false;
     p->num_eof_packets = 0;
     p->large_query = false;
-#if defined(SS_DEBUG)
-    p->protocol_chk_top = CHK_NUM_PROTOCOL;
-    p->protocol_chk_tail = CHK_NUM_PROTOCOL;
-#endif
     /*< Assign fd with protocol */
     p->fd = fd;
     p->owner_dcb = dcb;
