@@ -69,6 +69,13 @@ enum select_criteria_t
     LAST_CRITERIA               /**< not used except for an index */
 };
 
+#define STRCRITERIA(c) ((c) == UNDEFINED_CRITERIA ? "UNDEFINED_CRITERIA" : \
+                        ((c) == LEAST_GLOBAL_CONNECTIONS ? "LEAST_GLOBAL_CONNECTIONS" : \
+                         ((c) == LEAST_ROUTER_CONNECTIONS ? "LEAST_ROUTER_CONNECTIONS" : \
+                          ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER"           : \
+                           ((c) == LEAST_CURRENT_OPERATIONS ? "LEAST_CURRENT_OPERATIONS" : \
+                            "Unknown criteria")))))
+
 /**
  * Controls how master failure is handled
  */

@@ -295,3 +295,11 @@ private:
  * @return The internal ID of the prepared statement that the buffer contents refer to
  */
 uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer);
+
+#define STRTARGET(t)    (t == TARGET_ALL ? "TARGET_ALL" :               \
+                         (t == TARGET_MASTER ? "TARGET_MASTER" :        \
+                          (t == TARGET_SLAVE ? "TARGET_SLAVE" :         \
+                           (t == TARGET_NAMED_SERVER ? "TARGET_NAMED_SERVER" : \
+                            (t == TARGET_RLAG_MAX ? "TARGET_RLAG_MAX" : \
+                             (t == TARGET_UNDEFINED ? "TARGET_UNDEFINED" : \
+                              "Unknown target value"))))))

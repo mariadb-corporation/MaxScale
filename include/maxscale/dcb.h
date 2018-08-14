@@ -65,6 +65,13 @@ typedef enum
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
 } dcb_state_t;
 
+#define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
+                        ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
+                         ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
+                          ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
+                           ((s) == DCB_STATE_NOPOLLING ? "DCB_STATE_NOPOLLING" : \
+                            ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN"))))))
+
 typedef enum
 {
     DCB_ROLE_SERVICE_LISTENER,      /*< Receives initial connect requests from clients */
@@ -72,6 +79,12 @@ typedef enum
     DCB_ROLE_BACKEND_HANDLER,       /*< Serves back end connection */
     DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
 } dcb_role_t;
+
+#define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
+                       ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER" : \
+                        ((r) == DCB_ROLE_BACKEND_HANDLER ? "DCB_ROLE_BACKEND_HANDLER" : \
+                         ((r) == DCB_ROLE_INTERNAL ? "DCB_ROLE_INTERNAL" : \
+                          "UNKNOWN DCB ROLE"))))
 
 #define DCB_STRTYPE(dcb) (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB" : \
                           dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER ? "Backend DCB" : \

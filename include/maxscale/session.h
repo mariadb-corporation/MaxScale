@@ -50,6 +50,17 @@ typedef enum
     SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } mxs_session_state_t;
 
+#define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
+                            ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
+                             ((s) == SESSION_STATE_ROUTER_READY ? "SESSION_STATE_ROUTER_READY" : \
+                              ((s) == SESSION_STATE_STOPPING ? "SESSION_STATE_STOPPING": \
+                               ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
+                                ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
+                                 ((s) == SESSION_STATE_TO_BE_FREED ? "SESSION_STATE_TO_BE_FREED" : \
+                                  ((s) == SESSION_STATE_FREE ? "SESSION_STATE_TO_BE_FREE" : \
+                                   ((s) == SESSION_STATE_DUMMY ? "SESSION_STATE_DUMMY" : \
+                                    "SESSION_STATE_UNKNOWN")))))))))
+
 typedef enum
 {
     SESSION_TRX_INACTIVE_BIT   = 0x01, /* 0b00001 */

@@ -35,6 +35,14 @@ typedef enum
     HINT_PARAMETER
 } HINT_TYPE;
 
+#define STRHINTTYPE(t)  (t == HINT_ROUTE_TO_MASTER ? "HINT_ROUTE_TO_MASTER" : \
+                         ((t) == HINT_ROUTE_TO_SLAVE ? "HINT_ROUTE_TO_SLAVE" : \
+                          ((t) == HINT_ROUTE_TO_NAMED_SERVER ? "HINT_ROUTE_TO_NAMED_SERVER" : \
+                           ((t) == HINT_ROUTE_TO_UPTODATE_SERVER ? "HINT_ROUTE_TO_UPTODATE_SERVER" : \
+                            ((t) == HINT_ROUTE_TO_ALL ? "HINT_ROUTE_TO_ALL" : \
+                             ((t) == HINT_ROUTE_TO_LAST_USED ? "HINT_ROUTE_TO_LAST_USED" :\
+                              ((t) == HINT_PARAMETER ? "HINT_PARAMETER" : "UNKNOWN HINT TYPE")))))))
+
 /**
  * A generic hint.
  *
