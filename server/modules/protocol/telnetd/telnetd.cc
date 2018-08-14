@@ -30,7 +30,7 @@
 #include <arpa/inet.h>
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log_manager.h>

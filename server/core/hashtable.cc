@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/hashtable.h>
 
 /**

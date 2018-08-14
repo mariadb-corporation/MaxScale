@@ -26,7 +26,7 @@
 #include <tuple>
 #include <vector>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>

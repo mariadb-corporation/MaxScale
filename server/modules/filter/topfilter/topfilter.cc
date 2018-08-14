@@ -44,7 +44,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <regex.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/alloc.h>
 
 /*

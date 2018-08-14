@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 
 /**
- * @file atomic.c  - Implementation of atomic operations for MaxScale
+ * @file atomic.c  - Implementation of atomic operations
  */
 
 int atomic_add(int *variable, int value)

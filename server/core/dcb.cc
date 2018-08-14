@@ -39,8 +39,8 @@
 #include <time.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.h>

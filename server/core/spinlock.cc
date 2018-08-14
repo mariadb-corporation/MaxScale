@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/spinlock.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <time.h>
 #include <maxscale/debug.h>
 

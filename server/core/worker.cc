@@ -22,7 +22,7 @@
 #include <sstream>
 #include <sys/timerfd.h>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/semaphore.hh>

@@ -37,7 +37,7 @@
 #include <uuid/uuid.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>

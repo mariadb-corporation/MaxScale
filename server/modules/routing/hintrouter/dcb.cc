@@ -12,7 +12,7 @@
  */
 
 #include "dcb.hh"
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/service.h>
 
 Dcb::Dcb(DCB* pDcb)

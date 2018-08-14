@@ -26,7 +26,7 @@
 #include <netdb.h>
 #include <sys/stat.h>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/debug.h>
 #include <maxscale/utils.h>
 #include <maxscale/config.h>

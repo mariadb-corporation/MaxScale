@@ -36,7 +36,7 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>

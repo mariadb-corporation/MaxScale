@@ -18,7 +18,7 @@
 #include <sstream>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/hint.h>

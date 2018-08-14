@@ -32,7 +32,7 @@
 #include <inttypes.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>

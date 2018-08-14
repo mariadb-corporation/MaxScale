@@ -38,7 +38,7 @@
 #include <string>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/filter.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>

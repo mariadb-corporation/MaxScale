@@ -40,7 +40,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/monitor.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>

@@ -61,7 +61,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/server.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/query_classifier.h>
 
 /* The maximum size for query statements in a transaction (64MB) */

@@ -20,7 +20,7 @@
 
 #include <time.h>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <maxscale/log_manager.h>

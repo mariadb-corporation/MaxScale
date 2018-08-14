@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/encryption.h>
 #include <maxscale/log_manager.h>

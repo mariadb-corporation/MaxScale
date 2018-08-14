@@ -36,7 +36,7 @@
 #include <time.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/hashtable.h>
 
 static void

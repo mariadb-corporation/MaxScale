@@ -67,7 +67,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <amqp.h>
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>

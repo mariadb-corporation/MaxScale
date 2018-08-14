@@ -20,7 +20,7 @@
 
 #include <maxbase/semaphore.h>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/config.h>
 #include <maxscale/housekeeper.h>

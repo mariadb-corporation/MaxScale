@@ -69,7 +69,7 @@
 #include <sstream>
 #include <map>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/log_manager.h>

@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachept.hh"
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/platform.h>
 

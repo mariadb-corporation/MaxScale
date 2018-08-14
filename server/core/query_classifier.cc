@@ -18,7 +18,7 @@
 #include <random>
 #include <unordered_map>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log_manager.h>

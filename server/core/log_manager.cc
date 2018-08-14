@@ -21,9 +21,11 @@
 #include <string>
 #include <mutex>
 
+#include <maxbase/atomic.h>
 #include <maxbase/error.h>
 #include <maxbase/logger.hh>
 
+#include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/debug.h>
 #include <maxscale/json_api.h>

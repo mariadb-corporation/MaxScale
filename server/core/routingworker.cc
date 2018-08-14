@@ -22,7 +22,7 @@
 #include <sstream>
 
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>

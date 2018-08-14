@@ -13,12 +13,12 @@
  */
 
 /**
- * @file atomic.h The atomic operations used within the gateway
+ * @file atomic.h Atomic operations on integers.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxbase/cdefs.h>
 
-MXS_BEGIN_DECLS
+MXB_BEGIN_DECLS
 
 /**
  * Pre 4.7 GCC doesn't support the __atomic builtin functions. The older __sync
@@ -26,8 +26,8 @@ MXS_BEGIN_DECLS
  * hack to emulate the store/load.
  */
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
-#ifndef MXS_USE_ATOMIC_BUILTINS
-#define MXS_USE_ATOMIC_BUILTINS 1
+#ifndef MXB_USE_ATOMIC_BUILTINS
+#define MXB_USE_ATOMIC_BUILTINS 1
 #endif
 #endif
 
@@ -95,7 +95,7 @@ static inline void atomic_synchronize()
 {
 #ifdef __GNUC__
 
-#ifdef MXS_USE_ATOMIC_BUILTINS
+#ifdef MXB_USE_ATOMIC_BUILTINS
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
 #else
     __sync_synchronize(); /* Memory barrier. */
@@ -130,4 +130,4 @@ bool atomic_cas_ptr(void **variable, void** old_value, void *new_value);
  */
 int atomic_exchange_int(int *variable, int new_value);
 
-MXS_END_DECLS
+MXB_END_DECLS

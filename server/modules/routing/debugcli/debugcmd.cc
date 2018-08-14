@@ -37,7 +37,7 @@
 
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/buffer.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>

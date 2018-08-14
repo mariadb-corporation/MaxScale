@@ -24,7 +24,7 @@
 #include <ini.h>
 #include <sys/stat.h>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modulecmd.h>

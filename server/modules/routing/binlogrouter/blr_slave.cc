@@ -34,7 +34,7 @@
 #include <sys/stat.h>
 #include <zlib.h>
 #include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>

@@ -14,7 +14,7 @@
 #include "internal/event.hh"
 #include <algorithm>
 #include <string.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/debug.h>
 
 using namespace std;

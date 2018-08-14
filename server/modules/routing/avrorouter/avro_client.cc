@@ -27,7 +27,7 @@
 #include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>

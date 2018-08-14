@@ -36,7 +36,7 @@
 #include <arpa/inet.h>
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 
 MXS_BEGIN_DECLS
 

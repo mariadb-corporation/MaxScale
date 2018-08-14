@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <thread>
 
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/debug.h>
 
 

@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/workertask.hh>
-#include <maxscale/atomic.h>
+#include <maxbase/atomic.h>
 #include <maxscale/debug.h>
 
 namespace maxscale
