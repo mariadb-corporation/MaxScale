@@ -63,18 +63,18 @@ test1()
     load_module("readconnroute", MODULE_ROUTER);
 
     /* Service tests */
-    ss_dfprintf(stderr,
-                "testservice : creating service called MyService with router nonexistent");
+    fprintf(stderr,
+            "testservice : creating service called MyService with router nonexistent");
     service = service_alloc("MyService", "non-existent", NULL);
     ss_info_dassert(NULL == service, "New service with invalid router should be null");
     ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
-    ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
+    fprintf(stderr, "\t..done\nValid service creation, router testroute.");
     service = service_alloc("MyService", "readconnroute", NULL);
 
     ss_info_dassert(NULL != service, "New service with valid router must not be null");
     ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
     ss_info_dassert(0 == strcmp("MyService", service->name), "Service must have given name");
-    ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
+    fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     ss_info_dassert(serviceCreateListener(service, "TestProtocol", "mariadbclient",
                                           "localhost", 9876, "MySQLAuth", NULL, NULL),
                     "Add Protocol should succeed");

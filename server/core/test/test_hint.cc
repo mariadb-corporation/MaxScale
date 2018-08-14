@@ -46,20 +46,20 @@ test1()
     HINT    *hint;
 
     /* Hint tests */
-    ss_dfprintf(stderr,
-                "testhint : Add a parameter hint to a null list");
+    fprintf(stderr,
+            "testhint : Add a parameter hint to a null list");
     char* name = MXS_STRDUP_A("name");
     hint = hint_create_parameter(NULL, name, "value");
     MXS_FREE(name);
     ss_info_dassert(NULL != hint, "New hint list should not be null");
     ss_info_dassert(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
     ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
-    ss_dfprintf(stderr, "\t..done\nFree hints.");
+    fprintf(stderr, "\t..done\nFree hints.");
     if (NULL != hint)
     {
         hint_free(hint);
     }
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 

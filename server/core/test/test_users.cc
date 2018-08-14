@@ -42,11 +42,11 @@ static int test1()
     bool rv;
 
     /* Poll tests */
-    ss_dfprintf(stderr,
-                "testusers : Initialise the user table.");
+    fprintf(stderr,
+            "testusers : Initialise the user table.");
     users = users_alloc();
     ss_info_dassert(NULL != users, "Allocating user table should not return NULL.");
-    ss_dfprintf(stderr, "\t..done\nAdd a user");
+    fprintf(stderr, "\t..done\nAdd a user");
     rv = users_add(users, "username", "authorisation", USER_ACCOUNT_ADMIN);
     ss_info_dassert(rv, "Should add one user");
     rv = users_auth(users, "username", "authorisation");
@@ -54,14 +54,14 @@ static int test1()
     rv = users_auth(users, "username", "newauth");
     ss_info_dassert(rv == 0, "Fetch invalid user must return NULL");
 
-    ss_dfprintf(stderr, "\t..done\nAdd another user");
+    fprintf(stderr, "\t..done\nAdd another user");
     rv = users_add(users, "username2", "authorisation2", USER_ACCOUNT_ADMIN);
     ss_info_dassert(rv, "Should add one user");
-    ss_dfprintf(stderr, "\t..done\nDelete a user.");
+    fprintf(stderr, "\t..done\nDelete a user.");
     rv = users_delete(users, "username");
     ss_info_dassert(rv, "Should delete just one user");
 
-    ss_dfprintf(stderr, "\t..done\nDump users table.");
+    fprintf(stderr, "\t..done\nDump users table.");
     json_t* dump = users_to_json(users);
     ss_info_dassert(dump, "Users should be dumped");
     USERS* loaded_users = users_from_json(dump);
@@ -71,9 +71,9 @@ static int test1()
     users_free(loaded_users);
     ss_info_dassert(rv, "Loaded users should contain users");
 
-    ss_dfprintf(stderr, "\t..done\nFree user table.");
+    fprintf(stderr, "\t..done\nFree user table.");
     users_free(users);
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 

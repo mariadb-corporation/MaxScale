@@ -170,7 +170,7 @@ void test1()
     GWBUF   *buffer;
     proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     proto.num_eof_packets = 0;
-    ss_dfprintf(stderr, "test_session_track : Functional tests.\n");
+    fprintf(stderr, "test_session_track : Functional tests.\n");
     //BEGIN
     buffer = gwbuf_alloc_and_load(PACKET_1_LEN, resultset1 + PACKET_1_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
@@ -219,7 +219,7 @@ void test1()
 void test2()
 {
     GWBUF   *buffer;
-    ss_dfprintf(stderr, "test_session_track: multi results test\n");
+    fprintf(stderr, "test_session_track: multi results test\n");
     proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     proto.num_eof_packets = 0;
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
@@ -233,7 +233,7 @@ void test3()
     GWBUF   *buffer;
     proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     proto.num_eof_packets = 0;
-    ss_dfprintf(stderr, "test_session_track: protocol state test\n");
+    fprintf(stderr, "test_session_track: protocol state test\n");
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
     mxs_mysql_get_session_track_info(buffer, &proto);
     ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I_R_W___", 8) == 0);

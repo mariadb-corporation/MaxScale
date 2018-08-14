@@ -56,15 +56,15 @@ test1()
     service.routerModule = (char*)"required by a check in dcb.cc";
 
     /* Poll tests */
-    ss_dfprintf(stderr,
-                "testpoll : Initialise the polling system.");
+    fprintf(stderr,
+            "testpoll : Initialise the polling system.");
     init_test_env(NULL);
-    ss_dfprintf(stderr, "\t..done\nAdd a DCB");
+    fprintf(stderr, "\t..done\nAdd a DCB");
     dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, &dummy);
 
     if (dcb == NULL)
     {
-        ss_dfprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
+        fprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
         return 1;
     }
 
@@ -74,38 +74,38 @@ test1()
     if (dcb->fd < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
-        ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",
-                    errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        fprintf(stderr, "\nError on function call: socket() returned %d: %s\n",
+                errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         return 1;
     }
 
 
     if ((eno = poll_add_dcb(dcb)) != 0)
     {
-        ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
         return 1;
     }
 
     if ((eno = poll_remove_dcb(dcb)) != 0)
     {
-        ss_dfprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n", eno);
         return 1;
     }
 
     if ((eno = poll_add_dcb(dcb)) != 0)
     {
-        ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        fprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
         return 1;
     }
 
-    ss_dfprintf(stderr, "\t..done\nStart wait for events.");
+    fprintf(stderr, "\t..done\nStart wait for events.");
     sleep(10);
     //TODO, fix this for workers: poll_shutdown();
-    ss_dfprintf(stderr, "\t..done\nTidy up.");
+    fprintf(stderr, "\t..done\nTidy up.");
     SERVICE my_service = {};
     dcb->service = &my_service;
     dcb_close(dcb);
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 

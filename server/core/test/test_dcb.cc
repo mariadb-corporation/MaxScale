@@ -52,21 +52,21 @@ test1()
     DCB   *dcb;
     SERV_LISTENER dummy;
     /* Single buffer tests */
-    ss_dfprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
+    fprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
     printDCB(dcb);
-    ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
+    fprintf(stderr, "\t..done\nAllocated dcb.");
     //TODO: Without running workers, the following will hang. As it does not
     //TODO: really add value (the only created dcb is the one above), we'll
     //TODO: exclude it.
     //TODO: Some kind of test environment with workers would be needed.
     //printAllDCBs();
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     dcb->state = DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
     dcb_close(dcb);
-    ss_dfprintf(stderr, "Freed original dcb");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "Freed original dcb");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 }

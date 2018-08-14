@@ -50,23 +50,23 @@ test1()
     int     result, length, residual;
 
     /* Poll tests */
-    ss_dfprintf(stderr,
-                "testmodutil : Rudimentary tests.");
+    fprintf(stderr,
+            "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
     ss_info_dassert(GWBUF_IS_CONTIGUOUS(buffer), "Allocated buffer should be continuos");
     memset(GWBUF_DATA(buffer), 0, GWBUF_LENGTH(buffer));
     ss_info_dassert(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
-    ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer");
+    fprintf(stderr, "\t..done\nExtract SQL from buffer");
     ss_info_dassert(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
-    ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
+    fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
     ss_info_dassert(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
-    ss_dfprintf(stderr, "\t..done\nReplace SQL in buffer");
+    fprintf(stderr, "\t..done\nReplace SQL in buffer");
     ss_info_dassert(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
                     "Default buffer should fail");
-    ss_dfprintf(stderr, "\t..done\nTidy up.");
+    fprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 
@@ -95,7 +95,7 @@ test2()
     ss_dassert(strcmp(result, query) == 0);
     gwbuf_free(buffer);
     MXS_FREE(result);
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     return 0;
 
 }

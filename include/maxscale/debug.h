@@ -34,9 +34,6 @@ MXS_BEGIN_DECLS
             raise(SIGABRT);} } while (false)
 
 #define ss_debug(exp) exp
-#define ss_dfprintf fprintf
-#define ss_dfflush  fflush
-#define ss_dfwrite  fwrite
 
 #else /* SS_DEBUG */
 
@@ -44,9 +41,6 @@ MXS_BEGIN_DECLS
 #define ss_info_dassert(exp, info)
 
 #define ss_debug(exp)
-#define ss_dfprintf(a, b, ...)
-#define ss_dfflush(s)
-#define ss_dfwrite(a, b, c, d)
 
 #endif /* SS_DEBUG */
 

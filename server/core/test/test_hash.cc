@@ -108,19 +108,19 @@ static bool do_hashtest(
     int        longest;
     int*       iter;
 
-    ss_dfprintf(stderr,
-                "testhash : creating hash table of size %d, including %d "
-                "elements in total, at time %g.",
-                argsize,
-                argelems,
-                (double)clock() - start);
+    fprintf(stderr,
+            "testhash : creating hash table of size %d, including %d "
+            "elements in total, at time %g.",
+            argsize,
+            argelems,
+            (double)clock() - start);
 
     val_arr = (int *)MXS_MALLOC(sizeof(void *)*argelems);
     MXS_ABORT_IF_NULL(val_arr);
 
     h = hashtable_alloc(argsize, hfun, cmpfun);
 
-    ss_dfprintf(stderr, "\t..done\nAdd %d elements to hash table.", argelems);
+    fprintf(stderr, "\t..done\nAdd %d elements to hash table.", argelems);
 
     for (i = 0; i < argelems; i++)
     {
@@ -129,14 +129,14 @@ static bool do_hashtest(
     }
     if (argelems > 1000)
     {
-        ss_dfprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
+        fprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
     }
 
-    ss_dfprintf(stderr, "\t..done\nRead hash table statistics.");
+    fprintf(stderr, "\t..done\nRead hash table statistics.");
 
     hashtable_get_stats((void *)h, &hsize, &nelems, &longest);
 
-    ss_dfprintf(stderr, "\t..done\nValidate read values.");
+    fprintf(stderr, "\t..done\nValidate read values.");
 
     ss_info_dassert(hsize == (argsize > 0 ? argsize : 1), "Invalid hash size");
     ss_info_dassert((nelems == argelems) || (nelems == 0 && argsize == 0),
@@ -144,10 +144,10 @@ static bool do_hashtest(
     ss_info_dassert(longest <= nelems, "Too large longest list value");
     if (argelems > 1000)
     {
-        ss_dfprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
+        fprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
     }
 
-    ss_dfprintf(stderr, "\t..done\nValidate iterator.");
+    fprintf(stderr, "\t..done\nValidate iterator.");
 
     HASHITERATOR *iterator = hashtable_iterator(h);
     read_lock(h);
@@ -160,7 +160,7 @@ static bool do_hashtest(
         }
         if (argelems < 100)
         {
-            ss_dfprintf(stderr, "\nNext item, iter = %d, i = %d", *iter, i);
+            fprintf(stderr, "\nNext item, iter = %d, i = %d", *iter, i);
         }
     }
     read_unlock(h);
@@ -168,10 +168,10 @@ static bool do_hashtest(
     hashtable_iterator_free(iterator);
     if (argelems > 1000)
     {
-        ss_dfprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
+        fprintf(stderr, "\t..done\nOperation took %g", (double)clock() - start);
     }
 
-    ss_dfprintf(stderr, "\t\t..done\n\nTest completed successfully.\n\n");
+    fprintf(stderr, "\t\t..done\n\nTest completed successfully.\n\n");
 
     hashtable_free(h);
 

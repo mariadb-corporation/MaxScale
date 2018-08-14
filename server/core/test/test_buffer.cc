@@ -323,7 +323,7 @@ void test_compare()
 {
     static const uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    ss_dfprintf(stderr, "testbuffer : testing GWBUF comparisons\n");
+    fprintf(stderr, "testbuffer : testing GWBUF comparisons\n");
 
     GWBUF* lhs = NULL;
     GWBUF* rhs = NULL;
@@ -457,83 +457,83 @@ test1()
     size_t     buflen;
 
     /* Single buffer tests */
-    ss_dfprintf(stderr,
-                "testbuffer : creating buffer with data size %lu bytes",
-                size);
+    fprintf(stderr,
+            "testbuffer : creating buffer with data size %lu bytes",
+            size);
     buffer = gwbuf_alloc(size);
-    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
+    fprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\nBuffer length is now %lu", buflen);
+    fprintf(stderr, "\nBuffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
-    ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
+    fprintf(stderr, "\t..done\nSet a property for the buffer");
     gwbuf_add_property(buffer, (char*)"name", (char*)"value");
     ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, (char*)"name")),
                     "Should now have correct property");
     strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
-    ss_dfprintf(stderr, "\t..done\nLoad some data into the buffer");
+    fprintf(stderr, "\t..done\nLoad some data into the buffer");
     ss_info_dassert('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
     ss_info_dassert(-1 == GWBUF_DATA_CHAR(buffer, 105), "Hundred and fifth character of buffer must return -1");
     ss_info_dassert(0 == GWBUF_IS_SQL(buffer), "Must say buffer is not SQL, as it does not have marker");
     strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
-    ss_dfprintf(stderr, "\t..done\nLoad SQL data into the buffer");
+    fprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     ss_info_dassert(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
     clone = gwbuf_clone(buffer);
-    ss_dfprintf(stderr, "\t..done\nCloned buffer");
+    fprintf(stderr, "\t..done\nCloned buffer");
     buflen = GWBUF_LENGTH(clone);
-    ss_dfprintf(stderr, "\nCloned buffer length is now %lu", buflen);
+    fprintf(stderr, "\nCloned buffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(clone), "Cloned buffer should not be empty");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     gwbuf_free(clone);
-    ss_dfprintf(stderr, "Freed cloned buffer");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "Freed cloned buffer");
+    fprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite1);
     ss_info_dassert(NULL != buffer, "Buffer should not be null");
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite1, buflen, size - bite1);
+    fprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite1, buflen, size - bite1);
     ss_info_dassert((size - bite1) == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite2);
     ss_info_dassert(NULL != buffer, "Buffer should not be null");
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite2, buflen, size - bite1 - bite2);
+    fprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite2, buflen, size - bite1 - bite2);
     ss_info_dassert((size - bite1 - bite2) == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite3);
-    ss_dfprintf(stderr, "Consumed %lu bytes, should have null buffer", bite3);
+    fprintf(stderr, "Consumed %lu bytes, should have null buffer", bite3);
     ss_info_dassert(NULL == buffer, "Buffer should be null");
 
     /* Buffer list tests */
     size = 100000;
     buffer = gwbuf_alloc(size);
-    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
+    fprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\nBuffer length is now %lu", buflen);
+    fprintf(stderr, "\nBuffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
     extra = gwbuf_alloc(size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nAllocated extra buffer of size %lu.", size);
+    fprintf(stderr, "\t..done\nAllocated extra buffer of size %lu.", size);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     buffer = gwbuf_append(buffer, extra);
     buflen = gwbuf_length(buffer);
-    ss_dfprintf(stderr, "\t..done\nAppended extra buffer to original buffer to create list of size %lu", buflen);
+    fprintf(stderr, "\t..done\nAppended extra buffer to original buffer to create list of size %lu", buflen);
     ss_info_dassert((size * 2) == gwbuf_length(buffer), "Incorrect size for set of buffers");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nTrimmed 60 bytes from buffer, now size is %lu.", buflen);
+    fprintf(stderr, "\t..done\nTrimmed 60 bytes from buffer, now size is %lu.", buflen);
     ss_info_dassert((size - 60000) == buflen, "Incorrect buffer size");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nTrimmed another 60 bytes from buffer, now size is %lu.", buflen);
+    fprintf(stderr, "\t..done\nTrimmed another 60 bytes from buffer, now size is %lu.", buflen);
     ss_info_dassert(100000 == buflen, "Incorrect buffer size");
     ss_info_dassert(buffer == extra, "The buffer pointer should now point to the extra buffer");
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
     gwbuf_free(buffer);
     /** gwbuf_clone_all test  */
     size_t headsize = 10;

@@ -48,21 +48,21 @@ test1()
     int     result;
 
     /* Poll tests */
-    ss_dfprintf(stderr,
-                "testpoll : Initialise the polling system.");
+    fprintf(stderr,
+            "testpoll : Initialise the polling system.");
     poll_init();
-    ss_dfprintf(stderr, "\t..done\nAdd a DCB");
+    fprintf(stderr, "\t..done\nAdd a DCB");
     dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
     dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
     poll_add_dcb(dcb);
     poll_remove_dcb(dcb);
     poll_add_dcb(dcb);
-    ss_dfprintf(stderr, "\t..done\nStart wait for events.");
+    fprintf(stderr, "\t..done\nStart wait for events.");
     sleep(10);
     poll_shutdown();
-    ss_dfprintf(stderr, "\t..done\nTidy up.");
+    fprintf(stderr, "\t..done\nTidy up.");
     dcb_close(dcb);
-    ss_dfprintf(stderr, "\t..done\n");
+    fprintf(stderr, "\t..done\n");
 
     return 0;
 
