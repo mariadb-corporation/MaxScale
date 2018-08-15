@@ -360,9 +360,9 @@ std::string get_timestamp(void)
     struct tm tm;
     localtime_r(&t, &tm);
     const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                            tm.tm_min, tm.tm_sec);
+    static int required = snprintf(NULL, 0, timestamp_formatstr,
+                                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                                   tm.tm_min, tm.tm_sec);
     char buf[required + 1];
 
     snprintf(buf, sizeof(buf), timestamp_formatstr,
@@ -381,9 +381,9 @@ std::string get_timestamp_hp(void)
     int usec = tv.tv_usec / 1000;
 
     const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr_hp,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                            tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
+    static int required = snprintf(NULL, 0, timestamp_formatstr_hp,
+                                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                                   tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
 
     char buf[required + 1];
 
