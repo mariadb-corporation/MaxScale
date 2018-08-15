@@ -19,6 +19,7 @@
 #include <maxscale/config.h>
 
 #include <sstream>
+#include <initializer_list>
 
 #include <maxbase/jansson.h>
 #include <maxscale/ssl.h>
@@ -239,13 +240,13 @@ void dump_if_changed(const MXS_MODULE_PARAM* params, int file,
  * Note: Does not work with enum type parameters, they'll get converted into
  * integers. Convert them to string format at the call site.
  *
- * @param params Module parameter to use
  * @param file   File descriptor where the line is written
  * @param key    Name of the parameter
  * @param value  The parameter value
+ * @param params List of module parameters to use
  */
 template <class T>
-inline void dump_param(const MXS_MODULE_PARAM* params, int file, const std::string& key, const T value)
+inline void dump_param(int file, const std::string& key, const T value, std::initializer_list<const MXS_MODULE_PARAM*> params)
 {
     std::stringstream ss;
     ss << value;
@@ -254,7 +255,10 @@ inline void dump_param(const MXS_MODULE_PARAM* params, int file, const std::stri
     if (!strval.empty())
     {
         // Don't dump empty values
-        dump_if_changed(params, file, key, strval);
+        for (auto a : params)
+        {
+            dump_if_changed(a, file, key, strval);
+        }
     }
 }
 
@@ -262,9 +266,12 @@ inline void dump_param(const MXS_MODULE_PARAM* params, int file, const std::stri
 // the defaults. This requires that all defaults use either "true" or "false"
 // for the values.
 template <>
-inline void dump_param(const MXS_MODULE_PARAM* params, int file, const std::string& key, bool value)
+inline void dump_param(int file, const std::string& key, bool value, std::initializer_list<const MXS_MODULE_PARAM*> params)
 {
-    dump_if_changed(params, file, key, value ? "true" : "false");
+    for (auto a : params)
+    {
+        dump_if_changed(a, file, key, value ? "true" : "false");
+    }
 }
 
 }

@@ -1785,17 +1785,17 @@ bool Service::dump_config(const char *filename) const
 
     const MXS_MODULE_PARAM* mp = config_service_params;
 
-    dump_param(mp, file, CN_ENABLE_ROOT_USER, enable_root);
-    dump_param(mp, file, CN_MAX_RETRY_INTERVAL, max_retry_interval);
-    dump_param(mp, file, CN_MAX_CONNECTIONS, max_connections);
-    dump_param(mp, file, CN_CONNECTION_TIMEOUT, conn_idle_timeout);
-    dump_param(mp, file, CN_AUTH_ALL_SERVERS, users_from_all);
-    dump_param(mp, file, CN_STRIP_DB_ESC, strip_db_esc);
-    dump_param(mp, file, CN_LOCALHOST_MATCH_WILDCARD_HOST, localhost_match_wildcard_host);
-    dump_param(mp, file, CN_LOG_AUTH_WARNINGS, log_auth_warnings);
-    dump_param(mp, file, CN_RETRY_ON_FAILURE, retry_start);
-    dump_param(mp, file, CN_VERSION_STRING, m_version_string);
-    dump_param(mp, file, CN_WEIGHTBY, m_weightby);
+    dump_param(file, CN_ENABLE_ROOT_USER, enable_root, {mp});
+    dump_param(file, CN_MAX_RETRY_INTERVAL, max_retry_interval, {mp});
+    dump_param(file, CN_MAX_CONNECTIONS, max_connections, {mp});
+    dump_param(file, CN_CONNECTION_TIMEOUT, conn_idle_timeout, {mp});
+    dump_param(file, CN_AUTH_ALL_SERVERS, users_from_all, {mp});
+    dump_param(file, CN_STRIP_DB_ESC, strip_db_esc, {mp});
+    dump_param(file, CN_LOCALHOST_MATCH_WILDCARD_HOST, localhost_match_wildcard_host, {mp});
+    dump_param(file, CN_LOG_AUTH_WARNINGS, log_auth_warnings, {mp});
+    dump_param(file, CN_RETRY_ON_FAILURE, retry_start, {mp});
+    dump_param(file, CN_VERSION_STRING, m_version_string, {mp});
+    dump_param(file, CN_WEIGHTBY, m_weightby, {mp});
 
     if (!m_filters.empty())
     {
@@ -1848,14 +1848,13 @@ bool Service::dump_config(const char *filename) const
 
     const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
     ss_dassert(mod);
-    mp = mod->parameters;
 
     // Dump router specific parameters
     for (auto p = svc_config_param; p; p = p->next)
     {
         if (common_params.count(p->name) == 0)
         {
-            dump_param(mp, file, p->name, p->value);
+            dump_param(file, p->name, p->value, {mod->parameters});
         }
     }
 
