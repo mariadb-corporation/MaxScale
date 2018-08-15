@@ -297,6 +297,25 @@ private:
 }
 
 static std::unique_ptr<MessageRegistry> message_registry;
+static size_t (*get_context)(char* buffer, size_t len);
+
+static size_t mxs_get_context(char* buffer, size_t len)
+{
+    ss_dassert(len >= 20); // Needed for "9223372036854775807"
+
+    uint64_t session_id = session_get_current_id();
+
+    if (session_id != 0)
+    {
+        len = snprintf(buffer, len, "%" PRIu64, session_id);
+    }
+    else
+    {
+        len = 0;
+    }
+
+    return len;
+}
 
 /**
  * Initializes log manager
@@ -307,7 +326,8 @@ static std::unique_ptr<MessageRegistry> message_registry;
  *
  * @return true if succeed, otherwise false
  */
-bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
+bool mxs_log_init2(const char* ident, const char* logdir, mxs_log_target_t target,
+                   size_t (*gc)(char*, size_t))
 {
     static bool log_init_done = false;
     ss_dassert(!log_init_done);
@@ -342,8 +362,14 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
             break;
     }
 
+    get_context = gc;
 
     return logger && message_registry;
+}
+
+bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
+{
+    return mxs_log_init2(ident, logdir, target, mxs_get_context);
 }
 
 /**
@@ -718,19 +744,17 @@ int mxs_log_message(int priority,
         {
             va_list valist;
 
-            uint64_t session_id = session_get_current_id();
-            int session_len = 0;
+            char context[32]; // The documentation will guarantee a buffer of at least 32 bytes.
+            int context_len = 0;
 
-            char session[20]; // Enough to fit "9223372036854775807"
+            if (get_context)
+            {
+                context_len = get_context(context, sizeof(context));
 
-            if (session_id != 0)
-            {
-                sprintf(session, "%" PRIu64, session_id);
-                session_len = strlen(session) + 3; // +3 due to "() "
-            }
-            else
-            {
-                session_len = 0;
+                if (context_len != 0)
+                {
+                    context_len += 3; // The added "() "
+                }
             }
 
             int modname_len = modname ? strlen(modname) + 3 : 0; // +3 due to "[...] "
@@ -778,7 +802,7 @@ int mxs_log_message(int priority,
 
                 int buffer_len = 0;
                 buffer_len += prefix.len;
-                buffer_len += session_len;
+                buffer_len += context_len;
                 buffer_len += modname_len;
                 buffer_len += augmentation_len;
                 buffer_len += message_len;
@@ -790,26 +814,26 @@ int mxs_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    ss_dassert(prefix.len + session_len + modname_len +
+                    ss_dassert(prefix.len + context_len + modname_len +
                                augmentation_len + message_len + suppression_len + 1 == buffer_len);
                 }
 
                 char buffer[buffer_len];
 
                 char *prefix_text = buffer;
-                char *session_text = prefix_text + prefix.len;
-                char *modname_text = session_text + session_len;
+                char *context_text = prefix_text + prefix.len;
+                char *modname_text = context_text + context_len;
                 char *augmentation_text = modname_text + modname_len;
                 char *message_text = augmentation_text + augmentation_len;
                 char *suppression_text = message_text + message_len;
 
                 strcpy(prefix_text, prefix.text);
 
-                if (session_len)
+                if (context_len)
                 {
-                    strcpy(session_text, "(");
-                    strcat(session_text, session);
-                    strcat(session_text, ") ");
+                    strcpy(context_text, "(");
+                    strcat(context_text, context);
+                    strcat(context_text, ") ");
                 }
 
                 if (modname_len)
@@ -849,7 +873,7 @@ int mxs_log_message(int priority,
                 if (log_config.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                 {
                     // Debug messages are never logged into syslog
-                    syslog(priority, "%s", session_text);
+                    syslog(priority, "%s", context_text);
                 }
 
                 err = log_write(priority, buffer);

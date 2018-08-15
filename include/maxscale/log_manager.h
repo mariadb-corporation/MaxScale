@@ -92,6 +92,8 @@ typedef struct mxs_log_throttling
     size_t suppress_ms; // If exceeded, suppress such messages for this many ms.
 } MXS_LOG_THROTTLING;
 
+bool mxs_log_init2(const char* ident, const char* logdir, mxs_log_target_t target,
+                   size_t (*get_context)(char*, size_t));
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
 void mxs_log_finish(void);
 bool mxs_log_rotate();
