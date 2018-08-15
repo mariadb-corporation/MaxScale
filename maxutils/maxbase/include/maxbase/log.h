@@ -99,10 +99,80 @@ bool mxb_log_init(const char* ident,
                   size_t (*get_context)(char*, size_t));
 void mxb_log_finish(void);
 bool mxb_log_rotate();
-int  mxb_log_set_priority_enabled(int priority, bool enabled);
+
+/**
+ * Get log filename
+ *
+ * @return The current filename.
+ *
+ * @attention This function can be called only after @c mxs_log_init() has
+ *            been called and @c mxs_log_finish() has not been called. The
+ *            returned filename stays valid only until @c mxs_log_finish()
+ *            is called.
+ */
+const char* mxb_log_get_filename();
+
+/**
+ * Enable/disable a particular syslog priority.
+ *
+ * @param priority  One of the LOG_ERR etc. constants from sys/syslog.h.
+ * @param enabled   True if the priority should be enabled, false if it should be disabled.
+ *
+ * @return True if the priority was valid, false otherwise.
+ */
+bool mxb_log_set_priority_enabled(int priority, bool enabled);
+
+/**
+ * Query whether a particular syslog priority is enabled.
+ *
+ * @param priority  One of the LOG_ERR etc. constants from sys/syslog.h.
+ *
+ * @return True if enabled, false otherwise.
+ */
+bool mxs_log_is_priority_enabled(int priority);
+
+/**
+ * Enable/disable syslog logging.
+ *
+ * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
+ */
 void mxb_log_set_syslog_enabled(bool enabled);
+
+/**
+ * Is syslog logging enabled.
+ *
+ * @return True if enabled, false otherwise.
+ */
+bool mxb_log_is_syslog_enabled();
+
+/**
+ * Enable/disable maxscale log logging.
+ *
+ * @param enabled True, if maxlog logging should be enabled, false if it should be disabled.
+ */
 void mxb_log_set_maxlog_enabled(bool enabled);
+
+/**
+ * Is maxlog logging enabled.
+ *
+ * @return True if enabled, false otherwise.
+ */
+bool mxb_log_is_maxlog_enabled();
+
+/**
+ * Enable/disable highprecision logging.
+ *
+ * @param enabled True, if high precision logging should be enabled, false if it should be disabled.
+ */
 void mxb_log_set_highprecision_enabled(bool enabled);
+
+/**
+ * Is highprecision logging enabled.
+ *
+ * @return True if enabled, false otherwise.
+ */
+bool mxb_log_is_highprecision_enabled();
+
 void mxb_log_set_augmentation(int bits);
 void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling);
 
@@ -197,22 +267,5 @@ enum
     MXB_OOM_MESSAGE_MAXLEN = 80 /** Maximum length of an OOM message, including the
                                     trailing NULL. If longer, it will be cut. */
 };
-
-/**
- * Return a thread specific pointer to a string describing the error
- * code passed as argument. The string is obtained using strerror_r.
- *
- * @param error  One of the errno error codes.
- *
- * @return Thread specific pointer to string describing the error code.
- *
- * @attention The function is thread safe, but not re-entrant. That is,
- * calling it twice with different error codes between two sequence points
- * will not work. E.g:
- *
- *     printf("EINVAL = %s, EACCESS = %s",
- *            mxb_strerror(EINVAL), mxb_strerror(EACCESS));
- */
-const char* mxb_strerror(int error);
 
 MXB_END_DECLS

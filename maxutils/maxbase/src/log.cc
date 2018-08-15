@@ -379,7 +379,7 @@ void mxb_log_finish(void)
     closelog();
 }
 
-std::string get_timestamp(void)
+static std::string get_timestamp(void)
 {
     time_t t = time(NULL);
     struct tm tm;
@@ -397,7 +397,7 @@ std::string get_timestamp(void)
     return buf;
 }
 
-std::string get_timestamp_hp(void)
+static std::string get_timestamp_hp(void)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -458,11 +458,6 @@ void mxb_log_set_augmentation(int bits)
     log_config.augmentation = bits & MXB_LOG_AUGMENTATION_MASK;
 }
 
-/**
- * Enable/disable syslog logging.
- *
- * @param enabled True, if high precision logging should be enabled, false if it should be disabled.
- */
 void mxb_log_set_highprecision_enabled(bool enabled)
 {
     log_config.do_highprecision = enabled;
@@ -470,11 +465,11 @@ void mxb_log_set_highprecision_enabled(bool enabled)
     MXB_NOTICE("highprecision logging is %s.", enabled ? "enabled" : "disabled");
 }
 
-/**
- * Enable/disable syslog logging.
- *
- * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
- */
+bool mxb_log_is_highprecision_enabled()
+{
+    return log_config.do_highprecision;
+}
+
 void mxb_log_set_syslog_enabled(bool enabled)
 {
     log_config.do_syslog = enabled;
@@ -482,16 +477,21 @@ void mxb_log_set_syslog_enabled(bool enabled)
     MXB_NOTICE("syslog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
-/**
- * Enable/disable maxscale log logging.
- *
- * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
- */
+bool mxb_log_is_syslog_enabled()
+{
+    return log_config.do_syslog;
+}
+
 void mxb_log_set_maxlog_enabled(bool enabled)
 {
     log_config.do_maxlog = enabled;
 
     MXB_NOTICE("maxlog logging is %s.", enabled ? "enabled" : "disabled");
+}
+
+bool mxb_log_is_maxlog_enabled()
+{
+    return log_config.do_maxlog;
 }
 
 /**
@@ -544,6 +544,11 @@ bool mxb_log_rotate()
     return logger->rotate();
 }
 
+const char* mxb_log_get_filename()
+{
+    return logger->filename();
+}
+
 static const char* level_name(int level)
 {
     switch (level)
@@ -570,17 +575,9 @@ static const char* level_name(int level)
     }
 }
 
-/**
- * Enable/disable a particular syslog priority.
- *
- * @param priority One of the LOG_ERR etc. constants from sys/syslog.h.
- * @param enabled  True if the priority should be enabled, false if it to be disabled.
- *
- * @return 0 if the priority was valid, -1 otherwise.
- */
-int mxb_log_set_priority_enabled(int level, bool enable)
+bool mxb_log_set_priority_enabled(int level, bool enable)
 {
-    int rv = -1;
+    bool rv = false;
     const char* text = (enable ? "enable" : "disable");
 
     if ((level & ~LOG_PRIMASK) == 0)
@@ -598,10 +595,32 @@ int mxb_log_set_priority_enabled(int level, bool enable)
         }
 
         MXB_NOTICE("The logging of %s messages has been %sd.", level_name(level), text);
+        rv = true;
     }
     else
     {
         MXB_ERROR("Attempt to %s unknown syslog priority %d.", text, level);
+    }
+
+    return rv;
+}
+
+bool mxb_log_is_priority_enabled(int level)
+{
+    bool rv = false;
+
+    if ((level & ~LOG_PRIMASK) == 0)
+    {
+        int bit = (1 << level);
+
+        if (mxb_log_enabled_priorities & bit)
+        {
+            rv = true;
+        }
+    }
+    else
+    {
+        MXB_ERROR("Attempt to query unknown syslog priority %d.", level);
     }
 
     return rv;
@@ -713,7 +732,7 @@ static message_suppression_t message_status(const char* file, int line)
  * @param format   The printf format of the following arguments.
  * @param ...      Optional arguments according to the format.
  */
-int mxs_log_message(int priority,
+int mxb_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
                     const char* format, ...)
