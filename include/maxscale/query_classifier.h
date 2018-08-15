@@ -13,8 +13,8 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

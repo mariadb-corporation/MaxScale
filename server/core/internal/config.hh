@@ -20,8 +20,8 @@
 
 #include <sstream>
 
+#include <maxbase/jansson.h>
 #include <maxscale/ssl.h>
-#include <maxscale/jansson.h>
 
 #define DEFAULT_NBPOLLS             3      /**< Default number of non block polls before we block */
 #define DEFAULT_POLLSLEEP           1000   /**< Default poll wait time (milliseconds) */

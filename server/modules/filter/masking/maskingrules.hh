@@ -18,7 +18,7 @@
 #include <memory>
 #include <vector>
 
-#include <maxscale/jansson.h>
+#include <maxbase/jansson.h>
 #include <maxscale/pcre2.h>
 
 #include "mysql.hh"

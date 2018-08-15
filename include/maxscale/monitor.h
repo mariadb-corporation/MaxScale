@@ -20,10 +20,10 @@
 
 #include <openssl/sha.h>
 
+#include <maxbase/jansson.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/server.h>
-#include <maxscale/jansson.h>
 #include <maxscale/protocol/mysql.h>
 
 MXS_BEGIN_DECLS

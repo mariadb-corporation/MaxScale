@@ -20,11 +20,11 @@
 
 #include <stdint.h>
 
+#include <maxbase/jansson.h>
 #include <maxscale/buffer.h>
 #include <maxscale/routing.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

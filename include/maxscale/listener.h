@@ -17,9 +17,9 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

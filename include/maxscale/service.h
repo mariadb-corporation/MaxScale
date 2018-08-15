@@ -26,6 +26,7 @@
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
+#include <maxbase/jansson.h>
 #include <maxscale/protocol.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
@@ -33,7 +34,6 @@
 #include <maxscale/listener.h>
 #include <maxscale/filter.h>
 #include <maxscale/config.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

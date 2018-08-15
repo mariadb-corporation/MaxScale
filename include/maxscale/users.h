@@ -17,10 +17,10 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/jansson.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
 #include <maxscale/service.h>
-#include <maxscale/jansson.h>
 #include <openssl/sha.h>
 
 MXS_BEGIN_DECLS

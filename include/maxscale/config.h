@@ -23,8 +23,8 @@
 #include <sys/utsname.h>
 #include <time.h>
 
+#include <maxbase/jansson.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/jansson.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
 

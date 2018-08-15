@@ -33,6 +33,7 @@
 #include <vector>
 #include <unordered_set>
 
+#include <maxbase/jansson.h>
 #include <maxscale/service.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
@@ -50,7 +51,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>
-#include <maxscale/jansson.h>
 #include <maxscale/json_api.h>
 #include <maxscale/routingworker.h>
 

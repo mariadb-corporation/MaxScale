@@ -18,9 +18,9 @@
  * The protocol module interface definition.
  */
 
+#include <maxbase/jansson.h>
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

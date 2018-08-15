@@ -12,5 +12,5 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxbase/cdefs.h>
 #include <jansson.h>

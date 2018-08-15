@@ -19,9 +19,9 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/jansson.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

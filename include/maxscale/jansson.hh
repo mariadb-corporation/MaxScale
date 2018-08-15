@@ -18,9 +18,9 @@
 #include <sstream>
 #include <string>
 
+#include <maxbase/jansson.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
-#include <maxscale/jansson.h>
 #include <maxscale/utils.hh>
 
 namespace std

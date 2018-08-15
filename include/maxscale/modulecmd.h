@@ -23,13 +23,13 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/jansson.h>
 #include <maxscale/dcb.h>
 #include <maxscale/filter.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
