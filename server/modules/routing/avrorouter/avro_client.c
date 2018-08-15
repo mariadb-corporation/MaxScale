@@ -479,7 +479,7 @@ avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *q
             }
             else
             {
-                dcb_printf(client->dcb, "ERR NO-FILE File '%s' not found.", client->avro_binfile);
+                dcb_printf(client->dcb, "ERR NO-FILE File '%s' not found.\n", client->avro_binfile);
             }
         }
         else
@@ -825,8 +825,7 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
     }
     else
     {
-        fprintf(stderr, "No file specified\n");
-        dcb_printf(client->dcb, "ERR avro file not specified");
+        dcb_printf(client->dcb, "ERR avro file not specified\n");
     }
 
     return read_more;
