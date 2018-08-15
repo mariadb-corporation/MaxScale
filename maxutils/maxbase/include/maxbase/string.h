@@ -14,7 +14,11 @@
 
 #include <maxbase/cdefs.h>
 
+MXB_BEGIN_DECLS
+
 /**
  * Thread-safe strerror
  */
 const char* mxb_strerror(int error);
+
+MXB_END_DECLS
