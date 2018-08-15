@@ -419,40 +419,6 @@ static std::string get_timestamp_hp(void)
     return buf;
 }
 
-/**
- * write a message to the MaxScale log
- *
- * @param priority      Syslog priority
- * @param str           string to be written to log (null terminated)
- *
- * @return 0 on succeess, -1 on error
- */
-static int log_write(int priority, const char* str)
-{
-    mxb_assert(str);
-    mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
-
-    std::string msg = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
-    msg += str;
-
-    // Remove any user-generated newlines.
-    // This is safe to do as we know the message is not full of newlines
-    while (msg.back() == '\n')
-    {
-        msg.pop_back();
-    }
-
-    // Add a final newline into the message
-    msg.push_back('\n');
-
-    return this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
-}
-
-/**
- * Set log augmentation.
- *
- * @param bits One of the log_augmentation_t constants.
- */
 void mxb_log_set_augmentation(int bits)
 {
     this_unit.augmentation = bits & MXB_LOG_AUGMENTATION_MASK;
@@ -852,7 +818,20 @@ int mxb_log_message(int priority,
                     syslog(priority, "%s", context_text);
                 }
 
-                err = log_write(priority, buffer);
+                std::string msg = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
+                msg += buffer;
+
+                // Remove any user-generated newlines.
+                // This is safe to do as we know the message is not full of newlines
+                while (msg.back() == '\n')
+                {
+                    msg.pop_back();
+                }
+
+                // Add a final newline into the message
+                msg.push_back('\n');
+
+                err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
             }
         }
     }
