@@ -2352,98 +2352,69 @@ bool Service::is_basic_parameter(const std::string& name)
     return names.find(name) != names.end();
 }
 
-bool Service::update_basic_parameter(const std::string& key, const std::string& value)
+void Service::update_basic_parameter(const std::string& key, const std::string& value)
 {
-    bool valid = false;
-
     if (key == CN_USER)
     {
         m_user = value;
         snprintf(user, sizeof(user), "%s", value.c_str());
-        valid = true;
     }
     else if (key == CN_PASSWORD)
     {
         m_password = value;
         snprintf(password, sizeof(password), "%s", value.c_str());
-        valid = true;
     }
     else if (key == CN_ENABLE_ROOT_USER)
     {
         enable_root = config_truth_value(value.c_str());
-        valid = true;
     }
     else if (key == CN_MAX_RETRY_INTERVAL)
     {
-        int i = std::stoi(value);
-
-        if (i > 0)
-        {
-            max_retry_interval = i;
-            valid = true;
-        }
+        max_retry_interval = std::stoi(value);
+        ss_dassert(max_retry_interval > 0);
     }
     else if (key == CN_MAX_CONNECTIONS)
     {
-        int i = std::stoi(value);
-
-        if (i > 0)
-        {
-            max_connections = i;
-            valid = true;
-        }
+        max_connections = std::stoi(value);
+        ss_dassert(max_connections > 0);
     }
     else if (key == CN_CONNECTION_TIMEOUT)
     {
-        int i = std::stoi(value);
-
-        if (i > 0)
+        if ((conn_idle_timeout = std::stoi(value)))
         {
-            valid = true;
-
-            if ((conn_idle_timeout = i))
-            {
-                dcb_enable_session_timeouts();
-            }
+            dcb_enable_session_timeouts();
         }
+
+        ss_dassert(conn_idle_timeout >= 0);
     }
     else if (key == CN_AUTH_ALL_SERVERS)
     {
         users_from_all = config_truth_value(value.c_str());
-        valid = true;
     }
     else if (key == CN_STRIP_DB_ESC)
     {
         strip_db_esc = config_truth_value(value.c_str());
-        valid = true;
     }
     else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
     {
         localhost_match_wildcard_host = config_truth_value(value.c_str());
-        valid = true;
     }
     else if (key == CN_VERSION_STRING)
     {
         m_version_string = value;
         snprintf(version_string, sizeof(version_string), "%s", value.c_str());
-        valid = true;
     }
     else if (key == CN_WEIGHTBY)
     {
         m_weightby = value;
         snprintf(weightby, sizeof(weightby), "%s", value.c_str());
-        valid = true;
     }
     else if (key == CN_LOG_AUTH_WARNINGS)
     {
         log_auth_warnings = config_truth_value(value.c_str());
-        valid = true;
     }
     else if (key == CN_RETRY_ON_FAILURE)
     {
         retry_start = config_truth_value(value.c_str());
-        valid = true;
     }
-
-    return valid;
 }

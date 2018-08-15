@@ -59,10 +59,8 @@ public:
      *
      * @param name    Name of the parameter to update
      * @param value   The new value of the parameter
-     *
-     * @return True if the parameter and its value were valid
      */
-    bool update_basic_parameter(const std::string& name, const std::string& value);
+    void update_basic_parameter(const std::string& name, const std::string& value);
 
     /**
      * Set the list of filters for this service

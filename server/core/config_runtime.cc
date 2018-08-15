@@ -410,39 +410,38 @@ static inline bool is_valid_integer(const char* value)
 
 bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
+    if (!value[0])
+    {
+        config_runtime_error("Empty value for parameter: %s", key);
+        return false;
+    }
+
     mxs::SpinLockGuard guard(crt_lock);
-    bool valid = false;
+    server_update_parameter(server, key, value);
 
     if (strcmp(key, CN_ADDRESS) == 0)
     {
-        valid = true;
         server_update_address(server, value);
     }
     else if (strcmp(key, CN_PORT) == 0)
     {
-        long ival = get_positive_int(value);
-
-        if (ival)
+        if (long ival = get_positive_int(value))
         {
-            valid = true;
             server_update_port(server, ival);
         }
     }
     else if (strcmp(key, CN_MONITORUSER) == 0)
     {
-        valid = true;
         server_update_credentials(server, value, server->monpw);
     }
     else if (strcmp(key, CN_MONITORPW) == 0)
     {
-        valid = true;
         server_update_credentials(server, server->monuser, value);
     }
     else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
     {
         if (is_valid_integer(value))
         {
-            valid = true;
             server->persistpoolmax = atoi(value);
         }
     }
@@ -450,47 +449,26 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     {
         if (is_valid_integer(value))
         {
-            valid = true;
             server->persistmaxtime = atoi(value);
         }
     }
     else
     {
-        if (!value[0] && !server_remove_parameter(server, key))
-        {
-            // Not a valid parameter
-        }
-        else if (value[0])
-        {
-            valid = true;
-            server_update_parameter(server, key, value);
-
-            /**
-             * It's likely that this parameter is used as a weighting parameter.
-             * We need to update the weights of services that use this.
-             */
-            service_update_weights();
-        }
+        /**
+         * It's likely that this parameter is used as a weighting parameter.
+         * We need to update the weights of services that use this.
+         */
+        service_update_weights();
     }
 
-    if (valid)
-    {
-        if (server_serialize(server))
-        {
-            MXS_NOTICE("Updated server '%s': %s=%s", server->name, key, value);
-        }
-    }
-    else
-    {
-        config_runtime_error("Invalid server parameter: %s=%s", key, value);
-    }
+    server_serialize(server);
+    MXS_NOTICE("Updated server '%s': %s=%s", server->name, key, value);
 
-    return valid;
+    return true;
 }
 
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
 {
-    mxs::SpinLockGuard guard(crt_lock);;
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
     if (!config_param_is_valid(config_monitor_params, key, value, NULL) &&
@@ -505,6 +483,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         return false;
     }
 
+    mxs::SpinLockGuard guard(crt_lock);
     monitor_stop(monitor);
     monitor_set_parameter(monitor, key, value);
 
@@ -584,21 +563,31 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 
 bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)
 {
-    std::string key(zKey);
-    std::string value(zValue);
-    bool valid = false;
+    const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    ss_dassert(mod);
 
-    const MXS_MODULE* module = get_module(service->routerModule, MODULE_ROUTER);
-    ss_dassert(module);
+    if (!config_param_is_valid(config_service_params, zKey, zValue, NULL) &&
+        !config_param_is_valid(mod->parameters, zKey, zValue, NULL))
+    {
+        config_runtime_error("Invalid service parameter: %s", zKey);
+        return false;
+    }
+    else if (!zValue[0])
+    {
+        config_runtime_error("Empty value for parameter: %s", zKey);
+        return false;
+    }
 
     mxs::SpinLockGuard guard(crt_lock);
+    std::string key(zKey);
+    std::string value(zValue);
+    bool rval = true;
 
     if (service->is_basic_parameter(key))
     {
-        valid = service->update_basic_parameter(key, value);
+        service->update_basic_parameter(key, value);
     }
-    else if (config_param_is_valid(module->parameters, key.c_str(), value.c_str(), NULL) ||
-             key == CN_ROUTER_OPTIONS)
+    else
     {
         if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
         {
@@ -606,11 +595,7 @@ bool runtime_alter_service(Service *service, const char* zKey, const char* zValu
             std::string old_value = config_get_string(service->svc_config_param, key.c_str());
             service_replace_parameter(service, key.c_str(), value.c_str());
 
-            if (service->router->configureInstance(service->router_instance, service->svc_config_param))
-            {
-                valid = true;
-            }
-            else
+            if (!service->router->configureInstance(service->router_instance, service->svc_config_param))
             {
                 // Reconfiguration failed, restore the old value of the parameter
                 if (old_value.empty())
@@ -621,30 +606,27 @@ bool runtime_alter_service(Service *service, const char* zKey, const char* zValu
                 {
                     service_replace_parameter(service, key.c_str(), old_value.c_str());
                 }
+
+                rval = false;
                 config_runtime_error("Reconfiguration of service '%s' failed. See log "
                                      "file for more details.", service->name);
             }
         }
         else
         {
+            rval = false;
             config_runtime_error("Router '%s' does not support reconfiguration.",
                                  service->routerModule);
         }
     }
-    else
-    {
-        config_runtime_error("Invalid service parameter: %s=%s", key.c_str(), zValue);
-        MXS_ERROR("Unknown parameter for service '%s': %s=%s",
-                  service->name, key.c_str(), value.c_str());
-    }
 
-    if (valid)
+    if (rval)
     {
         service_serialize(service);
         MXS_NOTICE("Updated service '%s': %s=%s", service->name, key.c_str(), value.c_str());
     }
 
-    return valid;
+    return rval;
 }
 
 bool runtime_alter_maxscale(const char* name, const char* value)
@@ -1343,9 +1325,9 @@ bool runtime_is_count_or_null(json_t* json, const char* path)
             config_runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
             rval = false;
         }
-        else if (json_integer_value(value) <= 0)
+        else if (json_integer_value(value) < 0)
         {
-            config_runtime_error("Parameter '%s' is not a positive integer", path);
+            config_runtime_error("Parameter '%s' is a negative integer", path);
             rval = false;
         }
     }
@@ -1819,7 +1801,7 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
         }
         else
         {
-            for (const auto& a: paths)
+            for (const auto& a : paths)
             {
                 if (!(value = mxs_json_pointer(json, a.c_str())))
                 {
@@ -1831,7 +1813,7 @@ static bool validate_object_json(json_t* json, std::vector<std::string> paths,
                 }
             }
 
-            for (const auto& a: relationships)
+            for (const auto& a : relationships)
             {
                 StringSet relations;
                 if (extract_relations(json, relations, a.first, a.second))
