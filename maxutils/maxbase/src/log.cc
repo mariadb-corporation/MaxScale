@@ -16,15 +16,13 @@
 #include <sys/time.h>
 #include <syslog.h>
 
-#include <cerrno>
 #include <cinttypes>
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <mutex>
 #include <unordered_map>
 
-#include <maxbase/atomic.h>
-#include <maxbase/error.h>
 #include <maxbase/logger.hh>
 
 #define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
@@ -600,27 +598,6 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
     else
     {
         MXB_ERROR("Attempt to %s unknown syslog priority %d.", text, level);
-    }
-
-    return rv;
-}
-
-bool mxb_log_is_priority_enabled(int level)
-{
-    bool rv = false;
-
-    if ((level & ~LOG_PRIMASK) == 0)
-    {
-        int bit = (1 << level);
-
-        if (mxb_log_enabled_priorities & bit)
-        {
-            rv = true;
-        }
-    }
-    else
-    {
-        MXB_ERROR("Attempt to query unknown syslog priority %d.", level);
     }
 
     return rv;

@@ -129,7 +129,11 @@ bool mxb_log_set_priority_enabled(int priority, bool enabled);
  *
  * @return True if enabled, false otherwise.
  */
-bool mxs_log_is_priority_enabled(int priority);
+static inline bool mxb_log_is_priority_enabled(int priority)
+{
+    assert((priority & ~LOG_PRIMASK) == 0);
+    return MXB_LOG_PRIORITY_IS_ENABLED(priority) || priority == LOG_ALERT;
+}
 
 /**
  * Enable/disable syslog logging.
@@ -178,12 +182,6 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling);
 
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
 
-static inline bool mxb_log_priority_is_enabled(int priority)
-{
-    assert((priority & ~LOG_PRIMASK) == 0);
-    return MXB_LOG_PRIORITY_IS_ENABLED(priority) || priority == LOG_ALERT;
-}
-
 int mxb_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
@@ -199,7 +197,7 @@ int mxb_log_message(int priority,
  *       MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
 #define MXB_LOG_MESSAGE(priority, format, ...)\
-    (mxb_log_priority_is_enabled(priority) ? \
+    (mxb_log_is_priority_enabled(priority) ? \
      mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__) :\
      0)
 
