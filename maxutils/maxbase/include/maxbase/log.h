@@ -199,6 +199,11 @@ void mxb_log_set_highprecision_enabled(bool enabled);
  */
 bool mxb_log_is_highprecision_enabled();
 
+/**
+ * Set the augmentation
+ *
+ * @param bits  Combination of @c mxb_log_augmentation_t values.
+ */
 void mxb_log_set_augmentation(int bits);
 
 /**
@@ -232,6 +237,16 @@ int mxb_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
                     const char* format, ...) mxb_attribute((format(printf, 6, 7)));
+
+/**
+ * Log an Out-Of-Memory message.
+ *
+ * @param message  The message to be logged.
+ *
+ * @return 0 for success, non-zero otherwise.
+ */
+int mxb_log_oom(const char* message);
+
 /**
  * Log an error, warning, notice, info, or debug  message.
  *
@@ -280,25 +295,16 @@ int mxb_log_message(int priority,
 /**
  * Log an out of memory error using custom message.
  *
- * @param message Text to be logged.
- */
-// TODO: In an OOM situation, the default logging will (most likely) *not* work,
-// TODO: as memory is allocated as part of the process. A custom route, that does
-// TODO: not allocate memory, must be created for OOM messages.
-// TODO: So, currently these are primarily placeholders.
-#define MXB_OOM_MESSAGE(message) MXB_ERROR("OOM: %s", message);
-
-/**
- * Log an out of memory error using custom message, if the
- * provided pointer is NULL.
+ * @param message  Text to be logged. Must be a literal string.
  *
- * @param p If NULL, an OOM message will be logged.
- * @param message Text to be logged.
+ * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE_IFNULL(p, m) do { if (!p) { MXB_OOM_MESSAGE(m); } } while (false)
+#define MXB_OOM_MESSAGE(message) mxb_log_oom("OOM: " ## message ## "\n")
 
 /**
  * Log an out of memory error using a default message.
+ *
+ * @return 0 for success, non-zero otherwise.
  */
 #define MXB_OOM() MXB_OOM_MESSAGE(__func__)
 
@@ -306,14 +312,21 @@ int mxb_log_message(int priority,
  * Log an out of memory error using a default message, if the
  * provided pointer is NULL.
  *
- * @param p If NULL, an OOM message will be logged.
+ * @param p  If NULL, an OOM message will be logged.
+ *
+ * @return 0 for success, non-zero otherwise.
  */
 #define MXB_OOM_IFNULL(p) do { if (!p) { MXB_OOM(); } } while (false)
 
-enum
-{
-    MXB_OOM_MESSAGE_MAXLEN = 80 /** Maximum length of an OOM message, including the
-                                    trailing NULL. If longer, it will be cut. */
-};
+/**
+ * Log an out of memory error using custom message, if the
+ * provided pointer is NULL.
+ *
+ * @param p        If NULL, an OOM message will be logged.
+ * @param message  Text to be logged. Must be literal string.
+ *
+ * @return 0 for success, non-zero otherwise.
+ */
+#define MXB_OOM_MESSAGE_IFNULL(p, message) do { if (!p) { MXB_OOM_MESSAGE(message); } } while (false)
 
 MXB_END_DECLS

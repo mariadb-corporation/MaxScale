@@ -807,3 +807,8 @@ int mxb_log_message(int priority,
 
     return err;
 }
+
+int mxb_log_oom(const char* message)
+{
+    return this_unit.sLogger->write(message, strlen(message)) ? 0 : -1;
+}
