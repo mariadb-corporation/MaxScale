@@ -13,6 +13,8 @@
  */
 
 #include <maxscale/ccdefs.hh>
+
+#include <atomic>
 #include <maxscale/monitor.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/worker.hh>
@@ -32,16 +34,14 @@ public:
     /**
      * @brief Current state of the monitor.
      *
-     * Note that in principle the state of the monitor may already have
-     * changed when the current state is returned. The state can be fully
-     * trusted only if it is asked in a context when it is known that nobody
-     * else can affect it.
+     * Since the state is written to by the admin thread, the value returned in other threads cannot be fully
+     * trusted. The state should only be read in the admin thread or operations launched by the admin thread.
      *
-     * @return @c MXS_MONITOR_RUNNING if the monitor is running,
-     *         @c MXS_MONITOR_STOPPING if the monitor is stopping, and
-     *         @c MXS_MONITOR_STOPPED of the monitor is stopped.
+     * @return @c MONITOR_STATE_RUNNING if the monitor is running,
+     *         @c MONITOR_STATE_STOPPING if the monitor is stopping, and
+     *         @c MONITOR_STATE_STOPPED if the monitor is stopped.
      */
-    int32_t state() const;
+    monitor_state_t monitor_state() const;
 
     /**
      * @brief Find out whether the monitor is running.
@@ -52,7 +52,7 @@ public:
      */
     bool is_running() const
     {
-        return state() == MONITOR_STATE_RUNNING;
+        return monitor_state() == MONITOR_STATE_RUNNING;
     }
 
     /**
@@ -208,11 +208,11 @@ protected:
     MXS_MONITORED_SERVER* m_master;   /**< Master server */
 
 private:
-    int32_t     m_state;       /**< The current state of the monitor. */
-    int32_t     m_shutdown;    /**< Non-zero if the monitor should shut down. */
-    bool        m_checked;     /**< Whether server access has been checked. */
-    Semaphore   m_semaphore;   /**< Semaphore for synchronizing with monitor thread. */
-    int64_t     m_loop_called; /**< When was the loop called the last time. */
+    std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
+    int32_t     m_shutdown;             /**< Non-zero if the monitor should shut down. */
+    bool        m_checked;              /**< Whether server access has been checked. */
+    Semaphore   m_semaphore;            /**< Semaphore for synchronizing with monitor thread. */
+    int64_t     m_loop_called;          /**< When was the loop called the last time. */
 
     bool pre_run() final;
     void post_run() final;

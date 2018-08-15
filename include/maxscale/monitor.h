@@ -237,12 +237,13 @@ struct mxs_monitor
     SPINLOCK lock;
     MXS_CONFIG_PARAMETER* parameters; /*< configuration parameters */
     MXS_MONITORED_SERVER* monitored_servers; /*< List of servers the monitor monitors */
-    monitor_state_t state;        /**< The state of the monitor */
+    monitor_state_t state;        /**< The state of the monitor. This should ONLY be written to by the admin
+                                   *   thread. */
     int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
-    int connect_attempts;      /**< How many times a connection is attempted */
+    int connect_attempts;         /**< How many times a connection is attempted */
     int read_timeout;             /**< Timeout in seconds to read from the server.
-                                   * There are retries and the total effective timeout
-                                   * value is three times the option value.
+                                   *   There are retries and the total effective timeout
+                                   *   value is three times the option value.
                                    */
     int write_timeout;            /**< Timeout in seconds for each attempt to write to the server.
                                    * There are retries and the total effective timeout value is

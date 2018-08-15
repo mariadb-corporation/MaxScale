@@ -35,6 +35,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
+#include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.hh>
@@ -2456,7 +2457,7 @@ namespace maxscale
 MonitorInstance::MonitorInstance(MXS_MONITOR* pMonitor)
     : m_monitor(pMonitor)
     , m_master(NULL)
-    , m_state(MONITOR_STATE_STOPPED)
+    , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
     , m_loop_called(0)
@@ -2467,27 +2468,25 @@ MonitorInstance::~MonitorInstance()
 {
 }
 
-int32_t MonitorInstance::state() const
+monitor_state_t MonitorInstance::monitor_state() const
 {
-    return atomic_load_int32(&m_state);
+    static_assert(sizeof(monitor_state_t) == 4, "Unexpected size for enum");
+    return (monitor_state_t)atomic_load_uint32((uint32_t*)(&m_monitor->state));
 }
 
 void MonitorInstance::stop()
 {
-    // This is always called in single-thread context.
-    ss_dassert(m_state == MONITOR_STATE_RUNNING);
+    // This should only be called by monitor_stop(). NULL worker is allowed since the main worker may
+    // not exist during program start/stop.
+    ss_dassert(mxs_rworker_get_current() == NULL ||
+               mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    ss_dassert(Worker::state() != Worker::STOPPED);
+    ss_dassert(monitor_state() == MONITOR_STATE_STOPPING);
+    ss_dassert(m_thread_running.load() == true);
 
-    if (state() == MONITOR_STATE_RUNNING)
-    {
-        atomic_store_int32(&m_state, MONITOR_STATE_STOPPING);
-        Worker::shutdown();
-        Worker::join();
-        atomic_store_int32(&m_state, MONITOR_STATE_STOPPED);
-    }
-    else
-    {
-        MXS_WARNING("An attempt was made to stop a monitor that is not running.");
-    }
+    Worker::shutdown();
+    Worker::join();
+    m_thread_running.store(false, std::memory_order_release);
 }
 
 void MonitorInstance::diagnostics(DCB* pDcb) const
@@ -2501,63 +2500,55 @@ json_t* MonitorInstance::diagnostics_json() const
 
 bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 {
-    bool started = false;
-
+    // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
+    // not exist during program start/stop.
+    ss_dassert(mxs_rworker_get_current() == NULL ||
+               mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     ss_dassert(Worker::state() == Worker::STOPPED);
-    ss_dassert(m_state == MONITOR_STATE_STOPPED);
+    ss_dassert(monitor_state() == MONITOR_STATE_STOPPED);
+    ss_dassert(m_thread_running.load() == false);
 
-    if (state() == MONITOR_STATE_STOPPED)
+    if (!m_checked)
     {
-        if (!m_checked)
+        if (!has_sufficient_permissions())
         {
-            if (!has_sufficient_permissions())
+            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        }
+        else
+        {
+            m_checked = true;
+        }
+    }
+
+    bool started = false;
+    if (m_checked)
+    {
+        m_master = NULL;
+
+        if (configure(pParams))
+        {
+            m_loop_called = 0;
+
+            if (!Worker::start())
             {
-                MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+                MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
             }
             else
             {
-                m_checked = true;
-            }
-        }
+                // Ok, so the thread started. Let's wait until we can be certain the
+                // state has been updated.
+                m_semaphore.wait();
 
-        if (m_checked)
-        {
-            m_master = NULL;
-
-            if (configure(pParams))
-            {
-                m_loop_called = 0;
-
-                if (!Worker::start())
+                started = m_thread_running.load(std::memory_order_acquire);
+                if (!started)
                 {
-                    MXS_ERROR("Failed to start worker for monitor '%s'.", m_monitor->name);
-                }
-                else
-                {
-                    // Ok, so the thread started. Let's wait until we can be certain the
-                    // state has been updated.
-                    m_semaphore.wait();
-
-                    started = (atomic_load_int32(&m_state) == MONITOR_STATE_RUNNING);
-
-                    if (!started)
-                    {
-                        // Ok, so the initialization failed and the thread will exit.
-                        // We need to wait on it so that the thread resources will not leak.
-                        Worker::join();
-                    }
+                    // Ok, so the initialization failed and the thread will exit.
+                    // We need to wait on it so that the thread resources will not leak.
+                    Worker::join();
                 }
             }
         }
     }
-    else
-    {
-        MXS_WARNING("An attempt was made to start a monitor that is already running.");
-        // Likely to cause the least amount of damage if we pretend the monitor
-        // was started.
-        started = true;
-    }
-
     return started;
 }
 
@@ -2841,14 +2832,12 @@ bool MonitorInstance::pre_run()
     if (mysql_thread_init() == 0)
     {
         rv = true;
-
-        atomic_store_int32(&m_state, MONITOR_STATE_RUNNING);
+        // Write and post the semaphore to signal the admin thread that the start is succeeding.
+        m_thread_running.store(true, std::memory_order_release);
         m_semaphore.post();
 
         load_server_journal(m_monitor, &m_master);
-
         pre_loop();
-
         delayed_call(1, &MonitorInstance::call_run_one_tick, this);
     }
     else
