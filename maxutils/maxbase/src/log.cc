@@ -237,6 +237,27 @@ struct equal_to<MessageRegistryKey>
 namespace
 {
 
+class MessageRegistry;
+
+struct this_unit
+{
+    int                              augmentation;     // Can change during the lifetime of log_manager.
+    bool                             do_highprecision; // Can change during the lifetime of log_manager.
+    bool                             do_syslog;        // Can change during the lifetime of log_manager.
+    bool                             do_maxlog;        // Can change during the lifetime of log_manager.
+    MXB_LOG_THROTTLING               throttling;       // Can change during the lifetime of log_manager.
+    std::unique_ptr<mxb::Logger>     sLogger;
+    std::unique_ptr<MessageRegistry> sMessage_registry;
+    size_t (*context_provider)(char* buffer, size_t len);
+} this_unit =
+{
+    DEFAULT_LOG_AUGMENTATION, // augmentation
+    false,                    // do_highprecision
+    true,                     // do_syslog
+    true,                     // do_maxlog
+    DEFAULT_LOG_THROTTLING,   // throttling
+};
+
 class MessageRegistry
 {
 public:
@@ -256,28 +277,29 @@ public:
         return m_registry[key];
     }
 
+    message_suppression_t get_status(const char* file, int line)
+    {
+        message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
+
+        // Copy the config to prevent the values from changing while we are using
+        // them. It does not matter if they are changed just when we are copying
+        // them, but we want to use one set of values throughout the function.
+        MXB_LOG_THROTTLING t = this_unit.throttling;
+
+        if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
+        {
+            MessageRegistry::Key key(file, line);
+            MessageRegistry::Stats& stats = this_unit.sMessage_registry->get_stats(key);
+
+            rv = stats.update_suppression(t);
+        }
+
+        return rv;
+    }
+
 private:
     std::mutex                     m_lock;
     std::unordered_map<Key, Stats> m_registry;
-};
-
-struct this_unit
-{
-    int                              augmentation;     // Can change during the lifetime of log_manager.
-    bool                             do_highprecision; // Can change during the lifetime of log_manager.
-    bool                             do_syslog;        // Can change during the lifetime of log_manager.
-    bool                             do_maxlog;        // Can change during the lifetime of log_manager.
-    MXB_LOG_THROTTLING               throttling;       // Can change during the lifetime of log_manager.
-    std::unique_ptr<mxb::Logger>     sLogger;
-    std::unique_ptr<MessageRegistry> sMessage_registry;
-    size_t (*context_provider)(char* buffer, size_t len);
-} this_unit =
-{
-    DEFAULT_LOG_AUGMENTATION, // augmentation
-    false,                    // do_highprecision
-    true,                     // do_syslog
-    true,                     // do_maxlog
-    DEFAULT_LOG_THROTTLING,   // throttling
 };
 
 }
@@ -658,26 +680,6 @@ static log_prefix_t level_to_prefix(int level)
     return prefix;
 }
 
-static message_suppression_t message_status(const char* file, int line)
-{
-    message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
-
-    // Copy the config to prevent the values from changing while we are using
-    // them. It does not matter if they are changed just when we are copying
-    // them, but we want to use one set of values throughout the function.
-    MXB_LOG_THROTTLING t = this_unit.throttling;
-
-    if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
-    {
-        MessageRegistry::Key key(file, line);
-        MessageRegistry::Stats& stats = this_unit.sMessage_registry->get_stats(key);
-
-        rv = stats.update_suppression(t);
-    }
-
-    return rv;
-}
-
 /**
  * Log a message of a particular priority.
  *
@@ -712,7 +714,7 @@ int mxb_log_message(int priority,
         // flooding cannot be caused.
         if ((level == LOG_ERR) || (level == LOG_WARNING))
         {
-            status = message_status(file, line);
+            status = this_unit.sMessage_registry->get_status(file, line);
         }
 
         if (status != MESSAGE_STILL_SUPPRESSED)
