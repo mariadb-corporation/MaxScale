@@ -26,34 +26,28 @@
 #include <maxbase/assert.h>
 #include <maxbase/logger.hh>
 
-// Number of chars needed to represent a number.
-#define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
-#define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
-
-/**
- * Default augmentation.
- */
-static int DEFAULT_LOG_AUGMENTATION = 0;
-// A message that is logged 10 times in 1 second will be suppressed for 10 seconds.
-static MXB_LOG_THROTTLING DEFAULT_LOG_THROTTLING = { 10, 1000, 10000 };
-
 /**
  * Variable holding the enabled priorities information.
  * Used from logging macros.
  */
 int mxb_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
 
-/**
- * BUFSIZ comes from the system. It equals with block size or
- * its multiplication.
- */
-#define MAX_LOGSTRLEN BUFSIZ
+// Number of chars needed to represent a number.
+#define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
+#define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 
-/**
- * Returns the current time.
- *
- * @return Current monotonic raw time in milliseconds.
- */
+namespace
+{
+
+int DEFAULT_LOG_AUGMENTATION = 0;
+
+// A message that is logged 10 times in 1 second will be suppressed for 10 seconds.
+static MXB_LOG_THROTTLING DEFAULT_LOG_THROTTLING = { 10, 1000, 10000 };
+
+// BUFSIZ comes from the system. It equals with block size or its multiplication.
+const int MAX_LOGSTRLEN = BUFSIZ;
+
+// Current monotonic raw time in milliseconds.
 static uint64_t time_monotonic_ms()
 {
     struct timespec now;
@@ -62,15 +56,12 @@ static uint64_t time_monotonic_ms()
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
 
-namespace
-{
-
-typedef enum message_suppression
+enum message_suppression_t
 {
     MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
     MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
     MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
-} message_suppression_t;
+};
 
 class MessageRegistryKey
 {
@@ -279,6 +270,7 @@ struct this_unit
     MXB_LOG_THROTTLING               throttling;       // Can change during the lifetime of log_manager.
     std::unique_ptr<mxb::Logger>     sLogger;
     std::unique_ptr<MessageRegistry> sMessage_registry;
+    size_t (*context_provider)(char* buffer, size_t len);
 } this_unit =
 {
     DEFAULT_LOG_AUGMENTATION, // augmentation
@@ -289,8 +281,6 @@ struct this_unit
 };
 
 }
-
-static size_t (*get_context)(char* buffer, size_t len);
 
 /**
  * Initializes log manager
@@ -305,7 +295,7 @@ bool mxb_log_init(const char* ident,
                   const char* logdir,
                   const char* filename,
                   mxb_log_target_t target,
-                  size_t (*gc)(char*, size_t))
+                  size_t (*provide_context)(char*, size_t))
 {
     mxb_assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
@@ -354,7 +344,7 @@ bool mxb_log_init(const char* ident,
             break;
     }
 
-    get_context = gc;
+    this_unit.context_provider = provide_context;
 
     return this_unit.sLogger && this_unit.sMessage_registry;
 }
@@ -732,9 +722,9 @@ int mxb_log_message(int priority,
             char context[32]; // The documentation will guarantee a buffer of at least 32 bytes.
             int context_len = 0;
 
-            if (get_context)
+            if (this_unit.context_provider)
             {
-                context_len = get_context(context, sizeof(context));
+                context_len = this_unit.context_provider(context, sizeof(context));
 
                 if (context_len != 0)
                 {
