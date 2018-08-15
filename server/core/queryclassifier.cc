@@ -897,7 +897,7 @@ QueryClassifier::update_route_info(QueryClassifier::current_target_t current_tar
             }
         }
 
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             log_transaction_status(pBuffer, type_mask);
         }

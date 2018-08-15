@@ -106,7 +106,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
     int servers_connected = 0;
     int slaves_connected = 0;
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    if (mxs_log_is_priority_enabled(LOG_INFO))
     {
         MXS_INFO("Servers and connection counts:");
 
@@ -164,7 +164,7 @@ bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
     {
         succp = true;
 
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
             {

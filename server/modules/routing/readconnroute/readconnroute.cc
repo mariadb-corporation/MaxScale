@@ -636,7 +636,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
                                     queue);
         break;
     case MXS_COM_QUERY:
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             trc = modutil_get_SQL(queue);
         }

@@ -91,7 +91,7 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
                      user, remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
-        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        else if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             if (1 == return_code)
             {

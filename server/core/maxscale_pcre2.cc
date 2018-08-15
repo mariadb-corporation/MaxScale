@@ -143,7 +143,7 @@ void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *f
 {
     ss_dassert(filename);
     ss_dassert(func_name);
-    if (mxs_log_priority_is_enabled(LOG_ERR))
+    if (mxs_log_is_priority_enabled(LOG_ERR))
     {
         // 120 should be enough to contain any error message according to pcre2 manual.
         const PCRE2_SIZE errbuf_len = 120;
@@ -167,7 +167,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
         if (result == PCRE2_ERROR_NOMATCH)
         {
             rval = false; // Didn't match the "match"-regex
-            if (mxs_log_priority_is_enabled(LOG_INFO))
+            if (mxs_log_is_priority_enabled(LOG_INFO))
             {
                 mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
                                 "Subject does not match the 'match' pattern: %.*s",
@@ -188,7 +188,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
         if (result >= 0)
         {
             rval = false; // Matched the "exclude"-regex
-            if (mxs_log_priority_is_enabled(LOG_INFO))
+            if (mxs_log_is_priority_enabled(LOG_INFO))
             {
                 mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
                                 "Query matches the 'exclude' pattern: %.*s",

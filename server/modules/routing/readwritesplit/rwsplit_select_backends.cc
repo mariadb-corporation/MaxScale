@@ -314,7 +314,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     auto cmpfun = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    if (mxs_log_is_priority_enabled(LOG_INFO))
     {
         log_server_connections(select_criteria, backends);
     }

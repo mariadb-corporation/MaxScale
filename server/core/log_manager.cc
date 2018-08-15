@@ -63,27 +63,32 @@ json_t* get_log_priorities()
 {
     json_t* arr = json_array();
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR))
+    if (mxb_log_is_priority_enabled(LOG_ALERT))
+    {
+        json_array_append_new(arr, json_string("alert"));
+    }
+
+    if (mxb_log_is_priority_enabled(LOG_ERR))
     {
         json_array_append_new(arr, json_string("error"));
     }
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_WARNING))
+    if (mxb_log_is_priority_enabled(LOG_WARNING))
     {
         json_array_append_new(arr, json_string("warning"));
     }
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_NOTICE))
+    if (mxb_log_is_priority_enabled(LOG_NOTICE))
     {
         json_array_append_new(arr, json_string("notice"));
     }
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    if (mxb_log_is_priority_enabled(LOG_INFO))
     {
         json_array_append_new(arr, json_string("info"));
     }
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_DEBUG))
+    if (mxb_log_is_priority_enabled(LOG_DEBUG))
     {
         json_array_append_new(arr, json_string("debug"));
     }

@@ -182,7 +182,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         break;
     }
 
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    if (mxs_log_is_priority_enabled(LOG_INFO))
     {
         char *sql;
         int sql_len;
@@ -755,7 +755,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
             (*it)->append_session_command(buffer, m_sent_sescmd);
 
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+            if (mxs_log_is_priority_enabled(LOG_INFO))
             {
                 MXS_INFO("Route query to %s\t%s:%d",
                          server_is_master((*it)->backend()->server) ? "master" : "slave",
