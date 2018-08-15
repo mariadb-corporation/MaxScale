@@ -28,7 +28,6 @@
 
 /**
  * Variable holding the enabled priorities information.
- * Used from logging macros.
  */
 int mxb_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
 
@@ -48,12 +47,129 @@ static MXB_LOG_THROTTLING DEFAULT_LOG_THROTTLING = { 10, 1000, 10000 };
 const int MAX_LOGSTRLEN = BUFSIZ;
 
 // Current monotonic raw time in milliseconds.
-static uint64_t time_monotonic_ms()
+uint64_t time_monotonic_ms()
 {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+// Regular timestamp
+std::string get_timestamp(void)
+{
+    time_t t = time(NULL);
+    struct tm tm;
+    localtime_r(&t, &tm);
+    const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
+    int required = snprintf(NULL, 0, timestamp_formatstr,
+                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                            tm.tm_min, tm.tm_sec);
+    char buf[required + 1];
+
+    snprintf(buf, sizeof(buf), timestamp_formatstr,
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+             tm.tm_min, tm.tm_sec);
+
+    return buf;
+}
+
+// High-precision timestamp
+std::string get_timestamp_hp(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    struct tm tm;
+    localtime_r(&tv.tv_sec, &tm);
+    int usec = tv.tv_usec / 1000;
+
+    const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
+    int required = snprintf(NULL, 0, timestamp_formatstr_hp,
+                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                            tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
+
+    char buf[required + 1];
+
+    snprintf(buf, sizeof(buf), timestamp_formatstr_hp,
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+             tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
+
+    return buf;
+}
+
+struct LOG_PREFIX
+{
+    const char* text; // The prefix, e.g. "error: "
+    int len;          // The length of the prefix without the trailing NULL.
+};
+
+const char PREFIX_EMERG[]   = "emerg  : ";
+const char PREFIX_ALERT[]   = "alert  : ";
+const char PREFIX_CRIT[]    = "crit   : ";
+const char PREFIX_ERROR[]   = "error  : ";
+const char PREFIX_WARNING[] = "warning: ";
+const char PREFIX_NOTICE[]  = "notice : ";
+const char PREFIX_INFO[]    = "info   : ";
+const char PREFIX_DEBUG[]   = "debug  : ";
+
+LOG_PREFIX level_to_prefix(int level)
+{
+    mxb_assert((level & ~LOG_PRIMASK) == 0);
+
+    LOG_PREFIX prefix;
+
+    switch (level)
+    {
+    case LOG_EMERG:
+        prefix.text = PREFIX_EMERG;
+        prefix.len = sizeof(PREFIX_EMERG);
+        break;
+
+    case LOG_ALERT:
+        prefix.text = PREFIX_ALERT;
+        prefix.len = sizeof(PREFIX_ALERT);
+        break;
+
+    case LOG_CRIT:
+        prefix.text = PREFIX_CRIT;
+        prefix.len = sizeof(PREFIX_CRIT);
+        break;
+
+    case LOG_ERR:
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
+
+    case LOG_WARNING:
+        prefix.text = PREFIX_WARNING;
+        prefix.len = sizeof(PREFIX_WARNING);
+        break;
+
+    case LOG_NOTICE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
+
+    case LOG_INFO:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
+
+    case LOG_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
+
+    default:
+        mxb_assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
+    }
+
+    --prefix.len; // Remove trailing NULL.
+
+    return prefix;
 }
 
 enum message_suppression_t
@@ -304,20 +420,11 @@ private:
 
 }
 
-/**
- * Initializes log manager
- *
- * @param ident  The syslog ident. If NULL, then the program name is used.
- * @param logdir The directory for the log file. If NULL, file output is discarded.
- * @param target Logging target
- *
- * @return true if succeed, otherwise false
- */
 bool mxb_log_init(const char* ident,
                   const char* logdir,
                   const char* filename,
                   mxb_log_target_t target,
-                  size_t (*provide_context)(char*, size_t))
+                  mxb_log_context_provider_t context_provider)
 {
     mxb_assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
@@ -366,7 +473,7 @@ bool mxb_log_init(const char* ident,
             break;
     }
 
-    this_unit.context_provider = provide_context;
+    this_unit.context_provider = context_provider;
 
     return this_unit.sLogger && this_unit.sMessage_registry;
 }
@@ -377,46 +484,6 @@ bool mxb_log_init(const char* ident,
 void mxb_log_finish(void)
 {
     closelog();
-}
-
-static std::string get_timestamp(void)
-{
-    time_t t = time(NULL);
-    struct tm tm;
-    localtime_r(&t, &tm);
-    const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                            tm.tm_min, tm.tm_sec);
-    char buf[required + 1];
-
-    snprintf(buf, sizeof(buf), timestamp_formatstr,
-             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-             tm.tm_min, tm.tm_sec);
-
-    return buf;
-}
-
-static std::string get_timestamp_hp(void)
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    struct tm tm;
-    localtime_r(&tv.tv_sec, &tm);
-    int usec = tv.tv_usec / 1000;
-
-    const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr_hp,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                            tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
-
-    char buf[required + 1];
-
-    snprintf(buf, sizeof(buf), timestamp_formatstr_hp,
-             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-             tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
-
-    return buf;
 }
 
 void mxb_log_set_augmentation(int bits)
@@ -460,11 +527,6 @@ bool mxb_log_is_maxlog_enabled()
     return this_unit.do_maxlog;
 }
 
-/**
- * Set the log throttling parameters.
- *
- * @param throttling The throttling parameters.
- */
 void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
 {
     // No locking; it does not have any real impact, even if the struct
@@ -487,11 +549,6 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
     }
 }
 
-/**
- * Get the log throttling parameters.
- *
- * @param throttling The throttling parameters.
- */
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
 {
     // No locking; this is used only from maxadmin and an inconsistent set
@@ -500,11 +557,6 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
     *throttling = this_unit.throttling;
 }
 
-/**
- * Rotate the log
- *
- * @return True if the rotating was successful
- */
 bool mxb_log_rotate()
 {
     return this_unit.sLogger->rotate();
@@ -515,7 +567,7 @@ const char* mxb_log_get_filename()
     return this_unit.sLogger->filename();
 }
 
-static const char* level_name(int level)
+static const char* level_to_string(int level)
 {
     switch (level)
     {
@@ -552,7 +604,6 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
 
         if (enable)
         {
-            // TODO: Put behind spinlock.
             mxb_log_enabled_priorities |= bit;
         }
         else
@@ -560,7 +611,7 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
             mxb_log_enabled_priorities &= ~bit;
         }
 
-        MXB_NOTICE("The logging of %s messages has been %sd.", level_name(level), text);
+        MXB_NOTICE("The logging of %s messages has been %sd.", level_to_string(level), text);
         rv = true;
     }
     else
@@ -571,92 +622,6 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
     return rv;
 }
 
-typedef struct log_prefix
-{
-    const char* text; // The prefix, e.g. "error: "
-    int len;          // The length of the prefix without the trailing NULL.
-} log_prefix_t;
-
-static const char PREFIX_EMERG[]   = "emerg  : ";
-static const char PREFIX_ALERT[]   = "alert  : ";
-static const char PREFIX_CRIT[]    = "crit   : ";
-static const char PREFIX_ERROR[]   = "error  : ";
-static const char PREFIX_WARNING[] = "warning: ";
-static const char PREFIX_NOTICE[]  = "notice : ";
-static const char PREFIX_INFO[]    = "info   : ";
-static const char PREFIX_DEBUG[]   = "debug  : ";
-
-static log_prefix_t level_to_prefix(int level)
-{
-    mxb_assert((level & ~LOG_PRIMASK) == 0);
-
-    log_prefix_t prefix;
-
-    switch (level)
-    {
-    case LOG_EMERG:
-        prefix.text = PREFIX_EMERG;
-        prefix.len = sizeof(PREFIX_EMERG);
-        break;
-
-    case LOG_ALERT:
-        prefix.text = PREFIX_ALERT;
-        prefix.len = sizeof(PREFIX_ALERT);
-        break;
-
-    case LOG_CRIT:
-        prefix.text = PREFIX_CRIT;
-        prefix.len = sizeof(PREFIX_CRIT);
-        break;
-
-    case LOG_ERR:
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
-
-    case LOG_WARNING:
-        prefix.text = PREFIX_WARNING;
-        prefix.len = sizeof(PREFIX_WARNING);
-        break;
-
-    case LOG_NOTICE:
-        prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
-        break;
-
-    case LOG_INFO:
-        prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
-        break;
-
-    case LOG_DEBUG:
-        prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
-        break;
-
-    default:
-        mxb_assert(!true);
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
-    }
-
-    --prefix.len; // Remove trailing NULL.
-
-    return prefix;
-}
-
-/**
- * Log a message of a particular priority.
- *
- * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
- * @param modname  The name of the module.
- * @param file     The name of the file where the message was logged.
- * @param line     The line where the message was logged.
- * @param function The function where the message was logged.
- * @param format   The printf format of the following arguments.
- * @param ...      Optional arguments according to the format.
- */
 int mxb_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
@@ -723,7 +688,7 @@ int mxb_log_message(int priority,
 
             if (message_len >= 0)
             {
-                log_prefix_t prefix = level_to_prefix(level);
+                LOG_PREFIX prefix = level_to_prefix(level);
 
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 

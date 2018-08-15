@@ -49,55 +49,77 @@ MXB_BEGIN_DECLS
 #define MXB_MODULE_NAME NULL
 #endif
 
-typedef enum
+extern int mxb_log_enabled_priorities;
+
+typedef enum mxb_log_target_t
 {
     MXB_LOG_TARGET_DEFAULT,
     MXB_LOG_TARGET_FS,     // File system
     MXB_LOG_TARGET_STDOUT, // Standard output
 } mxb_log_target_t;
 
-/**
-* Thread-specific logging information.
-*/
-typedef struct mxb_log_info
+typedef enum mxb_log_augmentation_t
 {
-    size_t li_sesid;
-    int    li_enabled_priorities;
-} mxb_log_info_t;
-
-extern int mxb_log_enabled_priorities;
-
-/**
- * Check if specified log type is enabled in general or if it is enabled
- * for the current session.
- *
- * @param priority One of the syslog LOG_ERR, LOG_WARNING, etc. constants.
- */
-#define MXB_LOG_PRIORITY_IS_ENABLED(priority) \
-    ((mxb_log_enabled_priorities & (1 << priority)) ? true : false)
-
-/**
- * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
- */
-typedef enum
-{
-    MXB_LOG_AUGMENT_WITH_FUNCTION = 1,
+    MXB_LOG_AUGMENT_WITH_FUNCTION = 1, // Each logged line is suffixed with [function-name]
     MXB_LOG_AUGMENTATION_MASK     = (MXB_LOG_AUGMENT_WITH_FUNCTION)
 } mxb_log_augmentation_t;
 
-typedef struct mxb_log_throttling
+typedef struct MXB_LOG_THROTTLING
 {
     size_t count;       // Maximum number of a specific message...
     size_t window_ms;   // ...during this many milliseconds.
     size_t suppress_ms; // If exceeded, suppress such messages for this many ms.
 } MXB_LOG_THROTTLING;
 
+/**
+ * Prototype for function providing additional information.
+ *
+ * If the function returns a non-zero value, that amount of characters
+ * will be enclosed between '(' and ')', and written first to a logged
+ * message.
+ *
+ * @param buffer  Buffer where additional context may be written.
+ * @param len     Length of @c buffer.
+ *
+ * @return Length of data written to buffer.
+ */
+typedef size_t (*mxb_log_context_provider_t)(char* buffer, size_t len);
+
+/**
+ * @brief Initialize the log
+ *
+ * This function must be called before any of the log function should be
+ * used.
+ *
+ * @param ident             The syslog ident. If NULL, then the program name is used.
+ * @param logdir            The directory for the log file. If NULL, file output is discarded.
+ * @param filename          The name of the log-file. If NULL, the program name will be used
+ *                          if it can be deduced, otherwise the name will be "messages.log".
+ * @param target            Logging target
+ * @param context_provider  Optional function for providing contextual information
+ *                          at logging time.
+ *
+ * @return true if succeed, otherwise false
+ */
 bool mxb_log_init(const char* ident,
                   const char* logdir,
                   const char* filename,
                   mxb_log_target_t target,
-                  size_t (*get_context)(char*, size_t));
+                  mxb_log_context_provider_t context_provider);
+
+/**
+ * @brief Finalize the log
+ *
+ * A successfull call to @c max_log_init() should be followed by a call
+ * to this function before the process exits.
+ */
 void mxb_log_finish(void);
+
+/**
+ * Rotate the log
+ *
+ * @return True if the rotating was successful
+ */
 bool mxb_log_rotate();
 
 /**
@@ -132,7 +154,7 @@ bool mxb_log_set_priority_enabled(int priority, bool enabled);
 static inline bool mxb_log_is_priority_enabled(int priority)
 {
     assert((priority & ~LOG_PRIMASK) == 0);
-    return MXB_LOG_PRIORITY_IS_ENABLED(priority) || priority == LOG_ALERT;
+    return ((mxb_log_enabled_priorities & (1 << priority)) != 0) || (priority == LOG_ALERT);
 }
 
 /**
@@ -178,10 +200,34 @@ void mxb_log_set_highprecision_enabled(bool enabled);
 bool mxb_log_is_highprecision_enabled();
 
 void mxb_log_set_augmentation(int bits);
+
+/**
+ * Set the log throttling parameters.
+ *
+ * @param throttling The throttling parameters.
+ */
 void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling);
 
+/**
+ * Get the log throttling parameters.
+ *
+ * @param throttling The throttling parameters.
+ */
 void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
 
+/**
+ * Log a message of a particular priority.
+ *
+ * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
+ * @param modname  The name of the module.
+ * @param file     The name of the file where the message was logged.
+ * @param line     The line where the message was logged.
+ * @param function The function where the message was logged.
+ * @param format   The printf format of the following arguments.
+ * @param ...      Optional arguments according to the format.
+ *
+ * @return 0 for success, non-zero otherwise.
+ */
 int mxb_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
@@ -193,8 +239,10 @@ int mxb_log_message(int priority,
  * @param format   The printf format of the message.
  * @param ...      Arguments, depending on the format.
  *
- * NOTE: Should typically not be called directly. Use some of the
- *       MXB_ERROR, MXB_WARNING, etc. macros instead.
+ * @return 0 for success, non-zero otherwise.
+ *
+ * @attention Should typically not be called directly. Use some of the
+ *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
 #define MXB_LOG_MESSAGE(priority, format, ...)\
     (mxb_log_is_priority_enabled(priority) ? \
@@ -214,6 +262,8 @@ int mxb_log_message(int priority,
  *
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
+ *
+ * @return 0 for success, non-zero otherwise.
  */
 #define MXB_ALERT(format, ...)   MXB_LOG_MESSAGE(LOG_ALERT,   format, ##__VA_ARGS__)
 #define MXB_ERROR(format, ...)   MXB_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
