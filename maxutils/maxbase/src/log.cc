@@ -26,12 +26,9 @@
 #include <maxbase/assert.h>
 #include <maxbase/logger.hh>
 
+// Number of chars needed to represent a number.
 #define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
-#define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
-
-static std::unique_ptr<mxb::Logger> logger;
-
-const std::string LOGFILE_NAME = "maxscale.log";
+#define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 
 /**
  * Default augmentation.
@@ -39,24 +36,6 @@ const std::string LOGFILE_NAME = "maxscale.log";
 static int DEFAULT_LOG_AUGMENTATION = 0;
 // A message that is logged 10 times in 1 second will be suppressed for 10 seconds.
 static MXB_LOG_THROTTLING DEFAULT_LOG_THROTTLING = { 10, 1000, 10000 };
-
-static struct
-{
-    int                augmentation;     // Can change during the lifetime of log_manager.
-    bool               do_highprecision; // Can change during the lifetime of log_manager.
-    bool               do_syslog;        // Can change during the lifetime of log_manager.
-    bool               do_maxlog;        // Can change during the lifetime of log_manager.
-    MXB_LOG_THROTTLING throttling;       // Can change during the lifetime of log_manager.
-    bool               use_stdout;       // Can NOT change during the lifetime of log_manager.
-} log_config =
-{
-    DEFAULT_LOG_AUGMENTATION, // augmentation
-    false,                    // do_highprecision
-    true,                     // do_syslog
-    true,                     // do_maxlog
-    DEFAULT_LOG_THROTTLING,   // throttling
-    false                     // use_stdout
-};
 
 /**
  * Variable holding the enabled priorities information.
@@ -291,9 +270,26 @@ private:
     std::unordered_map<Key, Stats> m_registry;
 };
 
+struct this_unit
+{
+    int                              augmentation;     // Can change during the lifetime of log_manager.
+    bool                             do_highprecision; // Can change during the lifetime of log_manager.
+    bool                             do_syslog;        // Can change during the lifetime of log_manager.
+    bool                             do_maxlog;        // Can change during the lifetime of log_manager.
+    MXB_LOG_THROTTLING               throttling;       // Can change during the lifetime of log_manager.
+    std::unique_ptr<mxb::Logger>     sLogger;
+    std::unique_ptr<MessageRegistry> sMessage_registry;
+} this_unit =
+{
+    DEFAULT_LOG_AUGMENTATION, // augmentation
+    false,                    // do_highprecision
+    true,                     // do_syslog
+    true,                     // do_maxlog
+    DEFAULT_LOG_THROTTLING,   // throttling
+};
+
 }
 
-static std::unique_ptr<MessageRegistry> message_registry;
 static size_t (*get_context)(char* buffer, size_t len);
 
 /**
@@ -311,7 +307,7 @@ bool mxb_log_init(const char* ident,
                   mxb_log_target_t target,
                   size_t (*gc)(char*, size_t))
 {
-    mxb_assert(!logger && !message_registry);
+    mxb_assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
     openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
 
@@ -340,17 +336,17 @@ bool mxb_log_init(const char* ident,
         filepath = std::string(logdir) + "/" + suffix;
     }
 
-    message_registry.reset(new (std::nothrow) MessageRegistry);
+    this_unit.sMessage_registry.reset(new (std::nothrow) MessageRegistry);
 
     switch (target)
     {
         case MXB_LOG_TARGET_FS:
         case MXB_LOG_TARGET_DEFAULT:
-            logger = mxb::FileLogger::create(filepath);
+            this_unit.sLogger = mxb::FileLogger::create(filepath);
             break;
 
         case MXB_LOG_TARGET_STDOUT:
-            logger = mxb::StdoutLogger::create(filepath);
+            this_unit.sLogger = mxb::StdoutLogger::create(filepath);
             break;
 
         default:
@@ -360,7 +356,7 @@ bool mxb_log_init(const char* ident,
 
     get_context = gc;
 
-    return logger && message_registry;
+    return this_unit.sLogger && this_unit.sMessage_registry;
 }
 
 /**
@@ -424,7 +420,7 @@ static int log_write(int priority, const char* str)
     mxb_assert(str);
     mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
-    std::string msg = log_config.do_highprecision ? get_timestamp_hp() : get_timestamp();
+    std::string msg = this_unit.do_highprecision ? get_timestamp_hp() : get_timestamp();
     msg += str;
 
     // Remove any user-generated newlines.
@@ -437,7 +433,7 @@ static int log_write(int priority, const char* str)
     // Add a final newline into the message
     msg.push_back('\n');
 
-    return logger->write(msg.c_str(), msg.length()) ? 0 : -1;
+    return this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
 }
 
 /**
@@ -447,43 +443,43 @@ static int log_write(int priority, const char* str)
  */
 void mxb_log_set_augmentation(int bits)
 {
-    log_config.augmentation = bits & MXB_LOG_AUGMENTATION_MASK;
+    this_unit.augmentation = bits & MXB_LOG_AUGMENTATION_MASK;
 }
 
 void mxb_log_set_highprecision_enabled(bool enabled)
 {
-    log_config.do_highprecision = enabled;
+    this_unit.do_highprecision = enabled;
 
     MXB_NOTICE("highprecision logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 bool mxb_log_is_highprecision_enabled()
 {
-    return log_config.do_highprecision;
+    return this_unit.do_highprecision;
 }
 
 void mxb_log_set_syslog_enabled(bool enabled)
 {
-    log_config.do_syslog = enabled;
+    this_unit.do_syslog = enabled;
 
     MXB_NOTICE("syslog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 bool mxb_log_is_syslog_enabled()
 {
-    return log_config.do_syslog;
+    return this_unit.do_syslog;
 }
 
 void mxb_log_set_maxlog_enabled(bool enabled)
 {
-    log_config.do_maxlog = enabled;
+    this_unit.do_maxlog = enabled;
 
     MXB_NOTICE("maxlog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 bool mxb_log_is_maxlog_enabled()
 {
-    return log_config.do_maxlog;
+    return this_unit.do_maxlog;
 }
 
 /**
@@ -495,11 +491,11 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
 {
     // No locking; it does not have any real impact, even if the struct
     // is used right when its values are modified.
-    log_config.throttling = *throttling;
+    this_unit.throttling = *throttling;
 
-    if ((log_config.throttling.count == 0) ||
-        (log_config.throttling.window_ms == 0) ||
-        (log_config.throttling.suppress_ms == 0))
+    if ((this_unit.throttling.count == 0) ||
+        (this_unit.throttling.window_ms == 0) ||
+        (this_unit.throttling.suppress_ms == 0))
     {
         MXB_NOTICE("Log throttling has been disabled.");
     }
@@ -507,9 +503,9 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
     {
         MXB_NOTICE("A message that is logged %lu times in %lu milliseconds, "
                    "will be suppressed for %lu milliseconds.",
-                   log_config.throttling.count,
-                   log_config.throttling.window_ms,
-                   log_config.throttling.suppress_ms);
+                   this_unit.throttling.count,
+                   this_unit.throttling.window_ms,
+                   this_unit.throttling.suppress_ms);
     }
 }
 
@@ -523,7 +519,7 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
     // No locking; this is used only from maxadmin and an inconsistent set
     // may be returned only if mxb_log_set_throttling() is called via an
     // other instance of maxadmin at the very same moment.
-    *throttling = log_config.throttling;
+    *throttling = this_unit.throttling;
 }
 
 /**
@@ -533,12 +529,12 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
  */
 bool mxb_log_rotate()
 {
-    return logger->rotate();
+    return this_unit.sLogger->rotate();
 }
 
 const char* mxb_log_get_filename()
 {
-    return logger->filename();
+    return this_unit.sLogger->filename();
 }
 
 static const char* level_name(int level)
@@ -679,12 +675,12 @@ static message_suppression_t message_status(const char* file, int line)
     // Copy the config to prevent the values from changing while we are using
     // them. It does not matter if they are changed just when we are copying
     // them, but we want to use one set of values throughout the function.
-    MXB_LOG_THROTTLING t = log_config.throttling;
+    MXB_LOG_THROTTLING t = this_unit.throttling;
 
     if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
     {
         MessageRegistry::Key key(file, line);
-        MessageRegistry::Stats& stats = message_registry->get_stats(key);
+        MessageRegistry::Stats& stats = this_unit.sMessage_registry->get_stats(key);
 
         rv = stats.update_suppression(t);
     }
@@ -710,7 +706,7 @@ int mxb_log_message(int priority,
 {
     int err = 0;
 
-    mxb_assert(logger && message_registry);
+    mxb_assert(this_unit.sLogger && this_unit.sMessage_registry);
     mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
     int level = priority & LOG_PRIMASK;
@@ -751,7 +747,7 @@ int mxb_log_message(int priority,
             static const char SUPPRESSION[] =
                 " (subsequent similar messages suppressed for %lu milliseconds)";
             int suppression_len = 0;
-            size_t suppress_ms = log_config.throttling.suppress_ms;
+            size_t suppress_ms = this_unit.throttling.suppress_ms;
 
             if (status == MESSAGE_SUPPRESSED)
             {
@@ -773,8 +769,8 @@ int mxb_log_message(int priority,
 
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 
-                // Other thread might change log_config.augmentation.
-                int augmentation = log_config.augmentation;
+                // Other thread might change this_unit.augmentation.
+                int augmentation = this_unit.augmentation;
                 int augmentation_len = 0;
 
                 switch (augmentation)
@@ -858,7 +854,7 @@ int mxb_log_message(int priority,
                     sprintf(suppression_text, SUPPRESSION, suppress_ms);
                 }
 
-                if (log_config.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
+                if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                 {
                     // Debug messages are never logged into syslog
                     syslog(priority, "%s", context_text);
