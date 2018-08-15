@@ -23,13 +23,11 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <maxbase/assert.h>
 #include <maxbase/logger.hh>
 
 #define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
 #define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
-
-// TODO: Remove once maxbase/assert.h appears.
-#define ss_dassert(x)
 
 static std::unique_ptr<mxb::Logger> logger;
 
@@ -313,11 +311,7 @@ bool mxb_log_init(const char* ident,
                   mxb_log_target_t target,
                   size_t (*gc)(char*, size_t))
 {
-    /** TODO: Put back once maxbase/asser.h exists.
-    static bool log_init_done = false;
-    ss_dassert(!log_init_done);
-    log_init_done = true;
-    */
+    mxb_assert(!logger && !message_registry);
 
     openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
 
@@ -360,7 +354,7 @@ bool mxb_log_init(const char* ident,
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             break;
     }
 
@@ -427,8 +421,8 @@ static std::string get_timestamp_hp(void)
  */
 static int log_write(int priority, const char* str)
 {
-    ss_dassert(str);
-    ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
+    mxb_assert(str);
+    mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
     std::string msg = log_config.do_highprecision ? get_timestamp_hp() : get_timestamp();
     msg += str;
@@ -568,7 +562,7 @@ static const char* level_name(int level)
     case LOG_DEBUG:
         return "debug";
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "unknown";
     }
 }
@@ -620,7 +614,7 @@ static const char PREFIX_DEBUG[]   = "debug  : ";
 
 static log_prefix_t level_to_prefix(int level)
 {
-    ss_dassert((level & ~LOG_PRIMASK) == 0);
+    mxb_assert((level & ~LOG_PRIMASK) == 0);
 
     log_prefix_t prefix;
 
@@ -667,7 +661,7 @@ static log_prefix_t level_to_prefix(int level)
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         prefix.text = PREFIX_ERROR;
         prefix.len = sizeof(PREFIX_ERROR);
         break;
@@ -716,8 +710,8 @@ int mxb_log_message(int priority,
 {
     int err = 0;
 
-    ss_dassert(logger && message_registry);
-    ss_dassert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
+    mxb_assert(logger && message_registry);
+    mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
     int level = priority & LOG_PRIMASK;
 
@@ -808,7 +802,7 @@ int mxb_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    ss_dassert(prefix.len + context_len + modname_len +
+                    mxb_assert(prefix.len + context_len + modname_len +
                                augmentation_len + message_len + suppression_len == buffer_len);
                 }
 
@@ -848,11 +842,11 @@ int mxb_log_message(int priority,
                         break;
 
                     default:
-                        ss_dassert(!true);
+                        mxb_assert(!true);
                     }
 
                     (void)len;
-                    ss_dassert(len == augmentation_len);
+                    mxb_assert(len == augmentation_len);
                 }
 
                 va_start(valist, format);
