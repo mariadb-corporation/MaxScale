@@ -28,6 +28,7 @@
 #include <poll.h>
 #include <sstream>
 #include <stdexcept>
+#include <iterator>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -279,6 +280,11 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
                 else if ((m_first_row = read()))
                 {
                     rval = true;
+                }
+                else
+                {
+                    m_error += ". Data received so far: ";
+                    std::copy(m_buffer.begin(), m_buffer.end(), std::back_inserter(m_error));
                 }
             }
         }
