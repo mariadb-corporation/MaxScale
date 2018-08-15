@@ -1,4 +1,3 @@
-#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,14 +11,19 @@
  * Public License.
  */
 
-#include <maxbase/cdefs.h>
+#include <maxbase/string.h>
 
 #include <string.h>
 
-inline const char* mxb_strerror(int error)
+namespace
 {
-    // Enough for all errors
-    static thread_local char errbuf[512];
+
+thread_local char errbuf[512]; // Enough for all errors
+
+}
+
+const char* mxb_strerror(int error)
+{
 #ifdef HAVE_GLIBC
     return strerror_r(error, errbuf, sizeof(errbuf));
 #else

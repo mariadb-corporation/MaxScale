@@ -22,7 +22,7 @@
 #include <mutex>
 
 #include <maxbase/atomic.h>
-#include <maxbase/error.h>
+#include <maxbase/string.h>
 #include <maxbase/logger.hh>
 
 #include <maxscale/alloc.h>

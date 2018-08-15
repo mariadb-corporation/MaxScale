@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <ctime>
 
-#include <maxbase/error.h>
+#include <maxbase/string.h>
 
 // TODO: move <maxscale/debug.h> into maxbase
 #define ss_dassert(a)

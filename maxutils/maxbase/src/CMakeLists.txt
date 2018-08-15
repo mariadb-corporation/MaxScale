@@ -3,6 +3,7 @@ add_library(maxbase STATIC
   eventcount.cc
   logger.cc
   stopwatch.cc
+  string.cc
   stacktrace.cc
   )
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
