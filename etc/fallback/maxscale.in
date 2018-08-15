@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Init scripts are not supported on this platform, use either systemd or launch MaxScale manually"
+exit 1

@@ -73,7 +73,7 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         int status = SERVER_SLAVE;
 
         /** The master will return a row with two identical non-NULL fields */
-        if (row[0] && row[1] && strcmp(row[0], row[1]) == 0)
+        if (row && row[0] && row[1] && strcmp(row[0], row[1]) == 0)
         {
             status = SERVER_MASTER;
         }
