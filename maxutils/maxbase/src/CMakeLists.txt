@@ -1,6 +1,7 @@
 add_library(maxbase STATIC
   atomic.cc
   eventcount.cc
+  log.cc
   logger.cc
   stopwatch.cc
   string.cc
