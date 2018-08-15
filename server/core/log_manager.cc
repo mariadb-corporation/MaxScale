@@ -783,6 +783,7 @@ int mxs_log_message(int priority,
                 buffer_len += augmentation_len;
                 buffer_len += message_len;
                 buffer_len += suppression_len;
+                buffer_len += 1; // Trailing NULL
 
                 if (buffer_len > MAX_LOGSTRLEN)
                 {
@@ -790,10 +791,10 @@ int mxs_log_message(int priority,
                     buffer_len = MAX_LOGSTRLEN;
 
                     ss_dassert(prefix.len + session_len + modname_len +
-                               augmentation_len + message_len + suppression_len == buffer_len);
+                               augmentation_len + message_len + suppression_len + 1 == buffer_len);
                 }
 
-                char buffer[buffer_len + 1];
+                char buffer[buffer_len];
 
                 char *prefix_text = buffer;
                 char *session_text = prefix_text + prefix.len;
