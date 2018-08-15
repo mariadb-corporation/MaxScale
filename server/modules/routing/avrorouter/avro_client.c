@@ -484,7 +484,7 @@ avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *q
         }
         else
         {
-            dcb_printf(client->dcb, "ERR REQUEST-DATA with no data");
+            dcb_printf(client->dcb, "ERR REQUEST-DATA with no data\n");
         }
     }
     /* Return last GTID info */

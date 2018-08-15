@@ -584,7 +584,7 @@ bool Connection::read_row(std::string& dest)
         m_buf_ptr = m_buffer.begin();
     }
 
-    if (!m_connected && is_error(dest.c_str()))
+    if (is_error(dest.c_str()))
     {
         rval = false;
     }
