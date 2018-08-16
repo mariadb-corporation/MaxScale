@@ -299,7 +299,7 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE(message) mxb_log_oom("OOM: " ## message ## "\n")
+#define MXB_OOM_MESSAGE(message) mxb_log_oom(message)
 
 /**
  * Log an out of memory error using a default message.
