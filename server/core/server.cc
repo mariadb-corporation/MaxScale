@@ -51,6 +51,7 @@
 #include "internal/routingworker.hh"
 #include "internal/config.hh"
 #include "internal/service.hh"
+#include "internal/modules.h"
 
 
 using maxscale::RoutingWorker;
@@ -183,10 +184,7 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
 
     for (MXS_CONFIG_PARAMETER *p = params; p; p = p->next)
     {
-        if (!is_normal_server_parameter(p->name))
-        {
-            server_add_parameter(server, p->name, p->value);
-        }
+        server_add_parameter(server, p->name, p->value);
     }
 
     Guard guard(server_lock);
@@ -1127,6 +1125,49 @@ uint64_t server_get_version(const SERVER* server)
     return atomic_load_uint64(&server->version);
 }
 
+namespace
+{
+
+// Converts SERVER_PARAM to MXS_CONFIG_PARAM and keeps them in the same order
+class ParamAdaptor
+{
+public:
+    ParamAdaptor(SERVER_PARAM* params)
+    {
+        for (auto p = params; p; p = p->next)
+        {
+            if (p->active)
+            {
+                // The current tail of the list
+                auto it = m_params.begin();
+
+                // Push the new tail
+                m_params.push_front({p->name, p->value, nullptr});
+
+                if (it != m_params.end())
+                {
+                    // Update the old tail to point to the new tail
+                    it->next = &m_params.front();
+                }
+            }
+        }
+    }
+
+    operator MXS_CONFIG_PARAMETER*()
+    {
+        // Return the head of the parameter list which is the tail of the internal list
+        return m_params.empty() ? nullptr : &m_params.back();
+    }
+
+private:
+
+    // Holds the temporary configuration objects. Needs to be a list so that
+    // inserts into the container won't invalidate the next pointers
+    std::list<MXS_CONFIG_PARAMETER> m_params;
+};
+
+}
+
 /**
  * Creates a server configuration at the location pointed by @c filename
  *
@@ -1148,43 +1189,27 @@ static bool create_server_config(const SERVER *server, const char *filename)
     // TODO: Check for return values on all of the dprintf calls
     dprintf(file, "[%s]\n", server->name);
     dprintf(file, "%s=server\n", CN_TYPE);
-    dprintf(file, "%s=%s\n", CN_PROTOCOL, server->protocol);
-    dprintf(file, "%s=%s\n", CN_ADDRESS, server->address);
-    dprintf(file, "%s=%u\n", CN_PORT, server->port);
-    dprintf(file, "%s=%s\n", CN_AUTHENTICATOR, server->authenticator);
 
-    if (*server->monpw && *server->monuser)
-    {
-        dprintf(file, "%s=%s\n", CN_MONITORUSER, server->monuser);
-        dprintf(file, "%s=%s\n", CN_MONITORPW, server->monpw);
-    }
+    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+    dump_param_list(file, ParamAdaptor(server->parameters),{CN_TYPE},
+                         config_server_params, mod->parameters);
 
-    if (server->persistpoolmax)
-    {
-        dprintf(file, "%s=%ld\n", CN_PERSISTPOOLMAX, server->persistpoolmax);
-    }
+    std::unordered_set<std::string> known;
 
-    if (server->persistmaxtime)
+    for (auto a : {config_server_params, mod->parameters})
     {
-        dprintf(file, "%s=%ld\n", CN_PERSISTMAXTIME, server->persistmaxtime);
-    }
-
-    if (server->proxy_protocol)
-    {
-        dprintf(file, "%s=on\n", CN_PROXY_PROTOCOL);
-    }
-
-    for (SERVER_PARAM *p = server->parameters; p; p = p->next)
-    {
-        if (p->active)
+        for (int i = 0; a[i].name; i++)
         {
-            dprintf(file, "%s=%s\n", p->name, p->value);
+            known.insert(a[i].name);
         }
     }
 
-    if (server->server_ssl)
+    for (auto p = server->parameters; p; p = p->next)
     {
-        write_ssl_config(file, server->server_ssl);
+        if (known.count(p->name) == 0)
+        {
+            dprintf(file, "%s=%s\n", p->name, p->value);
+        }
     }
 
     close(file);
@@ -1371,41 +1396,17 @@ static json_t* server_json_attributes(const SERVER* server)
     /** Store server parameters in attributes */
     json_t* params = json_object();
 
-    json_object_set_new(params, CN_ADDRESS, json_string(server->address));
-    json_object_set_new(params, CN_PORT, json_integer(server->port));
-    json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
+    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+    config_add_module_params_json(ParamAdaptor(server->parameters), {CN_TYPE},
+                                  config_server_params, mod->parameters, params);
 
-    if (server->authenticator)
-    {
-        json_object_set_new(params, CN_AUTHENTICATOR, json_string(server->authenticator));
-    }
-
-    if (*server->monuser)
-    {
-        json_object_set_new(params, CN_MONITORUSER, json_string(server->monuser));
-    }
-
-    if (*server->monpw)
-    {
-        json_object_set_new(params, CN_MONITORPW, json_string(server->monpw));
-    }
-
-    if (server->server_ssl)
-    {
-        json_object_set_new(params, CN_SSL_KEY, json_string(server->server_ssl->ssl_key));
-        json_object_set_new(params, CN_SSL_CERT, json_string(server->server_ssl->ssl_cert));
-        json_object_set_new(params, CN_SSL_CA_CERT, json_string(server->server_ssl->ssl_ca_cert));
-        json_object_set_new(params, CN_SSL_CERT_VERIFY_DEPTH,
-                            json_integer(server->server_ssl->ssl_cert_verify_depth));
-        json_object_set_new(params, CN_SSL_VERIFY_PEER_CERTIFICATE,
-                            json_boolean(server->server_ssl->ssl_verify_peer_certificate));
-        json_object_set_new(params, CN_SSL_VERSION,
-                            json_string(ssl_method_type_to_string(server->server_ssl->ssl_method_type)));
-    }
-
+    // Add weighting parameters that weren't added by config_add_module_params_json
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
-        json_object_set_new(params, p->name, json_string(p->value));
+        if (!json_object_get(params, p->name))
+        {
+            json_object_set_new(params, p->name, json_string(p->value));
+        }
     }
 
     json_object_set_new(attr, CN_PARAMETERS, params);
