@@ -3390,43 +3390,38 @@ static json_t* param_value_to_json(const MXS_CONFIG_PARAMETER* param, const MXS_
     return rval;
 }
 
-void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters, const MXS_MODULE_PARAM* param_info,
-                                   const MXS_MODULE_PARAM* ignored_params, json_t* output)
+void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
+                                   const std::unordered_set<std::string>& ignored_params,
+                                   const MXS_MODULE_PARAM* basic_params,
+                                   const MXS_MODULE_PARAM* module_params,
+                                   json_t* output)
 {
-    set<string> ignore_set;
-    if (ignored_params)
+    // Create a map of the config values to ease their extraction
+    std::unordered_map<std::string, const MXS_CONFIG_PARAMETER*> params;
+
+    for (const MXS_CONFIG_PARAMETER* p = parameters; p; p = p->next)
     {
-        for (int i = 0; ignored_params[i].name; i++)
-        {
-            ignore_set.insert(ignored_params[i].name);
-        }
+        params[p->name] = p;
     }
 
-    // The parameter values are added to the json output in the order they are in 'param_info'.
-    // Add the config values to a map and loop through 'param_info'.
-    // 'parameters' is a linked list while the others are null-terminated arrays.
-    std::map<string, const MXS_CONFIG_PARAMETER*> param_values_map;
-    for (const MXS_CONFIG_PARAMETER* param = parameters; param; param = param->next)
+    for (auto param_info : {basic_params, module_params})
     {
-        ss_dassert(param_values_map.count(param->name) == 0);
-        param_values_map[param->name] = param;
-    }
-
-    for (int i = 0; param_info[i].name; i++)
-    {
-        if (ignore_set.count(param_info[i].name) == 0)
+        for (int i = 0; param_info[i].name; i++)
         {
-            auto item = param_values_map.find(param_info[i].name);
-            if (item != param_values_map.end())
+            if (ignored_params.count(param_info[i].name) == 0 &&
+                !json_object_get(output, param_info[i].name))
             {
-                json_object_set_new(output, param_info[i].name,
-                                    param_value_to_json(item->second, &param_info[i]));
-            }
-            else
-            {
-                // The parameter was not set in config and does not have a default value.
-                // Print a null value.
-                json_object_set_new(output, param_info[i].name, json_null());
+                if (auto item = params[param_info[i].name])
+                {
+                    json_object_set_new(output, param_info[i].name,
+                                        param_value_to_json(item, &param_info[i]));
+                }
+                else
+                {
+                    // The parameter was not set in config and does not have a default value.
+                    // Print a null value.
+                    json_object_set_new(output, param_info[i].name, json_null());
+                }
             }
         }
     }

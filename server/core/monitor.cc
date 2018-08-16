@@ -1743,13 +1743,9 @@ static const char* monitor_state_to_string(monitor_state_t state)
 json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
-    // The 'monitor->parameters' contain some items which are printed specially and should be ignored here.
-    static const MXS_MODULE_PARAM already_printed[] = {{CN_TYPE}, {CN_MODULE}, {CN_SERVERS}};
-    config_add_module_params_json(monitor->parameters, config_monitor_params, already_printed, rval);
-    /** Add module-specific parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
-    config_add_module_params_json(monitor->parameters, mod->parameters, NULL, rval);
-
+    config_add_module_params_json(monitor->parameters, {CN_TYPE, CN_MODULE, CN_SERVERS},
+                                  config_monitor_params, mod->parameters, rval);
     return rval;
 }
 

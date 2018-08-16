@@ -401,7 +401,8 @@ json_t* filter_parameters_to_json(const SFilterDef&  filter)
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
-    config_add_module_params_json(filter->parameters, mod->parameters, config_filter_params, rval);
+    config_add_module_params_json(filter->parameters, {CN_TYPE, CN_MODULE},
+                                  config_filter_params, mod->parameters, rval);
 
     return rval;
 }

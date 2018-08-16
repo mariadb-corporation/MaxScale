@@ -1929,34 +1929,10 @@ json_t* service_parameters_to_json(const SERVICE* service)
 {
     json_t* rval = json_object();
 
-    string options{config_get_string(service->svc_config_param, "router_options")};
-
-    json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
-    json_object_set_new(rval, CN_USER, json_string(service->user));
-    json_object_set_new(rval, CN_PASSWORD, json_string(service->password));
-
-    json_object_set_new(rval, CN_ENABLE_ROOT_USER, json_boolean(service->enable_root));
-    json_object_set_new(rval, CN_MAX_RETRY_INTERVAL, json_integer(service->max_retry_interval));
-    json_object_set_new(rval, CN_MAX_CONNECTIONS, json_integer(service->max_connections));
-    json_object_set_new(rval, CN_CONNECTION_TIMEOUT, json_integer(service->conn_idle_timeout));
-
-    json_object_set_new(rval, CN_AUTH_ALL_SERVERS, json_boolean(service->users_from_all));
-    json_object_set_new(rval, CN_STRIP_DB_ESC, json_boolean(service->strip_db_esc));
-    json_object_set_new(rval, CN_LOCALHOST_MATCH_WILDCARD_HOST,
-                        json_boolean(service->localhost_match_wildcard_host));
-    json_object_set_new(rval, CN_VERSION_STRING, json_string(service->version_string));
-
-    if (*service->weightby)
-    {
-        json_object_set_new(rval, CN_WEIGHTBY, json_string(service->weightby));
-    }
-
-    json_object_set_new(rval, CN_LOG_AUTH_WARNINGS, json_boolean(service->log_auth_warnings));
-    json_object_set_new(rval, CN_RETRY_ON_FAILURE, json_boolean(service->retry_start));
-
-    /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
-    config_add_module_params_json(service->svc_config_param, mod->parameters, config_service_params, rval);
+    config_add_module_params_json(service->svc_config_param,
+                                  {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
+                                  config_service_params, mod->parameters, rval);
 
     return rval;
 }

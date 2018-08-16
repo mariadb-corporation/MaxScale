@@ -169,11 +169,14 @@ bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
  *
  * @param parameters List of configuration parameter values
  * @param param_info Configuration parameter type information
- * @param ignored_params List of parameters which should not be added to the output
+ * @param ignored_params Set of parameters which should not be added to the output
  * @param output Output JSON object where the parameters are added
  */
-void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters, const MXS_MODULE_PARAM* param_info,
-                                   const MXS_MODULE_PARAM* ignored_params, json_t* output);
+void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
+                                   const std::unordered_set<std::string>& ignored_params,
+                                   const MXS_MODULE_PARAM* basic_params,
+                                   const MXS_MODULE_PARAM* module_params,
+                                   json_t* output);
 
 /**
  * @brief Convert object names to correct format
