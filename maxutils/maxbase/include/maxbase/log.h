@@ -243,6 +243,8 @@ int mxb_log_message(int priority,
  *
  * @param message  The message to be logged.
  *
+ * @attention The literal string should have a trailing "\n".
+ *
  * @return 0 for success, non-zero otherwise.
  */
 int mxb_log_oom(const char* message);
@@ -299,14 +301,16 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE(message) mxb_log_oom(message)
+#define MXB_OOM_MESSAGE(message) mxb_log_oom("OOM: " message "\n")
+
+#define MXB_OOM_FROM_STRINGIZED_MACRO(macro) MXB_OOM_MESSAGE(#macro)
 
 /**
  * Log an out of memory error using a default message.
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM() MXB_OOM_MESSAGE(__func__)
+#define MXB_OOM() MXB_OOM_FROM_STRINGIZED_MACRO(__func__)
 
 /**
  * Log an out of memory error using a default message, if the
