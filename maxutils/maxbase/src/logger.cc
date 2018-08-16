@@ -17,15 +17,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <chrono>
 #include <cstring>
 #include <cstdio>
 #include <ctime>
 
 #include <maxbase/string.h>
-
-// TODO: move <maxscale/debug.h> into maxbase
-#define ss_dassert(a)
 
 /**
  * Error logging for the logger itself.
@@ -103,7 +101,8 @@ std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
 FileLogger::~FileLogger()
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    ss_dassert(m_fd != -1);
+    // As mxb_assert() logs to the log-file, it cannot be used here.
+    assert(m_fd != -1);
     close("MariaDB MaxScale is shut down.");
 }
 
