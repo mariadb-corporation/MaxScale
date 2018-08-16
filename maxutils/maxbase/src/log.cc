@@ -61,10 +61,10 @@ std::string get_timestamp(void)
     time_t t = time(NULL);
     struct tm tm;
     localtime_r(&t, &tm);
-    const char* timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                            tm.tm_min, tm.tm_sec);
+    static const char timestamp_formatstr[] = "%04d-%02d-%02d %02d:%02d:%02d   ";
+    static int required = snprintf(NULL, 0, timestamp_formatstr,
+                                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                                   tm.tm_min, tm.tm_sec);
     char buf[required + 1];
 
     snprintf(buf, sizeof(buf), timestamp_formatstr,
@@ -83,10 +83,10 @@ std::string get_timestamp_hp(void)
     localtime_r(&tv.tv_sec, &tm);
     int usec = tv.tv_usec / 1000;
 
-    const char* timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-    int required = snprintf(NULL, 0, timestamp_formatstr_hp,
-                            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                            tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
+    static const char timestamp_formatstr_hp[] = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
+    static int required = snprintf(NULL, 0, timestamp_formatstr_hp,
+                                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                                   tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
 
     char buf[required + 1];
 
@@ -428,7 +428,9 @@ bool mxb_log_init(const char* ident,
 {
     mxb_assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
-    openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
+    // Trigger calculation of buffer lengths.
+    get_timestamp();
+    get_timestamp_hp();
 
     // Tests mainly pass a NULL logdir with MXB_LOG_TARGET_STDOUT but using
     // /dev/null as the default allows total suppression of logging
@@ -473,17 +475,29 @@ bool mxb_log_init(const char* ident,
             break;
     }
 
-    this_unit.context_provider = context_provider;
+    if (this_unit.sLogger && this_unit.sMessage_registry)
+    {
+        this_unit.context_provider = context_provider;
+
+        openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
+    }
+    else
+    {
+        this_unit.sLogger.reset();
+        this_unit.sMessage_registry.reset();
+    }
 
     return this_unit.sLogger && this_unit.sMessage_registry;
 }
 
-/**
- * End log manager
- */
 void mxb_log_finish(void)
 {
+    mxb_assert(this_unit.sLogger && this_unit.sMessage_registry);
+
     closelog();
+    this_unit.sLogger.reset();
+    this_unit.sMessage_registry.reset();
+    this_unit.context_provider = nullptr;
 }
 
 void mxb_log_set_augmentation(int bits)
