@@ -376,23 +376,6 @@ inline bool server_is_disk_space_exhausted(const SERVER* server)
 extern SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params);
 
 /**
- * @brief Find a server that can be reused
- *
- * A server that has been destroyed will not be deleted but only deactivated.
- *
- * @param name          Name of the server
- * @param protocol      Protocol used by the server
- * @param authenticator The authenticator module of the server
- * @param address       The network address of the new server
- * @param port          The port of the new server
- *
- * @return Repurposed SERVER or NULL if no servers matching the criteria were
- * found
- * @see runtime_create_server
- */
-SERVER* server_repurpose_destroyed(const char *name, const char *protocol, const char *authenticator,
-                                   const char *address, const char *port);
-/**
  * @brief Serialize a server to a file
  *
  * This converts @c server into an INI format file. This allows created servers

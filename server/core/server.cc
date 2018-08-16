@@ -1252,27 +1252,6 @@ bool server_serialize(const SERVER *server)
     return rval;
 }
 
-SERVER* server_repurpose_destroyed(const char *name, const char *protocol, const char *authenticator,
-                                   const char *address, const char *port)
-{
-    Guard guard(server_lock);
-
-    for (Server* server : all_servers)
-    {
-        if (!server->is_active &&
-            strcmp(server->name, name) == 0 &&
-            strcmp(server->protocol, protocol) == 0 &&
-            strcmp(server->authenticator, authenticator) == 0)
-        {
-            snprintf(server->address, sizeof(server->address), "%s", address);
-            server->port = atoi(port);
-            server->is_active = true;
-            return server;
-        }
-    }
-
-    return nullptr;
-}
 /**
  * Set a status bit in the server under a lock. This ensures synchronization
  * with the server monitor thread. Calling this inside the monitor will likely

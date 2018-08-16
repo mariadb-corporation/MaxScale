@@ -235,18 +235,7 @@ bool runtime_create_server(const char *name, const char *address, const char *po
                 config_replace_param(&ctx, "authenticator", authenticator);
             }
 
-            /** First check if this service has been created before */
-            SERVER *server = server_repurpose_destroyed(name, protocol, authenticator,
-                                                        address, port);
-
-            if (server)
-            {
-                MXS_INFO("Reusing server '%s'", name);
-            }
-            else
-            {
-                server = server_alloc(name, ctx.parameters);
-            }
+            SERVER *server = server_alloc(name, ctx.parameters);
 
             if (server && server_serialize(server))
             {
