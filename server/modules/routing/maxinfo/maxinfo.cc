@@ -44,7 +44,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/version.h>
 #include <maxscale/resultset.hh>

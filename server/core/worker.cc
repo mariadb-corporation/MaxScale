@@ -23,7 +23,7 @@
 #include <sys/timerfd.h>
 
 #include <maxbase/atomic.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/semaphore.hh>
 
 #define WORKER_ABSENT_ID -1

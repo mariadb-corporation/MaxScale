@@ -44,7 +44,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/messagequeue.hh>
 #include <maxscale/mysql_utils.h>

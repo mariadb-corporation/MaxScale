@@ -13,7 +13,7 @@
 
 %{
 #include <ruleparser.yy.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 %}
 
 %option reentrant noyywrap bison-bridge prefix="dbfw_yy"

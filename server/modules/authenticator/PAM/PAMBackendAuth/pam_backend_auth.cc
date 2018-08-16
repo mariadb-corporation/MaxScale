@@ -14,7 +14,7 @@
 #include "pam_backend_auth.hh"
 
 #include <maxscale/authenticator.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/server.h>
 #include "pam_backend_session.hh"
 #include "../pam_auth_common.hh"

@@ -17,7 +17,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
 

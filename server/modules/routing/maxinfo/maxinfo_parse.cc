@@ -40,7 +40,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 static MAXINFO_TREE *make_tree_node(MAXINFO_OPERATOR, char *, MAXINFO_TREE *, MAXINFO_TREE *);
 void maxinfo_free_tree(MAXINFO_TREE *); // This function is needed by maxinfo.c

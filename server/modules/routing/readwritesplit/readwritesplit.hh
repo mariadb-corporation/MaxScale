@@ -27,7 +27,7 @@
 #include <mutex>
 
 #include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/queryclassifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.h>

@@ -85,7 +85,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/modutil.h>
 #include <maxscale/utils.hh>

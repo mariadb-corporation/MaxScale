@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "maxavro_internal.h"
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <errno.h>
 
 /** Maximum byte size of an integer value */

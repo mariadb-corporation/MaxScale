@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include "internal/routingworker.hh"
 
 namespace

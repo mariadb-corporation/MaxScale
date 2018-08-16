@@ -38,7 +38,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 
 /**

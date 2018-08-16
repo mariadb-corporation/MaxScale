@@ -39,7 +39,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>

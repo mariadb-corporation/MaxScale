@@ -14,7 +14,7 @@
 #include "maxavro_internal.h"
 #include <errno.h>
 #include <string.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <zlib.h>
 
 static bool maxavro_read_sync(FILE *file, uint8_t* sync)

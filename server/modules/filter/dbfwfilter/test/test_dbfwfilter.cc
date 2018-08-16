@@ -14,7 +14,7 @@
 #include <cstdlib>
 #include <memory>
 #include <iostream>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/filtermodule.hh>
 #include <maxscale/queryclassifiermodule.hh>
 #include <maxscale/mock/backend.hh>

@@ -30,7 +30,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 namespace
 {

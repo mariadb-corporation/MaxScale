@@ -43,7 +43,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/filter.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/router.h>

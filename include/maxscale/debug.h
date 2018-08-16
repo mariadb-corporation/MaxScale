@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 MXS_BEGIN_DECLS
 

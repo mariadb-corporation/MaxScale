@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>

@@ -40,7 +40,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <debugcli.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 /* The router entry points */
 static  MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);

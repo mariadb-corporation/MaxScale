@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 #if defined(SS_DEBUG)
 #define DEBUG_HINTROUTER

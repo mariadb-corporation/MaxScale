@@ -38,7 +38,7 @@
 #include <maxscale/ssl.h>
 #include <maxscale/platform.h>
 #include <maxscale/protocol.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.h>

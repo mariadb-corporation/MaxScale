@@ -15,7 +15,7 @@
 #include "maxavro_internal.h"
 #include <string.h>
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <errno.h>
 
 bool maxavro_read_datablock_start(MAXAVRO_FILE *file);

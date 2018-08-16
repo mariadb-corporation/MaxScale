@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modutil.h>
 #include <ctype.h>
 

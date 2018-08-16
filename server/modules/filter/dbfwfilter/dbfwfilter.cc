@@ -72,7 +72,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/platform.h>
 #include <maxscale/pcre2.h>

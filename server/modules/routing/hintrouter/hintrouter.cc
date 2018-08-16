@@ -17,7 +17,7 @@
 #include <limits>
 #include <vector>
 
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include "dcb.hh"
 
 static const MXS_ENUM_VALUE default_action_values[] =

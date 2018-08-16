@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 #include <sys/time.h>
 #include <syslog.h>

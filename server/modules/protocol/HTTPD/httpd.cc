@@ -39,7 +39,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/protocol.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/resultset.hh>
 
 #define ISspace(x) isspace((int)(x))

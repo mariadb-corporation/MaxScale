@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <binlog_common.h>
 #include <blr_constants.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 /**
  * @file binlog_common.c - Common binary log code shared between multiple modules

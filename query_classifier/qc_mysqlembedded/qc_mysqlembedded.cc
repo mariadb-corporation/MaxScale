@@ -61,7 +61,7 @@
 #include <pthread.h>
 
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>

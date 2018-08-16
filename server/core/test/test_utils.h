@@ -18,7 +18,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/config.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/paths.h>

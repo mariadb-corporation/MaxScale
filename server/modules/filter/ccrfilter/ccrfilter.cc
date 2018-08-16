@@ -20,7 +20,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/hint.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/pcre2.h>

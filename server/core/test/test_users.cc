@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include <maxscale/users.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 static int test1()
 {

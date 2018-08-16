@@ -18,7 +18,7 @@
 #include <time.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 static void skygw_log_enable(int priority)
 {

@@ -33,7 +33,7 @@
 #include <maxbase/atomic.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 
 /**

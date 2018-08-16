@@ -26,7 +26,7 @@
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>

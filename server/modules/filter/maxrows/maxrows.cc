@@ -26,7 +26,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/debug.h>
 #include <maxscale/filter.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>

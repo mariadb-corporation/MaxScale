@@ -24,7 +24,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/ccdefs.hh>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 /**
  * All classes of MaxScale are defined in the namespace @c maxscale.

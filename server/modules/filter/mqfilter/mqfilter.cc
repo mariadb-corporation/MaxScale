@@ -73,7 +73,7 @@
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/session.h>

@@ -18,7 +18,7 @@
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/mysql_utils.h>
 #include <stdlib.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <string.h>
 #include <maxscale/debug.h>
 #include <maxscale/users.h>

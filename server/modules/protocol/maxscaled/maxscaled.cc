@@ -34,7 +34,7 @@
 #include <maxscale/poll.h>
 #include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include "maxscaled.h"
 #include <maxscale/maxadmin.h>

@@ -21,7 +21,7 @@
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/spinlock.hh>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/jansson.hh>
 
 namespace

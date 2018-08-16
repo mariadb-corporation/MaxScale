@@ -21,7 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 using namespace maxscale;
 using namespace std;

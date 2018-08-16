@@ -25,7 +25,7 @@
 #include <string>
 
 #include <maxscale/modinfo.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/version.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>

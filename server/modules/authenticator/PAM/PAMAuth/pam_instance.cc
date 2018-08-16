@@ -16,7 +16,7 @@
 #include <string>
 #include <string.h>
 #include <maxscale/jansson.hh>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
 

@@ -30,7 +30,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/json_api.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/mariadb.hh>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>

@@ -22,7 +22,7 @@
 #include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/hint.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/utils.h>
 
 #if defined(BUFFER_TRACE)

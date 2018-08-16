@@ -17,7 +17,7 @@
 #include <iostream>
 
 #include <maxscale/alloc.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/utils.h>

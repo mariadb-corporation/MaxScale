@@ -35,7 +35,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>

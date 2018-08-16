@@ -47,7 +47,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/limits.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>

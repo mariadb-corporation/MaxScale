@@ -27,7 +27,7 @@
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/secrets.h>

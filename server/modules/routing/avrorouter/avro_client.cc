@@ -31,7 +31,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/version.h>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>

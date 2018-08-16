@@ -20,7 +20,7 @@ add_library(maxscale-common SHARED
   json_api.cc
   listener.cc
   load_utils.cc
-  log_manager.cc
+  log.cc
   mariadb.cc
   maxscale_pcre2.cc
   misc.cc

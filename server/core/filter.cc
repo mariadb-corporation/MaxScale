@@ -31,7 +31,7 @@
 #include <vector>
 
 #include <maxscale/alloc.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/session.h>
 #include <maxscale/service.h>

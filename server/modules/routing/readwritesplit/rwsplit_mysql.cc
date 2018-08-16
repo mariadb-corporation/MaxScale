@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>

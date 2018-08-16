@@ -32,7 +32,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.h>
 #include <maxscale/encryption.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/paths.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>

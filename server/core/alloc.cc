@@ -13,7 +13,7 @@
 
 #include <maxscale/alloc.h>
 #include <stdlib.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 
 /**
  * @brief Allocates memory; behaves exactly like `malloc`.

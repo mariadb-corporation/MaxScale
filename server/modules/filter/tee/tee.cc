@@ -21,7 +21,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/log.h>
 #include <maxscale/modulecmd.h>
 
 #include "tee.hh"
