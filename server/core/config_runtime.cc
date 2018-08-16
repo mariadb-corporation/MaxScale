@@ -585,6 +585,7 @@ bool runtime_alter_service(Service *service, const char* zKey, const char* zValu
 
     if (service->is_basic_parameter(key))
     {
+        service_replace_parameter(service, zKey, zValue);
         service->update_basic_parameter(key, value);
     }
     else

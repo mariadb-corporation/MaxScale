@@ -1562,16 +1562,6 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
 
     dprintf(file, "[%s]\n", monitor->name);
     dprintf(file, "%s=monitor\n", CN_TYPE);
-    dprintf(file, "%s=%s\n", CN_MODULE, monitor->module_name);
-    dprintf(file, "%s=%s\n", CN_USER, monitor->user);
-    dprintf(file, "%s=%s\n", CN_PASSWORD, monitor->password);
-    dprintf(file, "%s=%lu\n", CN_MONITOR_INTERVAL, monitor->interval);
-    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_TIMEOUT, monitor->connect_timeout);
-    dprintf(file, "%s=%d\n", CN_BACKEND_WRITE_TIMEOUT, monitor->write_timeout);
-    dprintf(file, "%s=%d\n", CN_BACKEND_READ_TIMEOUT, monitor->read_timeout);
-    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
-    dprintf(file, "%s=%ld\n", CN_JOURNAL_MAX_AGE, monitor->journal_max_age);
-    dprintf(file, "%s=%d\n", CN_SCRIPT_TIMEOUT, monitor->script_timeout);
 
     if (monitor->monitored_servers)
     {
@@ -1587,35 +1577,12 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         dprintf(file, "\n");
     }
 
-    const char* params[] =
-    {
-        CN_TYPE,
-        CN_MODULE,
-        CN_USER,
-        CN_PASSWORD,
-        "passwd", // TODO: Remove this
-        CN_MONITOR_INTERVAL,
-        CN_BACKEND_CONNECT_TIMEOUT,
-        CN_BACKEND_WRITE_TIMEOUT,
-        CN_BACKEND_READ_TIMEOUT,
-        CN_BACKEND_CONNECT_ATTEMPTS,
-        CN_JOURNAL_MAX_AGE,
-        CN_SCRIPT_TIMEOUT,
-        CN_SERVERS
-    };
+    const MXS_MODULE* mod = get_module(monitor->module_name, NULL);
+    ss_dassert(mod);
 
-    std::set<std::string> param_set(params, params + sizeof(params) / sizeof(params[0]));
-
-    for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
-    {
-        if (param_set.find(p->name) == param_set.end())
-        {
-            dprintf(file, "%s=%s\n", p->name, p->value);
-        }
-    }
-
+    dump_param_list(file, monitor->parameters, {CN_TYPE, CN_SERVERS},
+                    config_monitor_params, mod->parameters);
     spinlock_release(&monitor->lock);
-
     close(file);
 
     return true;

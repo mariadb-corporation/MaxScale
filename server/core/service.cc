@@ -1779,23 +1779,6 @@ bool Service::dump_config(const char *filename) const
      */
     dprintf(file, "[%s]\n", m_name.c_str());
     dprintf(file, "%s=service\n", CN_TYPE);
-    dprintf(file, "%s=%s\n", CN_ROUTER, m_router_name.c_str());
-    dprintf(file, "%s=%s\n", CN_USER, m_user.c_str());
-    dprintf(file, "%s=%s\n", CN_PASSWORD, m_password.c_str());
-
-    const MXS_MODULE_PARAM* mp = config_service_params;
-
-    dump_param(file, CN_ENABLE_ROOT_USER, enable_root, {mp});
-    dump_param(file, CN_MAX_RETRY_INTERVAL, max_retry_interval, {mp});
-    dump_param(file, CN_MAX_CONNECTIONS, max_connections, {mp});
-    dump_param(file, CN_CONNECTION_TIMEOUT, conn_idle_timeout, {mp});
-    dump_param(file, CN_AUTH_ALL_SERVERS, users_from_all, {mp});
-    dump_param(file, CN_STRIP_DB_ESC, strip_db_esc, {mp});
-    dump_param(file, CN_LOCALHOST_MATCH_WILDCARD_HOST, localhost_match_wildcard_host, {mp});
-    dump_param(file, CN_LOG_AUTH_WARNINGS, log_auth_warnings, {mp});
-    dump_param(file, CN_RETRY_ON_FAILURE, retry_start, {mp});
-    dump_param(file, CN_VERSION_STRING, m_version_string, {mp});
-    dump_param(file, CN_WEIGHTBY, m_weightby, {mp});
 
     if (!m_filters.empty())
     {
@@ -1827,36 +1810,11 @@ bool Service::dump_config(const char *filename) const
         dprintf(file, "\n");
     }
 
-    std::unordered_set<std::string> common_params
-    {
-        CN_TYPE,
-        CN_USER,
-        CN_PASSWORD,
-        CN_ENABLE_ROOT_USER,
-        CN_MAX_RETRY_INTERVAL,
-        CN_MAX_CONNECTIONS,
-        CN_CONNECTION_TIMEOUT,
-        CN_AUTH_ALL_SERVERS,
-        CN_STRIP_DB_ESC,
-        CN_LOCALHOST_MATCH_WILDCARD_HOST,
-        CN_LOG_AUTH_WARNINGS,
-        CN_RETRY_ON_FAILURE,
-        CN_VERSION_STRING,
-        CN_WEIGHTBY,
-        CN_SERVERS
-    };
-
     const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
     ss_dassert(mod);
 
-    // Dump router specific parameters
-    for (auto p = svc_config_param; p; p = p->next)
-    {
-        if (common_params.count(p->name) == 0)
-        {
-            dump_param(file, p->name, p->value, {mod->parameters});
-        }
-    }
+    dump_param_list(file, svc_config_param, {CN_TYPE, CN_FILTERS, CN_SERVERS},
+                    config_service_params, mod->parameters);
 
     close(file);
 

@@ -20,6 +20,7 @@
 
 #include <sstream>
 #include <initializer_list>
+#include <unordered_set>
 
 #include <maxbase/jansson.h>
 #include <maxscale/ssl.h>
@@ -218,60 +219,8 @@ bool is_normal_server_parameter(const char *param);
  */
 bool get_suffixed_size(const char* value, uint64_t* dest);
 
-namespace maxscale
-{
-
-// Internal function
-void dump_if_changed(const MXS_MODULE_PARAM* params, int file,
-                     const std::string& key, const std::string& value);
-
-
-/**
- * Dump a parameter into a file descriptor
- *
- * The function detects only literal matches to the string format default values.
- * If the string conversion results in an empty string, the value will not be
- * dumped. This can only happen if an empty string is passed as the value.
- *
- * The function writes a single key-value pair into the file and terminates
- * the line with a newline. This is intended to be used with configuration
- * dumping code in the core.
- *
- * Note: Does not work with enum type parameters, they'll get converted into
- * integers. Convert them to string format at the call site.
- *
- * @param file   File descriptor where the line is written
- * @param key    Name of the parameter
- * @param value  The parameter value
- * @param params List of module parameters to use
- */
-template <class T>
-inline void dump_param(int file, const std::string& key, const T value, std::initializer_list<const MXS_MODULE_PARAM*> params)
-{
-    std::stringstream ss;
-    ss << value;
-    auto strval = ss.str();
-
-    if (!strval.empty())
-    {
-        // Don't dump empty values
-        for (auto a : params)
-        {
-            dump_if_changed(a, file, key, strval);
-        }
-    }
-}
-
-// Specialization required to dump booleans in the same format as they used in
-// the defaults. This requires that all defaults use either "true" or "false"
-// for the values.
-template <>
-inline void dump_param(int file, const std::string& key, bool value, std::initializer_list<const MXS_MODULE_PARAM*> params)
-{
-    for (auto a : params)
-    {
-        dump_if_changed(a, file, key, value ? "true" : "false");
-    }
-}
-
-}
+// Dump a parameter list into a file as `key=value` pairs
+void dump_param_list(int file, MXS_CONFIG_PARAMETER* list,
+                     const std::unordered_set<std::string>& ignored,
+                     const MXS_MODULE_PARAM* common_params,
+                     const MXS_MODULE_PARAM* module_params);

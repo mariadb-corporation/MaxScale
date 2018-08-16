@@ -4666,6 +4666,7 @@ MXS_CONFIG_PARAMETER* ParamList::params()
     return m_ctx.parameters;
 }
 
+}
 
 void dump_if_changed(const MXS_MODULE_PARAM* params, int file,
                      const std::string& key, const std::string& value)
@@ -4694,4 +4695,17 @@ void dump_if_changed(const MXS_MODULE_PARAM* params, int file,
     }
 }
 
+void dump_param_list(int file, MXS_CONFIG_PARAMETER* list,
+                     const std::unordered_set<std::string>& ignored,
+                     const MXS_MODULE_PARAM* common_params,
+                     const MXS_MODULE_PARAM* module_params)
+{
+    for (auto p = list; p; p = p->next)
+    {
+        if (ignored.count(p->name) == 0 && *p->value)
+        {
+            dump_if_changed(common_params, file, p->name, p->value);
+            dump_if_changed(module_params, file, p->name, p->value);
+        }
+    }
 }

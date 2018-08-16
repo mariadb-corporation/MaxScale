@@ -534,18 +534,12 @@ static bool create_filter_config(const SFilterDef& filter, const char *filename)
 
     dprintf(file, "[%s]\n", filter->name.c_str());
     dprintf(file, "%s=%s\n", CN_TYPE, CN_FILTER);
-    dprintf(file, "%s=%s\n", CN_MODULE, filter->module.c_str());
 
-    std::set<std::string> param_set{CN_TYPE, CN_MODULE};
+    const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
+    ss_dassert(mod);
 
-    for (MXS_CONFIG_PARAMETER* p = filter->parameters; p; p = p->next)
-    {
-        if (param_set.count(p->name) == 0)
-        {
-            dprintf(file, "%s=%s\n", p->name, p->value);
-        }
-    }
-
+    MXS_MODULE_PARAM no_common_params = {};
+    dump_param_list(file, filter->parameters, {CN_TYPE}, &no_common_params, mod->parameters);
     close(file);
 
     return true;
