@@ -35,6 +35,17 @@ public:
     }
 
     /**
+     * Set the identification, used in log header and footer.
+     * If not specified, the program name will be used.
+     *
+     * @param ident  The identifying string.
+     *
+     * @attention The identification should be specified before the
+     *            log is initialized.
+     */
+    static void set_ident(const std::string& ident);
+
+    /**
      * Write a message to the log
      *
      * @param msg Message to write

@@ -67,6 +67,25 @@ bool should_log_error()
     return rval;
 }
 
+struct this_unit
+{
+    std::string ident;
+} this_unit;
+
+std::string get_ident()
+{
+    if (this_unit.ident.empty())
+    {
+#ifdef __GNUC__
+        this_unit.ident = program_invocation_short_name;
+#else
+        this_unit.ident = "The Program";
+#endif
+    }
+
+    return this_unit.ident;
+}
+
 }
 
 namespace maxbase
@@ -75,6 +94,12 @@ namespace maxbase
 //
 // Public methods
 //
+
+// static
+void Logger::set_ident(const std::string& ident)
+{
+    this_unit.ident = ident;
+}
 
 std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
 {
@@ -103,7 +128,11 @@ FileLogger::~FileLogger()
     std::lock_guard<std::mutex> guard(m_lock);
     // As mxb_assert() logs to the log-file, it cannot be used here.
     assert(m_fd != -1);
-    close("MariaDB MaxScale is shut down.");
+
+    std::string suffix = get_ident();
+    suffix += " is shut down.";
+
+    close(suffix.c_str());
 }
 
 bool FileLogger::write(const char* msg, int len)
@@ -177,14 +206,14 @@ bool FileLogger::write_header()
     struct tm tm;
     localtime_r(&t, &tm);
 
-    const char PREFIX[] = "MariaDB MaxScale  "; // sizeof(PREFIX) includes the NULL.
+    std::string ident = get_ident();
     char time_string[32]; // 26 would be enough, according to "man asctime".
     asctime_r(&tm, time_string);
 
-    size_t size = sizeof(PREFIX) + m_filename.length() + 2 * sizeof(' ') + strlen(time_string);
+    size_t size = ident.length() + 2 * sizeof(' ') + m_filename.length() + 2 * sizeof(' ') + strlen(time_string);
 
-    char header[size + 2]; // For the 2 newlines.
-    sprintf(header, "\n\n%s%s  %s", PREFIX, m_filename.c_str(), time_string);
+    char header[size + 2 + 1]; // For the 2 newlines and the trailing NULL.
+    sprintf(header, "\n\n%s  %s  %s", ident.c_str(), m_filename.c_str(), time_string);
 
     char line[sizeof(header) - 1];
     memset(line, '-', sizeof(line) - 1);
