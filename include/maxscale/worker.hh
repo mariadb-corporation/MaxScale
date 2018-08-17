@@ -471,7 +471,7 @@ protected:
 private:
     uint32_t handle(Worker* pWorker, uint32_t events);
 
-    static uint32_t handler(MXB_POLL_DATA* pThis, void* pWorker, uint32_t events);
+    static uint32_t handler(MXB_POLL_DATA* pThis, MXB_WORKER* pWorker, uint32_t events);
 
 private:
     int     m_fd;      /**< The timerfd descriptor. */

@@ -225,7 +225,7 @@ void LocalClient::drain_queue()
     }
 }
 
-uint32_t LocalClient::poll_handler(MXB_POLL_DATA* data, void* worker, uint32_t events)
+uint32_t LocalClient::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
 {
     LocalClient* client = static_cast<LocalClient*>(data);
     client->process(events);

@@ -315,7 +315,7 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 }
 
 //static
-uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, void* pWorker, uint32_t events)
+uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
 {
     MessageQueue* pThis = static_cast<MessageQueue*>(pData);
 

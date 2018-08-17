@@ -195,7 +195,7 @@ private:
 
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
 
-    static uint32_t poll_handler(MXB_POLL_DATA* pData, void* worker, uint32_t events);
+    static uint32_t poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* worker, uint32_t events);
 
 private:
     Handler& m_handler;

@@ -255,7 +255,7 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
 }
 
 //static
-uint32_t WorkerTimer::handler(MXB_POLL_DATA* pThis, void* pWorker, uint32_t events)
+uint32_t WorkerTimer::handler(MXB_POLL_DATA* pThis, MXB_WORKER* pWorker, uint32_t events)
 {
     return static_cast<WorkerTimer*>(pThis)->handle(static_cast<Worker*>(pWorker), events);
 }

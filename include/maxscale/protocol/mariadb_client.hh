@@ -60,7 +60,7 @@ public:
 private:
     static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port);
     LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd);
-    static uint32_t poll_handler(MXB_POLL_DATA* data, void* worker, uint32_t events);
+    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     void   process(uint32_t events);
     GWBUF* read_complete_packet();
     void   drain_queue();

@@ -43,13 +43,12 @@ typedef struct MXB_WORKER
  *
  * @return A combination of mxb_poll_action_t enumeration values.
  */
-// TODO: Change void* to MXS_WORKER
-typedef uint32_t (*mxb_poll_handler_t)(struct MXB_POLL_DATA* data, void* worker, uint32_t events);
+typedef uint32_t (*mxb_poll_handler_t)(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 
 typedef struct MXB_POLL_DATA
 {
     mxb_poll_handler_t handler; /*< Handler for this particular kind of mxb_poll_data. */
-    void*              owner;   /*< Owning worker. */
+    MXB_WORKER*        owner;   /*< Owning worker. */
 } MXB_POLL_DATA;
 
 MXB_END_DECLS

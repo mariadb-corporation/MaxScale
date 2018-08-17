@@ -115,7 +115,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB *dcb, uint32_t events);
 static DCB *dcb_find_free();
 static void dcb_remove_from_list(DCB *dcb);
 
-static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, void* worker, uint32_t events);
+static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, MXB_WORKER* worker, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 static int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
@@ -342,7 +342,7 @@ dcb_free_all_memory(DCB *dcb)
     }
 
     // Ensure that id is immediately the wrong one.
-    dcb->poll.owner = reinterpret_cast<void*>(0xdeadbeef);
+    dcb->poll.owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
     MXS_FREE(dcb);
 
 }
@@ -3186,7 +3186,7 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
     return rv;
 }
 
-static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, void* worker, uint32_t events)
+static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, MXB_WORKER* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB *dcb = (DCB*)data;
@@ -3409,7 +3409,7 @@ private:
 static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
 {
     bool rv = true;
-    void* previous_owner = data->owner;
+    MXB_WORKER* previous_owner = data->owner;
 
     rv = RoutingWorker::add_shared_fd(fd, events, data);
 

@@ -544,7 +544,7 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 //static
-uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, void* pWorker, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
     ss_dassert(pThis == pWorker);
