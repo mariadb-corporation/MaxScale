@@ -28,7 +28,7 @@
  *
  * @return True if succeeded, false otherwise.
  */
-bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
+inline bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
 {
     return mxb_log_init(nullptr, ".", nullptr, target, nullptr);
 }
