@@ -13,8 +13,8 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/worker.h>
 #include <maxscale/session.h>
-#include <maxscale/worker.h>
 
 MXS_BEGIN_DECLS
 
@@ -31,14 +31,14 @@ MXS_BEGIN_DECLS
  * @return The corresponding routing worker instance, or NULL if the
  *         id does not correspond to a routing worker.
  */
-MXS_WORKER* mxs_rworker_get(int worker_id);
+MXB_WORKER* mxs_rworker_get(int worker_id);
 
 /**
  * Return the current routing worker.
  *
  * @return A routing worker, or NULL if there is no current routing worker.
  */
-MXS_WORKER* mxs_rworker_get_current();
+MXB_WORKER* mxs_rworker_get_current();
 
 /**
  * Return the id of the current routing worker.

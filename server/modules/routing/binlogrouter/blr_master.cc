@@ -110,7 +110,7 @@ extern int blr_write_special_event(ROUTER_INSTANCE *router,
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
                                      char *new_file);
-static void worker_cb_start_master(MXS_WORKER*, void* data);
+static void worker_cb_start_master(MXB_WORKER*, void* data);
 extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 static int blr_check_connect_retry(ROUTER_INSTANCE *router);
 
@@ -283,7 +283,7 @@ static void blr_start_master(void* data)
  * @param worker  The worker in whose context the function is called.
  * @param data    The data to be passed to `blr_start_master`
  */
-static void worker_cb_start_master(MXS_WORKER* worker, void* data)
+static void worker_cb_start_master(MXB_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
     ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
@@ -301,13 +301,13 @@ bool blr_start_master_in_main(void* data)
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_start_master` there.
 
-    MXS_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
+    MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_start_master;
     intptr_t arg2 = (intptr_t)data;
 
-    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    if (!mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, arg1, arg2))
     {
         MXS_ERROR("Could not post 'blr_start_master' message to main worker.");
     }
@@ -321,7 +321,7 @@ bool blr_start_master_in_main(void* data)
  * @param worker_id  The id of the worker in whose context the function is called.
  * @param data       The data to be passed to `blr_start_master`
  */
-static void worker_cb_close_master(MXS_WORKER* worker, void* data)
+static void worker_cb_close_master(MXB_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
     ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
@@ -339,13 +339,13 @@ void blr_close_master_in_main(void* data)
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_master_close` there.
 
-    MXS_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
+    MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_close_master;
     intptr_t arg2 = (intptr_t)data;
 
-    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    if (!mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, arg1, arg2))
     {
         MXS_ERROR("Could not post 'blr_master_close' message to main worker.");
     }

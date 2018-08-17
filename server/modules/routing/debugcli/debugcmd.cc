@@ -910,7 +910,7 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
 namespace
 {
 
-void ping(MXS_WORKER* worker, void* arg)
+void ping(MXB_WORKER* worker, void* arg)
 {
     MXS_NOTICE("Worker[%p]: Alive and kicking.", worker);
 }
@@ -921,7 +921,7 @@ void ping_workers(DCB* dcb)
 {
     intptr_t arg1 = reinterpret_cast<intptr_t>(ping);
 
-    int n = mxs_rworker_broadcast_message(MXS_WORKER_MSG_CALL, arg1, 0);
+    int n = mxs_rworker_broadcast_message(MXB_WORKER_MSG_CALL, arg1, 0);
 
     dcb_printf(dcb, "Broadcasted ping message to %d workers.\n", n);
 }

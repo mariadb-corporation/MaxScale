@@ -23,9 +23,9 @@
 
 #include <maxbase/atomic.h>
 #include <maxbase/semaphore.hh>
+#include <maxbase/worker.h>
 #include <maxscale/debug.h>
 #include <maxscale/messagequeue.hh>
-#include <maxscale/worker.h>
 #include <maxscale/workertask.hh>
 
 namespace maxscale
@@ -483,7 +483,7 @@ private:
  * associated with file descriptors. Internally Worker has a thread
  * and an epoll-instance of its own.
  */
-class Worker : public MXS_WORKER
+class Worker : public MXB_WORKER
              , private MessageQueue::Handler
 {
     Worker(const Worker&) = delete;

@@ -35,8 +35,8 @@ namespace
 
 using maxscale::Worker;
 
-const int MXS_WORKER_MSG_TASK = -1;
-const int MXS_WORKER_MSG_DISPOSABLE_TASK = -2;
+const int MXB_WORKER_MSG_TASK = -1;
+const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
 
 /**
  * Unit variables.
@@ -428,7 +428,7 @@ bool Worker::execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode
         intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
         intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
 
-        rval = post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+        rval = post_message(MXB_WORKER_MSG_TASK, arg1, arg2);
     }
 
     return rval;
@@ -456,7 +456,7 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     {
         intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
 
-        posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
+        posted = post_message(MXB_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
 
         if (!posted)
         {
@@ -598,7 +598,7 @@ void Worker::shutdown()
 
     if (!m_shutdown_initiated)
     {
-        if (post_message(MXS_WORKER_MSG_SHUTDOWN, 0, 0))
+        if (post_message(MXB_WORKER_MSG_SHUTDOWN, 0, 0))
         {
             m_shutdown_initiated = true;
         }
@@ -616,22 +616,22 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 {
     switch  (msg.id())
     {
-    case MXS_WORKER_MSG_SHUTDOWN:
+    case MXB_WORKER_MSG_SHUTDOWN:
         {
             MXS_INFO("Worker %p received shutdown message.", this);
             m_should_shutdown = true;
         }
         break;
 
-    case MXS_WORKER_MSG_CALL:
+    case MXB_WORKER_MSG_CALL:
         {
-            void (*f)(MXS_WORKER*, void*) = (void (*)(MXS_WORKER*, void*))msg.arg1();
+            void (*f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*))msg.arg1();
 
             f(this, (void*)msg.arg2());
         }
         break;
 
-    case MXS_WORKER_MSG_TASK:
+    case MXB_WORKER_MSG_TASK:
         {
             Task *pTask = reinterpret_cast<Task*>(msg.arg1());
             mxb::Semaphore* pSem = reinterpret_cast<mxb::Semaphore*>(msg.arg2());
@@ -645,7 +645,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
         }
         break;
 
-    case MXS_WORKER_MSG_DISPOSABLE_TASK:
+    case MXB_WORKER_MSG_DISPOSABLE_TASK:
         {
             DisposableTask *pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
             pTask->execute(*this);
@@ -1053,12 +1053,12 @@ bool Worker::cancel_delayed_call(uint32_t id)
 }
 
 
-MXS_WORKER* mxs_worker_get_current()
+MXB_WORKER* mxb_worker_get_current()
 {
     return Worker::get_current();
 }
 
-bool mxs_worker_post_message(MXS_WORKER* pWorker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
+bool mxb_worker_post_message(MXB_WORKER* pWorker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     return static_cast<Worker*>(pWorker)->post_message(msg_id, arg1, arg2);
 }

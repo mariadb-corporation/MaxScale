@@ -17,9 +17,7 @@
 
 MXS_BEGIN_DECLS
 
-typedef MXB_WORKER MXS_WORKER;
-
-enum mxs_worker_msg_id
+typedef enum mxb_worker_msg_id_t
 {
     /**
      * Shutdown message.
@@ -27,23 +25,23 @@ enum mxs_worker_msg_id
      * arg1: 0
      * arg2: NULL
      */
-    MXS_WORKER_MSG_SHUTDOWN,
+    MXB_WORKER_MSG_SHUTDOWN,
 
     /**
      * Function call message.
      *
-     * arg1: Pointer to function with the prototype: void (*)(MXS_WORKER*, void* arg2);
+     * arg1: Pointer to function with the prototype: void (*)(MXB_WORKER*, void* arg2);
      * arg2: Second argument for the function passed in arg1.
      */
-    MXS_WORKER_MSG_CALL
-};
+    MXB_WORKER_MSG_CALL
+} mxb_worker_msg_id_t;
 
 /**
  * Return the current worker.
  *
  * @return A worker, or NULL if there is no current worker.
  */
-MXS_WORKER* mxs_worker_get_current();
+MXB_WORKER* mxb_worker_get_current();
 
 /**
  * Post a message to a worker.
@@ -61,6 +59,6 @@ MXS_WORKER* mxs_worker_get_current();
  *
  * @attention This function is signal safe.
  */
-bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
+bool mxb_worker_post_message(MXB_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
-MXS_END_DECLS
+MXB_END_DECLS

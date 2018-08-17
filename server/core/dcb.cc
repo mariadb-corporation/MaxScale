@@ -1157,7 +1157,7 @@ void dcb_close(DCB *dcb)
     }
 }
 
-static void cb_dcb_close_in_owning_thread(MXS_WORKER*, void* data)
+static void cb_dcb_close_in_owning_thread(MXB_WORKER*, void* data)
 {
     DCB* dcb = static_cast<DCB*>(data);
     ss_dassert(dcb);
@@ -1173,13 +1173,13 @@ void dcb_close_in_owning_thread(DCB* dcb)
     // TODO: reference counted, so that we could addref before posting, thus
     // TODO: preventing too early a deletion.
 
-    MXS_WORKER* worker = static_cast<MXS_WORKER*>(dcb->poll.owner); // The owning worker
+    MXB_WORKER* worker = static_cast<MXB_WORKER*>(dcb->poll.owner); // The owning worker
     ss_dassert(worker);
 
     intptr_t arg1 = (intptr_t)cb_dcb_close_in_owning_thread;
     intptr_t arg2 = (intptr_t)dcb;
 
-    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    if (!mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, arg1, arg2))
     {
         MXS_ERROR("Could not post dcb for closing to the owning thread..");
     }
@@ -1984,7 +1984,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
     }
 }
 
-static void dcb_hangup_foreach_worker(MXS_WORKER* worker, struct server* server)
+static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
 {
     RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
     int id = rworker->id();
@@ -2011,7 +2011,7 @@ dcb_hangup_foreach(struct server* server)
     intptr_t arg1 = (intptr_t)dcb_hangup_foreach_worker;
     intptr_t arg2 = (intptr_t)server;
 
-    RoutingWorker::broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
+    RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
 }
 
 /**
@@ -3466,7 +3466,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
                 intptr_t arg1 = (intptr_t)dcb_add_to_list_cb;
                 intptr_t arg2 = (intptr_t)dcb;
 
-                if (!worker->post_message(MXS_WORKER_MSG_CALL, arg1, arg2))
+                if (!worker->post_message(MXB_WORKER_MSG_CALL, arg1, arg2))
                 {
                     MXS_ERROR("Could not post listening DCB for book-keeping to worker.");
                 }

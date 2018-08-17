@@ -36,8 +36,9 @@
 #include <time.h>
 #include <uuid/uuid.h>
 
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/worker.h>
+#include <maxscale/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
@@ -51,7 +52,6 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
-#include <maxscale/worker.h>
 #include <maxscale/paths.h>
 
 /* The router entry points */

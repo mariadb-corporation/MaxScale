@@ -1415,9 +1415,9 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
 
     for (int i = 0; i < config_threadcount(); i++)
     {
-        MXS_WORKER* worker = mxs_rworker_get(i);
+        MXB_WORKER* worker = mxs_rworker_get(i);
         ss_dassert(worker);
-        mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, (intptr_t)worker_func,
+        mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
                                 (intptr_t)new ConnKillInfo(target_id, ss.str(), issuer));
     }
 
@@ -1433,9 +1433,9 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
 
     for (int i = 0; i < config_threadcount(); i++)
     {
-        MXS_WORKER* worker = mxs_rworker_get(i);
+        MXB_WORKER* worker = mxs_rworker_get(i);
         ss_dassert(worker);
-        mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, (intptr_t)worker_func,
+        mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
                                 (intptr_t)new UserKillInfo(user, ss.str(), issuer));
     }
 

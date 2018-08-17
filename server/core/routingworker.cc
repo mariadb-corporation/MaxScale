@@ -48,9 +48,6 @@ using std::stringstream;
 namespace
 {
 
-const int MXS_WORKER_MSG_TASK = -1;
-const int MXS_WORKER_MSG_DISPOSABLE_TASK = -2;
-
 /**
  * Unit variables.
  */
@@ -340,7 +337,7 @@ bool RoutingWorker::remove_shared_fd(int fd)
     return rv;
 }
 
-bool mxs_worker_should_shutdown(MXS_WORKER* pWorker)
+bool mxs_worker_should_shutdown(MXB_WORKER* pWorker)
 {
     return static_cast<RoutingWorker*>(pWorker)->should_shutdown();
 }
@@ -1034,12 +1031,12 @@ MXS_SESSION* mxs_rworker_find_session(uint64_t id)
     return pWorker->session_registry().lookup(id);
 }
 
-MXS_WORKER* mxs_rworker_get(int worker_id)
+MXB_WORKER* mxs_rworker_get(int worker_id)
 {
     return RoutingWorker::get(worker_id);
 }
 
-MXS_WORKER* mxs_rworker_get_current()
+MXB_WORKER* mxs_rworker_get_current()
 {
     return RoutingWorker::get_current();
 }
