@@ -1363,7 +1363,7 @@ int main(int argc, char **argv)
      */
     for (int i = 0; exitfunp[i] != NULL; i++)
     {
-        int l = atexit(*exitfunp);
+        int l = atexit(exitfunp[i]);
 
         if (l != 0)
         {
