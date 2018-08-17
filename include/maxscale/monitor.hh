@@ -15,8 +15,8 @@
 #include <maxscale/ccdefs.hh>
 
 #include <atomic>
+#include <maxbase/semaphore.hh>
 #include <maxscale/monitor.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/worker.hh>
 
 namespace maxscale
@@ -209,10 +209,10 @@ protected:
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
-    int32_t     m_shutdown;             /**< Non-zero if the monitor should shut down. */
-    bool        m_checked;              /**< Whether server access has been checked. */
-    Semaphore   m_semaphore;            /**< Semaphore for synchronizing with monitor thread. */
-    int64_t     m_loop_called;          /**< When was the loop called the last time. */
+    int32_t           m_shutdown;       /**< Non-zero if the monitor should shut down. */
+    bool              m_checked;        /**< Whether server access has been checked. */
+    mxb::Semaphore    m_semaphore;      /**< Semaphore for synchronizing with monitor thread. */
+    int64_t           m_loop_called;    /**< When was the loop called the last time. */
 
     bool pre_run() final;
     void post_run() final;

@@ -40,7 +40,6 @@ add_library(maxscale-common SHARED
   router.cc
   routingworker.cc
   secrets.cc
-  semaphore.cc
   server.cc
   service.cc
   session.cc

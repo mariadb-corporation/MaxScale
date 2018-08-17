@@ -12,19 +12,19 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <cerrno>
 #include <climits>
+#include <maxbase/assert.h>
 #include <maxbase/semaphore.h>
-#include <maxscale/debug.h>
 
-namespace maxscale
+namespace maxbase
 {
 
 class Semaphore
 {
-    Semaphore(const Semaphore&);
-    Semaphore& operator = (const Semaphore&);
+    Semaphore(const Semaphore&) = delete;
+    Semaphore& operator = (const Semaphore&) = delete;
 
 public:
     enum signal_approach_t
@@ -48,8 +48,8 @@ public:
             initial_count = SEM_VALUE_MAX;
         }
 
-        ss_debug(int rc =) sem_init(&m_sem, 0, initial_count);
-        ss_dassert(rc == 0);
+        MXB_AT_DEBUG(int rc =) sem_init(&m_sem, 0, initial_count);
+        mxb_assert(rc == 0);
     }
 
     /**
@@ -63,11 +63,11 @@ public:
 #ifdef SS_DEBUG
         int count;
         int rc = sem_getvalue(&m_sem, &count);
-        ss_dassert(rc == 0);
-        ss_dassert(count == 0);
+        mxb_assert(rc == 0);
+        mxb_assert(count == 0);
 #endif
-        ss_debug(rc =) sem_destroy(&m_sem);
-        ss_dassert(rc == 0);
+        MXB_AT_DEBUG(rc =) sem_destroy(&m_sem);
+        mxb_assert(rc == 0);
     }
 
     /**
@@ -83,11 +83,11 @@ public:
     bool post() const
     {
         int rc = sem_post(&m_sem);
-        ss_dassert((rc == 0) || (errno == EOVERFLOW));
+        mxb_assert((rc == 0) || (errno == EOVERFLOW));
 #ifdef SS_DEBUG
         if ((rc != 0) && (errno == EOVERFLOW))
         {
-            ss_info_dassert(!true, "Semaphore overflow; indicates endless loop.");
+            mxb_assert_message(!true, "Semaphore overflow; indicates endless loop.");
         }
 #endif
         return rc == 0;
@@ -116,7 +116,7 @@ public:
         }
         while ((rc != 0) && ((errno == EINTR) && (signal_approach == IGNORE_SIGNALS)));
 
-        ss_dassert((rc == 0) || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
+        mxb_assert((rc == 0) || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 
         return rc == 0;
     }
@@ -181,7 +181,7 @@ public:
         }
         while ((rc != 0) && ((errno == EINTR) && (signal_approach == IGNORE_SIGNALS)));
 
-        ss_dassert((rc == 0) ||
+        mxb_assert((rc == 0) ||
                    (errno == EAGAIN) ||
                    ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 
@@ -217,7 +217,7 @@ public:
         }
         while ((rc != 0) && ((errno == EINTR) && (signal_approach == IGNORE_SIGNALS)));
 
-        ss_dassert((rc == 0) ||
+        mxb_assert((rc == 0) ||
                    (errno == ETIMEDOUT) ||
                    ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 

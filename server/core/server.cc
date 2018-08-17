@@ -40,7 +40,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
@@ -54,7 +53,6 @@
 #include "internal/service.hh"
 
 
-using maxscale::Semaphore;
 using maxscale::RoutingWorker;
 using maxscale::Worker;
 using maxscale::WorkerTask;

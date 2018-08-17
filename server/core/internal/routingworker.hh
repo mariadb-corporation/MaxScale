@@ -185,7 +185,7 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(Task* pTask, Semaphore* pSem = NULL);
+    static size_t broadcast(Task* pTask, mxb::Semaphore* pSem = NULL);
 
     /**
      * Posts a task to all workers for execution.

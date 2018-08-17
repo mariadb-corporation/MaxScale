@@ -48,12 +48,10 @@
 #include <maxscale/platform.h>
 #include <maxscale/poll.h>
 #include <maxscale/router.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/workertask.hh>
 
 #include "internal/modules.h"
@@ -63,7 +61,6 @@
 using maxscale::RoutingWorker;
 using maxscale::Worker;
 using maxscale::WorkerTask;
-using maxscale::Semaphore;
 
 //#define DCB_LOG_EVENT_HANDLING
 #if defined(DCB_LOG_EVENT_HANDLING)

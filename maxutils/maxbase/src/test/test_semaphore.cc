@@ -18,14 +18,14 @@
 #undef NDEBUG
 #endif
 
-#include <maxscale/ccdefs.hh>
-#include <time.h>
-#include <iostream>
-#include <pthread.h>
+#include <maxbase/ccdefs.hh>
 #include <signal.h>
-#include <maxscale/semaphore.hh>
+#include <ctime>
+#include <iostream>
+#include <thread>
+#include <maxbase/semaphore.hh>
 
-using namespace maxscale;
+using namespace maxbase;
 using namespace std;
 
 namespace
@@ -38,18 +38,18 @@ void test_simple()
 
     cout << "Waiting for semaphore with a count of 1." << endl;
     rv = sem1.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     cout << "Waited" << endl;
 
     Semaphore sem2(3);
 
     cout << "Waiting 3 times for semaphore with a count of 3." << endl;
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     cout << "Waited" << endl;
 
     sem2.post();
@@ -58,11 +58,11 @@ void test_simple()
 
     cout << "Waiting 3 times for semaphore with a count of 3." << endl;
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     rv = sem2.wait();
-    ss_dassert(rv);
+    mxb_assert(rv);
     cout << "Waited" << endl;
 
     sem2.post();
@@ -84,8 +84,8 @@ void test_simple()
     rv = sem3.timedwait(4);
     finished = time(NULL);
     diff = finished - started;
-    ss_dassert(!rv);
-    ss_dassert((diff >= 2) && (diff <= 4));
+    mxb_assert(!rv);
+    mxb_assert((diff >= 2) && (diff <= 4));
     cout << "Waited." << endl;
 
     cout << "Waiting 1 second for semaphore with a count of 0..." << endl;
@@ -93,8 +93,8 @@ void test_simple()
     rv = sem3.timedwait(0, 999999999);
     finished = time(NULL);
     diff = finished - started;
-    ss_dassert(!rv);
-    ss_dassert((diff >= 0) && (diff <= 2));
+    mxb_assert(!rv);
+    mxb_assert((diff >= 0) && (diff <= 2));
     cout << "Waited." << endl;
 }
 
@@ -112,7 +112,7 @@ void* thread_main(void* pArg)
 void test_threads()
 {
     const int n_threads = 10;
-    pthread_t threads[n_threads];
+    std::thread threads[n_threads];
 
     Semaphore sem;
 
@@ -120,8 +120,7 @@ void test_threads()
 
     for (int i = 0; i < n_threads; ++i)
     {
-        int rc = pthread_create(&threads[i], NULL, thread_main, &sem);
-        ss_dassert(rc == 0);
+        threads[i] = std::thread(thread_main, &sem);
     }
 
     cout << "Waiting for threads." << endl;
@@ -132,13 +131,13 @@ void test_threads()
 
     for (int i = 0; i < n_threads; ++i)
     {
-        pthread_join(threads[i], NULL);
+        threads[i].join();
     }
 
     cout << "Joined." << endl;
 }
 
-void* send_signal(void*)
+void send_signal()
 {
     cout << "Sleeping 2 seconds." << endl;
     sleep(2);
@@ -146,8 +145,6 @@ void* send_signal(void*)
     cout << "Sending signal" << endl;
     kill(getpid(), SIGTERM);
     cout << "Sent signal" << endl;
-
-    return NULL;
 }
 
 void sighandler(int s)
@@ -160,11 +157,7 @@ void test_signal()
 
     signal(SIGTERM, sighandler);
 
-    pthread_t thread;
-    int rc;
-
-    rc = pthread_create(&thread, NULL, send_signal, NULL);
-    ss_dassert(rc == 0);
+    std::thread thread(send_signal);
 
     bool waited;
 
@@ -173,21 +166,20 @@ void test_signal()
     cout << "Waited" << endl;
 
     // Should return false and errno should be EINTR.
-    ss_dassert(!waited && (errno == EINTR));
+    mxb_assert(!waited && (errno == EINTR));
 
-    pthread_join(thread, NULL);
+    thread.join();
 
-    rc = pthread_create(&thread, NULL, send_signal, NULL);
-    ss_dassert(rc == 0);
+    thread = std::thread(send_signal);
 
     cout << "Waiting" << endl;
     waited = sem.timedwait(4, Semaphore::IGNORE_SIGNALS);
     cout << "Waited" << endl;
 
     // Should return false and errno should be ETIMEDOUT.
-    ss_dassert(!waited && (errno == ETIMEDOUT));
+    mxb_assert(!waited && (errno == ETIMEDOUT));
 
-    pthread_join(thread, NULL);
+    thread.join();
 }
 
 }

@@ -24,7 +24,6 @@
 
 #include <maxbase/atomic.h>
 #include <maxscale/log.h>
-#include <maxscale/semaphore.hh>
 
 #define WORKER_ABSENT_ID -1
 
@@ -411,7 +410,7 @@ Worker* Worker::get_current()
     return this_thread.pCurrent_worker;
 }
 
-bool Worker::execute(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
+bool Worker::execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
     bool rval = true;
@@ -469,7 +468,7 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
-bool Worker::execute(function<void ()> func, Semaphore* pSem, execute_mode_t mode)
+bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode)
 {
 
     class CustomTask : public maxscale::WorkerTask
@@ -510,13 +509,13 @@ bool Worker::execute(function<void ()> func, Semaphore* pSem, execute_mode_t mod
 
 bool Worker::call(Task& task, execute_mode_t mode)
 {
-    Semaphore sem;
+    mxb::Semaphore sem;
     return execute(&task, &sem, mode) && sem.wait();
 }
 
 bool Worker::call(function<void ()> func, execute_mode_t mode)
 {
-    Semaphore sem;
+    mxb::Semaphore sem;
     return execute(func, &sem, mode) && sem.wait();
 }
 
@@ -620,7 +619,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
     case MXS_WORKER_MSG_TASK:
         {
             Task *pTask = reinterpret_cast<Task*>(msg.arg1());
-            Semaphore* pSem = reinterpret_cast<Semaphore*>(msg.arg2());
+            mxb::Semaphore* pSem = reinterpret_cast<mxb::Semaphore*>(msg.arg2());
 
             pTask->execute(*this);
 

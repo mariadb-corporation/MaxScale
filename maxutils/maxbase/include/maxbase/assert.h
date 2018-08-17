@@ -31,7 +31,7 @@ MXB_BEGIN_DECLS
 
 #define mxb_assert_message(exp,message) do { if(!(exp)){     \
             const char *debug_expr = #exp; \
-            MXS_ERROR("debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, message, debug_expr); \
+            MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, message, debug_expr); \
             fprintf(stderr, "debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, message, debug_expr); \
             raise(SIGABRT);} } while (false)
 

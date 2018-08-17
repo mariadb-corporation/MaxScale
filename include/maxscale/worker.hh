@@ -20,6 +20,7 @@
 #include <thread>
 #include <unordered_set>
 
+#include <maxbase/semaphore.hh>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
@@ -30,8 +31,6 @@
 
 namespace maxscale
 {
-
-class Semaphore;
 
 struct WORKER_STATISTICS
 {
@@ -728,7 +727,7 @@ public:
      * The semaphore can be used for waiting for the task to be finished.
      *
      * @code
-     *     Semaphore sem;
+     *     mxb::Semaphore sem;
      *     MyTask task;
      *
      *     pWorker->execute(&task, &sem);
@@ -737,7 +736,7 @@ public:
      *     MyResult& result = task.result();
      * @endcode
      */
-    bool execute(Task* pTask, Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode);
 
     bool execute(Task* pTask, enum execute_mode_t mode)
     {
@@ -765,7 +764,7 @@ public:
      *
      * @return True, if task was posted to the worker
      */
-    bool execute(std::function<void ()> func, Semaphore* pSem, enum execute_mode_t mode);
+    bool execute(std::function<void ()> func, mxb::Semaphore* pSem, enum execute_mode_t mode);
 
     bool execute(std::function<void ()> func, enum execute_mode_t mode)
     {

@@ -27,7 +27,6 @@
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/platform.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/utils.hh>
 
@@ -39,10 +38,10 @@
 
 #define WORKER_ABSENT_ID -1
 
+using maxbase::Semaphore;
 using maxscale::RoutingWorker;
 using maxscale::WorkerLoad;
 using maxscale::Closer;
-using maxscale::Semaphore;
 using std::vector;
 using std::stringstream;
 
@@ -1202,7 +1201,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int id)
 {
     Worker* target = RoutingWorker::get(id);
     WorkerInfoTask task(zHost, id + 1);
-    mxs::Semaphore sem;
+    Semaphore sem;
 
     target->execute(&task, &sem, mxs::Worker::EXECUTE_AUTO);
     sem.wait();

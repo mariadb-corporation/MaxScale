@@ -23,7 +23,6 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/server.hh>
 #include <maxscale/spinlock.hh>
 
