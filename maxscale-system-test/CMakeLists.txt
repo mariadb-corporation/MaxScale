@@ -11,27 +11,19 @@
 #     EXTERN_BACKEND
 #     BREAKS_REPL
 #     BREAKS_GALERA
-
-project(maxscale_system_test)
-cmake_minimum_required(VERSION 2.8)
 set(CTEST_BUILD_NAME "${BUILDNAME}")
-
-set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of
-build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
-Release RelWithDebInfo MinSizeRel.")
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb -Wall -Wextra -Werror -Wno-format-overflow -Wno-unused-function -Wno-unused-parameter -Werror=format-security")
 set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
 set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
 
-enable_testing()
-
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
 
-include_directories(${CMAKE_SOURCE_DIR})
-include_directories(${MAXUTILS_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 
 # The core library
 include_directories(${CMAKE_BINARY_DIR})
@@ -41,10 +33,10 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
   blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp
   # Include the CDC connector in the core library
-  ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
-target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} ${MAXUTILS_LIBRARIES} z m pthread ssl dl rt crypto crypt)
+  ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
+target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)
 install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c jansson maxutils)
+add_dependencies(testcore connector-c jansson maxbase)
 
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
@@ -217,7 +209,7 @@ add_test_executable(bug730.cpp bug730 bug730 LABELS regexfilter REPL_BACKEND)
 add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol REPL_BACKEND 10.2)
 
 # Tests for the CCRFilter module
-add_test_executable(ccrfilter.cpp ccrfilter ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
+add_test_executable(ccrfilter.cpp ccrfilter_test ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
 
 # Tries to reconfigure replication setup to use another node as a Master
 add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
@@ -743,7 +735,7 @@ add_test_executable(mxs1896_load_data_infile.cpp mxs1896_load_data_infile replic
 add_test_executable(mxs1899_generated_cnf.cpp mxs1899_generated_cnf replication LABELS REPL_BACKEND)
 
 # 'namedserverfilter' test
-add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
+add_test_executable(namedserverfilter.cpp namedserverfilter_test namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
 # Authentication error testing
 add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIGHT REPL_BACKEND)
@@ -1059,6 +1051,4 @@ add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS R
 add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL)
 
 
-configure_file(templates.h.in templates.h @ONLY)
-
-include(CTest)
+configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)

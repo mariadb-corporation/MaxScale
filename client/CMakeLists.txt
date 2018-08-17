@@ -1,5 +1,5 @@
 add_executable(maxadmin maxadmin.c)
-add_dependencies(maxadmin maxutils)
+add_dependencies(maxadmin maxbase)
 
 find_library(HIST edit)
 if(HIST)

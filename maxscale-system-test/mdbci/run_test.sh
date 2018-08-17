@@ -64,9 +64,11 @@ res=$?
 ulimit -c unlimited
 if [ $res == 0 ] ; then
     . ${script_dir}/set_env.sh $name
-    cd ${script_dir}/..
+    cd ${script_dir}/../../
+
     mkdir build && cd build
-    cmake .. -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
+    cmake ../../ -DWITH_SYSTEM_TESTS -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
+    cd maxscale-system-test
     make
 
     if [ ! -z "${named_test}" ] ; then
@@ -82,7 +84,7 @@ if [ $res == 0 ] ; then
             exit 1
         fi
         ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
-        ctest -VV -D Nightly ${test_set}
+        ctest -VV ${test_set}
     fi
     cp core.* ${logs_publish_dir}
     ${script_dir}/copy_logs.sh

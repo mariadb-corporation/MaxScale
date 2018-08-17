@@ -61,8 +61,8 @@ elseif(WITH_TCMALLOC)
 endif()
 
 target_link_libraries(maxscale-common
+  maxbase
   ${MARIADB_CONNECTOR_LIBRARIES}
-  ${MAXUTILS_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}
   ${JANSSON_LIBRARIES}
@@ -88,7 +88,7 @@ if (HAVE_LIBDL)
   target_link_libraries(maxscale-common dl)
 endif()
 
-add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxutils)
+add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxbase)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 

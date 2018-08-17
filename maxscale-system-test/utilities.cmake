@@ -105,20 +105,6 @@ add_test_executable_notest(binlog_big_transaction.cpp binlog_big_transaction set
 add_test_executable_notest(avro_long.cpp avro_long avro)
 add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 
-# Build the MariaDB Connector/C 3.0
-
-set(CONNECTOR_C_VERSION "v3.0.2" CACHE STRING "The Connector-C version to use")
-
-include(ExternalProject)
-ExternalProject_Add(connector-c
-  GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c.git"
-  GIT_TAG ${CONNECTOR_C_VERSION}
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
-  UPDATE_COMMAND "")
-
-include_directories(${CMAKE_BINARY_DIR}/include)
-set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
-
 #
 # Check that all required components are present. To build even without them,
 # add e.g. -DHAVE_PHP=Y to the CMake invocation
@@ -133,32 +119,3 @@ find_program(HAVE_PHP php)
 if (NOT HAVE_PHP)
   message(FATAL_ERROR "Could not find php.")
 endif()
-
-# Build the Jansson library from source
-set(JANSSON_REPO "https://github.com/akheron/jansson.git" CACHE STRING "Jansson Git repository")
-
-# Release 2.9 of Jansson
-set(JANSSON_TAG "v2.9" CACHE STRING "Jansson Git tag")
-
-ExternalProject_Add(jansson
-  GIT_REPOSITORY ${JANSSON_REPO}
-  GIT_TAG ${JANSSON_TAG}
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/jansson/install -DCMAKE_C_FLAGS=-fPIC -DJANSSON_BUILD_DOCS=OFF
-  BINARY_DIR ${CMAKE_BINARY_DIR}/jansson
-  INSTALL_DIR ${CMAKE_BINARY_DIR}/jansson/install
-  UPDATE_COMMAND "")
-
-set(JANSSON_FOUND TRUE CACHE INTERNAL "")
-set(JANSSON_STATIC_FOUND TRUE CACHE INTERNAL "")
-set(JANSSON_INCLUDE_DIR ${CMAKE_BINARY_DIR}/jansson/install/include CACHE INTERNAL "")
-set(JANSSON_STATIC_LIBRARIES ${CMAKE_BINARY_DIR}/jansson/install/lib/libjansson.a CACHE INTERNAL "")
-set(JANSSON_LIBRARIES ${JANSSON_STATIC_LIBRARIES} CACHE INTERNAL "")
-
-# Build the maxutils library
-ExternalProject_Add(maxutils
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/../maxutils/
-  BINARY_DIR ${CMAKE_BINARY_DIR}/maxutils
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/maxutils/install)
-
-set(MAXUTILS_INCLUDE_DIR ${CMAKE_BINARY_DIR}/maxutils/install/include CACHE INTERNAL "")
-set(MAXUTILS_LIBRARIES ${CMAKE_BINARY_DIR}/maxutils/install/lib/libmaxbase.a CACHE INTERNAL "")

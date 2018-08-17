@@ -58,10 +58,6 @@ include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
 
-# Build the MaxUtils libraries
-include(cmake/BuildMaxUtils.cmake)
-include_directories(${MAXUTILS_INCLUDE_DIR})
-
 include_directories(${JANSSON_INCLUDE_DIR})
 
 if(NOT OPENSSL_FOUND)
@@ -179,12 +175,14 @@ include_directories(server/inih)
 include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
+include_directories(maxutils/maxbase/include)
 
 if (BUILD_CDC)
   include_directories(avro)
   add_subdirectory(avro)
 endif()
 
+add_subdirectory(maxutils)
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
@@ -196,6 +194,10 @@ if(NOT WITHOUT_MAXADMIN)
 endif()
 if(BUILD_TESTS)
   add_subdirectory(examples)
+endif()
+
+if(BUILD_SYSTEM_TESTS)
+  add_subdirectory(maxscale-system-test)
 endif()
 
 # Generate text versions of some documents
