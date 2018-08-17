@@ -2629,7 +2629,6 @@ void config_set_global_defaults()
     {
         gateway.version_string = NULL;
     }
-    gateway.id = 0;
 
     /* get release string */
     if (!config_get_release_string(gateway.release_string))
@@ -3138,11 +3137,6 @@ config_get_release_string(char* release)
     {
         return 0;
     }
-}
-
-unsigned long config_get_gateway_id()
-{
-    return gateway.id;
 }
 
 MXS_CONFIG* config_get_global_options()

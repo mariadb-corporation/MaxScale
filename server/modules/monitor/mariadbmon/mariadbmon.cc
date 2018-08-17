@@ -58,7 +58,6 @@ static const char DIAG_ERROR[] = "Internal error, could not print diagnostics. "
 
 MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstance(monitor)
-    , m_id(config_get_global_options()->id)
     , m_master_gtid_domain(GTID_DOMAIN_UNKNOWN)
     , m_external_master_port(PORT_UNKNOWN)
     , m_cluster_topology_changed(true)
@@ -204,7 +203,6 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
 
     m_detect_stale_master = config_get_bool(params, "detect_stale_master");
     m_detect_stale_slave = config_get_bool(params, "detect_stale_slave");
-    m_detect_replication_lag = config_get_bool(params, "detect_replication_lag");
     m_ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     m_detect_standalone_master = config_get_bool(params, CN_DETECT_STANDALONE_MASTER);
     m_failcount = config_get_integer(params, CN_FAILCOUNT);
@@ -281,8 +279,6 @@ string MariaDBMonitor::diagnostics_to_string() const
     rval += string_printf("Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
     rval += string_printf("Enforce read-only:      %s\n", m_enforce_read_only_slaves ?
                "Enabled" : "Disabled");
-    rval += string_printf("MaxScale monitor ID:    %lu\n", m_id);
-    rval += string_printf("Detect replication lag: %s\n", (m_detect_replication_lag) ? "Enabled" : "Disabled");
     rval += string_printf("Detect stale master:    %s\n", (m_detect_stale_master == 1) ?
                "Enabled" : "Disabled");
     if (m_excluded_servers.size() > 0)
@@ -320,8 +316,6 @@ json_t* MariaDBMonitor::diagnostics_json() const
 json_t* MariaDBMonitor::diagnostics_to_json() const
 {
     json_t* rval = MonitorInstance::diagnostics_json();
-    json_object_set_new(rval, "monitor_id", json_integer(m_id));
-
     if (!m_servers.empty())
     {
         json_t* arr = json_array();
@@ -416,11 +410,6 @@ void MariaDBMonitor::pre_loop()
         assign_new_master(get_server_info(journal_master));
     }
 
-    if (m_detect_replication_lag)
-    {
-        check_maxscale_schema_replication();
-    }
-
     /* This loop can be removed if/once the replication check code is inside tick. It's required so that
      * the monitor makes new connections when starting. */
     for (MariaDBServer* server : m_servers)
@@ -476,12 +465,6 @@ void MariaDBMonitor::tick()
 
     // Sanity check. Master may not be both slave and master.
     ss_dassert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
-
-    /* Generate the replication heartbeat event by performing an update */
-    if (m_detect_replication_lag && m_master && m_master->is_master())
-    {
-        measure_replication_lag();
-    }
 
     // Update shared status. The next functions read the shared status. TODO: change the following
     // functions to read "pending_status" instead.
@@ -636,22 +619,6 @@ void MariaDBMonitor::update_external_master()
     }
 }
 
-void MariaDBMonitor::measure_replication_lag()
-{
-    ss_dassert(m_master && m_master->is_master());
-    set_master_heartbeat(m_master);
-    for (MariaDBServer* slave : m_servers)
-    {
-        // No lag measurement for Binlog Server
-        if (slave->is_slave() &&
-            (slave->m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
-             slave->m_version == MariaDBServer::version::MARIADB_100))
-        {
-            set_slave_heartbeat(slave);
-        }
-    }
-}
-
 void MariaDBMonitor::log_master_changes()
 {
     MXS_MONITORED_SERVER* root_master = m_master ? m_master->m_server_base : NULL;
@@ -709,252 +676,6 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
     m_warn_have_better_master = true;
-}
-
-/**
- * Simple wrapper for mxs_mysql_query and mysql_num_rows
- *
- * @param database Database connection
- * @param query    Query to execute
- *
- * @return Number of rows or -1 on error
- */
-static int get_row_count(MXS_MONITORED_SERVER *database, const char* query)
-{
-    int returned_rows = -1;
-
-    if (mxs_mysql_query(database->con, query) == 0)
-    {
-        MYSQL_RES* result = mysql_store_result(database->con);
-
-        if (result)
-        {
-            returned_rows = mysql_num_rows(result);
-            mysql_free_result(result);
-        }
-    }
-
-    return returned_rows;
-}
-
-/**
- * Write the replication heartbeat into the maxscale_schema.replication_heartbeat table in the current master.
- * The inserted value will be seen from all slaves replicating from this master.
- *
- * @param server      The server to write the heartbeat to
- */
-void MariaDBMonitor::set_master_heartbeat(MariaDBServer* server)
-{
-    time_t heartbeat;
-    time_t purge_time;
-    char heartbeat_insert_query[512] = "";
-    char heartbeat_purge_query[512] = "";
-
-    if (m_master == NULL)
-    {
-        MXS_ERROR("set_master_heartbeat called without an available Master server");
-        return;
-    }
-
-    MXS_MONITORED_SERVER* database = server->m_server_base;
-    int n_db = get_row_count(database, "SELECT schema_name FROM information_schema.schemata "
-                             "WHERE schema_name = 'maxscale_schema'");
-    int n_tbl = get_row_count(database, "SELECT table_name FROM information_schema.tables "
-                              "WHERE table_schema = 'maxscale_schema' "
-                              "AND table_name = 'replication_heartbeat'");
-
-    if (n_db == -1 || n_tbl == -1 ||
-        (n_db == 0 && mxs_mysql_query(database->con, "CREATE DATABASE maxscale_schema")) ||
-        (n_tbl == 0 && mxs_mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-                                       "maxscale_schema.replication_heartbeat "
-                                       "(maxscale_id INT NOT NULL, "
-                                       "master_server_id INT NOT NULL, "
-                                       "master_timestamp INT UNSIGNED NOT NULL, "
-                                       "PRIMARY KEY ( master_server_id, maxscale_id ) )")))
-    {
-        MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
-                  "table in Master server: %s", mysql_error(database->con));
-        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-        return;
-    }
-
-    /* auto purge old values after 48 hours*/
-    purge_time = time(0) - (3600 * 48);
-
-    sprintf(heartbeat_purge_query,
-            "DELETE FROM maxscale_schema.replication_heartbeat WHERE master_timestamp < %lu", purge_time);
-
-    if (mxs_mysql_query(database->con, heartbeat_purge_query))
-    {
-        MXS_ERROR("Error deleting from maxscale_schema.replication_heartbeat "
-                  "table: [%s], %s",
-                  heartbeat_purge_query,
-                  mysql_error(database->con));
-    }
-
-    heartbeat = time(0);
-
-    /* set node_ts for master as time(0) */
-    database->server->node_ts = heartbeat;
-
-    sprintf(heartbeat_insert_query,
-            "UPDATE maxscale_schema.replication_heartbeat "
-            "SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
-            heartbeat, m_master->m_server_base->server->node_id, m_id);
-
-    /* Try to insert MaxScale timestamp into master */
-    if (mxs_mysql_query(database->con, heartbeat_insert_query))
-    {
-
-        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-
-        MXS_ERROR("Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
-                  heartbeat_insert_query,
-                  mysql_error(database->con));
-    }
-    else
-    {
-        if (mysql_affected_rows(database->con) == 0)
-        {
-            heartbeat = time(0);
-            sprintf(heartbeat_insert_query,
-                    "REPLACE INTO maxscale_schema.replication_heartbeat "
-                    "(master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
-                    m_master->m_server_base->server->node_id, m_id, heartbeat);
-
-            if (mxs_mysql_query(database->con, heartbeat_insert_query))
-            {
-
-                database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-
-                MXS_ERROR("Error inserting into "
-                          "maxscale_schema.replication_heartbeat table: [%s], %s",
-                          heartbeat_insert_query,
-                          mysql_error(database->con));
-            }
-            else
-            {
-                /* Set replication lag to 0 for the master */
-                database->server->rlag = 0;
-
-                MXS_DEBUG("heartbeat table inserted data for %s:%i",
-                          database->server->address, database->server->port);
-            }
-        }
-        else
-        {
-            /* Set replication lag as 0 for the master */
-            database->server->rlag = 0;
-
-            MXS_DEBUG("heartbeat table updated for Master %s:%i",
-                      database->server->address, database->server->port);
-        }
-    }
-}
-
-/*
- * This function gets the replication heartbeat from the maxscale_schema.replication_heartbeat table in
- * the current slave and stores the timestamp and replication lag in the slave server struct.
- *
- * @param server      The slave to measure lag at
- */
-void MariaDBMonitor::set_slave_heartbeat(MariaDBServer* server)
-{
-    time_t heartbeat;
-    char select_heartbeat_query[256] = "";
-    MYSQL_ROW row;
-    MYSQL_RES *result;
-
-    if (m_master == NULL)
-    {
-        MXS_ERROR("set_slave_heartbeat called without an available Master server");
-        return;
-    }
-
-    /* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
-
-    sprintf(select_heartbeat_query, "SELECT master_timestamp "
-            "FROM maxscale_schema.replication_heartbeat "
-            "WHERE maxscale_id = %lu AND master_server_id = %li",
-            m_id, m_master->m_server_base->server->node_id);
-
-    MXS_MONITORED_SERVER* database = server->m_server_base;
-    /* if there is a master then send the query to the slave with master_id */
-    if (m_master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
-                             && (result = mysql_store_result(database->con)) != NULL))
-    {
-        int rows_found = 0;
-
-        while ((row = mysql_fetch_row(result)))
-        {
-            int rlag = MAX_RLAG_NOT_AVAILABLE;
-            time_t slave_read;
-
-            rows_found = 1;
-
-            heartbeat = time(0);
-            slave_read = strtoul(row[0], NULL, 10);
-
-            if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) ||
-                (errno != 0 && slave_read == 0))
-            {
-                slave_read = 0;
-            }
-
-            if (slave_read)
-            {
-                /* set the replication lag */
-                rlag = heartbeat - slave_read;
-            }
-
-            /* set this node_ts as master_timestamp read from replication_heartbeat table */
-            database->server->node_ts = slave_read;
-
-            if (rlag >= 0)
-            {
-                /* store rlag only if greater than monitor sampling interval */
-                database->server->rlag = ((unsigned int)rlag > (m_monitor->interval / 1000)) ? rlag : 0;
-            }
-            else
-            {
-                database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-            }
-
-            MXS_DEBUG("Slave %s:%i has %i seconds lag",
-                      database->server->address,
-                      database->server->port,
-                      database->server->rlag);
-        }
-        if (!rows_found)
-        {
-            database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-            database->server->node_ts = 0;
-        }
-
-        mysql_free_result(result);
-    }
-    else
-    {
-        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-        database->server->node_ts = 0;
-
-        if (m_master->m_server_base->server->node_id < 0)
-        {
-            MXS_ERROR("error: replication heartbeat: "
-                      "master_server_id NOT available for %s:%i",
-                      database->server->address,
-                      database->server->port);
-        }
-        else
-        {
-            MXS_ERROR("error: replication heartbeat: "
-                      "failed selecting from hearthbeat table of %s:%i : [%s], %s",
-                      database->server->address,
-                      database->server->port,
-                      select_heartbeat_query,
-                      mysql_error(database->con));
-        }
-    }
 }
 
 /**

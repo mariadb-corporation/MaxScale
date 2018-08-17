@@ -125,7 +125,6 @@ private:
         bool result_waiting = false;         /**< Guard variable for the above */
     };
 
-    unsigned long m_id;                  /**< Monitor ID */
     ServerArray m_servers;               /**< Servers of the monitor */
     ServerInfoMap m_server_info;         /**< Map from server base struct to MariaDBServer */
     ManualCommand m_manual_cmd;          /**< Communicates manual commands and results */
@@ -144,7 +143,6 @@ private:
     CycleInfo m_master_cycle_status;     /**< Info about master server cycle from previous round */
 
     // Replication topology detection settings
-    bool m_detect_replication_lag;       /**< Monitor flag for MySQL replication heartbeat */
     bool m_detect_stale_master;          /**< Monitor flag for MySQL replication Stale Master detection */
     bool m_detect_stale_slave;           /**< Monitor flag for MySQL replication Stale Slave detection */
     bool m_detect_standalone_master;     /**< If standalone master are detected */
@@ -201,10 +199,6 @@ private:
     void log_master_changes();
     void update_gtid_domain();
     void update_external_master();
-    void set_master_heartbeat(MariaDBServer*);
-    void set_slave_heartbeat(MariaDBServer*);
-    void measure_replication_lag();
-    void check_maxscale_schema_replication();
     void build_replication_graph();
     void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index, int *cycle);
     MariaDBServer* find_topology_master_server(std::string* msg_out);

@@ -245,7 +245,6 @@ typedef struct
     char          release_string[RELEASE_STR_LENGTH]; /**< The release name string of the system */
     char          sysname[SYSNAME_LEN];    /**< The OS name of the system */
     uint8_t       mac_sha1[SHA_DIGEST_LENGTH];         /**< The SHA1 digest of an interface MAC address */
-    unsigned long id;                                  /**< MaxScale ID */
     unsigned int  n_nbpoll;                            /**< Tune number of non-blocking polls */
     unsigned int  pollsleep;                           /**< Wait time in blocking polls */
     int           syslog;                              /**< Log to syslog */
