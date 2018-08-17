@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <functional>
 
 #ifdef HAVE_GLIBC
 #include <execinfo.h>
@@ -119,7 +120,7 @@ static void extract_file_and_line(const char* symbols, char* cmd, size_t size)
 namespace maxbase
 {
 
-void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
+void dump_stacktrace(std::function<void(const char*, const char*)> handler)
 {
     void *addrs[128];
     int count = backtrace(addrs, 128);
@@ -135,6 +136,11 @@ void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
         }
         free(symbols);
     }
+}
+
+void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
+{
+    dump_stacktrace([&](const char* symbol, const char* command){handler(symbol, command);});
 }
 
 }
