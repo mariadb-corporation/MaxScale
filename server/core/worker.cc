@@ -527,16 +527,29 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
     return m_pQueue->post(message);
 }
 
-void Worker::run()
+void Worker::run(mxs::Semaphore* pSem)
 {
     this_thread.pCurrent_worker = this;
 
     if (pre_run())
     {
+        m_state = IDLE;
+
+        if (pSem)
+        {
+            pSem->post();
+        }
+
         poll_waitevents();
+
+        m_state = STOPPED;
 
         post_run();
         MXS_INFO("Worker %p has shut down.", this);
+    }
+    else if (pSem)
+    {
+        pSem->post();
     }
 
     this_thread.pCurrent_worker = nullptr;
@@ -546,6 +559,7 @@ bool Worker::start()
 {
     ss_dassert(!m_started);
     ss_dassert(m_thread.get_id() == std::thread::id());
+    mxs::Semaphore sem;
 
     m_started = true;
     m_should_shutdown = false;
@@ -553,7 +567,8 @@ bool Worker::start()
 
     try
     {
-        m_thread = std::thread(&Worker::thread_main, this);
+        m_thread = std::thread(&Worker::thread_main, this, &sem);
+        sem.wait();
     }
     catch (const std::exception& x)
     {
@@ -649,9 +664,9 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
  * @param arg A worker.
  */
 //static
-void Worker::thread_main(Worker* pThis)
+void Worker::thread_main(Worker* pThis, mxs::Semaphore* pSem)
 {
-    pThis->run();
+    pThis->run(pSem);
 }
 
 bool Worker::pre_run()
@@ -740,8 +755,6 @@ long time_in_100ms_ticks()
 void Worker::poll_waitevents()
 {
     struct epoll_event events[m_max_events];
-
-    m_state = IDLE;
 
     m_load.reset();
 
@@ -877,8 +890,6 @@ void Worker::poll_waitevents()
 
         m_state = IDLE;
     } /*< while(1) */
-
-    m_state = STOPPED;
 }
 
 namespace

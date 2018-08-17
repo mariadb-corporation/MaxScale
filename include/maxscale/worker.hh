@@ -22,6 +22,7 @@
 
 #include <maxbase/semaphore.hh>
 #include <maxscale/platform.h>
+#include <maxscale/semaphore.hh>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
 #include <maxscale/worker.h>
@@ -672,8 +673,10 @@ public:
      * The worker will run the poll loop, until it is told to shut down.
      *
      * @attention  This function will run in the calling thread.
+     *
+     * @param pSem Semaphore that is posted on once the thread has started
      */
-    void run();
+    void run(mxs::Semaphore* pSem = NULL);
 
     /**
      * Run worker in separate thread.
@@ -1177,7 +1180,7 @@ private:
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
-    static void thread_main(Worker* pThis);
+    static void thread_main(Worker* pThis, mxs::Semaphore* pSem);
 
     void poll_waitevents();
 
