@@ -14,15 +14,15 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <cstring>
 #include <functional>
 #include <map>
 #include <memory>
 #include <thread>
-#include <unordered_set>
+#include <unordered_map>
 
+#include <maxbase/atomic.h>
 #include <maxbase/semaphore.hh>
-#include <maxscale/session.h>
-#include <maxscale/utils.hh>
 #include <maxscale/worker.h>
 #include <maxscale/workertask.hh>
 

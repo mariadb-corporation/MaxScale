@@ -25,7 +25,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/routingworker.h>
 #include <maxscale/secrets.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 // TODO: For monitor_add_parameters
 #include "../../../core/internal/monitor.h"
 

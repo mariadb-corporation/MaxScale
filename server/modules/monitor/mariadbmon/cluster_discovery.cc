@@ -18,6 +18,7 @@
 #include <queue>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/utils.hh>
 
 
 using std::string;

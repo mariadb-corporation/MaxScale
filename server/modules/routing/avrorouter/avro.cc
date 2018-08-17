@@ -40,7 +40,7 @@
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/routingworker.h>
 #include <maxscale/worker.hh>
 #include <binlog_common.h>
