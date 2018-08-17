@@ -163,8 +163,6 @@ int main(int argc, char **argv)
     inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
     if (inst == NULL)
     {
-        mxs_log_finish();
-
         return 1;
     }
     const char* user;
@@ -884,7 +882,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    mxs_log_finish();
     MXS_FREE(inst->user);
     MXS_FREE(inst->password);
     MXS_FREE(inst->fileroot);
