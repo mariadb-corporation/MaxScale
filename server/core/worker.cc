@@ -527,7 +527,7 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
     return m_pQueue->post(message);
 }
 
-void Worker::run(mxs::Semaphore* pSem)
+void Worker::run(mxb::Semaphore* pSem)
 {
     this_thread.pCurrent_worker = this;
 
@@ -559,7 +559,7 @@ bool Worker::start()
 {
     ss_dassert(!m_started);
     ss_dassert(m_thread.get_id() == std::thread::id());
-    mxs::Semaphore sem;
+    mxb::Semaphore sem;
 
     m_started = true;
     m_should_shutdown = false;
@@ -664,7 +664,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
  * @param arg A worker.
  */
 //static
-void Worker::thread_main(Worker* pThis, mxs::Semaphore* pSem)
+void Worker::thread_main(Worker* pThis, mxb::Semaphore* pSem)
 {
     pThis->run(pSem);
 }

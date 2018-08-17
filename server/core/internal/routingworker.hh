@@ -16,6 +16,7 @@
 
 #include <unordered_map>
 
+#include <maxbase/semaphore.hh>
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>

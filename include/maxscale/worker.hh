@@ -22,7 +22,6 @@
 
 #include <maxbase/semaphore.hh>
 #include <maxscale/platform.h>
-#include <maxscale/semaphore.hh>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
 #include <maxscale/worker.h>
@@ -676,7 +675,7 @@ public:
      *
      * @param pSem Semaphore that is posted on once the thread has started
      */
-    void run(mxs::Semaphore* pSem = NULL);
+    void run(mxb::Semaphore* pSem = NULL);
 
     /**
      * Run worker in separate thread.
@@ -1180,7 +1179,7 @@ private:
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
-    static void thread_main(Worker* pThis, mxs::Semaphore* pSem);
+    static void thread_main(Worker* pThis, mxb::Semaphore* pSem);
 
     void poll_waitevents();
 
