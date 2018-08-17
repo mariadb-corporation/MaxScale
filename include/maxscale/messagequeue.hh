@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/poll_core.hh>
+#include <maxbase/poll.hh>
 
 namespace maxscale
 {
@@ -107,7 +107,7 @@ public:
  * The class @c MessageQueue provides a cross thread message queue implemented
  * on top of a pipe.
  */
-class MessageQueue : private MxsPollData
+class MessageQueue : private mxb::PollData
 {
     MessageQueue(const MessageQueue&);
     MessageQueue& operator = (const MessageQueue&);
@@ -195,7 +195,7 @@ private:
 
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
 
-    static uint32_t poll_handler(MXS_POLL_DATA* pData, void* worker, uint32_t events);
+    static uint32_t poll_handler(MXB_POLL_DATA* pData, void* worker, uint32_t events);
 
 private:
     Handler& m_handler;

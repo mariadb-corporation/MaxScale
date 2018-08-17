@@ -115,7 +115,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB *dcb, uint32_t events);
 static DCB *dcb_find_free();
 static void dcb_remove_from_list(DCB *dcb);
 
-static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, void* worker, uint32_t events);
+static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, void* worker, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 static int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
@@ -2985,7 +2985,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     ss_dassert(owner == RoutingWorker::get_current() ||
                dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
-    uint32_t rc = MXS_POLL_NOP;
+    uint32_t rc = MXB_POLL_NOP;
 
     /* It isn't obvious that this is impossible */
     /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
@@ -3021,7 +3021,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
         if (eno == 0)
         {
-            rc |= MXS_POLL_WRITE;
+            rc |= MXB_POLL_WRITE;
 
             if (dcb_session_check(dcb, "write_ready"))
             {
@@ -3050,7 +3050,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                       "Accept in fd %d",
                       pthread_self(),
                       dcb->fd);
-            rc |= MXS_POLL_ACCEPT;
+            rc |= MXB_POLL_ACCEPT;
 
             if (dcb_session_check(dcb, "accept"))
             {
@@ -3065,7 +3065,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                       pthread_self(),
                       dcb,
                       dcb->fd);
-            rc |= MXS_POLL_READ;
+            rc |= MXB_POLL_READ;
 
             if (dcb_session_check(dcb, "read"))
             {
@@ -3098,7 +3098,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                       eno,
                       strerror_r(eno, errbuf, sizeof(errbuf)));
         }
-        rc |= MXS_POLL_ERROR;
+        rc |= MXB_POLL_ERROR;
 
         if (dcb_session_check(dcb, "error"))
         {
@@ -3119,7 +3119,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        rc |= MXS_POLL_HUP;
+        rc |= MXB_POLL_HUP;
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
             dcb->flags |= DCBF_HUNG;
@@ -3145,7 +3145,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        rc |= MXS_POLL_HUP;
+        rc |= MXB_POLL_HUP;
 
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -3186,7 +3186,7 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
     return rv;
 }
 
-static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, void* worker, uint32_t events)
+static uint32_t dcb_poll_handler(MXB_POLL_DATA *data, void* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB *dcb = (DCB*)data;
@@ -3406,7 +3406,7 @@ private:
 
 }
 
-static bool add_fd_to_routing_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
+static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
 {
     bool rv = true;
     void* previous_owner = data->owner;
@@ -3447,7 +3447,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
         ss_dassert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
         // A listening DCB, we add it immediately.
-        if (add_fd_to_routing_workers(dcb->fd, events, (MXS_POLL_DATA*)dcb))
+        if (add_fd_to_routing_workers(dcb->fd, events, (MXB_POLL_DATA*)dcb))
         {
             // If this takes place on the main thread (all listening DCBs are
             // stored on the main thread)...
@@ -3483,7 +3483,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
         {
             // If the DCB should end up on the current thread, we can both add it
             // to the epoll-instance and to the DCB book-keeping immediately.
-            if (worker->add_fd(dcb->fd, events, (MXS_POLL_DATA*)dcb))
+            if (worker->add_fd(dcb->fd, events, (MXB_POLL_DATA*)dcb))
             {
                 dcb_add_to_list(dcb);
                 rv = true;

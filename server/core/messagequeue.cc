@@ -52,7 +52,7 @@ namespace maxscale
 {
 
 MessageQueue::MessageQueue(Handler* pHandler, int read_fd, int write_fd)
-    : MxsPollData(&MessageQueue::poll_handler)
+    : mxb::PollData(&MessageQueue::poll_handler)
     , m_handler(*pHandler)
     , m_read_fd(read_fd)
     , m_write_fd(write_fd)
@@ -267,7 +267,7 @@ Worker* MessageQueue::remove_from_worker()
 
 uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 {
-    uint32_t rc = MXS_POLL_NOP;
+    uint32_t rc = MXB_POLL_NOP;
 
     ss_dassert(pWorker == m_pWorker);
 
@@ -308,14 +308,14 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
         }
         while ((n != 0) && (n != -1));
 
-        rc = MXS_POLL_READ;
+        rc = MXB_POLL_READ;
     }
 
     return rc;
 }
 
 //static
-uint32_t MessageQueue::poll_handler(MXS_POLL_DATA* pData, void* pWorker, uint32_t events)
+uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, void* pWorker, uint32_t events)
 {
     MessageQueue* pThis = static_cast<MessageQueue*>(pData);
 

@@ -23,10 +23,10 @@
 
 #include <maxbase/atomic.h>
 #include <maxbase/semaphore.hh>
+#include <maxscale/debug.h>
+#include <maxscale/messagequeue.hh>
 #include <maxscale/worker.h>
 #include <maxscale/workertask.hh>
-
-#include "messagequeue.hh"
 
 namespace maxscale
 {
@@ -431,7 +431,7 @@ private:
  * too many WorkerTimer instances. In order to be used, a WorkerTimer
  * needs a Worker instance in whose context the timer is triggered.
  */
-class WorkerTimer : private MXS_POLL_DATA
+class WorkerTimer : private MXB_POLL_DATA
 {
     WorkerTimer(const WorkerTimer&) = delete;
     WorkerTimer& operator = (const WorkerTimer&) = delete;
@@ -471,7 +471,7 @@ protected:
 private:
     uint32_t handle(Worker* pWorker, uint32_t events);
 
-    static uint32_t handler(MXS_POLL_DATA* pThis, void* pWorker, uint32_t events);
+    static uint32_t handler(MXB_POLL_DATA* pThis, void* pWorker, uint32_t events);
 
 private:
     int     m_fd;      /**< The timerfd descriptor. */
@@ -654,7 +654,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    bool add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData);
+    bool add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData);
 
     /**
      * Remove a file descriptor from the worker's epoll instance.

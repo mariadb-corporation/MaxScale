@@ -12,21 +12,22 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
-#include <maxscale/poll_core.h>
+#include <maxbase/ccdefs.hh>
+#include <maxbase/poll.h>
 
-namespace maxscale
+namespace maxbase
 {
 
-struct MxsPollData : MXS_POLL_DATA
+class PollData : public MXB_POLL_DATA
 {
-    MxsPollData()
+public:
+    PollData()
     {
         handler = NULL;
         owner = nullptr;
     }
 
-    MxsPollData(mxs_poll_handler_t h)
+    PollData(mxb_poll_handler_t h)
     {
         handler = h;
         owner = nullptr;

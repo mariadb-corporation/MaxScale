@@ -17,14 +17,14 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/buffer.h>
-#include <maxscale/protocol.h>
-#include <maxscale/authenticator.h>
-#include <maxscale/ssl.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/poll_core.h>
 #include <netinet/in.h>
+#include <maxbase/poll.h>
+#include <maxscale/authenticator.h>
+#include <maxscale/buffer.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/protocol.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/ssl.h>
 
 MXS_BEGIN_DECLS
 
@@ -144,7 +144,7 @@ typedef enum
  */
 typedef struct dcb
 {
-    MXS_POLL_DATA   poll;
+    MXB_POLL_DATA   poll;
     bool            dcb_errhandle_called; /*< this can be called only once */
     dcb_role_t      dcb_role;
     int             fd;             /**< The descriptor */

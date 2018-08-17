@@ -33,7 +33,7 @@ LocalClient::LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd):
     m_protocol(*proto),
     m_self_destruct(false)
 {
-    MXS_POLL_DATA::handler = LocalClient::poll_handler;
+    MXB_POLL_DATA::handler = LocalClient::poll_handler;
 }
 
 LocalClient::~LocalClient()
@@ -225,7 +225,7 @@ void LocalClient::drain_queue()
     }
 }
 
-uint32_t LocalClient::poll_handler(struct mxs_poll_data* data, void* worker, uint32_t events)
+uint32_t LocalClient::poll_handler(MXB_POLL_DATA* data, void* worker, uint32_t events)
 {
     LocalClient* client = static_cast<LocalClient*>(data);
     client->process(events);
@@ -246,7 +246,7 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, c
         {
             mxs::Worker* worker = mxs::Worker::get_current();
 
-            if (worker->add_fd(fd, poll_events, (MXS_POLL_DATA*)relay))
+            if (worker->add_fd(fd, poll_events, (MXB_POLL_DATA*)relay))
             {
                 rval = relay;
             }

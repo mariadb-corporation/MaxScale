@@ -28,7 +28,7 @@ namespace maxscale
 {
 
 class RoutingWorker : public Worker
-                    , private MXS_POLL_DATA
+                    , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
     RoutingWorker& operator = (const RoutingWorker&) = delete;
@@ -81,7 +81,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_shared_fd(int fd, uint32_t events, MXS_POLL_DATA* pData);
+    static bool add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData);
 
     /**
      * Remove a file descriptor from the epoll instance shared between all workers.
@@ -429,7 +429,7 @@ private:
 
     void delete_zombies();
 
-    static uint32_t epoll_instance_handler(struct mxs_poll_data* data, void* worker, uint32_t events);
+    static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, void* worker, uint32_t events);
     uint32_t handle_epoll_events(uint32_t events);
 };
 

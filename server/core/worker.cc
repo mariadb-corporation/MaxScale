@@ -22,7 +22,6 @@
 #include <sstream>
 #include <sys/timerfd.h>
 
-#include <maxbase/atomic.h>
 #include <maxscale/log.h>
 
 #define WORKER_ABSENT_ID -1
@@ -181,8 +180,8 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
-    MXS_POLL_DATA::handler = handler;
-    MXS_POLL_DATA::owner = m_pWorker;
+    MXB_POLL_DATA::handler = handler;
+    MXB_POLL_DATA::owner = m_pWorker;
 
     if (m_fd != -1)
     {
@@ -252,11 +251,11 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
 
     tick();
 
-    return MXS_POLL_READ;
+    return MXB_POLL_READ;
 }
 
 //static
-uint32_t WorkerTimer::handler(MXS_POLL_DATA* pThis, void* pWorker, uint32_t events)
+uint32_t WorkerTimer::handler(MXB_POLL_DATA* pThis, void* pWorker, uint32_t events)
 {
     return static_cast<WorkerTimer*>(pThis)->handle(static_cast<Worker*>(pWorker), events);
 }
@@ -358,7 +357,7 @@ void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
     *pnTotal = atomic_load_uint64(&m_nTotal_descriptors);
 }
 
-bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
+bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;
 
@@ -843,31 +842,31 @@ void Worker::poll_waitevents()
 
             m_statistics.maxqtime = MXS_MAX(m_statistics.maxqtime, qtime);
 
-            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
+            MXB_POLL_DATA *data = (MXB_POLL_DATA*)events[i].data.ptr;
 
             uint32_t actions = data->handler(data, this, events[i].events);
 
-            if (actions & MXS_POLL_ACCEPT)
+            if (actions & MXB_POLL_ACCEPT)
             {
                 atomic_add_int64(&m_statistics.n_accept, 1);
             }
 
-            if (actions & MXS_POLL_READ)
+            if (actions & MXB_POLL_READ)
             {
                 atomic_add_int64(&m_statistics.n_read, 1);
             }
 
-            if (actions & MXS_POLL_WRITE)
+            if (actions & MXB_POLL_WRITE)
             {
                 atomic_add_int64(&m_statistics.n_write, 1);
             }
 
-            if (actions & MXS_POLL_HUP)
+            if (actions & MXB_POLL_HUP)
             {
                 atomic_add_int64(&m_statistics.n_hup, 1);
             }
 
-            if (actions & MXS_POLL_ERROR)
+            if (actions & MXB_POLL_ERROR)
             {
                 atomic_add_int64(&m_statistics.n_error, 1);
             }

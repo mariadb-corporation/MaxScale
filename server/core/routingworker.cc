@@ -169,8 +169,8 @@ namespace maxscale
 RoutingWorker::RoutingWorker()
     : m_id(next_worker_id())
 {
-    MXS_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
-    MXS_POLL_DATA::owner = this;
+    MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
+    MXB_POLL_DATA::owner = this;
 }
 
 RoutingWorker::~RoutingWorker()
@@ -296,7 +296,7 @@ void RoutingWorker::finish()
 }
 
 //static
-bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
+bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;
 
@@ -497,7 +497,7 @@ RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
     {
         struct epoll_event ev;
         ev.events = EPOLLIN;
-        MXS_POLL_DATA* pData = pThis;
+        MXB_POLL_DATA* pData = pThis;
         ev.data.ptr = pData; // Necessary for pointer adjustment, otherwise downcast will not work.
 
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
@@ -547,7 +547,7 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 //static
-uint32_t RoutingWorker::epoll_instance_handler(struct mxs_poll_data* pData, void* pWorker, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, void* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
     ss_dassert(pThis == pWorker);
@@ -569,7 +569,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     // We extract just one event
     int nfds = epoll_wait(this_unit.epoll_listener_fd, epoll_events, 1, 0);
 
-    uint32_t actions = MXS_POLL_NOP;
+    uint32_t actions = MXB_POLL_NOP;
 
     if (nfds == -1)
     {
@@ -582,7 +582,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     else
     {
         MXS_DEBUG("1 event for worker %d.", m_id);
-        MXS_POLL_DATA* pData = static_cast<MXS_POLL_DATA*>(epoll_events[0].data.ptr);
+        MXB_POLL_DATA* pData = static_cast<MXB_POLL_DATA*>(epoll_events[0].data.ptr);
 
         actions = pData->handler(pData, this, epoll_events[0].events);
     }

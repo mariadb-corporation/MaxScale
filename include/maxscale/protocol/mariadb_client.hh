@@ -16,12 +16,13 @@
 
 #include <deque>
 
+#include <maxbase/poll.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.h>
 #include <maxscale/protocol/mysql.h>
 
 /** A DCB-like client abstraction which ignores responses */
-class LocalClient: public MXS_POLL_DATA
+class LocalClient: public MXB_POLL_DATA
 {
     LocalClient(const LocalClient&);
     LocalClient& operator=(const LocalClient&);
@@ -59,7 +60,7 @@ public:
 private:
     static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port);
     LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd);
-    static uint32_t poll_handler(struct mxs_poll_data* data, void* worker, uint32_t events);
+    static uint32_t poll_handler(MXB_POLL_DATA* data, void* worker, uint32_t events);
     void   process(uint32_t events);
     GWBUF* read_complete_packet();
     void   drain_queue();

@@ -13,12 +13,11 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/poll.h>
 
 MXS_BEGIN_DECLS
 
-typedef struct mxs_worker
-{
-} MXS_WORKER;
+typedef MXB_WORKER MXS_WORKER;
 
 enum mxs_worker_msg_id
 {
