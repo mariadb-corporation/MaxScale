@@ -16,7 +16,6 @@
 
 #include <maxbase/atomic.h>
 #include <maxscale/config.h>
-#include <maxscale/platform.h>
 
 #include "cachest.hh"
 #include "storagefactory.hh"

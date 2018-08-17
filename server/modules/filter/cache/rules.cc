@@ -23,7 +23,6 @@
 #include <maxscale/config.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/platform.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>

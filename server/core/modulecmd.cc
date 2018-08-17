@@ -18,7 +18,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 
 #include "internal/filter.hh"

@@ -62,7 +62,6 @@
 
 #include <maxscale/debug.h>
 #include <maxscale/log.h>
-#include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/paths.h>

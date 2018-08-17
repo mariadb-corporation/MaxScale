@@ -28,7 +28,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/debug.h>
-#include <maxscale/platform.h>
 #include <maxscale/utils.h>
 
 static int thread_count = 0;

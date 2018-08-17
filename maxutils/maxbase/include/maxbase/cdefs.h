@@ -72,3 +72,41 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+/**
+ * thread_local
+ */
+#if !defined(__cplusplus)
+
+#if __STDC_VERSION__ >= 201112
+
+#if defined(__STDC_NO_THREADS__)
+#define thread_local _Thread_local
+#else
+#include <threads.h>
+#endif
+
+#else // __STDC_VERSION >= 201112
+
+#if defined(__GNUC__)
+#define thread_local __thread
+#else
+#error Do not know how to define thread_local on this compiler/OS platform.
+#endif
+
+#endif
+
+#else // __cplusplus
+
+// GCC 4.8 added support for native thread_local.
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+
+#if defined(__GNUC__)
+#define thread_local __thread
+#else
+#error Do not know how to define thread_local on this compiler/OS platform.
+#endif
+
+#endif
+
+#endif // __cplusplus

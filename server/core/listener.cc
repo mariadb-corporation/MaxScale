@@ -36,7 +36,6 @@
 #include <maxscale/listener.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
-#include <maxscale/platform.h>
 #include <maxscale/protocol.h>
 #include <maxscale/log.h>
 #include <maxscale/alloc.h>

@@ -32,7 +32,6 @@
 #include <maxbase/atomic.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
-#include <maxscale/platform.h>
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>
 #include "internal/poll.hh"

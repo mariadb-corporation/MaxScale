@@ -21,7 +21,6 @@
 #include <unordered_set>
 
 #include <maxbase/semaphore.hh>
-#include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
 #include <maxscale/worker.h>

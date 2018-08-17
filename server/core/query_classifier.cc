@@ -24,7 +24,6 @@
 #include <maxscale/log.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.h>
-#include <maxscale/platform.h>
 #include <maxscale/utils.h>
 
 #include "internal/config_runtime.h"

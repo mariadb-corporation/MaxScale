@@ -74,7 +74,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/log.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/platform.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
 #include <maxscale/spinlock.hh>

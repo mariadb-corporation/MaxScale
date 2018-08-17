@@ -21,12 +21,12 @@
 #include <vector>
 #include <sstream>
 
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/semaphore.hh>
+#include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
-#include <maxscale/platform.h>
 #include <maxscale/json_api.h>
 #include <maxscale/utils.hh>
 

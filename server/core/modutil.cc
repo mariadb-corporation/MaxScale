@@ -24,7 +24,6 @@
 #include <maxscale/buffer.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
-#include <maxscale/platform.h>
 #include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
