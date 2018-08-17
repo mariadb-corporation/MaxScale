@@ -145,10 +145,12 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     auto i_last_io_errno = result->get_col_index("Last_IO_Errno");
     auto i_last_io_error = result->get_col_index("Last_IO_Error");
     auto i_last_sql_error = result->get_col_index("Last_SQL_Error");
+    auto i_seconds_behind_master = result->get_col_index("Seconds_Behind_Master");
 
     const char INVALID_DATA[] = "'%s' returned invalid data.";
     if (i_master_host < 0 || i_master_port < 0 || i_slave_io_running < 0 || i_slave_sql_running < 0 ||
-        i_master_server_id < 0 || i_last_io_errno < 0  || i_last_io_error < 0 || i_last_sql_error < 0)
+        i_master_server_id < 0 || i_last_io_errno < 0  || i_last_io_error < 0 || i_last_sql_error < 0 ||
+        i_seconds_behind_master < 0)
     {
         MXS_ERROR(INVALID_DATA, query.c_str());
         return false;
@@ -186,6 +188,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         sstatus_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
         sstatus_row.master_server_id = result->get_uint(i_master_server_id);
+        sstatus_row.seconds_behind_master = result->get_uint(i_seconds_behind_master);
 
         if (sstatus_row.slave_io_running == SlaveStatus::SLAVE_IO_YES && sstatus_row.slave_sql_running)
         {
@@ -506,9 +509,9 @@ string MariaDBServer::diagnostics() const
     ss << "Read only:              " << (m_read_only ? "Yes" : "No") << "\n";
     ss << (m_slave_status.empty() ? "No slave connections \n" : "Slave connections: \n");
 
-    for (auto iter = m_slave_status.begin(); iter != m_slave_status.end(); iter++)
+    for (const SlaveStatus& sstatus : m_slave_status)
     {
-        ss << iter->to_string();
+        ss << sstatus.to_string() << "\n";
     }
     if (!m_gtid_current_pos.empty())
     {
@@ -551,6 +554,11 @@ json_t* MariaDBServer::diagnostics_json() const
     {
         json_object_set_new(srv, "gtid_io_pos",
                             json_string(m_slave_status[0].gtid_io_pos.to_string().c_str()));
+    }
+    if (!m_slave_status.empty())
+    {
+        json_object_set_new(srv, "seconds_behind_master",
+                            json_integer(m_slave_status[0].seconds_behind_master));
     }
     if (m_node.cycle != NodeData::CYCLE_NONE)
     {
@@ -1158,18 +1166,19 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
 
 string SlaveStatus::to_string() const
 {
-    using std::setw;
     // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
     // not quite array-like since usually there is just one row. May be changed later.
-    std::stringstream result;
-    std::stringstream helper;
-    helper << "[" << master_host << "]:" << master_port;
-    result << "  Host: " << setw(22) << helper.str() << ", "; // small intendation
-    string host_port = slave_io_to_string(slave_io_running) + "/" + (slave_sql_running ? "Yes" : "No");
-    result << "IO/SQL running: " << setw(7) << host_port << ", ";
-    result << "Master ID: " << setw(4) << master_server_id << ", ";
-    result << "Gtid_IO_Pos: " << gtid_io_pos.to_string() << "\n";
-    return result.str();
+    // Form the components of the line.
+    string host_port = string_printf("[%s]:%d", master_host.c_str(), master_port);
+    string running_states = string_printf("%s/%s",
+                                          slave_io_to_string(slave_io_running).c_str(),
+                                          slave_sql_running ? "Yes" : "No");
+
+    string rval = string_printf(
+            "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %" PRId64,
+            host_port.c_str(), running_states.c_str(), master_server_id,
+            gtid_io_pos.to_string().c_str(), seconds_behind_master);
+    return rval;
 }
 
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)

@@ -53,7 +53,7 @@ public:
     bool slave_sql_running = false;                     /* Slave SQL thread running state, true if "Yes" */
     GtidList gtid_io_pos;                               /* Gtid I/O position of the slave thread. */
     std::string last_error;                             /* Last IO or SQL error encountered. */
-
+    int64_t seconds_behind_master = 0;                  /* How much behind the slave is. */
     std::string to_string() const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string slave_io_to_string(slave_io_running_t slave_io);
