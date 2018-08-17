@@ -114,7 +114,7 @@ const char PREFIX_DEBUG[]   = "debug  : ";
 
 LOG_PREFIX level_to_prefix(int level)
 {
-    mxb_assert((level & ~LOG_PRIMASK) == 0);
+    assert((level & ~LOG_PRIMASK) == 0);
 
     LOG_PREFIX prefix;
 
@@ -161,7 +161,7 @@ LOG_PREFIX level_to_prefix(int level)
         break;
 
     default:
-        mxb_assert(!true);
+        assert(!true);
         prefix.text = PREFIX_ERROR;
         prefix.len = sizeof(PREFIX_ERROR);
         break;
@@ -426,7 +426,7 @@ bool mxb_log_init(const char* ident,
                   mxb_log_target_t target,
                   mxb_log_context_provider_t context_provider)
 {
-    mxb_assert(!this_unit.sLogger && !this_unit.sMessage_registry);
+    assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
     // Trigger calculation of buffer lengths.
     get_timestamp();
@@ -471,7 +471,7 @@ bool mxb_log_init(const char* ident,
             break;
 
         default:
-            mxb_assert(!true);
+            assert(!true);
             break;
     }
 
@@ -492,7 +492,7 @@ bool mxb_log_init(const char* ident,
 
 void mxb_log_finish(void)
 {
-    mxb_assert(this_unit.sLogger && this_unit.sMessage_registry);
+    assert(this_unit.sLogger && this_unit.sMessage_registry);
 
     closelog();
     this_unit.sLogger.reset();
@@ -602,7 +602,7 @@ static const char* level_to_string(int level)
     case LOG_DEBUG:
         return "debug";
     default:
-        mxb_assert(!true);
+        assert(!true);
         return "unknown";
     }
 }
@@ -643,8 +643,8 @@ int mxb_log_message(int priority,
 {
     int err = 0;
 
-    mxb_assert(this_unit.sLogger && this_unit.sMessage_registry);
-    mxb_assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
+    assert(this_unit.sLogger && this_unit.sMessage_registry);
+    assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);
 
     int level = priority & LOG_PRIMASK;
 
@@ -735,7 +735,7 @@ int mxb_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    mxb_assert(prefix.len + context_len + modname_len +
+                    assert(prefix.len + context_len + modname_len +
                                augmentation_len + message_len + suppression_len == buffer_len);
                 }
 
@@ -775,11 +775,11 @@ int mxb_log_message(int priority,
                         break;
 
                     default:
-                        mxb_assert(!true);
+                        assert(!true);
                     }
 
                     (void)len;
-                    mxb_assert(len == augmentation_len);
+                    assert(len == augmentation_len);
                 }
 
                 va_start(valist, format);
