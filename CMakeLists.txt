@@ -28,7 +28,9 @@ project(MaxScale)
 include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
 
 # Do the platform check
-include(cmake/CheckPlatform.cmake)
+if (NOT BUILD_SYSTEM_TESTS)
+  include(cmake/CheckPlatform.cmake)
+endif()
 
 check_dirs()
 find_package(OpenSSL)
@@ -60,7 +62,7 @@ include(cmake/BuildMicroHttpd.cmake)
 
 include_directories(${JANSSON_INCLUDE_DIR})
 
-if(NOT OPENSSL_FOUND)
+if(NOT OPENSSL_FOUND AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
 else()
   if(OPENSSL_VERSION VERSION_LESS 1 AND NOT FORCE_OPENSSL100)

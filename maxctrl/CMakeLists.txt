@@ -19,7 +19,7 @@ if (BUILD_MAXCTRL)
       ${CMAKE_BINARY_DIR}/maxctrl-test/ # Location where tests are built and run
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-  else()
+  elseif(NOT BUILD_SYSTEM_TESTS)
     message(FATAL_ERROR "Not building MaxCtrl: npm or Node.js >= 6.0.0 not found. Add the following to skip MaxCtrl: -DBUILD_MAXCTRL=N")
   endif()
 else()

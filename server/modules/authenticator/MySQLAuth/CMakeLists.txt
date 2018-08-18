@@ -1,4 +1,4 @@
-if(SQLITE_VERSION VERSION_LESS 3.3)
+if(SQLITE_VERSION VERSION_LESS 3.3 AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "SQLite version 3.3 or higher is required")
 else()
   add_library(mysqlauth SHARED mysql_auth.cc dbusers.cc)

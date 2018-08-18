@@ -67,7 +67,7 @@ if [ $res == 0 ] ; then
     cd ${script_dir}/../../
 
     mkdir build && cd build
-    cmake ../../ -DWITH_SYSTEM_TESTS -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
+    cmake ../../ -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
     cd maxscale-system-test
     make
 
