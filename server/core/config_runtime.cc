@@ -397,11 +397,44 @@ static inline bool is_valid_integer(const char* value)
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
 }
 
+bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const char* key)
+{
+    std::unordered_set<std::string> names;
+
+    for (auto param : {basic, module})
+    {
+        for (int i = 0; param[i].name; i++)
+        {
+            names.insert(param[i].name);
+        }
+    }
+
+    return names.count(key);
+}
+
+bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const char* key, const char* value)
+{
+    return config_param_is_valid(basic, key, value, NULL) ||
+           config_param_is_valid(module, key, value, NULL);
+}
+
 bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
     if (!value[0])
     {
         config_runtime_error("Empty value for parameter: %s", key);
+        return false;
+    }
+
+    const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
+
+    // As servers allow unknown parameters, we must only validate known parameters
+    if (param_is_known(config_server_params, mod->parameters, key) &&
+        !param_is_valid(config_server_params, mod->parameters, key, value))
+    {
+        config_runtime_error("Invalid value for parameter '%s': %s", key, value);
         return false;
     }
 
@@ -456,19 +489,37 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     return true;
 }
 
-bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+                    const char* key, const char* value)
 {
-    const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
+    bool rval = false;
 
-    if (!config_param_is_valid(config_monitor_params, key, value, NULL) &&
-        !config_param_is_valid(mod->parameters, key, value, NULL))
+    if (!param_is_known(basic, module, key))
     {
-        config_runtime_error("Invalid monitor parameter: %s", key);
-        return false;
+        config_runtime_error("Unknown parameter: %s", key);
     }
     else if (!value[0])
     {
         config_runtime_error("Empty value for parameter: %s", key);
+    }
+    else if (!param_is_valid(basic, module, key, value))
+    {
+        config_runtime_error("Invalid parameter value for '%s': %s", key, value);
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
+{
+    const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
+
+    if (!validate_param(config_monitor_params, mod->parameters, key, value))
+    {
         return false;
     }
 
@@ -553,17 +604,9 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)
 {
     const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
-    ss_dassert(mod);
 
-    if (!config_param_is_valid(config_service_params, zKey, zValue, NULL) &&
-        !config_param_is_valid(mod->parameters, zKey, zValue, NULL))
+    if (!validate_param(config_service_params, mod->parameters, zKey, zValue))
     {
-        config_runtime_error("Invalid service parameter: %s", zKey);
-        return false;
-    }
-    else if (!zValue[0])
-    {
-        config_runtime_error("Empty value for parameter: %s", zKey);
         return false;
     }
 
