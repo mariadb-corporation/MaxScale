@@ -1460,12 +1460,21 @@ static inline bool have_ssl_json(json_t* params)
 {
     return mxs_json_pointer(params, CN_SSL_KEY) ||
            mxs_json_pointer(params, CN_SSL_CERT) ||
-           mxs_json_pointer(params, CN_SSL_CA_CERT) ||
-           mxs_json_pointer(params, CN_SSL_VERSION) ||
-           mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
+           mxs_json_pointer(params, CN_SSL_CA_CERT);
 }
 
-static bool validate_ssl_json(json_t* params)
+namespace
+{
+
+enum object_type
+{
+    OT_SERVER,
+    OT_LISTENER
+};
+
+}
+
+static bool validate_ssl_json(json_t* params, object_type type)
 {
     bool rval = true;
 
@@ -1475,16 +1484,30 @@ static bool validate_ssl_json(json_t* params)
         runtime_is_string_or_null(params, CN_SSL_VERSION) &&
         runtime_is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
     {
-        if ((mxs_json_pointer(params, CN_SSL_KEY) ||
-             mxs_json_pointer(params, CN_SSL_CERT) ||
-             mxs_json_pointer(params, CN_SSL_CA_CERT)) &&
-            (!mxs_json_pointer(params, CN_SSL_KEY) ||
-             !mxs_json_pointer(params, CN_SSL_CERT) ||
-             !mxs_json_pointer(params, CN_SSL_CA_CERT)))
+        json_t* key = mxs_json_pointer(params, CN_SSL_KEY);
+        json_t* cert = mxs_json_pointer(params, CN_SSL_CERT);
+        json_t* ca_cert = mxs_json_pointer(params, CN_SSL_CA_CERT);
+
+        if (type == OT_LISTENER && !(key && cert && ca_cert))
         {
-            config_runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters",
+            config_runtime_error("SSL configuration for listeners requires "
+                                 "'%s', '%s' and '%s' parameters",
                                  CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
             rval = false;
+        }
+        else if (type == OT_SERVER)
+        {
+            if (!ca_cert)
+            {
+                config_runtime_error("SSL configuration for servers requires "
+                                     "at least the '%s' parameter", CN_SSL_CA_CERT);
+                rval = false;
+            }
+            else if ((key == nullptr) != (cert == nullptr))
+            {
+                config_runtime_error("Both '%s' and '%s' must be defined", CN_SSL_KEY, CN_SSL_CERT);
+                rval = false;
+            }
         }
 
         json_t* ssl_version = mxs_json_pointer(params, CN_SSL_VERSION);
@@ -1507,7 +1530,7 @@ static bool process_ssl_parameters(SERVER* server, json_t* params)
 
     if (have_ssl_json(params))
     {
-        if (validate_ssl_json(params))
+        if (validate_ssl_json(params, OT_SERVER))
         {
             char buf[20]; // Enough to hold the string form of the ssl_cert_verify_depth
             char buf_verify[20]; // Enough to hold the string form of the ssl_verify_peer_certificate
@@ -2307,7 +2330,7 @@ static bool validate_listener_json(json_t* json)
              runtime_is_string_or_null(param, CN_ADDRESS) &&
              runtime_is_string_or_null(param, CN_AUTHENTICATOR) &&
              runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS) &&
-             validate_ssl_json(param))
+             (!have_ssl_json(param) || validate_ssl_json(param, OT_LISTENER)))
     {
         rval = true;
     }
