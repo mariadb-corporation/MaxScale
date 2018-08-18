@@ -29,9 +29,9 @@ class RegexHintFSession;
 struct RegexToServers;
 struct SourceHost;
 
-using std::string;
-typedef std::vector<string> StringArray;
-typedef std::vector<RegexToServers> MappingArray;
+using StringVector = std::vector<std::string>;
+using MappingVector = std::vector<RegexToServers>;
+using SourceHostVector = std::vector<SourceHost>;
 
 /**
  * Filter instance definition
@@ -39,9 +39,9 @@ typedef std::vector<RegexToServers> MappingArray;
 class RegexHintFilter : public maxscale::Filter<RegexHintFilter, RegexHintFSession>
 {
 private:
-    const string m_user; /* User name to restrict matches with */
-    SourceHost* m_source; /* Source address to restrict matches */
-    MappingArray m_mapping; /* Regular expression to serverlist mapping */
+    const std::string m_user; /* User name to restrict matches with */
+    SourceHostVector m_sources; /* Source addresses to restrict matches */
+    MappingVector m_mapping; /* Regular expression to serverlist mapping */
     const int m_ovector_size; /* Given to pcre2_match_data_create() */
 
     int check_source_host(const char *remote, const struct sockaddr_storage *ip);
@@ -51,7 +51,7 @@ public:
     volatile unsigned int m_total_diverted;
     volatile unsigned int m_total_undiverted;
 
-    RegexHintFilter(string user, SourceHost* source, const MappingArray& map,
+    RegexHintFilter(const std::string& user, const SourceHostVector& source, const MappingVector& map,
                     int ovector_size);
     ~RegexHintFilter();
     static RegexHintFilter* create(const char* zName,  MXS_CONFIG_PARAMETER* ppParams);
@@ -62,11 +62,12 @@ public:
     const RegexToServers* find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
 
     static void form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, int pcre_ops,
-                                          MappingArray* mapping, uint32_t* max_capcount_out);
-    static bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const string& match,
-                                      const string& servers, MappingArray* mapping, uint32_t* max_capcount);
+                                          MappingVector* mapping, uint32_t* max_capcount_out);
+    static bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
+                                      const std::string& servers, MappingVector* mapping, uint32_t* max_capcount);
     static bool validate_ip_address(const char *);
-    static SourceHost* set_source_address(const char *);
+    static bool add_source_address(const char *, SourceHostVector&);
+    static bool set_source_addresses(const std::string& input_host_names, SourceHostVector&);
 };
 
 /**
@@ -95,29 +96,29 @@ public:
  * does not manage the regex memory. That is done by the filter instance. */
 struct RegexToServers
 {
-    string m_match; /* Regex in text form */
+    std::string m_match; /* Regex in text form */
     pcre2_code* m_regex; /* Compiled regex */
-    StringArray m_targets; /* List of target servers. */
+    StringVector m_targets; /* List of target servers. */
     HINT_TYPE m_htype; /* For special hint types */
     volatile bool m_error_printed; /* Has an error message about
                                     * matching this regex been printed yet? */
-    RegexToServers(string match, pcre2_code* regex)
+    RegexToServers(const std::string& match, pcre2_code* regex)
         : m_match(match),
           m_regex(regex),
           m_htype(HINT_ROUTE_TO_NAMED_SERVER),
           m_error_printed(false)
     {}
 
-    int add_servers(string server_names, bool legacy_mode);
+    int add_servers(const std::string& server_names, bool legacy_mode);
 };
 
 /* Container for address-specific filtering */
 struct SourceHost
 {
-    string m_address;
+    std::string m_address;
     struct sockaddr_in m_ipv4;
     int m_netmask;
-    SourceHost(string address, const struct sockaddr_in& ipv4, int netmask)
+    SourceHost(std::string address, const struct sockaddr_in& ipv4, int netmask)
         : m_address(address),
           m_ipv4(ipv4),
           m_netmask(netmask)
