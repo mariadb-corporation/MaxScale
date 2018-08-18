@@ -529,6 +529,7 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
 void Worker::run(mxb::Semaphore* pSem)
 {
+    ss_dassert(m_state == STOPPED);
     this_thread.pCurrent_worker = this;
 
     if (pre_run())

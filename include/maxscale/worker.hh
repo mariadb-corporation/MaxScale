@@ -672,10 +672,11 @@ public:
      * The worker will run the poll loop, until it is told to shut down.
      *
      * @attention  This function will run in the calling thread.
-     *
-     * @param pSem Semaphore that is posted on once the thread has started
      */
-    void run(mxb::Semaphore* pSem = NULL);
+    void run()
+    {
+        run(nullptr);
+    }
 
     /**
      * Run worker in separate thread.
@@ -1194,6 +1195,8 @@ private:
             return pLhs->at() > pRhs->at();
         }
     };
+
+    void run(mxb::Semaphore* pSem);
 
     typedef DelegatingTimer<Worker>                         PrivateTimer;
     typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
