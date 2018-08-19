@@ -1436,7 +1436,7 @@ int main(int argc, char **argv)
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
     bool to_stdout = false;
-    void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
+    void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, NULL };
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
@@ -1454,7 +1454,6 @@ int main(int argc, char **argv)
     progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
-    file_write_header(stderr);
 
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
