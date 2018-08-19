@@ -66,12 +66,12 @@ ${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
 
 checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
 
-cd ${script_dir}/..
+cd ${script_dir}/../../
 
 rm -rf build
 
 mkdir build && cd build
-cmake ../../ -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target -DBUILD_SYSTEM_TESTS=Y
+cmake .. -DBUILDNAME=$JOB_NAME-$BUILD_NUMBER-$target -DBUILD_SYSTEM_TESTS=Y
 cd maxscale-system-test
 make
 

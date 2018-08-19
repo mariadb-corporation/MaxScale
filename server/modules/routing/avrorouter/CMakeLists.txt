@@ -18,7 +18,7 @@ if(AVRO_FOUND AND JANSSON_FOUND)
   if (BUILD_TESTS)
     add_subdirectory(test)
   endif()
-else()
+elseif(NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "No Avro C or Jansson libraries found, cannot build avrorouter. "
     "Use the -DBUILD_CDC=N  option to `cmake` to disable building of the avrorouter.")
 endif()

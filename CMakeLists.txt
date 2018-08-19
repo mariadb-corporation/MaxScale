@@ -28,9 +28,7 @@ project(MaxScale)
 include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
 
 # Do the platform check
-if (NOT BUILD_SYSTEM_TESTS)
-  include(cmake/CheckPlatform.cmake)
-endif()
+include(cmake/CheckPlatform.cmake)
 
 check_dirs()
 find_package(OpenSSL)

@@ -12,6 +12,6 @@ static struct
 static const char * default_template __attribute__((unused)) = "replication";
 
 /** This is the working directory for all tests */
-static const char *test_dir __attribute__((unused)) = "@CMAKE_SOURCE_DIR@";
+static const char *test_dir __attribute__((unused)) = "@CMAKE_CURRENT_SOURCE_DIR@";
 
 #endif
