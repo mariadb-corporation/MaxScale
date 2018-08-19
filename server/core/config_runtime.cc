@@ -1721,7 +1721,7 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
 bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(server_to_json(server, ""));
+    std::unique_ptr<json_t> old_json(server_to_json(server, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
@@ -1781,14 +1781,14 @@ static bool is_valid_relationship_body(json_t* json)
 bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(server_to_json(server, ""));
+    std::unique_ptr<json_t> old_json(server_to_json(server, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
-        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
-                                         "relationships", type, "data",
-                                         json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                            "relationships", type, "data",
+                                            json_object_get(json, "data")));
 
         if (server_to_object_relations(server, old_json.get(), j.get()))
         {
@@ -2067,7 +2067,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
 bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
@@ -2119,14 +2119,14 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t* json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
-        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
-                                         "relationships", "servers", "data",
-                                         json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                            "relationships", "servers", "data",
+                                            json_object_get(json, "data")));
 
         if (object_to_server_relations(monitor->name, old_json.get(), j.get()))
         {
@@ -2140,14 +2140,14 @@ bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t*
 bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(service_to_json(service, ""));
+    std::unique_ptr<json_t> old_json(service_to_json(service, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
-        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
-                                         "relationships", type, "data",
-                                         json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                            "relationships", type, "data",
+                                            json_object_get(json, "data")));
 
         if (strcmp(type, CN_SERVERS) == 0)
         {
@@ -2179,7 +2179,7 @@ static bool is_dynamic_param(const std::string& key)
 bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
     bool rval = false;
-    mxs::Closer<json_t*> old_json(service_to_json(service, ""));
+    std::unique_ptr<json_t> old_json(service_to_json(service, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&

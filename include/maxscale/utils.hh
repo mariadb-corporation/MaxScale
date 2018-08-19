@@ -154,7 +154,10 @@ struct CloserTraits
      *
      * @param t  Close the resource *if* it has not been closed already.
      */
-    static void close_if(T t);
+    static void close_if(T t)
+    {
+        static_assert(sizeof(T) != sizeof(T), "The base closer should never be used");
+    }
 
     /**
      * Resets a reference to a resource. After the call, the value of t should

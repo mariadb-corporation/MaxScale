@@ -1331,7 +1331,7 @@ auto_ptr<MaskingRules> MaskingRules::load(const char* zPath)
 
         if (pRoot)
         {
-            Closer<json_t*> root(pRoot);
+            std::unique_ptr<json_t> root(pRoot);
 
             sRules = create_from(root.get());
         }
@@ -1360,7 +1360,7 @@ auto_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
 
     if (pRoot)
     {
-        Closer<json_t*> root(pRoot);
+        std::unique_ptr<json_t> root(pRoot);
 
         sRules = create_from(root.get());
     }

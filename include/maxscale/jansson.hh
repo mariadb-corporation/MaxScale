@@ -21,7 +21,6 @@
 #include <maxbase/jansson.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
-#include <maxscale/utils.hh>
 
 namespace std
 {
@@ -39,28 +38,6 @@ struct default_delete<json_t>
 
 namespace maxscale
 {
-
-/**
- * @class CloserTraits<json_t*> jansson.hh <maxscale/jansson.hh>
- *
- * Specialization of @c CloserTraits for @c json_t*.
- */
-template<>
-struct CloserTraits<json_t*>
-{
-    static void close_if(json_t* pJson)
-    {
-        if (pJson)
-        {
-            json_decref(pJson);
-        }
-    }
-
-    static void reset(json_t*& pJson)
-    {
-        pJson = NULL;
-    }
-};
 
 /**
  * @brief Convenience function for dumping JSON into a string
@@ -81,11 +58,6 @@ static inline std::string json_dump(const json_t* json, int flags = 0)
     }
 
     return rval;
-}
-
-static inline std::string json_dump(const Closer<json_t*>& json, int flags = 0)
-{
-    return json_dump(json.get(), flags);
 }
 
 /**

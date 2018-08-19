@@ -286,7 +286,7 @@ private:
     static const std::string HTTPS_PREFIX;
 
     std::map<std::string, std::string> m_options;        /**< Request options */
-    mxs::Closer<json_t*>               m_json;           /**< Request body */
+    std::unique_ptr<json_t>            m_json;           /**< Request body */
     std::string                        m_json_string;    /**< String version of @c m_json */
     std::string                        m_resource;       /**< Requested resource */
     std::deque<std::string>            m_resource_parts; /**< @c m_resource split into parts */
