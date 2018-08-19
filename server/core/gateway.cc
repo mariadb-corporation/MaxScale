@@ -2200,8 +2200,6 @@ int main(int argc, char **argv)
     MXS_NOTICE("MaxScale is shutting down.");
 
     utils_end();
-    cleanup_process_datadir();
-    unlock_directories();
     MXS_NOTICE("MaxScale shutdown completed.");
 
     if (unload_modules_at_exit)
