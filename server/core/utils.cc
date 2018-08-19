@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
+#include <curl/curl.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
@@ -1196,6 +1197,86 @@ std::string string_printf(const char* format, ...)
         va_end(args);
     }
     return rval;
+}
+
+namespace
+{
+
+size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    std::string* buf = static_cast<std::string*>(userdata);
+
+    if (nmemb > 0)
+    {
+        buf->append(ptr, nmemb);
+    }
+
+    return nmemb;
+}
+
+size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    std::unordered_map<std::string, std::string>* map =
+        static_cast<std::unordered_map<std::string, std::string>*>(userdata);
+
+    if (nmemb > 0)
+    {
+        std::string data(ptr, size * nmemb);
+        auto pos = data.find_first_of(':');
+
+        if (pos != std::string::npos)
+        {
+            std::string key = data.substr(0, pos);
+            std::string value = data.substr(pos + 1);
+            trim(key);
+            trim(value);
+            map->insert(std::make_pair(key, value));
+        }
+    }
+
+    return nmemb * size;
+}
+
+}
+
+namespace http
+{
+
+Result get(const std::string& url)
+{
+    Result res;
+    char errbuf[CURL_ERROR_SIZE + 1] = "";
+    CURL* curl = curl_easy_init();
+
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &res.raw_body);
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &res.headers);
+
+    long code = 0; // needs to be a long
+
+    if (curl_easy_perform(curl) == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+        res.code = code;
+    }
+    else
+    {
+        res.code = -1;
+        res.raw_body = errbuf;
+    }
+
+    // Even the errors are valid JSON so this should be OK
+    json_error_t err;
+    res.body.reset(json_loads(res.raw_body.c_str(), 0, &err));
+
+    curl_easy_cleanup(curl);
+
+    return std::move(res);
+}
+
 }
 
 }

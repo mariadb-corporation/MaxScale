@@ -44,6 +44,7 @@ find_package(GSSAPI)
 find_package(SQLite)
 find_package(ASAN)
 find_package(TSAN)
+find_package(CURL)
 
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
