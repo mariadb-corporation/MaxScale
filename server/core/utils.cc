@@ -1248,6 +1248,9 @@ Result get(const std::string& url)
     char errbuf[CURL_ERROR_SIZE + 1] = "";
     CURL* curl = curl_easy_init();
 
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10); // For connection phase
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10); // For data transfer phase
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &res.raw_body);
