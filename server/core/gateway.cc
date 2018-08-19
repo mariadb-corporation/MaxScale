@@ -1335,7 +1335,6 @@ int main(int argc, char **argv)
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
     bool to_stdout = false;
-    void   (*exitfunp[5])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, unlock_directories, NULL };
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
@@ -1353,26 +1352,9 @@ int main(int argc, char **argv)
     progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
-    file_write_header(stderr);
 
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
-
-    /*<
-     * Register functions which are called at exit.
-     */
-    for (int i = 0; exitfunp[i] != NULL; i++)
-    {
-        int l = atexit(exitfunp[i]);
-
-        if (l != 0)
-        {
-            const char* fprerr = "Failed to register exit functions for MaxScale";
-            print_log_n_stderr(false, true, NULL, fprerr, 0);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-    }
 
 #ifdef HAVE_GLIBC
     while ((opt = getopt_long(argc, argv, accepted_opts,
@@ -1883,6 +1865,8 @@ int main(int argc, char **argv)
 
         mxs_log_set_syslog_enabled(*syslog_enabled);
         mxs_log_set_maxlog_enabled(*maxlog_enabled);
+
+        atexit(mxs_log_finish);
     }
 
     if (!config_load_global(cnf_file_path))
@@ -1920,6 +1904,7 @@ int main(int argc, char **argv)
         if (create_datadir(get_datadir(), datadir))
         {
             set_process_datadir(datadir);
+            atexit(cleanup_process_datadir);
         }
         else
         {
@@ -2013,6 +1998,8 @@ int main(int argc, char **argv)
             rc = MAXSCALE_ALREADYRUNNING;
             goto return_main;
         }
+
+        atexit(unlock_directories);
     }
 
     if (!redirect_output_to.empty())
