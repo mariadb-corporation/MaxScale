@@ -21,6 +21,7 @@
 #include <string>
 #include <tr1/memory>
 #include <vector>
+#include <deque>
 #include <map>
 #include <algorithm>
 #include <jansson.h>
@@ -137,8 +138,7 @@ private:
     SValueVector m_keys;
     SValueVector m_types;
     int m_timeout;
-    std::vector<char> m_buffer;
-    std::vector<char>::iterator m_buf_ptr;
+    std::deque<char> m_buffer;
     SRow m_first_row;
     bool m_connected;
 
