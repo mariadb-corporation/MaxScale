@@ -162,8 +162,20 @@ public:
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
 
+    /**
+     * Query this server.
+     */
     void monitor_server();
+
+    /**
+     * Update information which changes rarely. This method should be called after (re)connecting to a backend.
+     * Calling this every monitoring loop is overkill.
+     */
     void update_server_version();
+
+    /**
+     * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
+     */
     void check_permissions();
 
     /**
@@ -355,14 +367,6 @@ public:
      * not have a gtid_IO_Pos.
      */
     bool uses_gtid(std::string* error_out = NULL);
-
-    /**
-     * Update replication settings, gtid:s and slave status of the server.
-     *
-     * @param server Slave to update
-     * @return True on success. False on error, or if server is not a slave (slave SQL not running).
-     */
-    bool update_slave_info();
 
     /**
      * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious errors.

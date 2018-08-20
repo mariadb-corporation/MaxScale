@@ -279,22 +279,18 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
     return rval;
 }
 
-bool MariaDBServer::update_replication_settings(std::string* error_out)
+bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 {
-    static const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
-    string query_error;
+    const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
     bool rval = false;
-    auto result = execute_query(query, &query_error);
+
+    auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL && result->next_row())
     {
+        rval = true;
         m_rpl_settings.gtid_strict_mode = result->get_bool(0);
         m_rpl_settings.log_bin = result->get_bool(1);
         m_rpl_settings.log_slave_updates = result->get_bool(2);
-        rval = true;
-    }
-    else if (error_out)
-    {
-        *error_out = query_error;
     }
     return rval;
 }
@@ -582,13 +578,6 @@ bool MariaDBServer::uses_gtid(std::string* error_out)
     return using_gtid;
 }
 
-bool MariaDBServer::update_slave_info()
-{
-    // TODO: fix for multisource repl
-    return (!m_slave_status.empty() && m_slave_status[0].slave_sql_running && update_replication_settings() &&
-            update_gtids() && do_show_slave_status());
-}
-
 bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* error_out)
 {
     bool rval = false;
@@ -782,9 +771,6 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     return !error;
 }
 
-/**
- * Query this server.
- */
 void MariaDBServer::monitor_server()
 {
     string errmsg;
@@ -818,7 +804,7 @@ void MariaDBServer::monitor_server()
      * ways. */
     else if (!errmsg.empty() && m_print_update_errormsg)
     {
-        MXS_WARNING("Error during monitor update of server '%s'. %s.", name(), errmsg.c_str());
+        MXS_WARNING("Error during monitor update of server '%s': %s", name(), errmsg.c_str());
         m_print_update_errormsg = false;
     }
     return;
@@ -832,19 +818,9 @@ void MariaDBServer::monitor_server()
  */
 bool MariaDBServer::update_slave_status(string* errmsg_out)
 {
-    /** Clear old states */
-    clear_status(SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER);
-
-    bool rval = false;
-    if (do_show_slave_status(errmsg_out))
+    bool rval = do_show_slave_status(errmsg_out);
+    if (rval)
     {
-        rval = true;
-        /* If all configured slaves are running set this node as slave */
-        if (m_n_slaves_running > 0 && m_n_slaves_running == m_slave_status.size())
-        {
-            set_status(SERVER_SLAVE);
-        }
-
         /** Store master_id of current node. */
         m_server_base->server->master_id = !m_slave_status.empty() ?
             m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
@@ -852,10 +828,6 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     return rval;
 }
 
-/**
- * Update information which changes rarely. This method should be called after (re)connecting to a backend.
- * Calling this every monitoring loop is overkill.
- */
 void MariaDBServer::update_server_version()
 {
     m_version = version::UNKNOWN;
@@ -896,15 +868,14 @@ void MariaDBServer::update_server_version()
     }
 }
 
-/**
- * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
- */
 void MariaDBServer::check_permissions()
 {
-    MYSQL* conn = m_server_base->con;
     // Test with a typical query to make sure the monitor has sufficient permissions.
-    const char* query = "SHOW SLAVE STATUS;";
-    if (mxs_mysql_query(conn, query) != 0)
+    const string query = "SHOW SLAVE STATUS;";
+    string err_msg;
+    auto result = execute_query(query, &err_msg);
+
+    if (result.get() == NULL)
     {
         /* In theory, this could be due to other errors as well, but that is quite unlikely since the
          * connection was just checked. The end result is in any case that the server is not updated,
@@ -913,18 +884,13 @@ void MariaDBServer::check_permissions()
         // Only print error if last round was ok.
         if (!had_status(SERVER_AUTH_ERROR))
         {
-            MXS_WARNING("Query '%s' to server '%s' failed when checking monitor permissions: '%s'. ",
-                        query, name(), mysql_error(conn));
+            MXS_WARNING("Error during monitor permissions test for server '%s': %s",
+                        name(), err_msg.c_str());
         }
     }
     else
     {
         clear_status(SERVER_AUTH_ERROR);
-        MYSQL_RES* result = mysql_store_result(conn);
-        if (result)
-        {
-            mysql_free_result(result);
-        }
     }
 }
 

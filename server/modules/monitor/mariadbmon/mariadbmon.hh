@@ -192,7 +192,7 @@ private:
     json_t* diagnostics_to_json() const;
 
     // Cluster discovery and status assignment methods
-    void update_server(MariaDBServer& server);
+    void update_server(MariaDBServer* server);
     void find_graph_cycles();
     void update_topology();
     void log_master_changes();
@@ -218,7 +218,6 @@ private:
                             MariaDBServer** new_master_out, MariaDBServer** current_master_out,
                             json_t** error_out);
     bool do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target, json_t** error_out);
-    bool switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out);
     bool switchover_demote_master(MariaDBServer* current_master,
                                   json_t** err_out);
     bool switchover_wait_slaves_catchup(const ServerArray& slaves, const GtidList& gtid, int total_timeout,

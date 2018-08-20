@@ -334,33 +334,34 @@ json_t* MariaDBMonitor::diagnostics_to_json() const
  *
  * @param server The server to update
  */
-void MariaDBMonitor::update_server(MariaDBServer& server)
+void MariaDBMonitor::update_server(MariaDBServer* server)
 {
-    MXS_MONITORED_SERVER* mon_srv = server.m_server_base;
+    MXS_MONITORED_SERVER* mon_srv = server->m_server_base;
     mxs_connect_result_t conn_status = mon_ping_or_connect_to_db(m_monitor, mon_srv);
     MYSQL* conn = mon_srv->con; // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
     if (mon_connection_is_ok(conn_status))
     {
-        server.set_status(SERVER_RUNNING);
+        server->set_status(SERVER_RUNNING);
         if (conn_status == MONITOR_CONN_NEWCONN_OK)
         {
             // Is a new connection or a reconnection. Check server version.
-            server.update_server_version();
+            server->update_server_version();
         }
 
-        if (server.m_version == MariaDBServer::version::MARIADB_MYSQL_55 ||
-            server.m_version == MariaDBServer::version::MARIADB_100 ||
-            server.m_version == MariaDBServer::version::BINLOG_ROUTER)
+        auto server_vrs = server->m_version;
+        if (server_vrs == MariaDBServer::version::MARIADB_MYSQL_55 ||
+            server_vrs == MariaDBServer::version::MARIADB_100 ||
+            server_vrs == MariaDBServer::version::BINLOG_ROUTER)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
-            if (server.had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
+            if (server->had_status(SERVER_AUTH_ERROR) || conn_status == MONITOR_CONN_NEWCONN_OK)
             {
-                server.check_permissions();
+                server->check_permissions();
             }
 
             // If permissions are ok, continue.
-            if (!server.has_status(SERVER_AUTH_ERROR))
+            if (!server->has_status(SERVER_AUTH_ERROR))
             {
                 if (should_update_disk_space_status(mon_srv))
                 {
@@ -368,7 +369,7 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
                 }
 
                 // Query MariaDBServer specific data
-                server.monitor_server();
+                server->monitor_server();
             }
         }
     }
@@ -376,24 +377,24 @@ void MariaDBMonitor::update_server(MariaDBServer& server)
     {
         /* The current server is not running. Clear all but the stale master bit as it is used to detect
          * masters that went down but came up. */
-        server.clear_status(~SERVER_WAS_MASTER);
+        server->clear_status(~SERVER_WAS_MASTER);
         auto conn_errno = mysql_errno(conn);
         if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
-            server.set_status(SERVER_AUTH_ERROR);
+            server->set_status(SERVER_AUTH_ERROR);
         }
 
         /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
          * iteration. */
-        if (mon_srv->mon_prev_status & (SERVER_RUNNING | SERVER_MAINT))
+        if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT))
         {
             mon_log_connect_error(mon_srv, conn_status);
         }
     }
 
     /** Increase or reset the error count of the server. */
-    bool is_running = server.is_running();
-    bool in_maintenance = server.is_in_maintenance();
+    bool is_running = server->is_running();
+    bool in_maintenance = server->is_in_maintenance();
     mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
 }
 
@@ -434,10 +435,9 @@ void MariaDBMonitor::tick()
     }
 
     // Query all servers for their status.
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        MariaDBServer* server = *iter;
-        update_server(*server);
+        update_server(server);
         if (server->m_topology_changed)
         {
             m_cluster_topology_changed = true;
@@ -466,8 +466,7 @@ void MariaDBMonitor::tick()
     // Sanity check. Master may not be both slave and master.
     mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
-    // Update shared status. The next functions read the shared status. TODO: change the following
-    // functions to read "pending_status" instead.
+    // Update shared status.
     for (auto server : m_servers)
     {
         SERVER* srv = server->m_server_base->server;

@@ -897,26 +897,6 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
 }
 
 /**
- * Check that the given slave is a valid promotion candidate.
- *
- * @param preferred Preferred new master
- * @param err_out Json object for error printing. Can be NULL.
- * @return True, if given slave is a valid promotion candidate.
- */
-bool MariaDBMonitor::switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out)
-{
-    mxb_assert(preferred);
-    bool rval = true;
-    if (!preferred->update_slave_info() || !preferred->check_replication_settings())
-    {
-        PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
-                             preferred->name());
-        rval = false;
-    }
-    return rval;
-}
-
-/**
  * Prepares a server for the replication master role.
  *
  * @param new_master The new master server
