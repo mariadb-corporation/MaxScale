@@ -71,7 +71,7 @@ void LocalClient::self_destruct()
 
 void LocalClient::close()
 {
-    mxs::Worker* worker = mxs::Worker::get_current();
+    mxb::Worker* worker = mxb::Worker::get_current();
     ss_dassert(worker);
     worker->remove_fd(m_sock);
     ::close(m_sock);
@@ -244,7 +244,7 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, c
 
         if (relay)
         {
-            mxs::Worker* worker = mxs::Worker::get_current();
+            mxb::Worker* worker = mxb::Worker::get_current();
 
             if (worker->add_fd(fd, poll_events, (MXB_POLL_DATA*)relay))
             {

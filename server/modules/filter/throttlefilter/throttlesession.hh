@@ -12,8 +12,8 @@
  */
 #pragma once
 
+#include <maxbase/worker.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/worker.hh>
 #include <maxbase/eventcount.hh>
 
 namespace throttle
@@ -31,7 +31,7 @@ public:
 
     int routeQuery(GWBUF* buffer);
 private:
-    bool delayed_routeQuery(maxscale::Worker::Call::action_t action,
+    bool delayed_routeQuery(maxbase::Worker::Call::action_t action,
                             GWBUF* buffer);
     int real_routeQuery(GWBUF* buffer, bool is_delayed);
     ThrottleFilter& m_filter;

@@ -11,11 +11,11 @@
  * Public License.
  */
 
-#include <maxscale/workertask.hh>
+#include <maxbase/workertask.hh>
 #include <maxbase/atomic.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
-namespace maxscale
+namespace maxbase
 {
 
 //
@@ -44,7 +44,7 @@ void WorkerDisposableTask::inc_ref()
 
 void WorkerDisposableTask::dec_ref()
 {
-    ss_dassert(atomic_load_int32(&m_count) > 0);
+    mxb_assert(atomic_load_int32(&m_count) > 0);
 
     if (atomic_add(&m_count, -1) == 1)
     {

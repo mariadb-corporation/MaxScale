@@ -16,14 +16,14 @@
 
 #include <atomic>
 #include <maxbase/semaphore.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/monitor.h>
-#include <maxscale/worker.hh>
 
 namespace maxscale
 {
 
 class MonitorInstance : public  MXS_MONITOR_INSTANCE
-                      , protected maxscale::Worker
+                      , protected maxbase::Worker
 {
 public:
     MonitorInstance(const MonitorInstance&) = delete;

@@ -39,8 +39,9 @@
 #define WORKER_ABSENT_ID -1
 
 using maxbase::Semaphore;
+using maxbase::Worker;
+using maxbase::WorkerLoad;
 using maxscale::RoutingWorker;
-using maxscale::WorkerLoad;
 using maxscale::Closer;
 using std::vector;
 using std::stringstream;
@@ -866,7 +867,7 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
 //static
 bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
 {
-    class Task : public mxs::Worker::Task
+    class Task : public Worker::Task
     {
     public:
         Task(QC_CACHE_STATS* pStats)
@@ -874,7 +875,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
         {
         }
 
-        void execute(mxs::Worker&)
+        void execute(Worker&)
         {
             qc_get_cache_stats(&m_stats);
         }
@@ -899,7 +900,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
 //static
 void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 {
-    class Task : public mxs::Worker::Task
+    class Task : public Worker::Task
     {
     public:
         Task(std::vector<QC_CACHE_STATS>* pAll_stats)
@@ -908,7 +909,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
             m_all_stats.resize(config_threadcount());
         }
 
-        void execute(mxs::Worker& worker)
+        void execute(Worker& worker)
         {
             int id = mxs::RoutingWorker::get_current_id();
             ss_dassert(id >= 0);
@@ -1051,7 +1052,7 @@ namespace
 
 using namespace maxscale;
 
-class WorkerInfoTask: public maxscale::WorkerTask
+class WorkerInfoTask: public Worker::Task
 {
 public:
     WorkerInfoTask(const char* zHost, uint32_t nThreads)
@@ -1139,7 +1140,7 @@ private:
     const char*     m_zHost;
 };
 
-class FunctionTask: public maxscale::WorkerDisposableTask
+class FunctionTask: public Worker::DisposableTask
 {
 public:
     FunctionTask(std::function<void ()> cb):
@@ -1200,7 +1201,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int id)
     WorkerInfoTask task(zHost, id + 1);
     Semaphore sem;
 
-    target->execute(&task, &sem, mxs::Worker::EXECUTE_AUTO);
+    target->execute(&task, &sem, Worker::EXECUTE_AUTO);
     sem.wait();
 
     return task.resource(id);

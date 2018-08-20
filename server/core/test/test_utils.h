@@ -15,6 +15,8 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/messagequeue.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
@@ -46,8 +48,8 @@ void init_test_env(char *path)
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     qc_process_init(QC_INIT_BOTH);
     poll_init();
-    maxscale::MessageQueue::init();
-    maxscale::Worker::init();
+    mxb::MessageQueue::init();
+    mxb::Worker::init();
     maxscale::RoutingWorker::init();
     hkinit();
 }

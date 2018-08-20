@@ -23,8 +23,9 @@
 #include <glob.h>
 #include <ini.h>
 #include <sys/stat.h>
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/worker.hh>
+#include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/modulecmd.h>
@@ -37,12 +38,11 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.h>
-#include <maxscale/worker.hh>
 #include <binlog_common.h>
 
 #include "avro_converter.hh"
 
-using namespace mxs;
+using namespace maxbase;
 
 static bool conversion_task_ctl(Avro *inst, bool start);
 
@@ -296,7 +296,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     return true;
 }
 
-class ConversionCtlTask: public mxs::WorkerDisposableTask
+class ConversionCtlTask: public Worker::DisposableTask
 {
 public:
     ConversionCtlTask(Avro* instance, bool start):

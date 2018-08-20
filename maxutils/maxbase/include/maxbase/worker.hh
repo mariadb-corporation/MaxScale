@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 
 #include <cstring>
 #include <functional>
@@ -21,14 +21,14 @@
 #include <thread>
 #include <unordered_map>
 
+#include <maxbase/assert.h>
 #include <maxbase/atomic.h>
+#include <maxbase/messagequeue.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.h>
-#include <maxscale/debug.h>
-#include <maxscale/messagequeue.hh>
-#include <maxscale/workertask.hh>
+#include <maxbase/workertask.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
 struct WORKER_STATISTICS
@@ -155,7 +155,7 @@ public:
             return m_load_1_hour.value();
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             return 0;
         };
     }
@@ -371,8 +371,8 @@ private:
     private:
         uint8_t* prev(uint8_t* p)
         {
-            ss_dassert(p >= m_begin);
-            ss_dassert(p < m_end);
+            mxb_assert(p >= m_begin);
+            mxb_assert(p < m_end);
 
             if (p > m_begin)
             {
@@ -380,20 +380,20 @@ private:
             }
             else
             {
-                ss_dassert(p == m_begin);
+                mxb_assert(p == m_begin);
                 p = m_end - 1;
             }
 
-            ss_dassert(p >= m_begin);
-            ss_dassert(p < m_end);
+            mxb_assert(p >= m_begin);
+            mxb_assert(p < m_end);
 
             return p;
         }
 
         uint8_t* next(uint8_t* p)
         {
-            ss_dassert(p >= m_begin);
-            ss_dassert(p < m_end);
+            mxb_assert(p >= m_begin);
+            mxb_assert(p < m_end);
 
             ++p;
 
@@ -402,8 +402,8 @@ private:
                 p = m_begin;
             }
 
-            ss_dassert(p >= m_begin);
-            ss_dassert(p < m_end);
+            mxb_assert(p >= m_begin);
+            mxb_assert(p < m_end);
 
             return p;
         }
@@ -1044,7 +1044,7 @@ private:
             , m_delay(delay)
             , m_at(get_at(delay))
         {
-            ss_dassert(delay > 0);
+            mxb_assert(delay > 0);
         }
 
         virtual bool do_call(Worker::Call::action_t action) = 0;
@@ -1052,11 +1052,11 @@ private:
     private:
         static int64_t get_at(int32_t delay)
         {
-            ss_dassert(delay > 0);
+            mxb_assert(delay > 0);
 
             struct timespec ts;
-            ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
-            ss_dassert(rv == 0);
+            MXB_AT_DEBUG(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+            mxb_assert(rv == 0);
 
             return delay + (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
         }

@@ -51,15 +51,13 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
-#include <maxscale/workertask.hh>
 
 #include "internal/modules.h"
 #include "internal/routingworker.hh"
 #include "internal/session.h"
 
 using maxscale::RoutingWorker;
-using maxscale::Worker;
-using maxscale::WorkerTask;
+using maxbase::Worker;
 
 //#define DCB_LOG_EVENT_HANDLING
 #if defined(DCB_LOG_EVENT_HANDLING)
@@ -2892,7 +2890,7 @@ void dcb_process_idle_sessions(int thr)
 }
 
 /** Helper class for serial iteration over all DCBs */
-class SerialDcbTask : public WorkerTask
+class SerialDcbTask : public Worker::Task
 {
 public:
 
@@ -3228,7 +3226,7 @@ static bool dcb_is_still_valid(DCB* target, int id)
     return rval;
 }
 
-class FakeEventTask: public mxs::WorkerDisposableTask
+class FakeEventTask: public Worker::DisposableTask
 {
     FakeEventTask(const FakeEventTask&);
     FakeEventTask& operator=(const FakeEventTask&);
@@ -3290,7 +3288,7 @@ static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
         if (task)
         {
             RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
-            worker->execute(std::unique_ptr<FakeEventTask>(task), mxs::Worker::EXECUTE_QUEUED);
+            worker->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
         }
         else
         {
@@ -3372,7 +3370,7 @@ static inline void dcb_sanity_check(DCB* dcb)
 namespace
 {
 
-class AddDcbToWorker: public mxs::WorkerDisposableTask
+class AddDcbToWorker: public Worker::DisposableTask
 {
 public:
     AddDcbToWorker(const AddDcbToWorker&) = delete;
@@ -3502,7 +3500,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
                 Worker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
                 ss_dassert(worker);
 
-                if (worker->execute(std::unique_ptr<AddDcbToWorker>(task), mxs::Worker::EXECUTE_QUEUED))
+                if (worker->execute(std::unique_ptr<AddDcbToWorker>(task), Worker::EXECUTE_QUEUED))
                 {
                     rv = true;
                 }

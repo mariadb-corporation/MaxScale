@@ -12,9 +12,9 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
 class Worker;

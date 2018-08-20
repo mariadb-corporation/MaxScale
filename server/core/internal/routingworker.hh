@@ -17,17 +17,17 @@
 #include <unordered_map>
 
 #include <maxbase/semaphore.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>
-#include <maxscale/worker.hh>
 
 #include "session.hh"
 
 namespace maxscale
 {
 
-class RoutingWorker : public Worker
+class RoutingWorker : public mxb::Worker
                     , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;

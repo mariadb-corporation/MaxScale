@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <maxbase/messagequeue.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/adminusers.h>
@@ -46,7 +47,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/messagequeue.hh>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
@@ -1337,7 +1337,7 @@ int main(int argc, char **argv)
     bool to_stdout = false;
     int numlocks = 0;
     bool pid_file_created = false;
-    Worker* worker;
+    mxb::Worker* worker;
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
 
@@ -1941,14 +1941,14 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
-    if (!MessageQueue::init())
+    if (!mxb::MessageQueue::init())
     {
         MXS_ERROR("Failed to initialize message queue.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
 
-    if (!Worker::init())
+    if (!mxb::Worker::init())
     {
         MXS_ERROR("Failed to initialize workers.");
         rc = MAXSCALE_INTERNALERROR;
@@ -2193,8 +2193,8 @@ int main(int argc, char **argv)
     service_destroy_instances();
 
     RoutingWorker::finish();
-    Worker::finish();
-    MessageQueue::finish();
+    mxb::Worker::finish();
+    mxb::MessageQueue::finish();
 
     /*< Call finish on all modules. */
     modules_process_finish();

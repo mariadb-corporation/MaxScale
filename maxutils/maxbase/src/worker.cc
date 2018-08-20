@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/worker.hh>
+#include <maxbase/worker.hh>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -22,7 +22,9 @@
 #include <sstream>
 #include <sys/timerfd.h>
 
-#include <maxscale/log.h>
+#include <maxbase/assert.h>
+#include <maxbase/log.h>
+#include <maxbase/string.h>
 
 #define WORKER_ABSENT_ID -1
 
@@ -33,7 +35,7 @@ using std::stringstream;
 namespace
 {
 
-using maxscale::Worker;
+using maxbase::Worker;
 
 const int MXB_WORKER_MSG_TASK = -1;
 const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
@@ -72,7 +74,7 @@ typedef struct worker_message
 static bool modules_thread_init();
 static void modules_thread_finish();
 
-namespace maxscale
+namespace maxbase
 {
 
 WorkerLoad::WorkerLoad()
@@ -112,8 +114,8 @@ uint64_t WorkerLoad::get_time()
 
     timespec t;
 
-    ss_debug(int rv = )clock_gettime(CLOCK_MONOTONIC, &t);
-    ss_dassert(rv == 0);
+    MXB_AT_DEBUG(int rv = )clock_gettime(CLOCK_MONOTONIC, &t);
+    mxb_assert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
@@ -140,34 +142,34 @@ int create_timerfd()
                     flags |= O_NONBLOCK;
                     if (fcntl(fd, F_SETFL, flags) == -1)
                     {
-                        MXS_ALERT("Could not make timer fd non-blocking, MaxScale will not work: %s",
-                                  mxs_strerror(errno));
+                        MXB_ALERT("Could not make timer fd non-blocking, system will not work: %s",
+                                  mxb_strerror(errno));
                         close(fd);
                         fd = -1;
-                        ss_dassert(!true);
+                        mxb_assert(!true);
                     }
                 }
                 else
                 {
-                    MXS_ALERT("Could not get timer fd flags, MaxScale will not work: %s",
-                              mxs_strerror(errno));
+                    MXB_ALERT("Could not get timer fd flags, system will not work: %s",
+                              mxb_strerror(errno));
                     close(fd);
                     fd = -1;
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                 }
             }
             else
             {
-                MXS_ALERT("Could not create timer file descriptor even with no flags, MaxScale "
-                          "will not work: %s", mxs_strerror(errno));
-                ss_dassert(!true);
+                MXB_ALERT("Could not create timer file descriptor even with no flags, system "
+                          "will not work: %s", mxb_strerror(errno));
+                mxb_assert(!true);
             }
         }
         else
         {
-            MXS_ALERT("Could not create timer file descriptor, MaxScale will not work: %s",
-                      mxs_strerror(errno));
-            ss_dassert(!true);
+            MXB_ALERT("Could not create timer file descriptor, system will not work: %s",
+                      mxb_strerror(errno));
+            mxb_assert(!true);
         }
     }
 
@@ -187,10 +189,10 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     {
         if (!m_pWorker->add_fd(m_fd, EPOLLIN, this))
         {
-            MXS_ALERT("Could not add timer descriptor to worker, MaxScale will not work.");
+            MXB_ALERT("Could not add timer descriptor to worker, system will not work.");
             ::close(m_fd);
             m_fd = -1;
-            ss_dassert(!true);
+            mxb_assert(!true);
         }
     }
 }
@@ -201,7 +203,7 @@ WorkerTimer::~WorkerTimer()
     {
         if (!m_pWorker->remove_fd(m_fd))
         {
-            MXS_ERROR("Could not remove timer fd from worker.");
+            MXB_ERROR("Could not remove timer fd from worker.");
         }
 
         ::close(m_fd);
@@ -210,7 +212,7 @@ WorkerTimer::~WorkerTimer()
 
 void WorkerTimer::start(int32_t interval)
 {
-    ss_dassert(interval >= 0);
+    mxb_assert(interval >= 0);
 
     // TODO: Add possibility to set initial delay and interval.
     time_t initial_sec = interval / 1000;
@@ -228,7 +230,7 @@ void WorkerTimer::start(int32_t interval)
 
     if (timerfd_settime(m_fd, 0, &time, NULL) != 0)
     {
-        MXS_ERROR("Could not set timer settings.");
+        MXB_ERROR("Could not set timer settings.");
     }
 }
 
@@ -239,9 +241,9 @@ void WorkerTimer::cancel()
 
 uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
 {
-    ss_dassert(pWorker == m_pWorker);
-    ss_dassert(events & EPOLLIN);
-    ss_dassert((events & ~EPOLLIN) == 0);
+    mxb_assert(pWorker == m_pWorker);
+    mxb_assert(events & EPOLLIN);
+    mxb_assert((events & ~EPOLLIN) == 0);
 
     // Read all events
     uint64_t expirations;
@@ -271,9 +273,9 @@ int create_epoll_instance()
 
     if (fd == -1)
     {
-        MXS_ALERT("Could not create epoll-instance for worker, MaxScale will not work: %s",
-                  mxs_strerror(errno));
-        ss_dassert(!true);
+        MXB_ALERT("Could not create epoll-instance for worker, system will not work: %s",
+                  mxb_strerror(errno));
+        mxb_assert(!true);
     }
 
     return fd;
@@ -296,7 +298,7 @@ Worker::Worker(int max_events)
     , m_nTotal_descriptors(0)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
 {
-    ss_dassert(max_events > 0);
+    mxb_assert(max_events > 0);
 
     if (m_epoll_fd != -1)
     {
@@ -306,21 +308,21 @@ Worker::Worker(int max_events)
         {
             if (!m_pQueue->add_to_worker(this))
             {
-                MXS_ALERT("Could not add message queue to worker, MaxScale will not work.");
-                ss_dassert(!true);
+                MXB_ALERT("Could not add message queue to worker, system will not work.");
+                mxb_assert(!true);
             }
         }
         else
         {
-            MXS_ALERT("Could not create message queue for worker, MaxScale will not work.");
-            ss_dassert(!true);
+            MXB_ALERT("Could not create message queue for worker, system will not work.");
+            mxb_assert(!true);
         }
     }
 }
 
 Worker::~Worker()
 {
-    ss_dassert(!m_started);
+    mxb_assert(!m_started);
 
     delete m_pTimer;
     delete m_pQueue;
@@ -337,7 +339,7 @@ Worker::~Worker()
 // static
 bool Worker::init()
 {
-    ss_dassert(!this_unit.initialized);
+    mxb_assert(!this_unit.initialized);
 
     this_unit.initialized = true;
 
@@ -346,7 +348,7 @@ bool Worker::init()
 
 void Worker::finish()
 {
-    ss_dassert(this_unit.initialized);
+    mxb_assert(this_unit.initialized);
 
     this_unit.initialized = false;
 }
@@ -470,7 +472,7 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
 bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode)
 {
 
-    class CustomTask : public maxscale::WorkerTask
+    class CustomTask : public Task
     {
     public:
 
@@ -482,7 +484,7 @@ bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_
     private:
         function<void ()> m_func;
 
-        void execute(maxscale::Worker& worker)
+        void execute(maxbase::Worker& worker)
         {
             m_func();
 
@@ -528,7 +530,7 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
 void Worker::run(mxb::Semaphore* pSem)
 {
-    ss_dassert(m_state == STOPPED);
+    mxb_assert(m_state == STOPPED);
     this_thread.pCurrent_worker = this;
 
     if (pre_run())
@@ -545,7 +547,7 @@ void Worker::run(mxb::Semaphore* pSem)
         m_state = STOPPED;
 
         post_run();
-        MXS_INFO("Worker %p has shut down.", this);
+        MXB_INFO("Worker %p has shut down.", this);
     }
     else if (pSem)
     {
@@ -557,8 +559,8 @@ void Worker::run(mxb::Semaphore* pSem)
 
 bool Worker::start()
 {
-    ss_dassert(!m_started);
-    ss_dassert(m_thread.get_id() == std::thread::id());
+    mxb_assert(!m_started);
+    mxb_assert(m_thread.get_id() == std::thread::id());
     mxb::Semaphore sem;
 
     m_started = true;
@@ -572,7 +574,7 @@ bool Worker::start()
     }
     catch (const std::exception& x)
     {
-        MXS_ERROR("Could not start worker thread: %s", x.what());
+        MXB_ERROR("Could not start worker thread: %s", x.what());
         m_started = false;
     }
 
@@ -581,13 +583,13 @@ bool Worker::start()
 
 void Worker::join()
 {
-    ss_dassert(m_thread.get_id() != std::thread::id());
+    mxb_assert(m_thread.get_id() != std::thread::id());
 
     if (m_started)
     {
-        MXS_INFO("Waiting for worker %p.", this);
+        MXB_INFO("Waiting for worker %p.", this);
         m_thread.join();
-        MXS_INFO("Waited for worker %p.", this);
+        MXB_INFO("Waited for worker %p.", this);
         m_started = false;
     }
 }
@@ -618,7 +620,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
     {
     case MXB_WORKER_MSG_SHUTDOWN:
         {
-            MXS_INFO("Worker %p received shutdown message.", this);
+            MXB_INFO("Worker %p received shutdown message.", this);
             m_should_shutdown = true;
         }
         break;
@@ -654,7 +656,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
         break;
 
     default:
-        MXS_ERROR("Worker received unknown message %d.", msg.id());
+        MXB_ERROR("Worker received unknown message %d.", msg.id());
     }
 }
 
@@ -689,30 +691,30 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
     {
         if (EEXIST == errornum)
         {
-            MXS_ERROR("File descriptor %d already present in an epoll instance.", fd);
+            MXB_ERROR("File descriptor %d already present in an epoll instance.", fd);
             return;
         }
 
         if (ENOSPC == errornum)
         {
-            MXS_ERROR("The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
+            MXB_ERROR("The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
                       "reached when trying to add file descriptor %d to an epoll instance.", fd);
             return;
         }
     }
     else
     {
-        ss_dassert(op == EPOLL_CTL_DEL);
+        mxb_assert(op == EPOLL_CTL_DEL);
 
         /* Must be removing */
         if (ENOENT == errornum)
         {
-            MXS_ERROR("File descriptor %d was not found in epoll instance.", fd);
+            MXB_ERROR("File descriptor %d was not found in epoll instance.", fd);
             return;
         }
     }
 
-    /* Common checks for add or remove - crash MaxScale */
+    /* Common checks for add or remove - crash system */
     if (EBADF == errornum)
     {
         raise(SIGABRT);
@@ -787,7 +789,7 @@ void Worker::poll_waitevents()
         {
             int eno = errno;
             errno = 0;
-            MXS_ERROR("%lu [poll_waitevents] epoll_wait returned "
+            MXB_ERROR("%lu [poll_waitevents] epoll_wait returned "
                       "%d, errno %d",
                       pthread_self(),
                       nfds,
@@ -813,7 +815,7 @@ void Worker::poll_waitevents()
                 m_statistics.evq_max = nfds;
             }
 
-            MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
+            MXB_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
             atomic_add_int64(&m_statistics.n_pollev, 1);
@@ -840,7 +842,7 @@ void Worker::poll_waitevents()
                 m_statistics.qtimes[qtime]++;
             }
 
-            m_statistics.maxqtime = MXS_MAX(m_statistics.maxqtime, qtime);
+            m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
             MXB_POLL_DATA *data = (MXB_POLL_DATA*)events[i].data.ptr;
 
@@ -883,7 +885,7 @@ void Worker::poll_waitevents()
                 m_statistics.exectimes[qtime]++;
             }
 
-            m_statistics.maxexectime = MXS_MAX(m_statistics.maxexectime, qtime);
+            m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
         epoll_tick();
@@ -898,8 +900,8 @@ namespace
 int64_t get_current_time_ms()
 {
     struct timespec ts;
-    ss_debug(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
-    ss_dassert(rv == 0);
+    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
+    mxb_assert(rv == 0);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
@@ -920,7 +922,7 @@ void Worker::tick()
         DelayedCall* pCall = i->second;
 
         auto j = m_calls.find(pCall->id());
-        ss_dassert(j != m_calls.end());
+        mxb_assert(j != m_calls.end());
 
         m_sorted_calls.erase(i);
         m_calls.erase(j);
@@ -971,7 +973,7 @@ uint32_t Worker::add_delayed_call(DelayedCall* pCall)
     m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
 
     // Insert the delayed call into the map indexed by id.
-    ss_dassert(m_calls.find(pCall->id()) == m_calls.end());
+    mxb_assert(m_calls.find(pCall->id()) == m_calls.end());
     m_calls.insert(std::make_pair(pCall->id(), pCall));
 
     if (adjust)
@@ -1020,7 +1022,7 @@ bool Worker::cancel_delayed_call(uint32_t id)
         auto range = m_sorted_calls.equal_range(pCall->at());
 
         auto k = range.first;
-        ss_dassert(k != range.second);
+        mxb_assert(k != range.second);
 
         while (k != range.second)
         {
@@ -1039,12 +1041,12 @@ bool Worker::cancel_delayed_call(uint32_t id)
             }
         }
 
-        ss_dassert(found);
+        mxb_assert(found);
     }
     else
     {
-        ss_dassert(!true);
-        MXS_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
+        mxb_assert(!true);
+        MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
     }
 
     return found;

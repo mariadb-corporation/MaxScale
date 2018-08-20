@@ -15,9 +15,9 @@
  * Test modulecmd.h functionality
  */
 
+#include <maxbase/messagequeue.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/messagequeue.hh>
 #include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/session.h>
@@ -466,7 +466,7 @@ int main(int argc, char **argv)
     int rc = 0;
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
-    mxs::MessageQueue::init();
+    mxb::MessageQueue::init();
 
     rc += test_arguments();
     rc += test_optional_arguments();

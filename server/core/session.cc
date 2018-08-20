@@ -48,6 +48,7 @@
 
 using std::string;
 using std::stringstream;
+using maxbase::Worker;
 using namespace maxscale;
 
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
@@ -323,7 +324,7 @@ void session_close(MXS_SESSION *session)
     }
 }
 
-class ServiceDestroyTask: public mxs::WorkerDisposableTask
+class ServiceDestroyTask: public Worker::DisposableTask
 {
 public:
     ServiceDestroyTask(Service* service):
@@ -358,7 +359,7 @@ static void session_free(MXS_SESSION *session)
         // Destroy the service in the main routing worker thread
         mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         main_worker->execute(std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
-                             mxs::Worker::EXECUTE_AUTO);
+                             Worker::EXECUTE_AUTO);
     }
 }
 

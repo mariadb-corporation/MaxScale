@@ -24,7 +24,6 @@ add_library(maxscale-common SHARED
   mariadb.cc
   maxscale_pcre2.cc
   misc.cc
-  messagequeue.cc
   modulecmd.cc
   modutil.cc
   monitor.cc
@@ -49,8 +48,6 @@ add_library(maxscale-common SHARED
   statistics.cc
   users.cc
   utils.cc
-  worker.cc
-  workertask.cc
   )
 
 if(WITH_JEMALLOC)

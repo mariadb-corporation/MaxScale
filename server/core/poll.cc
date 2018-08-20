@@ -37,7 +37,7 @@
 #include "internal/poll.hh"
 #include "internal/routingworker.hh"
 
-using maxscale::Worker;
+using maxbase::Worker;
 using maxscale::RoutingWorker;
 
 static int n_threads;                      /*< Number of threads */

@@ -12,10 +12,11 @@
  */
 
 #include <iostream>
-#include <maxscale/worker.hh>
-#include "../internal/poll.hh"
+#include <maxbase/assert.h>
+#include <maxbase/log.hh>
+#include <maxbase/worker.hh>
 
-using namespace maxscale;
+using namespace maxbase;
 using namespace std;
 
 namespace
@@ -25,8 +26,8 @@ namespace
 int64_t get_monotonic_time_ms()
 {
     struct timespec ts;
-    ss_debug(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
-    ss_dassert(rv == 0);
+    MXB_AT_DEBUG(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+    mxb_assert(rv == 0);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
@@ -50,11 +51,11 @@ public:
         return m_delay;
     }
 
-    bool tick(mxs::Worker::Call::action_t action)
+    bool tick(Worker::Call::action_t action)
     {
         bool rv = false;
 
-        if (action == mxs::Worker::Call::EXECUTE)
+        if (action == Worker::Call::EXECUTE)
         {
             int64_t now = get_monotonic_time_ms();
             int64_t diff = abs(now - m_at);
@@ -122,18 +123,10 @@ int run()
 
 int main()
 {
-    int rv = EXIT_FAILURE;
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
 
-    if (mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
-    {
-        poll_init();
-        maxscale::MessageQueue::init();
-        maxscale::Worker::init();
+    maxbase::MessageQueue::init();
+    maxbase::Worker::init();
 
-        rv = run();
-
-        mxs_log_finish();
-    }
-
-    return rv;
+    return run();
 }

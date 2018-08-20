@@ -28,8 +28,9 @@
 #include <glob.h>
 #include <ini.h>
 #include <avro/errors.h>
-#include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
+#include <maxbase/worker.hh>
+#include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 #include <maxscale/modulecmd.h>
@@ -42,7 +43,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.hh>
 #include <maxscale/routingworker.h>
-#include <maxscale/worker.hh>
 #include <binlog_common.h>
 
 #include "avro_converter.hh"

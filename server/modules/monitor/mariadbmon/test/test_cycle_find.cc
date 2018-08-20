@@ -18,8 +18,8 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <maxbase/messagequeue.hh>
 #include <maxscale/alloc.h>
-#include <maxscale/messagequeue.hh>
 #include <set>
 
 using std::string;
@@ -70,7 +70,7 @@ private:
 
 int main()
 {
-    mxs::MessageQueue::init();
+    mxb::MessageQueue::init();
 
     MariaDBMonitor::Test tester;
     return tester.run_tests();

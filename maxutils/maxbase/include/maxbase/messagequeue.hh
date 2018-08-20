@@ -12,10 +12,10 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <maxbase/poll.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
 class MessageQueue;

@@ -54,9 +54,8 @@
 #include "internal/modules.h"
 
 
+using maxbase::Worker;
 using maxscale::RoutingWorker;
-using maxscale::Worker;
-using maxscale::WorkerTask;
 
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
@@ -459,7 +458,7 @@ dprintAllServersJson(DCB *dcb)
 /**
  * A class for cleaning up persistent connections
  */
-class CleanupTask : public WorkerTask
+class CleanupTask : public Worker::Task
 {
 public:
     CleanupTask(const SERVER* server):

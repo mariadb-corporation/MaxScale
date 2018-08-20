@@ -1275,13 +1275,13 @@ static HttpResponse handle_request(const HttpRequest& request)
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    mxs::Worker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    mxb::Worker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
 
     HttpResponse response;
     worker->call([&request, &response]()
                  {
                      response = handle_request(request);
-                 }, mxs::Worker::EXECUTE_AUTO);
+                 }, mxb::Worker::EXECUTE_AUTO);
 
     return response;
 }
