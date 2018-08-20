@@ -406,6 +406,7 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
 
 /**
  * Assign replication role status bits to the servers in the cluster. Starts from the cluster master server.
+ * Also updates replication lag.
  */
 void MariaDBMonitor::assign_server_roles()
 {
@@ -416,6 +417,7 @@ void MariaDBMonitor::assign_server_roles()
     for (auto server : m_servers)
     {
         server->clear_status(remove_bits);
+        server->m_replication_lag = MXS_RLAG_UNDEFINED;
     }
 
     // Check the the master node, label it as the [Master] if
@@ -425,6 +427,8 @@ void MariaDBMonitor::assign_server_roles()
     {
         if (m_master->is_running())
         {
+            // Master gets replication lag 0 even if it's replicating from an external server.
+            m_master->m_replication_lag = 0;
             if (m_master->is_read_only())
             {
                 // Special case: read_only is ON on a running master but there is no alternative master.
@@ -464,7 +468,7 @@ void MariaDBMonitor::assign_server_roles()
 
 /**
  * Check if the servers replicating from the given node qualify for [Slave] and mark them. Continue the
- * search to any found slaves.
+ * search to any found slaves. Also updates replication lag.
  *
  * @param start_node The root master node where the search begins. The node itself is not marked [Slave].
  */
@@ -557,6 +561,16 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
                     if (slave->is_running())
                     {
                         slave->set_status(SERVER_SLAVE);
+                        // Write the replication lag for this slave. It may have multiple slave connections,
+                        // in which case take the smallest value. This only counts the slave connections
+                        // leading to the master or a relay.
+                        int curr_rlag = slave->m_replication_lag;
+                        int new_rlag = sstatus->seconds_behind_master;
+                        if (new_rlag != MXS_RLAG_UNDEFINED &&
+                            (curr_rlag == MXS_RLAG_UNDEFINED || new_rlag < curr_rlag))
+                        {
+                            slave->m_replication_lag = new_rlag;
+                        }
                     }
                 }
             }

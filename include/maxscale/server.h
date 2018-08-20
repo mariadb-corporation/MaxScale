@@ -49,6 +49,10 @@ const int MAINTENANCE_NO_CHANGE = 0;
 const int MAINTENANCE_ON = 100;
 const int MAINTENANCE_FLAG_NOCHECK = 0;
 const int MAINTENANCE_FLAG_CHECK = -1;
+
+// Default replication lag value
+const int MXS_RLAG_UNDEFINED = -1;
+
 /**
  * The server parameters used for weighting routing decissions
  */
@@ -157,12 +161,6 @@ typedef struct server
     bool           warn_ssl_not_enabled; /**< SSL not used for an SSL enabled server */
     MxsDiskSpaceThreshold* disk_space_threshold; /**< Disk space thresholds */
 } SERVER;
-
-enum
-{
-    MAX_RLAG_NOT_AVAILABLE = -1,
-    MAX_RLAG_UNDEFINED = -2
-};
 
 /**
  * Status bits in the SERVER->status member, which describes the general state of a server. Although the

@@ -552,9 +552,7 @@ bool RWSplitSession::route_session_write(GWBUF *querybuf, uint8_t command, uint3
  */
 static inline bool rpl_lag_is_ok(SRWBackend& backend, int max_rlag)
 {
-    return max_rlag == MAX_RLAG_UNDEFINED ||
-           (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-            backend->server()->rlag <= max_rlag);
+    return max_rlag == MXS_RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
 }
 
 SRWBackend RWSplitSession::get_hinted_backend(char *name)
@@ -735,7 +733,7 @@ int RWSplitSession::get_max_replication_lag()
 SRWBackend RWSplitSession::handle_hinted_target(GWBUF *querybuf, route_target_t route_target)
 {
     char *named_server = NULL;
-    int rlag_max = MAX_RLAG_UNDEFINED;
+    int rlag_max = MXS_RLAG_UNDEFINED;
 
     HINT* hint = querybuf->hint;
 
@@ -766,7 +764,7 @@ SRWBackend RWSplitSession::handle_hinted_target(GWBUF *querybuf, route_target_t 
         hint = hint->next;
     } /*< while */
 
-    if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+    if (rlag_max == MXS_RLAG_UNDEFINED) /*< no rlag max hint, use config */
     {
         rlag_max = get_max_replication_lag();
     }
@@ -953,7 +951,7 @@ bool RWSplitSession::should_migrate_trx(SRWBackend& target)
  */
 bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
 {
-    SRWBackend target = get_target_backend(BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
+    SRWBackend target = get_target_backend(BE_MASTER, NULL, MXS_RLAG_UNDEFINED);
     bool succp = true;
 
     if (should_replace_master(target))

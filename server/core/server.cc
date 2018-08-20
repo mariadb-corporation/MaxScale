@@ -169,7 +169,7 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
     server->version = 0;
     server->server_type = SERVER_TYPE_MARIADB;
     server->node_id = -1;
-    server->rlag = MAX_RLAG_UNDEFINED;
+    server->rlag = MXS_RLAG_UNDEFINED;
     server->node_ts = 0;
     server->master_id = -1;
     server->master_err_is_logged = false;

@@ -468,9 +468,11 @@ void MariaDBMonitor::tick()
 
     // Update shared status. The next functions read the shared status. TODO: change the following
     // functions to read "pending_status" instead.
-    for (auto mon_srv = m_monitor->monitored_servers; mon_srv; mon_srv = mon_srv->next)
+    for (auto server : m_servers)
     {
-        mon_srv->server->status = mon_srv->pending_status;
+        SERVER* srv = server->m_server_base->server;
+        srv->rlag = server->m_replication_lag;
+        srv->status = server->m_server_base->pending_status;
     }
 
     log_master_changes();

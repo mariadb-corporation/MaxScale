@@ -53,7 +53,8 @@ public:
     bool slave_sql_running = false;                     /* Slave SQL thread running state, true if "Yes" */
     GtidList gtid_io_pos;                               /* Gtid I/O position of the slave thread. */
     std::string last_error;                             /* Last IO or SQL error encountered. */
-    int64_t seconds_behind_master = 0;                  /* How much behind the slave is. */
+    int seconds_behind_master = MXS_RLAG_UNDEFINED;     /* How much behind the slave is. */
+
     std::string to_string() const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string slave_io_to_string(slave_io_running_t slave_io);
@@ -151,6 +152,8 @@ public:
     bool            m_topology_changed;     /**< Has anything that could affect replication topology changed
                                               *  this iteration? Causes: server id, slave connections,
                                               *  read-only. */
+    int             m_replication_lag;      /**< Replication lag of the server. Used during calculation so
+                                              *  that the actual SERVER struct is only written to once. */
     NodeData        m_node;                 /**< Replication topology data */
     SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings. These are not

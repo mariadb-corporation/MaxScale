@@ -46,6 +46,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_
     , m_latest_event(time(NULL))
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
     , m_topology_changed(true)
+    , m_replication_lag(MXS_RLAG_UNDEFINED)
     , m_print_update_errormsg(true)
 {
     ss_dassert(monitored_server);
@@ -188,7 +189,11 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         sstatus_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
         sstatus_row.master_server_id = result->get_uint(i_master_server_id);
-        sstatus_row.seconds_behind_master = result->get_uint(i_seconds_behind_master);
+
+        auto rlag = result->get_uint(i_seconds_behind_master);
+        // If slave connection is stopped, the value given by the backend is null -> -1.
+        sstatus_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
+            (rlag > INT_MAX) ? INT_MAX : rlag;
 
         if (sstatus_row.slave_io_running == SlaveStatus::SLAVE_IO_YES && sstatus_row.slave_sql_running)
         {
@@ -1175,7 +1180,7 @@ string SlaveStatus::to_string() const
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
-            "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %" PRId64,
+            "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
             host_port.c_str(), running_states.c_str(), master_server_id,
             gtid_io_pos.to_string().c_str(), seconds_behind_master);
     return rval;
