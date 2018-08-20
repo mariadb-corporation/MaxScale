@@ -500,6 +500,11 @@ void mxb_log_finish(void)
     this_unit.context_provider = nullptr;
 }
 
+bool mxb_log_inited()
+{
+    return this_unit.sLogger && this_unit.sMessage_registry;
+}
+
 void mxb_log_set_augmentation(int bits)
 {
     this_unit.augmentation = bits & MXB_LOG_AUGMENTATION_MASK;

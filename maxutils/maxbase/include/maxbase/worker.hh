@@ -559,22 +559,6 @@ public:
         };
     };
 
-    /**
-     * Initialize the worker mechanism.
-     *
-     * To be called once at process startup.
-     *
-     * @return True if the initialization succeeded, false otherwise.
-     */
-    static bool init();
-
-    /**
-     * Finalize the worker mechanism.
-     *
-     * To be called once at process shutdown.
-     */
-    static void finish();
-
     enum
     {
         MAX_EVENTS = 1000
@@ -989,6 +973,11 @@ protected:
      * @param op      Either EPOLL_CTL_ADD or EPOLL_CTL_DEL.
      */
     static void resolve_poll_error(int fd, int err, int op);
+
+public:
+    // TODO: Make private once all callers have beed modified.
+    static bool init();
+    static void finish();
 
 private:
     class DelayedCall;

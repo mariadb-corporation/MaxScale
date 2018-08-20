@@ -3,6 +3,7 @@ add_library(maxbase STATIC
   eventcount.cc
   log.cc
   logger.cc
+  maxbase.cc
   messagequeue.cc
   semaphore.cc
   stopwatch.cc

@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <maxbase/assert.h>
-#include <maxbase/log.hh>
+#include <maxbase/maxbase.hh>
 #include <maxbase/worker.hh>
 
 using namespace maxbase;
@@ -123,10 +123,7 @@ int run()
 
 int main()
 {
-    mxb::Log log(MXB_LOG_TARGET_STDOUT);
-
-    maxbase::MessageQueue::init();
-    maxbase::Worker::init();
+    mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
     return run();
 }

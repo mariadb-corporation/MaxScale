@@ -18,6 +18,7 @@
 namespace maxbase
 {
 
+class MaxBase;
 class MessageQueue;
 class Worker;
 
@@ -117,21 +118,6 @@ public:
     typedef MessageQueueMessage Message;
 
     /**
-     * Initializes the message queue mechanism. To be called once at
-     * process startup.
-     *
-     * @return True if the initialization succeeded, false otherwise.
-     */
-    static bool init();
-
-
-    /**
-     * Finalizes the message queue mechanism. To be called once at
-     * process shutdown, if the initialization succeeded.
-     */
-    static void finish();
-
-    /**
      * Creates a @c MessageQueue with the provided handler.
      *
      * @param pHandler  The handler that will receive the messages sent over the
@@ -189,6 +175,12 @@ public:
      *         if it was not associated with any.
      */
     Worker* remove_from_worker();
+
+public:
+    // TODO: Make private once all callers have been modified.
+    friend class MaxBase;
+    static bool init();
+    static void finish();
 
 private:
     MessageQueue(Handler* pHandler, int read_fd, int write_fd);

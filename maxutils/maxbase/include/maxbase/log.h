@@ -116,6 +116,12 @@ bool mxb_log_init(const char* ident,
 void mxb_log_finish(void);
 
 /**
+ * @brief Has the log been initialized.
+ *
+ * @return True if the log has been initialized, false otherwise.
+ */
+bool mxb_log_inited();
+/**
  * Rotate the log
  *
  * @return True if the rotating was successful
