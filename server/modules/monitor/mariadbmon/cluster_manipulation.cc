@@ -1367,7 +1367,7 @@ bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
             rval = false;
         }
 
-        if (server->is_slave())
+        if (server->is_slave() && !server->m_slave_status.empty())
         {
             if (server->m_slave_status.size() > 1)
             {

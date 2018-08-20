@@ -24,8 +24,6 @@
 using std::string;
 using maxscale::string_printf;
 
-static const int64_t MASTER_BITS = SERVER_MASTER | SERVER_WAS_MASTER;
-
 /**
  * Generic depth-first search. Iterates through child nodes (slaves) and runs the 'visit_func' on the nodes.
  * Isn't flexible enough for all uses.
@@ -420,32 +418,35 @@ void MariaDBMonitor::assign_server_roles()
         server->clear_status(remove_bits);
     }
 
-    // Check the the master node, label it as the [Master] if...
-    if (m_master)
+    // Check the the master node, label it as the [Master] if
+    // 1) the node has slaves, even if their slave sql threads are stopped
+    // 2) or detect standalone master is on.
+    if (m_master && (!m_master->m_node.children.empty() || m_detect_standalone_master))
     {
-        // the node has slaves, even if their slave sql threads are stopped ...
-        if (!m_master->m_node.children.empty() ||
-            // or detect standalone master is on ...
-            m_detect_standalone_master)
+        if (m_master->is_running())
         {
-            if (m_master->is_running())
+            if (m_master->is_read_only())
             {
-                // Master is running, assign bits for valid replication.
-                m_master->clear_status(SERVER_SLAVE | SERVER_RELAY);
-                m_master->set_status(MASTER_BITS);
-                // Run another graph search, this time assigning slaves.
-                reset_node_index_info();
-                assign_slave_and_relay_master(m_master);
+                // Special case: read_only is ON on a running master but there is no alternative master.
+                // In this case, label the master as a slave and proceed normally.
+                m_master->set_status(SERVER_SLAVE);
             }
-            else if (m_detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
+            else
             {
-                // The master is not running but it was the master last round and may have running slaves
-                // who have up-to-date events. Label any slaves, whether running or not with SERVER_WAS_SLAVE.
-                m_master->set_status(SERVER_WAS_MASTER);
-                reset_node_index_info();
-                assign_slave_and_relay_master(m_master);
+                // Master is running and writable.
+                m_master->set_status(SERVER_MASTER | SERVER_WAS_MASTER);
             }
         }
+        else if (m_detect_stale_master && (m_master->had_status(SERVER_WAS_MASTER)))
+        {
+            // The master is not running but it was the master last round and
+            // may have running slaves who have up-to-date events.
+            m_master->set_status(SERVER_WAS_MASTER);
+        }
+
+        // Run another graph search, this time assigning slaves.
+        reset_node_index_info();
+        assign_slave_and_relay_master(m_master);
     }
 
     if (!m_ignore_external_masters)
@@ -553,7 +554,6 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
 
                     // The slave only gets the slave flags if it's running.
                     // TODO: If slaves with broken links should be given different flags, add that here.
-                    slave->clear_status(MASTER_BITS);
                     if (slave->is_running())
                     {
                         slave->set_status(SERVER_SLAVE);
@@ -563,7 +563,8 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
         }
 
         // Finally, if the node itself is a running slave and has slaves of its own, label it as relay.
-        if (parent_has_live_link && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_slaves)
+        if (parent != m_master && parent_has_live_link &&
+            parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_slaves)
         {
             parent->set_status(SERVER_RELAY);
         }
