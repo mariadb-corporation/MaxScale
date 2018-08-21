@@ -172,10 +172,6 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 
         maxavro_file_close(file);
     }
-    else
-    {
-        MXS_ERROR("Failed to open file '%s' when generating file index.", filename);
-    }
 }
 
 /**
