@@ -210,12 +210,12 @@ int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray
     string change_cmd = generate_change_master_cmd(new_master->m_server_base->server->address,
                                                    new_master->m_server_base->server->port);
     int successes = 0;
-    for (auto iter = slaves.begin(); iter != slaves.end(); iter++)
+    for (MariaDBServer* slave : slaves)
     {
-        if ((*iter)->redirect_one_slave(change_cmd))
+        if (slave->redirect_one_slave(change_cmd))
         {
             successes++;
-            redirected_slaves->push_back(*iter);
+            redirected_slaves->push_back(slave);
         }
     }
     return successes;
@@ -294,12 +294,11 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
     if (!joinable_servers.empty())
     {
         string change_cmd = generate_change_master_cmd(master_server->address, master_server->port);
-        for (auto iter = joinable_servers.begin(); iter != joinable_servers.end(); iter++)
+        for (MariaDBServer* joinable : joinable_servers)
         {
-            MariaDBServer* joinable = *iter;
             const char* name = joinable->name();
-
             bool op_success = false;
+
             if (joinable->m_slave_status.empty())
             {
                 if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
@@ -356,11 +355,11 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
     ServerArray suspects;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        if (server_is_rejoin_suspect(*iter, NULL))
+        if (server_is_rejoin_suspect(server, NULL))
         {
-            suspects.push_back(*iter);
+            suspects.push_back(server);
         }
     }
 
@@ -1067,9 +1066,9 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
  */
 bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
 {
-    for (auto iter = m_excluded_servers.begin(); iter != m_excluded_servers.end(); iter++)
+    for (MariaDBServer* excluded : m_excluded_servers)
     {
-        if (*iter == server)
+        if (excluded == server)
         {
             return true;
         }
@@ -1389,9 +1388,8 @@ bool MariaDBMonitor::slave_receiving_events()
     bool received_event = false;
     int64_t master_id = m_master->m_server_base->server->node_id;
 
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        MariaDBServer* server = *iter;
         if (!server->m_slave_status.empty() &&
             server->m_slave_status[0].slave_io_running == SlaveStatus::SLAVE_IO_YES &&
             server->m_slave_status[0].master_server_id == master_id &&
@@ -1560,9 +1558,8 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demoti
 void MariaDBMonitor::enforce_read_only_on_slaves()
 {
     const char QUERY[] = "SET GLOBAL read_only=1;";
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        MariaDBServer* server = *iter;
         if (server->is_slave() && !server->is_read_only() &&
             (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
         {

@@ -40,9 +40,8 @@ void topology_DFS(MariaDBServer* node, T* data, void (*visit_func)(MariaDBServer
    {
         visit_func(node, data);
    }
-   for (auto iter = node->m_node.children.begin(); iter != node->m_node.children.end(); iter++)
+   for (MariaDBServer* slave : node->m_node.children)
    {
-       MariaDBServer* slave = *iter;
        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
        {
            topology_DFS<T>(slave, data, visit_func);
@@ -91,13 +90,13 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* sta
         stack->push_back(node);
         node_info.in_stack = true;
 
-        for (auto iter = node_info.parents.begin(); iter != node_info.parents.end(); iter++)
+        for (MariaDBServer* parent : node_info.parents)
         {
-            NodeData& parent_node = (*iter)->m_node;
+            NodeData& parent_node = parent->m_node;
             if (parent_node.index == NodeData::INDEX_NOT_VISITED)
             {
                 /** Node has not been visited, so recurse. */
-                tarjan_scc_visit_node((*iter), stack, next_ind, next_cycle);
+                tarjan_scc_visit_node(parent, stack, next_ind, next_cycle);
                 node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.lowest_index);
             }
             else if (parent_node.in_stack)
@@ -106,9 +105,9 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* sta
                 node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.index);
             }
 
-            /* If parent_node.active==false, the parent has been visited, but is not in the current stack.
-             * This means that while there is a route from this node to the parent, there is no route
-             * from the parent to this node. No cycle. */
+            /* The else-clause here can be omitted, since in that case the parent has been visited,
+             * but is not in the current stack. This means that while there is a route from this
+             * node to the parent, there is no route from the parent to this node. No cycle. */
         }
 
         /* At the end of a visit to node, leave this node on the stack if it has a path to a node earlier
@@ -153,26 +152,23 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* sta
 void MariaDBMonitor::build_replication_graph()
 {
     // First, reset all node data.
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        (*iter)->m_node.reset_indexes();
-        (*iter)->m_node.reset_results();
+        server->m_node.reset_indexes();
+        server->m_node.reset_results();
     }
 
     /* Here, all slave connections are added to the graph, even if the IO thread cannot connect. Strictly
      * speaking, building the parents-array is not required as the data already exists. This construction
      * is more for convenience and faster access later on. */
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* slave : m_servers)
     {
         /* All servers are accepted in this loop, even if the server is [Down] or [Maintenance]. For these
          * servers, we just use the latest available information. Not adding such servers could suddenly
          * change the topology quite a bit and all it would take is a momentarily network failure. */
-        MariaDBServer* slave = *iter;
 
-        for (auto iter_ss = slave->m_slave_status.begin(); iter_ss != slave->m_slave_status.end();
-             iter_ss++)
+        for (SlaveStatus& slave_conn : slave->m_slave_status)
         {
-            SlaveStatus& slave_conn = *iter_ss;
             /* We always trust the "Master_Server_Id"-field of the SHOW SLAVE STATUS output, as long as
              * the id is > 0 (server uses 0 for default). This means that the graph constructed is faulty if
              * an old "Master_Server_Id"- value is read from a slave which is still trying to connect to
@@ -227,12 +223,12 @@ void MariaDBMonitor::find_graph_cycles()
     int cycle = NodeData::CYCLE_FIRST; /* If cycles are found, the nodes in the cycle are given an identical
                                         * cycle index. */
 
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
         /** Index is 0, this node has not yet been visited. */
-        if ((*iter)->m_node.index == NodeData::INDEX_NOT_VISITED)
+        if (server->m_node.index == NodeData::INDEX_NOT_VISITED)
         {
-            tarjan_scc_visit_node(*iter, &stack, &index, &cycle);
+            tarjan_scc_visit_node(server, &stack, &index, &cycle);
         }
     }
 }
@@ -249,9 +245,8 @@ MariaDBServer* MariaDBMonitor::find_best_reach_server(const ServerArray& candida
     mxb_assert(!candidates.empty());
     MariaDBServer* best_reach = NULL;
     /* Search for the server with the best reach. */
-    for (auto iter = candidates.begin(); iter != candidates.end(); iter++)
+    for (MariaDBServer* candidate : candidates)
     {
-        MariaDBServer* candidate = *iter;
         calculate_node_reach(candidate);
         // This is the first valid node or this node has better reach than the so far best found ...
         if (best_reach == NULL || (candidate->m_node.reach > best_reach->m_node.reach))
@@ -306,9 +301,8 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
     string separator;
     const char disq[] = "is not a valid master candidate because it is ";
     ServerArray master_candidates;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    for (MariaDBServer* server : m_servers)
     {
-        MariaDBServer* server = *iter;
         if (server->m_node.parents.empty())
         {
             if (server->is_usable() && !server->is_read_only())
@@ -325,10 +319,9 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
     }
 
     // For each cycle, it's enough to take one sample server, as all members of a cycle have the same reach.
-    for (auto iter = m_cycles.begin(); iter != m_cycles.end(); iter++)
+    for (auto& iter : m_cycles)
     {
-        int cycle_id = iter->first;
-        ServerArray& cycle_members = m_cycles[cycle_id];
+        ServerArray& cycle_members = iter.second;
         // Check that no server in the cycle is replicating from outside the cycle. This requirement is
         // analogous with the same requirement for non-cycle servers.
         if (!cycle_has_master_server(cycle_members))
@@ -347,9 +340,8 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
                 messages += separator + no_valid_servers + " '" + server_names + "'.";
                 separator = "\n";
 
-                for (auto iter2 = cycle_members.begin(); iter2 != cycle_members.end(); iter2++)
+                for (MariaDBServer* disqualified_server : cycle_members)
                 {
-                    MariaDBServer* disqualified_server = *iter2;
                     string reasons = disqualify_reasons_to_string(disqualified_server);
                     messages += separator + "'" + disqualified_server->name() + "' " + disq + reasons + ".";
                     separator = "\n";
@@ -392,9 +384,8 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
 {
     /* For a cycle, all servers are equally good in a sense. The question is just if the server is up
      * and writable. */
-    for (auto iter = cycle_members.begin(); iter != cycle_members.end(); iter++)
+    for (MariaDBServer* server : cycle_members)
     {
-        MariaDBServer* server = *iter;
         mxb_assert(server->m_node.cycle != NodeData::CYCLE_NONE);
         if (server->is_usable() && !server->is_read_only())
         {
@@ -671,17 +662,15 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
  */
 bool MariaDBMonitor::cycle_has_master_server(ServerArray& cycle_servers)
 {
+    mxb_assert(!cycle_servers.empty());
     bool outside_replication = false;
     int cycle_id = cycle_servers.front()->m_node.cycle;
-    // Looks good, check that no cycle server is replicating from elsewhere.
-    for (auto iter = cycle_servers.begin(); iter != cycle_servers.end() && !outside_replication; iter++)
+
+    for (MariaDBServer* server : cycle_servers)
     {
-        MariaDBServer* server = *iter;
-        for (auto iter_master = server->m_node.parents.begin();
-             iter_master != server->m_node.parents.end();
-             iter_master++)
+        for (MariaDBServer* master : server->m_node.parents)
         {
-            if ((*iter_master)->m_node.cycle != cycle_id)
+            if (master->m_node.cycle != cycle_id)
             {
                 // Cycle member is replicating from a server that is not in the current cycle. The
                 // cycle is not a valid "master" cycle.

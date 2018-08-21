@@ -161,9 +161,8 @@ void MariaDBMonitor::Test::clear_servers()
 {
     m_monitor->m_server_info.clear();
     m_monitor->m_servers_by_id.clear();
-    for (auto iter = m_monitor->m_servers.begin(); iter != m_monitor->m_servers.end(); iter++)
+    for (MariaDBServer* server : m_monitor->m_servers)
     {
-        MariaDBServer* server = *iter;
         MXS_FREE(server->m_server_base->server->name);
         delete server->m_server_base->server;
         delete server->m_server_base;
@@ -214,13 +213,13 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     // Copy the index->server map so it can be checked later
     IdToServerMap no_cycle_servers = m_monitor->m_servers_by_id;
     std::set<int> used_cycle_ids;
-    for (auto iter = 0; iter < MAX_CYCLES; iter++)
+    for (auto ind_cycles = 0; ind_cycles < MAX_CYCLES; ind_cycles++)
     {
         int cycle_id = NodeData::CYCLE_NONE;
-        CycleMembers cycle_member_ids = expected_cycles.cycles[iter];
-        for (auto iter2 = 0; iter2 < MAX_CYCLE_SIZE; iter2++)
+        CycleMembers cycle_member_ids = expected_cycles.cycles[ind_cycles];
+        for (auto ind_servers = 0; ind_servers < MAX_CYCLE_SIZE; ind_servers++)
         {
-            auto search_id = cycle_member_ids.members[iter2];
+            auto search_id = cycle_member_ids.members[ind_servers];
             if (search_id == 0)
             {
                 break;
@@ -257,9 +256,9 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     }
 
     // Check that servers not in expected_cycles are not in a cycle
-    for (auto iter = no_cycle_servers.begin(); iter != no_cycle_servers.end(); iter++)
+    for (auto& map_elem : no_cycle_servers)
     {
-        MariaDBServer* server = (*iter).second;
+        MariaDBServer* server = map_elem.second;
         if (server->m_node.cycle != NodeData::CYCLE_NONE)
         {
             cout << server->name() << " is in cycle " << server->m_node.cycle << " when none was expected.\n";
