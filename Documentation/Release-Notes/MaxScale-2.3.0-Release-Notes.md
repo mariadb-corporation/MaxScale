@@ -140,6 +140,14 @@ allows queries to be automatically retried if their execution is interrupted.
 The [`causal_reads`](../Routers/ReadWriteSplit.md#causal_reads) parameter
 enables distributed consistent reads with MariaDB version 10.2 and newer.
 
+### Interactive Mode for MaxCtrl
+
+MaxCtrl can now be started in an interactive mode similar to MaxAdmin. This
+makes use of passwords more convenient as they have to be input only once and
+they are cached for the duration of the session.
+
+For more information about MaxCtrl, see the output of `maxctrl help`.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.3.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.3.0)
