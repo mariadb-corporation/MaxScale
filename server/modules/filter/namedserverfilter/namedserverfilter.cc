@@ -76,9 +76,9 @@ RegexHintFilter::RegexHintFilter(const std::string& user, const SourceHostVector
 
 RegexHintFilter::~RegexHintFilter()
 {
-    for (unsigned int i = 0; i < m_mapping.size(); i++)
+    for (const auto& regex : m_mapping)
     {
-        pcre2_code_free(m_mapping.at(i).m_regex);
+        pcre2_code_free(regex.m_regex);
     }
 }
 
@@ -121,11 +121,10 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
-                for (unsigned int i = 0; i < reg_serv->m_targets.size(); i++)
+                for (const auto& target : reg_serv->m_targets)
                 {
                     queue->hint =
-                        hint_create_route(queue->hint, reg_serv->m_htype,
-                                          ((reg_serv->m_targets)[i]).c_str());
+                        hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
                 }
                 m_n_diverted++;
                 m_fil_inst.m_total_diverted++;
@@ -183,24 +182,24 @@ const RegexToServers*
 RegexHintFilter::find_servers(char* sql, int sql_len, pcre2_match_data* match_data)
 {
     /* Go through the regex array and find a match. */
-    for (unsigned int i = 0; i < m_mapping.size(); i++)
+    for (auto& regex_map : m_mapping)
     {
-        pcre2_code* regex = m_mapping[i].m_regex;
+        pcre2_code* regex = regex_map.m_regex;
         int result = pcre2_match(regex, (PCRE2_SPTR)sql, sql_len, 0, 0,
                                  match_data, NULL);
         if (result >= 0)
         {
             /* Have a match. No need to check if the regex matches the complete
              * query, since the user can form the regex to enforce this. */
-            return &(m_mapping[i]);
+            return &(regex_map);
         }
         else if (result != PCRE2_ERROR_NOMATCH)
         {
             /* Error during matching */
-            if (!m_mapping[i].m_error_printed)
+            if (!regex_map.m_error_printed)
             {
                 MXS_PCRE2_PRINT_ERROR(result);
-                m_mapping[i].m_error_printed = true;
+                regex_map.m_error_printed = true;
             }
             return NULL;
         }
@@ -234,6 +233,7 @@ RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
     SourceHostVector source_host;
 
     const char* source = config_get_string(params, "source");
+
     if (*source)
     {
         if (!set_source_addresses(source, source_host))
@@ -347,14 +347,15 @@ void RegexHintFilter::diagnostics(DCB* dcb)
     {
         dcb_printf(dcb, "\t\tMatches and routes:\n");
     }
-    for (unsigned int i = 0; i < m_mapping.size(); i++)
+
+    for (const auto& regex_map : m_mapping)
     {
         dcb_printf(dcb, "\t\t\t/%s/ -> ",
-                   m_mapping[i].m_match.c_str());
-        dcb_printf(dcb, "%s", m_mapping[i].m_targets[0].c_str());
-        for (unsigned int j = 1; j < m_mapping[i].m_targets.size(); j++)
+                   regex_map.m_match.c_str());
+
+        for (const auto& target : regex_map.m_targets)
         {
-            dcb_printf(dcb, ", %s", m_mapping[i].m_targets[j].c_str());
+            dcb_printf(dcb, ", %s", target.c_str());
         }
         dcb_printf(dcb, "\n");
     }
@@ -363,11 +364,11 @@ void RegexHintFilter::diagnostics(DCB* dcb)
     dcb_printf(dcb, "\t\tTotal no. of queries not diverted by filter (approx.): %d\n",
                m_total_undiverted);
 
-    for (unsigned int i = 0; i < m_sources.size(); i++)
+    for (const auto& source : m_sources)
     {
         dcb_printf(dcb,
                    "\t\tReplacement limited to connections from     %s\n",
-                   m_sources[i].m_address.c_str());
+                   source.m_address.c_str());
     }
 
     if (m_user.length())
@@ -396,17 +397,17 @@ json_t* RegexHintFilter::diagnostics_json() const
     {
         json_t* arr = json_array();
 
-        for (const auto& map : m_mapping)
+        for (const auto& regex_map : m_mapping)
         {
             json_t* obj = json_object();
             json_t* targets = json_array();
 
-            for (const auto& target : map.m_targets)
+            for (const auto& target : regex_map.m_targets)
             {
                 json_array_append_new(targets, json_string(target.c_str()));
             }
 
-            json_object_set_new(obj, "match", json_string(map.m_match.c_str()));
+            json_object_set_new(obj, "match", json_string(regex_map.m_match.c_str()));
             json_object_set_new(obj, "targets", targets);
         }
 
@@ -454,14 +455,17 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
     bool error = false;
     char** names_arr = NULL;
     const int n_names = config_parse_server_list(server_names.c_str(), &names_arr);
+
     if (n_names > 1)
     {
         /* The string contains a server list, all must be valid servers */
         SERVER **servers;
         int found = server_find_by_unique_names(names_arr, n_names, &servers);
+
         if (found != n_names)
         {
             error = true;
+
             for (int i = 0; i < n_names; i++)
             {
                 /* servers is valid only if found > 0 */
@@ -471,10 +475,12 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
                 }
             }
         }
+
         if (found)
         {
             MXS_FREE(servers);
         }
+
         if (!error)
         {
             for (int i = 0; i < n_names; i++)
@@ -544,6 +550,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode,
         }
 
         RegexToServers regex_ser(match, regex);
+
         if (regex_ser.add_servers(servers, legacy_mode) == 0)
         {
             // The servers string didn't seem to contain any servers
@@ -557,6 +564,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode,
          */
         uint32_t capcount = 0;
         int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
+
         if (ret_info != 0)
         {
             MXS_PCRE2_PRINT_ERROR(ret_info);
@@ -652,6 +660,7 @@ void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, in
 int RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage *ip)
 {
     int ret = 0;
+
     for (const auto& source : m_sources)
     {
         struct sockaddr_in check_ipv4;
@@ -723,6 +732,7 @@ bool RegexHintFilter::validate_ip_address(const char* host)
     /* Check each byte */
     while (*host != '\0')
     {
+
         if (!isdigit(*host) && *host != '.' && *host != '%')
         {
             return false;
@@ -789,6 +799,7 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
 
     while (*p && bytes <= 3)
     {
+
         if (*p == '.')
         {
             bytes++;
@@ -904,6 +915,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
      * parameters is limited, so let's limit the number of matches and servers.
      * First, loop over the already defined parameters... */
     int params_counter = 0;
+
     while (info.parameters[params_counter].name != MXS_END_MODULE_PARAMS)
     {
         params_counter++;
@@ -913,6 +925,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
      * number within two decimals). */
     const int max_pairs = 100;
     int match_server_pairs = ((MXS_MODULE_PARAM_MAX - params_counter) / 2);
+
     if (match_server_pairs > max_pairs)
     {
         match_server_pairs = max_pairs;
@@ -925,7 +938,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     MXS_MODULE_PARAM new_param_match = {NULL, MXS_MODULE_PARAM_STRING, NULL};
     /* Cannot use SERVERLIST in the target, since it may contain MASTER, SLAVE. */
     MXS_MODULE_PARAM new_param_target = {NULL, MXS_MODULE_PARAM_STRING, NULL};
-    for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
+
+    for (unsigned int i = 0; i < param_names_match_indexed.size(); ++i)
     {
         new_param_match.name = param_names_match_indexed.at(i).c_str();
         info.parameters[params_counter] = new_param_match;
@@ -954,7 +968,8 @@ static void generate_param_names(int pairs)
     char name_server[namelen_server];
 
     const char FORMAT[] = "%s%02d";
-    for (int counter = 1; counter <= pairs; counter++)
+
+    for (int counter = 1; counter <= pairs; ++counter)
     {
         MXB_AT_DEBUG(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
         mxb_assert(rval == namelen_match - 1);
