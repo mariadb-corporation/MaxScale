@@ -17,12 +17,6 @@
 #include <maxscale/monitor.h>
 #include "gtid.hh"
 
-enum print_repl_warnings_t
-{
-    WARNINGS_ON,
-    WARNINGS_OFF
-};
-
 class QueryResult;
 class MariaDBServer;
 // Server pointer array
@@ -230,12 +224,10 @@ public:
     bool read_server_variables(std::string* errmsg_out = NULL);
 
     /**
-     * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
-     *
-     * @param print_on Print warnings or not
-     * @return True if log_bin is on
+     * Print warnings if gtid_strict_mode or log_slave_updates is off. Does not query the server,
+     * so 'update_replication_settings' should have been called recently to update the values.
      */
-    bool check_replication_settings(print_repl_warnings_t print_warnings = WARNINGS_ON) const;
+    void warn_replication_settings() const;
 
     /**
      * Wait until server catches up to the target gtid. Only considers gtid domains common to this server

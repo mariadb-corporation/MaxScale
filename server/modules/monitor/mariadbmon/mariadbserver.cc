@@ -353,38 +353,23 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     return rval;
 }
 
-bool MariaDBServer::check_replication_settings(print_repl_warnings_t print_warnings) const
+void MariaDBServer::warn_replication_settings() const
 {
-    bool rval = true;
     const char* servername = name();
-    if (m_rpl_settings.log_bin == false)
+    if (m_rpl_settings.gtid_strict_mode == false)
     {
-        if (print_warnings == WARNINGS_ON)
-        {
-            const char NO_BINLOG[] =
-                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
-            MXS_WARNING(NO_BINLOG, servername);
-        }
-        rval = false;
+        const char NO_STRICT[] =
+            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+            "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+        MXS_WARNING(NO_STRICT, servername);
     }
-    else if (print_warnings == WARNINGS_ON)
+    if (m_rpl_settings.log_slave_updates == false)
     {
-        if (m_rpl_settings.gtid_strict_mode == false)
-        {
-            const char NO_STRICT[] =
-                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-            MXS_WARNING(NO_STRICT, servername);
-        }
-        if (m_rpl_settings.log_slave_updates == false)
-        {
-            const char NO_SLAVE_UPDATES[] =
-                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-                "will break for lagging slaves if '%s' is promoted.";
-            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
-        }
+        const char NO_SLAVE_UPDATES[] =
+            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+            "will break for lagging slaves if '%s' is promoted.";
+        MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
-    return rval;
 }
 
 bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t** err_out)
@@ -1006,7 +991,7 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     }
     else if (!update_replication_settings(&query_error))
     {
-        reason = string_printf("it could not be queried: '%s'.", query_error.c_str());
+        reason = string_printf("it could not be queried: %s", query_error.c_str());
     }
     else if (!binlog_on())
     {
@@ -1084,7 +1069,7 @@ bool MariaDBServer::can_be_promoted(ClusterOperation op,
     }
     else if (!update_replication_settings(&query_error))
     {
-        reason = string_printf("it could not be queried: '%s'.", query_error.c_str());
+        reason = string_printf("it could not be queried: %s", query_error.c_str());
     }
     else if (!binlog_on())
     {

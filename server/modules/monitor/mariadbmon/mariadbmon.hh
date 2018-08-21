@@ -213,26 +213,26 @@ private:
     void assign_new_master(MariaDBServer* new_master);
 
     // Switchover methods
-    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     bool switchover_prepare(SERVER* new_master, SERVER* current_master, Log log_mode,
-                            MariaDBServer** new_master_out, MariaDBServer** current_master_out,
+                            MariaDBServer** promotion_target_out, MariaDBServer** demotion_target_out,
                             json_t** error_out);
-    bool do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target, json_t** error_out);
-    bool switchover_demote_master(MariaDBServer* current_master,
-                                  json_t** err_out);
+    bool switchover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target, json_t** error_out);
+    bool switchover_demote_master(MariaDBServer* current_master, json_t** err_out);
     bool switchover_wait_slaves_catchup(const ServerArray& slaves, const GtidList& gtid, int total_timeout,
                                         json_t** err_out);
     bool switchover_start_slave(MariaDBServer* old_master, MariaDBServer* new_master);
+    bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     void handle_low_disk_space_master();
 
     // Failover methods
-    bool manual_failover(json_t** output);
-    void handle_auto_failover();
-    bool cluster_supports_failover(std::string* reasons_out);
-    bool slave_receiving_events();
     bool failover_prepare(Log log_mode, MariaDBServer** promotion_target_out,
                           MariaDBServer** demotion_target_out, json_t** error_out);
-    bool do_failover(MariaDBServer* promotion_target, MariaDBServer* demotion_target, json_t** err_out);
+    bool failover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                          json_t** error_out);
+    bool cluster_supports_failover(std::string* reasons_out);
+    bool slave_receiving_events();
+    bool manual_failover(json_t** output);
+    void handle_auto_failover();
 
     // Rejoin methods
     bool manual_rejoin(SERVER* rejoin_server, json_t** output);
