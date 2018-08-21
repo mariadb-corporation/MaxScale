@@ -122,6 +122,9 @@ FilterDef::FilterDef(std::string name, std::string module, MXS_FILTER_OBJECT* ob
         config_add_param(&ctx, p->name, p->value);
     }
 
+    // Store module, used when the filter is serialized
+    config_replace_param(&ctx, CN_MODULE, module.c_str());
+
     parameters = ctx.parameters;
 }
 

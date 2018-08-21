@@ -107,6 +107,9 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
         dcb_enable_session_timeouts();
     }
 
+    // Store router, used when service is serialized
+    service_add_parameter(service, CN_ROUTER, router);
+
     // Store parameters in the service
     service_add_parameters(service, params);
 

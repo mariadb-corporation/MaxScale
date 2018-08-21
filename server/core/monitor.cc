@@ -155,6 +155,9 @@ MXS_MONITOR* monitor_create(const char *name, const char *module, MXS_CONFIG_PAR
     monitor_add_user(mon, config_get_string(params, CN_USER),
                      config_get_string(params, CN_PASSWORD));
 
+    // Store module, used when the monitor is serialized
+    monitor_set_parameter(mon, CN_MODULE, module);
+
     monitor_add_parameters(mon, params);
 
     if ((mon->instance = mon->api->createInstance(mon)) == NULL)
