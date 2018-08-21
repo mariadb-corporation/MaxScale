@@ -39,7 +39,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <maxbase/messagequeue.hh>
+#include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/adminusers.h>
@@ -1941,16 +1941,9 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
-    if (!mxb::MessageQueue::init())
+    if (!maxbase::init())
     {
-        MXS_ERROR("Failed to initialize message queue.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    if (!mxb::Worker::init())
-    {
-        MXS_ERROR("Failed to initialize workers.");
+        MXS_ERROR("Failed to initialize MaxScale base library.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2193,8 +2186,7 @@ int main(int argc, char **argv)
     service_destroy_instances();
 
     RoutingWorker::finish();
-    mxb::Worker::finish();
-    mxb::MessageQueue::finish();
+    maxbase::finish();
 
     /*< Call finish on all modules. */
     modules_process_finish();

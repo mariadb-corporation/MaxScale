@@ -18,7 +18,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <maxbase/messagequeue.hh>
+#include <maxbase/maxbase.hh>
 #include <maxscale/alloc.h>
 #include <set>
 
@@ -70,7 +70,7 @@ private:
 
 int main()
 {
-    mxb::MessageQueue::init();
+    maxbase::init();
 
     MariaDBMonitor::Test tester;
     return tester.run_tests();

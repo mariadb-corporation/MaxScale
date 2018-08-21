@@ -12,6 +12,7 @@
  */
 
 #include <stdio.h>
+#include <maxbase/maxbase.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
@@ -38,6 +39,8 @@ GWBUF* create_gwbuf(const char* s, size_t len)
 int main()
 {
     int rv = EXIT_FAILURE;
+
+    maxbase::MaxBase init(MXB_LOG_TARGET_FS);
 
     set_libdir(strdup("../qc_sqlite"));
 

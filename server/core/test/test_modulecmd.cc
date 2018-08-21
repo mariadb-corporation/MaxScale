@@ -15,7 +15,7 @@
  * Test modulecmd.h functionality
  */
 
-#include <maxbase/messagequeue.hh>
+#include <maxbase/maxbase.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>
@@ -466,7 +466,7 @@ int main(int argc, char **argv)
     int rc = 0;
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
-    mxb::MessageQueue::init();
+    maxbase::init();
 
     rc += test_arguments();
     rc += test_optional_arguments();
@@ -477,6 +477,7 @@ int main(int argc, char **argv)
     rc += test_domain_matching("mariadbmon", "mysqlmon",   "test_domain_matching2");
     rc += test_output();
 
+    maxbase::finish();
     mxs_log_finish();
     return rc;
 }

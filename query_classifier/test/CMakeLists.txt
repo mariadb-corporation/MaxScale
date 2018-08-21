@@ -30,7 +30,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_executable(version_sensitivity version_sensitivity.cc)
   target_link_libraries(version_sensitivity maxscale-common)
 
-  add_executable(crash_qc_sqlite crash_qc_sqlite.c)
+  add_executable(crash_qc_sqlite crash_qc_sqlite.cc)
   target_link_libraries(crash_qc_sqlite maxscale-common)
 
   add_test(TestQC_Crash_qcsqlite crash_qc_sqlite)
