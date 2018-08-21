@@ -189,7 +189,7 @@ private:
     MariaDBServer* get_server(SERVER* server);
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     std::string diagnostics_to_string() const;
-    json_t* diagnostics_to_json() const;
+    json_t* to_json() const;
 
     // Cluster discovery and status assignment methods
     void update_server(MariaDBServer* server);

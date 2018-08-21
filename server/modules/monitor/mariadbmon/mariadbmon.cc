@@ -302,7 +302,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
     MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
     auto func = [this, &rval]
     {
-        rval = diagnostics_to_json();
+        rval = to_json();
     };
 
     if (!mutable_ptr->call(func, Worker::EXECUTE_AUTO))
@@ -313,19 +313,20 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return rval;
 }
 
-json_t* MariaDBMonitor::diagnostics_to_json() const
+json_t* MariaDBMonitor::to_json() const
 {
     json_t* rval = MonitorInstance::diagnostics_json();
-    if (!m_servers.empty())
-    {
-        json_t* arr = json_array();
-        for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
-        {
-            json_array_append_new(arr, (*iter)->diagnostics_json());
-        }
-        json_object_set_new(rval, "server_info", arr);
-    }
+    json_object_set_new(rval, "master", m_master == NULL ? json_null() : json_string(m_master->name()));
+    json_object_set_new(rval, "master_gtid_domain_id",
+                        m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null() :
+                            json_integer(m_master_gtid_domain));
 
+    json_t* server_info = json_array();
+    for (MariaDBServer* server : m_servers)
+    {
+        json_array_append_new(server_info, server->to_json());
+    }
+    json_object_set_new(rval, "server_info", server_info);
     return rval;
 }
 

@@ -529,43 +529,31 @@ string MariaDBServer::diagnostics() const
     return ss.str();
 }
 
-json_t* MariaDBServer::diagnostics_json() const
+json_t* MariaDBServer::to_json() const
 {
-    json_t* srv = json_object();
-    json_object_set_new(srv, "name", json_string(name()));
-    json_object_set_new(srv, "server_id", json_integer(m_server_id));
-    json_object_set_new(srv, "read_only", json_boolean(m_read_only));
-    json_object_set_new(srv, "slave_configured", json_boolean(!m_slave_status.empty()));
-    if (!m_slave_status.empty())
+    json_t* result = json_object();
+    json_object_set_new(result, "name", json_string(name()));
+    json_object_set_new(result, "server_id", json_integer(m_server_id));
+    json_object_set_new(result, "read_only", json_boolean(m_read_only));
+
+    json_object_set_new(result, "gtid_current_pos",
+                        m_gtid_current_pos.empty() ? json_null() :
+                            json_string(m_gtid_current_pos.to_string().c_str()));
+
+    json_object_set_new(result, "gtid_binlog_pos",
+                        m_gtid_binlog_pos.empty() ? json_null() :
+                            json_string(m_gtid_binlog_pos.to_string().c_str()));
+
+    json_object_set_new(result, "master_group",
+                        (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
+
+    json_t* slave_connections = json_array();
+    for (const auto& sstatus : m_slave_status)
     {
-        json_object_set_new(srv, "slave_io_running",
-            json_string(SlaveStatus::slave_io_to_string(m_slave_status[0].slave_io_running).c_str()));
-        json_object_set_new(srv, "slave_sql_running", json_boolean(m_slave_status[0].slave_sql_running));
-        json_object_set_new(srv, "master_id", json_integer(m_slave_status[0].master_server_id));
+        json_array_append_new(slave_connections, sstatus.to_json());
     }
-    if (!m_gtid_current_pos.empty())
-    {
-        json_object_set_new(srv, "gtid_current_pos", json_string(m_gtid_current_pos.to_string().c_str()));
-    }
-    if (!m_gtid_binlog_pos.empty())
-    {
-        json_object_set_new(srv, "gtid_binlog_pos", json_string(m_gtid_binlog_pos.to_string().c_str()));
-    }
-    if (!m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty())
-    {
-        json_object_set_new(srv, "gtid_io_pos",
-                            json_string(m_slave_status[0].gtid_io_pos.to_string().c_str()));
-    }
-    if (!m_slave_status.empty())
-    {
-        json_object_set_new(srv, "seconds_behind_master",
-                            json_integer(m_slave_status[0].seconds_behind_master));
-    }
-    if (m_node.cycle != NodeData::CYCLE_NONE)
-    {
-        json_object_set_new(srv, "master_group", json_integer(m_node.cycle));
-    }
-    return srv;
+    json_object_set_new(result, "slave_connections", slave_connections);
+    return result;
 }
 
 bool MariaDBServer::uses_gtid(std::string* error_out)
@@ -1152,6 +1140,23 @@ string SlaveStatus::to_string() const
     return rval;
 }
 
+json_t* SlaveStatus::to_json() const
+{
+    json_t* result = json_object();
+    json_object_set_new(result, "connection_name", json_string(name.c_str()));
+    json_object_set_new(result, "master_host", json_string(master_host.c_str()));
+    json_object_set_new(result, "master_port", json_integer(master_port));
+    json_object_set_new(result, "slave_io_running",
+                        json_string(slave_io_to_string(slave_io_running).c_str()));
+    json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
+    json_object_set_new(result, "seconds_behing_master",
+                        seconds_behind_master == MXS_RLAG_UNDEFINED ? json_null() :
+                            json_integer(seconds_behind_master));
+    json_object_set_new(result, "master_server_id", json_integer(master_server_id));
+    json_object_set_new(result, "last_io_or_sql_error", json_string(last_error.c_str()));
+    json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
+    return result;
+}
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)
 {
     slave_io_running_t rval = SLAVE_IO_NO;

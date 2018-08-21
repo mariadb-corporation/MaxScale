@@ -55,6 +55,7 @@ public:
     int seconds_behind_master = MXS_RLAG_UNDEFINED;     /* How much behind the slave is. */
 
     std::string to_string() const;
+    json_t* to_json() const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string slave_io_to_string(slave_io_running_t slave_io);
 };
@@ -350,7 +351,7 @@ public:
      *
      * @return Json diagnostics object
      */
-    json_t* diagnostics_json() const;
+    json_t* to_json() const;
 
     /**
      * Print server information to a string.
