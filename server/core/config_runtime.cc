@@ -522,6 +522,11 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     {
         return false;
     }
+    else if (strcmp(key, "servers") == 0)
+    {
+        config_runtime_error("Parameter '%s' cannot be altered via this method", key);
+        return false;
+    }
 
     mxs::SpinLockGuard guard(crt_lock);
     monitor_stop(monitor);
@@ -604,15 +609,20 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)
 {
     const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    std::string key(zKey);
+    std::string value(zValue);
 
     if (!validate_param(config_service_params, mod->parameters, zKey, zValue))
     {
         return false;
     }
+    else if (key == "filters" || key == "servers")
+    {
+        config_runtime_error("Parameter '%s' cannot be altered via this method", zKey);
+        return false;
+    }
 
     mxs::SpinLockGuard guard(crt_lock);
-    std::string key(zKey);
-    std::string value(zValue);
     bool rval = true;
 
     if (service->is_basic_parameter(key))
