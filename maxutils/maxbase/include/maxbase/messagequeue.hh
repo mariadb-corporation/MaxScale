@@ -18,7 +18,6 @@
 namespace maxbase
 {
 
-class MaxBase;
 class MessageQueue;
 class Worker;
 
@@ -176,9 +175,8 @@ public:
      */
     Worker* remove_from_worker();
 
-public:
-    // TODO: Make private once all callers have been modified.
-    friend class MaxBase;
+private:
+    friend class Initer;
     static bool init();
     static void finish();
 

@@ -974,8 +974,8 @@ protected:
      */
     static void resolve_poll_error(int fd, int err, int op);
 
-public:
-    // TODO: Make private once all callers have beed modified.
+private:
+    friend class Initer;
     static bool init();
     static void finish();
 

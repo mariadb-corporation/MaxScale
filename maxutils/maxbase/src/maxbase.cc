@@ -16,34 +16,77 @@
 #include <maxbase/messagequeue.hh>
 #include <maxbase/worker.hh>
 
-namespace
+namespace maxbase
 {
 
-using namespace maxbase;
+class Initer
+{
+    Initer() = delete;
+    Initer(const Initer&) = delete;
+    Initer& operator=(const Initer&) = delete;
 
-typedef bool (*init_function_t)();
-typedef void (*finish_function_t)();
+public:
+    static bool init()
+    {
+        bool rv = false;
+
+        int i;
+        for (i = 0; i < s_nComponents; ++i)
+        {
+            if (!s_components[i].init())
+            {
+                break;
+            }
+        }
+
+        if (i == s_nComponents)
+        {
+            rv = true;
+        }
+        else if (i != 0)
+        {
+            // We need to finalize in reverse order the components that
+            // successfully were initialized.
+            for (int j = i - 1; j >= 0; --j)
+            {
+                s_components[j].finish();
+            }
+        }
+
+        return rv;
+    }
+
+    static void finish()
+    {
+        for (int i = s_nComponents - 1; i >= 0; --i)
+        {
+            s_components[i].finish();
+        }
+    }
+
+private:
+    typedef bool (*init_function_t)();
+    typedef void (*finish_function_t)();
+
+    struct component_t
+    {
+        init_function_t   init;
+        finish_function_t finish;
+    };
+
+    static component_t s_components[];
+    static int         s_nComponents;
+};
 
 #define MAXBASE_COMPONENT(X) { &X::init, &X::finish }
 
-struct maxbase_component_t
-{
-    init_function_t   init;
-    finish_function_t finish;
-};
-
-const maxbase_component_t maxbase_components[] =
+Initer::component_t Initer::s_components[] =
 {
     MAXBASE_COMPONENT(MessageQueue),
     MAXBASE_COMPONENT(Worker),
 };
 
-const int N_COMPONENTS = sizeof(maxbase_components)/sizeof(maxbase_components[0]);
-
-}
-
-namespace maxbase
-{
+int Initer::s_nComponents = sizeof(Initer::s_components) / sizeof(Initer::s_components[0]);
 
 MaxBase::MaxBase(const char* zIdent,
                  const char* zLogdir,
@@ -101,28 +144,7 @@ bool init()
 
     if (log_exists)
     {
-        int i;
-        for (i = 0; i < N_COMPONENTS; ++i)
-        {
-            if (!maxbase_components[i].init())
-            {
-                break;
-            }
-        }
-
-        if (i == N_COMPONENTS)
-        {
-            rv = true;
-        }
-        else if (i != 0)
-        {
-            // We need to finalize in reverse order the components that
-            // successfully were initialized.
-            for (int j = i - 1; j >= 0; --j)
-            {
-                maxbase_components[j].finish();
-            }
-        }
+        rv = Initer::init();
     }
 
     if (log_inited_locally)
@@ -136,10 +158,7 @@ bool init()
 
 void finish()
 {
-    for (int i = N_COMPONENTS - 1; i >= 0; --i)
-    {
-        maxbase_components[i].finish();
-    }
+    Initer::finish();
 }
 
 }
