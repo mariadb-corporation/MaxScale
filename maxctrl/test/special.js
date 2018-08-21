@@ -70,11 +70,6 @@ describe("Library invocation", function() {
             .should.be.fulfilled
     })
 
-    it('no command', function() {
-        return ctrl.execute([], {})
-            .should.be.rejected
-    })
-
     it('reject on connection failure', function() {
         stopMaxScale()
             .then(function() {
