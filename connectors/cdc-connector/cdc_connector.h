@@ -1,4 +1,3 @@
-#pragma once
 /* Copyright (c) 2017, MariaDB Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -16,6 +15,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+#pragma once
 
 #include <cstdint>
 #include <string>
