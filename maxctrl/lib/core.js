@@ -13,10 +13,14 @@
 
 var fs = require('fs')
 var program = require('yargs');
+var inquirer = require('inquirer')
 
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, manually create the file
 const maxctrl_version = require('./version.js').version;
+
+// Global options given at startup
+var base_opts = []
 
 program
     .version(maxctrl_version)
@@ -108,21 +112,26 @@ program
     .command(require('./call.js'))
     .command(require('./cluster.js'))
     .command(require('./api.js'))
+    .epilog('If no commands are given, maxctrl is started in interactive mode. ' +
+            'Use `exit` to exit the interactive mode.')
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, function(argv) {
-        maxctrl(argv, function() {
-            msg = argv._.length == 0 ? 'No command given' : 'Unknown command ' + JSON.stringify(argv._)
-            return error(msg + '. See output of `help` for a list of commands.')
-        })
+        if (argv._.length == 0) {
+            base_opts = ['--user=' + argv.user,
+                        '--password=' + argv.password,
+                        '--hosts=' + argv.hosts,
+                        '--timeout=' + argv.timeout]
+            return askQuestion()
+        } else {
+            maxctrl(argv, function() {
+                msg = 'Unknown command ' + JSON.stringify(argv._)
+                return error(msg + '. See output of `help` for a list of commands.')
+            })
+        }
     })
 
-module.exports.execute = function(argv, opts) {
-    if (opts && opts.extra_args) {
-        // Add extra options to the end of the argument list
-        argv = argv.concat(opts.extra_args)
-    }
-
+function doCommand(argv) {
     return new Promise(function(resolve, reject) {
         program
             .parse(argv, {resolve: resolve, reject: reject}, function(err, argv, output) {
@@ -133,4 +142,47 @@ module.exports.execute = function(argv, opts) {
                 }
             })
     })
+}
+
+module.exports.execute = function(argv, opts) {
+    if (opts && opts.extra_args) {
+        // Add extra options to the end of the argument list
+        argv = argv.concat(opts.extra_args)
+    }
+
+    return doCommand(argv)
+}
+
+function askQuestion() {
+    var question = [ {
+        name: 'maxctrl',
+        prefix: '',
+        suffix: ''
+    }]
+    var running = true
+
+    return inquirer
+        .prompt(question)
+        .then(answers => {
+            cmd = answers.maxctrl
+            if (cmd.toLowerCase() == 'exit' || cmd.toLowerCase() == 'quit') {
+                return Promise.resolve()
+            } else {
+                return doCommand(base_opts.concat(cmd.split(' ')))
+                    .then((output) => {
+                        if (output) {
+                            console.log(output)
+                        }
+                        return askQuestion()
+                    }, (err) => {
+                        if (err) {
+                            console.log(err)
+                        } else {
+                            console.log('An undefined error has occurred')
+                        }
+                        return askQuestion()
+                    })
+
+            }
+        })
 }
