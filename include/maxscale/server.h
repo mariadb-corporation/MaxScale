@@ -144,7 +144,6 @@ typedef struct server
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
     int            last_event;     /**< The last event that occurred on this server */
     int64_t        triggered_at;   /**< Time when the last event was triggered */
-    bool           active_event;   /**< Was MaxScale active when last event was observed */
     // Status descriptors. Updated automatically by a monitor or manually by the admin
     uint64_t       status;         /**< Current status flag bitmap */
     int            maint_request;  /**< Is admin requesting Maintenance=ON/OFF on the server? */

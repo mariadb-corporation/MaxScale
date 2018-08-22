@@ -372,7 +372,6 @@ bool monitor_add_server(MXS_MONITOR *mon, SERVER *server)
         db->next = NULL;
         db->mon_err_count = 0;
         db->log_version_err = true;
-        db->new_event = true;
 
         /** Server status is uninitialized */
         db->mon_prev_status = -1;
@@ -1698,8 +1697,6 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             mxs_monitor_event_t event = mon_get_event_type(ptr);
             ptr->server->last_event = event;
             ptr->server->triggered_at = mxs_clock();
-            ptr->server->active_event = !config_get_global_options()->passive;
-            ptr->new_event = true;
             mon_log_state_change(ptr);
 
             if (event == MASTER_DOWN_EVENT)

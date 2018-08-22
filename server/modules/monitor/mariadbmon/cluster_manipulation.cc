@@ -1236,119 +1236,66 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
 */
 void MariaDBMonitor::handle_auto_failover()
 {
-    string cluster_issues;
-    // TODO: Only check this when topology has changed.
-    if (!cluster_supports_failover(&cluster_issues))
+    if (m_master == NULL || m_master->is_running())
     {
-        const char PROBLEMS[] = "The backend cluster does not support failover due to the following "
-                                "reason(s):\n"
-                                "%s\n\n"
-                                "Automatic failover has been disabled. It should only be enabled after the "
-                                "above issues have been resolved.";
-        string p1 = string_printf(PROBLEMS, cluster_issues.c_str());
-        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
-        string total_msg = p1 + " " + p2;
-        MXS_ERROR("%s", total_msg.c_str());
-        m_auto_failover = false;
-        disable_setting(CN_AUTO_FAILOVER);
+        // No need for failover. This also applies if master is in maintenance, because that is a user
+        // problem.
+        m_warn_master_down = true;
+        m_warn_failover_precond = true;
         return;
     }
 
-    if (m_master && m_master->is_master())
+    int master_down_count = m_master->m_server_base->mon_err_count;
+    if (m_failcount > 1 && m_warn_master_down)
     {
-        // Certainly no need for a failover.
-        return;
+        int monitor_passes = m_failcount - master_down_count;
+        MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
+                    "begins.", (monitor_passes > 1) ? monitor_passes : 1);
+        m_warn_master_down = false;
     }
-
     // If master seems to be down, check if slaves are receiving events.
-    if (m_verify_master_failure && m_master && m_master->is_down() && slave_receiving_events())
+    else if (m_verify_master_failure && slave_receiving_events()) // TODO: Fix the events detection
     {
         MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
-        return;
     }
-
-    MariaDBServer* failed_master = NULL;
-    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    else if (master_down_count >= m_failcount)
     {
-        MariaDBServer* server = *iter;
-        MXS_MONITORED_SERVER* mon_server = server->m_server_base;
-        if (mon_server->new_event && mon_server->server->last_event == MASTER_DOWN_EVENT)
+        // Failover is required, but first we should check if preconditions are met.
+        MariaDBServer* promotion_target = NULL;
+        MariaDBServer* demotion_target = NULL;
+        Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
+        if (failover_prepare(log_mode, &promotion_target, &demotion_target, NULL))
         {
-            if (mon_server->server->active_event)
+            m_warn_failover_precond = true;
+            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", m_master->name());
+            if (!failover_perform(promotion_target, demotion_target, NULL))
             {
-                // MaxScale was active when the event took place
-                failed_master = server;
-            }
-            else
-            {
-                /* If a master_down event was triggered when this MaxScale was passive, we need to execute
-                 * the failover script again if no new masters have appeared. */
-                int64_t timeout = MXS_SEC_TO_CLOCK(m_failover_timeout);
-                int64_t t = mxs_clock() - mon_server->server->triggered_at;
-
-                if (t > timeout)
-                {
-                    MXS_WARNING("Failover of server '%s' did not take place within %u seconds, "
-                                "failover needs to be re-triggered", server->name(), m_failover_timeout);
-                    failed_master = server;
-                }
+                report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
             }
         }
-    }
-
-    if (failed_master)
-    {
-        if (m_failcount > 1 && failed_master->m_server_base->mon_err_count == 1)
+        else
         {
-            MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
-                        "begins.", m_failcount - 1);
-        }
-        else if (failed_master->m_server_base->mon_err_count >= m_failcount)
-        {
-            // Failover is required, but first we should check if preconditions are met.
-            MariaDBServer* promotion_target = NULL;
-            MariaDBServer* demotion_target = NULL;
-            Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-            if (failover_prepare(log_mode, &promotion_target, &demotion_target, NULL))
+            // Failover was not attempted because of errors, however these errors are not permanent.
+            // Servers were not modified, so it's ok to try this again.
+            if (m_warn_failover_precond)
             {
-                m_warn_failover_precond = true;
-                MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                           failed_master->name());
-                failed_master->m_server_base->new_event = false;
-                if (!failover_perform(promotion_target, demotion_target, NULL))
-                {
-                    report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
-                }
-            }
-            else
-            {
-                // Failover was not attempted because of errors, however these errors are not permanent.
-                // Servers were not modified, so it's ok to try this again.
-                if (m_warn_failover_precond)
-                {
-                    MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
-                                "suppressed.");
-                    m_warn_failover_precond = false;
-                }
+                MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
+                            "suppressed.");
+                m_warn_failover_precond = false;
             }
         }
-    }
-    else
-    {
-        m_warn_failover_precond = true;
     }
 }
 
 /**
- * Is the topology such that failover is supported, even if not required just yet?
- *
- * @param reasons_out Why failover is not supported
- * @return True if cluster supports failover
+ * Is the topology such that failover and switchover are supported, even if not required just yet?
+ * Print errors and disable the settings if this is not the case.
  */
-bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
+void MariaDBMonitor::check_cluster_operations_support()
 {
-    bool rval = true;
-    string separator;
+    bool supported = true;
+    DelimitedPrinter printer("\n");
+    string all_reasons;
     // Currently, only simple topologies are supported. No Relay Masters or multiple slave connections.
     // Gtid-replication is required, and a server version which supports it.
     for (MariaDBServer* server : m_servers)
@@ -1358,41 +1305,63 @@ bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
         if (server->m_version != MariaDBServer::version::UNKNOWN &&
             server->m_version != MariaDBServer::version::MARIADB_100)
         {
-            *reasons_out += separator + string_printf("The version of server '%s' is not supported. Failover "
-                                                      "requires MariaDB 10.X.", server->name());
-            separator = "\n";
-            rval = false;
+            supported = false;
+            auto reason = string_printf("The version of server '%s' is not supported. Failover/switchover "
+                                        "requires MariaDB 10.X.", server->name());
+            printer.cat(all_reasons, reason);
         }
 
         if (server->is_slave() && !server->m_slave_status.empty())
         {
-            if (server->m_slave_status.size() > 1)
+            if (server->m_node.parents.size() > 1)
             {
-                *reasons_out += separator +
-                    string_printf("Server '%s' is replicating or attempting to replicate from "
-                                  "multiple masters.", server->name());
-                separator = "\n";
-                rval = false;
+                supported = false;
+                auto reason = string_printf("Server '%s' is replicating or attempting to replicate from "
+                                            "multiple masters.", server->name());
+                printer.cat(all_reasons, reason);
             }
             if (!server->uses_gtid())
             {
-                *reasons_out += separator +
-                    string_printf("Server '%s' is not using gtid-replication.", server->name());
-                separator = "\n";
-                rval = false;
+                supported = false;
+                auto reason = string_printf("Server '%s' is not using gtid-replication.", server->name());
+                printer.cat(all_reasons, reason);
             }
         }
 
         if (server->is_relay_master())
         {
-            *reasons_out += separator +
-                    string_printf("Server '%s' is a relay master. Only topologies with one replication "
-                                  "layer are supported.", server->name());
-            separator = "\n";
-            rval = false;
+            supported = false;
+            auto reason = string_printf("Server '%s' is a relay. Only topologies with one replication "
+                                        "layer are supported.", server->name());
+            printer.cat(all_reasons, reason);
         }
     }
-    return rval;
+
+    if (!supported)
+    {
+        const char PROBLEMS[] =
+            "The backend cluster does not support failover/switchover due to the following reason(s):\n"
+            "%s\n"
+            "Automatic failover/switchover has been disabled. They should only be enabled "
+            "after the above issues have been resolved.";
+        string p1 = string_printf(PROBLEMS, all_reasons.c_str());
+        string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
+        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+                                  m_monitor->name);
+        string total_msg = p1 + " " + p2 + " " + p3;
+        MXS_ERROR("%s", total_msg.c_str());
+
+        if (m_auto_failover)
+        {
+            m_auto_failover = false;
+            disable_setting(CN_AUTO_FAILOVER);
+        }
+        if (m_switchover_on_low_disk_space)
+        {
+            m_switchover_on_low_disk_space = false;
+            disable_setting(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
+        }
+    }
 }
 
 /**

@@ -68,6 +68,7 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor)
     , m_warn_cannot_rejoin(true)
     , m_warn_current_master_invalid(true)
     , m_warn_have_better_master(true)
+    , m_warn_master_down(true)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -451,6 +452,11 @@ void MariaDBMonitor::tick()
     {
         update_topology();
         m_cluster_topology_changed = false;
+        // If cluster operations are enabled, check topology support and disable if needed.
+        if (m_auto_failover || m_switchover_on_low_disk_space)
+        {
+            check_cluster_operations_support();
+        }
     }
 
     // Always re-assign master, slave etc bits as these depend on other factors outside topology

@@ -176,6 +176,7 @@ private:
     bool m_warn_cannot_rejoin;           /**< Print warning if auto_rejoin fails because of invalid gtid:s? */
     bool m_warn_current_master_invalid;  /**< Print warning if current master is not valid? */
     bool m_warn_have_better_master;      /**< Print warning if the current master is not the best one? */
+    bool m_warn_master_down;             /**< Print warning that failover may happen soon? */
 
     // Base methods
     MariaDBMonitor(MXS_MONITOR* monitor_base);
@@ -212,6 +213,7 @@ private:
     void update_master_cycle_info();
     void set_low_disk_slaves_maintenance();
     void assign_new_master(MariaDBServer* new_master);
+    void check_cluster_operations_support();
 
     // Switchover methods
     bool switchover_prepare(SERVER* new_master, SERVER* current_master, Log log_mode,
@@ -230,7 +232,6 @@ private:
                           MariaDBServer** demotion_target_out, json_t** error_out);
     bool failover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target,
                           json_t** error_out);
-    bool cluster_supports_failover(std::string* reasons_out);
     bool slave_receiving_events();
     bool manual_failover(json_t** output);
     void handle_auto_failover();

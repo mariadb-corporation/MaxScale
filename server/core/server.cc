@@ -162,7 +162,6 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
     server->persistmax = 0;
     server->last_event = SERVER_UP_EVENT;
     server->triggered_at = 0;
-    server->active_event = false;
     server->status = SERVER_RUNNING;
     server->maint_request = MAINTENANCE_NO_CHANGE;
     server->version_string[0] = '\0';
