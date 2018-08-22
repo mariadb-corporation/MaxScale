@@ -1123,6 +1123,22 @@ bool config_load_global(const char *filename)
     {
         log_config_error(filename, rval);
     }
+    else
+    {
+        // Do some post-processing for auto-sized default variables
+        if (gateway.qc_cache_properties.max_size == -1)
+        {
+            int64_t mem_per_thr = get_total_memory() * 0.4 / gateway.n_threads;
+            mxb_assert(mem_per_thr >= 0);
+            gateway.qc_cache_properties.max_size = mem_per_thr;
+
+            if (mem_per_thr == 0)
+            {
+                MXS_WARNING("Could not auto-detect total system memory for the query classifier "
+                            "cache. Manually define `%s` to enable it.", CN_QUERY_CLASSIFIER_CACHE_SIZE);
+            }
+        }
+    }
 
     return rval == 0;
 }
@@ -2607,6 +2623,9 @@ void config_set_global_defaults()
     gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
     gateway.passive = false;
     gateway.promoted_at = 0;
+
+    // Note: This is not a valid cache value: it is used to detect that the default value is used
+    gateway.qc_cache_properties.max_size = -1;
 
     gateway.thread_stack_size = 0;
     gateway.writeq_high_water = 0;

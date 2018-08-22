@@ -1119,11 +1119,6 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr, const 
     return fd;
 }
 
-/**
- * Return the number of processors available.
- * @return Number of processors or 1 if the required definition of _SC_NPROCESSORS_CONF
- * is not found
- */
 long get_processor_count()
 {
     long processors = 1;
@@ -1137,6 +1132,24 @@ long get_processor_count()
 #error _SC_NPROCESSORS_ONLN not available.
 #endif
     return processors;
+}
+
+int64_t get_total_memory()
+{
+    int64_t pagesize = 0;
+    int64_t num_pages = 0;
+#if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
+    if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
+    {
+        MXS_WARNING("Unable to establish total system memory");
+        pagesize = 0;
+        num_pages = 0;
+    }
+#else
+#error _SC_PAGESIZE and _SC_PHYS_PAGES are not defined
+#endif
+    mxb_assert(pagesize * num_pages > 0);
+    return pagesize * num_pages;
 }
 
 namespace maxscale

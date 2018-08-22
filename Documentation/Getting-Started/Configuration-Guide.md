@@ -552,26 +552,29 @@ _qc_sqlite_ - supports the following arguments:
 
 #### `query_classifier_cache_size`
 
-If present, enables and specifies the maximum size of the query classifier cache.
+Specifies the maximum size of the query classifier cache. The default limit is
+40% of total system memory.
 
-If the query classifier cache has been enabled, MaxScale will, after a statement
-has been parsed, store the classification result using the canonicalized version
-of the statement as the key.
+When the query classifier cache has been enabled, MaxScale will, after a
+statement has been parsed, store the classification result using the
+canonicalized version of the statement as the key.
 
-When the classification result for a statement is needed, MaxScale will first
-canonicalize the statement and check whether the result can be found in the cache.
-If it can, the statement will not be parsed at all but the cached result is used.
+If the classification result for a statement is needed, MaxScale will first
+canonicalize the statement and check whether the result can be found in the
+cache.  If it can, the statement will not be parsed at all but the cached result
+is used.
 
-The configuration parameter takes one integer that specifies the maximum size
-of the cache. The size of the cache can be specifed as explained [here](#sizes).
+The configuration parameter takes one integer that specifies the maximum size of
+the cache. The size of the cache can be specifed as explained [here](#sizes).
+
 ```
 # 1MB query classifier cache
-query_classifier_cache=1MB
+query_classifier_cache_size=1MB
 ```
 
 Note that MaxScale uses a separate cache for each worker thread. So, the total
-amount of memory used at most by the cache is obtained by multiplying the
-size specified here, with the number the worker threads used.
+amount of memory used at most by the cache is obtained by multiplying the size
+specified here, with the value of `threads`.
 
 ##### `log_unrecognized_statements`
 

@@ -154,7 +154,19 @@ bool clean_up_pathname(char *path);
 
 bool mxs_mkdir_all(const char *path, int mask);
 
+/**
+ * Return the number of processors
+ *
+ * @return Number of processors or 1 if the information is not available
+ */
 long get_processor_count();
+
+/**
+ * Return total system memory
+ *
+ * @return Total memory in bytes or 0 if the information is not available
+ */
+int64_t get_total_memory();
 
 /**
  * Store a 4 byte integer
