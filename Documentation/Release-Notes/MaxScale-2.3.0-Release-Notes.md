@@ -59,6 +59,11 @@ The `thread_stack_size` configuration parameter is ignored and has been
 deprecated. If you need to explicitly set the stack size, do so using
 `ulimit -s` before starting MaxScale.
 
+### `ssl` for Servers and Listeners
+
+The `ssl` parameter now accepts boolean values ìn addition to the old `required`
+and `disabled` values.
+
 ## Dropped Features
 
 ### `log_to_shm` parameter and `--log=shm` option
@@ -91,12 +96,17 @@ The CDC protocol no longer accepts the `QUERY-LAST-TRANSACTION` and
 `QUERY-TRANSACTION` commands. They were removed due to the addition of the REST
 API that provides the same information in a more easy to process format.
 
-### `ssl` for Servers and Listeners
-
-The `ssl` parameter now accepts boolean values ìn addition to the old `required`
-and `disabled` values.
-
 ## New Features
+
+### Query Classifier Cache
+
+The query classifier now caches the results of each classification which
+significantly improves performance of workloads that require query
+classification. The default cache size limit is 40% of total system memory.
+
+Read [the configuration guide](../Getting-Started/Configuration-Guide.md#query_classifier_cache_size)
+for more information about the details of the query classifier cache and how to
+configure it.
 
 ### Runtime Configuration of the Cache
 
