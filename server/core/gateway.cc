@@ -728,14 +728,11 @@ static void print_log_n_stderr(
 {
     if (do_log)
     {
-        if (mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS))
-        {
-            MXS_ERROR("%s%s%s%s",
-                      logstr,
-                      eno == 0 ? "" : " (",
-                      eno == 0 ? "" : mxs_strerror(eno),
-                      eno == 0 ? "" : ")");
-        }
+        MXS_ERROR("%s%s%s%s",
+                  logstr,
+                  eno == 0 ? "" : " (",
+                  eno == 0 ? "" : mxs_strerror(eno),
+                  eno == 0 ? "" : ")");
     }
     if (do_stderr)
     {
