@@ -343,10 +343,15 @@ inline bool server_is_in_cluster(const SERVER* server)
             (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED | SERVER_NDB)) != 0);
 }
 
+inline bool status_is_slave_of_ext_master(uint64_t status)
+{
+    return ((status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER)) ==
+            (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER));
+}
+
 inline bool server_is_slave_of_ext_master(const SERVER* server)
 {
-    return ((server->status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER)) ==
-            (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER));
+    return status_is_slave_of_ext_master(server->status);
 }
 
 inline bool status_is_disk_space_exhausted(uint64_t status)

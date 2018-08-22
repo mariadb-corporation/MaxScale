@@ -273,6 +273,13 @@ public:
     bool is_slave() const;
 
     /**
+     * Check if server is a slave of an external server.
+     *
+     * @return True if server is a slave of an external server
+     */
+    bool is_slave_of_ext_master() const;
+
+    /**
      * Check if server is running and not in maintenance.
      *
      * @return True if server is usable

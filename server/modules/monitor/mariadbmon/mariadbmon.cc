@@ -587,7 +587,7 @@ void MariaDBMonitor::update_gtid_domain()
 
 void MariaDBMonitor::update_external_master()
 {
-    if (server_is_slave_of_ext_master(m_master->m_server_base->server))
+    if (m_master->is_slave_of_ext_master())
     {
         mxb_assert(!m_master->m_slave_status.empty());
         if (m_master->m_slave_status[0].master_host != m_external_master_host ||
@@ -614,7 +614,8 @@ void MariaDBMonitor::update_external_master()
     {
         if (m_external_master_port != PORT_UNKNOWN)
         {
-            MXS_NOTICE("Cluster lost the external master.");
+            MXS_NOTICE("Cluster lost the external master. Previous one was at: [%s]:%d",
+                       m_external_master_host.c_str(), m_external_master_port);
         }
         m_external_master_host.clear();
         m_external_master_port = PORT_UNKNOWN;

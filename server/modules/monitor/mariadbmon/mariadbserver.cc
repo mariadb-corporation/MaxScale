@@ -437,6 +437,11 @@ bool MariaDBServer::is_slave() const
     return status_is_slave(m_server_base->pending_status);
 }
 
+bool MariaDBServer::is_slave_of_ext_master() const
+{
+    return status_is_slave_of_ext_master(m_server_base->pending_status);
+}
+
 bool MariaDBServer::is_usable() const
 {
     return status_is_usable(m_server_base->pending_status);
