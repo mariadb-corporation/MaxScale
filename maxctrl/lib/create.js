@@ -142,10 +142,12 @@ exports.builder = function(yargs) {
             describe: 'Password for the monitor user',
             type: 'string'
         })
-        .command('monitor <name> <module>', 'Create a new monitor', function(yargs) {
+        .command('monitor <name> <module> [params...]', 'Create a new monitor', function(yargs) {
             return yargs.epilog('The list of servers given with the --servers option should not ' +
-                                'contain any servers that are already monitored by another monitor.')
-                .usage('Usage: create monitor <name> <module>')
+                                'contain any servers that are already monitored by another monitor. ' +
+                                'The last argument to this command is a list of key=value parameters ' +
+                                'given as the monitor parameters.')
+                .usage('Usage: create monitor <name> <module> [params...]')
         }, function(argv) {
 
             var monitor = {
@@ -155,6 +157,15 @@ exports.builder = function(yargs) {
                         'module': argv.module
                     }
                 }
+            }
+
+            if (argv.params) {
+                var err = validateParams(argv, argv.params)
+                if (err) {
+                    return Promise.reject(err)
+                }
+
+                monitor.data.attributes.parameters = argv.params.reduce(to_obj, {})
             }
 
             if (argv.servers) {

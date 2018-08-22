@@ -10,6 +10,12 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### MaxCtrl `create monitor`
+
+The `create monitor` command now accepts a list of key-value parameters that are
+passed to the monitor as the last argument. This allows creation and
+configuration of monitors in one command.
+
 ### `query_retries`
 
 The default value of `query_retries` was changed from 0 to 1. This turns
