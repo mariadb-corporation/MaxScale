@@ -843,8 +843,8 @@ int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW
 
             if (strcmp(suffix, "cnf") == 0) // that is ".cnf".
             {
-                ss_dassert(current_dcontext);
-                ss_dassert(current_ccontext);
+                mxb_assert(current_dcontext);
+                mxb_assert(current_ccontext);
 
                 if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
                 {
@@ -960,7 +960,7 @@ static bool contains_cnf_files(const char *path)
         break;
 
     default:
-        ss_dassert(rc == GLOB_NOMATCH);
+        mxb_assert(rc == GLOB_NOMATCH);
         break;
     }
 
@@ -1136,7 +1136,7 @@ bool config_load_global(const char *filename)
 bool
 config_load(const char *filename)
 {
-    ss_dassert(!config_file);
+    mxb_assert(!config_file);
 
     config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
@@ -1207,7 +1207,7 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
         return {config_filter_params, get_module(name, MODULE_FILTER)};
     }
 
-    ss_dassert(!true);
+    mxb_assert(!true);
     return {nullptr, nullptr};
 }
 
@@ -1465,7 +1465,7 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
             }
             else
             {
-                ss_dassert(!group.empty());
+                mxb_assert(!group.empty());
                 /** Due to the algorithm that was used, the strongly connected
                  * components are always identified before the nodes that depend
                  * on them. This means that the result is sorted at the same
@@ -1475,7 +1475,7 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
         }
 
         // The end result should contain the same set of nodes we started with
-        ss_dassert(std::set<CONFIG_CONTEXT*>(result.begin(), result.end()) ==
+        mxb_assert(std::set<CONFIG_CONTEXT*>(result.begin(), result.end()) ==
                    std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end()));
 
         objects = std::move(result);
@@ -1512,7 +1512,7 @@ process_config_context(CONFIG_CONTEXT *context)
     for (CONFIG_CONTEXT* obj : objects)
     {
         std::string type = config_get_string(obj->parameters, CN_TYPE);
-        ss_dassert(!type.empty());
+        mxb_assert(!type.empty());
 
         if (type == CN_SERVER)
         {
@@ -1534,7 +1534,7 @@ process_config_context(CONFIG_CONTEXT *context)
     for (CONFIG_CONTEXT* obj : objects)
     {
         std::string type = config_get_string(obj->parameters, CN_TYPE);
-        ss_dassert(!type.empty());
+        mxb_assert(!type.empty());
 
         if (type == CN_SERVICE)
         {
@@ -1649,7 +1649,7 @@ uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
     const char *value = config_get_value_string(params, key);
     uint64_t intval;
     MXB_AT_DEBUG(bool rval = )get_suffixed_size(value, &intval);
-    ss_dassert(rval);
+    mxb_assert(rval);
     return intval;
 }
 
@@ -1731,7 +1731,7 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
                     }
                 }
                 *output = result;
-                ss_dassert(found == res_ind);
+                mxb_assert(found == res_ind);
             }
             MXS_FREE(servers);
         }
@@ -1780,7 +1780,7 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
     uint32_t ovec_size_temp = 0;
     for (int i = 0; i < keys_size; i++)
     {
-        ss_dassert(out_codes[i]);
+        mxb_assert(out_codes[i]);
         *out_codes[i] = config_get_compiled_regex(params, keys[i], options,
                                                   &ovec_size_temp);
         if (*out_codes[i])
@@ -1858,7 +1858,7 @@ void config_context_free(CONFIG_CONTEXT *context)
 
 bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    ss_dassert(config_get_param(obj->parameters, key) == NULL);
+    mxb_assert(config_get_param(obj->parameters, key) == NULL);
     bool rval = false;
     char *my_key = MXS_STRDUP(key);
     char *my_value = MXS_STRDUP(value);
@@ -1885,7 +1885,7 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
     MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
-    ss_dassert(param);
+    mxb_assert(param);
     int paramlen = strlen(param->value) + strlen(value) + 2;
     char tmp[paramlen];
     bool rval = false;
@@ -2512,7 +2512,7 @@ bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
 
     // The enum values convert to bool
     int value = config_get_enum(params, CN_SSL, ssl_values);
-    ss_dassert(value != -1);
+    mxb_assert(value != -1);
 
     if (value)
     {
@@ -2566,9 +2566,9 @@ bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
 
         listener_set_certificates(ssl, ssl_cert, ssl_key, ssl_ca_cert);
 
-        ss_dassert(access(ssl_ca_cert, F_OK) == 0);
-        ss_dassert(!ssl_cert || access(ssl_cert, F_OK) == 0);
-        ss_dassert(!ssl_key || access(ssl_key, F_OK) == 0);
+        mxb_assert(access(ssl_ca_cert, F_OK) == 0);
+        mxb_assert(!ssl_cert || access(ssl_cert, F_OK) == 0);
+        mxb_assert(!ssl_key || access(ssl_key, F_OK) == 0);
 
         if (!SSL_LISTENER_init(ssl))
         {
@@ -2812,13 +2812,13 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
                 return "a path to a file";
 
             default:
-                ss_info_dassert(!true, "Unknown parameter type");
+                mxb_assert_message(!true, "Unknown parameter type");
                 return "<unknown parameter type>";
             }
         }
     }
 
-    ss_info_dassert(!true, "Unknown parameter name");
+    mxb_assert_message(!true, "Unknown parameter name");
     return "<unknown parameter name>";
 }
 
@@ -2853,7 +2853,7 @@ check_config_objects(CONFIG_CONTEXT *context)
         const MXS_MODULE *mod = nullptr;
         std::tie(param_set, mod) = get_module_details(obj);
 
-        ss_dassert(param_set);
+        mxb_assert(param_set);
         std::vector<std::string> to_be_removed;
 
         for (MXS_CONFIG_PARAMETER *params = obj->parameters; params; params = params->next)
@@ -3362,7 +3362,7 @@ void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
  */
 static json_t* param_value_to_json(const MXS_CONFIG_PARAMETER* param, const MXS_MODULE_PARAM* param_info)
 {
-    ss_dassert(strcmp(param->name, param_info->name) == 0);
+    mxb_assert(strcmp(param->name, param_info->name) == 0);
     json_t* rval = NULL;
 
     switch (param_info->type)
@@ -3429,12 +3429,12 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
 int create_new_service(CONFIG_CONTEXT *obj)
 {
     const char *router = config_get_string(obj->parameters, CN_ROUTER);
-    ss_dassert(*router);
+    mxb_assert(*router);
 
     char *user = config_get_value(obj->parameters, CN_USER);
     char *auth = config_get_value(obj->parameters, CN_PASSWORD);
     const MXS_MODULE* module = get_module(router, MODULE_ROUTER);
-    ss_dassert(module);
+    mxb_assert(module);
 
     if ((!user || !auth) &&
         !rcap_type_required(module->module_capabilities, RCAP_TYPE_NO_AUTH))
@@ -3527,7 +3527,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
     config_add_defaults(obj, config_server_params);
 
     const char* module = config_get_string(obj->parameters, CN_PROTOCOL);
-    ss_dassert(module);
+    mxb_assert(module);
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_PROTOCOL))
     {
@@ -3599,7 +3599,7 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
     }
 
     const char* module = config_get_string(obj->parameters, CN_MODULE);
-    ss_dassert(module);
+    mxb_assert(module);
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
     {
@@ -3648,7 +3648,7 @@ int create_new_monitor(CONFIG_CONTEXT *obj, std::set<std::string>& monitored_ser
 int create_new_listener(CONFIG_CONTEXT *obj)
 {
     const char* protocol = config_get_string(obj->parameters, CN_PROTOCOL);
-    ss_dassert(*protocol);
+    mxb_assert(*protocol);
 
     if (const MXS_MODULE * mod = get_module(protocol, MODULE_PROTOCOL))
     {
@@ -3682,7 +3682,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     {
         const char *address = config_get_string(obj->parameters, CN_ADDRESS);
         Service *service = static_cast<Service*>(config_get_service(obj->parameters, CN_SERVICE));
-        ss_dassert(service);
+        mxb_assert(service);
 
         if (auto l = service_find_listener(service, socket, address, socket ? 0 : atoi(port)))
         {
@@ -3730,7 +3730,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
     const char* module = config_get_value(obj->parameters, CN_MODULE);
-    ss_dassert(*module);
+    mxb_assert(*module);
 
     if (const MXS_MODULE* mod = get_module(module, MODULE_FILTER))
     {
@@ -4129,7 +4129,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
 
             default:
                 MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
-                ss_dassert(false);
+                mxb_assert(false);
                 break;
             }
         }
@@ -4140,7 +4140,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
 
 int config_parse_server_list(const char *servers, char ***output_array)
 {
-    ss_dassert(servers);
+    mxb_assert(servers);
 
     /* First, check the string for the maximum amount of servers it
      * might contain by counting the commas. */
@@ -4321,7 +4321,7 @@ bool config_global_serialize()
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)
@@ -4559,8 +4559,8 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
 bool config_parse_disk_space_threshold(MxsDiskSpaceThreshold* pDisk_space_threshold,
                                      const char* zDisk_space_threshold)
 {
-    ss_dassert(pDisk_space_threshold);
-    ss_dassert(zDisk_space_threshold);
+    mxb_assert(pDisk_space_threshold);
+    mxb_assert(zDisk_space_threshold);
 
     bool success = true;
 

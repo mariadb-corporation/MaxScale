@@ -124,7 +124,7 @@ bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const CacheFilterSession
 void CacheSimple::do_refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     Pending::iterator i = m_pending.find(key);
-    ss_dassert(i != m_pending.end());
-    ss_dassert(i->second == pSession);
+    mxb_assert(i != m_pending.end());
+    mxb_assert(i->second == pSession);
     m_pending.erase(i);
 }

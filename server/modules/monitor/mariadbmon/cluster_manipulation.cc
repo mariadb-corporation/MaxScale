@@ -205,7 +205,7 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
 int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
                                     ServerArray* redirected_slaves)
 {
-    ss_dassert(redirected_slaves != NULL);
+    mxb_assert(redirected_slaves != NULL);
     MXS_NOTICE("Redirecting slaves to new master.");
     string change_cmd = generate_change_master_cmd(new_master->m_server_base->server->address,
                                                    new_master->m_server_base->server->port);
@@ -351,7 +351,7 @@ bool MariaDBMonitor::cluster_can_be_joined()
  */
 bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
 {
-    ss_dassert(output);
+    mxb_assert(output);
 
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
@@ -476,7 +476,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
 bool MariaDBMonitor::do_switchover(MariaDBServer* demotion_target, MariaDBServer* promotion_target,
                                    json_t** err_out)
 {
-    ss_dassert(demotion_target && promotion_target);
+    mxb_assert(demotion_target && promotion_target);
 
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
@@ -818,7 +818,7 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerArray& slaves, c
 bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
                                                 int seconds_remaining)
 {
-    ss_dassert(!slaves.empty());
+    mxb_assert(!slaves.empty());
     bool rval = false;
     time_t begin = time(NULL);
 
@@ -905,7 +905,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
  */
 bool MariaDBMonitor::switchover_check_preferred_master(MariaDBServer* preferred, json_t** err_out)
 {
-    ss_dassert(preferred);
+    mxb_assert(preferred);
     bool rval = true;
     if (!preferred->update_slave_info() || !preferred->check_replication_settings())
     {
@@ -1405,7 +1405,7 @@ bool MariaDBMonitor::cluster_supports_failover(string* reasons_out)
  */
 bool MariaDBMonitor::slave_receiving_events()
 {
-    ss_dassert(m_master);
+    mxb_assert(m_master);
     bool received_event = false;
     int64_t master_id = m_master->m_server_base->server->node_id;
 
@@ -1480,7 +1480,7 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demoti
     const auto op = ClusterOperation::SWITCHOVER;
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
-    ss_dassert(promotion_target_out && demotion_target_out &&
+    mxb_assert(promotion_target_out && demotion_target_out &&
                !*promotion_target_out && !*demotion_target_out);
     const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
 

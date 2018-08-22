@@ -141,8 +141,8 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
 void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
                            int line_num, const char* func_name)
 {
-    ss_dassert(filename);
-    ss_dassert(func_name);
+    mxb_assert(filename);
+    mxb_assert(func_name);
     if (mxs_log_is_priority_enabled(LOG_ERR))
     {
         // 120 should be enough to contain any error message according to pcre2 manual.
@@ -158,7 +158,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
                                    pcre2_match_data* md, const char* subject,
                                    int length, const char* calling_module)
 {
-    ss_dassert((!re_match && !re_exclude) || (md && subject));
+    mxb_assert((!re_match && !re_exclude) || (md && subject));
     bool rval = true;
     int string_len = ((size_t)length == PCRE2_ZERO_TERMINATED) ? strlen(subject) : length;
     if (re_match)

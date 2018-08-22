@@ -128,7 +128,7 @@ public:
 
         iterator& operator++()
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             ++m_pS;
             return *this;
         }
@@ -142,7 +142,7 @@ public:
 
         iterator operator + (ptrdiff_t n)
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             iterator rv = m_pS;
             rv += n;
             return rv;
@@ -150,22 +150,22 @@ public:
 
         iterator& operator += (ptrdiff_t n)
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             m_pS += n;
             return *this;
         }
 
         iterator& operator -= (ptrdiff_t n)
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             m_pS -= n;
             return *this;
         }
 
         ptrdiff_t operator - (const iterator& rhs) const
         {
-            ss_dassert(m_pS);
-            ss_dassert(rhs.m_pS);
+            mxb_assert(m_pS);
+            mxb_assert(rhs.m_pS);
             return m_pS - rhs.m_pS;
         }
 
@@ -201,13 +201,13 @@ public:
 
         reference operator*()
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             return *m_pS;
         }
 
         reference operator[](ptrdiff_t i)
         {
-            ss_dassert(m_pS);
+            mxb_assert(m_pS);
             return m_pS[i];
         }
 
@@ -565,7 +565,7 @@ public:
         : ComPacket(pPacket)
         , m_type(*m_pData)
     {
-        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
 
@@ -573,14 +573,14 @@ public:
         : ComPacket(packet)
         , m_type(*m_pData)
     {
-        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
     ComResponse(const ComResponse& packet)
         : ComPacket(packet)
         , m_type(packet.m_type)
     {
-        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
 
@@ -620,7 +620,7 @@ public:
     ComEOF(GWBUF* pPacket)
         : ComResponse(pPacket)
     {
-        ss_dassert(m_type == EOF_PACKET);
+        mxb_assert(m_type == EOF_PACKET);
 
         extract_payload();
     }
@@ -628,7 +628,7 @@ public:
     ComEOF(const ComResponse& response)
         : ComResponse(response)
     {
-        ss_dassert(m_type == EOF_PACKET);
+        mxb_assert(m_type == EOF_PACKET);
 
         extract_payload();
     }
@@ -664,7 +664,7 @@ public:
     ComOK(GWBUF* pPacket)
         : ComResponse(pPacket)
     {
-        ss_dassert(m_type == OK_PACKET);
+        mxb_assert(m_type == OK_PACKET);
 
         extract_payload();
     }
@@ -672,7 +672,7 @@ public:
     ComOK(const ComResponse& response)
         : ComResponse(response)
     {
-        ss_dassert(m_type == OK_PACKET);
+        mxb_assert(m_type == OK_PACKET);
 
         extract_payload();
     }
@@ -868,7 +868,7 @@ public:
 
     LEncString as_string()
     {
-        ss_dassert(is_string());
+        mxb_assert(is_string());
         return LEncString(m_pData);
     }
 
@@ -1081,7 +1081,7 @@ public:
         , m_iTypes(types.begin())
         , m_iNulls(pData + 1)
     {
-        ss_dassert(*m_pData == 0);
+        mxb_assert(*m_pData == 0);
         ++m_pData;
 
         // See https://dev.mysql.com/doc/internals/en/binary-protocol-resultset-row.html
@@ -1169,7 +1169,7 @@ public:
             break;
 
         case MAX_NO_FIELD_TYPES:
-            ss_dassert(!true);
+            mxb_assert(!true);
             break;
 
         default:

@@ -779,7 +779,7 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
     }
 
     rc = regcomp(&re, search_re, REG_EXTENDED | REG_ICASE);
-    ss_info_dassert(rc == 0, "Regex check");
+    mxb_assert_message(rc == 0, "Regex check");
 
     if (rc != 0)
     {
@@ -901,7 +901,7 @@ bool utils_init()
     PCRE2_SIZE erroffset;
     int errcode;
 
-    ss_info_dassert(remove_comments_re == NULL, "utils_init called multiple times");
+    mxb_assert_message(remove_comments_re == NULL, "utils_init called multiple times");
     remove_comments_re = pcre2_compile(remove_comments_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
                                        &erroffset, NULL);
     if (remove_comments_re == NULL)
@@ -909,7 +909,7 @@ bool utils_init()
         rval = false;
     }
 
-    ss_info_dassert(replace_quoted_re == NULL, "utils_init called multiple times");
+    mxb_assert_message(replace_quoted_re == NULL, "utils_init called multiple times");
     replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
                                       &erroffset, NULL);
     if (replace_quoted_re == NULL)
@@ -917,7 +917,7 @@ bool utils_init()
         rval = false;
     }
 
-    ss_info_dassert(replace_values_re == NULL, "utils_init called multiple times");
+    mxb_assert_message(replace_values_re == NULL, "utils_init called multiple times");
     replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
                                       &erroffset, NULL);
     if (replace_values_re == NULL)
@@ -989,14 +989,14 @@ static void set_port(struct sockaddr_storage *addr, uint16_t port)
     else
     {
         MXS_ERROR("Unknown address family: %d", (int)addr->ss_family);
-        ss_dassert(false);
+        mxb_assert(false);
     }
 }
 
 int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host,
                         uint16_t port)
 {
-    ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
+    mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
     struct addrinfo *ai = NULL, hint = {};
     int so = 0, rc = 0;
     hint.ai_socktype = SOCK_STREAM;
@@ -1152,7 +1152,7 @@ std::string to_hex(uint8_t value)
 uint64_t get_byteN(const uint8_t* ptr, int bytes)
 {
     uint64_t rval = 0;
-    ss_dassert(bytes >= 0 && bytes <= (int)sizeof(rval));
+    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(rval));
     for (int i = 0; i < bytes; i++)
     {
         rval += (uint64_t)ptr[i] << (i * 8);
@@ -1162,7 +1162,7 @@ uint64_t get_byteN(const uint8_t* ptr, int bytes)
 
 uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
 {
-    ss_dassert(bytes >= 0 && bytes <= (int)sizeof(value));
+    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(value));
     for (int i = 0; i < bytes; i++)
     {
         ptr[i] = (uint8_t)(value >> (i * 8));
@@ -1181,7 +1181,7 @@ std::string string_printf(const char* format, ...)
     if (characters < 0)
     {
         // Encoding (programmer) error.
-        ss_dassert(!true);
+        mxb_assert(!true);
         MXS_ERROR("Could not format the string %s.", format);
     }
     else if (characters > 0)

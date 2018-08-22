@@ -84,7 +84,7 @@ static bool rwsplit_process_router_options(Config& config, char **options)
             if (strcmp(options[i], "slave_selection_criteria") == 0)
             {
                 select_criteria_t c = GET_SELECT_CRITERIA(value);
-                ss_dassert(c == LEAST_GLOBAL_CONNECTIONS ||
+                mxb_assert(c == LEAST_GLOBAL_CONNECTIONS ||
                            c == LEAST_ROUTER_CONNECTIONS || c == LEAST_BEHIND_MASTER ||
                            c == LEAST_CURRENT_OPERATIONS || c == UNDEFINED_CRITERIA);
 
@@ -221,7 +221,7 @@ Config* RWSplit::get_local_config() const
         mxs_rworker_set_data(m_wkey, my_config, data_destroy_callback);
     }
 
-    ss_dassert(my_config);
+    mxb_assert(my_config);
     return my_config;
 }
 

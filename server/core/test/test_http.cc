@@ -32,8 +32,8 @@ int main(int argc, char** argv)
     cout << "Converted Linux time: " << converted_now << endl;
     cout << "Converted HTTP-date: " << converted_date << endl;
 
-    ss_dassert(now == converted_now);
-    ss_dassert(date == converted_date);
+    mxb_assert(now == converted_now);
+    mxb_assert(date == converted_date);
 
     return 0;
 }

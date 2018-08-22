@@ -65,7 +65,7 @@ CachePT::~CachePT()
 // static
 CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 {
-    ss_dassert(pConfig);
+    mxb_assert(pConfig);
 
     CachePT* pCache = NULL;
 
@@ -202,6 +202,6 @@ CachePT* CachePT::Create(const std::string&              name,
 Cache& CachePT::thread_cache()
 {
     int i = thread_index();
-    ss_dassert(i < (int)m_caches.size());
+    mxb_assert(i < (int)m_caches.size());
     return *m_caches[i].get();
 }

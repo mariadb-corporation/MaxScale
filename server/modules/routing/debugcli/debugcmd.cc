@@ -1712,7 +1712,7 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
             if (!succeeded && !output)
             {
                 const char* s = modulecmd_get_error();
-                ss_dassert(s);
+                mxb_assert(s);
 
                 if (*s == 0)
                 {
@@ -2193,7 +2193,7 @@ execute_cmd(CLI_SESSION *cli)
                                     break;
                                 default:
                                     dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
-                                    ss_info_dassert(!true, "Command has too many arguments");
+                                    mxb_assert_message(!true, "Command has too many arguments");
                                     break;
                                 }
                             }

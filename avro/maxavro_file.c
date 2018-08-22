@@ -194,7 +194,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
                 file->records_in_block = records;
                 file->records_read_from_block = 0;
                 file->data_start_pos = pos;
-                ss_dassert(file->data_start_pos > file->block_start_pos);
+                mxb_assert(file->data_start_pos > file->block_start_pos);
                 file->metadata_read = true;
                 rval = maxavro_verify_block(file);
             }

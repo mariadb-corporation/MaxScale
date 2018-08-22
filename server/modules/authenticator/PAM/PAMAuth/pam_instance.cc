@@ -209,7 +209,7 @@ int PamInstance::load_users(SERVICE* service)
                     delete_old_users();
                     if (res)
                     {
-                        ss_dassert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
+                        mxb_assert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
                         MXS_NOTICE("Loaded %llu users for service %s.", mysql_num_rows(res),
                                    service->name);
                         MYSQL_ROW row;
@@ -242,7 +242,7 @@ int PamInstance::load_users(SERVICE* service)
 void PamInstance::diagnostic(DCB* dcb)
 {
     json_t* array = diagnostic_json();
-    ss_dassert(json_is_array(array));
+    mxb_assert(json_is_array(array));
 
     string result, separator;
     size_t index;
@@ -269,7 +269,7 @@ void PamInstance::diagnostic(DCB* dcb)
 
 static int diag_cb_json(void *data, int columns, char **row, char **field_names)
 {
-    ss_dassert(columns == NUM_FIELDS);
+    mxb_assert(columns == NUM_FIELDS);
     json_t* obj = json_object();
     for (int i = 0; i < columns; i++)
     {

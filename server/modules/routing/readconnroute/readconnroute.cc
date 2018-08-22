@@ -459,7 +459,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
 
     MXB_AT_DEBUG(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
-    ss_dassert(prev_val > 0);
+    mxb_assert(prev_val > 0);
 
     MXS_FREE(router_cli_ses);
 }
@@ -730,7 +730,7 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
 static void
 clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
-    ss_dassert(backend_dcb->session->client_dcb != NULL);
+    mxb_assert(backend_dcb->session->client_dcb != NULL);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
@@ -751,7 +751,7 @@ static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session
                         DCB *problem_dcb, mxs_error_action_t action, bool *succp)
 
 {
-    ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     DCB *client_dcb;
     MXS_SESSION *session = problem_dcb->session;
     mxs_session_state_t sesstate;

@@ -48,7 +48,7 @@ void User::add_rules(match_type mode, const RuleList& rules)
         break;
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
 }

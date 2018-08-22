@@ -424,7 +424,7 @@ int test_event_configuration()
                          }
                          else
                          {
-                             ss_dassert(c.what == What::LEVEL);
+                             mxb_assert(c.what == What::LEVEL);
 
                              int32_t level = event::get_log_level(c.id);
 

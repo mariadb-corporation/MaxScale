@@ -162,7 +162,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     int fd = -1;
 
     protocol = mysql_protocol_init(backend_dcb, -1);
-    ss_dassert(protocol != NULL);
+    mxb_assert(protocol != NULL);
 
     if (protocol == NULL)
     {
@@ -194,7 +194,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     switch (rv)
     {
     case 0:
-        ss_dassert(fd > 0);
+        mxb_assert(fd > 0);
         protocol->fd = fd;
         protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
         MXS_DEBUG("Established "
@@ -215,7 +215,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         /* The state MYSQL_PENDING_CONNECT is likely to be transitory,    */
         /* as it means the calls have been successful but the connection  */
         /* has not yet completed and the calls are non-blocking.          */
-        ss_dassert(fd > 0);
+        mxb_assert(fd > 0);
         protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
         protocol->fd = fd;
         MXS_DEBUG("Connection "
@@ -228,8 +228,8 @@ static int gw_create_backend_connection(DCB *backend_dcb,
 
     default:
         /* Failure - the state reverts to its initial value */
-        ss_dassert(fd == -1);
-        ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
+        mxb_assert(fd == -1);
+        mxb_assert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
         break;
     } /*< switch */
 
@@ -667,7 +667,7 @@ static inline bool expecting_ps_response(MySQLProtocol *proto)
 
 static inline bool complete_ps_response(GWBUF *buffer)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(buffer));
     MXS_PS_RESPONSE resp;
     bool rval = false;
 
@@ -781,12 +781,12 @@ gw_read_and_write(DCB *dcb)
     nbytes_read = gwbuf_length(read_buffer);
     if (nbytes_read == 0)
     {
-        ss_dassert(read_buffer == NULL);
+        mxb_assert(read_buffer == NULL);
         return return_code;
     }
     else
     {
-        ss_dassert(read_buffer != NULL);
+        mxb_assert(read_buffer != NULL);
     }
 
     /** Ask what type of output the router/filter chain expects */
@@ -906,7 +906,7 @@ gw_read_and_write(DCB *dcb)
         GWBUF *query = proto->stored_query;
         proto->stored_query = NULL;
         proto->ignore_replies--;
-        ss_dassert(proto->ignore_replies >= 0);
+        mxb_assert(proto->ignore_replies >= 0);
         GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
 
         while (read_buffer)
@@ -916,8 +916,8 @@ gw_read_and_write(DCB *dcb)
             reply = modutil_get_next_MySQL_packet(&read_buffer);
         }
 
-        ss_dassert(reply);
-        ss_dassert(!read_buffer);
+        mxb_assert(reply);
+        mxb_assert(!read_buffer);
         uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
         int rval = 0;
 
@@ -1107,13 +1107,13 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     if (dcb->was_persistent)
     {
-        ss_dassert(!dcb->fakeq);
-        ss_dassert(!dcb->readq);
-        ss_dassert(!dcb->delayq);
-        ss_dassert(!dcb->writeq);
-        ss_dassert(dcb->persistentstart == 0);
+        mxb_assert(!dcb->fakeq);
+        mxb_assert(!dcb->readq);
+        mxb_assert(!dcb->delayq);
+        mxb_assert(!dcb->writeq);
+        mxb_assert(dcb->persistentstart == 0);
         dcb->was_persistent = false;
-        ss_dassert(backend_protocol->ignore_replies >= 0);
+        mxb_assert(backend_protocol->ignore_replies >= 0);
         backend_protocol->ignore_replies = 0;
 
         if (dcb->state != DCB_STATE_POLLING ||
@@ -1240,7 +1240,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 {
                     /** The response to this command should be ignored */
                     backend_protocol->ignore_replies++;
-                    ss_dassert(backend_protocol->ignore_replies > 0);
+                    mxb_assert(backend_protocol->ignore_replies > 0);
                 }
 
                 /** Write to backend */
@@ -1359,7 +1359,7 @@ static int gw_backend_hangup(DCB *dcb)
  */
 static int gw_backend_close(DCB *dcb)
 {
-    ss_dassert(dcb->session);
+    mxb_assert(dcb->session);
 
     /** Send COM_QUIT to the backend being closed */
     GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
@@ -1409,9 +1409,9 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue)
  */
 static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 {
-    ss_dassert(buffer);
-    ss_dassert(dcb->persistentstart == 0);
-    ss_dassert(!dcb->was_persistent);
+    mxb_assert(buffer);
+    mxb_assert(dcb->persistentstart == 0);
+    mxb_assert(!dcb->was_persistent);
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(buffer))))
     {
@@ -1499,7 +1499,7 @@ static int gw_change_user(DCB *backend,
     if (auth_token_len > 0)
     {
         auth_token = (uint8_t *)MXS_MALLOC(auth_token_len);
-        ss_dassert(auth_token != NULL);
+        mxb_assert(auth_token != NULL);
 
         if (auth_token == NULL)
         {
@@ -1865,7 +1865,7 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb)
         MXS_ERROR("'%s' failed on file descriptor '%d'.", "getsockname()", client_fd);
         return;
     }
-    ss_dassert(sa_peer.ss_family == sa_local.ss_family);
+    mxb_assert(sa_peer.ss_family == sa_local.ss_family);
 
     char peer_ip[INET6_ADDRSTRLEN];
     char maxscale_ip[INET6_ADDRSTRLEN];

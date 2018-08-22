@@ -33,7 +33,7 @@ TesterStorage::HitTask::HitTask(ostream* pOut,
     , m_dels(0)
     , m_misses(0)
 {
-    ss_dassert(m_cache_items.size() > 0);
+    mxb_assert(m_cache_items.size() > 0);
 }
 
 int TesterStorage::HitTask::run()
@@ -65,7 +65,7 @@ int TesterStorage::HitTask::run()
                 }
                 else
                 {
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                     rv = EXIT_FAILURE;
                 }
             }
@@ -78,8 +78,8 @@ int TesterStorage::HitTask::run()
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
-                    ss_dassert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
-                    ss_dassert(memcmp(GWBUF_DATA(pQuery), GWBUF_DATA(cache_item.second),
+                    mxb_assert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
+                    mxb_assert(memcmp(GWBUF_DATA(pQuery), GWBUF_DATA(cache_item.second),
                                       GWBUF_LENGTH(pQuery)) == 0);
 
                     gwbuf_free(pQuery);
@@ -91,7 +91,7 @@ int TesterStorage::HitTask::run()
                 }
                 else
                 {
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                     rv = EXIT_FAILURE;
                 }
             }
@@ -111,14 +111,14 @@ int TesterStorage::HitTask::run()
                 }
                 else
                 {
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                     rv = EXIT_FAILURE;
                 }
             }
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
         }
 
         ++i;
@@ -173,8 +173,8 @@ int TesterStorage::run(size_t n_threads,
     {
         size_t size = n_min_size + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX) *
                                                        (n_max_size - n_min_size));
-        ss_dassert(size >= n_min_size);
-        ss_dassert(size <= n_max_size);
+        mxb_assert(size >= n_min_size);
+        mxb_assert(size <= n_max_size);
 
         CacheKey key;
 
@@ -322,7 +322,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     if (diff != 0)
     {
-        ss_dassert(cache_items.size() > 0);
+        mxb_assert(cache_items.size() > 0);
 
         out() << "Hard TTL: " << hard_ttl << endl;
         out() << "Soft TTL: " << soft_ttl << endl;

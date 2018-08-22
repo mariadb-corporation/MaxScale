@@ -202,7 +202,7 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     else
     {
         /** Otherwise the DCB is owned by the thread that allocates it */
-        ss_dassert(RoutingWorker::get_current_id() != -1);
+        mxb_assert(RoutingWorker::get_current_id() != -1);
         newdcb->poll.owner = RoutingWorker::get_current();
     }
 
@@ -217,7 +217,7 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
 static void
 dcb_final_free(DCB *dcb)
 {
-    ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED ||
+    mxb_assert_message(dcb->state == DCB_STATE_DISCONNECTED ||
                     dcb->state == DCB_STATE_ALLOC,
                     "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
@@ -243,7 +243,7 @@ dcb_final_free(DCB *dcb)
                  * been closed.
                  */
 
-                ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
+                mxb_assert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
                            dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER ||
                            dcb->dcb_role == DCB_ROLE_INTERNAL);
                 session_put_ref(local_session);
@@ -761,7 +761,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
         }
     }
 
-    ss_dassert(gwbuf_length(*head) == (size_t)(start_length + nreadtotal));
+    mxb_assert(gwbuf_length(*head) == (size_t)(start_length + nreadtotal));
 
     return nsingleread < 0 ? nsingleread : nreadtotal;
 }
@@ -1035,7 +1035,7 @@ int dcb_drain_writeq(DCB *dcb)
         dcb_call_callback(dcb, DCB_REASON_DRAINED);
     }
 
-    ss_dassert(dcb->writeqlen >= (uint32_t)total_written);
+    mxb_assert(dcb->writeqlen >= (uint32_t)total_written);
     dcb->writeqlen -= total_written;
 
     if (dcb->high_water_reached && DCB_BELOW_LOW_WATER(dcb))
@@ -1097,7 +1097,7 @@ void dcb_close(DCB *dcb)
     {
         MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
                   dcb, current->id(), owner->id());
-        ss_dassert(owner == RoutingWorker::get_current());
+        mxb_assert(owner == RoutingWorker::get_current());
     }
 #endif
 
@@ -1141,7 +1141,7 @@ void dcb_close(DCB *dcb)
         else
         {
             RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
-            ss_dassert(worker);
+            mxb_assert(worker);
 
             worker->register_zombie(dcb);
         }
@@ -1151,14 +1151,14 @@ void dcb_close(DCB *dcb)
         ++dcb->n_close;
         // TODO: Will this happen on a regular basis?
         MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->n_close);
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 }
 
 static void cb_dcb_close_in_owning_thread(MXB_WORKER*, void* data)
 {
     DCB* dcb = static_cast<DCB*>(data);
-    ss_dassert(dcb);
+    mxb_assert(dcb);
 
     dcb_close(dcb);
 }
@@ -1172,7 +1172,7 @@ void dcb_close_in_owning_thread(DCB* dcb)
     // TODO: preventing too early a deletion.
 
     MXB_WORKER* worker = static_cast<MXB_WORKER*>(dcb->poll.owner); // The owning worker
-    ss_dassert(worker);
+    mxb_assert(worker);
 
     intptr_t arg1 = (intptr_t)cb_dcb_close_in_owning_thread;
     intptr_t arg2 = (intptr_t)dcb;
@@ -1192,10 +1192,10 @@ void dcb_final_close(DCB* dcb)
     {
         MXS_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
                   dcb, current->id(), owner->id());
-        ss_dassert(owner == current);
+        mxb_assert(owner == current);
     }
 #endif
-    ss_dassert(dcb->n_close != 0);
+    mxb_assert(dcb->n_close != 0);
 
     if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
         dcb->state == DCB_STATE_POLLING &&            // Being polled
@@ -2263,7 +2263,7 @@ int dcb_connect_SSL(DCB* dcb)
     if ((NULL == dcb->server || NULL == dcb->server->server_ssl) ||
         (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->server->server_ssl) != 0))
     {
-        ss_dassert((NULL != dcb->server) && (NULL != dcb->server->server_ssl));
+        mxb_assert((NULL != dcb->server) && (NULL != dcb->server->server_ssl));
         return -1;
     }
     dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;
@@ -2614,12 +2614,12 @@ int dcb_listen(DCB *dcb, const char *config, const char *protocol_name)
     else
     {
         // We don't have a socket path or a network port
-        ss_dassert(false);
+        mxb_assert(false);
     }
 
     if (listener_socket < 0)
     {
-        ss_dassert(listener_socket == -1);
+        mxb_assert(listener_socket == -1);
         return -1;
     }
 
@@ -2760,7 +2760,7 @@ static void dcb_add_to_list_cb(int thread_id, void* data)
 {
     DCB *dcb = (DCB*)data;
 
-    ss_dassert(thread_id == static_cast<RoutingWorker*>(dcb->poll.owner)->id());
+    mxb_assert(thread_id == static_cast<RoutingWorker*>(dcb->poll.owner)->id());
 
     dcb_add_to_list(dcb);
 }
@@ -2776,7 +2776,7 @@ static void dcb_add_to_list(DCB *dcb)
          */
 
         int id = static_cast<RoutingWorker*>(dcb->poll.owner)->id();
-        ss_dassert(id == RoutingWorker::get_current_id());
+        mxb_assert(id == RoutingWorker::get_current_id());
 
         if (this_unit.all_dcbs[id] == NULL)
         {
@@ -2866,7 +2866,7 @@ void dcb_process_idle_sessions(int thr)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
-                ss_dassert(dcb->listener);
+                mxb_assert(dcb->listener);
                 SERVICE *service = dcb->listener->service;
 
                 if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
@@ -2910,7 +2910,7 @@ public:
              dcb && atomic_load_int32(&m_more);
              dcb = dcb->thread.next)
         {
-            ss_dassert(dcb->session);
+            mxb_assert(dcb->session);
 
             if (dcb->session->state != SESSION_STATE_DUMMY)
             {
@@ -2936,7 +2936,7 @@ private:
 
 bool dcb_foreach(bool(*func)(DCB *dcb, void *data), void *data)
 {
-    ss_dassert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
+    mxb_assert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
     SerialDcbTask task(func, data);
     RoutingWorker::execute_serially(task);
     return task.more();
@@ -2971,7 +2971,7 @@ int dcb_get_port(const DCB *dcb)
     }
     else
     {
-        ss_dassert(dcb->ip.ss_family == AF_UNIX);
+        mxb_assert(dcb->ip.ss_family == AF_UNIX);
     }
 
     return rval;
@@ -2980,13 +2980,13 @@ int dcb_get_port(const DCB *dcb)
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->poll.owner);
-    ss_dassert(owner == RoutingWorker::get_current() ||
+    mxb_assert(owner == RoutingWorker::get_current() ||
                dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
     uint32_t rc = MXB_POLL_NOP;
 
     /* It isn't obvious that this is impossible */
-    /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
+    /* mxb_assert(dcb->state != DCB_STATE_DISCONNECTED); */
     if (DCB_STATE_DISCONNECTED == dcb->state)
     {
         return rc;
@@ -3003,7 +3003,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     {
         MXS_WARNING("Events reported for dcb(%p), owned by %d, that has been closed %" PRIu32 " times.",
                     dcb, owner->id(), dcb->n_close);
-        ss_dassert(!true);
+        mxb_assert(!true);
         return rc;
     }
 
@@ -3241,7 +3241,7 @@ public:
 
     void execute(Worker& worker)
     {
-        ss_dassert(&worker == RoutingWorker::get_current());
+        mxb_assert(&worker == RoutingWorker::get_current());
 
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
         if (dcb_is_still_valid(m_dcb, rworker.id()))
@@ -3386,10 +3386,10 @@ public:
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
-        ss_dassert(rworker.id() == static_cast<RoutingWorker*>(m_dcb->poll.owner)->id());
+        mxb_assert(rworker.id() == static_cast<RoutingWorker*>(m_dcb->poll.owner)->id());
 
         bool added = dcb_add_to_worker(&rworker, m_dcb, m_events);
-        ss_dassert(added);
+        mxb_assert(added);
 
         if (!added)
         {
@@ -3442,7 +3442,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
     if (!worker)
     {
         // No specific worker; indicates the DCB is a listening DCB.
-        ss_dassert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+        mxb_assert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
         // A listening DCB, we add it immediately.
         if (add_fd_to_routing_workers(dcb->fd, events, (MXB_POLL_DATA*)dcb))
@@ -3459,7 +3459,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
                 // otherwise we must move the adding to the main thread.
                 // TODO: Separate listening and other DCBs, as this is a mess.
                 RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
-                ss_dassert(worker);
+                mxb_assert(worker);
 
                 intptr_t arg1 = (intptr_t)dcb_add_to_list_cb;
                 intptr_t arg2 = (intptr_t)dcb;
@@ -3475,7 +3475,7 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
     }
     else
     {
-        ss_dassert(worker == dcb->poll.owner);
+        mxb_assert(worker == dcb->poll.owner);
 
         if (worker == RoutingWorker::get_current())
         {
@@ -3493,12 +3493,12 @@ static bool dcb_add_to_worker(Worker* worker, DCB* dcb, uint32_t events)
             // This will only happen for "cli" and "maxinfo" services that must
             // be served by one thread as there otherwise deadlocks can occur.
             AddDcbToWorker* task = new (std::nothrow) AddDcbToWorker(dcb, events);
-            ss_dassert(task);
+            mxb_assert(task);
 
             if (task)
             {
                 Worker* worker = static_cast<RoutingWorker*>(dcb->poll.owner);
-                ss_dassert(worker);
+                mxb_assert(worker);
 
                 if (worker->execute(std::unique_ptr<AddDcbToWorker>(task), Worker::EXECUTE_QUEUED))
                 {
@@ -3568,9 +3568,9 @@ int poll_add_dcb(DCB *dcb)
     }
     else
     {
-        ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-        ss_dassert(RoutingWorker::get_current_id() != -1);
-        ss_dassert(RoutingWorker::get_current() == dcb->poll.owner);
+        mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+        mxb_assert(RoutingWorker::get_current_id() != -1);
+        mxb_assert(RoutingWorker::get_current() == dcb->poll.owner);
 
         new_state = DCB_STATE_POLLING;
         owner = static_cast<RoutingWorker*>(dcb->poll.owner);
@@ -3629,7 +3629,7 @@ int poll_remove_dcb(DCB *dcb)
      * Only positive fds can be removed from epoll set.
      */
     dcbfd = dcb->fd;
-    ss_dassert(dcbfd > 0 || dcb->dcb_role == DCB_ROLE_INTERNAL);
+    mxb_assert(dcbfd > 0 || dcb->dcb_role == DCB_ROLE_INTERNAL);
 
     if (dcbfd > 0)
     {
@@ -3645,7 +3645,7 @@ int poll_remove_dcb(DCB *dcb)
         else
         {
             Worker* worker = static_cast<Worker*>(dcb->poll.owner);
-            ss_dassert(worker);
+            mxb_assert(worker);
 
             if (worker->remove_fd(dcbfd))
             {
@@ -3750,7 +3750,7 @@ json_t* dcb_to_json(DCB* dcb)
     if (dcb->func.diagnostics_json)
     {
         json_t* json = dcb->func.diagnostics_json(dcb);
-        ss_dassert(json);
+        mxb_assert(json);
         json_object_set_new(obj, "protocol_diagnostics", json);
     }
 

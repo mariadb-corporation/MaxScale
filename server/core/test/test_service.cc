@@ -66,19 +66,19 @@ test1()
     fprintf(stderr,
             "testservice : creating service called MyService with router nonexistent");
     service = service_alloc("MyService", "non-existent", NULL);
-    ss_info_dassert(NULL == service, "New service with invalid router should be null");
-    ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
+    mxb_assert_message(NULL == service, "New service with invalid router should be null");
+    mxb_assert_message(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     fprintf(stderr, "\t..done\nValid service creation, router testroute.");
     service = service_alloc("MyService", "readconnroute", NULL);
 
-    ss_info_dassert(NULL != service, "New service with valid router must not be null");
-    ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
-    ss_info_dassert(0 == strcmp("MyService", service->name), "Service must have given name");
+    mxb_assert_message(NULL != service, "New service with valid router must not be null");
+    mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");
+    mxb_assert_message(0 == strcmp("MyService", service->name), "Service must have given name");
     fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
-    ss_info_dassert(serviceCreateListener(service, "TestProtocol", "mariadbclient",
+    mxb_assert_message(serviceCreateListener(service, "TestProtocol", "mariadbclient",
                                           "localhost", 9876, "MySQLAuth", NULL, NULL),
                     "Add Protocol should succeed");
-    ss_info_dassert(0 != serviceHasListener(service, "TestProtocol", "mariadbclient", "localhost", 9876),
+    mxb_assert_message(0 != serviceHasListener(service, "TestProtocol", "mariadbclient", "localhost", 9876),
                     "Service should have new protocol as requested");
 
     return 0;

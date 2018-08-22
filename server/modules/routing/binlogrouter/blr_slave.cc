@@ -2643,7 +2643,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
      * Now checking read error indicator.
      */
 
-    ss_dassert(record == NULL);
+    mxb_assert(record == NULL);
 
     /* Refresh file prefix */
     if (f_tree)
@@ -2749,7 +2749,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     slave->cstate &= ~CS_BUSY;
     spinlock_release(&slave->catch_lock);
 
-    ss_dassert(hdr.ok == SLAVE_POS_READ_OK);
+    mxb_assert(hdr.ok == SLAVE_POS_READ_OK);
 
     /**
      * Check now slave position with read indicator = SLAVE_POS_READ_OK
@@ -4151,7 +4151,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     if ((cmd_ptr = strcasestr(command, "TO")) == NULL)
     {
         static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
-        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
         return -1;
     }
@@ -4159,7 +4159,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     if ((cmd_string = MXS_STRDUP(cmd_ptr + 2)) == NULL)
     {
         static const char MESSAGE[] = "error allocating memory for statement parsing";
-        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
 
         MXS_ERROR("%s: %s", router->service->name, error);
@@ -4193,7 +4193,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     if (!current_master)
     {
         static const char MESSAGE[] = "error allocating memory for blr_master_get_config";
-        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
         MXS_ERROR("%s: %s", router->service->name, error);
 
@@ -8634,7 +8634,7 @@ static int binary_logs_select_cb(void *data,
     uint32_t fsize;
     char file_size[40];
 
-    ss_dassert(cols >= 4 && dcb);
+    mxb_assert(cols >= 4 && dcb);
 
     if (values[0] &&    // File Name
         values[1] &&    // File Size
@@ -8656,7 +8656,7 @@ static int binary_logs_select_cb(void *data,
         fsize = atoll(values[1]);
 
         /* File size != 0 && server ID != 0 */
-        ss_dassert(fsize && atoll(values[3]));
+        mxb_assert(fsize && atoll(values[3]));
 
         /**
          * In GTID repo binlog file last pos is last GTID.
@@ -8829,7 +8829,7 @@ static int binary_logs_find_file_cb(void *data,
                                     char** values,
                                     char** names)
 {
-    ss_dassert(cols == 2);
+    mxb_assert(cols == 2);
     BINARY_LOG_DATA_RESULT *data_set = (BINARY_LOG_DATA_RESULT *)data;
 
     if (values[0])      // Server ID
@@ -8854,7 +8854,7 @@ static int binary_logs_purge_cb(void *data,
                                 char** values,
                                 char** names)
 {
-    ss_dassert(cols == 2);
+    mxb_assert(cols == 2);
 
     BINARY_LOG_DATA_RESULT *result_data = (BINARY_LOG_DATA_RESULT *)data;
 

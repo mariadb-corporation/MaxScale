@@ -191,7 +191,7 @@ const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute)
         return "user";
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "<invalid>";
     }
 }
@@ -213,7 +213,7 @@ const char *cache_rule_op_to_string(cache_rule_op_t op)
         return "unlike";
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "<invalid>";
     }
 }
@@ -535,7 +535,7 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
                                      const char *s,
                                      cache_rule_attribute_t *attribute)
 {
-    ss_dassert(attribute);
+    mxb_assert(attribute);
 
     while (mapping->name)
     {
@@ -602,7 +602,7 @@ static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                             const char            *cvalue,
                                             uint32_t               debug)
 {
-    ss_dassert((op == CACHE_OP_LIKE) || (op == CACHE_OP_UNLIKE));
+    mxb_assert((op == CACHE_OP_LIKE) || (op == CACHE_OP_UNLIKE));
 
     CACHE_RULE *rule = NULL;
 
@@ -618,7 +618,7 @@ static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
         pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
 
         int n_threads = config_threadcount();
-        ss_dassert(n_threads > 0);
+        mxb_assert(n_threads > 0);
 
         pcre2_match_data **datas = alloc_match_datas(n_threads, code);
 
@@ -679,8 +679,8 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
 {
     CACHE_RULE *rule = NULL;
 
-    ss_dassert(attribute == CACHE_ATTRIBUTE_USER);
-    ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+    mxb_assert(attribute == CACHE_ATTRIBUTE_USER);
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
     bool error = false;
     size_t len = strlen(cvalue);
@@ -785,10 +785,10 @@ static CACHE_RULE *cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
                                                 const char            *cvalue,
                                                 uint32_t               debug)
 {
-    ss_dassert((attribute == CACHE_ATTRIBUTE_COLUMN) ||
+    mxb_assert((attribute == CACHE_ATTRIBUTE_COLUMN) ||
                (attribute == CACHE_ATTRIBUTE_TABLE) ||
                (attribute == CACHE_ATTRIBUTE_DATABASE));
-    ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
     CACHE_RULE *rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
     char *value = MXS_STRDUP(cvalue);
@@ -914,7 +914,7 @@ static CACHE_RULE *cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
         }
 
         if (allocation_failed)
@@ -952,8 +952,8 @@ static CACHE_RULE *cache_rule_create_simple_query(cache_rule_attribute_t attribu
                                                   const char            *cvalue,
                                                   uint32_t               debug)
 {
-    ss_dassert(attribute == CACHE_ATTRIBUTE_QUERY);
-    ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+    mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
     CACHE_RULE *rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
     char *value = MXS_STRDUP(cvalue);
@@ -990,7 +990,7 @@ static CACHE_RULE *cache_rule_create_simple(cache_rule_attribute_t attribute,
                                             const char            *cvalue,
                                             uint32_t               debug)
 {
-    ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
     CACHE_RULE *rule = NULL;
 
@@ -1012,7 +1012,7 @@ static CACHE_RULE *cache_rule_create_simple(cache_rule_attribute_t attribute,
 
     default:
         MXS_ERROR("Unknown attribute type: %d", (int)attribute);
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return rule;
@@ -1048,7 +1048,7 @@ static CACHE_RULE *cache_rule_create(cache_rule_attribute_t attribute,
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         MXS_ERROR("Internal error.");
         break;
     }
@@ -1143,14 +1143,14 @@ static bool cache_rule_compare_n(CACHE_RULE *self, int thread_id, const char *va
 
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
-        ss_dassert((thread_id >= 0) && (thread_id < config_threadcount()));
+        mxb_assert((thread_id >= 0) && (thread_id < config_threadcount()));
         compares = (pcre2_match(self->regexp.code,
                                 (PCRE2_SPTR)value, length,
                                 0, 0, self->regexp.datas[thread_id], NULL) >= 0);
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     if ((self->op == CACHE_OP_NEQ) || (self->op == CACHE_OP_UNLIKE))
@@ -1176,8 +1176,8 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE *self,
                                              const char *default_db,
                                              const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
-    ss_dassert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
+    mxb_assert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
 
     const char* default_database = NULL;
 
@@ -1309,8 +1309,8 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE *self,
  */
 static bool cache_rule_matches_column_simple(CACHE_RULE *self, const char *default_db, const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
-    ss_dassert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
+    mxb_assert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
 
     const char* rule_column = self->simple.column;
     const char* rule_table = self->simple.table;
@@ -1471,7 +1471,7 @@ static bool cache_rule_matches_column(CACHE_RULE *self,
                                       const char *default_db,
                                       const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
 
     bool matches = false;
 
@@ -1488,7 +1488,7 @@ static bool cache_rule_matches_column(CACHE_RULE *self,
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return matches;
@@ -1509,7 +1509,7 @@ static bool cache_rule_matches_database(CACHE_RULE *self,
                                         const char *default_db,
                                         const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_DATABASE);
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_DATABASE);
 
     bool matches = false;
 
@@ -1569,7 +1569,7 @@ static bool cache_rule_matches_query(CACHE_RULE *self,
                                      const char *default_db,
                                      const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_QUERY);
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_QUERY);
 
     char* sql;
     int len;
@@ -1595,8 +1595,8 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE *self,
                                             const char *default_db,
                                             const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_TABLE);
-    ss_dassert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_TABLE);
+    mxb_assert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
 
     bool matches = false;
 
@@ -1674,8 +1674,8 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE *self,
  */
 static bool cache_rule_matches_table_simple(CACHE_RULE *self, const char *default_db, const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_TABLE);
-    ss_dassert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_TABLE);
+    mxb_assert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
 
     bool matches = false;
 
@@ -1767,7 +1767,7 @@ static bool cache_rule_matches_table(CACHE_RULE *self,
                                      const char *default_db,
                                      const GWBUF *query)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_TABLE);
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_TABLE);
 
     bool matches = false;
 
@@ -1784,7 +1784,7 @@ static bool cache_rule_matches_table(CACHE_RULE *self,
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return matches;
@@ -1801,7 +1801,7 @@ static bool cache_rule_matches_table(CACHE_RULE *self,
  */
 static bool cache_rule_matches_user(CACHE_RULE *self, int thread_id, const char *account)
 {
-    ss_dassert(self->attribute == CACHE_ATTRIBUTE_USER);
+    mxb_assert(self->attribute == CACHE_ATTRIBUTE_USER);
 
     bool matches = cache_rule_compare(self, thread_id, account);
 
@@ -1862,11 +1862,11 @@ static bool cache_rule_matches(CACHE_RULE *self, int thread_id, const char *defa
         break;
 
     case CACHE_ATTRIBUTE_USER:
-        ss_dassert(!true);
+        mxb_assert(!true);
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     if ((matches && (self->debug & CACHE_DEBUG_MATCHING)) ||
@@ -1907,7 +1907,7 @@ static bool cache_rule_matches(CACHE_RULE *self, int thread_id, const char *defa
  */
 static CACHE_RULE* cache_rule_append(CACHE_RULE* head, CACHE_RULE* tail)
 {
-    ss_dassert(tail);
+    mxb_assert(tail);
 
     if (!head)
     {
@@ -1960,7 +1960,7 @@ static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
  */
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
 {
-    ss_dassert(root);
+    mxb_assert(root);
 
     CACHE_RULES *rules = cache_rules_create(debug);
 
@@ -2013,7 +2013,7 @@ static bool cache_rules_create_from_json(json_t* pRoot, uint32_t debug,
             for (i = 0; i < nRules; ++i)
             {
                 json_t* pObject = json_array_get(pRoot, i);
-                ss_dassert(pObject);
+                mxb_assert(pObject);
 
                 CACHE_RULES* pRules = cache_rules_create_from_json(pObject, debug);
 
@@ -2146,7 +2146,7 @@ static bool cache_rules_parse_array(CACHE_RULES *self,
                                     const char *name,
                                     cache_rules_parse_element_t parse_element)
 {
-    ss_dassert(json_is_array(store));
+    mxb_assert(json_is_array(store));
 
     bool parsed = true;
 
@@ -2156,7 +2156,7 @@ static bool cache_rules_parse_array(CACHE_RULES *self,
     while (parsed && (i < n))
     {
         json_t *element = json_array_get(store, i);
-        ss_dassert(element);
+        mxb_assert(element);
 
         if (json_is_object(element))
         {
@@ -2187,7 +2187,7 @@ static CACHE_RULE *cache_rules_parse_element(CACHE_RULES *self, json_t *object,
                                              const char* array_name, size_t index,
                                              struct cache_attribute_mapping *mapping)
 {
-    ss_dassert(json_is_object(object));
+    mxb_assert(json_is_object(object));
 
     CACHE_RULE *rule = NULL;
 

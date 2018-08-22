@@ -140,7 +140,7 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
         MXS_ERROR("Version mismatch for table %s.%s. Table map version is %d and "
                   "the table definition version is %d.", map->database.c_str(),
                   map->table.c_str(), map->version, create->version);
-        ss_dassert(!true); // Should not happen
+        mxb_assert(!true); // Should not happen
         return NULL;
     }
 
@@ -226,7 +226,7 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
     case MXS_AVRO_CODEC_SNAPPY:
         return "snappy";
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         return "null";
     }
 }
@@ -388,5 +388,5 @@ void AvroConverter::set_active(int i)
 {
     MXB_AT_DEBUG(int rc =)avro_value_get_by_name(&m_record, m_create->columns[i].name.c_str(),
                                              &m_field, NULL);
-    ss_dassert(rc == 0);
+    mxb_assert(rc == 0);
 }

@@ -66,7 +66,7 @@ int TestStorage::run(int argc, char** argv)
                 switch (argc)
                 {
                 default:
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                 case 7:
                     max_size = atoi(argv[6]);
                 case 6:

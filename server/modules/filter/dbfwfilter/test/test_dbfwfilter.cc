@@ -735,7 +735,7 @@ int test(mock::Client& client,
     }
     else
     {
-        ss_dassert(c.result == FW_ACTION_BLOCK);
+        mxb_assert(c.result == FW_ACTION_BLOCK);
 
         if (router_session.idle())
         {

@@ -40,7 +40,7 @@ static json_t* self_link(const char* host, const char* endpoint)
 
 json_t* mxs_json_resource(const char* host, const char* self, json_t* data)
 {
-    ss_dassert(data && (json_is_array(data) || json_is_object(data) || json_is_null(data)));
+    mxb_assert(data && (json_is_array(data) || json_is_object(data) || json_is_null(data)));
     json_t* rval = json_object();
     json_object_set_new(rval, CN_LINKS, self_link(host, self));
     json_object_set_new(rval, CN_DATA, data);
@@ -70,7 +70,7 @@ json_t* mxs_json_relationship(const char* host, const char* endpoint)
 void mxs_json_add_relation(json_t* rel, const char* id, const char* type)
 {
     json_t* data = json_object_get(rel, CN_DATA);
-    ss_dassert(data && json_is_array(data));
+    mxb_assert(data && json_is_array(data));
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(id));
@@ -213,8 +213,8 @@ static json_t* json_error_append(json_t* obj, const char* message)
     json_t* err = json_error_detail(message);
 
     json_t* arr = json_object_get(obj, ERRORS);
-    ss_dassert(arr);
-    ss_dassert(json_is_array(arr));
+    mxb_assert(arr);
+    mxb_assert(json_is_array(arr));
 
     if (arr)
     {

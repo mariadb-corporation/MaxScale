@@ -183,7 +183,7 @@ std::unique_ptr<ResultSet> ResultSet::create(std::initializer_list<std::string> 
 
 void ResultSet::add_row(std::initializer_list<std::string> values)
 {
-    ss_dassert(values.size() == m_columns.size());
+    mxb_assert(values.size() == m_columns.size());
     m_rows.emplace_back(values);
 }
 

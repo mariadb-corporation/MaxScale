@@ -207,7 +207,7 @@ public:
     {
         if (state == LOAD_DATA_ACTIVE)
         {
-            ss_dassert(m_load_data_state == LOAD_DATA_INACTIVE);
+            mxb_assert(m_load_data_state == LOAD_DATA_INACTIVE);
             reset_load_data_sent();
         }
 

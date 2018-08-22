@@ -146,7 +146,7 @@ dShowThreads(DCB *dcb)
     for (int i = 0; i < n_threads; i++)
     {
         Worker* worker = RoutingWorker::get(i);
-        ss_dassert(worker);
+        mxb_assert(worker);
 
         const char *state = "Unknown";
 
@@ -169,7 +169,7 @@ dShowThreads(DCB *dcb)
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
         }
 
         uint32_t nCurrent;

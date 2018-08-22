@@ -128,7 +128,7 @@ static const char* admin_remove_user(USERS *users, const char* fname, const char
 static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type,
                                     enum user_account_type account)
 {
-    ss_dassert(user_type != USER_TYPE_ALL);
+    mxb_assert(user_type != USER_TYPE_ALL);
     const char* type = user_type == USER_TYPE_INET ? CN_INET : CN_UNIX;
 
     json_t* entry = json_object();

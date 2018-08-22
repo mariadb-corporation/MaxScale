@@ -277,7 +277,7 @@ static timespec timespec_subtract(const timespec& later, const timespec& earlier
 {
     timespec result = { 0, 0 };
 
-    ss_dassert((later.tv_sec > earlier.tv_sec) ||
+    mxb_assert((later.tv_sec > earlier.tv_sec) ||
                ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
 
     if (later.tv_nsec >= earlier.tv_nsec)
@@ -830,7 +830,7 @@ ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
     {
         out << x.database;
         out << ".";
-        ss_dassert(x.table);
+        mxb_assert(x.table);
     }
 
     if (x.table)
@@ -839,7 +839,7 @@ ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
         out << ".";
     }
 
-    ss_dassert(x.column);
+    mxb_assert(x.column);
     out << x.column;
 
     return out;
@@ -1069,7 +1069,7 @@ public:
                 out << name.table << ".";
             }
 
-            ss_dassert(name.column);
+            mxb_assert(name.column);
 
             out << name.column;
 
@@ -1348,7 +1348,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
                 break;
 
             default:
-                ss_dassert(!true);
+                mxb_assert(!true);
             case SetSqlModeParser::SOMETHING:
                 break;
             };
@@ -1589,7 +1589,7 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
-                            ss_dassert(n == 2);
+                            mxb_assert(n == 2);
 
                             ifstream in(argv[argc - 1]);
 

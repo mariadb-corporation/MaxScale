@@ -346,7 +346,7 @@ modutil_get_query(GWBUF *buf)
         {
             if (len >= 1 && len <= ~(size_t)0 - 1)
             {
-                ss_dassert(!query_str);
+                mxb_assert(!query_str);
             }
             goto retblock;
         }
@@ -360,7 +360,7 @@ modutil_get_query(GWBUF *buf)
         {
             if (len >= 1 && len <= ~(size_t)0 - 1)
             {
-                ss_dassert(!query_str);
+                mxb_assert(!query_str);
             }
             goto retblock;
         }
@@ -423,7 +423,7 @@ GWBUF *modutil_create_mysql_err_msg(int        packet_number,
 
     /* allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    ss_dassert(errbuf != NULL);
+    mxb_assert(errbuf != NULL);
 
     if (errbuf == NULL)
     {
@@ -490,7 +490,7 @@ int modutil_send_mysql_err_packet(DCB        *dcb,
 // Helper function for debug assertions
 static bool only_one_packet(GWBUF* buffer)
 {
-    ss_dassert(buffer);
+    mxb_assert(buffer);
     uint8_t header[4] = {};
     gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
     size_t packet_len = gw_mysql_get_byte3(header);
@@ -542,7 +542,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         }
     }
 
-    ss_dassert(!packet || only_one_packet(packet));
+    mxb_assert(!packet || only_one_packet(packet));
     return packet;
 }
 
@@ -593,7 +593,7 @@ static size_t get_complete_packets_length(GWBUF *buffer)
             /** The buffer chain contains at least one incomplete packet */
             else
             {
-                ss_dassert(!buffer);
+                mxb_assert(!buffer);
                 break;
             }
         }
@@ -633,8 +633,8 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
 #endif
         complete = gwbuf_split(p_readbuf, total);
 #ifdef SS_DEBUG
-        ss_dassert(gwbuf_length(complete) == total);
-        ss_dassert(*p_readbuf == NULL || before - total == gwbuf_length(*p_readbuf));
+        mxb_assert(gwbuf_length(complete) == total);
+        mxb_assert(*p_readbuf == NULL || before - total == gwbuf_length(*p_readbuf));
 #endif
     }
     return complete;
@@ -1041,7 +1041,7 @@ bool is_mysql_sp_end(const char* start, int len)
  */
 GWBUF* modutil_create_query(const char* query)
 {
-    ss_dassert(query);
+    mxb_assert(query);
     size_t len = strlen(query) + 1; // Query plus the command byte
     GWBUF* rval = gwbuf_alloc(len + MYSQL_HEADER_LEN);
 
@@ -1232,7 +1232,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
 
 static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, const std::string& str)
 {
-    ss_dassert(it != end);
+    mxb_assert(it != end);
     for (auto s_it = str.begin(); s_it != str.end(); ++s_it, ++it)
     {
         if (it == end || *it != *s_it)
@@ -1247,8 +1247,8 @@ static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, 
 static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator it,
                                                            mxs::Buffer::iterator end)
 {
-    ss_dassert(it != end);
-    ss_dassert(isdigit(*it));
+    mxb_assert(it != end);
+    mxb_assert(isdigit(*it));
     std::pair<bool, mxs::Buffer::iterator> rval = std::make_pair(true, it);
     bool is_hex = *it == '0';
     bool allow_hex = false;
@@ -1302,7 +1302,7 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
                     rval.first = false;
                     break;
                 }
-                ss_dassert(isdigit(*next_it));
+                mxb_assert(isdigit(*next_it));
             }
             else
             {
@@ -1568,7 +1568,7 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
 
                             if (i != end)
                             {
-                                ss_dassert(*i == '\n');
+                                mxb_assert(*i == '\n');
                                 ++i;
                             }
                         }
@@ -1592,7 +1592,7 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
 
             if (i != end)
             {
-                ss_dassert(*i == '\n');
+                mxb_assert(*i == '\n');
                 ++i;
             }
             break;

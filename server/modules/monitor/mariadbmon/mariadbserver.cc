@@ -49,7 +49,7 @@ MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_
     , m_replication_lag(MXS_RLAG_UNDEFINED)
     , m_print_update_errormsg(true)
 {
-    ss_dassert(monitored_server);
+    mxb_assert(monitored_server);
 }
 
 NodeData::NodeData()
@@ -121,7 +121,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             query = "SHOW SLAVE STATUS";
             break;
         default:
-            ss_dassert(!true); // This method should not be called for versions < 5.5
+            mxb_assert(!true); // This method should not be called for versions < 5.5
             return false;
     }
 
@@ -1003,7 +1003,7 @@ void MariaDBServer::sstatus_array_set_conn_status(SlaveStatusArray* new_slave_st
         SlaveStatus& new_row = new_sstatus[i];
         if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_YES)
         {
-            ss_dassert(new_row.master_server_id > 0);
+            mxb_assert(new_row.master_server_id > 0);
             new_row.seen_connected = true;
         }
         else if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING)
@@ -1221,7 +1221,7 @@ string SlaveStatus::slave_io_to_string(SlaveStatus::slave_io_running_t slave_io)
             rval = NO;
             break;
         default:
-            ss_dassert(!false);
+            mxb_assert(!false);
     }
     return rval;
 }
@@ -1241,7 +1241,7 @@ QueryResult::QueryResult(MYSQL_RES* resultset)
             string key(field_info[column_index].name);
             // TODO: Think of a way to handle duplicate names nicely. Currently this should only be used
             // for known queries.
-            ss_dassert(m_col_indexes.count(key) == 0);
+            mxb_assert(m_col_indexes.count(key) == 0);
             m_col_indexes[key] = column_index;
         }
     }
@@ -1284,14 +1284,14 @@ int64_t QueryResult::get_col_index(const string& col_name) const
 
 string QueryResult::get_string(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? data : "";
 }
 
 int64_t QueryResult::get_uint(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     int64_t rval = -1;
     if (data && *data)
@@ -1309,7 +1309,7 @@ int64_t QueryResult::get_uint(int64_t column_ind) const
 
 bool QueryResult::get_bool(int64_t column_ind) const
 {
-    ss_dassert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < m_columns && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
 }

@@ -78,8 +78,8 @@ public:
 
     bool matches(const char* zUser, const char* zHost) const
     {
-        ss_dassert(zUser);
-        ss_dassert(zHost);
+        mxb_assert(zUser);
+        mxb_assert(zHost);
 
         return
             (m_user.empty() || (m_user == zUser)) &&
@@ -158,14 +158,14 @@ public:
 
     bool matches(const char* zUser, const char* zHost) const
     {
-        ss_dassert(zUser);
-        ss_dassert(zHost);
+        mxb_assert(zUser);
+        mxb_assert(zHost);
 
         bool rv = (m_user.empty() || (m_user == zUser));
 
         if (rv)
         {
-            ss_dassert(m_pCode);
+            mxb_assert(m_pCode);
             pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_pCode, NULL);
 
             if (pData)
@@ -285,7 +285,7 @@ bool get_accounts(const char* zName,
                   json_t* pStrings,
                   vector<shared_ptr<MaskingRules::Rule::Account> >& accounts)
 {
-    ss_dassert(json_is_array(pStrings));
+    mxb_assert(json_is_array(pStrings));
 
     bool success = true;
 
@@ -295,7 +295,7 @@ bool get_accounts(const char* zName,
     while (success && (i < n))
     {
         json_t* pString = json_array_get(pStrings, i);
-        ss_dassert(pString);
+        mxb_assert(pString);
 
         if (json_is_string(pString))
         {
@@ -332,7 +332,7 @@ bool get_accounts(const char* zName,
  */
 bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rule> >& rules)
 {
-    ss_dassert(json_is_array(pRules));
+    mxb_assert(json_is_array(pRules));
 
     bool parsed = true;
 
@@ -342,7 +342,7 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
     while (parsed && (i < n))
     {
         json_t* pRule = json_array_get(pRules, i);
-        ss_dassert(pRule);
+        mxb_assert(pRule);
 
         if (json_is_object(pRule))
         {
@@ -889,7 +889,7 @@ bool rule_get_value_fill(json_t* pRule,
 //static
 auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRule)
 {
-    ss_dassert(json_is_object(pRule));
+    mxb_assert(json_is_object(pRule));
 
     json_t *pReplace;
     std::string column, table, database, value, fill;
@@ -923,7 +923,7 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
 //static
 auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pRule)
 {
-    ss_dassert(json_is_object(pRule));
+    mxb_assert(json_is_object(pRule));
 
     std::string column, table, database;
     vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
@@ -982,7 +982,7 @@ static pcre2_code* rule_compile_pcre2_match(const char* match_string)
 //static
 auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
 {
-    ss_dassert(json_is_object(pRule));
+    mxb_assert(json_is_object(pRule));
 
     std::string column, table, database, value, fill, match;
     vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
@@ -1080,7 +1080,7 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
     const char* zTable = field.table;
     const char* zDatabase = field.database;
 
-    ss_dassert(zColumn);
+    mxb_assert(zColumn);
 
     // If the resultset does not contain table and database names, as will
     // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",

@@ -38,11 +38,11 @@ char VERSION_STRING[] = "V1.0.0";
  */
 bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 {
-    ss_dassert(pArgs->argc == 1);
-    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[0].value.filter;
-    ss_dassert(pFilterDef);
+    mxb_assert(pFilterDef);
     MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(filter_def_get_instance(pFilterDef));
 
     bool rv = false;

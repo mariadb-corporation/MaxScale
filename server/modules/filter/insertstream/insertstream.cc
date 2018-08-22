@@ -281,7 +281,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
     bool send_ok = false;
     bool send_error = false;
     int rc = 0;
-    ss_dassert(GWBUF_IS_CONTIGUOUS(queue));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
 
     if (session_trx_is_active(my_session->client_dcb->session) &&
         extract_insert_target(queue, target, sizeof(target)))
@@ -326,7 +326,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
 
         default:
             MXS_ERROR("Unexpected state: %d", my_session->state);
-            ss_dassert(false);
+            mxb_assert(false);
             break;
         }
     }
@@ -353,7 +353,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
             break;
 
         default:
-            ss_dassert(my_session->state == DS_STREAM_CLOSED);
+            mxb_assert(my_session->state == DS_STREAM_CLOSED);
             break;
         }
 
@@ -469,7 +469,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GW
          !MYSQL_IS_ERROR_PACKET((uint8_t*)GWBUF_DATA(reply))))
     {
         gwbuf_free(reply);
-        ss_dassert(my_session->queue);
+        mxb_assert(my_session->queue);
 
         my_session->state = my_session->state == DS_CLOSING_STREAM ?
                             DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;

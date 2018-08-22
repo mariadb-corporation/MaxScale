@@ -268,9 +268,9 @@ private:
         uint32_t buflen = gwbuf_length(buf);
 
         // The buffer should contain at most (2^24 - 1) + 4 bytes ...
-        ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+        mxb_assert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
         // ... and the payload should be buflen - 4 bytes
-        ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+        mxb_assert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
 
         return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
     }

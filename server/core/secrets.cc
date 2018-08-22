@@ -223,7 +223,7 @@ secrets_readKeys(const char* path)
                   mxs_strerror(eno));
         return NULL;
     }
-    ss_dassert(keys != NULL);
+    mxb_assert(keys != NULL);
 
     /** Successfully loaded keys, log notification */
     if (!reported)

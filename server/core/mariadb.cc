@@ -38,7 +38,7 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
 
         if (pResult)
         {
-            ss_dassert(mysql_field_count(pMysql) == 5);
+            mxb_assert(mysql_field_count(pMysql) == 5);
 
             MYSQL_ROW row;
 
@@ -47,11 +47,11 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
                 char* pEnd;
 
                 int64_t total = strtoll(row[2], &pEnd, 0);
-                ss_dassert(*pEnd == 0);
+                mxb_assert(*pEnd == 0);
                 int64_t used = strtoll(row[3], &pEnd, 0);
-                ss_dassert(*pEnd == 0);
+                mxb_assert(*pEnd == 0);
                 int64_t available = strtoll(row[4], &pEnd, 0);
-                ss_dassert(*pEnd == 0);
+                mxb_assert(*pEnd == 0);
 
                 pCallback(pCollection, row[0], row[1], total, used, available);
             }
@@ -101,9 +101,9 @@ void add_info_by_disk(std::map<std::string, disk::SizesAndPaths>* pSizes,
     {
         disk::SizesAndPaths& item = i->second;
 
-        ss_dassert(total == item.total());
-        ss_dassert(used == item.used());
-        ss_dassert(available == item.available());
+        mxb_assert(total == item.total());
+        mxb_assert(used == item.used());
+        mxb_assert(available == item.available());
 
         item.add_path(zPath);
     }

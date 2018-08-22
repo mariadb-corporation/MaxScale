@@ -351,7 +351,7 @@ monitor_stop_all()
  */
 bool monitor_add_server(MXS_MONITOR *mon, SERVER *server)
 {
-    ss_dassert(mon && server);
+    mxb_assert(mon && server);
     bool rval = false;
 
     if (monitor_server_in_use(server))
@@ -647,7 +647,7 @@ MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
     {
         if (strcmp(ptr->name, name) == 0 && strcmp(ptr->module_name, module) == 0)
         {
-            ss_dassert(!ptr->active);
+            mxb_assert(!ptr->active);
             ptr->active = true;
             rval = ptr;
         }
@@ -719,7 +719,7 @@ bool monitor_set_network_timeout(MXS_MONITOR *mon, int type, int value, const ch
 
         default:
             MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
-            ss_dassert(!true);
+            mxb_assert(!true);
             rval = false;
             break;
         }
@@ -972,7 +972,7 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
     if (prev == present)
     {
         /* This should never happen */
-        ss_dassert(false);
+        mxb_assert(false);
         return UNDEFINED_EVENT;
     }
 
@@ -986,7 +986,7 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
         else
         {
             /* Otherwise, was not running and still is not running. This should never happen. */
-            ss_dassert(false);
+            mxb_assert(false);
         }
     }
     else
@@ -1056,11 +1056,11 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
 
     default:
         /* This should never happen */
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
 
-    ss_dassert(rval != UNDEFINED_EVENT);
+    mxb_assert(rval != UNDEFINED_EVENT);
     return rval;
 }
 
@@ -1074,7 +1074,7 @@ const char* mon_get_event_name(mxs_monitor_event_t event)
         }
     }
 
-    ss_dassert(!true);
+    mxb_assert(!true);
     return "undefined_event";
 }
 
@@ -1342,7 +1342,7 @@ int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCM
     }
     else
     {
-        ss_dassert(cmd->argv != NULL && cmd->argv[0] != NULL);
+        mxb_assert(cmd->argv != NULL && cmd->argv[0] != NULL);
         // Construct a string with the script + arguments
         char *scriptStr = NULL;
         int totalStrLen = 0;
@@ -1370,7 +1370,7 @@ int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCM
                 currentPos += len;
                 spaceRemaining -= len;
             }
-            ss_dassert(spaceRemaining > 0);
+            mxb_assert(spaceRemaining > 0);
             *currentPos = '\0';
         }
         else
@@ -1497,7 +1497,7 @@ bool mon_connection_is_ok(mxs_connect_result_t connect_result)
  */
 void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval)
 {
-    ss_dassert(!mon_connection_is_ok(rval) && database);
+    mxb_assert(!mon_connection_is_ok(rval) && database);
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
     auto srv = database->server;
@@ -1578,7 +1578,7 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
     }
 
     const MXS_MODULE* mod = get_module(monitor->module_name, NULL);
-    ss_dassert(mod);
+    mxb_assert(mod);
 
     dump_param_list(file, monitor->parameters, {CN_TYPE, CN_SERVERS},
                     config_monitor_params, mod->parameters);
@@ -1606,7 +1606,7 @@ bool monitor_serialize(const MXS_MONITOR *monitor)
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)
@@ -1735,7 +1735,7 @@ static const char* monitor_state_to_string(monitor_state_t state)
         return "Stopped";
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         return "Unknown";
     }
 }
@@ -1950,7 +1950,7 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
     uint8_t* ptr = data;
 
     /** Store the data length */
-    ss_dassert(sizeof(size) == MMB_LEN_BYTES);
+    mxb_assert(sizeof(size) == MMB_LEN_BYTES);
     ptr = mxs_set_byte4(ptr, size);
 
     /** Then the schema version */
@@ -1981,10 +1981,10 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master, uint8
     /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
     uint32_t crc = crc32(0L, NULL, 0);
     crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
-    ss_dassert(sizeof(crc) == MMB_LEN_CRC32);
+    mxb_assert(sizeof(crc) == MMB_LEN_CRC32);
 
     ptr = mxs_set_byte4(ptr, crc);
-    ss_dassert(ptr - data == size + MMB_LEN_BYTES);
+    mxb_assert(ptr - data == size + MMB_LEN_BYTES);
 }
 
 static int get_data_file_path(MXS_MONITOR *monitor, char *path)
@@ -2048,7 +2048,7 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
         if (strcmp(db->server->name, data) == 0)
         {
             const unsigned char *sptr = (unsigned char*)strchr(data, '\0');
-            ss_dassert(sptr);
+            mxb_assert(sptr);
             sptr++;
 
             uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
@@ -2133,11 +2133,11 @@ static bool process_data_file(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **maste
             MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
             return false;
         }
-        ss_dassert(prevptr != ptr);
+        mxb_assert(prevptr != ptr);
         MXB_AT_DEBUG(prevptr = ptr);
     }
 
-    ss_dassert(ptr == crc_ptr);
+    mxb_assert(ptr == crc_ptr);
     return true;
 }
 
@@ -2213,7 +2213,7 @@ void load_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **master)
     {
         uint32_t size = 0;
         size_t bytes = fread(&size, 1, MMB_LEN_BYTES, file);
-        ss_dassert(sizeof(size) == MMB_LEN_BYTES);
+        mxb_assert(sizeof(size) == MMB_LEN_BYTES);
 
         if (bytes == MMB_LEN_BYTES)
         {
@@ -2333,7 +2333,7 @@ static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
 
 MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* search_server)
 {
-    ss_dassert(mon && search_server);
+    mxb_assert(mon && search_server);
     for (MXS_MONITORED_SERVER* iter = mon->monitored_servers; iter != NULL; iter = iter->next)
     {
         if (iter->server == search_server)
@@ -2347,7 +2347,7 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* s
 int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_MONITOR* mon,
                            MXS_MONITORED_SERVER*** monitored_servers_out)
 {
-    ss_dassert(monitored_servers_out != NULL && *monitored_servers_out == NULL);
+    mxb_assert(monitored_servers_out != NULL && *monitored_servers_out == NULL);
     SERVER** servers = NULL;
     int servers_size = config_get_server_list(params, key, &servers);
     int found = 0;
@@ -2371,7 +2371,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
         }
         MXS_FREE(servers);
 
-        ss_dassert(found <= servers_size);
+        mxb_assert(found <= servers_size);
         if (found == 0)
         {
             MXS_FREE(monitored_array);
@@ -2441,11 +2441,11 @@ void MonitorInstance::stop()
 {
     // This should only be called by monitor_stop(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
-    ss_dassert(mxs_rworker_get_current() == NULL ||
+    mxb_assert(mxs_rworker_get_current() == NULL ||
                mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    ss_dassert(Worker::state() != Worker::STOPPED);
-    ss_dassert(monitor_state() == MONITOR_STATE_STOPPING);
-    ss_dassert(m_thread_running.load() == true);
+    mxb_assert(Worker::state() != Worker::STOPPED);
+    mxb_assert(monitor_state() == MONITOR_STATE_STOPPING);
+    mxb_assert(m_thread_running.load() == true);
 
     Worker::shutdown();
     Worker::join();
@@ -2465,11 +2465,11 @@ bool MonitorInstance::start(const MXS_CONFIG_PARAMETER* pParams)
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
-    ss_dassert(mxs_rworker_get_current() == NULL ||
+    mxb_assert(mxs_rworker_get_current() == NULL ||
                mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    ss_dassert(Worker::state() == Worker::STOPPED);
-    ss_dassert(monitor_state() == MONITOR_STATE_STOPPED);
-    ss_dassert(m_thread_running.load() == false);
+    mxb_assert(Worker::state() == Worker::STOPPED);
+    mxb_assert(monitor_state() == MONITOR_STATE_STOPPED);
+    mxb_assert(m_thread_running.load() == false);
 
     if (!m_checked)
     {
@@ -2521,7 +2521,7 @@ int64_t MonitorInstance::get_time_ms()
     timespec t;
 
     MXB_AT_DEBUG(int rv = )clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
-    ss_dassert(rv == 0);
+    mxb_assert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
@@ -2584,7 +2584,7 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
         MxsDiskSpaceThreshold* pDst =
             pMs->server->disk_space_threshold ?
             pMs->server->disk_space_threshold : m_monitor->disk_space_threshold;
-        ss_dassert(pDst);
+        mxb_assert(pDst);
 
         int32_t star_max_percentage = -1;
 

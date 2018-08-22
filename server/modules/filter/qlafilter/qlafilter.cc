@@ -154,7 +154,7 @@ public:
 
     ~LogEventData()
     {
-        ss_dassert(query_clone == NULL);
+        mxb_assert(query_clone == NULL);
     }
 
     /**
@@ -296,7 +296,7 @@ QlaFilterSession::~QlaFilterSession()
 {
     pcre2_match_data_free(m_mdata);
     // File should be closed and event data freed by now
-    ss_dassert(m_logfile == NULL && m_event_data.has_message == false);
+    mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
 
 MXS_BEGIN_DECLS
@@ -528,7 +528,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     QlaInstance *my_instance = (QlaInstance *) instance;
     bool error = false;
 
-    ss_dassert(userName && remote);
+    mxb_assert(userName && remote);
     if ((!my_instance->source.empty() && remote && my_instance->source != remote) ||
         (!my_instance->user_name.empty() && userName && my_instance->user_name != userName))
     {
@@ -773,7 +773,7 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     if (event.has_message)
     {
         const uint32_t data_flags = my_instance->log_file_data_flags;
-        ss_dassert(data_flags & LOG_DATA_REPLY_TIME);
+        mxb_assert(data_flags & LOG_DATA_REPLY_TIME);
         char* query = NULL;
         int query_len = 0;
         if (data_flags & LOG_DATA_QUERY)
@@ -996,7 +996,7 @@ static void print_string_replace_newlines(const char *sql_string,
                                           size_t sql_str_len, const char* rep_newline,
                                           std::stringstream* output)
 {
-    ss_dassert(output);
+    mxb_assert(output);
     size_t line_begin = 0;
     size_t search_pos = 0;
     while (search_pos < sql_str_len)
@@ -1061,7 +1061,7 @@ static int write_log_entry(FILE *logfile, QlaInstance *instance, QlaFilterSessio
                            const char *time_string, const char *sql_string, size_t sql_str_len,
                            int elapsed_ms)
 {
-    ss_dassert(logfile != NULL);
+    mxb_assert(logfile != NULL);
     if (data_flags == 0)
     {
         // Nothing to print
@@ -1135,8 +1135,8 @@ static int write_log_entry(FILE *logfile, QlaInstance *instance, QlaFilterSessio
 
 static bool cb_log(const MODULECMD_ARG *argv, json_t** output)
 {
-    ss_dassert(argv->argc > 0);
-    ss_dassert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
+    mxb_assert(argv->argc > 0);
+    mxb_assert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
 
     MXS_FILTER_DEF* filter = argv[0].argv->value.filter;
     QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
@@ -1144,7 +1144,7 @@ static bool cb_log(const MODULECMD_ARG *argv, json_t** output)
 
     if (instance->log_mode_flags & CONFIG_FILE_UNIFIED)
     {
-        ss_dassert(instance->unified_fp && !instance->unified_filename.empty());
+        mxb_assert(instance->unified_fp && !instance->unified_filename.empty());
         std::ifstream file(instance->unified_filename);
 
         if (file)

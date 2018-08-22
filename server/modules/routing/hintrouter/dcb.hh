@@ -47,7 +47,7 @@ public:
 
     bool write(GWBUF* pPacket) const
     {
-        ss_dassert(m_sInner.get());
+        mxb_assert(m_sInner.get());
         return m_sInner.get()->func.write(m_sInner.get(), pPacket) == 1;
     }
 

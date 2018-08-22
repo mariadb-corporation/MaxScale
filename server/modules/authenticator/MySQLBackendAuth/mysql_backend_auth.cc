@@ -100,7 +100,7 @@ static bool auth_backend_extract(DCB *dcb, GWBUF *buf)
 
     default:
         MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
 

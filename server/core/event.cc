@@ -354,7 +354,7 @@ bool from_string(id_t* pId, const char* zValue)
 void set_log_facility(id_t id, int32_t facility)
 {
     bool rv = false;
-    ss_dassert((id >= 0) && (id < N_EVENTS));
+    mxb_assert((id >= 0) && (id < N_EVENTS));
 
     // We silently strip away other than the relevant bits.
     facility = facility & LOG_FACMASK;
@@ -366,7 +366,7 @@ void set_log_facility(id_t id, int32_t facility)
 
 int32_t get_log_facility(id_t id)
 {
-    ss_dassert((id >= 0) && (id < N_EVENTS));
+    mxb_assert((id >= 0) && (id < N_EVENTS));
 
     const EVENT& event = this_unit.events[id];
 
@@ -375,7 +375,7 @@ int32_t get_log_facility(id_t id)
 
 void set_log_level(id_t id, int32_t level)
 {
-    ss_dassert((id >= 0) && (id < N_EVENTS));
+    mxb_assert((id >= 0) && (id < N_EVENTS));
 
     // We silently strip away other than the relevant bits.
     level = level & LOG_PRIMASK;
@@ -387,7 +387,7 @@ void set_log_level(id_t id, int32_t level)
 
 int32_t get_log_level(id_t id)
 {
-    ss_dassert((id >= 0) && (id < N_EVENTS));
+    mxb_assert((id >= 0) && (id < N_EVENTS));
 
     const EVENT& event = this_unit.events[id];
 
@@ -414,7 +414,7 @@ result_t configure(const char* zName, const char* zValue)
             id_t id;
             if (from_string(&id, event.c_str()))
             {
-                ss_dassert((id >= 0) && (id < N_EVENTS));
+                mxb_assert((id >= 0) && (id < N_EVENTS));
 
                 if (property == CN_FACILITY)
                 {
@@ -450,7 +450,7 @@ void log(id_t event_id,
 {
     va_list valist;
 
-    ss_dassert((event_id >= 0) && (event_id < N_EVENTS));
+    mxb_assert((event_id >= 0) && (event_id < N_EVENTS));
 
     const EVENT& event = this_unit.events[event_id];
 

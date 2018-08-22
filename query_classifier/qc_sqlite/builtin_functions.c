@@ -470,7 +470,7 @@ static int search_compare(const void* key, const void* value)
 
 void init_builtin_functions()
 {
-    ss_dassert(!unit.inited);
+    mxb_assert(!unit.inited);
 
     qsort(BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), sort_compare);
     qsort(BUILTIN_10_2_3_FUNCTIONS, N_BUILTIN_10_2_3_FUNCTIONS, sizeof(char*), sort_compare);
@@ -481,7 +481,7 @@ void init_builtin_functions()
 
 void finish_builtin_functions()
 {
-    ss_dassert(unit.inited);
+    mxb_assert(unit.inited);
     unit.inited = false;
 }
 
@@ -489,7 +489,7 @@ bool is_builtin_readonly_function(const char* key,
                                   uint32_t major, uint32_t minor, uint32_t patch,
                                   bool check_oracle)
 {
-    ss_dassert(unit.inited);
+    mxb_assert(unit.inited);
 
     char* value = bsearch(key, BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), search_compare);
 

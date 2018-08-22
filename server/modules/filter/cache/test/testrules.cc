@@ -35,7 +35,7 @@ GWBUF* create_gwbuf(const char* s)
     size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
-    ss_dassert(gwbuf);
+    mxb_assert(gwbuf);
 
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
@@ -92,14 +92,14 @@ int test_user()
         CACHE_RULES** ppRules;
         int32_t nRules;
         bool rv = cache_rules_parse(test_case.json, 0, &ppRules, &nRules);
-        ss_dassert(rv);
+        mxb_assert(rv);
 
         for (int i = 0; i < nRules; ++i)
         {
             CACHE_RULES* pRules = ppRules[i];
 
             CACHE_RULE* pRule = pRules->use_rules;
-            ss_dassert(pRule);
+            mxb_assert(pRule);
 
             if (pRule->op != test_case.expect.op)
             {
@@ -206,14 +206,14 @@ int test_store()
         int32_t nRules;
 
         bool rv = cache_rules_parse(test_case.rule, 0, &ppRules, &nRules);
-        ss_dassert(rv);
+        mxb_assert(rv);
 
         for (int i = 0; i < nRules; ++i)
         {
             CACHE_RULES* pRules = ppRules[i];
 
             CACHE_RULE* pRule = pRules->store_rules;
-            ss_dassert(pRule);
+            mxb_assert(pRule);
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 

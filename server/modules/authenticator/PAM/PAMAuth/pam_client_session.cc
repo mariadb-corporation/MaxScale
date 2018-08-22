@@ -61,7 +61,7 @@ bool store_client_password(DCB *dcb, GWBUF *buffer)
  */
 int user_services_cb(void *data, int columns, char** column_vals, char** column_names)
 {
-    ss_dassert(columns == 1);
+    mxb_assert(columns == 1);
     PamClientSession::StringVector* results = static_cast<PamClientSession::StringVector*>(data);
     if (column_vals[0])
     {
@@ -413,7 +413,7 @@ bool PamClientSession::extract(DCB *dcb, GWBUF *buffer)
 
     default:
         MXS_ERROR("Unexpected authentication state: %d", m_state);
-        ss_dassert(!true);
+        mxb_assert(!true);
         break;
     }
     return rval;

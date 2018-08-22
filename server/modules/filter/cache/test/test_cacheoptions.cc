@@ -106,7 +106,7 @@ const char* to_string(cache_in_trxs_t x)
         return "all_transactions";
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return NULL;
     }
 }
@@ -147,8 +147,8 @@ int test(mock::Session& session,
     mock::Client& client = session.client();
 
     // Let's check that there's nothing pending.
-    ss_dassert(client.n_responses() == 0);
-    ss_dassert(router_session.idle());
+    mxb_assert(client.n_responses() == 0);
+    mxb_assert(router_session.idle());
 
     session.set_trx_state(tc.trx_state);
     session.set_autocommit(tc.trx_state == SESSION_TRX_INACTIVE);
@@ -168,9 +168,9 @@ int test(mock::Session& session,
         router_session.respond();
 
         // And let's verify that the backend is now empty...
-        ss_dassert(router_session.idle());
+        mxb_assert(router_session.idle());
         // ...and that we have received a response.
-        ss_dassert(client.n_responses() == 1);
+        mxb_assert(client.n_responses() == 1);
 
         // Let's do the select again.
         pStatement = mock::create_com_query(select);
@@ -191,7 +191,7 @@ int test(mock::Session& session,
                 cout << ", cache was used." << endl;
 
                 // Let's check we did receive a response.
-                ss_dassert(client.n_responses() == 2);
+                mxb_assert(client.n_responses() == 2);
             }
         }
         else

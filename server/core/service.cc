@@ -168,8 +168,8 @@ Service::Service(const std::string& service_name, const std::string& router_name
     m_wkey(mxs_rworker_create_key())
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
-    ss_dassert(module);
-    ss_dassert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
+    mxb_assert(module);
+    mxb_assert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
 
     router = (MXS_ROUTER_OBJECT*)module->module_object;
     capabilities = module->module_capabilities;
@@ -236,7 +236,7 @@ Service::~Service()
     while (auto tmp = ports)
     {
         ports = ports->next;
-        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
+        mxb_assert(!tmp->active || maxscale_teardown_in_progress());
         listener_free(tmp);
     }
 
@@ -247,7 +247,7 @@ Service::~Service()
 
     while (SERVER_REF* tmp = dbref)
     {
-        ss_dassert(!tmp->active || maxscale_teardown_in_progress());
+        mxb_assert(!tmp->active || maxscale_teardown_in_progress());
         dbref = dbref->next;
         MXS_FREE(tmp);
     }
@@ -257,13 +257,13 @@ Service::~Service()
 
 void service_free(Service* service)
 {
-    ss_dassert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
-    ss_dassert(!service->active || maxscale_teardown_in_progress());
+    mxb_assert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
+    mxb_assert(!service->active || maxscale_teardown_in_progress());
 
     {
         LockGuard guard(this_unit.lock);
         auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), service);
-        ss_dassert(it != this_unit.services.end());
+        mxb_assert(it != this_unit.services.end());
         this_unit.services.erase(it);
     }
 
@@ -275,10 +275,10 @@ void service_destroy(Service* service)
 #ifdef SS_DEBUG
     auto current = mxs::RoutingWorker::get_current();
     auto main = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-    ss_info_dassert(current == main, "Destruction of service must be done on the main worker");
+    mxb_assert_message(current == main, "Destruction of service must be done on the main worker");
 #endif
 
-    ss_dassert(service->active);
+    mxb_assert(service->active);
     atomic_store_int(&service->active, false);
 
     char filename[PATH_MAX + 1];
@@ -350,7 +350,7 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
         /* Should never happen, this guarantees it can't */
         MXS_ERROR("Attempt to start port with null or incomplete service");
         close_port(port);
-        ss_dassert(false);
+        mxb_assert(false);
         return 0;
     }
 
@@ -399,7 +399,7 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
     // Add protocol and authenticator capabilities from the listener
     const MXS_MODULE* proto_mod = get_module(port->protocol, MODULE_PROTOCOL);
     const MXS_MODULE* auth_mod = get_module(authenticator_name, MODULE_AUTHENTICATOR);
-    ss_dassert(proto_mod && auth_mod);
+    mxb_assert(proto_mod && auth_mod);
     service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
 
     memcpy(&port->listener->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
@@ -551,7 +551,7 @@ int serviceInitialize(Service *service)
 
 bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
 {
-    ss_dassert(service->state != SERVICE_STATE_FAILED);
+    mxb_assert(service->state != SERVICE_STATE_FAILED);
     bool rval = true;
     LockGuard guard(service->lock);
 
@@ -1082,7 +1082,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
             flist.push_back(def);
 
             const MXS_MODULE* module = get_module(def->module.c_str(), MODULE_FILTER);
-            ss_dassert(module);
+            mxb_assert(module);
             my_capabilities |= module->module_capabilities;
 
             if (def->obj->getCapabilities)
@@ -1283,7 +1283,7 @@ dListServices(DCB *dcb)
 
         for (Service* service : this_unit.services)
         {
-            ss_dassert(service->stats.n_current >= 0);
+            mxb_assert(service->stats.n_current >= 0);
             dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
                        service->name, service->routerModule,
                        service->stats.n_current, service->stats.n_sessions);
@@ -1359,7 +1359,7 @@ bool Service::refresh_users()
 {
     bool ret = true;
     int self = mxs_rworker_get_current_id();
-    ss_dassert(self >= 0);
+    mxb_assert(self >= 0);
     time_t now = time(NULL);
 
     // Use unique_lock instead of lock_guard to make the locking conditional
@@ -1435,7 +1435,7 @@ bool Service::refresh_users()
 int service_refresh_users(SERVICE *svc)
 {
     Service* service = static_cast<Service*>(svc);
-    ss_dassert(service);
+    mxb_assert(service);
     return service->refresh_users() ? 0 : 1;
 }
 
@@ -1739,7 +1739,7 @@ bool service_server_in_use(const SERVER *server)
 
 bool service_filter_in_use(const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     LockGuard guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
@@ -1811,7 +1811,7 @@ bool Service::dump_config(const char *filename) const
     }
 
     const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
-    ss_dassert(mod);
+    mxb_assert(mod);
 
     dump_param_list(file, svc_config_param, {CN_TYPE, CN_FILTERS, CN_SERVERS},
                     config_service_params, mod->parameters);
@@ -1839,7 +1839,7 @@ bool service_serialize(const Service *service)
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)
@@ -1920,7 +1920,7 @@ static const char* service_state_to_string(int state)
         return "Allocated";
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         return "Unknown";
     }
 }
@@ -2200,7 +2200,7 @@ uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
         }
         else
         {
-            ss_dassert(which == SERVICE_VERSION_MAX);
+            mxb_assert(which == SERVICE_VERSION_MAX);
 
             v = 0;
         }
@@ -2225,7 +2225,7 @@ uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
                 }
                 else
                 {
-                    ss_dassert(which == SERVICE_VERSION_MAX);
+                    mxb_assert(which == SERVICE_VERSION_MAX);
 
                     if (server_version > v)
                     {
@@ -2305,12 +2305,12 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
     else if (key == CN_MAX_RETRY_INTERVAL)
     {
         max_retry_interval = std::stoi(value);
-        ss_dassert(max_retry_interval > 0);
+        mxb_assert(max_retry_interval > 0);
     }
     else if (key == CN_MAX_CONNECTIONS)
     {
         max_connections = std::stoi(value);
-        ss_dassert(max_connections > 0);
+        mxb_assert(max_connections > 0);
     }
     else if (key == CN_CONNECTION_TIMEOUT)
     {
@@ -2319,7 +2319,7 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
             dcb_enable_session_timeouts();
         }
 
-        ss_dassert(conn_idle_timeout >= 0);
+        mxb_assert(conn_idle_timeout >= 0);
     }
     else if (key == CN_AUTH_ALL_SERVERS)
     {

@@ -91,7 +91,7 @@ void MariaDBMonitor::reset_server_info()
     for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
     {
         auto mon_server = (*iter)->m_server_base;
-        ss_dassert(m_server_info.count(mon_server) == 0);
+        mxb_assert(m_server_info.count(mon_server) == 0);
         ServerInfoMap::value_type new_val(mon_server, *iter);
         m_server_info.insert(new_val);
     }
@@ -132,7 +132,7 @@ void MariaDBMonitor::reset_node_index_info()
  */
 MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 {
-    ss_dassert(m_server_info.count(db) == 1); // Should always exist in the map
+    mxb_assert(m_server_info.count(db) == 1); // Should always exist in the map
     return m_server_info[db];
 }
 
@@ -247,7 +247,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
      * thread and not the admin thread. Because the diagnostic must be printable even when the monitor is
      * not running, the printing must be done outside the normal loop. */
 
-    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     /* The 'dcb' is owned by the admin thread (the thread executing this function), and probably
      * should not be written to by any other thread. To prevent this, have the monitor thread
      * print the diagnostics to a string. */
@@ -297,7 +297,7 @@ string MariaDBMonitor::diagnostics_to_string() const
 
 json_t* MariaDBMonitor::diagnostics_json() const
 {
-    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
     json_t* rval = NULL;
     MariaDBMonitor* mutable_ptr = const_cast<MariaDBMonitor*>(this);
     auto func = [this, &rval]
@@ -464,7 +464,7 @@ void MariaDBMonitor::tick()
     }
 
     // Sanity check. Master may not be both slave and master.
-    ss_dassert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
+    mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
     // Update shared status. The next functions read the shared status. TODO: change the following
     // functions to read "pending_status" instead.
@@ -589,7 +589,7 @@ void MariaDBMonitor::update_external_master()
 {
     if (server_is_slave_of_ext_master(m_master->m_server_base->server))
     {
-        ss_dassert(!m_master->m_slave_status.empty());
+        mxb_assert(!m_master->m_slave_status.empty());
         if (m_master->m_slave_status[0].master_host != m_external_master_host ||
             m_master->m_slave_status[0].master_port != m_external_master_port)
         {
@@ -744,7 +744,7 @@ bool MariaDBMonitor::execute_manual_command(std::function<void (void)> command, 
     {
         PRINT_MXS_JSON_ERROR(error_out,
                              "Previous command has not been executed, cannot send another command.");
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
     else
     {
@@ -806,10 +806,10 @@ bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out
  */
 bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
-    ss_dassert((args->argc >= 1) && (args->argc <= 3));
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    ss_dassert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
-    ss_dassert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args->argc >= 1) && (args->argc <= 3));
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     bool rval = false;
     if (config_get_global_options()->passive)
@@ -837,8 +837,8 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
  */
 bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
 {
-    ss_dassert(args->argc == 1);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     bool rv = false;
 
     if (config_get_global_options()->passive)
@@ -863,9 +863,9 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
  */
 bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
 {
-    ss_dassert(args->argc == 2);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(args->argc == 2);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
     if (config_get_global_options()->passive)
@@ -907,7 +907,7 @@ string get_connection_errors(const ServerArray& servers)
     for (auto iter = servers.begin(); iter != servers.end(); iter++)
     {
         const char* error = mysql_error((*iter)->m_server_base->con);
-        ss_dassert(*error); // Every connection should have an error.
+        mxb_assert(*error); // Every connection should have an error.
         rval += separator + (*iter)->name() + ": '" + error + "'";
         separator = ", ";
     }

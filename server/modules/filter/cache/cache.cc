@@ -135,7 +135,7 @@ cache_result_t Cache::get_default_key(const char* zDefault_db,
                                       const GWBUF* pQuery,
                                       CACHE_KEY* pKey)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));
 
     char *pSql;
     int length;

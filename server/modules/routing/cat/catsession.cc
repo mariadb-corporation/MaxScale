@@ -70,7 +70,7 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
 void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 {
     auto backend = *m_current;
-    ss_dassert(backend->dcb() == pDcb);
+    mxb_assert(backend->dcb() == pDcb);
     bool send = false;
 
     if (backend->reply_is_complete(pPacket))

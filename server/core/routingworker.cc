@@ -178,7 +178,7 @@ RoutingWorker::~RoutingWorker()
 // static
 bool RoutingWorker::init()
 {
-    ss_dassert(!this_unit.initialized);
+    mxb_assert(!this_unit.initialized);
 
     this_unit.number_poll_spins = config_nbpolls();
     this_unit.max_poll_sleep = config_pollsleep();
@@ -273,12 +273,12 @@ bool RoutingWorker::init()
 
 void RoutingWorker::finish()
 {
-    ss_dassert(this_unit.initialized);
+    mxb_assert(this_unit.initialized);
 
     for (int i = this_unit.id_max_worker; i >= this_unit.id_min_worker; --i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
@@ -350,7 +350,7 @@ RoutingWorker* RoutingWorker::get(int worker_id)
         worker_id = this_unit.id_main_worker;
     }
 
-    ss_dassert((worker_id >= this_unit.id_min_worker) && (worker_id <= this_unit.id_max_worker));
+    mxb_assert((worker_id >= this_unit.id_min_worker) && (worker_id <= this_unit.id_max_worker));
 
     return this_unit.ppWorkers[worker_id];
 }
@@ -386,7 +386,7 @@ bool RoutingWorker::start_threaded_workers()
         if (i != this_unit.id_main_worker)
         {
             RoutingWorker* pWorker = this_unit.ppWorkers[i];
-            ss_dassert(pWorker);
+            mxb_assert(pWorker);
 
             if (!pWorker->start())
             {
@@ -409,7 +409,7 @@ void RoutingWorker::join_threaded_workers()
         if (i != this_unit.id_main_worker)
         {
             RoutingWorker* pWorker = this_unit.ppWorkers[i];
-            ss_dassert(pWorker);
+            mxb_assert(pWorker);
 
             pWorker->join();
         }
@@ -435,7 +435,7 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
 
 void RoutingWorker::register_zombie(DCB* pDcb)
 {
-    ss_dassert(pDcb->poll.owner == this);
+    mxb_assert(pDcb->poll.owner == this);
 
     m_zombies.push_back(pDcb);
 }
@@ -548,7 +548,7 @@ void RoutingWorker::epoll_tick()
 uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
-    ss_dassert(pThis == pWorker);
+    mxb_assert(pThis == pWorker);
 
     return pThis->handle_epoll_events(events);
 }
@@ -598,7 +598,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
     for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         if (pWorker->execute(pTask, pSem, EXECUTE_AUTO))
         {
@@ -621,7 +621,7 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
     for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         if (pWorker->post_disposable(pTask, EXECUTE_AUTO))
         {
@@ -644,7 +644,7 @@ size_t RoutingWorker::execute_serially(Task& task)
     for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         if (pWorker->execute(&task, &sem, EXECUTE_AUTO))
         {
@@ -674,7 +674,7 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
     for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         if (pWorker->post_message(msg_id, arg1, arg2))
         {
@@ -689,13 +689,13 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 void RoutingWorker::shutdown_all()
 {
     // NOTE: No logging here, this function must be signal safe.
-    ss_dassert((this_unit.next_worker_id == 0) || (this_unit.ppWorkers != NULL));
+    mxb_assert((this_unit.next_worker_id == 0) || (this_unit.ppWorkers != NULL));
 
     int nWorkers = this_unit.next_worker_id;
     for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         pWorker->shutdown();
     }
@@ -713,7 +713,7 @@ int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type
     for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = RoutingWorker::get(i);
-        ss_dassert(pWorker);
+        mxb_assert(pWorker);
 
         const Worker::STATISTICS& s = pWorker->statistics();
 
@@ -771,7 +771,7 @@ Worker::STATISTICS RoutingWorker::get_statistics()
         for (int j = 0; j < this_unit.next_worker_id; ++j)
         {
             Worker* pWorker = RoutingWorker::get(j);
-            ss_dassert(pWorker);
+            mxb_assert(pWorker);
 
             cs.n_fds[i] += pWorker->statistics().n_fds[i];
         }
@@ -784,7 +784,7 @@ Worker::STATISTICS RoutingWorker::get_statistics()
         for (int j = 0; j < nWorkers; ++j)
         {
             Worker* pWorker = RoutingWorker::get(j);
-            ss_dassert(pWorker);
+            mxb_assert(pWorker);
 
             cs.qtimes[i] += pWorker->statistics().qtimes[i];
             cs.exectimes[i] += pWorker->statistics().exectimes[i];
@@ -853,7 +853,7 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     if (member)
@@ -912,7 +912,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
         void execute(Worker& worker)
         {
             int id = mxs::RoutingWorker::get_current_id();
-            ss_dassert(id >= 0);
+            mxb_assert(id >= 0);
 
             QC_CACHE_STATS& stats = m_all_stats[id];
 
@@ -1014,21 +1014,21 @@ size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t ar
 bool mxs_rworker_register_session(MXS_SESSION* session)
 {
     RoutingWorker* pWorker = RoutingWorker::get_current();
-    ss_dassert(pWorker);
+    mxb_assert(pWorker);
     return pWorker->session_registry().add(session);
 }
 
 bool mxs_rworker_deregister_session(uint64_t id)
 {
     RoutingWorker* pWorker = RoutingWorker::get_current();
-    ss_dassert(pWorker);
+    mxb_assert(pWorker);
     return pWorker->session_registry().remove(id);
 }
 
 MXS_SESSION* mxs_rworker_find_session(uint64_t id)
 {
     RoutingWorker* pWorker = RoutingWorker::get_current();
-    ss_dassert(pWorker);
+    mxb_assert(pWorker);
     return pWorker->session_registry().lookup(id);
 }
 
@@ -1112,7 +1112,7 @@ public:
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
 
-        ss_dassert((size_t)idx < m_data.size());
+        mxb_assert((size_t)idx < m_data.size());
         m_data[idx] = pJson;
     }
 

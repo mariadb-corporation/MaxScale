@@ -142,11 +142,11 @@ FilterDef::~FilterDef()
  */
 void filter_free(const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     // Removing the filter from the list will trigger deletion once it's no longer in use
     Guard guard(this_unit.lock);
     auto it = std::remove(this_unit.filters.begin(), this_unit.filters.end(), filter);
-    ss_dassert(it != this_unit.filters.end());
+    mxb_assert(it != this_unit.filters.end());
     this_unit.filters.erase(it);
 }
 
@@ -167,14 +167,14 @@ SFilterDef filter_find(const char *name)
 
 bool filter_can_be_destroyed(const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     return !service_filter_in_use(filter);
 }
 
 void filter_destroy(const SFilterDef& filter)
 {
-    ss_dassert(filter);
-    ss_dassert(filter_can_be_destroyed(filter));
+    mxb_assert(filter);
+    mxb_assert(filter_can_be_destroyed(filter));
     filter_free(filter);
 }
 
@@ -195,21 +195,21 @@ void filter_destroy_instances()
 const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
-    ss_dassert(filter);
+    mxb_assert(filter);
     return filter->name.c_str();
 }
 
 const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
-    ss_dassert(filter);
+    mxb_assert(filter);
     return filter->module.c_str();
 }
 
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 {
     const FilterDef* filter = static_cast<const FilterDef*>(filter_def);
-    ss_dassert(filter);
+    mxb_assert(filter);
     return filter->filter;
 }
 
@@ -262,7 +262,7 @@ dprintAllFilters(DCB *dcb)
  */
 void dprintFilter(DCB *dcb, const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     dcb_printf(dcb, "FilterDef %p (%s)\n", filter.get(), filter->name.c_str());
     dcb_printf(dcb, "\tModule:      %s\n", filter->module.c_str());
     if (filter->obj && filter->filter)
@@ -310,7 +310,7 @@ dListFilters(DCB *dcb)
 void
 filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     CONFIG_CONTEXT ctx = {};
     ctx.object = (char*)"";
 
@@ -333,7 +333,7 @@ filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
  */
 MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     MXS_DOWNSTREAM *me;
 
     if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
@@ -368,7 +368,7 @@ MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS
  */
 MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     MXS_UPSTREAM *me = NULL;
 
     /*
@@ -396,7 +396,7 @@ MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fses
 
 json_t* filter_parameters_to_json(const SFilterDef&  filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     json_t* rval = json_object();
 
     /** Add custom module parameters */
@@ -409,7 +409,7 @@ json_t* filter_parameters_to_json(const SFilterDef&  filter)
 
 json_t* filter_json_data(const SFilterDef&  filter, const char* host)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     json_t* rval = json_object();
 
     json_object_set_new(rval, CN_ID, json_string(filter->name.c_str()));
@@ -443,7 +443,7 @@ json_t* filter_json_data(const SFilterDef&  filter, const char* host)
 
 json_t* filter_to_json(const SFilterDef&  filter, const char* host)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     string self = MXS_JSON_API_FILTERS;
     self += filter->name;
     return mxs_json_resource(host, self.c_str(), filter_json_data(filter, host));
@@ -521,7 +521,7 @@ json_t* FilterSession::diagnostics_json() const
 
 static bool create_filter_config(const SFilterDef& filter, const char *filename)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
@@ -537,7 +537,7 @@ static bool create_filter_config(const SFilterDef& filter, const char *filename)
     dprintf(file, "%s=%s\n", CN_TYPE, CN_FILTER);
 
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
-    ss_dassert(mod);
+    mxb_assert(mod);
 
     MXS_MODULE_PARAM no_common_params = {};
     dump_param_list(file, filter->parameters, {CN_TYPE}, &no_common_params, mod->parameters);
@@ -548,7 +548,7 @@ static bool create_filter_config(const SFilterDef& filter, const char *filename)
 
 bool filter_serialize(const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
@@ -565,7 +565,7 @@ bool filter_serialize(const SFilterDef& filter)
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)

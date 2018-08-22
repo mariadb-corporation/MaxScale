@@ -83,7 +83,7 @@ spinlock_acquire_nowait(const SPINLOCK *const_lock)
 void spinlock_release(const SPINLOCK *const_lock)
 {
     SPINLOCK *lock = (SPINLOCK*)const_lock;
-    ss_dassert(lock->lock != 0);
+    mxb_assert(lock->lock != 0);
 #if SPINLOCK_PROFILE
     if (lock->waiting > lock->max_waiting)
     {

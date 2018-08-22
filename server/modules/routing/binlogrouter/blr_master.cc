@@ -126,7 +126,7 @@ static int keepalive = 1;
 static void blr_start_master(void* data)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
-    ss_dassert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     if (router->client)
     {
@@ -286,7 +286,7 @@ static void blr_start_master(void* data)
 static void worker_cb_start_master(MXB_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
-    ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     blr_start_master(data);
 }
@@ -302,7 +302,7 @@ bool blr_start_master_in_main(void* data)
     // message and call `blr_start_master` there.
 
     MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
-    ss_dassert(worker);
+    mxb_assert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_start_master;
     intptr_t arg2 = (intptr_t)data;
@@ -324,7 +324,7 @@ bool blr_start_master_in_main(void* data)
 static void worker_cb_close_master(MXB_WORKER* worker, void* data)
 {
     // This is itended to be called only in the main worker.
-    ss_dassert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     blr_master_close(static_cast<ROUTER_INSTANCE*>(data));
 }
@@ -340,7 +340,7 @@ void blr_close_master_in_main(void* data)
     // message and call `blr_master_close` there.
 
     MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
-    ss_dassert(worker);
+    mxb_assert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_close_master;
     intptr_t arg2 = (intptr_t)data;
@@ -524,7 +524,7 @@ void
 blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
 {
     atomic_add(&router->handling_threads, 1);
-    ss_dassert(router->handling_threads == 1);
+    mxb_assert(router->handling_threads == 1);
     spinlock_acquire(&router->lock);
     router->active_logs = 1;
     spinlock_release(&router->lock);
@@ -995,7 +995,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             else
             {
                 /** We're processing a multi-packet replication event */
-                ss_dassert(router->master_event_state == BLR_EVENT_ONGOING);
+                mxb_assert(router->master_event_state == BLR_EVENT_ONGOING);
             }
 
             /** Gather the event into one big buffer */
@@ -1007,7 +1007,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 part = gwbuf_consume(part, semisync_bytes);
             }
 
-            ss_dassert(router->master_event_state == BLR_EVENT_STARTED ||
+            mxb_assert(router->master_event_state == BLR_EVENT_STARTED ||
                        router->master_event_state == BLR_EVENT_ONGOING);
 
             if (router->master_event_state == BLR_EVENT_ONGOING)
@@ -1030,7 +1030,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  * the network header of the first packet (4 bytes) and one OK byte.
                  * The semi-sync bytes are always consumed at an earlier stage.
                  */
-                ss_dassert(router->master_event_state != BLR_EVENT_DONE);
+                mxb_assert(router->master_event_state != BLR_EVENT_DONE);
 
                 if (router->master_event_state != BLR_EVENT_STARTED)
                 {
@@ -1055,7 +1055,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  * exception to this and it is appended as-is with the network
                  * header and the extra OK byte.
                  */
-                ss_dassert(len == MYSQL_PACKET_LENGTH_MAX);
+                mxb_assert(len == MYSQL_PACKET_LENGTH_MAX);
                 router->master_event_state = BLR_EVENT_ONGOING;
                 continue;
             }
@@ -2891,7 +2891,7 @@ bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
                             REP_HEADER *hdr,
                             uint8_t *ptr)
 {
-    ss_dassert(hdr->event_type == ROTATE_EVENT);
+    mxb_assert(hdr->event_type == ROTATE_EVENT);
 
     uint64_t pos;
     int len, slen;
@@ -2971,7 +2971,7 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
                                REP_HEADER *hdr,
                                uint8_t *ptr)
 {
-    ss_dassert(hdr->event_type == MARIADB10_GTID_GTID_LIST_EVENT);
+    mxb_assert(hdr->event_type == MARIADB10_GTID_GTID_LIST_EVENT);
 
     if (router->mariadb10_master_gtid)
     {

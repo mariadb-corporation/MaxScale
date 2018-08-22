@@ -33,7 +33,7 @@ Backend::Backend(SERVER_REF *ref):
 
 Backend::~Backend()
 {
-    ss_dassert(m_closed || !in_use());
+    mxb_assert(m_closed || !in_use());
 
     if (in_use())
     {
@@ -43,7 +43,7 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
-    ss_dassert(m_dcb->n_close == 0);
+    mxb_assert(m_dcb->n_close == 0);
 
     if (!m_closed)
     {
@@ -72,7 +72,7 @@ void Backend::close(close_type type)
     }
     else
     {
-        ss_dassert(false);
+        mxb_assert(false);
     }
 }
 
@@ -95,7 +95,7 @@ bool Backend::execute_session_command()
         /** These commands do not generate responses */
         rval = write(buffer, NO_RESPONSE);
         complete_session_command();
-        ss_dassert(!is_waiting_result());
+        mxb_assert(!is_waiting_result());
         break;
 
     case MXS_COM_CHANGE_USER:
@@ -107,7 +107,7 @@ bool Backend::execute_session_command()
         // We want the complete response in one packet
         gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
         rval = write(buffer, EXPECT_RESPONSE);
-        ss_dassert(is_waiting_result());
+        mxb_assert(is_waiting_result());
         break;
     }
 
@@ -143,7 +143,7 @@ size_t Backend::session_command_count() const
 
 const SSessionCommand& Backend::next_session_command() const
 {
-    ss_dassert(has_session_commands());
+    mxb_assert(has_session_commands());
     return m_session_commands.front();
 }
 
@@ -152,7 +152,7 @@ void Backend::clear_state(backend_state state)
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
         MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, -1);
-        ss_dassert(prev2 > 0);
+        mxb_assert(prev2 > 0);
     }
 
     m_state &= ~state;
@@ -163,7 +163,7 @@ void Backend::set_state(backend_state state)
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
         MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, 1);
-        ss_dassert(prev2 >= 0);
+        mxb_assert(prev2 >= 0);
     }
 
     m_state |= state;
@@ -171,7 +171,7 @@ void Backend::set_state(backend_state state)
 
 bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 {
-    ss_dassert(!in_use());
+    mxb_assert(!in_use());
     bool rval = false;
 
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol)))
@@ -201,7 +201,7 @@ bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 
 bool Backend::write(GWBUF* buffer, response_type type)
 {
-    ss_dassert(in_use());
+    mxb_assert(in_use());
     bool rval = m_dcb->func.write(m_dcb, buffer) != 0;
 
     if (rval && type == EXPECT_RESPONSE)
@@ -214,7 +214,7 @@ bool Backend::write(GWBUF* buffer, response_type type)
 
 bool Backend::auth(GWBUF* buffer)
 {
-    ss_dassert(in_use());
+    mxb_assert(in_use());
     bool rval = false;
 
     if (m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer) == 1)
@@ -228,7 +228,7 @@ bool Backend::auth(GWBUF* buffer)
 
 void Backend::ack_write()
 {
-    ss_dassert(is_waiting_result());
+    mxb_assert(is_waiting_result());
     clear_state(WAITING_RESULT);
 }
 
@@ -239,7 +239,7 @@ void Backend::store_command(GWBUF* buffer)
 
 bool Backend::write_stored_command()
 {
-    ss_dassert(in_use());
+    mxb_assert(in_use());
     bool rval = false;
 
     if (m_pending_cmd.length())

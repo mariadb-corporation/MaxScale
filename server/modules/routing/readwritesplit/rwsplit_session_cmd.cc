@@ -75,7 +75,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
 {
     if (backend->has_session_commands())
     {
-        ss_dassert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
+        mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
         uint8_t cmd;
         gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
         uint8_t command = backend->next_session_command()->get_command();
@@ -88,7 +88,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
         {
             // This should never fail or the backend protocol is broken
             MXB_AT_DEBUG(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
-            ss_dassert(b);
+            mxb_assert(b);
             backend->add_ps_handle(id, resp.id);
         }
 

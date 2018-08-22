@@ -235,7 +235,7 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             break;
         }
     }
@@ -312,7 +312,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     /** Check slave selection criteria and set compare function */
     select_criteria_t select_criteria = cnf.slave_selection_criteria;
     auto cmpfun = criteria_cmpfun[select_criteria];
-    ss_dassert(cmpfun);
+    mxb_assert(cmpfun);
 
     if (mxs_log_is_priority_enabled(LOG_INFO))
     {
@@ -342,7 +342,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
     int slaves_connected = counts.second;
     int max_nslaves = max_slave_count();
 
-    ss_dassert(slaves_connected <= max_nslaves || max_nslaves == 0);
+    mxb_assert(slaves_connected <= max_nslaves || max_nslaves == 0);
 
     if (slaves_connected < max_nslaves)
     {

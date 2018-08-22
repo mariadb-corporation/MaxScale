@@ -47,7 +47,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     MySQLProtocol* p;
 
     p = (MySQLProtocol *) MXS_CALLOC(1, sizeof(MySQLProtocol));
-    ss_dassert(p != NULL);
+    mxb_assert(p != NULL);
 
     if (p == NULL)
     {
@@ -134,7 +134,7 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     {
         return 0;
     }
-    ss_dassert(GWBUF_LENGTH(buf) == COM_QUIT_PACKET_SIZE);
+    mxb_assert(GWBUF_LENGTH(buf) == COM_QUIT_PACKET_SIZE);
 
     data = GWBUF_DATA(buf);
 
@@ -154,7 +154,7 @@ int mysql_send_com_quit(DCB*   dcb,
     GWBUF *buf;
     int nbytes = 0;
 
-    ss_dassert(packet_number <= 255);
+    mxb_assert(packet_number <= 255);
 
     if (dcb == NULL)
     {
@@ -216,7 +216,7 @@ GWBUF* mysql_create_custom_error(int         packet_number,
 
     /** allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    ss_dassert(errbuf != NULL);
+    mxb_assert(errbuf != NULL);
 
     if (errbuf == NULL)
     {
@@ -587,7 +587,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
         // The shared session data can be extracted at any time if the client DCB is used.
-        ss_dassert(dcb->data);
+        mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
     else if (dcb->session->state != SESSION_STATE_ALLOC &&
@@ -597,7 +597,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     }
     else
     {
-        ss_dassert(false);
+        mxb_assert(false);
         MXS_ERROR("Couldn't get session authentication info. Session in a wrong state %s.",
                   STRSESSIONSTATE(dcb->session->state));
         rval = false;
@@ -971,7 +971,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     GWBUF* buffer = gw_generate_auth_response(&client, (MySQLProtocol*)dcb->protocol,
                                               with_ssl, ssl_established,
                                               dcb->service->capabilities);
-    ss_dassert(buffer);
+    mxb_assert(buffer);
 
     if (with_ssl && !ssl_established)
     {
@@ -1088,8 +1088,8 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
     if (payload[0] > 0)
     {
         scramble_len = payload[0] - 1;
-        ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
-        ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
+        mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+        mxb_assert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
 
         if ((scramble_len < GW_SCRAMBLE_LENGTH_323) ||
             scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
@@ -1416,7 +1416,7 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
     for (int i = 0; i < config_threadcount(); i++)
     {
         MXB_WORKER* worker = mxs_rworker_get(i);
-        ss_dassert(worker);
+        mxb_assert(worker);
         mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
                                 (intptr_t)new ConnKillInfo(target_id, ss.str(), issuer));
     }
@@ -1434,7 +1434,7 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
     for (int i = 0; i < config_threadcount(); i++)
     {
         MXB_WORKER* worker = mxs_rworker_get(i);
-        ss_dassert(worker);
+        mxb_assert(worker);
         mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
                                 (intptr_t)new UserKillInfo(user, ss.str(), issuer));
     }
@@ -1470,14 +1470,14 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
         if (server_status  & SERVER_SESSION_STATE_CHANGED)
         {
             MXB_AT_DEBUG(uint64_t data_size = )mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
-            ss_dassert(data_size == packet_len - (ptr - local_buf));
+            mxb_assert(data_size == packet_len - (ptr - local_buf));
 
             while (ptr < (local_buf + packet_len))
             {
                 enum_session_state_type type =
                     (enum enum_session_state_type)mxs_leint_consume(&ptr);
 #if defined(SS_DEBUG)
-                ss_dassert(type <= SESSION_TRACK_TRANSACTION_TYPE);
+                mxb_assert(type <= SESSION_TRACK_TRANSACTION_TYPE);
 #endif
                 switch (type)
                 {
@@ -1606,7 +1606,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
 mysql_tx_state_t parse_trx_state(const char *str)
 {
     int s = TX_EMPTY;
-    ss_dassert(str);
+    mxb_assert(str);
     do
     {
         switch (*str)

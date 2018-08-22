@@ -53,16 +53,16 @@ test1()
     fprintf(stderr,
             "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
-    ss_info_dassert(GWBUF_IS_CONTIGUOUS(buffer), "Allocated buffer should be continuos");
+    mxb_assert_message(GWBUF_IS_CONTIGUOUS(buffer), "Allocated buffer should be continuos");
     memset(GWBUF_DATA(buffer), 0, GWBUF_LENGTH(buffer));
-    ss_info_dassert(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
+    mxb_assert_message(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
-    ss_info_dassert(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
+    mxb_assert_message(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
     fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
-    ss_info_dassert(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
+    mxb_assert_message(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
     fprintf(stderr, "\t..done\nReplace SQL in buffer");
-    ss_info_dassert(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
+    mxb_assert_message(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
                     "Default buffer should fail");
     fprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
@@ -81,7 +81,7 @@ test2()
 
     /** Allocate space for the COM_QUERY header and payload */
     buffer = gwbuf_alloc(5 + 128);
-    ss_info_dassert((buffer != NULL), "Buffer should not be null");
+    mxb_assert_message((buffer != NULL), "Buffer should not be null");
 
     memset(query, ';', 128);
     memset(query + 128, '\0', 1);
@@ -92,7 +92,7 @@ test2()
     *((unsigned char*)buffer->start + 4) = 0x03;
     memcpy((uint8_t*)buffer->start + 5, query, strlen(query));
     char* result = modutil_get_SQL(buffer);
-    ss_dassert(strcmp(result, query) == 0);
+    mxb_assert(strcmp(result, query) == 0);
     gwbuf_free(buffer);
     MXS_FREE(result);
     fprintf(stderr, "\t..done\n");
@@ -164,27 +164,27 @@ void test_single_sql_packet1()
     /** Single packet */
     GWBUF* buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
     GWBUF* complete = modutil_get_complete_packets(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
-    ss_info_dassert(complete, "Complete packet buffer should not be NULL");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(ok), "Complete packet buffer should contain enough data");
-    ss_info_dassert(memcmp(GWBUF_DATA(complete), ok, GWBUF_LENGTH(complete)) == 0,
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
+    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(ok), "Complete packet buffer should contain enough data");
+    mxb_assert_message(memcmp(GWBUF_DATA(complete), ok, GWBUF_LENGTH(complete)) == 0,
                     "Complete packet buffer's data should be equal to original data");
     gwbuf_free(complete);
 
     /** Partial single packet */
     buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
     complete = modutil_get_complete_packets(&buffer);
-    ss_info_dassert(buffer, "Old buffer should be not NULL");
-    ss_info_dassert(complete == NULL, "Complete packet buffer should be NULL");
-    ss_info_dassert(gwbuf_length(buffer) == sizeof(ok) - 4, "Old buffer should contain right amount of data");
+    mxb_assert_message(buffer, "Old buffer should be not NULL");
+    mxb_assert_message(complete == NULL, "Complete packet buffer should be NULL");
+    mxb_assert_message(gwbuf_length(buffer) == sizeof(ok) - 4, "Old buffer should contain right amount of data");
 
     /** Add the missing data */
     buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(4, ok + sizeof(ok) - 4));
     complete = modutil_get_complete_packets(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
-    ss_info_dassert(complete, "Complete packet buffer should not be NULL");
-    ss_info_dassert(complete->next, "The complete packet should be a chain of buffers");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(ok), "Buffer should contain all data");
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
+    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
+    mxb_assert_message(complete->next, "The complete packet should be a chain of buffers");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(ok), "Buffer should contain all data");
     gwbuf_free(complete);
 }
 
@@ -194,11 +194,11 @@ void test_multiple_sql_packets1()
     /** All of the data */
     GWBUF* buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
     GWBUF* complete = modutil_get_complete_packets(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
-    ss_info_dassert(complete, "Complete packet buffer should not be NULL");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(resultset),
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
+    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
                     "Complete packet buffer should contain enough data");
-    ss_info_dassert(memcmp(GWBUF_DATA(complete), resultset, GWBUF_LENGTH(complete)) == 0,
+    mxb_assert_message(memcmp(GWBUF_DATA(complete), resultset, GWBUF_LENGTH(complete)) == 0,
                     "Complete packet buffer's data should be equal to original data");
     gwbuf_free(complete);
 
@@ -206,18 +206,18 @@ void test_multiple_sql_packets1()
     GWBUF* head = gwbuf_alloc_and_load(7, resultset);
     GWBUF* tail = gwbuf_alloc_and_load(sizeof(resultset) - 7, resultset + 7);
     complete = modutil_get_complete_packets(&head);
-    ss_info_dassert(head, "Old buffer should not be NULL");
-    ss_info_dassert(complete, "Complete buffer should not be NULL");
-    ss_info_dassert(gwbuf_length(complete) == 5, "Complete buffer should contain first packet only");
-    ss_info_dassert(gwbuf_length(head) == 2, "Complete buffer should contain first packet only");
+    mxb_assert_message(head, "Old buffer should not be NULL");
+    mxb_assert_message(complete, "Complete buffer should not be NULL");
+    mxb_assert_message(gwbuf_length(complete) == 5, "Complete buffer should contain first packet only");
+    mxb_assert_message(gwbuf_length(head) == 2, "Complete buffer should contain first packet only");
     gwbuf_free(complete);
 
     /** All packets are available */
     head = gwbuf_append(head, tail);
     complete = modutil_get_complete_packets(&head);
-    ss_info_dassert(head == NULL, "Old buffer should be NULL");
-    ss_info_dassert(complete, "Complete packet buffer should not be NULL");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(resultset) - 5,
+    mxb_assert_message(head == NULL, "Old buffer should be NULL");
+    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset) - 5,
                     "Complete packet should be sizeof(resultset) - 5 bytes");
     gwbuf_free(complete);
 
@@ -230,12 +230,12 @@ void test_multiple_sql_packets1()
         complete = modutil_get_complete_packets(&head);
         int headlen = gwbuf_length(head);
         int completelen = complete ? gwbuf_length(complete) : 0;
-        ss_info_dassert(headlen + completelen == sizeof(resultset),
+        mxb_assert_message(headlen + completelen == sizeof(resultset),
                         "Both buffers should sum up to sizeof(resutlset) bytes");
         uint8_t databuf[sizeof(resultset)];
         gwbuf_copy_data(complete, 0, completelen, databuf);
         gwbuf_copy_data(head, 0, headlen, databuf + completelen);
-        ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+        mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
         gwbuf_free(head);
         gwbuf_free(complete);
     }
@@ -253,48 +253,48 @@ void test_multiple_sql_packets1()
     }
     while (total < sizeof(resultset));
 
-    ss_info_dassert(gwbuf_length(head) == sizeof(resultset), "Head should be sizeof(resulset) bytes long");
+    mxb_assert_message(gwbuf_length(head) == sizeof(resultset), "Head should be sizeof(resulset) bytes long");
     complete = modutil_get_complete_packets(&head);
-    ss_info_dassert(head == NULL, "Head should be NULL");
-    ss_info_dassert(complete, "Complete should not be NULL");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(resultset),
+    mxb_assert_message(head == NULL, "Head should be NULL");
+    mxb_assert_message(complete, "Complete should not be NULL");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
                     "Complete should be sizeof(resulset) bytes long");
 
     unsigned int headlen = gwbuf_length(head);
     unsigned int completelen = complete ? gwbuf_length(complete) : 0;
     uint8_t databuf[sizeof(resultset)];
-    ss_info_dassert(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
+    mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                     "Expected data should be readable");
-    ss_info_dassert(gwbuf_copy_data(head, 0, headlen, databuf + completelen) == headlen,
+    mxb_assert_message(gwbuf_copy_data(head, 0, headlen, databuf + completelen) == headlen,
                     "Expected data should be readable");
-    ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+    mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
 
     /** Fragmented buffer split into multiple chains and then reassembled as a complete resultset */
     GWBUF* half = complete;
     GWBUF* quarter = gwbuf_split(&half, gwbuf_length(half) / 2);
     head = gwbuf_split(&quarter, gwbuf_length(quarter) / 2);
-    ss_info_dassert(half && quarter && head, "gwbuf_split should work");
+    mxb_assert_message(half && quarter && head, "gwbuf_split should work");
 
     complete = modutil_get_complete_packets(&head);
-    ss_info_dassert(complete && head, "Both buffers should have data");
-    ss_info_dassert(gwbuf_length(complete) + gwbuf_length(head) + gwbuf_length(quarter)
+    mxb_assert_message(complete && head, "Both buffers should have data");
+    mxb_assert_message(gwbuf_length(complete) + gwbuf_length(head) + gwbuf_length(quarter)
                     + gwbuf_length(half) == sizeof(resultset), "25% of data should be available");
 
     quarter = gwbuf_append(gwbuf_append(complete, head), quarter);
     complete = modutil_get_complete_packets(&quarter);
-    ss_info_dassert(gwbuf_length(complete) + gwbuf_length(quarter) +
+    mxb_assert_message(gwbuf_length(complete) + gwbuf_length(quarter) +
                     gwbuf_length(half) == sizeof(resultset), "50% of data should be available");
 
     half = gwbuf_append(gwbuf_append(complete, quarter), half);
     complete = modutil_get_complete_packets(&half);
-    ss_info_dassert(complete, "Complete should not be NULL");
-    ss_info_dassert(half == NULL, "Old buffer should be NULL");
-    ss_info_dassert(gwbuf_length(complete) == sizeof(resultset), "Complete should contain 100% of data");
+    mxb_assert_message(complete, "Complete should not be NULL");
+    mxb_assert_message(half == NULL, "Old buffer should be NULL");
+    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset), "Complete should contain 100% of data");
 
     completelen = gwbuf_length(complete);
-    ss_info_dassert(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
+    mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                     "All data should be readable");
-    ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+    mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
     gwbuf_free(complete);
 }
 
@@ -310,10 +310,10 @@ void test_single_sql_packet2()
 
     buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
-    ss_info_dassert(next, "Next packet buffer should not be NULL");
-    ss_info_dassert(gwbuf_length(next) == sizeof(ok), "Next packet buffer should contain enough data");
-    ss_info_dassert(memcmp(GWBUF_DATA(next), ok, GWBUF_LENGTH(next)) == 0,
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
+    mxb_assert_message(next, "Next packet buffer should not be NULL");
+    mxb_assert_message(gwbuf_length(next) == sizeof(ok), "Next packet buffer should contain enough data");
+    mxb_assert_message(memcmp(GWBUF_DATA(next), ok, GWBUF_LENGTH(next)) == 0,
                     "Next packet buffer's data should be equal to original data");
     gwbuf_free(buffer);
     gwbuf_free(next);
@@ -321,18 +321,18 @@ void test_single_sql_packet2()
     /** Partial single packet */
     buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should be not NULL");
-    ss_info_dassert(next == NULL, "Next packet buffer should be NULL");
-    ss_info_dassert(gwbuf_length(buffer) == sizeof(ok) - 4, "Old buffer should contain right amount of data");
+    mxb_assert_message(buffer, "Old buffer should be not NULL");
+    mxb_assert_message(next == NULL, "Next packet buffer should be NULL");
+    mxb_assert_message(gwbuf_length(buffer) == sizeof(ok) - 4, "Old buffer should contain right amount of data");
 
     /** Add the missing data */
     buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(4, ok + sizeof(ok) - 4));
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
-    ss_info_dassert(next, "Next packet buffer should not be NULL");
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
+    mxb_assert_message(next, "Next packet buffer should not be NULL");
     //To be put back when the current realloc behaviour is replaced with splitting behaviour.
-    //ss_info_dassert(next->next, "The next packet should be a chain of buffers");
-    ss_info_dassert(gwbuf_length(next) == sizeof(ok), "Buffer should contain all data");
+    //mxb_assert_message(next->next, "The next packet should be a chain of buffers");
+    mxb_assert_message(gwbuf_length(next) == sizeof(ok), "Buffer should contain all data");
     gwbuf_free(next);
 }
 
@@ -348,38 +348,38 @@ void test_multiple_sql_packets2()
     for (unsigned int i = 0; i < N_PACKETS; i++)
     {
         GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
-        ss_info_dassert(next, "Next packet buffer should not be NULL");
-        ss_info_dassert(gwbuf_length(next) == packets[i].length,
+        mxb_assert_message(next, "Next packet buffer should not be NULL");
+        mxb_assert_message(gwbuf_length(next) == packets[i].length,
                         "Next packet buffer should contain enough data");
-        ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
                         "Next packet buffer's data should be equal to original data");
         gwbuf_free(next);
     }
-    ss_info_dassert(buffer == NULL, "Buffer should be NULL");
+    mxb_assert_message(buffer == NULL, "Buffer should be NULL");
 
     size_t len;
     // Exactly one packet
     len = PACKET_1_LEN;
     buffer = gwbuf_alloc_and_load(len, resultset);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL.");
-    ss_info_dassert(next, "Next should not be NULL.");
-    ss_info_dassert(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    mxb_assert_message(buffer == NULL, "Old buffer should be NULL.");
+    mxb_assert_message(next, "Next should not be NULL.");
+    mxb_assert_message(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
     gwbuf_free(next);
 
     // Slightly less than one packet
     len = PACKET_1_LEN - 1;
     buffer = gwbuf_alloc_and_load(len, resultset);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should not be NULL.");
-    ss_info_dassert(next == NULL, "Next should be NULL.");
+    mxb_assert_message(buffer, "Old buffer should not be NULL.");
+    mxb_assert_message(next == NULL, "Next should be NULL.");
 
     GWBUF *tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
     buffer = gwbuf_append(buffer, tail);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should not be NULL.");
-    ss_info_dassert(next, "Next should not be NULL.");
-    ss_info_dassert(gwbuf_length(next) == PACKET_1_LEN, "Length should match.");
+    mxb_assert_message(buffer, "Old buffer should not be NULL.");
+    mxb_assert_message(next, "Next should not be NULL.");
+    mxb_assert_message(gwbuf_length(next) == PACKET_1_LEN, "Length should match.");
     gwbuf_free(buffer);
     gwbuf_free(next);
 
@@ -387,22 +387,22 @@ void test_multiple_sql_packets2()
     len = PACKET_1_LEN + 1;
     buffer = gwbuf_alloc_and_load(len, resultset);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should not be NULL.");
-    ss_info_dassert(next, "Next should not be NULL.");
-    ss_info_dassert(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    mxb_assert_message(buffer, "Old buffer should not be NULL.");
+    mxb_assert_message(next, "Next should not be NULL.");
+    mxb_assert_message(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
     gwbuf_free(next);
 
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should not be NULL.");
-    ss_info_dassert(next == NULL, "Next should be NULL.");
+    mxb_assert_message(buffer, "Old buffer should not be NULL.");
+    mxb_assert_message(next == NULL, "Next should be NULL.");
 
     tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
     buffer = gwbuf_append(buffer, tail);
     next = modutil_get_next_MySQL_packet(&buffer);
-    ss_info_dassert(buffer, "Old buffer should not be NULL.");
-    ss_info_dassert(next, "Next should not be NULL.");
-    ss_info_dassert(gwbuf_length(next) == PACKET_2_LEN, "Length should match.");
-    ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], GWBUF_LENGTH(next)) == 0,
+    mxb_assert_message(buffer, "Old buffer should not be NULL.");
+    mxb_assert_message(next, "Next should not be NULL.");
+    mxb_assert_message(gwbuf_length(next) == PACKET_2_LEN, "Length should match.");
+    mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], GWBUF_LENGTH(next)) == 0,
                     "Next packet buffer's data should be equal to original data");
     gwbuf_free(buffer);
     gwbuf_free(next);
@@ -417,12 +417,12 @@ void test_multiple_sql_packets2()
         next = modutil_get_next_MySQL_packet(&head);
         int headlen = gwbuf_length(head);
         int nextlen = next ? gwbuf_length(next) : 0;
-        ss_info_dassert(headlen + nextlen == sizeof(resultset),
+        mxb_assert_message(headlen + nextlen == sizeof(resultset),
                         "Both buffers should sum up to sizeof(resutlset) bytes");
         uint8_t databuf[sizeof(resultset)];
         gwbuf_copy_data(next, 0, nextlen, databuf);
         gwbuf_copy_data(head, 0, headlen, databuf + nextlen);
-        ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+        mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
         gwbuf_free(head);
         gwbuf_free(next);
     }
@@ -443,37 +443,37 @@ void test_multiple_sql_packets2()
     for (unsigned int i = 0; i < N_PACKETS; i++)
     {
         GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
-        ss_info_dassert(next, "Next packet buffer should not be NULL");
-        ss_info_dassert(gwbuf_length(next) == packets[i].length,
+        mxb_assert_message(next, "Next packet buffer should not be NULL");
+        mxb_assert_message(gwbuf_length(next) == packets[i].length,
                         "Next packet buffer should contain enough data");
         next = gwbuf_make_contiguous(next);
-        ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
                         "Next packet buffer's data should be equal to original data");
         gwbuf_free(next);
     }
-    ss_info_dassert(buffer == NULL, "Buffer should be NULL");
+    mxb_assert_message(buffer == NULL, "Buffer should be NULL");
 }
 
 void test_strnchr_esc_mysql()
 {
     char comment1[] = "This will -- fail.";
-    ss_info_dassert(strnchr_esc_mysql(comment1, '.', sizeof(comment1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(comment1, '.', sizeof(comment1) - 1) == NULL,
                     "Commented character should return NULL");
 
     char comment2[] = "This will # fail.";
-    ss_info_dassert(strnchr_esc_mysql(comment2, '.', sizeof(comment2) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(comment2, '.', sizeof(comment2) - 1) == NULL,
                     "Commented character should return NULL");
 
     char comment3[] = "This will fail/* . */";
-    ss_info_dassert(strnchr_esc_mysql(comment3, '.', sizeof(comment3) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(comment3, '.', sizeof(comment3) - 1) == NULL,
                     "Commented character should return NULL");
 
     char comment4[] = "This will not /* . */ fail.";
-    ss_info_dassert(strnchr_esc_mysql(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
+    mxb_assert_message(strnchr_esc_mysql(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
                     "Uncommented character should be matched");
 
     char comment5[] = "This will fail/* . ";
-    ss_info_dassert(strnchr_esc_mysql(comment5, '.', sizeof(comment5) - 1) == NULL, "Bad comment should fail");
+    mxb_assert_message(strnchr_esc_mysql(comment5, '.', sizeof(comment5) - 1) == NULL, "Bad comment should fail");
 
 }
 
@@ -481,56 +481,56 @@ void test_strnchr_esc()
 {
     /** Single escaped and quoted characters */
     char esc1[] = "This will fail\\.";
-    ss_info_dassert(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
-    ss_info_dassert(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
 
     char esc2[] = "This will fail\".\"";
-    ss_info_dassert(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
-    ss_info_dassert(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
 
     char esc3[] = "This will fail'.'";
-    ss_info_dassert(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
-    ss_info_dassert(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
                     "Only escaped character should return NULL");
 
     /** Test escaped and quoted characters */
     char str1[] = "this \\. is a test.";
-    ss_info_dassert(strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+    mxb_assert_message(strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
                     "Escaped characters should be ignored");
-    ss_info_dassert(strnchr_esc_mysql(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+    mxb_assert_message(strnchr_esc_mysql(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
                     "Escaped characters should be ignored");
     char str2[] = "this \"is . \" a test .";
-    ss_info_dassert(strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+    mxb_assert_message(strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
                     "Double quoted characters should be ignored");
-    ss_info_dassert(strnchr_esc_mysql(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+    mxb_assert_message(strnchr_esc_mysql(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
                     "Double quoted characters should be ignored");
     char str3[] = "this 'is . ' a test .";
-    ss_info_dassert(strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+    mxb_assert_message(strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
                     "Double quoted characters should be ignored");
-    ss_info_dassert(strnchr_esc_mysql(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+    mxb_assert_message(strnchr_esc_mysql(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
                     "Double quoted characters should be ignored");
 
     /** Bad quotation tests */
     char bad1[] = "This will \" fail.";
-    ss_info_dassert(strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
-    ss_info_dassert(strnchr_esc_mysql(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(strnchr_esc_mysql(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
 
     char bad2[] = "This will ' fail.";
-    ss_info_dassert(strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
-    ss_info_dassert(strnchr_esc_mysql(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(strnchr_esc_mysql(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
 
     char bad3[] = "This will \" fail. '";
-    ss_info_dassert(strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
-    ss_info_dassert(strnchr_esc_mysql(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(strnchr_esc_mysql(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
 
     char bad4[] = "This will ' fail. \"";
-    ss_info_dassert(strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
-    ss_info_dassert(strnchr_esc_mysql(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(strnchr_esc_mysql(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
 }
 
 GWBUF* create_buffer(size_t size)
@@ -560,9 +560,9 @@ void test_large_packets()
         size_t before = gwbuf_length(buffer);
         GWBUF* complete = modutil_get_complete_packets(&buffer);
 
-        ss_info_dassert(buffer == NULL, "Original buffer should be NULL");
-        ss_info_dassert(complete, "Complete buffer should not be NULL");
-        ss_info_dassert(gwbuf_length(complete) == before, "Complete buffer should contain all data");
+        mxb_assert_message(buffer == NULL, "Original buffer should be NULL");
+        mxb_assert_message(complete, "Complete buffer should not be NULL");
+        mxb_assert_message(gwbuf_length(complete) == before, "Complete buffer should contain all data");
         gwbuf_free(complete);
     }
 
@@ -572,8 +572,8 @@ void test_large_packets()
         GWBUF* buffer = create_buffer(0x00ffffff - i);
         buffer = gwbuf_rtrim(buffer, 4);
         GWBUF* complete = modutil_get_complete_packets(&buffer);
-        ss_info_dassert(buffer, "Incomplete buffer is not NULL");
-        ss_info_dassert(complete == NULL, "The complete buffer is NULL");
+        mxb_assert_message(buffer, "Incomplete buffer is not NULL");
+        mxb_assert_message(complete == NULL, "The complete buffer is NULL");
         gwbuf_free(buffer);
     }
 
@@ -581,12 +581,12 @@ void test_large_packets()
     for (int i = 2; i < 8; i++)
     {
         GWBUF* buffer = gwbuf_append(create_buffer(0x00ffffff), create_buffer(i));
-        ss_dassert(gwbuf_length(buffer) == 0xffffffUL + i + 8);
+        mxb_assert(gwbuf_length(buffer) == 0xffffffUL + i + 8);
         GWBUF_RTRIM(buffer->next, 1)
         GWBUF* complete = modutil_get_complete_packets(&buffer);
-        ss_info_dassert(buffer, "Incomplete buffer is not NULL");
-        ss_info_dassert(complete, "The complete buffer is not NULL");
-        ss_info_dassert(gwbuf_length(complete) == 0xffffff + 4, "Length should be correct");
+        mxb_assert_message(buffer, "Incomplete buffer is not NULL");
+        mxb_assert_message(complete, "The complete buffer is not NULL");
+        mxb_assert_message(gwbuf_length(complete) == 0xffffff + 4, "Length should be correct");
         gwbuf_free(buffer);
         gwbuf_free(complete);
     }
@@ -602,31 +602,31 @@ void test_bypass_whitespace()
     char* sql;
 
     sql = bypass_whitespace("SELECT");
-    ss_info_dassert(*sql == 'S', "1");
+    mxb_assert_message(*sql == 'S', "1");
 
     sql = bypass_whitespace(" SELECT");
-    ss_info_dassert(*sql == 'S', "2");
+    mxb_assert_message(*sql == 'S', "2");
 
     sql = bypass_whitespace("\tSELECT");
-    ss_info_dassert(*sql == 'S', "3");
+    mxb_assert_message(*sql == 'S', "3");
 
     sql = bypass_whitespace("\nSELECT");
-    ss_info_dassert(*sql == 'S', "4");
+    mxb_assert_message(*sql == 'S', "4");
 
     sql = bypass_whitespace("/* comment */SELECT");
-    ss_info_dassert(*sql == 'S', "5");
+    mxb_assert_message(*sql == 'S', "5");
 
     sql = bypass_whitespace(" /* comment */ SELECT");
-    ss_info_dassert(*sql == 'S', "6");
+    mxb_assert_message(*sql == 'S', "6");
 
     sql = bypass_whitespace("-- comment\nSELECT");
-    ss_info_dassert(*sql == 'S', "7");
+    mxb_assert_message(*sql == 'S', "7");
 
     sql = bypass_whitespace("-- comment\n /* comment */ SELECT");
-    ss_info_dassert(*sql == 'S', "8");
+    mxb_assert_message(*sql == 'S', "8");
 
     sql = bypass_whitespace("# comment\nSELECT");
-    ss_info_dassert(*sql == 'S', "9");
+    mxb_assert_message(*sql == 'S', "9");
 }
 
 int main(int argc, char **argv)

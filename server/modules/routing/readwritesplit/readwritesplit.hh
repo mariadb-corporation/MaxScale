@@ -362,7 +362,7 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
         return "error_on_write";
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         return "UNDEFINED_MODE";
     }
 }

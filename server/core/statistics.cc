@@ -59,7 +59,7 @@ static size_t get_cache_line_size()
  */
 void ts_stats_init()
 {
-    ss_dassert(!stats_initialized);
+    mxb_assert(!stats_initialized);
     thread_count = config_threadcount();
     cache_linesize = get_cache_line_size();
     stats_size = thread_count * cache_linesize;
@@ -71,7 +71,7 @@ void ts_stats_init()
  */
 void ts_stats_end()
 {
-    ss_dassert(stats_initialized);
+    mxb_assert(stats_initialized);
 }
 
 /**
@@ -81,7 +81,7 @@ void ts_stats_end()
  */
 ts_stats_t ts_stats_alloc()
 {
-    ss_dassert(stats_initialized);
+    mxb_assert(stats_initialized);
     return MXS_CALLOC(thread_count, cache_linesize);
 }
 
@@ -92,7 +92,7 @@ ts_stats_t ts_stats_alloc()
  */
 void ts_stats_free(ts_stats_t stats)
 {
-    ss_dassert(stats_initialized);
+    mxb_assert(stats_initialized);
     MXS_FREE(stats);
 }
 
@@ -106,7 +106,7 @@ void ts_stats_free(ts_stats_t stats)
  */
 int64_t ts_stats_sum(ts_stats_t stats)
 {
-    ss_dassert(stats_initialized);
+    mxb_assert(stats_initialized);
     int64_t sum = 0;
 
     for (size_t i = 0; i < stats_size; i += cache_linesize)
@@ -128,7 +128,7 @@ int64_t ts_stats_sum(ts_stats_t stats)
  */
 int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type)
 {
-    ss_dassert(stats_initialized);
+    mxb_assert(stats_initialized);
     int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
 
     for (size_t i = 0; i < stats_size; i += cache_linesize)
@@ -163,21 +163,21 @@ int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type)
 
 void ts_stats_increment(ts_stats_t stats, int thread_id)
 {
-    ss_dassert(thread_id < thread_count);
+    mxb_assert(thread_id < thread_count);
     int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
     *item += 1;
 }
 
 void ts_stats_set(ts_stats_t stats, int value, int thread_id)
 {
-    ss_dassert(thread_id < thread_count);
+    mxb_assert(thread_id < thread_count);
     int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
     *item = value;
 }
 
 void ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
 {
-    ss_dassert(thread_id < thread_count);
+    mxb_assert(thread_id < thread_count);
     int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
 
     if (value > *item)
@@ -188,7 +188,7 @@ void ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
 
 void ts_stats_set_min(ts_stats_t stats, int value, int thread_id)
 {
-    ss_dassert(thread_id < thread_count);
+    mxb_assert(thread_id < thread_count);
     int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
 
     if (value < *item)

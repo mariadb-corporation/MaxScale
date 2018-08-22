@@ -103,7 +103,7 @@ uint64_t mxs_leint_value(const uint8_t* c)
     }
     else
     {
-        ss_dassert(*c == 0xff);
+        mxb_assert(*c == 0xff);
         MXS_ERROR("Unexpected length encoding '%x' encountered when reading "
                   "length-encoded integer.", *c);
     }
@@ -302,7 +302,7 @@ bool mxs_mysql_trim_quotes(char *s)
             --end;
         }
 
-        ss_dassert(end > i);
+        mxb_assert(end > i);
 
         char quote;
 

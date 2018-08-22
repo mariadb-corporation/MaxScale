@@ -57,7 +57,7 @@ int test(StorageFactory& factory, istream& in)
         {
             string statement = *i;
             GWBUF* pQuery = Tester::gwbuf_from_string(statement);
-            ss_dassert(pQuery);
+            mxb_assert(pQuery);
 
             if (pQuery)
             {

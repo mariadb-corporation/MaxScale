@@ -28,7 +28,7 @@ timespec timespec_subtract(const timespec& later, const timespec& earlier)
 {
     timespec result = { 0, 0 };
 
-    ss_dassert((later.tv_sec > earlier.tv_sec) ||
+    mxb_assert((later.tv_sec > earlier.tv_sec) ||
                ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
 
     if (later.tv_nsec >= earlier.tv_nsec)

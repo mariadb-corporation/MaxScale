@@ -423,7 +423,7 @@ void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_
             }
             break;
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             *succp = false;
             break;
         }
@@ -444,7 +444,7 @@ RRRouterSession::RRRouterSession(DCB_VEC& backends, DCB* write, DCB* client)
 RRRouterSession::~RRRouterSession()
 {
     /* Shouldn't happen. */
-    ss_dassert(m_closed);
+    mxb_assert(m_closed);
 }
 
 void RRRouterSession::close()

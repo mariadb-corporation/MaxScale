@@ -342,9 +342,9 @@ static int routeQuery(MXS_FILTER *instance,
     uint8_t *data = GWBUF_DATA(packet);
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
-    ss_dassert(GWBUF_IS_CONTIGUOUS(packet));
-    ss_dassert(GWBUF_LENGTH(packet) >= MYSQL_HEADER_LEN + 1);
-    ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) +
+    mxb_assert(GWBUF_IS_CONTIGUOUS(packet));
+    mxb_assert(GWBUF_LENGTH(packet) >= MYSQL_HEADER_LEN + 1);
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) +
                MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
 
     maxrows_response_state_reset(&csdata->res);
@@ -476,7 +476,7 @@ static int clientReply(MXS_FILTER *instance,
     default:
         MXS_ERROR("Internal filter logic broken, unexpected state: %d",
                   csdata->state);
-        ss_dassert(!true);
+        mxb_assert(!true);
         rv = send_upstream(csdata);
         maxrows_response_state_reset(&csdata->res);
         csdata->state = MAXROWS_IGNORING_RESPONSE;
@@ -559,8 +559,8 @@ static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *insta
 
     if (data)
     {
-        ss_dassert(session->client_dcb);
-        ss_dassert(session->client_dcb->data);
+        mxb_assert(session->client_dcb);
+        mxb_assert(session->client_dcb->data);
 
         MYSQL_session *mysql_session = (MYSQL_session*)session->client_dcb->data;
         data->instance = instance;
@@ -592,8 +592,8 @@ static void maxrows_session_data_free(MAXROWS_SESSION_DATA* data)
  */
 static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_FIELDS);
-    ss_dassert(csdata->res.data);
+    mxb_assert(csdata->state == MAXROWS_EXPECTING_FIELDS);
+    mxb_assert(csdata->res.data);
 
     int rv = 1;
 
@@ -638,7 +638,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
             default: // Field information.
                 csdata->res.offset += packetlen;
                 ++csdata->res.n_fields;
-                ss_dassert(csdata->res.n_fields <= csdata->res.n_totalfields);
+                mxb_assert(csdata->res.n_fields <= csdata->res.n_totalfields);
                 break;
             }
         }
@@ -659,8 +659,8 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
  */
 static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_NOTHING);
-    ss_dassert(csdata->res.data);
+    mxb_assert(csdata->state == MAXROWS_EXPECTING_NOTHING);
+    mxb_assert(csdata->res.data);
     unsigned long msg_size = gwbuf_length(csdata->res.data);
 
     if ((int)MYSQL_GET_COMMAND(GWBUF_DATA(csdata->res.data)) == 0xff)
@@ -681,7 +681,7 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
                     "filter is expecting nothing. "
                     "Packet size is %lu bytes long.",
                     msg_size);
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return send_upstream(csdata);
@@ -694,8 +694,8 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
  */
 static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_RESPONSE);
-    ss_dassert(csdata->res.data);
+    mxb_assert(csdata->state == MAXROWS_EXPECTING_RESPONSE);
+    mxb_assert(csdata->res.data);
 
     int rv = 1;
     size_t buflen = csdata->res.length;
@@ -817,8 +817,8 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
  */
 static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra_offset)
 {
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_ROWS);
-    ss_dassert(csdata->res.data);
+    mxb_assert(csdata->state == MAXROWS_EXPECTING_ROWS);
+    mxb_assert(csdata->res.data);
 
     int rv = 1;
     bool insufficient = false;
@@ -1028,8 +1028,8 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
  */
 static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->state == MAXROWS_IGNORING_RESPONSE);
-    ss_dassert(csdata->res.data);
+    mxb_assert(csdata->state == MAXROWS_IGNORING_RESPONSE);
+    mxb_assert(csdata->res.data);
 
     return send_upstream(csdata);
 }
@@ -1043,7 +1043,7 @@ static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata)
  */
 static int send_upstream(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->res.data != NULL);
+    mxb_assert(csdata->res.data != NULL);
 
     /* Free a saved SQL not freed by send_error_upstream() */
     if (csdata->instance->config.m_return == MAXROWS_RETURN_ERR)
@@ -1085,8 +1085,8 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
     uint8_t eof[MYSQL_EOF_PACKET_LEN] = {05, 00, 00, 01, 0xfe, 00, 00, 02, 00};
     GWBUF *new_pkt = NULL;
 
-    ss_dassert(csdata->res.data != NULL);
-    ss_dassert(csdata->res.column_defs != NULL);
+    mxb_assert(csdata->res.data != NULL);
+    mxb_assert(csdata->res.column_defs != NULL);
 
     /**
      * The offset to server reply pointing to
@@ -1158,7 +1158,7 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
                                                          00, 02, 00, 00, 00
                                                        };
 
-    ss_dassert(csdata->res.data != NULL);
+    mxb_assert(csdata->res.data != NULL);
 
     GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
     if (!packet)
@@ -1173,7 +1173,7 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
     uint8_t *ptr = GWBUF_DATA(packet);
     memcpy(ptr, &ok, MYSQL_OK_PACKET_MIN_LEN);
 
-    ss_dassert(csdata->res.data != NULL);
+    mxb_assert(csdata->res.data != NULL);
 
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
@@ -1213,7 +1213,7 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
               MAXROWS_INPUT_SQL_MAX_LEN : sql_len;
     uint8_t sql[sql_len];
 
-    ss_dassert(csdata->res.data != NULL);
+    mxb_assert(csdata->res.data != NULL);
 
     pkt_len += sql_len;
 
@@ -1292,7 +1292,7 @@ static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata)
         break;
     default:
         MXS_ERROR("MaxRows config value not expected!");
-        ss_dassert(!true);
+        mxb_assert(!true);
         return 0;
         break;
     }

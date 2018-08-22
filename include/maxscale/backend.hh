@@ -100,7 +100,7 @@ public:
      */
     inline bool has_session_commands() const
     {
-        ss_dassert(in_use());
+        mxb_assert(in_use());
         return !m_session_commands.empty();
     }
 
@@ -125,7 +125,7 @@ public:
      */
     inline SERVER_REF* backend() const
     {
-        ss_dassert(m_backend);
+        mxb_assert(m_backend);
         return m_backend;
     }
 
@@ -136,7 +136,7 @@ public:
      */
     inline SERVER* server() const
     {
-        ss_dassert(m_backend);
+        mxb_assert(m_backend);
         return m_backend->server;
     }
 

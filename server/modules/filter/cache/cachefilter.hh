@@ -26,12 +26,12 @@ public:
 
     Cache& cache()
     {
-        ss_dassert(m_sCache.get());
+        mxb_assert(m_sCache.get());
         return *m_sCache.get();
     }
     const Cache& cache() const
     {
-        ss_dassert(m_sCache.get());
+        mxb_assert(m_sCache.get());
         return *m_sCache.get();
     }
 

@@ -45,31 +45,31 @@ static int test1()
     fprintf(stderr,
             "testusers : Initialise the user table.");
     users = users_alloc();
-    ss_info_dassert(NULL != users, "Allocating user table should not return NULL.");
+    mxb_assert_message(NULL != users, "Allocating user table should not return NULL.");
     fprintf(stderr, "\t..done\nAdd a user");
     rv = users_add(users, "username", "authorisation", USER_ACCOUNT_ADMIN);
-    ss_info_dassert(rv, "Should add one user");
+    mxb_assert_message(rv, "Should add one user");
     rv = users_auth(users, "username", "authorisation");
-    ss_info_dassert(rv, "Fetch valid user must not return NULL");
+    mxb_assert_message(rv, "Fetch valid user must not return NULL");
     rv = users_auth(users, "username", "newauth");
-    ss_info_dassert(rv == 0, "Fetch invalid user must return NULL");
+    mxb_assert_message(rv == 0, "Fetch invalid user must return NULL");
 
     fprintf(stderr, "\t..done\nAdd another user");
     rv = users_add(users, "username2", "authorisation2", USER_ACCOUNT_ADMIN);
-    ss_info_dassert(rv, "Should add one user");
+    mxb_assert_message(rv, "Should add one user");
     fprintf(stderr, "\t..done\nDelete a user.");
     rv = users_delete(users, "username");
-    ss_info_dassert(rv, "Should delete just one user");
+    mxb_assert_message(rv, "Should delete just one user");
 
     fprintf(stderr, "\t..done\nDump users table.");
     json_t* dump = users_to_json(users);
-    ss_info_dassert(dump, "Users should be dumped");
+    mxb_assert_message(dump, "Users should be dumped");
     USERS* loaded_users = users_from_json(dump);
-    ss_info_dassert(dump, "Users should be loaded");
+    mxb_assert_message(dump, "Users should be loaded");
     json_decref(dump);
     rv = users_auth(loaded_users, "username2", "authorisation2");
     users_free(loaded_users);
-    ss_info_dassert(rv, "Loaded users should contain users");
+    mxb_assert_message(rv, "Loaded users should contain users");
 
     fprintf(stderr, "\t..done\nFree user table.");
     users_free(users);

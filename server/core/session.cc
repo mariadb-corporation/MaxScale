@@ -255,7 +255,7 @@ session_set_dummy(DCB *client_dcb)
 
 void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
 {
-    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
     atomic_add(&session->refcount, 1);
     dcb->session = session;
@@ -365,7 +365,7 @@ static void session_free(MXS_SESSION *session)
 
 static void session_final_free(MXS_SESSION *session)
 {
-    ss_dassert(session->refcount == 0);
+    mxb_assert(session->refcount == 0);
 
     session->state = SESSION_STATE_TO_BE_FREED;
 
@@ -638,10 +638,10 @@ session_get_remote(const MXS_SESSION *session)
 
 bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
 {
-    ss_dassert(session);
-    ss_dassert(session->head.routeQuery);
-    ss_dassert(session->head.instance);
-    ss_dassert(session->head.session);
+    mxb_assert(session);
+    mxb_assert(session->head.routeQuery);
+    mxb_assert(session->head.instance);
+    mxb_assert(session->head.session);
 
     bool rv;
 
@@ -663,10 +663,10 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
 
 bool session_route_reply(MXS_SESSION *session, GWBUF *buffer)
 {
-    ss_dassert(session);
-    ss_dassert(session->tail.clientReply);
-    ss_dassert(session->tail.instance);
-    ss_dassert(session->tail.session);
+    mxb_assert(session);
+    mxb_assert(session->tail.clientReply);
+    mxb_assert(session->tail.instance);
+    mxb_assert(session->tail.session);
 
     bool rv;
 
@@ -933,7 +933,7 @@ void session_qualify_for_pool(MXS_SESSION* session)
 
 bool session_valid_for_pool(const MXS_SESSION* session)
 {
-    ss_dassert(session->state != SESSION_STATE_DUMMY);
+    mxb_assert(session->state != SESSION_STATE_DUMMY);
     return session->qualifies_for_pooling;
 }
 
@@ -981,10 +981,10 @@ bool session_remove_variable(MXS_SESSION* session,
 void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *buffer)
 {
     // Valid arguments.
-    ss_dassert(session && up && buffer);
+    mxb_assert(session && up && buffer);
 
     // Valid state. Only one filter may terminate the execution and exactly once.
-    ss_dassert(!session->response.up.instance &&
+    mxb_assert(!session->response.up.instance &&
                !session->response.up.session &&
                !session->response.buffer);
 
@@ -1007,8 +1007,8 @@ static void session_deliver_response(MXS_SESSION* session)
         MXS_FILTER_SESSION* filter_session = session->response.up.session;
         GWBUF* buffer = session->response.buffer;
 
-        ss_dassert(filter_session);
-        ss_dassert(buffer);
+        mxb_assert(filter_session);
+        mxb_assert(buffer);
 
         session->response.up.clientReply(filter_instance, filter_session, buffer);
 
@@ -1018,10 +1018,10 @@ static void session_deliver_response(MXS_SESSION* session)
         session->response.buffer = NULL;
     }
 
-    ss_dassert(!session->response.up.instance);
-    ss_dassert(!session->response.up.session);
-    ss_dassert(!session->response.up.clientReply);
-    ss_dassert(!session->response.buffer);
+    mxb_assert(!session->response.up.instance);
+    mxb_assert(!session->response.up.session);
+    mxb_assert(!session->response.up.clientReply);
+    mxb_assert(!session->response.buffer);
 }
 
 void session_set_retain_last_statements(uint32_t n)
@@ -1109,7 +1109,7 @@ bool session_delay_routing(MXS_SESSION* session, MXS_DOWNSTREAM down, GWBUF* buf
     try
     {
         Worker* worker = Worker::get_current();
-        ss_dassert(worker == session->client_dcb->poll.owner);
+        mxb_assert(worker == session->client_dcb->poll.owner);
         std::unique_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
 
         // Delay the routing for at least a millisecond
@@ -1158,7 +1158,7 @@ const char* session_get_close_reason(const MXS_SESSION* session)
             return "Too many connections";
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             return "Internal error";
     }
 }
@@ -1377,7 +1377,7 @@ void Session::retain_statement(GWBUF* pBuffer)
 
             if (MYSQL_GET_COMMAND(pHeader) == MXS_COM_QUERY)
             {
-                ss_dassert(m_last_statements.size() <= retain_last_statements);
+                mxb_assert(m_last_statements.size() <= retain_last_statements);
 
                 if (m_last_statements.size() == retain_last_statements)
                 {

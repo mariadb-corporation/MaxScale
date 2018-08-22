@@ -33,7 +33,7 @@ const char* LOGFILE_NAME = "maxscale.log";
 
 size_t mxs_get_context(char* buffer, size_t len)
 {
-    ss_dassert(len >= 20); // Needed for "9223372036854775807"
+    mxb_assert(len >= 20); // Needed for "9223372036854775807"
 
     uint64_t session_id = session_get_current_id();
 

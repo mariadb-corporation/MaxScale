@@ -1207,7 +1207,7 @@ static void freeSession(MXS_ROUTER* router_instance,
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
 
     MXB_AT_DEBUG(int prev_val = ) atomic_add(&router->stats.n_slaves, -1);
-    ss_dassert(prev_val > 0);
+    mxb_assert(prev_val > 0);
 
     /*
      * Remove the slave session form the list of slaves that are using the
@@ -2261,7 +2261,7 @@ errorReply(MXS_ROUTER *instance,
            mxs_error_action_t action,
            bool *succp)
 {
-    ss_dassert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int error;
     socklen_t len;
@@ -2619,7 +2619,7 @@ blr_send_custom_error(DCB *dcb,
 
     /** allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    ss_dassert(errbuf != NULL);
+    mxb_assert(errbuf != NULL);
 
     if (errbuf == NULL)
     {

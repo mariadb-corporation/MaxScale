@@ -125,7 +125,7 @@ hint_create_route(HINT *head, HINT_TYPE type, const char *data)
 HINT *
 hint_splice(HINT *head, HINT *list)
 {
-    ss_dassert(list);
+    mxb_assert(list);
     if (head)
     {
         HINT* tail = list;

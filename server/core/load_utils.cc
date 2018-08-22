@@ -116,7 +116,7 @@ static bool api_version_mismatch(const MXS_MODULE *mod_info, const char* module)
 
         default:
             MXS_ERROR("Unknown module type: 0x%02hhx", mod_info->modapi);
-            ss_dassert(!true);
+            mxb_assert(!true);
             break;
     }
 
@@ -196,7 +196,7 @@ static bool check_module(const MXS_MODULE *mod_info, const char *type, const cha
 
 void *load_module(const char *module, const char *type)
 {
-    ss_dassert(module && type);
+    mxb_assert(module && type);
     LOADED_MODULE *mod;
 
     module = mxs_module_get_effective_name(module);
@@ -480,7 +480,7 @@ bool modulecmd_cb(const MODULECMD *cmd, void *data)
     std::string s = d->domain;
     s += "/";
     s += cmd->identifier;
-    ss_dassert(strcasecmp(d->domain, cmd->domain) == 0);
+    mxb_assert(strcasecmp(d->domain, cmd->domain) == 0);
 
     json_object_set_new(obj, CN_LINKS, mxs_json_self_link(d->host, CN_MODULES, s.c_str()));
     json_object_set_new(attr, CN_PARAMETERS, param);
@@ -561,7 +561,7 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
     }
 
     // This should always be non-NULL
-    ss_dassert(data);
+    mxb_assert(data);
 
     return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
 }

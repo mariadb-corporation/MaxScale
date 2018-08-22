@@ -21,7 +21,7 @@ using std::string;
 
 GtidList GtidList::from_string(const string& gtid_string)
 {
-    ss_dassert(gtid_string.size());
+    mxb_assert(gtid_string.size());
     GtidList rval;
     bool error = false;
     bool have_more = false;
@@ -110,7 +110,7 @@ uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs,
         auto lhs_triplet = lhs.m_triplets[ind_lhs];
         auto rhs_triplet = rhs.m_triplets[ind_rhs];
         // Server id -1 should never be saved in a real gtid variable.
-        ss_dassert(lhs_triplet.m_server_id != SERVER_ID_UNKNOWN &&
+        mxb_assert(lhs_triplet.m_server_id != SERVER_ID_UNKNOWN &&
                    rhs_triplet.m_server_id != SERVER_ID_UNKNOWN);
         // Search for matching domain_id:s, advance the smaller one.
         if (lhs_triplet.m_domain < rhs_triplet.m_domain)
@@ -147,7 +147,7 @@ Gtid Gtid::from_string(const char* str, char** endptr)
     /* Error checking the gtid string is a bit questionable, as having an error means that the server is
        buggy or network has faults, in which case nothing can be trusted. But without error checking
        MaxScale may crash if string is wrong. */
-    ss_dassert(endptr);
+    mxb_assert(endptr);
     const char* ptr = str;
     char* strtoull_endptr = NULL;
     // Parse three numbers separated by -

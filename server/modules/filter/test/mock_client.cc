@@ -120,7 +120,7 @@ int32_t Client::clientReply(MXS_FILTER* pInstance,
                             GWBUF* pResponse)
 {
     Client* pClient = reinterpret_cast<Client*>(pSession);
-    ss_dassert(pInstance == &pClient->m_instance);
+    mxb_assert(pInstance == &pClient->m_instance);
 
     return pClient->clientReply(pResponse);
 }

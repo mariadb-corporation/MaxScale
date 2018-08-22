@@ -34,12 +34,12 @@ public:
         : m_pTask(pTask)
         , m_thread(0)
     {
-        ss_dassert(pTask);
+        mxb_assert(pTask);
     }
 
     ~Thread()
     {
-        ss_dassert(m_thread == 0);
+        mxb_assert(m_thread == 0);
     }
 
     static Thread from_task(Tester::Task* pTask)
@@ -54,7 +54,7 @@ public:
 
     void start()
     {
-        ss_dassert(m_thread == 0);
+        mxb_assert(m_thread == 0);
 
         if (pthread_create(&m_thread, NULL, &Thread::thread_main, this) != 0)
         {
@@ -65,7 +65,7 @@ public:
 
     void wait()
     {
-        ss_dassert(m_thread != 0);
+        mxb_assert(m_thread != 0);
 
         pthread_join(m_thread, NULL);
         m_thread = 0;
@@ -254,13 +254,13 @@ bool Tester::get_cache_items(const Statements& statements,
             }
             else
             {
-                ss_dassert(!true);
+                mxb_assert(!true);
                 success = false;
             }
         }
         else
         {
-            ss_dassert(!true);
+            mxb_assert(!true);
             success = false;
         }
 

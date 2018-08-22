@@ -39,7 +39,7 @@ public:
      */
     void add_stmt(GWBUF* buf)
     {
-        ss_info_dassert(buf, "Trx::add_stmt: Buffer must not be empty");
+        mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
 
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {
@@ -72,7 +72,7 @@ public:
      */
     GWBUF* pop_stmt()
     {
-        ss_dassert(!m_log.empty());
+        mxb_assert(!m_log.empty());
         GWBUF* rval = m_log.front().release();
         m_log.pop_front();
         return rval;

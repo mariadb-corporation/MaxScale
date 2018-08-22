@@ -1329,7 +1329,7 @@ int main(int argc, char **argv)
     char*    tmp_path;
     int      option_index;
     MXS_CONFIG* cnf = config_get_global_options();
-    ss_dassert(cnf);
+    mxb_assert(cnf);
     int      *syslog_enabled = &cnf->syslog; /** Log to syslog */
     int      *maxlog_enabled = &cnf->maxlog; /** Log with MaxScale */
     sigset_t sigpipe_mask;
@@ -1343,7 +1343,7 @@ int main(int argc, char **argv)
 
     config_init();
     config_set_global_defaults();
-    ss_dassert(cnf);
+    mxb_assert(cnf);
 
     maxscale_reset_starttime();
 
@@ -2144,7 +2144,7 @@ int main(int argc, char **argv)
     /**
      * Successful start, notify the parent process that it can exit.
      */
-    ss_dassert(rc == MAXSCALE_SHUTDOWN);
+    mxb_assert(rc == MAXSCALE_SHUTDOWN);
     if (daemon_mode)
     {
         write_child_exit_code(daemon_pipe[1], rc);
@@ -2154,7 +2154,7 @@ int main(int argc, char **argv)
      * Run worker 0 in the main thread.
      */
     worker = RoutingWorker::get(RoutingWorker::MAIN);
-    ss_dassert(worker);
+    mxb_assert(worker);
     worker->run();
 
     /** Stop administrative interface */

@@ -134,7 +134,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
         }
     }
 
-    ss_dassert((type & (QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_PREPARE_NAMED_STMT)) == 0);
+    mxb_assert((type & (QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_PREPARE_NAMED_STMT)) == 0);
 
     return type;
 }
@@ -243,7 +243,7 @@ public:
 
     void store(GWBUF* buffer, uint32_t id)
     {
-        ss_dassert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE ||
+        mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE ||
                    qc_query_is_type(qc_get_type_mask(buffer),
                                     QUERY_TYPE_PREPARE_NAMED_STMT));
 
@@ -258,7 +258,7 @@ public:
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             break;
         }
     }
@@ -327,7 +327,7 @@ public:
         }
         else
         {
-            ss_info_dassert(!true, "QueryClassifier::PSManager::erase called with invalid query");
+            mxb_assert_message(!true, "QueryClassifier::PSManager::erase called with invalid query");
         }
     }
 
@@ -480,7 +480,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
     }
     else
     {
-        ss_dassert(trx_active || load_active ||
+        mxb_assert(trx_active || load_active ||
                    (qc_query_is_type(qtype, QUERY_TYPE_WRITE) ||
                     qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
                     qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
@@ -532,12 +532,12 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
 
             case HINT_ROUTE_TO_UPTODATE_SERVER:
                 // TODO: Add generic target type, never to be seem by RWS.
-                ss_dassert(false);
+                mxb_assert(false);
                 break;
 
             case HINT_ROUTE_TO_ALL:
                 // TODO: Add generic target type, never to be seem by RWS.
-                ss_dassert(false);
+                mxb_assert(false);
                 break;
 
             case HINT_ROUTE_TO_LAST_USED:

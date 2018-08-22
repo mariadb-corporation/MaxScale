@@ -100,7 +100,7 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
     if (param)
     {
         SERVICE *source = service_find(param->value);
-        ss_dassert(source);
+        mxb_assert(source);
 
         if (source)
         {

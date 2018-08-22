@@ -72,7 +72,7 @@ void LocalClient::self_destruct()
 void LocalClient::close()
 {
     mxb::Worker* worker = mxb::Worker::get_current();
-    ss_dassert(worker);
+    mxb_assert(worker);
     worker->remove_fd(m_sock);
     ::close(m_sock);
 }

@@ -139,8 +139,8 @@ bool Housekeeper::init()
 
 bool Housekeeper::start()
 {
-    ss_dassert(hk); // init() has been called.
-    ss_dassert(hk->m_thread.get_id() == std::thread::id()); // start has not been called.
+    mxb_assert(hk); // init() has been called.
+    mxb_assert(hk->m_thread.get_id() == std::thread::id()); // start has not been called.
 
     struct hkstart_result res;
     sem_init(&res.sem, 0, 0);
@@ -194,8 +194,8 @@ void Housekeeper::run()
 
 void Housekeeper::stop()
 {
-    ss_dassert(hk); // init() has been called.
-    ss_dassert(hk->m_thread.get_id() != std::thread::id()); // start has been called.
+    mxb_assert(hk); // init() has been called.
+    mxb_assert(hk->m_thread.get_id() != std::thread::id()); // start has been called.
 
     atomic_store_uint32(&m_running, 0);
     m_thread.join();
@@ -242,7 +242,7 @@ json_t* Housekeeper::tasks_json(const char* host)
         localtime_r(&ptr->nextdue, &tm);
         asctime_r(&tm, buf);
         char* nl = strchr(buf, '\n');
-        ss_dassert(nl);
+        mxb_assert(nl);
         *nl = '\0';
 
         json_t* obj = json_object();
@@ -265,14 +265,14 @@ json_t* Housekeeper::tasks_json(const char* host)
 
 void hktask_add(const char *name, TASKFN func, void *data, int frequency)
 {
-    ss_dassert(hk);
+    mxb_assert(hk);
     Task task(name, func, data, frequency);
     hk->add(task);
 }
 
 void hktask_remove(const char *name)
 {
-    ss_dassert(hk);
+    mxb_assert(hk);
     hk->remove(name);
 }
 
@@ -321,12 +321,12 @@ void hkfinish()
 
 void hkshow_tasks(DCB *pDcb)
 {
-    ss_dassert(hk);
+    mxb_assert(hk);
     hk->print_tasks(pDcb);
 }
 
 json_t* hk_tasks_json(const char* host)
 {
-    ss_dassert(hk);
+    mxb_assert(hk);
     return hk->tasks_json(host);
 }

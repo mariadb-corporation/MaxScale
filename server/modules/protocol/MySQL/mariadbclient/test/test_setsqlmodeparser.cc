@@ -242,7 +242,7 @@ int test(const TEST_CASE& test_case)
     cout << test_case.zStmt << ": ";
 
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
-    ss_dassert(pStmt);
+    mxb_assert(pStmt);
 
     rv = test(&pStmt, test_case.sql_mode, test_case.status);
 
@@ -285,7 +285,7 @@ int test_non_contiguous()
         cout << test_case.zStmt << "(" << strlen(test_case.zStmt) << ": ";
 
         GWBUF* pTail = gwbuf_create_com_query(test_case.zStmt);
-        ss_dassert(pTail);
+        mxb_assert(pTail);
         GWBUF* pStmt = NULL;
 
         while (pTail)

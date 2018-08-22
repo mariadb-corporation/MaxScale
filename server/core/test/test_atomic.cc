@@ -33,7 +33,7 @@ void test_add(void* data)
     {
         atomic_add(&expected, id);
         atomic_add(&expected, -id);
-        ss_dassert(atomic_load_int32(&expected) >= 0);
+        mxb_assert(atomic_load_int32(&expected) >= 0);
     }
 }
 
@@ -45,7 +45,7 @@ void test_load_store(void* data)
     {
         if (atomic_load_int32(&expected) % NTHR == id)
         {
-            ss_dassert(atomic_add(&expected, 1) % NTHR == id + 1);
+            mxb_assert(atomic_add(&expected, 1) % NTHR == id + 1);
         }
     }
 }
@@ -72,7 +72,7 @@ void test_cas(void* data)
         loops++;
     }
 
-    ss_dassert(loops > 0);
+    mxb_assert(loops > 0);
 }
 
 int run_test(void(*func)(void*))

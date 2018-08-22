@@ -107,7 +107,7 @@ void RWBackend::close(close_type type)
 bool RWBackend::consume_fetched_rows(GWBUF* buffer)
 {
     m_expected_rows -= modutil_count_packets(buffer);
-    ss_dassert(m_expected_rows >= 0);
+    mxb_assert(m_expected_rows >= 0);
     return m_expected_rows == 0;
 }
 
@@ -165,7 +165,7 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         else
         {
             // This is an OK packet and more results will follow
-            ss_dassert(mxs_mysql_is_ok_packet(buffer) &&
+            mxb_assert(mxs_mysql_is_ok_packet(buffer) &&
                        mxs_mysql_more_results_after_ok(buffer));
 
             if (have_next_packet(buffer))
@@ -216,7 +216,7 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && current_command() == MXS_COM_FIELD_LIST));
+            mxb_assert(n_eof == 2 || (n_eof == 1 && current_command() == MXS_COM_FIELD_LIST));
             set_reply_state(REPLY_STATE_DONE);
 
             if (more)

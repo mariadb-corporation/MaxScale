@@ -152,7 +152,7 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
         {
             gtid_pos_t gtid;
             MXB_AT_DEBUG(bool rval = )gtid.parse(value);
-            ss_dassert(rval);
+            mxb_assert(rval);
             router->handler.set_gtid(gtid);
         }
         else if (strcmp(key, "position") == 0)
@@ -461,7 +461,7 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
     std::string next_binlog;
     bool rotate_seen = false;
 
-    ss_dassert(router->binlog_fd != -1);
+    mxb_assert(router->binlog_fd != -1);
 
     while (!service_should_stop)
     {
@@ -573,17 +573,17 @@ void avro_load_metadata_from_schemas(Avro *router)
         for (int i = files.gl_pathc - 1; i > -1; i--)
         {
             char *dbstart = strrchr(files.gl_pathv[i], '/');
-            ss_dassert(dbstart);
+            mxb_assert(dbstart);
             dbstart++;
 
             char *tablestart = strchr(dbstart, '.');
-            ss_dassert(tablestart);
+            mxb_assert(tablestart);
 
             snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
             tablestart++;
 
             char *versionstart = strchr(tablestart, '.');
-            ss_dassert(versionstart);
+            mxb_assert(versionstart);
 
             snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
             versionstart++;

@@ -98,13 +98,13 @@ public:
 
     void link_backend_dcb(DCB* dcb)
     {
-        ss_dassert(m_dcb_set.count(dcb) == 0);
+        mxb_assert(m_dcb_set.count(dcb) == 0);
         m_dcb_set.insert(dcb);
     }
 
     void unlink_backend_dcb(DCB* dcb)
     {
-        ss_dassert(m_dcb_set.count(dcb) == 1);
+        mxb_assert(m_dcb_set.count(dcb) == 1);
         m_dcb_set.erase(dcb);
     }
 

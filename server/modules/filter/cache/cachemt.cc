@@ -37,7 +37,7 @@ CacheMT::~CacheMT()
 
 CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 {
-    ss_dassert(pConfig);
+    mxb_assert(pConfig);
 
     CacheMT* pCache = NULL;
 

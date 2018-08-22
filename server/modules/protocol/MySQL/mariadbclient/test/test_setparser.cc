@@ -388,7 +388,7 @@ int test(GWBUF** ppStmt, SetParser::status_t expected_status, const TEST_CASE::E
         {
             const SetParser::Result::Items& variables = result.variables();
             const SetParser::Result::Items& values = result.values();
-            ss_dassert(variables.size() == values.size());
+            mxb_assert(variables.size() == values.size());
 
             SetParser::Result::Items::const_iterator i = variables.begin();
             SetParser::Result::Items::const_iterator j = values.begin();
@@ -482,7 +482,7 @@ int test(const TEST_CASE& test_case)
     cout << test_case.zStmt << ": ";
 
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
-    ss_dassert(pStmt);
+    mxb_assert(pStmt);
 
     rv = test(&pStmt, test_case.status, test_case.expectations);
 
@@ -525,7 +525,7 @@ int test_non_contiguous()
         cout << test_case.zStmt << "(" << strlen(test_case.zStmt) << ": ";
 
         GWBUF* pTail = gwbuf_create_com_query(test_case.zStmt);
-        ss_dassert(pTail);
+        mxb_assert(pTail);
         GWBUF* pStmt = NULL;
 
         while (pTail)

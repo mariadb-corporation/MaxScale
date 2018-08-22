@@ -109,8 +109,8 @@ StorageFactory::StorageFactory(void* handle,
     , m_storage_caps(capabilities)
     , m_caps(capabilities)
 {
-    ss_dassert(handle);
-    ss_dassert(pApi);
+    mxb_assert(handle);
+    mxb_assert(pApi);
 
     m_caps |= CACHE_STORAGE_CAP_LRU;
     m_caps |= CACHE_STORAGE_CAP_MAX_COUNT;
@@ -150,8 +150,8 @@ Storage* StorageFactory::createStorage(const char* zName,
                                        const CACHE_STORAGE_CONFIG& config,
                                        int argc, char* argv[])
 {
-    ss_dassert(m_handle);
-    ss_dassert(m_pApi);
+    mxb_assert(m_handle);
+    mxb_assert(m_pApi);
 
     CacheStorageConfig used_config(config);
 
@@ -184,7 +184,7 @@ Storage* StorageFactory::createStorage(const char* zName,
             }
             else
             {
-                ss_dassert(config.thread_model == CACHE_THREAD_MODEL_MT);
+                mxb_assert(config.thread_model == CACHE_THREAD_MODEL_MT);
 
                 pLruStorage = LRUStorageMT::create(config, pStorage);
             }
@@ -209,8 +209,8 @@ Storage* StorageFactory::createRawStorage(const char* zName,
                                           const CACHE_STORAGE_CONFIG& config,
                                           int argc, char* argv[])
 {
-    ss_dassert(m_handle);
-    ss_dassert(m_pApi);
+    mxb_assert(m_handle);
+    mxb_assert(m_pApi);
 
     Storage* pStorage = 0;
 

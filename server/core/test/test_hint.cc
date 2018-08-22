@@ -51,9 +51,9 @@ test1()
     char* name = MXS_STRDUP_A("name");
     hint = hint_create_parameter(NULL, name, "value");
     MXS_FREE(name);
-    ss_info_dassert(NULL != hint, "New hint list should not be null");
-    ss_info_dassert(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
-    ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
+    mxb_assert_message(NULL != hint, "New hint list should not be null");
+    mxb_assert_message(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
+    mxb_assert_message(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
     fprintf(stderr, "\t..done\nFree hints.");
     if (NULL != hint)
     {

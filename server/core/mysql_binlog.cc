@@ -101,7 +101,7 @@ const char* column_type_to_string(uint8_t type)
     case TABLE_COL_TYPE_GEOMETRY:
         return "GEOMETRY";
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
     return "UNKNOWN";
@@ -535,7 +535,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int 
         break;
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
     return temporal_field_size(type, metadata, length);
@@ -569,7 +569,7 @@ void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
 
     default:
         MXS_ERROR("Unexpected temporal type: %x %s", type, column_type_to_string(type));
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
     strftime(str, size, format, tm);
@@ -620,7 +620,7 @@ size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8
         break;
     }
 
-    ss_dassert(size > 0);
+    mxb_assert(size > 0);
     memcpy(dest, src, size);
     return size;
 }
@@ -669,7 +669,7 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
         break;
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
 
@@ -715,7 +715,7 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
         int extra = ibytes - 8;
         ptr += extra;
         ibytes -= extra;
-        ss_dassert(ibytes == 8);
+        mxb_assert(ibytes == 8);
     }
 
     val_i = unpack_bytes(ptr, ibytes);

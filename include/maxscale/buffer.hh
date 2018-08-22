@@ -72,7 +72,7 @@ public:
 
         void advance()
         {
-            ss_dassert(m_i != m_end);
+            mxb_assert(m_i != m_end);
 
             ++m_i;
 
@@ -151,7 +151,7 @@ public:
 
         reference operator*()
         {
-            ss_dassert(m_i);
+            mxb_assert(m_i);
             return *m_i;
         }
     };
@@ -198,7 +198,7 @@ public:
 
         reference operator*() const
         {
-            ss_dassert(m_i);
+            mxb_assert(m_i);
             return *m_i;
         }
     };
@@ -226,7 +226,7 @@ public:
 
             if (!m_pBuffer)
             {
-                ss_dassert(!true);
+                mxb_assert(!true);
                 throw std::bad_alloc();
             }
         }
@@ -666,7 +666,7 @@ public:
     {
         if (!make_contiguous(std::nothrow))
         {
-            ss_dassert(!true);
+            mxb_assert(!true);
             throw std::bad_alloc();
         }
     }

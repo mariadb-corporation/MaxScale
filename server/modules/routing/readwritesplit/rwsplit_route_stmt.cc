@@ -81,7 +81,7 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
 
 void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 {
-    ss_dassert(target);
+    mxb_assert(target);
     MXB_AT_DEBUG(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
     int keepalive = m_config.connection_keepalive * 10;
@@ -104,7 +104,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
         }
     }
 
-    ss_dassert(nserv < m_nbackends);
+    mxb_assert(nserv < m_nbackends);
 }
 
 bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_target)
@@ -114,14 +114,14 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
     // Check if we need to connect to the server in order to use it
     if (!target->in_use())
     {
-        ss_dassert(target->can_connect() && can_recover_servers());
-        ss_dassert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
+        mxb_assert(target->can_connect() && can_recover_servers());
+        mxb_assert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
         rval = target->connect(m_client->session, &m_sescmd_list);
         MXS_INFO("Connected to '%s'", target->name());
 
         if (rval && target->is_waiting_result())
         {
-            ss_info_dassert(!m_sescmd_list.empty() && target->has_session_commands(),
+            mxb_assert_message(!m_sescmd_list.empty() && target->has_session_commands(),
                             "Session command list must not be empty and target "
                             "should have unfinished session commands.");
             m_expected_responses++;
@@ -133,7 +133,7 @@ bool RWSplitSession::prepare_target(SRWBackend& target, route_target_t route_tar
 
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
-    ss_dassert(querybuf);
+    mxb_assert(querybuf);
     // Try to route the query again later
     MXS_SESSION* session = m_client->session;
     session_delay_routing(session, router_as_downstream(session), querybuf, delay);
@@ -213,7 +213,7 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
  */
 bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
 {
-    ss_info_dassert(m_otrx_state != OTRX_ROLLBACK,
+    mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                     "OTRX_ROLLBACK should never happen when routing queries");
     bool succp = false;
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
@@ -261,7 +261,7 @@ bool RWSplitSession::route_single_stmt(GWBUF *querybuf)
         {
             /** We're processing a large query that's split across multiple packets.
              * Route it to the same backend where we routed the previous packet. */
-            ss_dassert(m_prev_target);
+            mxb_assert(m_prev_target);
             target = m_prev_target;
             succp = true;
         }
@@ -678,7 +678,7 @@ SRWBackend RWSplitSession::get_target_backend(backend_type_t btype,
 
     if (name) /*< Choose backend by name from a hint */
     {
-        ss_dassert(btype != BE_MASTER);
+        mxb_assert(btype != BE_MASTER);
         btype = BE_SLAVE;
         rval = get_hinted_backend(name);
     }
@@ -842,7 +842,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     if (target)
     {
         atomic_add_uint64(&m_router->stats().n_slave, 1);
-        ss_dassert(target->in_use() || target->can_connect());
+        mxb_assert(target->in_use() || target->can_connect());
     }
     else
     {
@@ -861,8 +861,8 @@ void RWSplitSession::log_master_routing_failure(bool found,
 {
     /** Both backends should either be empty, not connected or the DCB should
      * be a backend (the last check is slightly redundant). */
-    ss_dassert(!old_master || !old_master->in_use() || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    ss_dassert(!curr_master || !curr_master->in_use() ||
+    mxb_assert(!old_master || !old_master->in_use() || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(!curr_master || !curr_master->in_use() ||
                curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
 
@@ -873,14 +873,14 @@ void RWSplitSession::log_master_routing_failure(bool found,
     else if (old_master && curr_master && old_master->in_use())
     {
         /** We found a master but it's not the same connection */
-        ss_dassert(old_master != curr_master);
+        mxb_assert(old_master != curr_master);
         sprintf(errmsg, "Master server changed from '%s' to '%s'",
                 old_master->name(), curr_master->name());
     }
     else if (old_master && old_master->in_use())
     {
         // TODO: Figure out if this is an impossible situation
-        ss_dassert(!curr_master);
+        mxb_assert(!curr_master);
         /** We have an original master connection but we couldn't find it */
         sprintf(errmsg, "The connection to master server '%s' is not available",
                 old_master->name());
@@ -895,10 +895,10 @@ void RWSplitSession::log_master_routing_failure(bool found,
         }
         else
         {
-            ss_dassert(old_master && !old_master->in_use());
+            mxb_assert(old_master && !old_master->in_use());
             sprintf(errmsg, "Was supposed to route to master but the master connection is %s",
                     old_master->is_closed() ? "closed" : "not in a suitable state");
-            ss_dassert(old_master->is_closed());
+            mxb_assert(old_master->is_closed());
         }
     }
 
@@ -1061,7 +1061,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER *server, GWBUF *origin)
  */
 bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool store)
 {
-    ss_dassert(target->in_use());
+    mxb_assert(target->in_use());
     /**
      * If the transaction is READ ONLY set forced_node to this backend.
      * This SLAVE backend will be used until the COMMIT is seen.
@@ -1075,7 +1075,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
              target->name(), target->uri());
 
     /** The session command cursor must not be active */
-    ss_dassert(!target->has_session_commands());
+    mxb_assert(!target->has_session_commands());
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
@@ -1119,7 +1119,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
 
         if (!m_qc.large_query())
         {
-            ss_dassert(target->get_reply_state() == REPLY_STATE_DONE);
+            mxb_assert(target->get_reply_state() == REPLY_STATE_DONE);
 
             if (response == mxs::Backend::EXPECT_RESPONSE)
             {
@@ -1131,7 +1131,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
                 {
                     /** The final packet in a LOAD DATA LOCAL INFILE is an empty packet
                      * to which the server responds with an OK or an ERR packet */
-                    ss_dassert(gwbuf_length(querybuf) == 4);
+                    mxb_assert(gwbuf_length(querybuf) == 4);
                     m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
                 }
             }

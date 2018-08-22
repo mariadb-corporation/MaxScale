@@ -119,7 +119,7 @@ public:
 
     ~QCInfoCache()
     {
-        ss_dassert(this_unit.classifier);
+        mxb_assert(this_unit.classifier);
 
         for (auto a : m_infos)
         {
@@ -146,7 +146,7 @@ public:
 
             if (entry.sql_mode == this_unit.qc_sql_mode)
             {
-                ss_dassert(this_unit.classifier);
+                mxb_assert(this_unit.classifier);
                 this_unit.classifier->qc_info_dup(entry.pInfo);
                 pInfo = entry.pInfo;
 
@@ -170,8 +170,8 @@ public:
 
     void insert(const std::string& canonical_stmt, QC_STMT_INFO* pInfo)
     {
-        ss_dassert(peek(canonical_stmt) == nullptr);
-        ss_dassert(this_unit.classifier);
+        mxb_assert(peek(canonical_stmt) == nullptr);
+        mxb_assert(this_unit.classifier);
 
         int64_t cache_max_size = this_unit.cache_max_size();
         int64_t size = canonical_stmt.size();
@@ -219,11 +219,11 @@ private:
 
     void erase(InfosByStmt::iterator& i)
     {
-        ss_dassert(i != m_infos.end());
+        mxb_assert(i != m_infos.end());
 
         m_stats.size -= i->first.size();
 
-        ss_dassert(this_unit.classifier);
+        mxb_assert(this_unit.classifier);
         this_unit.classifier->qc_info_close(i->second.pInfo);
 
         m_infos.erase(i);
@@ -236,7 +236,7 @@ private:
         bool erased = false;
 
         auto i = m_infos.find(canonical_stmt);
-        ss_dassert(i != m_infos.end());
+        mxb_assert(i != m_infos.end());
 
         if (i != m_infos.end())
         {
@@ -264,7 +264,7 @@ private:
         int64_t freed_space = 0;
 
         int bucket = dis(m_reng);
-        ss_dassert((bucket >= 0) && (bucket < static_cast<int>(m_infos.bucket_count())));
+        mxb_assert((bucket >= 0) && (bucket < static_cast<int>(m_infos.bucket_count())));
 
         auto i = m_infos.begin(bucket);
 
@@ -275,7 +275,7 @@ private:
             freed_space += i->first.size();
 
             MXB_AT_DEBUG(bool erased =) erase(i->first);
-            ss_dassert(erased);
+            mxb_assert(erased);
         }
 
         return freed_space;
@@ -300,7 +300,7 @@ bool has_not_been_parsed(GWBUF* pStmt)
 
 void info_object_close(void* pData)
 {
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
     this_unit.classifier->qc_info_close(static_cast<QC_STMT_INFO*>(pData));
 }
 
@@ -345,7 +345,7 @@ public:
         if (!m_canonical.empty())
         {
             void* pData = gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO);
-            ss_dassert(pData);
+            mxb_assert(pData);
             QC_STMT_INFO* pInfo = static_cast<QC_STMT_INFO*>(pData);
 
             this_thread.pInfo_cache->insert(m_canonical, pInfo);
@@ -365,7 +365,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               const char* plugin_name, const char* plugin_args)
 {
     QC_TRACE();
-    ss_dassert(!this_unit.classifier);
+    mxb_assert(!this_unit.classifier);
 
     if (!plugin_name || (*plugin_name == 0))
     {
@@ -385,7 +385,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
             this_unit.qc_sql_mode = sql_mode;
 
             int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
-            ss_dassert(cache_max_size >= 0);
+            mxb_assert(cache_max_size >= 0);
 
             if (cache_max_size)
             {
@@ -411,7 +411,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     const char* parse_using = getenv(QC_TRX_PARSE_USING);
 
@@ -455,7 +455,7 @@ bool qc_process_init(uint32_t kind)
 void qc_process_end(uint32_t kind)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     if (kind & QC_INIT_PLUGIN)
     {
@@ -491,7 +491,7 @@ void qc_unload(QUERY_CLASSIFIER* classifier)
 bool qc_thread_init(uint32_t kind)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     bool rc = false;
 
@@ -519,7 +519,7 @@ bool qc_thread_init(uint32_t kind)
 void qc_thread_end(uint32_t kind)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     if (kind & QC_INIT_PLUGIN)
     {
@@ -533,7 +533,7 @@ void qc_thread_end(uint32_t kind)
 qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     int32_t result = QC_QUERY_INVALID;
 
@@ -546,7 +546,7 @@ qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
 uint32_t qc_get_type_mask(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
 
@@ -559,7 +559,7 @@ uint32_t qc_get_type_mask(GWBUF* query)
 qc_query_op_t qc_get_operation(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     int32_t op = QUERY_OP_UNDEFINED;
 
@@ -572,7 +572,7 @@ qc_query_op_t qc_get_operation(GWBUF* query)
 char* qc_get_created_table_name(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     char* name = NULL;
 
@@ -585,7 +585,7 @@ char* qc_get_created_table_name(GWBUF* query)
 bool qc_is_drop_table_query(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     int32_t is_drop_table = 0;
 
@@ -598,7 +598,7 @@ bool qc_is_drop_table_query(GWBUF* query)
 char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     char** names = NULL;
     *tblsize = 0;
@@ -612,7 +612,7 @@ char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
 char* qc_get_canonical(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     char *rval;
 
@@ -636,7 +636,7 @@ char* qc_get_canonical(GWBUF* query)
 bool qc_query_has_clause(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     int32_t has_clause = 0;
 
@@ -649,7 +649,7 @@ bool qc_query_has_clause(GWBUF* query)
 void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     *infos = NULL;
 
@@ -664,7 +664,7 @@ void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_info
 void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     *infos = NULL;
 
@@ -679,7 +679,7 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
 char** qc_get_database_names(GWBUF* query, int* sizep)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     char** names = NULL;
     *sizep = 0;
@@ -693,7 +693,7 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
 char* qc_get_prepare_name(GWBUF* query)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     char* name = NULL;
 
@@ -706,7 +706,7 @@ char* qc_get_prepare_name(GWBUF* query)
 GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     GWBUF* preparable_stmt = NULL;
 
@@ -1141,7 +1141,7 @@ uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return type_mask;
@@ -1155,7 +1155,7 @@ uint32_t qc_get_trx_type_mask(GWBUF* stmt)
 void qc_set_server_version(uint64_t version)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     this_unit.classifier->qc_set_server_version(version);
 }
@@ -1163,7 +1163,7 @@ void qc_set_server_version(uint64_t version)
 uint64_t qc_get_server_version()
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     uint64_t version;
 
@@ -1175,7 +1175,7 @@ uint64_t qc_get_server_version()
 qc_sql_mode_t qc_get_sql_mode()
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     return this_unit.qc_sql_mode;
 }
@@ -1183,10 +1183,10 @@ qc_sql_mode_t qc_get_sql_mode()
 void qc_set_sql_mode(qc_sql_mode_t sql_mode)
 {
     QC_TRACE();
-    ss_dassert(this_unit.classifier);
+    mxb_assert(this_unit.classifier);
 
     int32_t rv = this_unit.classifier->qc_set_sql_mode(sql_mode);
-    ss_dassert(rv == QC_RESULT_OK);
+    mxb_assert(rv == QC_RESULT_OK);
 
     if (rv == QC_RESULT_OK)
     {
@@ -1306,13 +1306,13 @@ bool qc_alter_from_json(json_t* pJson)
             cache_properties.max_size = json_integer_value(pValue);
             // If runtime_is_count_or_null() did its job, then we will not
             // get here if the value is negative.
-            ss_dassert(cache_properties.max_size >= 0);
+            mxb_assert(cache_properties.max_size >= 0);
         }
 
         if (rv)
         {
             MXB_AT_DEBUG(bool set =) qc_set_cache_properties(&cache_properties);
-            ss_dassert(set);
+            mxb_assert(set);
         }
     }
 

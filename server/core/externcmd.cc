@@ -173,7 +173,7 @@ static const char* skip_whitespace(const char* ptr)
 static const char* skip_prefix(const char* str)
 {
     const char* ptr = strchr(str, ':');
-    ss_dassert(ptr);
+    mxb_assert(ptr);
 
     ptr++;
     return skip_whitespace(ptr);

@@ -298,7 +298,7 @@ static bool gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
 
     default:
         MXS_ERROR("Unexpected authentication state: %d", auth->state);
-        ss_dassert(false);
+        mxb_assert(false);
         break;
     }
 
@@ -419,7 +419,7 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
  */
 static bool validate_user(gssapi_auth_t *auth, DCB *dcb, MYSQL_session *session, const char *princ)
 {
-    ss_dassert(princ);
+    mxb_assert(princ);
     size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + strlen(dcb->remote) + strlen(princ) * 2;
     char sql[len + 1];
@@ -635,7 +635,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 
                     if (res)
                     {
-                        ss_dassert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
+                        mxb_assert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
                         MYSQL_ROW row;
 
                         while ((row = mysql_fetch_row(res)))

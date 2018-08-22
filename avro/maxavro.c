@@ -254,7 +254,7 @@ bool maxavro_read_float(MAXAVRO_FILE* file, float *dest)
     }
     else
     {
-        ss_dassert(!true);
+        mxb_assert(!true);
         MXS_ERROR("Block cannot hold a value of type float");
     }
 
@@ -293,7 +293,7 @@ bool maxavro_read_double(MAXAVRO_FILE* file, double *dest)
     }
     else
     {
-        ss_dassert(!true);
+        mxb_assert(!true);
         MXS_ERROR("Block cannot hold a value of type double");
     }
 

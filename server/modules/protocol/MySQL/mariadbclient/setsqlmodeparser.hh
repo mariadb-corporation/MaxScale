@@ -76,7 +76,7 @@ public:
 
         GWBUF* pBuffer = *ppBuffer;
 
-        ss_dassert(gwbuf_length(pBuffer) >= MYSQL_HEADER_LEN);
+        mxb_assert(gwbuf_length(pBuffer) >= MYSQL_HEADER_LEN);
 
         size_t buf_len = GWBUF_LENGTH(pBuffer);
         size_t payload_len;
@@ -196,7 +196,7 @@ public:
             return "SOMETHING";
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             return "UNKNOWN";
         }
     }
@@ -222,7 +222,7 @@ public:
             return "NOT_SET_SQL_MODE";
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             return "UNKNOWN";
         }
     }
@@ -248,7 +248,7 @@ private:
 
     result_t initialize(GWBUF* pBuffer)
     {
-        ss_dassert(GWBUF_IS_CONTIGUOUS(pBuffer));
+        mxb_assert(GWBUF_IS_CONTIGUOUS(pBuffer));
 
         result_t rv = ERROR;
 

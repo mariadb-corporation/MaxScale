@@ -116,7 +116,7 @@ protected:
      */
     bool is_next_alpha(char uc, int offset = 1) const
     {
-        ss_dassert(uc >= 'A' && uc <= 'Z');
+        mxb_assert(uc >= 'A' && uc <= 'Z');
 
         char lc = uc + ('a' - 'A');
 

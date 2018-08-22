@@ -590,7 +590,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode,
 void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, int pcre_ops,
                                                 MappingArray* mapping, uint32_t* max_capcount_out)
 {
-    ss_dassert(param_names_match_indexed.size() == param_names_target_indexed.size());
+    mxb_assert(param_names_match_indexed.size() == param_names_target_indexed.size());
     bool error = false;
     uint32_t max_capcount = 0;
     *max_capcount_out = 0;
@@ -751,7 +751,7 @@ bool RegexHintFilter::validate_ip_address(const char* host)
  */
 SourceHost* RegexHintFilter::set_source_address(const char* input_host)
 {
-    ss_dassert(input_host);
+    mxb_assert(input_host);
 
     if (!input_host)
     {
@@ -810,7 +810,7 @@ SourceHost* RegexHintFilter::set_source_address(const char* input_host)
     /* fill IPv4 data struct */
     if (rc == 0)
     {
-        ss_dassert(ai->ai_family == AF_INET);
+        mxb_assert(ai->ai_family == AF_INET);
         memcpy(&ipv4, ai->ai_addr, ai->ai_addrlen);
 
         /* if netmask < 32 there are % wildcards */
@@ -892,7 +892,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         match_server_pairs = max_pairs;
     }
-    ss_dassert(match_server_pairs >= 25); // If this limit is modified, update documentation.
+    mxb_assert(match_server_pairs >= 25); // If this limit is modified, update documentation.
     /* Create parameter pair names */
     generate_param_names(match_server_pairs);
 
@@ -932,9 +932,9 @@ static void generate_param_names(int pairs)
     for (int counter = 1; counter <= pairs; counter++)
     {
         MXB_AT_DEBUG(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
-        ss_dassert(rval == namelen_match - 1);
+        mxb_assert(rval == namelen_match - 1);
         MXB_AT_DEBUG(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
-        ss_dassert(rval == namelen_server - 1);
+        mxb_assert(rval == namelen_server - 1);
 
         // Have both names, add them to the global vectors
         param_names_match_indexed.push_back(name_match);

@@ -146,8 +146,8 @@ private:
 
         const MaskingRules::Rule* get_rule()
         {
-            ss_dassert(m_nTotal_fields == m_rules.size());
-            ss_dassert(m_index < m_rules.size());
+            mxb_assert(m_nTotal_fields == m_rules.size());
+            mxb_assert(m_index < m_rules.size());
             const MaskingRules::Rule* pRule = m_rules[m_index++];
             // The rules will be used repeatedly for each row. Hence, once we hit
             // the end, we need to continue from the start.

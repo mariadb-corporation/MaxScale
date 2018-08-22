@@ -4132,7 +4132,7 @@ static int gtid_select_cb(void *data,
 {
     MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
 
-    ss_dassert(cols >= 4);
+    mxb_assert(cols >= 4);
 
     if (values[0] &&
         values[1] &&
@@ -4156,11 +4156,11 @@ static int gtid_select_cb(void *data,
 
         if (result->start > 4)
         {
-            ss_dassert(result->end > result->start);
+            mxb_assert(result->end > result->start);
         }
         else
         {
-            ss_dassert(result->start > 0 && result->start > 0);
+            mxb_assert(result->start > 0 && result->start > 0);
         }
     }
 
@@ -4205,7 +4205,7 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                                      "server_id = %" PRIu32 " AND "
                                      "sequence = %" PRIu64 ") "
                                      "ORDER BY id DESC LIMIT 1;";
-    ss_dassert(gtid != NULL);
+    mxb_assert(gtid != NULL);
 
     /* Parse GTID value into its components */
     if (!blr_parse_gtid(gtid, &gtid_elms))
@@ -4404,7 +4404,7 @@ static int gtid_file_select_cb(void *data,
 {
     MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
 
-    ss_dassert(cols >= 4);
+    mxb_assert(cols >= 4);
 
     if (values[0] &&
         values[1] &&

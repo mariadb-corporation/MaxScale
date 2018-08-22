@@ -28,21 +28,21 @@ TempFile::TempFile()
     , m_name(NAME_TEMPLATE)
 {
     m_fd = mkstemp((char*)m_name.c_str());
-    ss_dassert(m_fd != -1);
+    mxb_assert(m_fd != -1);
 }
 
 TempFile::~TempFile()
 {
     int rc = unlink(m_name.c_str());
-    ss_dassert(rc != -1);
+    mxb_assert(rc != -1);
     close(m_fd);
 }
 
 void TempFile::write(const void* pData, size_t count)
 {
     int rc = ::write(m_fd, pData, count);
-    ss_dassert(rc != -1);
-    ss_dassert((size_t)rc == count);
+    mxb_assert(rc != -1);
+    mxb_assert((size_t)rc == count);
 }
 
 void TempFile::write(const char* zData)

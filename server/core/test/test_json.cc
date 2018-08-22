@@ -259,33 +259,33 @@ int test1()
     json_error_t err = {};
     json_t* json = json_loads(test1_json, 0, &err);
 
-    ss_dassert(json);
+    mxb_assert(json);
 
-    ss_dassert(mxs_json_pointer(json, "") == json);
-    ss_dassert(mxs_json_pointer(json, "links") == json_object_get(json, "links"));
-    ss_dassert(json_is_string(mxs_json_pointer(json, "links/self")));
+    mxb_assert(mxs_json_pointer(json, "") == json);
+    mxb_assert(mxs_json_pointer(json, "links") == json_object_get(json, "links"));
+    mxb_assert(json_is_string(mxs_json_pointer(json, "links/self")));
 
-    ss_dassert(mxs_json_pointer(json, "data") == json_object_get(json, "data"));
-    ss_dassert(json_is_array(mxs_json_pointer(json, "data")));
+    mxb_assert(mxs_json_pointer(json, "data") == json_object_get(json, "data"));
+    mxb_assert(json_is_array(mxs_json_pointer(json, "data")));
 
-    ss_dassert(json_is_object(mxs_json_pointer(json, "data/0")));
-    ss_dassert(json_is_string(mxs_json_pointer(json, "data/0/id")));
+    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0")));
+    mxb_assert(json_is_string(mxs_json_pointer(json, "data/0/id")));
     string s = json_string_value(mxs_json_pointer(json, "data/0/id"));
-    ss_dassert(s == "server1");
+    mxb_assert(s == "server1");
 
-    ss_dassert(json_is_object(mxs_json_pointer(json, "data/1")));
-    ss_dassert(json_is_string(mxs_json_pointer(json, "data/1/id")));
+    mxb_assert(json_is_object(mxs_json_pointer(json, "data/1")));
+    mxb_assert(json_is_string(mxs_json_pointer(json, "data/1/id")));
     s = json_string_value(mxs_json_pointer(json, "data/1/id"));
-    ss_dassert(s == "server2");
+    mxb_assert(s == "server2");
 
-    ss_dassert(json_is_object(mxs_json_pointer(json, "data/0/attributes")));
-    ss_dassert(json_is_object(mxs_json_pointer(json, "data/0/attributes/parameters")));
-    ss_dassert(json_is_integer(mxs_json_pointer(json, "data/0/attributes/parameters/port")));
+    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0/attributes")));
+    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0/attributes/parameters")));
+    mxb_assert(json_is_integer(mxs_json_pointer(json, "data/0/attributes/parameters/port")));
     int i = json_integer_value(mxs_json_pointer(json, "data/0/attributes/parameters/port"));
-    ss_dassert(i == 3000);
+    mxb_assert(i == 3000);
 
-    ss_dassert(json_is_array(mxs_json_pointer(json, "data/0/attributes/slaves")));
-    ss_dassert(json_array_size(mxs_json_pointer(json, "data/0/attributes/slaves")) == 3);
+    mxb_assert(json_is_array(mxs_json_pointer(json, "data/0/attributes/slaves")));
+    mxb_assert(json_array_size(mxs_json_pointer(json, "data/0/attributes/slaves")) == 3);
 
     json_decref(json);
 
@@ -300,7 +300,7 @@ int test2()
     err = mxs_json_error("%s", "This is an error!");
     s = json_dumps(err, 0);
     printf("%s\n", s);
-    ss_dassert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
+    mxb_assert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
     MXS_FREE(s);
 
     json_decref(err);
@@ -308,13 +308,13 @@ int test2()
     err = mxs_json_error_append(NULL, "%s", "This is an error!");
     s = json_dumps(err, 0);
     printf("%s\n", s);
-    ss_dassert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
+    mxb_assert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
     MXS_FREE(s);
 
     err = mxs_json_error_append(err, "%s", "This is another error!");
     s = json_dumps(err, 0);
     printf("%s\n", s);
-    ss_dassert(strcmp(s,
+    mxb_assert(strcmp(s,
                       "{\"errors\": [{\"detail\": \"This is an error!\"}, "
                       "{\"detail\": \"This is another error!\"}]}") == 0);
     MXS_FREE(s);

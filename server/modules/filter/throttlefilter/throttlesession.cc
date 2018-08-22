@@ -42,7 +42,7 @@ ThrottleSession::~ThrottleSession()
     if (m_delayed_call_id)
     {
         maxbase::Worker* worker = maxbase::Worker::get_current();
-        ss_dassert(worker);
+        mxb_assert(worker);
         worker->cancel_delayed_call(m_delayed_call_id);
     }
 }
@@ -62,7 +62,7 @@ int ThrottleSession::real_routeQuery(GWBUF *buffer, bool is_delayed)
         // delay the current routeQuery for at least one cycle at stated max speed.
         int32_t delay = 1 + std::ceil(1000.0 / m_filter.config().max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
-        ss_dassert(worker);
+        mxb_assert(worker);
         m_delayed_call_id = worker->delayed_call(delay, &ThrottleSession::delayed_routeQuery,
                                                  this, buffer);
         if (m_state == State::MEASURING)

@@ -27,8 +27,8 @@ public:
                                          const CACHE_STORAGE_CONFIG* pConfig,
                                          int argc, char* argv[])
     {
-        ss_dassert(zName);
-        ss_dassert(pConfig);
+        mxb_assert(zName);
+        mxb_assert(pConfig);
 
         StorageType* pStorage = NULL;
 
@@ -45,8 +45,8 @@ public:
     static void getConfig(CACHE_STORAGE* pCache_storage,
                           CACHE_STORAGE_CONFIG* pConfig)
     {
-        ss_dassert(pCache_storage);
-        ss_dassert(pConfig);
+        mxb_assert(pCache_storage);
+        mxb_assert(pConfig);
 
         StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
 
@@ -57,7 +57,7 @@ public:
                                   uint32_t       what,
                                   json_t**       ppInfo)
     {
-        ss_dassert(pCache_storage);
+        mxb_assert(pCache_storage);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -75,9 +75,9 @@ public:
                                    uint32_t hard_ttl,
                                    GWBUF** ppResult)
     {
-        ss_dassert(pCache_storage);
-        ss_dassert(pKey);
-        ss_dassert(ppResult);
+        mxb_assert(pCache_storage);
+        mxb_assert(pKey);
+        mxb_assert(ppResult);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -92,9 +92,9 @@ public:
                                    const CACHE_KEY* pKey,
                                    const GWBUF* pValue)
     {
-        ss_dassert(pCache_storage);
-        ss_dassert(pKey);
-        ss_dassert(pValue);
+        mxb_assert(pCache_storage);
+        mxb_assert(pKey);
+        mxb_assert(pValue);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -107,8 +107,8 @@ public:
 
     static cache_result_t delValue(CACHE_STORAGE* pCache_storage, const CACHE_KEY* pKey)
     {
-        ss_dassert(pCache_storage);
-        ss_dassert(pKey);
+        mxb_assert(pCache_storage);
+        mxb_assert(pKey);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -123,7 +123,7 @@ public:
                                   CACHE_KEY* pKey,
                                   GWBUF** ppHead)
     {
-        ss_dassert(pCache_storage);
+        mxb_assert(pCache_storage);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -138,7 +138,7 @@ public:
                                   CACHE_KEY* pKey,
                                   GWBUF** ppTail)
     {
-        ss_dassert(pCache_storage);
+        mxb_assert(pCache_storage);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -151,7 +151,7 @@ public:
 
     static cache_result_t getSize(CACHE_STORAGE* pCache_storage, uint64_t* pSize)
     {
-        ss_dassert(pCache_storage);
+        mxb_assert(pCache_storage);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -164,7 +164,7 @@ public:
 
     static cache_result_t getItems(CACHE_STORAGE* pCache_storage, uint64_t* pItems)
     {
-        ss_dassert(pCache_storage);
+        mxb_assert(pCache_storage);
 
         cache_result_t result = CACHE_RESULT_ERROR;
 

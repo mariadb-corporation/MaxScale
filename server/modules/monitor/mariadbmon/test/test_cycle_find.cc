@@ -134,7 +134,7 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    ss_dassert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty() &&
+    mxb_assert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty() &&
                m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
@@ -188,7 +188,7 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
             break;
         }
         auto iter2 = m_monitor->m_servers_by_id.find(slave_id);
-        ss_dassert(iter2 != m_monitor->m_servers_by_id.end());
+        mxb_assert(iter2 != m_monitor->m_servers_by_id.end());
         SlaveStatus ss;
         ss.master_server_id = master_id;
         ss.slave_io_running = SlaveStatus::SLAVE_IO_YES;

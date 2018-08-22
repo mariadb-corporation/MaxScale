@@ -183,7 +183,7 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 info.local_index = local_index;
             }
 
-            ss_dassert(row[0] && row[1]);
+            mxb_assert(row[0] && row[1]);
 
             if (strcmp(row[0], "wsrep_local_state") == 0)
             {

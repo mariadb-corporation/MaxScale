@@ -46,7 +46,7 @@ GWBUF* Backend::create_ok_response()
         { 07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00 };
 
     GWBUF* pResponse = gwbuf_alloc_and_load(sizeof(ok), &ok);
-    ss_dassert(pResponse);
+    mxb_assert(pResponse);
 
     return pResponse;
 }
@@ -100,12 +100,12 @@ bool BufferBackend::discard_one_response(const RouterSession* pSession)
 
 void BufferBackend::discard_all_responses(const RouterSession* pSession)
 {
-    ss_dassert(!idle(pSession));
+    mxb_assert(!idle(pSession));
 
     if (!idle(pSession))
     {
         Responses& responses = m_session_responses[pSession];
-        ss_dassert(!responses.empty());
+        mxb_assert(!responses.empty());
 
         std::for_each(responses.begin(), responses.end(), gwbuf_free);
         responses.clear();
@@ -121,14 +121,14 @@ void BufferBackend::enqueue_response(const RouterSession* pSession, GWBUF* pResp
 
 GWBUF* BufferBackend::dequeue_response(const RouterSession* pSession, bool* pEmpty)
 {
-    ss_dassert(!idle(pSession));
+    mxb_assert(!idle(pSession));
     GWBUF* pResponse = NULL;
     *pEmpty = true;
 
     if (!idle(pSession))
     {
         Responses& responses = m_session_responses[pSession];
-        ss_dassert(!responses.empty());
+        mxb_assert(!responses.empty());
 
         if (!responses.empty())
         {
@@ -190,7 +190,7 @@ private:
     int32_t write(GWBUF* pBuffer)
     {
         pBuffer = gwbuf_make_contiguous(pBuffer);
-        ss_dassert(pBuffer);
+        mxb_assert(pBuffer);
 
         unsigned char* begin = GWBUF_DATA(pBuffer);
         unsigned char* end = begin + GWBUF_LENGTH(pBuffer);

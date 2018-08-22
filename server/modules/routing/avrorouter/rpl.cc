@@ -401,7 +401,7 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         dest[bytes] = '\0';
 
         make_valid_avro_identifier(dest);
-        ss_dassert(strlen(dest) > 0);
+        mxb_assert(strlen(dest) > 0);
     }
     else
     {
@@ -522,10 +522,10 @@ STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
     const char* statement_sql = get_table_definition(sql, len, &stmt_len);
-    ss_dassert(statement_sql);
+    mxb_assert(statement_sql);
 
     char* tbl_start = strchr(ident, '.');
-    ss_dassert(tbl_start);
+    mxb_assert(tbl_start);
     *tbl_start++ = '\0';
 
     char table[MYSQL_TABLE_MAXLEN + 1];
@@ -620,7 +620,7 @@ Rpl::Rpl(SERVICE* service, SRowEventHandler handler, gtid_pos_t gtid):
                                       0, &pcreerr, &erroff, NULL);
     m_alter_table_re = pcre2_compile((PCRE2_SPTR) alter_table_regex, PCRE2_ZERO_TERMINATED,
                                      0, &pcreerr, &erroff, NULL);
-    ss_info_dassert(m_create_table_re && m_alter_table_re,
+    mxb_assert_message(m_create_table_re && m_alter_table_re,
                     "CREATE TABLE and ALTER TABLE regex compilation should not fail");
 
 }
@@ -732,7 +732,7 @@ static void remove_extras(char* str)
     memmove(str, start, len);
     str[len] = '\0';
 
-    ss_dassert(strlen(str) == len);
+    mxb_assert(strlen(str) == len);
 }
 
 static void remove_backticks(char* src)
@@ -751,7 +751,7 @@ static void remove_backticks(char* src)
         src++;
     }
 
-    ss_dassert(dest == src || (*dest != '\0' && dest < src));
+    mxb_assert(dest == src || (*dest != '\0' && dest < src));
     *dest = '\0';
 }
 
@@ -950,7 +950,7 @@ static void rskip_token(const char* sql, const char** end)
 static bool get_placement_specifier(const char* sql, const char* end, const char** tgt, int* tgt_len)
 {
     bool rval = false;
-    ss_dassert(end > sql);
+    mxb_assert(end > sql);
     end--;
 
     *tgt = NULL;
@@ -971,7 +971,7 @@ static bool get_placement_specifier(const char* sql, const char* end, const char
         }
 
         const char* id_start = end + 1;
-        ss_dassert(*end == '`' && *id_end == '`');
+        mxb_assert(*end == '`' && *id_end == '`');
 
         end--;
 

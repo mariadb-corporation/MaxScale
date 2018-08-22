@@ -16,16 +16,16 @@
 
 size_t cache_key_hash(const CACHE_KEY* key)
 {
-    ss_dassert(key);
-    ss_dassert(sizeof(key->data) == sizeof(size_t));
+    mxb_assert(key);
+    mxb_assert(sizeof(key->data) == sizeof(size_t));
 
     return key->data;
 }
 
 bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
 {
-    ss_dassert(lhs);
-    ss_dassert(rhs);
+    mxb_assert(lhs);
+    mxb_assert(rhs);
 
     return lhs->data == rhs->data;
 }

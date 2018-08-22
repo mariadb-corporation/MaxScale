@@ -254,15 +254,15 @@ public:
 
         using std::shared_ptr;
         auto_ptr<MaskingRules> sRules = MaskingRules::parse(valid_users);
-        ss_dassert(sRules.get());
+        mxb_assert(sRules.get());
 
         const vector<shared_ptr<MaskingRules::Rule> >& rules = sRules->m_rules;
-        ss_dassert(rules.size() == 1);
+        mxb_assert(rules.size() == 1);
 
         shared_ptr<MaskingRules::Rule> sRule = rules[0];
 
         const vector<shared_ptr<MaskingRules::Rule::Account> >& accounts = sRule->applies_to();
-        ss_dassert(accounts.size() == nExpected_accounts);
+        mxb_assert(accounts.size() == nExpected_accounts);
 
         int j = 0;
         for (vector<shared_ptr<MaskingRules::Rule::Account> >::const_iterator i = accounts.begin();

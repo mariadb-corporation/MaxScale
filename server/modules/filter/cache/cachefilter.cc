@@ -93,11 +93,11 @@ void cache_config_reset(CACHE_CONFIG& config)
  */
 bool cache_command_show(const MODULECMD_ARG* pArgs, json_t** output)
 {
-    ss_dassert(pArgs->argc == 1);
-    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
-    ss_dassert(pFilterDef);
+    mxb_assert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
     MXS_EXCEPTION_GUARD(*output = pFilter->cache().show_json());
@@ -296,7 +296,7 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
                 break;
 
             default:
-                ss_dassert(!true);
+                mxb_assert(!true);
             }
         }
 
@@ -444,7 +444,7 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& c
         }
         else
         {
-            ss_dassert(config.max_resultset_size != 0);
+            mxb_assert(config.max_resultset_size != 0);
 
             if ((config.max_size != 0) && (config.max_resultset_size > config.max_size))
             {

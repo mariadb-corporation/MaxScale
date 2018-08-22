@@ -134,34 +134,34 @@ int test_checksums()
     sum1.update(d1);
     sum1.finalize();
     sum2.finalize(d1);
-    ss_dassert(sum1 == sum2);
+    mxb_assert(sum1 == sum2);
     sum1.reset();
     sum2.reset();
 
     // Check that the hex strings match
-    ss_dassert(sum1.hex() == sum2.hex());
+    mxb_assert(sum1.hex() == sum2.hex());
 
     std::string saved = sum1.hex();
 
     // The checksum must not be empty
-    ss_dassert(!saved.empty());
+    mxb_assert(!saved.empty());
 
     // Repeat the same test, should produce the same checksums
     sum1.update(d1);
     sum1.finalize();
     sum2.finalize(d1);
-    ss_dassert(sum1 == sum2);
-    ss_dassert(sum1.hex() == saved);
-    ss_dassert(sum2.hex() == saved);
+    mxb_assert(sum1 == sum2);
+    mxb_assert(sum1.hex() == saved);
+    mxb_assert(sum2.hex() == saved);
     sum1.reset();
     sum2.reset();
 
     // Check that different buffers but same content produce the same checksum
     sum1.finalize(d2);
     sum2.finalize(d1);
-    ss_dassert(sum1 == sum2);
-    ss_dassert(sum1.hex() == saved);
-    ss_dassert(sum2.hex() == saved);
+    mxb_assert(sum1 == sum2);
+    mxb_assert(sum1.hex() == saved);
+    mxb_assert(sum2.hex() == saved);
 
     gwbuf_free(d1);
     gwbuf_free(d2);

@@ -243,12 +243,12 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
 
     /** BIT type values use the extra bits in the row event header */
     int extra_bits = (((ncolumns + 7) / 8) * 8) - ncolumns;
-    ss_dassert(ptr < end);
+    mxb_assert(ptr < end);
 
     /** Store the null value bitmap */
     uint8_t *null_bitmap = ptr;
     ptr += (ncolumns + 7) / 8;
-    ss_dassert(ptr < end || (bit_is_set(null_bitmap, ncolumns, 0)));
+    mxb_assert(ptr < end || (bit_is_set(null_bitmap, ncolumns, 0)));
 
     char trace[ncolumns][768];
     memset(trace, 0, sizeof(trace));
@@ -405,7 +405,7 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
                 sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
                 check_overflow(ptr <= end);
             }
-            ss_dassert(metadata_offset <= map->column_metadata.size());
+            mxb_assert(metadata_offset <= map->column_metadata.size());
             metadata_offset += get_metadata_len(map->column_types[i]);
         }
         else
@@ -476,7 +476,7 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
 
     if (create != m_created_tables.end())
     {
-        ss_dassert(create->second->columns.size() > 0);
+        mxb_assert(create->second->columns.size() > 0);
         auto it = m_table_maps.find(table_ident);
         STableMapEvent map(table_map_alloc(ptr, ev_len, create->second.get()));
 
@@ -506,7 +506,7 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
 
             m_table_maps[table_ident] = map;
             m_active_maps[map->id] = map;
-            ss_dassert(m_active_maps[id] == map);
+            mxb_assert(m_active_maps[id] == map);
             MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
             rval = true;
         }
@@ -777,7 +777,7 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
     }
 
     m_created_tables[table_ident] = created;
-    ss_dassert(created->columns.size() > 0);
+    mxb_assert(created->columns.size() > 0);
     return m_handler->create_table(created);
 }
 

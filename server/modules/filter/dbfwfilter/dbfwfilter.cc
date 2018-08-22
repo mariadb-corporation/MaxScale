@@ -328,7 +328,7 @@ bool check_time(const char* str)
 
 
 #ifdef SS_DEBUG
-#define CHK_TIMES(t) ss_dassert(t->tm_sec > -1 && t->tm_sec < 62        \
+#define CHK_TIMES(t) mxb_assert(t->tm_sec > -1 && t->tm_sec < 62        \
                                 && t->tm_min > -1 && t->tm_min < 60     \
                                 && t->tm_hour > -1 && t->tm_hour < 24)
 #else
@@ -481,7 +481,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
 static int dbfw_thr_init()
 {
-    ss_dassert(this_thread == NULL);
+    mxb_assert(this_thread == NULL);
     int rval = 0;
 
     if ((this_thread = new (std::nothrow) DbfwThread) == NULL)
@@ -720,7 +720,7 @@ bool set_rule_name(void* scanner, char* name)
 {
     bool rval = true;
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
 
     if (find_rule_by_name(rstack->rule, name))
     {
@@ -756,14 +756,14 @@ static std::string strip_backticks(std::string str)
 void push_value(void* scanner, char* value)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->values.push_back(strip_backticks(value));
 }
 
 void push_auxiliary_value(void* scanner, char* value)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->auxiliary_values.push_back(strip_backticks(value));
 }
 
@@ -775,7 +775,7 @@ void push_auxiliary_value(void* scanner, char* value)
 void add_active_user(void* scanner, const char* name)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->user.push_back(name);
 }
 
@@ -787,7 +787,7 @@ void add_active_user(void* scanner, const char* name)
 void add_active_rule(void* scanner, const char* name)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->active_rules.push_back(name);
 }
 
@@ -799,10 +799,10 @@ void add_active_rule(void* scanner, const char* name)
 bool add_at_times_rule(void* scanner, const char* range)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
-    ss_dassert(!rstack->rule.empty());
+    mxb_assert(rstack);
+    mxb_assert(!rstack->rule.empty());
     TIMERANGE* timerange = parse_time(range);
-    ss_dassert(timerange);
+    mxb_assert(timerange);
 
     if (timerange)
     {
@@ -821,8 +821,8 @@ bool add_at_times_rule(void* scanner, const char* range)
 void add_on_queries_rule(void* scanner, const char* sql)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
-    ss_dassert(!rstack->rule.empty());
+    mxb_assert(rstack);
+    mxb_assert(!rstack->rule.empty());
     parse_querytypes(sql, rstack->rule.front());
 }
 
@@ -833,7 +833,7 @@ void add_on_queries_rule(void* scanner, const char* sql)
 bool create_user_templates(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
 
     for (ValueList::const_iterator it = rstack->user.begin(); it != rstack->user.end(); it++)
     {
@@ -850,7 +850,7 @@ bool create_user_templates(void* scanner)
 void set_matching_mode(void* scanner, enum match_type mode)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->active_mode = mode;
 }
 
@@ -862,7 +862,7 @@ void set_matching_mode(void* scanner, enum match_type mode)
 void define_basic_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new Rule(rstack->name));
 }
 
@@ -874,7 +874,7 @@ void define_basic_rule(void* scanner)
 void define_wildcard_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new WildCardRule(rstack->name));
 }
 
@@ -886,7 +886,7 @@ void define_wildcard_rule(void* scanner)
 void define_columns_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new ColumnsRule(rstack->name, rstack->values));
 }
 
@@ -898,7 +898,7 @@ void define_columns_rule(void* scanner)
 void define_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new FunctionRule(rstack->name, rstack->values, inverted));
 }
 
@@ -910,7 +910,7 @@ void define_function_rule(void* scanner, bool inverted)
 void define_function_usage_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new FunctionUsageRule(rstack->name, rstack->values));
 }
 
@@ -922,7 +922,7 @@ void define_function_usage_rule(void* scanner)
 void define_column_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values, inverted));
 }
 
@@ -934,7 +934,7 @@ void define_column_function_rule(void* scanner, bool inverted)
 void define_where_clause_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new NoWhereClauseRule(rstack->name));
 }
 
@@ -953,7 +953,7 @@ void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
                 "Please use the Throttle Filter instead");
 
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-    ss_dassert(rstack);
+    mxb_assert(rstack);
     rstack->add(new LimitQueriesRule(rstack->name, max, timeperiod, holdoff));
 }
 
@@ -969,7 +969,7 @@ bool define_regex_rule(void* scanner, char* pattern)
 {
     /** This should never fail as long as the rule syntax is correct */
     PCRE2_SPTR start = (PCRE2_SPTR) get_regex_string(&pattern);
-    ss_dassert(start);
+    mxb_assert(start);
     pcre2_code *re;
     int err;
     size_t offset;
@@ -977,7 +977,7 @@ bool define_regex_rule(void* scanner, char* pattern)
                             0, &err, &offset, NULL)))
     {
         struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
-        ss_dassert(rstack);
+        mxb_assert(rstack);
         rstack->add(new RegexRule(rstack->name, re));
     }
     else
@@ -1400,7 +1400,7 @@ fw_actions DbfwSession::get_action() const
 
 int DbfwSession::send_error()
 {
-    ss_dassert(m_session && m_session->client_dcb);
+    mxb_assert(m_session && m_session->client_dcb);
     const char* db = mxs_mysql_get_current_db(m_session);
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
@@ -1455,7 +1455,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
         {
             analyzed_queue = qc_get_preparable_stmt(buffer);
-            ss_dassert(analyzed_queue);
+            mxb_assert(analyzed_queue);
         }
 
         SUser suser = find_user_data(this_thread->users(m_instance), user(), remote());
@@ -1486,7 +1486,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
 
             default:
                 MXS_ERROR("Unknown dbfwfilter action: %d", m_instance->get_action());
-                ss_dassert(false);
+                mxb_assert(false);
                 break;
             }
 
@@ -1674,7 +1674,7 @@ bool rule_matches(Dbfw* my_instance,
                   SRule rule,
                   char* query)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(queue));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
     char *msg = NULL;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);

@@ -235,7 +235,7 @@ bool ensure_query_is_parsed(GWBUF* query)
         MXB_AT_DEBUG(int rv);
 
         MXB_AT_DEBUG(rv = )pthread_mutex_lock(&this_unit.sql_mode_mutex);
-        ss_dassert(rv == 0);
+        mxb_assert(rv == 0);
 
         if (this_thread.sql_mode == QC_SQL_MODE_ORACLE)
         {
@@ -249,7 +249,7 @@ bool ensure_query_is_parsed(GWBUF* query)
         parsed = parse_query(query);
 
         MXB_AT_DEBUG(rv = )pthread_mutex_unlock(&this_unit.sql_mode_mutex);
-        ss_dassert(rv == 0);
+        mxb_assert(rv == 0);
 
         if (!parsed)
         {
@@ -274,7 +274,7 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
     {
         parsing_info_t* pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf,
                                                                             GWBUF_PARSING_INFO);
-        ss_dassert(pi);
+        mxb_assert(pi);
 
         *result = pi->result;
     }
@@ -294,7 +294,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
     MYSQL* mysql;
     bool succp;
 
-    ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
+    mxb_assert_message(querybuf != NULL, ("querybuf is NULL"));
 
     if (querybuf == NULL)
     {
@@ -359,7 +359,7 @@ static bool parse_query(GWBUF* querybuf)
     parsing_info_t* pi;
 
     /** Do not parse without releasing previous parse info first */
-    ss_dassert(!query_is_parsed(querybuf));
+    mxb_assert(!query_is_parsed(querybuf));
 
     if (querybuf == NULL || query_is_parsed(querybuf))
     {
@@ -461,8 +461,8 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
     bool failp = FALSE;
     size_t query_len;
 
-    ss_info_dassert(mysql != NULL, ("mysql is NULL"));
-    ss_info_dassert(query_str != NULL, ("query_str is NULL"));
+    mxb_assert_message(mysql != NULL, ("mysql is NULL"));
+    mxb_assert_message(query_str != NULL, ("query_str is NULL"));
 
     query_len = strlen(query_str);
     client_flags = set_client_flags(mysql);
@@ -727,7 +727,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
     bool force_data_modify_op_replication;
     force_data_modify_op_replication = FALSE;
 #endif /* NOT_IN_USE */
-    ss_info_dassert(thd != NULL, ("thd is NULL\n"));
+    mxb_assert_message(thd != NULL, ("thd is NULL\n"));
 
     lex = thd->lex;
 
@@ -1317,7 +1317,7 @@ static int is_autocommit_stmt(LEX* lex)
 
             if ((rc = find_type(&bool_typelib, res->ptr(), res->length(), false)))
             {
-                ss_dassert(rc >= 0 && rc <= 2);
+                mxb_assert(rc >= 0 && rc <= 2);
                 /**
                  * rc is the position of matchin string in
                  * typelib's value array.
@@ -1375,9 +1375,9 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 LEX* get_lex(parsing_info_t* pi)
 {
     MYSQL* mysql = (MYSQL *) pi->pi_handle;
-    ss_dassert(mysql);
+    mxb_assert(mysql);
     THD* thd = (THD *) mysql->thd;
-    ss_dassert(thd);
+    mxb_assert(thd);
 
     return thd->lex;
 }
@@ -1397,9 +1397,9 @@ LEX* get_lex(GWBUF* querybuf)
     if (pi)
     {
         MYSQL* mysql = (MYSQL *) pi->pi_handle;
-        ss_dassert(mysql);
+        mxb_assert(mysql);
         THD* thd = (THD *) mysql->thd;
-        ss_dassert(thd);
+        mxb_assert(thd);
         lex = thd->lex;
     }
 
@@ -1417,7 +1417,7 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr)
 
     if (lex == NULL || lex->current_select == NULL)
     {
-        ss_dassert(lex != NULL && lex->current_select != NULL);
+        mxb_assert(lex != NULL && lex->current_select != NULL);
         return NULL;
     }
 
@@ -1678,7 +1678,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
     const char* user = "skygw";
     const char* db = "skygw";
 
-    ss_dassert(donefun != NULL);
+    mxb_assert(donefun != NULL);
 
     /** Get server handle */
     mysql = mysql_init(NULL);
@@ -1688,7 +1688,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
         MXS_ERROR("Call to mysql_real_connect failed due %d, %s.",
                   mysql_errno(mysql),
                   mysql_error(mysql));
-        ss_dassert(mysql != NULL);
+        mxb_assert(mysql != NULL);
         goto retblock;
     }
 
@@ -1712,7 +1712,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
     pi->pi_handle = mysql;
     pi->pi_done_fp = donefun;
     pi->result = QC_QUERY_INVALID;
-    ss_dassert(this_thread.function_name_mappings);
+    mxb_assert(this_thread.function_name_mappings);
     pi->function_name_mappings = this_thread.function_name_mappings;
 
 retblock:
@@ -2227,7 +2227,7 @@ static void add_field_info(parsing_info_t* info,
                            const char* column,
                            List<Item>* excludep)
 {
-    ss_dassert(column);
+    mxb_assert(column);
 
     unalias_names(select, database, table, &database, &table);
 
@@ -2242,7 +2242,7 @@ static void add_field_info(parsing_info_t* info,
         {
             if (!item.table && !field_info->table)
             {
-                ss_dassert(!item.database && !field_info->database);
+                mxb_assert(!item.database && !field_info->database);
                 break;
             }
             else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
@@ -2294,7 +2294,7 @@ static void add_field_info(parsing_info_t* info,
     {
         item.database = item.database ? strdup(item.database) : NULL;
         item.table = item.table ? strdup(item.table) : NULL;
-        ss_dassert(item.column);
+        mxb_assert(item.column);
         item.column = strdup(item.column);
 
         // We are happy if we at least could dup the column.
@@ -2344,7 +2344,7 @@ static void add_function_field_usage(const char* database,
     {
         QC_FIELD_INFO* fields = (QC_FIELD_INFO*)realloc(fi->fields,
                                                         (fi->n_fields + 1) * sizeof(QC_FIELD_INFO));
-        ss_dassert(fields);
+        mxb_assert(fields);
 
         if (fields)
         {
@@ -2431,7 +2431,7 @@ static void add_function_field_usage(st_select_lex* select,
             break;
 
         default:
-            //ss_dassert(!true);
+            //mxb_assert(!true);
             ;
         }
     }
@@ -2499,7 +2499,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
                                            Item** items,
                                            int n_items)
 {
-    ss_dassert(name);
+    mxb_assert(name);
 
     QC_FUNCTION_INFO* function_info = NULL;
 
@@ -3093,12 +3093,12 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
     }
 
     parsing_info_t* pi = get_pinfo(buf);
-    ss_dassert(pi);
+    mxb_assert(pi);
 
     if (!pi->field_infos)
     {
         LEX* lex = get_lex(buf);
-        ss_dassert(lex);
+        mxb_assert(lex);
 
         if (!lex)
         {
@@ -3283,7 +3283,7 @@ int32_t qc_mysql_get_function_info(GWBUF* buf,
         if (rv == QC_RESULT_OK)
         {
             parsing_info_t* pi = get_pinfo(buf);
-            ss_dassert(pi);
+            mxb_assert(pi);
 
             *function_infos = pi->function_infos;
             *n_function_infos = pi->function_infos_len;
@@ -3348,15 +3348,15 @@ void configure_options(const char* datadir, const char* langdir)
     int rv;
 
     rv = snprintf(datadir_arg, OPTIONS_DATADIR_SIZE, "--datadir=%s", datadir);
-    ss_dassert(rv < OPTIONS_DATADIR_SIZE); // Ensured by create_datadir().
+    mxb_assert(rv < OPTIONS_DATADIR_SIZE); // Ensured by create_datadir().
     server_options[IDX_DATADIR] = datadir_arg;
 
     rv = sprintf(language_arg, "--language=%s", langdir);
-    ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_process_init().
+    mxb_assert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_process_init().
     server_options[IDX_LANGUAGE] = language_arg;
 
     // To prevent warning of unused variable when built in release mode,
-    // when ss_dassert() turns into empty statement.
+    // when mxb_assert() turns into empty statement.
     (void)rv;
 }
 
@@ -3401,7 +3401,7 @@ int32_t qc_mysql_process_init(void)
         if (rc != 0)
         {
             this_thread.sql_mode = this_unit.sql_mode;
-            ss_dassert(this_unit.function_name_mappings);
+            mxb_assert(this_unit.function_name_mappings);
             this_thread.function_name_mappings = this_unit.function_name_mappings;
 
             MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
@@ -3427,7 +3427,7 @@ void qc_mysql_process_end(void)
 int32_t qc_mysql_thread_init(void)
 {
     this_thread.sql_mode = this_unit.sql_mode;
-    ss_dassert(this_unit.function_name_mappings);
+    mxb_assert(this_unit.function_name_mappings);
     this_thread.function_name_mappings = this_unit.function_name_mappings;
 
     bool inited = (mysql_thread_init() == 0);

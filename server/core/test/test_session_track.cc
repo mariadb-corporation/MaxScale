@@ -174,44 +174,44 @@ void test1()
     //BEGIN
     buffer = gwbuf_alloc_and_load(PACKET_1_LEN, resultset1 + PACKET_1_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "T_______", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "T_______", 8) == 0);
     gwbuf_free(buffer);
     //COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_2_LEN, resultset1 + PACKET_2_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "________", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "________", 8) == 0);
     gwbuf_free(buffer);
     //START TRANSACTION
     buffer = gwbuf_alloc_and_load(PACKET_3_LEN, resultset1 + PACKET_3_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "T_______", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "T_______", 8) == 0);
     gwbuf_free(buffer);
     //START TRANSACTION READ ONLY
     buffer = gwbuf_alloc_and_load(PACKET_4_LEN, resultset1 + PACKET_4_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_characteristics"),
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_characteristics"),
                        "START TRANSACTION READ ONLY;", 28) == 0);
     gwbuf_free(buffer);
     //COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_5_LEN, resultset1 + PACKET_5_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(gwbuf_get_property(buffer, (char *)"trx_characteristics") == NULL);
-    ss_dassert(gwbuf_get_property(buffer, (char *)"trx_state") == NULL);
+    mxb_assert(gwbuf_get_property(buffer, (char *)"trx_characteristics") == NULL);
+    mxb_assert(gwbuf_get_property(buffer, (char *)"trx_state") == NULL);
     gwbuf_free(buffer);
     //SET AUTOCOMMIT=0;
     buffer = gwbuf_alloc_and_load(PACKET_6_LEN, resultset1 + PACKET_6_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"autocommit"), "OFF", 3) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"autocommit"), "OFF", 3) == 0);
     gwbuf_free(buffer);
     //INSERT INTO t1 VALUES(1);
     buffer = gwbuf_alloc_and_load(PACKET_7_LEN, resultset1 + PACKET_7_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I___W___", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I___W___", 8) == 0);
     gwbuf_free(buffer);
     //COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_8_LEN, resultset1 + PACKET_8_IDX);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "________", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "________", 8) == 0);
     gwbuf_free(buffer);
 }
 
@@ -224,7 +224,7 @@ void test2()
     proto.num_eof_packets = 0;
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I_R_W___", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I_R_W___", 8) == 0);
     gwbuf_free(buffer);
 }
 
@@ -236,7 +236,7 @@ void test3()
     fprintf(stderr, "test_session_track: protocol state test\n");
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
     mxs_mysql_get_session_track_info(buffer, &proto);
-    ss_dassert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I_R_W___", 8) == 0);
+    mxb_assert(strncmp(gwbuf_get_property(buffer, (char *)"trx_state"), "I_R_W___", 8) == 0);
     gwbuf_free(buffer);
 }
 

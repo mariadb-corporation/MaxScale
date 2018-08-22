@@ -216,7 +216,7 @@ static void
 clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     /** We should never end up here */
-    ss_dassert(false);
+    mxb_assert(false);
 }
 
 /**
@@ -239,7 +239,7 @@ errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *mess
            bool *succp)
 {
     /** We should never end up here */
-    ss_dassert(false);
+    mxb_assert(false);
 }
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)

@@ -143,8 +143,8 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
                                  int argc, modulecmd_arg_type_t* argv,
                                  const char *description)
 {
-    ss_dassert((argc && argv) || (argc == 0 && argv == NULL));
-    ss_dassert(description);
+    mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
+    mxb_assert(description);
     MODULECMD *rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
     char *id = MXS_STRDUP(identifier);
     char *dm = MXS_STRDUP(domain);
@@ -361,7 +361,7 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
             break;
 
         default:
-            ss_dassert(false);
+            mxb_assert(false);
             MXS_ERROR("Undefined argument type: %0lx", type->type);
             *err = "internal error";
             break;
@@ -715,7 +715,7 @@ const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
         break;
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         MXS_ERROR("Unknown type");
         break;
     }

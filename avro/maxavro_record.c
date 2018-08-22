@@ -62,13 +62,13 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
             maxavro_read_integer(file, &val);
 
             json_t *arr = field->extra;
-            ss_dassert(arr);
-            ss_dassert(json_is_array(arr));
+            mxb_assert(arr);
+            mxb_assert(json_is_array(arr));
 
             if (json_array_size(arr) >= val)
             {
                 json_t * symbol = json_array_get(arr, val);
-                ss_dassert(json_is_string(symbol));
+                mxb_assert(json_is_string(symbol));
                 value = json_pack("s", json_string_value(symbol));
             }
         }
@@ -260,7 +260,7 @@ bool maxavro_record_seek(MAXAVRO_FILE *file, uint64_t offset)
             maxavro_next_block(file);
         }
 
-        ss_dassert(offset <= file->records_in_block);
+        mxb_assert(offset <= file->records_in_block);
 
         while (offset-- > 0)
         {
@@ -310,7 +310,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE *file)
         }
 
         long data_size = (file->data_start_pos - file->block_start_pos) + file->buffer_size;
-        ss_dassert(data_size > 0);
+        mxb_assert(data_size > 0);
         rval = gwbuf_alloc(data_size + SYNC_MARKER_SIZE);
 
         if (rval)

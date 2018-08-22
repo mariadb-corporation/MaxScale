@@ -81,7 +81,7 @@ public:
             return "SOMETHING";
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             return "UNKNOWN";
         }
     }

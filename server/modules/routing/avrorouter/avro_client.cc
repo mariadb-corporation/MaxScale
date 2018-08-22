@@ -385,15 +385,15 @@ static int send_row(DCB *dcb, json_t* row)
 void AvroSession::set_current_gtid(json_t *row)
 {
     json_t *obj = json_object_get(row, avro_sequence);
-    ss_dassert(json_is_integer(obj));
+    mxb_assert(json_is_integer(obj));
     gtid.seq = json_integer_value(obj);
 
     obj = json_object_get(row, avro_server_id);
-    ss_dassert(json_is_integer(obj));
+    mxb_assert(json_is_integer(obj));
     gtid.server_id = json_integer_value(obj);
 
     obj = json_object_get(row, avro_domain);
-    ss_dassert(json_is_integer(obj));
+    mxb_assert(json_is_integer(obj));
     gtid.domain = json_integer_value(obj);
 }
 
@@ -477,20 +477,20 @@ bool AvroSession::seek_to_gtid()
         while ((row = maxavro_record_read_json(file_handle)))
         {
             json_t *obj = json_object_get(row, avro_sequence);
-            ss_dassert(json_is_integer(obj));
+            mxb_assert(json_is_integer(obj));
             uint64_t value = json_integer_value(obj);
 
             /** If a larger GTID is found, use that */
             if (value >= gtid.seq)
             {
                 obj = json_object_get(row, avro_server_id);
-                ss_dassert(json_is_integer(obj));
+                mxb_assert(json_is_integer(obj));
                 value = json_integer_value(obj);
 
                 if (value == gtid.server_id)
                 {
                     obj = json_object_get(row, avro_domain);
-                    ss_dassert(json_is_integer(obj));
+                    mxb_assert(json_is_integer(obj));
                     value = json_integer_value(obj);
 
                     if (value == gtid.domain)
@@ -630,7 +630,7 @@ GWBUF* read_avro_binary_schema(std::string avrofile, std::string dir)
 void AvroSession::rotate_avro_file(std::string fullname)
 {
     auto pos = fullname.find_last_of('/');
-    ss_dassert(pos != std::string::npos);
+    mxb_assert(pos != std::string::npos);
     avro_binfile = fullname.substr(pos + 1);
     last_sent_pos = 0;
 
@@ -659,7 +659,7 @@ static std::string get_next_filename(std::string file, std::string dir)
     // Find the last and second to last dot
     auto last = file.find_last_of('.');
     auto almost_last = file.find_last_of('.', last);
-    ss_dassert(last != std::string::npos && almost_last != std::string::npos);
+    mxb_assert(last != std::string::npos && almost_last != std::string::npos);
 
     // Extract the number between the dots
     std::string number_part = file.substr(almost_last + 1, last);

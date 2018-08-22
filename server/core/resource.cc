@@ -290,7 +290,7 @@ HttpResponse cb_start_service(const HttpRequest& request)
 
 HttpResponse cb_create_server(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_create_server_from_json(request.get_json()))
     {
@@ -303,7 +303,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
 HttpResponse cb_alter_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    ss_dassert(server && request.get_json());
+    mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_from_json(server, request.get_json()))
     {
@@ -316,7 +316,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 HttpResponse do_alter_server_relationship(const HttpRequest& request, const char* type)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    ss_dassert(server && request.get_json());
+    mxb_assert(server && request.get_json());
 
     if (runtime_alter_server_relationships_from_json(server, type, request.get_json()))
     {
@@ -338,7 +338,7 @@ HttpResponse cb_alter_server_monitor_relationship(const HttpRequest& request)
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_create_monitor_from_json(request.get_json()))
     {
@@ -350,7 +350,7 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
 
 HttpResponse cb_create_filter(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_create_filter_from_json(request.get_json()))
     {
@@ -362,7 +362,7 @@ HttpResponse cb_create_filter(const HttpRequest& request)
 
 HttpResponse cb_create_service(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_create_service_from_json(request.get_json()))
     {
@@ -375,7 +375,7 @@ HttpResponse cb_create_service(const HttpRequest& request)
 HttpResponse cb_create_service_listener(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service && request.get_json());
+    mxb_assert(service && request.get_json());
 
     if (runtime_create_listener_from_json(service, request.get_json()))
     {
@@ -388,7 +388,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
 HttpResponse cb_alter_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-    ss_dassert(monitor && request.get_json());
+    mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_from_json(monitor, request.get_json()))
     {
@@ -401,7 +401,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-    ss_dassert(monitor && request.get_json());
+    mxb_assert(monitor && request.get_json());
 
     if (runtime_alter_monitor_relationships_from_json(monitor, request.get_json()))
     {
@@ -414,7 +414,7 @@ HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
 HttpResponse cb_alter_service(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service && request.get_json());
+    mxb_assert(service && request.get_json());
 
     if (runtime_alter_service_from_json(service, request.get_json()))
     {
@@ -427,7 +427,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
 HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service && request.get_json());
+    mxb_assert(service && request.get_json());
 
     if (runtime_alter_service_relationships_from_json(service, CN_SERVERS, request.get_json()))
     {
@@ -440,7 +440,7 @@ HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
 HttpResponse cb_alter_service_filter_relationship(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service && request.get_json());
+    mxb_assert(service && request.get_json());
 
     if (runtime_alter_service_relationships_from_json(service, CN_FILTERS, request.get_json()))
     {
@@ -452,7 +452,7 @@ HttpResponse cb_alter_service_filter_relationship(const HttpRequest& request)
 
 HttpResponse cb_alter_logs(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_alter_logs_from_json(request.get_json()))
     {
@@ -464,7 +464,7 @@ HttpResponse cb_alter_logs(const HttpRequest& request)
 
 HttpResponse cb_alter_qc(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_alter_qc_from_json(request.get_json()))
     {
@@ -477,7 +477,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    ss_dassert(server);
+    mxb_assert(server);
 
     if (runtime_destroy_server(server))
     {
@@ -490,7 +490,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
 HttpResponse cb_delete_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-    ss_dassert(monitor);
+    mxb_assert(monitor);
 
     if (runtime_destroy_monitor(monitor))
     {
@@ -504,7 +504,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
 {
 
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service);
+    mxb_assert(service);
     std::string listener = request.uri_part(3);
 
     if (!service_has_named_listener(service, listener.c_str()))
@@ -522,7 +522,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
 HttpResponse cb_delete_service(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service);
+    mxb_assert(service);
 
     if (runtime_destroy_service(service))
     {
@@ -535,7 +535,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
 HttpResponse cb_delete_filter(const HttpRequest& request)
 {
     auto filter = filter_find(request.uri_part(1).c_str());
-    ss_dassert(filter);
+    mxb_assert(filter);
 
     if (runtime_destroy_filter(filter))
     {
@@ -552,7 +552,7 @@ HttpResponse cb_all_servers(const HttpRequest& request)
 HttpResponse cb_get_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    ss_dassert(server);
+    mxb_assert(server);
     return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
 }
 
@@ -564,7 +564,7 @@ HttpResponse cb_all_services(const HttpRequest& request)
 HttpResponse cb_get_service(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
-    ss_dassert(service);
+    mxb_assert(service);
     return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
 }
 
@@ -578,7 +578,7 @@ HttpResponse cb_get_service_listener(const HttpRequest& request)
 {
     Service* service = service_internal_find(request.uri_part(1).c_str());
     std::string listener = request.uri_part(3);
-    ss_dassert(service);
+    mxb_assert(service);
 
     if (!service_has_named_listener(service, listener.c_str()))
     {
@@ -598,7 +598,7 @@ HttpResponse cb_all_filters(const HttpRequest& request)
 HttpResponse cb_get_filter(const HttpRequest& request)
 {
     auto filter = filter_find(request.uri_part(1).c_str());
-    ss_dassert(filter);
+    mxb_assert(filter);
     return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
 }
 
@@ -610,7 +610,7 @@ HttpResponse cb_all_monitors(const HttpRequest& request)
 HttpResponse cb_get_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-    ss_dassert(monitor);
+    mxb_assert(monitor);
     return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
 }
 
@@ -641,7 +641,7 @@ HttpResponse cb_maxscale(const HttpRequest& request)
 
 HttpResponse cb_alter_maxscale(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_alter_maxscale_from_json(request.get_json()))
     {
@@ -730,7 +730,7 @@ HttpResponse cb_unix_user(const HttpRequest& request)
 
 HttpResponse cb_create_user(const HttpRequest& request)
 {
-    ss_dassert(request.get_json());
+    mxb_assert(request.get_json());
 
     if (runtime_create_user_from_json(request.get_json()))
     {

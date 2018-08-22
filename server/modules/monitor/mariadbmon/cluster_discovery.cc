@@ -119,7 +119,7 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer *node, ServerArray* sta
             auto cycle_ind = *next_cycle;
             while (true)
             {
-                ss_dassert(!stack->empty());
+                mxb_assert(!stack->empty());
                 MariaDBServer* cycle_server = stack->back();
                 NodeData& cycle_node = cycle_server->m_node;
                 stack->pop_back();
@@ -246,7 +246,7 @@ void MariaDBMonitor::find_graph_cycles()
  */
 MariaDBServer* MariaDBMonitor::find_best_reach_server(const ServerArray& candidates)
 {
-    ss_dassert(!candidates.empty());
+    mxb_assert(!candidates.empty());
     MariaDBServer* best_reach = NULL;
     /* Search for the server with the best reach. */
     for (auto iter = candidates.begin(); iter != candidates.end(); iter++)
@@ -373,7 +373,7 @@ static void node_reach_visit(MariaDBServer* node, int* reach)
  */
 void MariaDBMonitor::calculate_node_reach(MariaDBServer* node)
 {
-    ss_dassert(node && node->m_node.reach == NodeData::REACH_UNKNOWN);
+    mxb_assert(node && node->m_node.reach == NodeData::REACH_UNKNOWN);
     // Reset indexes since they will be reused.
     reset_node_index_info();
 
@@ -395,7 +395,7 @@ MariaDBServer* MariaDBMonitor::find_master_inside_cycle(ServerArray& cycle_membe
     for (auto iter = cycle_members.begin(); iter != cycle_members.end(); iter++)
     {
         MariaDBServer* server = *iter;
-        ss_dassert(server->m_node.cycle != NodeData::CYCLE_NONE);
+        mxb_assert(server->m_node.cycle != NodeData::CYCLE_NONE);
         if (server->is_usable() && !server->is_read_only())
         {
             return server;
@@ -474,7 +474,7 @@ void MariaDBMonitor::assign_server_roles()
  */
 void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
 {
-    ss_dassert(start_node->m_node.index == NodeData::INDEX_NOT_VISITED);
+    mxb_assert(start_node->m_node.index == NodeData::INDEX_NOT_VISITED);
     // Combines a node with its connection state. The state tracks whether there is a series of
     // running slave connections all the way to the master server. If even one server is down or
     // a connection is broken in the series, the link is considered stale.
@@ -754,7 +754,7 @@ void MariaDBMonitor::update_topology()
             const char sel_new_master[] = "Selecting new master server.";
             if (m_master)
             {
-                ss_dassert(!reason_not_valid.empty());
+                mxb_assert(!reason_not_valid.empty());
                 MXS_WARNING("The current master server '%s' is no longer valid because %s. %s",
                             m_master->name(), reason_not_valid.c_str(), sel_new_master);
             }
@@ -796,7 +796,7 @@ void MariaDBMonitor::update_topology()
             {
                 if (m_master)
                 {
-                    ss_dassert(!reason_not_valid.empty());
+                    mxb_assert(!reason_not_valid.empty());
                     MXS_WARNING("The current master server '%s' is no longer valid because %s, "
                                 "but there is no valid alternative to swap to.",
                                 m_master->name(), reason_not_valid.c_str());

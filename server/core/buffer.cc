@@ -375,7 +375,7 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
 {
     GWBUF* clonebuf;
 
-    ss_dassert(start_offset + length <= GWBUF_LENGTH(buf));
+    mxb_assert(start_offset + length <= GWBUF_LENGTH(buf));
 
     if ((clonebuf = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
@@ -431,7 +431,7 @@ GWBUF* gwbuf_split(GWBUF **buf, size_t length)
 
             if (length > 0)
             {
-                ss_dassert(GWBUF_LENGTH(buffer) > length);
+                mxb_assert(GWBUF_LENGTH(buffer) > length);
                 GWBUF* partial = gwbuf_clone_portion(buffer, 0, length);
 
                 /** If the head points to the original head of the buffer chain
@@ -482,7 +482,7 @@ static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
         *buf = (*buf)->next;
     }
 
-    ss_dassert(!*buf || (GWBUF_LENGTH(*buf) > *offset));
+    mxb_assert(!*buf || (GWBUF_LENGTH(*buf) > *offset));
 
     if (*buf)
     {
@@ -505,17 +505,17 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
     }
     else if (lhs == NULL)
     {
-        ss_dassert(rhs);
+        mxb_assert(rhs);
         rv = -1;
     }
     else if (rhs == NULL)
     {
-        ss_dassert(lhs);
+        mxb_assert(lhs);
         rv = 1;
     }
     else
     {
-        ss_dassert(lhs && rhs);
+        mxb_assert(lhs && rhs);
 
         size_t llen = gwbuf_length(lhs);
         size_t rlen = gwbuf_length(rhs);
@@ -530,7 +530,7 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
         }
         else
         {
-            ss_dassert(llen == rlen);
+            mxb_assert(llen == rlen);
 
             rv = 0;
             size_t i = 0;
@@ -545,7 +545,7 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
                 MXB_AT_DEBUG(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
                 MXB_AT_DEBUG(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);
 
-                ss_dassert(rv1 && rv2);
+                mxb_assert(rv1 && rv2);
 
                 rv = (int)lc - (int)rc;
 
@@ -605,7 +605,7 @@ gwbuf_consume(GWBUF *head, unsigned int length)
         }
     }
 
-    ss_dassert(head == NULL || (head->end >= head->start));
+    mxb_assert(head == NULL || (head->end >= head->start));
     return head;
 }
 
@@ -751,7 +751,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF *orig)
 {
     if (orig == NULL)
     {
-        ss_info_dassert(!true, "gwbuf_make_contiguous: NULL buffer");
+        mxb_assert_message(!true, "gwbuf_make_contiguous: NULL buffer");
         return NULL;
     }
     if (orig->next == NULL)

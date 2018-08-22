@@ -267,7 +267,7 @@ static const char* get_ssl_errors()
 
 bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 {
-    ss_dassert(!ssl->ssl_init_done);
+    mxb_assert(!ssl->ssl_init_done);
     bool rval = true;
 
     switch (ssl->ssl_method_type)
@@ -335,11 +335,11 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     }
     else
     {
-        ss_dassert(rsa_512 && rsa_1024);
+        mxb_assert(rsa_512 && rsa_1024);
         SSL_CTX_set_tmp_rsa_callback(ctx, tmp_rsa_callback);
     }
 
-    ss_dassert(ssl->ssl_ca_cert);
+    mxb_assert(ssl->ssl_ca_cert);
 
     /* Load the CA certificate into the SSL_CTX structure */
     if (!SSL_CTX_load_verify_locations(ctx, ssl->ssl_ca_cert, NULL))
@@ -512,7 +512,7 @@ bool listener_serialize(const SERV_LISTENER *listener)
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)
@@ -590,14 +590,14 @@ static inline SERV_LISTENER* load_port(SERV_LISTENER const *const *const port)
 
 SERV_LISTENER* listener_iterator_init(const SERVICE* service, LISTENER_ITERATOR* iter)
 {
-    ss_dassert(iter);
+    mxb_assert(iter);
     iter->current = load_port(&service->ports);
     return iter->current;
 }
 
 SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter)
 {
-    ss_dassert(iter);
+    mxb_assert(iter);
 
     if (iter->current)
     {
@@ -609,7 +609,7 @@ SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter)
 
 const char* listener_state_to_string(const SERV_LISTENER* listener)
 {
-    ss_dassert(listener);
+    mxb_assert(listener);
 
     if (listener->listener && listener->listener->session)
     {
@@ -622,7 +622,7 @@ const char* listener_state_to_string(const SERV_LISTENER* listener)
                 return "Running";
 
             default:
-                ss_dassert(!true);
+                mxb_assert(!true);
                 return "Unknown";
         }
     }

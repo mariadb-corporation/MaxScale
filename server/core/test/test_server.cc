@@ -66,32 +66,32 @@ test1()
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
     server = server_alloc("uniquename", params.params());
-    ss_info_dassert(server, "Allocating the server should not fail");
+    mxb_assert_message(server, "Allocating the server should not fail");
 
     char buf[120];
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
-    ss_info_dassert(!server_get_parameter(server, "name", buf, sizeof(buf)), "Parameter should be null when not set");
+    mxb_assert_message(!server_get_parameter(server, "name", buf, sizeof(buf)), "Parameter should be null when not set");
     server_add_parameter(server, "name", "value");
-    ss_dassert(server_get_parameter(server, "name", buf, sizeof(buf)));
-    ss_info_dassert(strcmp("value", buf) == 0, "Parameter should be returned correctly");
+    mxb_assert(server_get_parameter(server, "name", buf, sizeof(buf)));
+    mxb_assert_message(strcmp("value", buf) == 0, "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
-    ss_info_dassert(NULL == server_find_by_unique_name("non-existent"),
+    mxb_assert_message(NULL == server_find_by_unique_name("non-existent"),
                     "Should not find non-existent unique name.");
-    ss_info_dassert(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
+    mxb_assert_message(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server_status(server);
-    ss_info_dassert(0 == strcmp("Running", status), "Status of Server should be Running by default.");
+    mxb_assert_message(0 == strcmp("Running", status), "Status of Server should be Running by default.");
     if (NULL != status)
     {
         MXS_FREE(status);
     }
     server_set_status_nolock(server, SERVER_MASTER);
     status = server_status(server);
-    ss_info_dassert(0 == strcmp("Master, Running", status), "Should find correct status.");
+    mxb_assert_message(0 == strcmp("Master, Running", status), "Should find correct status.");
     server_clear_status_nolock(server, SERVER_MASTER);
     MXS_FREE(status);
     status = server_status(server);
-    ss_info_dassert(0 == strcmp("Running", status),
+    mxb_assert_message(0 == strcmp("Running", status),
                     "Status of Server should be Running after master status cleared.");
     if (NULL != status)
     {

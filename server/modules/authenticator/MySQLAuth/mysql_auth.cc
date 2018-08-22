@@ -144,12 +144,12 @@ static bool open_instance_database(const char *path, sqlite3 **handle)
 sqlite3* get_handle(MYSQL_AUTH* instance)
 {
     int i = mxs_rworker_get_current_id();
-    ss_dassert(i >= 0);
+    mxb_assert(i >= 0);
 
     if (instance->handles[i] == NULL)
     {
         MXB_AT_DEBUG(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
-        ss_dassert(rval);
+        mxb_assert(rval);
     }
 
     return instance->handles[i];

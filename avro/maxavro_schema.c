@@ -100,7 +100,7 @@ static enum maxavro_value_type unpack_to_type(json_t *object,
         {
             json_t *tmp = NULL;
             json_unpack(object, "{s:o}", "symbols", &tmp);
-            ss_dassert(json_is_array(tmp));
+            mxb_assert(json_is_array(tmp));
             json_incref(tmp);
             field->extra = tmp;
         }

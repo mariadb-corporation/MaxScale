@@ -93,7 +93,7 @@ static const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     }
 
     MXS_NOTICE("Module type with no default parameters used: %s", type);
-    ss_info_dassert(!true, "Module type with no default parameters used");
+    mxb_assert_message(!true, "Module type with no default parameters used");
     return NULL;
 }
 
@@ -591,7 +591,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     else
     {
         // This should be a module specific parameter
-        ss_dassert(config_param_is_valid(mod->parameters, key, value, NULL));
+        mxb_assert(config_param_is_valid(mod->parameters, key, value, NULL));
     }
 
     monitor_serialize(monitor);
@@ -1039,7 +1039,7 @@ bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARA
 
 bool runtime_destroy_filter(const SFilterDef& filter)
 {
-    ss_dassert(filter);
+    mxb_assert(filter);
     bool rval = false;
     mxs::SpinLockGuard guard(crt_lock);
 
@@ -1109,7 +1109,7 @@ bool runtime_destroy_service(Service* service)
 {
     bool rval = false;
     mxs::SpinLockGuard guard(crt_lock);
-    ss_dassert(service && service->active);
+    mxb_assert(service && service->active);
 
     if (service_can_be_destroyed(service))
     {
@@ -1233,7 +1233,7 @@ static inline bool is_null_relation(json_t* json, const char* relation)
     std::string str(relation);
     size_t pos = str.rfind("/data");
 
-    ss_dassert(pos != std::string::npos);
+    mxb_assert(pos != std::string::npos);
     str = str.substr(0, pos);
 
     json_t* data = mxs_json_pointer(json, relation);
@@ -1244,7 +1244,7 @@ static inline bool is_null_relation(json_t* json, const char* relation)
 
 static const char* json_type_to_string(const json_t* json)
 {
-    ss_dassert(json);
+    mxb_assert(json);
 
     if (json_is_object(json))
     {
@@ -1276,7 +1276,7 @@ static const char* json_type_to_string(const json_t* json)
     }
     else
     {
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "an unknown type";
     }
 }
@@ -1568,7 +1568,7 @@ static bool validate_ssl_json(json_t* params, object_type type)
 
 static bool process_ssl_parameters(SERVER* server, json_t* params)
 {
-    ss_dassert(server->server_ssl == NULL);
+    mxb_assert(server->server_ssl == NULL);
     bool rval = true;
 
     if (have_ssl_json(params))
@@ -1640,7 +1640,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
             if (runtime_create_server(name, address, port.c_str(), protocol, authenticator))
             {
                 rval = server_find_by_unique_name(name);
-                ss_dassert(rval);
+                mxb_assert(rval);
                 json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
                 if (!process_ssl_parameters(rval, param) ||
@@ -1722,7 +1722,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(server_to_json(server, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
         server_to_object_relations(server, old_json.get(), new_json))
@@ -1731,7 +1731,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
-        ss_dassert(old_parameters);
+        mxb_assert(old_parameters);
 
         if (parameters)
         {
@@ -1782,7 +1782,7 @@ bool runtime_alter_server_relationships_from_json(SERVER* server, const char* ty
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(server_to_json(server, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
@@ -1932,7 +1932,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
         if (runtime_create_monitor(name, module))
         {
             rval = monitor_find(name);
-            ss_dassert(rval);
+            mxb_assert(rval);
 
             if (!runtime_alter_monitor_from_json(rval, json))
             {
@@ -1976,7 +1976,7 @@ Service* runtime_create_service_from_json(json_t* json)
         if (runtime_create_service(name, router, params))
         {
             rval = service_internal_find(name);
-            ss_dassert(rval);
+            mxb_assert(rval);
 
             // Performing an alter right after creation takes care of server relationships
             if (!runtime_alter_service_from_json(rval, json))
@@ -2068,7 +2068,7 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
         object_to_server_relations(monitor->name, old_json.get(), new_json))
@@ -2078,7 +2078,7 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
-        ss_dassert(old_parameters);
+        mxb_assert(old_parameters);
 
         if (parameters)
         {
@@ -2120,7 +2120,7 @@ bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t*
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(monitor_to_json(monitor, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
@@ -2141,7 +2141,7 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(service_to_json(service, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_relationship_body(json))
     {
@@ -2155,7 +2155,7 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
         }
         else
         {
-            ss_dassert(strcmp(type, CN_FILTERS) == 0);
+            mxb_assert(strcmp(type, CN_FILTERS) == 0);
             rval = service_to_filter_relations(service, old_json.get(), j.get());
         }
     }
@@ -2180,7 +2180,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(service_to_json(service, ""));
-    ss_dassert(old_json.get());
+    mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
         object_to_server_relations(service->name, old_json.get(), new_json) &&
@@ -2190,7 +2190,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
-        ss_dassert(old_parameters);
+        mxb_assert(old_parameters);
 
         if (parameters)
         {
@@ -2598,7 +2598,7 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
     {
         rval = true;
         json_t* old_json = config_maxscale_to_json("");
-        ss_dassert(old_json);
+        mxb_assert(old_json);
 
         json_t* new_param = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_param = mxs_json_pointer(old_json, MXS_JSON_PTR_PARAMETERS);

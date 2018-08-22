@@ -34,7 +34,7 @@ CacheST::~CacheST()
 
 CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 {
-    ss_dassert(pConfig);
+    mxb_assert(pConfig);
 
     CacheST* pCache = NULL;
 
@@ -57,8 +57,8 @@ CacheST* CacheST::Create(const std::string&              name,
                          SStorageFactory                 sFactory,
                          const CACHE_CONFIG*             pConfig)
 {
-    ss_dassert(sFactory.get());
-    ss_dassert(pConfig);
+    mxb_assert(sFactory.get());
+    mxb_assert(pConfig);
 
     return Create(name, pConfig, rules, sFactory);
 }

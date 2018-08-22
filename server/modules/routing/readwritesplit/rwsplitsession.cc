@@ -142,7 +142,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
          * We are already processing a request from the client. Store the
          * new query and wait for the previous one to complete.
          */
-        ss_dassert(m_expected_responses > 0 || m_query_queue);
+        mxb_assert(m_expected_responses > 0 || m_query_queue);
         MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
                  gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses);
         m_query_queue = gwbuf_append(m_query_queue, querybuf);
@@ -185,7 +185,7 @@ bool RWSplitSession::route_stored_query()
         MXS_INFO("Routing stored queries");
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&m_query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
-        ss_dassert(query_queue);
+        mxb_assert(query_queue);
 
         if (query_queue == NULL)
         {
@@ -269,7 +269,7 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF *buffer)
  */
 SRWBackend& RWSplitSession::get_backend_from_dcb(DCB *dcb)
 {
-    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -340,7 +340,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
         uint16_t errcode = MYSQL_GET_ERRCODE(data);
         std::string errstr((char*)data + 7, (char*)data + 7 + len - 3);
 
-        ss_dassert(errcode != ER_CONNECTION_KILLED);
+        mxb_assert(errcode != ER_CONNECTION_KILLED);
         MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
                     backend->name(), errcode, errstr.c_str());
     }
@@ -352,7 +352,7 @@ static void log_unexpected_response(SRWBackend& backend, GWBUF* buffer, GWBUF* c
                   "Query: %s", mxs_mysql_get_command(buffer), backend->name(),
                   backend->current_command(), sql.c_str());
         session_dump_statements(backend->dcb()->session);
-        ss_dassert(false);
+        mxb_assert(false);
     }
 }
 
@@ -432,7 +432,7 @@ void RWSplitSession::trx_replay_next_stmt()
              * whereas the original interrupted transaction had none. Due to this,
              * the checksums would not match if they were to be compared.
              */
-            ss_info_dassert(!m_interrupted_query.get(), "Interrupted query should be empty");
+            mxb_assert_message(!m_interrupted_query.get(), "Interrupted query should be empty");
         }
     }
 }
@@ -472,7 +472,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         /** This is the response to the ROLLBACK. If it fails, we must close
          * the connection. The replaying of the transaction can continue
          * regardless of the ROLLBACK result. */
-        ss_dassert(backend == m_prev_target);
+        mxb_assert(backend == m_prev_target);
 
         if (!mxs_mysql_is_ok_packet(writebuf))
         {
@@ -535,14 +535,14 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         /** Got a complete reply, acknowledge the write and decrement expected response count */
         backend->ack_write();
         m_expected_responses--;
-        ss_dassert(m_expected_responses >= 0);
-        ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
+        mxb_assert(m_expected_responses >= 0);
+        mxb_assert(backend->get_reply_state() == REPLY_STATE_DONE);
         MXS_INFO("Reply complete, last reply from %s", backend->name());
 
         if (m_config.causal_reads)
         {
             // The reply should never be complete while we are still waiting for the header.
-            ss_dassert(m_wait_gtid != WAITING_FOR_HEADER);
+            mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
             m_wait_gtid = NONE;
         }
 
@@ -578,7 +578,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
     }
     else if (m_is_replay_active)
     {
-        ss_dassert(m_config.transaction_replay);
+        mxb_assert(m_config.transaction_replay);
 
         if (m_expected_responses == 0)
         {
@@ -633,8 +633,8 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     if (writebuf)
     {
-        ss_dassert(client_dcb);
-        ss_info_dassert(backend->in_use(), "Backend should be in use when routing reply");
+        mxb_assert(client_dcb);
+        mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
@@ -649,7 +649,7 @@ void check_and_log_backend_state(const SRWBackend& backend, DCB* problem_dcb)
         {
             MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
                       backend->name());
-            ss_dassert(false);
+            mxb_assert(false);
         }
     }
     else
@@ -698,14 +698,14 @@ bool RWSplitSession::start_trx_replay()
                  * executed. The buffer should contain a query that starts
                  * a transaction.
                  */
-                ss_info_dassert(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX,
+                mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX,
                                 "The current query should start a transaction");
                 retry_query(m_interrupted_query.release(), 0);
             }
         }
         else
         {
-            ss_info_dassert(!session_is_autocommit(m_client->session),
+            mxb_assert_message(!session_is_autocommit(m_client->session),
                             "Session should have autocommit disabled if the transaction "
                             "had no statements and no query was interrupted");
         }
@@ -734,12 +734,12 @@ bool RWSplitSession::start_trx_replay()
 void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                                  mxs_error_action_t action, bool *succp)
 {
-    ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     MXS_SESSION *session = problem_dcb->session;
-    ss_dassert(session);
+    mxb_assert(session);
 
     SRWBackend& backend = get_backend_from_dcb(problem_dcb);
-    ss_dassert(backend->in_use());
+    mxb_assert(backend->in_use());
 
     switch (action)
     {
@@ -772,7 +772,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                 else
                 {
                     // We were expecting a response but we aren't going to get one
-                    ss_dassert(m_expected_responses > 0);
+                    mxb_assert(m_expected_responses > 0);
                     m_expected_responses--;
 
                     if (can_retry_query())
@@ -828,7 +828,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
                      * on the master.
                      */
 
-                    ss_dassert(session_trx_is_active(session));
+                    mxb_assert(session_trx_is_active(session));
                     m_otrx_state = OTRX_INACTIVE;
                     can_continue = start_trx_replay();
                     backend->close();
@@ -853,7 +853,7 @@ void RWSplitSession::handleError(GWBUF *errmsgbuf, DCB *problem_dcb,
         }
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         *succp = false;
         break;
     }
@@ -882,7 +882,7 @@ bool RWSplitSession::handle_error_new_connection(DCB *backend_dcb, GWBUF *errmsg
 
     if (backend->is_waiting_result())
     {
-        ss_dassert(m_expected_responses > 0);
+        mxb_assert(m_expected_responses > 0);
         m_expected_responses--;
 
         /**
@@ -1002,12 +1002,12 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
 
     case HINT_ROUTE_TO_UPTODATE_SERVER:
     case HINT_ROUTE_TO_ALL:
-        ss_dassert(!true);
+        mxb_assert(!true);
         rv = false;
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         rv = false;
     }
 

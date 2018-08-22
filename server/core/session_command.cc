@@ -94,7 +94,7 @@ std::string SessionCommand::to_string()
 
 void SessionCommand::mark_as_duplicate(const SessionCommand& rhs)
 {
-    ss_dassert(eq(rhs));
+    mxb_assert(eq(rhs));
     // The commands now share the mxs::Buffer that contains the actual command
     m_buffer = rhs.m_buffer;
 }

@@ -273,7 +273,7 @@ static void handleError(MXS_ROUTER         *instance,
                         bool               *succp)
 
 {
-    ss_dassert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     DCB *client_dcb;
     MXS_SESSION *session = backend_dcb->session;
 

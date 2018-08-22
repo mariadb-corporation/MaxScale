@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
                 }
                 else
                 {
-                    ss_dassert(n == 2);
+                    mxb_assert(n == 2);
 
                     ifstream in(argv[argc - 1]);
 

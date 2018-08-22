@@ -89,7 +89,7 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
 int MaskingFilterSession::clientReply(GWBUF* pPacket)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pPacket));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
 
     ComResponse response(pPacket);
 
@@ -230,7 +230,7 @@ void MaskingFilterSession::handle_eof(GWBUF* pPacket)
             break;
 
         default:
-            ss_dassert(!true);
+            mxb_assert(!true);
             m_state = IGNORING_RESPONSE;
         }
     }
@@ -365,7 +365,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
 
     default:
         MXS_ERROR("Unexpected request: %d", m_res.command());
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 }
 

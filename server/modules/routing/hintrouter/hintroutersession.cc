@@ -157,7 +157,7 @@ void HintRouterSession::handleError(GWBUF*             pMessage,
 {
     HR_ENTRY();
 
-    ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
     MXS_SESSION* pSession = pProblem->session;
     mxs_session_state_t sesstate = pSession->state;
@@ -189,7 +189,7 @@ void HintRouterSession::handleError(GWBUF*             pMessage,
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         *pSuccess = false;
     }
 }

@@ -306,7 +306,7 @@ static void extract_header(register const uint8_t *event,
 bool BinlogFilterSession::checkEvent(GWBUF* buffer,
                                      const REP_HEADER& hdr)
 {
-    ss_dassert(!m_is_large);
+    mxb_assert(!m_is_large);
 
     uint8_t *event = GWBUF_DATA(buffer);
 
@@ -512,7 +512,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket)
     uint32_t orig_event_type = 0;
 
     // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguos
-    ss_dassert(m_skip == true);
+    mxb_assert(m_skip == true);
 
     /**
      * RAND_EVENT is:

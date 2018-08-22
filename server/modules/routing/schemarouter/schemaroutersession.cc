@@ -88,7 +88,7 @@ SchemaRouterSession::~SchemaRouterSession()
 
 void SchemaRouterSession::close()
 {
-    ss_dassert(!m_closed);
+    mxb_assert(!m_closed);
 
     /**
      * Lock router client session for secure read and update.
@@ -491,7 +491,7 @@ void SchemaRouterSession::handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket
         }
         else if (m_queue.size() && rc != -1)
         {
-            ss_dassert(m_state == INIT_READY || m_state == INIT_USE_DB);
+            mxb_assert(m_state == INIT_READY || m_state == INIT_USE_DB);
             MXS_INFO("Routing stored query");
             route_queued_query();
         }
@@ -507,7 +507,7 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
 {
     if (bref->has_session_commands())
     {
-        ss_dassert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
+        mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
         uint8_t command = bref->next_session_command()->get_command();
         uint64_t id = bref->complete_session_command();
         MXS_PS_RESPONSE resp = {};
@@ -565,7 +565,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
                   m_connect_db.c_str(), m_client->session);
         m_state &= ~INIT_USE_DB;
         m_current_db = m_connect_db;
-        ss_dassert(m_state == INIT_READY);
+        mxb_assert(m_state == INIT_READY);
 
         if (m_queue.size())
         {
@@ -575,7 +575,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     else if (m_queue.size())
     {
-        ss_dassert(m_state == INIT_READY);
+        mxb_assert(m_state == INIT_READY);
         route_queued_query();
     }
     else
@@ -613,7 +613,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
                                       mxs_error_action_t action,
                                       bool* pSuccess)
 {
-    ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    mxb_assert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL) // Should never happen
@@ -780,7 +780,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             }
             else
             {
-                ss_dassert((*it)->session_command_count() > 1);
+                mxb_assert((*it)->session_command_count() > 1);
                 /** The server is already executing a session command */
                 MXS_INFO("Backend %s:%d already executing sescmd.",
                          (*it)->backend()->server->address,
@@ -832,7 +832,7 @@ SSRBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
     }
 
     // This should not happen
-    ss_dassert(false);
+    mxb_assert(false);
     return SSRBackend(reinterpret_cast<SRBackend*>(NULL));
 }
 
@@ -1032,7 +1032,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             }
             else
             {
-                ss_dassert(rc != SHOWDB_PARTIAL_RESPONSE);
+                mxb_assert(rc != SHOWDB_PARTIAL_RESPONSE);
                 DCB* client_dcb = NULL;
 
                 if ((m_state & INIT_FAILED) == 0)
@@ -1467,7 +1467,7 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
 bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
 {
     bool succp = false;
-    ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
+    mxb_assert(p_dcb != NULL && *(p_dcb) == NULL);
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -1644,7 +1644,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, ui
         }
         else
         {
-                ss_dassert(bref->session_command_count() > 1);
+                mxb_assert(bref->session_command_count() > 1);
                 /** The server is already executing a session command */
                 MXS_INFO("Backend %s:%d already executing sescmd.",
                          bref->backend()->server->address,

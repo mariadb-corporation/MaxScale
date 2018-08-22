@@ -19,8 +19,8 @@ StorageReal::StorageReal(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
     : m_pApi(pApi)
     , m_pStorage(pStorage)
 {
-    ss_dassert(m_pApi);
-    ss_dassert(m_pStorage);
+    mxb_assert(m_pApi);
+    mxb_assert(m_pStorage);
 }
 
 StorageReal::~StorageReal()

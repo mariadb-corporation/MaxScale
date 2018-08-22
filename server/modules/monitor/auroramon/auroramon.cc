@@ -68,7 +68,7 @@ void AuroraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                         "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
         (result = mysql_store_result(monitored_server->con)))
     {
-        ss_dassert(mysql_field_count(monitored_server->con) == 2);
+        mxb_assert(mysql_field_count(monitored_server->con) == 2);
         MYSQL_ROW row = mysql_fetch_row(result);
         int status = SERVER_SLAVE;
 

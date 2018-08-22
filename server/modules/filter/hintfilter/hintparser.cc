@@ -100,7 +100,7 @@ static const char* token_get_keyword(
                 i++;
             }
 
-            ss_dassert(i != TOK_LINEBRK);
+            mxb_assert(i != TOK_LINEBRK);
 
             if (i == TOK_LINEBRK)
             {

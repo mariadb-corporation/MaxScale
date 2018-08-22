@@ -254,7 +254,7 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
     case MXS_MODULE_PARAM_REGEX:
         return "regular expression";
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "unknown";
     }
 }
@@ -276,7 +276,7 @@ static inline const char* mxs_module_api_to_string(MXS_MODULE_API type)
     case MXS_MODULE_API_QUERY_CLASSIFIER:
         return "query_classifier";
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "unknown";
     }
 }
@@ -296,7 +296,7 @@ static inline const char* mxs_module_status_to_string(MXS_MODULE_STATUS type)
     case MXS_MODULE_EXPERIMENTAL:
         return "Experimental";
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         return "Unknown";
     }
 }

@@ -285,7 +285,7 @@ int MySQLSendHandshake(DCB* dcb)
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
     {
-        ss_dassert(buf != NULL);
+        mxb_assert(buf != NULL);
         return 0;
     }
     outbuf = GWBUF_DATA(buf);
@@ -356,7 +356,7 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
 
     // Check that we match the old values
-    ss_dassert(mysql_server_capabilities_two[0] == 15);
+    mxb_assert(mysql_server_capabilities_two[0] == 15);
     /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
      the value 128 even though there's no such capability. */
 
@@ -565,7 +565,7 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
     MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
     gwbuf_copy_data(buffer, 0, len, data);
-    ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len ||
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len ||
                len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
@@ -626,7 +626,7 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
 {
     uint8_t hdr[MYSQL_HEADER_LEN];
-    ss_dassert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
+    mxb_assert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
 
     int buflen = gwbuf_length(buf);
     int pktlen = MYSQL_GET_PAYLOAD_LEN(hdr) + MYSQL_HEADER_LEN;
@@ -634,13 +634,13 @@ static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /** This is an SSL request packet */
-        ss_dassert(dcb->listener->ssl);
-        ss_dassert(buflen == bytes && pktlen >= buflen);
+        mxb_assert(dcb->listener->ssl);
+        mxb_assert(buflen == bytes && pktlen >= buflen);
     }
     else
     {
         /** Normal packet */
-        ss_dassert(buflen == pktlen);
+        mxb_assert(buflen == pktlen);
     }
 }
 
@@ -738,13 +738,13 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
         if (session != NULL)
         {
-            ss_dassert(session->state != SESSION_STATE_ALLOC &&
+            mxb_assert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             MXB_AT_DEBUG(bool check = ) mxs_rworker_register_session(session);
-            ss_dassert(check);
+            mxb_assert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
             if (dcb->readq)
@@ -853,7 +853,7 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
 
             if (gwbuf_copy_data(queue, offset, MYSQL_HEADER_LEN, packet_header) != MYSQL_HEADER_LEN)
             {
-                ss_dassert(offset > 0);
+                mxb_assert(offset > 0);
                 queue = split_and_store(dcb, queue, offset);
                 break;
             }
@@ -869,10 +869,10 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
             {
                 if ((queue = split_and_store(dcb, queue, offset)) == NULL)
                 {
-                    ss_dassert(bytes_available - offset == MYSQL_HEADER_LEN);
+                    mxb_assert(bytes_available - offset == MYSQL_HEADER_LEN);
                     return false;
                 }
-                ss_dassert(offset > 0);
+                mxb_assert(offset > 0);
                 break;
             }
 
@@ -893,11 +893,11 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
         bytes_available -= packet_bytes;
         dcb->protocol_bytes_processed += packet_bytes;
         offset += packet_bytes;
-        ss_dassert(dcb->protocol_bytes_processed <= dcb->protocol_packet_length);
+        mxb_assert(dcb->protocol_bytes_processed <= dcb->protocol_packet_length);
     }
 
-    ss_dassert(bytes_available >= 0);
-    ss_dassert(queue);
+    mxb_assert(bytes_available >= 0);
+    mxb_assert(queue);
     *buffer = queue;
     return true;
 }
@@ -950,7 +950,7 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
                     break;
 
                 default:
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                 }
             }
         }
@@ -983,7 +983,7 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
 
     return message;
@@ -1109,7 +1109,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
     }
     return rval;
 }
@@ -1194,7 +1194,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     else if (proto->current_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
-        ss_info_dassert(session_valid_for_pool(dcb->session), "Session should qualify for pooling");
+        mxb_assert_message(session_valid_for_pool(dcb->session), "Session should qualify for pooling");
         dcb_close(dcb);
     }
 
@@ -1304,7 +1304,7 @@ int gw_write_client_event(DCB *dcb)
 {
     MySQLProtocol *protocol = NULL;
 
-    ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+    mxb_assert(dcb->state != DCB_STATE_DISCONNECTED);
 
     if (dcb == NULL)
     {
@@ -1448,7 +1448,7 @@ retblock:
 
 static int gw_client_close(DCB *dcb)
 {
-    ss_dassert(dcb->protocol);
+    mxb_assert(dcb->protocol);
 
     if (mysql_protocol_done(dcb))
     {
@@ -1457,10 +1457,10 @@ static int gw_client_close(DCB *dcb)
         if (target->state != SESSION_STATE_TO_BE_FREED &&
             target->state != SESSION_STATE_DUMMY)
         {
-            ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
+            mxb_assert(target->state == SESSION_STATE_ROUTER_READY ||
                        target->state == SESSION_STATE_STOPPING);
             MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
-            ss_dassert(removed);
+            mxb_assert(removed);
             session_close(target);
         }
     }
@@ -1626,7 +1626,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
-                ss_dassert(GWBUF_IS_CONTIGUOUS(packetbuf));
+                mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
                 SERVICE *service = session->client_dcb->service;
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !service->session_track_trx_state)
@@ -1695,7 +1695,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             }
             else if (proto->changing_user)
             {
-                ss_dassert(proto->current_command == MXS_COM_CHANGE_USER);
+                mxb_assert(proto->current_command == MXS_COM_CHANGE_USER);
                 proto->changing_user = false;
                 bool ok = reauthenticate_client(session, packetbuf);
                 gwbuf_free(packetbuf);
@@ -2002,7 +2002,7 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
                 }
                 else
                 {
-                    ss_dassert(*endptr_id == '\0' || *endptr_id == ';');
+                    mxb_assert(*endptr_id == '\0' || *endptr_id == ';');
                     state = SEMICOLON; // In case we have space before ;
                     get_next = true;
                     thread_id = l;

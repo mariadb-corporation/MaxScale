@@ -97,7 +97,7 @@ static inline std::string json_to_string(json_t* json)
         break;
 
     default:
-        ss_dassert(false);
+        mxb_assert(false);
         break;
 
     }

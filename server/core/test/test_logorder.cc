@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     {
         fprintf(stderr, "Error, log manager initialization failed.\n");
     }
-    ss_dassert(succp);
+    mxb_assert(succp);
 
     skygw_log_disable(LOG_INFO);
     skygw_log_disable(LOG_NOTICE);

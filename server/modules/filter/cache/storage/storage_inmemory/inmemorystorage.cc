@@ -55,7 +55,7 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
                                                   const CACHE_STORAGE_CONFIG& config,
                                                   int argc, char* argv[])
 {
-    ss_dassert(zName);
+    mxb_assert(zName);
 
     if (config.max_count != 0)
     {
@@ -78,7 +78,7 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
         break;
 
     default:
-        ss_dassert(!true);
+        mxb_assert(!true);
         MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
                   (int)config.thread_model);
     case CACHE_THREAD_MODEL_MT:
@@ -192,7 +192,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
         }
         else
         {
-            ss_dassert(is_soft_stale);
+            mxb_assert(is_soft_stale);
             result |= CACHE_RESULT_STALE;
         }
     }
@@ -206,7 +206,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
 
 cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF& value)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(&value));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(&value));
 
     size_t size = GWBUF_LENGTH(&value);
 
@@ -257,8 +257,8 @@ cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
 
     if (i != m_entries.end())
     {
-        ss_dassert(m_stats.size >= i->second.value.size());
-        ss_dassert(m_stats.items > 0);
+        mxb_assert(m_stats.size >= i->second.value.size());
+        mxb_assert(m_stats.items > 0);
 
         m_stats.size -= i->second.value.size();
         m_stats.items -= 1;

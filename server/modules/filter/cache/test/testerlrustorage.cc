@@ -96,7 +96,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                 }
                 else
                 {
-                    ss_dassert(!true);
+                    mxb_assert(!true);
                     rv = EXIT_FAILURE;
                 }
 
@@ -119,7 +119,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             }
             else
             {
-                ss_dassert(!true);
+                mxb_assert(!true);
                 rv = EXIT_FAILURE;
             }
         }
@@ -166,7 +166,7 @@ int TesterLRUStorage::test_max_count(size_t n_threads, size_t n_seconds,
 
         uint64_t items;
         cache_result_t result = pStorage->get_items(&items);
-        ss_dassert(result == CACHE_RESULT_OK);
+        mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max count: " << max_count << ", count: " << items << "." << endl;
 
@@ -203,7 +203,7 @@ int TesterLRUStorage::test_max_size(size_t n_threads, size_t n_seconds,
 
         uint64_t size;
         cache_result_t result = pStorage->get_size(&size);
-        ss_dassert(result == CACHE_RESULT_OK);
+        mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max size: " << max_size << ", size: " << size << "." << endl;
 
@@ -244,7 +244,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads, size_t n_seconds
         MXB_AT_DEBUG(cache_result_t result);
         uint64_t items;
         MXB_AT_DEBUG(result = ) pStorage->get_items(&items);
-        ss_dassert(result == CACHE_RESULT_OK);
+        mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max count: " << max_count << ", count: " << items << "." << endl;
 
@@ -255,7 +255,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads, size_t n_seconds
 
         uint64_t size;
         MXB_AT_DEBUG(result = ) pStorage->get_size(&size);
-        ss_dassert(result == CACHE_RESULT_OK);
+        mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max size: " << max_size << ", size: " << size << "." << endl;
 

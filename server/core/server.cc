@@ -202,12 +202,12 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
  */
 void server_free(Server* server)
 {
-    ss_dassert(server);
+    mxb_assert(server);
 
     {
         Guard guard(server_lock);
         auto it = std::find(all_servers.begin(), all_servers.end(), server);
-        ss_dassert(it != all_servers.end());
+        mxb_assert(it != all_servers.end());
         all_servers.erase(it);
     }
 
@@ -336,7 +336,7 @@ SERVER * server_find_by_unique_name(const char *name)
  */
 int server_find_by_unique_names(char **server_names, int size, SERVER*** output)
 {
-    ss_dassert(server_names && (size > 0));
+    mxb_assert(server_names && (size > 0));
 
     SERVER **results = (SERVER**)MXS_CALLOC(size, sizeof(SERVER*));
     if (!results)
@@ -469,7 +469,7 @@ public:
     void execute(Worker& worker)
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        ss_dassert(&rworker == RoutingWorker::get_current());
+        mxb_assert(&rworker == RoutingWorker::get_current());
 
         int thread_id = rworker.id();
         dcb_persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
@@ -646,7 +646,7 @@ dListServers(DCB *dcb)
  */
 char* server_status(const SERVER *server)
 {
-    ss_dassert(server);
+    mxb_assert(server);
     uint64_t server_status = server->status;
 
     string result;
@@ -938,7 +938,7 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  */
 static size_t server_get_parameter_nolock(const SERVER *server, const char *name, char* out, size_t size)
 {
-    ss_dassert(SPINLOCK_IS_LOCKED(&server->lock));
+    mxb_assert(SPINLOCK_IS_LOCKED(&server->lock));
     size_t len = 0;
     SERVER_PARAM *param = server->parameters;
 
@@ -1234,7 +1234,7 @@ bool server_serialize(const SERVER *server)
         strcpy(final_filename, filename);
 
         char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
+        mxb_assert(dot);
         *dot = '\0';
 
         if (rename(filename, final_filename) == 0)
