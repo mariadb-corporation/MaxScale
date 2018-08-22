@@ -27,8 +27,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <getopt.h>
+
 #include <set>
 #include <map>
+#include <fstream>
 
 #include <ini.h>
 #include <openssl/opensslconf.h>
@@ -2265,6 +2267,25 @@ static void unlink_pidfile(void)
     }
 }
 
+bool pid_is_maxscale(int pid)
+{
+    bool rval = false;
+    std::stringstream ss;
+    ss << "/proc/" << pid << "/comm";
+    std::ifstream file(ss.str());
+    std::string line;
+
+    if (file && std::getline(file, line))
+    {
+        if (line == "maxscale")
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Check if the maxscale.pid file exists and has a valid PID in it. If one has already been
  * written and a MaxScale process is running, this instance of MaxScale should shut down.
@@ -2352,32 +2373,7 @@ bool pid_file_exists()
             return true;
         }
 
-        if (kill(pid, 0) == -1)
-        {
-            if (errno == ESRCH)
-            {
-                /** no such process, old PID file */
-                if (lock_failed)
-                {
-                    const char* logerr =
-                        "Locking the PID file '%s' failed. "
-                        "Read PID from file and no process found with PID %d. "
-                        "Confirm that no other process holds the lock on the PID file.";
-                    snprintf(logbuf, sizeof(logbuf), logerr, pathbuf, pid);
-                    print_log_n_stderr(true, true, logbuf, logbuf, 0);
-                    close(fd);
-                }
-                return lock_failed;
-            }
-            else
-            {
-                const char* logerr = "Failed to check the existence of process %d read from file '%s'";
-                snprintf(logbuf, sizeof(logbuf), logerr, pid, pathbuf);
-                print_log_n_stderr(true, true, logbuf, logbuf, errno);
-                unlock_pidfile();
-            }
-        }
-        else
+        if (pid_is_maxscale(pid))
         {
             const char* logerr =
                 "MaxScale is already running. Process id: %d. "
@@ -2386,6 +2382,21 @@ bool pid_file_exists()
             snprintf(logbuf, sizeof(logbuf), logerr, pid);
             print_log_n_stderr(true, true, logbuf, logbuf, 0);
             unlock_pidfile();
+        }
+        else
+        {
+            /** no such process, old PID file */
+            if (lock_failed)
+            {
+                const char* logerr =
+                "Locking the PID file '%s' failed. "
+                "Read PID from file and no process found with PID %d. "
+                "Confirm that no other process holds the lock on the PID file.";
+                snprintf(logbuf, sizeof(logbuf), logerr, pathbuf, pid);
+                print_log_n_stderr(true, true, logbuf, logbuf, 0);
+                close(fd);
+            }
+            return lock_failed;
         }
     }
     else
