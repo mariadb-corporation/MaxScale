@@ -44,7 +44,6 @@
 #include <lualib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
 #include <maxscale/filter.h>
 #include <maxscale/log.h>
 #include <maxscale/modutil.h>
