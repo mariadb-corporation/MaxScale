@@ -7,7 +7,7 @@ describe("Create/Destroy Commands", function() {
     before(startMaxScale)
 
     it('create monitor', function() {
-        return verifyCommand('create monitor my-monitor mysqlmon', 'monitors/my-monitor')
+        return verifyCommand('create monitor my-monitor mysqlmon user=maxuser password=maxpwd', 'monitors/my-monitor')
             .should.be.fulfilled
     })
 

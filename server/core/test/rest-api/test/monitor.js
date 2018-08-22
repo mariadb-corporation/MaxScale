@@ -1,16 +1,21 @@
 require("../utils.js")()
 
-var monitor = {
-    data: {
-        id: "test-monitor",
-        type: "monitors",
-        attributes: {
-            module: "mysqlmon"
+describe("Monitor", function() {
+
+    var monitor = {
+        data: {
+            id: "test-monitor",
+            type: "monitors",
+            attributes: {
+                module: "mysqlmon",
+                parameters: {
+                    user: "maxuser",
+                    password: "maxpwd"
+                }
+            }
         }
     }
-}
 
-describe("Monitor", function() {
     before(startMaxScale)
 
     it("create new monitor", function() {
@@ -41,6 +46,20 @@ describe("Monitor", function() {
 
 describe("Monitor Relationships", function() {
     before(startMaxScale)
+
+    var monitor = {
+        data: {
+            id: "test-monitor",
+            type: "monitors",
+            attributes: {
+                module: "mysqlmon",
+                parameters: {
+                    user: "maxuser",
+                    password: "maxpwd"
+                }
+            }
+        }
+    }
 
     it("create new monitor", function() {
         return request.post(base_url + "/monitors/", {json: monitor})

@@ -179,7 +179,7 @@ describe('Cluster Sync', function() {
     })
 
     it('sync after monitor creation', function() {
-        return doCommand('create monitor my-monitor-2 mysqlmon --hosts ' + secondary_host)
+        return doCommand('create monitor my-monitor-2 mysqlmon user=maxuser password=maxpwd --hosts ' + secondary_host)
             .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'monitors/my-monitor-2'))
     })
