@@ -64,10 +64,11 @@ static const char MATCH_STR[] = "match";
 static const char SERVER_STR[] = "server";
 static const char TARGET_STR[] = "target";
 
-RegexHintFilter::RegexHintFilter(const std::string& user, const SourceHostVector& source,
-                                 const MappingVector& mapping, int ovector_size)
+RegexHintFilter::RegexHintFilter(const std::string& user, const SourceHostVector& addresses,
+                                 const StringVector& hostnames, const MappingVector& mapping, int ovector_size)
     :   m_user(user),
-        m_sources(source),
+        m_sources(addresses),
+        m_hostnames(hostnames),
         m_mapping(mapping),
         m_ovector_size(ovector_size),
         m_total_diverted(0),
@@ -152,14 +153,22 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session)
 
     pcre2_match_data* md = pcre2_match_data_create(m_ovector_size, NULL);
     bool session_active = true;
+    bool ip_found = false;
 
     /* Check client IP against 'source' host option */
-    if (m_sources.size() > 0 && (remote = session_get_remote(session)) != NULL)
+    if ((remote = session_get_remote(session)) != NULL)
     {
-        session_active =
-            check_source_host(remote, &(session->client_dcb->ip));
+        if (m_sources.size() > 0)
+        {
+            ip_found = check_source_host(remote, &(session->client_dcb->ip));
+            session_active = ip_found;
+        }
+        /* Don't check hostnames if ip is already found */
+        if (m_hostnames.size() > 0 && ip_found == false)
+        {
+            session_active = check_source_hostnames(remote, &(session->client_dcb->ip));
+        }
     }
-
     /* Check client user against 'user' option */
     if (m_user.length() > 0 &&
         ((user = session_get_user(session)) != NULL) &&
@@ -230,13 +239,14 @@ RegexHintFilter*
 RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    SourceHostVector source_host;
+    SourceHostVector source_addresses;
+    StringVector source_hostnames;
 
     const char* source = config_get_string(params, "source");
 
     if (*source)
     {
-        if (!set_source_addresses(source, source_host))
+        if (!set_source_addresses(source, source_addresses, source_hostnames))
         {
             MXS_ERROR("Failure setting 'source' from %s", source);
             error = true;
@@ -294,7 +304,7 @@ RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
         RegexHintFilter* instance = NULL;
         std::string user(config_get_string(params, "user"));
         MXS_EXCEPTION_GUARD(instance =
-                                new RegexHintFilter(user, source_host, mapping, max_capcount + 1));
+                                new RegexHintFilter(user, source_addresses, source_hostnames, mapping, max_capcount + 1));
         return instance;
     }
 }
@@ -655,11 +665,11 @@ void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, in
  *
  * @param remote      The clientIP
  * @param ipv4        The client socket address struct
- * @return            1 for match, 0 otherwise
+ * @return            true for match, false otherwise
  */
-int RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage *ip)
+bool RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage *ip)
 {
-    int ret = 0;
+    int rval = false;
 
     for (const auto& source : m_sources)
     {
@@ -670,7 +680,7 @@ int RegexHintFilter::check_source_host(const char* remote, const struct sockaddr
         switch (source.m_netmask)
         {
         case 32:
-            ret = (source.m_address == remote) ? 1 : 0;
+            rval = (source.m_address == remote);
             break;
         case 24:
             /* Class C check */
@@ -690,20 +700,45 @@ int RegexHintFilter::check_source_host(const char* remote, const struct sockaddr
 
         if (source.m_netmask < 32)
         {
-            ret = (check_ipv4.sin_addr.s_addr == source.m_ipv4.sin_addr.s_addr);
+            rval = (check_ipv4.sin_addr.s_addr == source.m_ipv4.sin_addr.s_addr);
         }
 
-        if (ret)
+        if (rval)
         {
             MXS_INFO("Client IP %s matches host source %s%s",
                     remote,
                     source.m_netmask < 32 ? "with wildcards " : "",
                     source.m_address.c_str());
-            return ret;
+            return rval;
         }
     }
 
-    return ret;
+    return rval;
+}
+
+bool RegexHintFilter::check_source_hostnames(const char* remote, const struct sockaddr_storage *ip)
+{
+    struct sockaddr_storage addr;
+    memcpy(&addr, ip, sizeof(addr));
+    char hbuf[NI_MAXHOST];
+
+    if (int rc = (getnameinfo((struct sockaddr *)&addr, sizeof(sockaddr), hbuf, sizeof(hbuf), 0, 0, NI_NAMEREQD)) != 0)
+    {
+        MXS_INFO("Failed to resolve hostname due to %s", gai_strerror(rc));
+        return false;
+    }
+
+    for (const auto& host : m_hostnames)
+    {
+        if (strcmp(hbuf, host.c_str()) == 0)
+        {
+            MXS_INFO("Client hostname %s matches host source %s",
+                    hbuf, host.c_str());
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -851,7 +886,7 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
     return true;
 }
 
-bool RegexHintFilter::set_source_addresses(const std::string& input_host_names, SourceHostVector& source_hosts)
+bool RegexHintFilter::set_source_addresses(const std::string& input_host_names, SourceHostVector& source_hosts, StringVector& hostnames)
 {
 
     bool rval = true;
@@ -861,7 +896,13 @@ bool RegexHintFilter::set_source_addresses(const std::string& input_host_names, 
     {
         char* trimmed_host = trim((char*)host.c_str());
 
-        if (!add_source_address(trimmed_host, source_hosts))
+        if (!validate_ip_address(trimmed_host))
+        {
+            MXS_INFO("The given 'source' parameter '%s' is not a valid IPv4 address. "
+                    "adding it as hostname.", trimmed_host);
+            hostnames.emplace_back(trimmed_host);
+        }
+        else if (!add_source_address(trimmed_host, source_hosts))
         {
             rval = false;
         }
