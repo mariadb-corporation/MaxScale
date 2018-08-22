@@ -805,7 +805,7 @@ SourceHost* RegexHintFilter::set_source_address(const char* input_host)
 
     struct addrinfo *ai = NULL, hint = {};
     hint.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
-    int rc = getaddrinfo(input_host, NULL, &hint, &ai);
+    int rc = getaddrinfo(format_host, NULL, &hint, &ai);
 
     /* fill IPv4 data struct */
     if (rc == 0)
