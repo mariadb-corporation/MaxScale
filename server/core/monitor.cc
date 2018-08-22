@@ -2869,7 +2869,8 @@ void MonitorInstance::run_one_tick()
 static bool remote_server_is_master(const std::string& url, std::string* host, int* port)
 {
     bool rval = false;
-    auto res = mxs::http::get(url);
+    auto res = mxs::http::get(url, config_get_global_options()->peer_user,
+                              config_get_global_options()->peer_password);
     json_t* state = mxs_json_pointer(res.body.get(), "data/attributes/state");
     json_t* json_host = mxs_json_pointer(res.body.get(), "data/attributes/parameters/address");
     json_t* json_port = mxs_json_pointer(res.body.get(), "data/attributes/parameters/port");
@@ -2889,12 +2890,16 @@ static bool remote_server_is_master(const std::string& url, std::string* host, i
     return rval;
 }
 
-std::pair<std::string, int> mon_get_external_master(const std::string& url)
+std::pair<std::string, int> mon_get_external_master(const std::string& name)
 {
     std::string host;
     int port = 0;
+    std::string url = config_get_global_options()->peer_hosts;
 
-    auto res = mxs::http::get(url);
+    auto res = mxs::http::get(url + "/v1/monitors/" + name,
+                              config_get_global_options()->peer_user,
+                              config_get_global_options()->peer_password);
+
     json_t* remote = mxs_json_pointer(res.body.get(), "data/relationships/servers/links/self");
     json_t* arr = mxs_json_pointer(res.body.get(), "data/relationships/servers/data");
 

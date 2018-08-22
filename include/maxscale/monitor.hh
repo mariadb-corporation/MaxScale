@@ -339,17 +339,15 @@ MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
 };
 
 /**
- * Get the master server of the monitor pointed by @c url
+ * Get the master server of the remote monitor
  *
- * The URL must be in `http://hostname-of-maxscale:<rest-api-port>/v1/monitors/<name-of-monitor>`
- * format and must point to a single monitor resource.
+ * The `peer_hosts`, `peer_user` and `peer_password` parameters must have been defined for this
+ * to work.
  *
- * TODO: Move the base URL and credentials into a global parameter
- *
- * @param url URL to a REST API endpoint for a monitor
+ * @param name The name of the remote monitor
  *
  * @return The host and port of the monitor or an empty string and 0 if an error occurred
  */
-std::pair<std::string, int> mon_get_external_master(const std::string& url);
+std::pair<std::string, int> mon_get_external_master(const std::string& name);
 
 }

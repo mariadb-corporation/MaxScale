@@ -662,10 +662,12 @@ struct Result
  * Do a HTTP GET
  *
  * @param url     URL to use
+ * @param user    Username to use, optional
+ * @param passwor Password for the user, optional
  *
  * @return A Result
  */
-Result get(const std::string& url);
+Result get(const std::string& url, const std::string& user = "", const std::string& password = "");
 
 }
 

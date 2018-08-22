@@ -793,6 +793,24 @@ be completely disabled to prevent access to it.
 Log authentication failures for the admin interface. This parameter expects a
 boolean value and is enabled by default.
 
+#### `peer_hosts`
+
+The REST API URL of a remote peer MaxScale. This is used to communicate with
+other MaxScale instances and can be a required parameter for some other features
+in MaxScale.
+
+Note that currently only one URL is supported. Defining more than one is
+considered a configuration error.
+
+#### `peer_user`
+
+Username used when connecting to remote MaxScale instances.
+
+#### `peer_password`
+
+Password used when connecting to remote MaxScale instances. This password can be
+encrypted with `maxpasswd`.
+
 #### _events_
 
 MaxScale logs warnings and errors for various reasons and often it is self-

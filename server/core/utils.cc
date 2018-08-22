@@ -1255,7 +1255,7 @@ size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
 namespace http
 {
 
-Result get(const std::string& url)
+Result get(const std::string& url, const std::string& user, const std::string& password)
 {
     Result res;
     char errbuf[CURL_ERROR_SIZE + 1] = "";
@@ -1270,6 +1270,12 @@ Result get(const std::string& url)
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &res.headers);
+
+    if (!user.empty() && !password.empty())
+    {
+        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_easy_setopt(curl, CURLOPT_USERPWD, (user + ":" + password).c_str());
+    }
 
     long code = 0; // needs to be a long
 

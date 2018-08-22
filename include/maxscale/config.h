@@ -145,6 +145,9 @@ extern const char CN_OPTIONS[];
 extern const char CN_PARAMETERS[];
 extern const char CN_PASSIVE[];
 extern const char CN_PASSWORD[];
+extern const char CN_PEER_HOSTS[];
+extern const char CN_PEER_PASSWORD[];
+extern const char CN_PEER_USER[];
 extern const char CN_POLL_SLEEP[];
 extern const char CN_PORT[];
 extern const char CN_PROTOCOL[];
@@ -275,6 +278,9 @@ typedef struct
     time_t        users_refresh_time;                  /**< How often the users can be refreshed */
     uint64_t      writeq_high_water;                   /**< High water mark of dcb write queue */
     uint64_t      writeq_low_water;                    /**< Low water mark of dcb write queue */
+    char          peer_hosts[MAX_ADMIN_HOST_LEN];      /**< The protocol, address and port for peers (currently only one) */
+    char          peer_user[MAX_ADMIN_HOST_LEN];       /**< Username for maxscale-to-maxscale traffic */
+    char          peer_password[MAX_ADMIN_HOST_LEN];   /**< Password for maxscale-to-maxscale traffic */
 } MXS_CONFIG;
 
 /**
