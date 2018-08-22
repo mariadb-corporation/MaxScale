@@ -1020,6 +1020,10 @@ add_test_executable(mxs1929_service_runtime.cpp mxs1929_service_runtime mxs1929_
 # https://jira.mariadb.org/browse/MXS-1929
 add_test_executable(mxs1929_filter_runtime.cpp mxs1929_filter_runtime mxs1929_filter_runtime LABELS REPL_BACKEND)
 
+# MXS-1929: Create complete configuration at runtime
+# https://jira.mariadb.org/browse/MXS-1929
+add_test_executable(mxs1929_start_from_scratch.cpp mxs1929_start_from_scratch mxs1929_start_from_scratch LABELS REPL_BACKEND)
+
 # MXS-1932: Hidden files are not ignored
 # https://jira.mariadb.org/browse/MXS-1932
 add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)
