@@ -13,35 +13,13 @@
  #pragma once
 
 #include <maxscale/cdefs.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <maxbase/assert.h>
 #include <maxscale/log.h>
 
 MXS_BEGIN_DECLS
 
-#if defined(SS_DEBUG)
-
-#define ss_dassert(exp) do { if(!(exp)){\
-            const char *debug_expr = #exp;  /** The MXS_ERROR marco doesn't seem to like stringification */ \
-            MXS_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-            fprintf(stderr, "debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-            raise(SIGABRT);} } while (false)
-#define ss_info_dassert(exp,info) do { if(!(exp)){\
-            const char *debug_expr = #exp; \
-            MXS_ERROR("debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, info, debug_expr); \
-            fprintf(stderr, "debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, info, debug_expr); \
-            raise(SIGABRT);} } while (false)
-
-#define ss_debug(exp) exp
-
-#else /* SS_DEBUG */
-
-#define ss_dassert(exp)
-#define ss_info_dassert(exp, info)
-
-#define ss_debug(exp)
-
-#endif /* SS_DEBUG */
+#define ss_dassert      mxb_assert
+#define ss_info_dassert mxb_assert_message
+#define ss_debug        MXB_AT_DEBUG
 
 MXS_END_DECLS
