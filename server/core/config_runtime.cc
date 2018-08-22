@@ -1949,6 +1949,10 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
                 runtime_destroy_monitor(rval);
                 rval = NULL;
             }
+            else
+            {
+                monitor_start(rval, rval->parameters);
+            }
         }
     }
 
