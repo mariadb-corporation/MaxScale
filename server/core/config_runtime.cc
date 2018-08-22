@@ -514,7 +514,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
     return rval;
 }
 
-bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
+bool do_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value, bool restart_monitor)
 {
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
@@ -529,7 +529,11 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     }
 
     mxs::SpinLockGuard guard(crt_lock);
-    monitor_stop(monitor);
+
+    if (restart_monitor)
+    {
+        monitor_stop(monitor);
+    }
     monitor_set_parameter(monitor, key, value);
 
     if (strcmp(key, CN_USER) == 0)
@@ -599,11 +603,19 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         mxb_assert(config_param_is_valid(mod->parameters, key, value, NULL));
     }
 
-    monitor_serialize(monitor);
-    monitor_start(monitor, monitor->parameters);
+    if (restart_monitor)
+    {
+        monitor_serialize(monitor);
+        monitor_start(monitor, monitor->parameters);
+    }
     MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
 
     return true;
+}
+
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
+{
+    return do_alter_monitor(monitor, key, value, true);
 }
 
 bool runtime_alter_service(Service *service, const char* zKey, const char* zValue)
@@ -1930,11 +1942,30 @@ static bool link_object_to_servers(const char* target, StringSet& relations)
     return rval;
 }
 
+static bool validate_monitor_json(json_t* json)
+{
+    bool rval = true;
+    json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+
+    for (auto a : { CN_USER, CN_PASSWORD })
+    {
+        if (!mxs_json_pointer(params, a))
+        {
+            config_runtime_error("Mandatory parameter '%s' is not defined", a);
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
 MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 {
     MXS_MONITOR* rval = NULL;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server}))
+    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server}) &&
+        validate_monitor_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -2101,6 +2132,8 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 
         if (parameters)
         {
+            bool restart = monitor->state != MONITOR_STATE_STOPPED;
+            monitor_stop(monitor);
             const char* key;
             json_t* value;
 
@@ -2113,22 +2146,26 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
                 {
                     /** No change in values */
                 }
-                else if (runtime_alter_monitor(monitor, key, mxs::json_to_string(value).c_str()))
+                else if (do_alter_monitor(monitor, key, mxs::json_to_string(value).c_str(), false))
                 {
                     changed = true;
                 }
                 else
                 {
                     rval = false;
+                    break;
                 }
             }
-        }
 
-        if (changed)
-        {
-            /** A configuration change was made, restart the monitor */
-            monitor_stop(monitor);
-            monitor_start(monitor, monitor->parameters);
+            if (rval && changed)
+            {
+                monitor_serialize(monitor);
+            }
+
+            if (restart)
+            {
+                monitor_start(monitor, monitor->parameters);
+            }
         }
     }
 
