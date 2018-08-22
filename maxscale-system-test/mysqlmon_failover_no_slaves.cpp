@@ -38,11 +38,11 @@ int main(int argc, char** argv)
     test.repl->stash_server_settings(2);
     test.repl->disable_server_setting(2, "log-bin");
     test.repl->start_node(2, (char *) "");
-    // Slave 3. Create a second slave connection to a non-existing server.
-    const char CHANGE_CMD[] = "CHANGE MASTER 'dummy' TO MASTER_HOST = 'imagination_host.img', "
-    "MASTER_PORT = 1234, MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD='repl';";
-    test.try_query(nodes[3], CHANGE_CMD);
-    test.try_query(nodes[3], "START SLAVE;");
+    // Slave 3. Stop this slave as well. The monitor is quick to turn failover off it a slave has another
+    // slave connection or if a slave connection is not using gtid, so those situations are hard to test.
+    // This may change later when failover support for such situations is added, so add a more interesting
+    // test for node 3 then.
+    test.try_query(nodes[3], "STOP SLAVE");
 
     test.maxscales->wait_for_monitor();
     get_output(test);
@@ -62,8 +62,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(2);
     test.repl->restore_server_settings(2);
     test.repl->start_node(2, (char *) "");
-    test.try_query(nodes[3], "STOP SLAVE 'dummy';");
-    test.try_query(nodes[3], "RESET SLAVE 'dummy' ALL;");
+    test.try_query(nodes[3], "START SLAVE;");
     test.repl->fix_replication();
     return test.global_result;
 }
