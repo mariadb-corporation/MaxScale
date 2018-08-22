@@ -669,13 +669,27 @@ void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, in
  */
 bool RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage *ip)
 {
-    int rval = false;
+    bool rval = false;
+    struct sockaddr_storage addr;
+    memcpy(&addr, ip, sizeof(addr));
 
     for (const auto& source : m_sources)
     {
-        struct sockaddr_in check_ipv4;
+        if (addr.ss_family == AF_INET6)
+        {
+            struct sockaddr_in6* addr6 = (struct sockaddr_in6*)&addr;
 
-        memcpy(&check_ipv4, ip, sizeof(check_ipv4));
+            if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr))
+            {
+                mapped_ipv6_to_ipv4(&addr);
+            }
+            else
+            {
+                // TODO handle ipv6 address
+                return false;
+            }
+        }
+        struct sockaddr_in *check_ipv4 = (struct sockaddr_in*)&addr;
 
         switch (source.m_netmask)
         {
@@ -684,15 +698,15 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
             break;
         case 24:
             /* Class C check */
-            check_ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+            check_ipv4->sin_addr.s_addr &= 0x00FFFFFF;
             break;
         case 16:
             /* Class B check */
-            check_ipv4.sin_addr.s_addr &= 0x0000FFFF;
+            check_ipv4->sin_addr.s_addr &= 0x0000FFFF;
             break;
         case 8:
             /* Class A check */
-            check_ipv4.sin_addr.s_addr &= 0x000000FF;
+            check_ipv4->sin_addr.s_addr &= 0x000000FF;
             break;
         default:
             break;
@@ -700,7 +714,7 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
 
         if (source.m_netmask < 32)
         {
-            rval = (check_ipv4.sin_addr.s_addr == source.m_ipv4.sin_addr.s_addr);
+            rval = (check_ipv4->sin_addr.s_addr == source.m_ipv4.sin_addr.s_addr);
         }
 
         if (rval)
@@ -722,6 +736,21 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     memcpy(&addr, ip, sizeof(addr));
     char hbuf[NI_MAXHOST];
 
+    if (addr.ss_family == AF_INET6)
+    {
+        struct sockaddr_in6* addr6 = (struct sockaddr_in6*)&addr;
+
+        if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr))
+        {
+            mapped_ipv6_to_ipv4(&addr);
+        }
+        else
+        {
+            // TODO handle ipv6 address
+            return false;
+        }
+    }
+
     if (int rc = (getnameinfo((struct sockaddr *)&addr, sizeof(sockaddr), hbuf, sizeof(hbuf), 0, 0, NI_NAMEREQD)) != 0)
     {
         MXS_INFO("Failed to resolve hostname due to %s", gai_strerror(rc));
@@ -739,6 +768,20 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     }
 
     return false;
+}
+
+void RegexHintFilter::mapped_ipv6_to_ipv4(struct sockaddr_storage* addr)
+{
+    struct sockaddr_in6* addr6 = (struct sockaddr_in6*)addr;
+    struct sockaddr_in addr4;
+    memset(&addr4, 0, sizeof(addr4));
+    addr4.sin_family = AF_INET;
+    addr4.sin_port = addr6->sin6_port;
+
+    /* When mapped to ipv6, ipv4 addresses are prepended with prefix of length 12.
+     * Lets ignore the prefix and only copy the actual ipv4 address. */
+    memcpy(&addr4.sin_addr.s_addr, addr6->sin6_addr.s6_addr + 12, sizeof(addr4.sin_addr.s_addr));
+    memcpy(addr, &addr4, sizeof(addr4));
 }
 
 /**

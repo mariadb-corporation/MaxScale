@@ -47,6 +47,8 @@ private:
 
     bool check_source_host(const char *remote, const struct sockaddr_storage *ip);
     bool check_source_hostnames(const char *remote, const struct sockaddr_storage *ip);
+    /* Change ipv6 mapped ipv4 address to actual ipv4 address*/
+    void mapped_ipv6_to_ipv4(struct sockaddr_storage* ip);
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet
      * shared access. */
