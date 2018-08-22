@@ -12,7 +12,6 @@ add_library(maxscale-common SHARED
   event.cc
   externcmd.cc
   filter.cc
-  hashtable.cc
   hint.cc
   housekeeper.cc
   httprequest.cc
