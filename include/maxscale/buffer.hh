@@ -17,6 +17,7 @@
 #include <iterator>
 #include <new>
 #include <vector>
+#include <maxbase/assert.h>
 #include <maxscale/buffer.h>
 
 namespace maxscale

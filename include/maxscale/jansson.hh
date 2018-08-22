@@ -18,9 +18,9 @@
 #include <sstream>
 #include <string>
 
+#include <maxbase/assert.h>
 #include <maxbase/jansson.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
 
 namespace std
 {

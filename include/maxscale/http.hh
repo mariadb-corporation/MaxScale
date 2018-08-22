@@ -17,8 +17,6 @@
 #include <string>
 #include <time.h>
 
-#include <maxscale/debug.h>
-
 /**
  * @brief Return the current HTTP-date
  *

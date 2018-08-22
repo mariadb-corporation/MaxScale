@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/mariadb.hh>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 namespace
 {

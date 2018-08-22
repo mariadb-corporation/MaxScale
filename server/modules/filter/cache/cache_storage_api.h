@@ -18,7 +18,6 @@
 #include <jansson.h>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 

@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 MXS_BEGIN_DECLS
 

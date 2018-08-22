@@ -20,7 +20,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 #include <maxscale/log.h>
 
 using namespace maxscale;

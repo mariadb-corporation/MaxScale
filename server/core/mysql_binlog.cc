@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <maxscale/log.h>
 #include <string.h>
-#include <maxscale/debug.h>
 #include <maxscale/users.h>
 #include <strings.h>
 #include <math.h>

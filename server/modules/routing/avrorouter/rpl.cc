@@ -17,7 +17,7 @@
 #include <sstream>
 #include <algorithm>
 
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/protocol/mysql.h>
 

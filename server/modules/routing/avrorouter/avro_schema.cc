@@ -25,7 +25,6 @@
 #include <maxscale/log.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <maxscale/debug.h>
 #include <string.h>
 #include <strings.h>
 #include <maxscale/alloc.h>

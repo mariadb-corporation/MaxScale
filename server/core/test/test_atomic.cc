@@ -16,8 +16,8 @@
 #include <stdio.h>
 #include <thread>
 
+#include <maxbase/assert.h>
 #include <maxbase/atomic.h>
-#include <maxscale/debug.h>
 
 
 #define NTHR 10

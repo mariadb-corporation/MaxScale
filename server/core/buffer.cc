@@ -17,12 +17,12 @@
 #include <stdlib.h>
 #include <sstream>
 
-#include <maxscale/alloc.h>
+#include <maxbase/assert.h>
 #include <maxbase/atomic.h>
-#include <maxscale/debug.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/alloc.h>
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
+#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
 #if defined(BUFFER_TRACE)

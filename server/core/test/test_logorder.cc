@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <maxbase/assert.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
 #include <maxscale/log.h>
 
 static void skygw_log_enable(int priority)

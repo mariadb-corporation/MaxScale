@@ -19,7 +19,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 

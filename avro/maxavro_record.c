@@ -14,7 +14,7 @@
 #include <maxscale/cdefs.h>
 #include "maxavro_internal.h"
 #include <string.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 #include <maxscale/log.h>
 #include <errno.h>
 

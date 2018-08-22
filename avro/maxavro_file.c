@@ -14,6 +14,7 @@
 #include "maxavro_internal.h"
 #include <errno.h>
 #include <string.h>
+#include <maxbase/assert.h>
 #include <maxscale/log.h>
 #include <zlib.h>
 

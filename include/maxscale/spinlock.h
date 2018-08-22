@@ -25,7 +25,6 @@
 
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
-#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 

@@ -15,7 +15,6 @@
 
 #include <string>
 
-#include <maxscale/debug.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 

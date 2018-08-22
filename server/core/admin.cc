@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 
 #include <maxbase/atomic.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
 #include <maxscale/clock.h>

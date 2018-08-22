@@ -21,8 +21,8 @@
 #include <string>
 #include <thread>
 
+#include <maxbase/assert.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
 #include <maxscale/log.h>
 #include <maxscale/pcre2.h>
 

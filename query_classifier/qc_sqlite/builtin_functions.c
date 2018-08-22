@@ -14,7 +14,7 @@
 #include "builtin_functions.h"
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 static struct
 {

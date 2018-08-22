@@ -12,9 +12,9 @@
  */
 
 #include <maxscale/spinlock.h>
+#include <maxbase/assert.h>
 #include <maxbase/atomic.h>
 #include <time.h>
-#include <maxscale/debug.h>
 
 
 void spinlock_init(SPINLOCK *lock)

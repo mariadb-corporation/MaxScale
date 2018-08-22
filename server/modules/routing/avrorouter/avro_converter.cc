@@ -15,8 +15,8 @@
 
 #include <limits.h>
 
+#include <maxbase/assert.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
 #include <maxscale/log.h>
 
 /**

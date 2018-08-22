@@ -20,7 +20,7 @@
 #include "auroramon.hh"
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/mysql_utils.h>
 

@@ -29,7 +29,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
-#include <maxscale/debug.h>
 #include <maxscale/log.h>
 
 namespace

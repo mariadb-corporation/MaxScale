@@ -22,9 +22,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <maxbase/assert.h>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
-#include <maxscale/debug.h>
 #include <maxscale/filter.h>
 #include <maxscale/log.h>
 #include <maxscale/modinfo.h>

@@ -26,7 +26,7 @@ using namespace std;
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 GWBUF* create_gwbuf(const char* s)
 {

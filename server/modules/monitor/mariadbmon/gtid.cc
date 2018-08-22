@@ -15,7 +15,7 @@
 
 #include <algorithm>
 #include <sstream>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 using std::string;
 

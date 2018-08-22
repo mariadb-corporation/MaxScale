@@ -14,7 +14,7 @@
 #include "tempfile.hh"
 #include <string.h>
 #include <unistd.h>
-#include <maxscale/debug.h>
+#include <maxbase/assert.h>
 
 namespace
 {

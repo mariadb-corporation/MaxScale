@@ -28,7 +28,6 @@
 
 #include <maxscale/cdefs.h>
 #include <string.h>
-#include <maxscale/debug.h>
 #include <maxscale/hint.h>
 #include <maxscale/spinlock.h>
 #include <stdint.h>

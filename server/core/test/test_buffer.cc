@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <maxbase/assert.h>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/hint.h>

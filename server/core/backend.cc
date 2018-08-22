@@ -16,7 +16,6 @@
 #include <sstream>
 
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/debug.h>
 
 using namespace maxscale;
 
