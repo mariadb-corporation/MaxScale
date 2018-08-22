@@ -1998,6 +1998,11 @@ Service* runtime_create_service_from_json(json_t* json)
                 runtime_destroy_service(rval);
                 rval = NULL;
             }
+            else
+            {
+                // This function sets the service in the correct state
+                serviceStart(rval);
+            }
         }
 
         config_parameter_free(params);
