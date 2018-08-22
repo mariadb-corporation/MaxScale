@@ -151,7 +151,7 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
         if (strcmp(key, "gtid") == 0)
         {
             gtid_pos_t gtid;
-            ss_debug(bool rval = )gtid.parse(value);
+            MXB_AT_DEBUG(bool rval = )gtid.parse(value);
             ss_dassert(rval);
             router->handler.set_gtid(gtid);
         }

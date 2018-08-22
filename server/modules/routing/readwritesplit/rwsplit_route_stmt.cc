@@ -82,7 +82,7 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
 void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 {
     ss_dassert(target);
-    ss_debug(int nserv = 0);
+    MXB_AT_DEBUG(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
     int keepalive = m_config.connection_keepalive * 10;
 
@@ -92,7 +92,7 @@ void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 
         if (backend->in_use() && backend != target && !backend->is_waiting_result())
         {
-            ss_debug(nserv++);
+            MXB_AT_DEBUG(nserv++);
             int diff = mxs_clock() - backend->dcb()->last_read;
 
             if (diff > keepalive)

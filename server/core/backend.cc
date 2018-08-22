@@ -151,7 +151,7 @@ void Backend::clear_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
-        ss_debug(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, -1);
+        MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, -1);
         ss_dassert(prev2 > 0);
     }
 
@@ -162,7 +162,7 @@ void Backend::set_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
-        ss_debug(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, 1);
+        MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, 1);
         ss_dassert(prev2 >= 0);
     }
 

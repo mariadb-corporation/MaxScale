@@ -2105,7 +2105,7 @@ static bool process_data_file(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **maste
                               const char *crc_ptr)
 {
     const char *ptr = data;
-    ss_debug(const char *prevptr = ptr);
+    MXB_AT_DEBUG(const char *prevptr = ptr);
 
     while (ptr < crc_ptr)
     {
@@ -2134,7 +2134,7 @@ static bool process_data_file(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **maste
             return false;
         }
         ss_dassert(prevptr != ptr);
-        ss_debug(prevptr = ptr);
+        MXB_AT_DEBUG(prevptr = ptr);
     }
 
     ss_dassert(ptr == crc_ptr);
@@ -2520,7 +2520,7 @@ int64_t MonitorInstance::get_time_ms()
 {
     timespec t;
 
-    ss_debug(int rv = )clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    MXB_AT_DEBUG(int rv = )clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     ss_dassert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);

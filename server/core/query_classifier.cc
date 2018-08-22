@@ -274,7 +274,7 @@ private:
         {
             freed_space += i->first.size();
 
-            ss_debug(bool erased =) erase(i->first);
+            MXB_AT_DEBUG(bool erased =) erase(i->first);
             ss_dassert(erased);
         }
 
@@ -1311,7 +1311,7 @@ bool qc_alter_from_json(json_t* pJson)
 
         if (rv)
         {
-            ss_debug(bool set =) qc_set_cache_properties(&cache_properties);
+            MXB_AT_DEBUG(bool set =) qc_set_cache_properties(&cache_properties);
             ss_dassert(set);
         }
     }

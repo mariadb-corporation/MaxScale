@@ -1206,7 +1206,7 @@ static void freeSession(MXS_ROUTER* router_instance,
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
 
-    ss_debug(int prev_val = ) atomic_add(&router->stats.n_slaves, -1);
+    MXB_AT_DEBUG(int prev_val = ) atomic_add(&router->stats.n_slaves, -1);
     ss_dassert(prev_val > 0);
 
     /*

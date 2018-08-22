@@ -2189,8 +2189,8 @@ int dcb_accept_SSL(DCB* dcb)
         return -1;
     }
 
-    ss_debug(const char *remote = dcb->remote ? dcb->remote : "");
-    ss_debug(const char *user = dcb->user ? dcb->user : "");
+    MXB_AT_DEBUG(const char *remote = dcb->remote ? dcb->remote : "");
+    MXB_AT_DEBUG(const char *user = dcb->user ? dcb->user : "");
 
     int ssl_rval = SSL_accept(dcb->ssl);
 
@@ -3107,8 +3107,8 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
     if ((events & EPOLLHUP) && (dcb->n_close == 0))
     {
-        ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
+        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -3133,8 +3133,8 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 #ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (dcb->n_close == 0))
     {
-        ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
+        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",

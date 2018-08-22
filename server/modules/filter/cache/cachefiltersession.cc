@@ -151,7 +151,7 @@ bool is_select_statement(GWBUF* pStmt)
     char* pSql;
     int len;
 
-    ss_debug(int rc = ) modutil_extract_SQL(pStmt, &pSql, &len);
+    MXB_AT_DEBUG(int rc = ) modutil_extract_SQL(pStmt, &pSql, &len);
     ss_dassert(rc == 1);
 
     char* pSql_end = pSql + len;
@@ -1001,7 +1001,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
  */
 CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
 {
-    ss_debug(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
+    MXB_AT_DEBUG(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
     ss_dassert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
 
     routing_action_t routing_action = ROUTING_CONTINUE;

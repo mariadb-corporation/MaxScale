@@ -1648,7 +1648,7 @@ uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     uint64_t intval;
-    ss_debug(bool rval = )get_suffixed_size(value, &intval);
+    MXB_AT_DEBUG(bool rval = )get_suffixed_size(value, &intval);
     ss_dassert(rval);
     return intval;
 }

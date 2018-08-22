@@ -232,9 +232,9 @@ bool ensure_query_is_parsed(GWBUF* query)
         // serialize the parsing. That's ok, since qc_mysqlembedded is only
         // used for verifying the behaviour of qc_sqlite.
 
-        ss_debug(int rv);
+        MXB_AT_DEBUG(int rv);
 
-        ss_debug(rv = )pthread_mutex_lock(&this_unit.sql_mode_mutex);
+        MXB_AT_DEBUG(rv = )pthread_mutex_lock(&this_unit.sql_mode_mutex);
         ss_dassert(rv == 0);
 
         if (this_thread.sql_mode == QC_SQL_MODE_ORACLE)
@@ -248,7 +248,7 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         parsed = parse_query(query);
 
-        ss_debug(rv = )pthread_mutex_unlock(&this_unit.sql_mode_mutex);
+        MXB_AT_DEBUG(rv = )pthread_mutex_unlock(&this_unit.sql_mode_mutex);
         ss_dassert(rv == 0);
 
         if (!parsed)

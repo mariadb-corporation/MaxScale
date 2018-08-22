@@ -386,7 +386,7 @@ void AvroConverter::column(int i)
 
 void AvroConverter::set_active(int i)
 {
-    ss_debug(int rc =)avro_value_get_by_name(&m_record, m_create->columns[i].name.c_str(),
+    MXB_AT_DEBUG(int rc =)avro_value_get_by_name(&m_record, m_create->columns[i].name.c_str(),
                                              &m_field, NULL);
     ss_dassert(rc == 0);
 }

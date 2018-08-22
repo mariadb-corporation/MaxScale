@@ -931,9 +931,9 @@ static void generate_param_names(int pairs)
     const char FORMAT[] = "%s%02d";
     for (int counter = 1; counter <= pairs; counter++)
     {
-        ss_debug(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
+        MXB_AT_DEBUG(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
         ss_dassert(rval == namelen_match - 1);
-        ss_debug(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
+        MXB_AT_DEBUG(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
         ss_dassert(rval == namelen_server - 1);
 
         // Have both names, add them to the global vectors

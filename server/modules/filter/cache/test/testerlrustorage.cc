@@ -241,9 +241,9 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads, size_t n_seconds
     {
         rv = execute_tasks(n_threads, n_seconds, cache_items, *pStorage);
 
-        ss_debug(cache_result_t result);
+        MXB_AT_DEBUG(cache_result_t result);
         uint64_t items;
-        ss_debug(result = ) pStorage->get_items(&items);
+        MXB_AT_DEBUG(result = ) pStorage->get_items(&items);
         ss_dassert(result == CACHE_RESULT_OK);
 
         out() << "Max count: " << max_count << ", count: " << items << "." << endl;
@@ -254,7 +254,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads, size_t n_seconds
         }
 
         uint64_t size;
-        ss_debug(result = ) pStorage->get_size(&size);
+        MXB_AT_DEBUG(result = ) pStorage->get_size(&size);
         ss_dassert(result == CACHE_RESULT_OK);
 
         out() << "Max size: " << max_size << ", size: " << size << "." << endl;

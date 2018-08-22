@@ -655,7 +655,7 @@ static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
-    ss_debug(check_packet(dcb, read_buffer, nbytes_read));
+    MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
 
     /** Allocate the shared session structure */
     if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
@@ -743,7 +743,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            ss_debug(bool check = ) mxs_rworker_register_session(session);
+            MXB_AT_DEBUG(bool check = ) mxs_rworker_register_session(session);
             ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
@@ -1459,7 +1459,7 @@ static int gw_client_close(DCB *dcb)
         {
             ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
                        target->state == SESSION_STATE_STOPPING);
-            ss_debug(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
+            MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(target->ses_id);
             ss_dassert(removed);
             session_close(target);
         }

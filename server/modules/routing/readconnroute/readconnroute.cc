@@ -458,7 +458,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
 
-    ss_debug(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
+    MXB_AT_DEBUG(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
     ss_dassert(prev_val > 0);
 
     MXS_FREE(router_cli_ses);

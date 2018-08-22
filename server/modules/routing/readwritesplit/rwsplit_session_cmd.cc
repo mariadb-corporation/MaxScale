@@ -87,7 +87,7 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
         if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
         {
             // This should never fail or the backend protocol is broken
-            ss_debug(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
+            MXB_AT_DEBUG(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
             ss_dassert(b);
             backend->add_ps_handle(id, resp.id);
         }

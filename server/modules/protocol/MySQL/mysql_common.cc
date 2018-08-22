@@ -1469,7 +1469,7 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
 
         if (server_status  & SERVER_SESSION_STATE_CHANGED)
         {
-            ss_debug(uint64_t data_size = )mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
+            MXB_AT_DEBUG(uint64_t data_size = )mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
             ss_dassert(data_size == packet_len - (ptr - local_buf));
 
             while (ptr < (local_buf + packet_len))

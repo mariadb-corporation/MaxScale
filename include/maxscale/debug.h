@@ -20,6 +20,5 @@ MXS_BEGIN_DECLS
 
 #define ss_dassert      mxb_assert
 #define ss_info_dassert mxb_assert_message
-#define ss_debug        MXB_AT_DEBUG
 
 MXS_END_DECLS

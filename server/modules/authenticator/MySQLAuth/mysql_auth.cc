@@ -148,7 +148,7 @@ sqlite3* get_handle(MYSQL_AUTH* instance)
 
     if (instance->handles[i] == NULL)
     {
-        ss_debug(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
+        MXB_AT_DEBUG(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
         ss_dassert(rval);
     }
 
