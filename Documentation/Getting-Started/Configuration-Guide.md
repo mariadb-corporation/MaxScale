@@ -1390,8 +1390,20 @@ to `required` and provide the three files for `ssl_cert`, `ssl_key` and
 
 After this, MaxScale connections between the server and/or the client will be
 encrypted. Note that the database must be configured to use TLS/SSL connections
-if backend connection encryption is used. When client-side encryption is
-enabled, only encrypted connections to MaxScale can be created.
+if backend connection encryption is used.
+
+**Note:** MaxScale does not allow mixed use of TLS/SSL and normal connections on
+  the same port.
+
+If TLS encryption is enabled for a listener, any unencrypted connections to it
+will be rejected. MaxScale does this to improve security by preventing
+accidental creation on unencrypted connections.
+
+The separation of secure and insecure connections differs from the MariaDB
+server which allows both secure and insecure connections on the same port. As
+MaxScale is the gateway through which all connections go, in order to guarantee
+a more secure system MaxScale enforces a stricter security policy than what the
+server does.
 
 #### `ssl`
 
