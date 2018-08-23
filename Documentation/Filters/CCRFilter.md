@@ -12,6 +12,8 @@ a routing hint to all following statements. This routing hint guides the routing
 module to route the statement to the master server where data is guaranteed to
 be in an up-to-date state.
 
+### Controlling the Filter with SQL Comments
+
 The triggering of the filter can be limited further by adding MaxScale supported
 comments to queries and/or by using regular expressions. The query comments take
 precedence: if a comment is found it is obayed even if a regular expression
