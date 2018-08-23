@@ -146,9 +146,6 @@ typedef enum count_spec_t
 #define SERVICE_STATE_FAILED    3       /**< The service failed to start */
 #define SERVICE_STATE_STOPPED   4       /**< The service has been stopped */
 
-// Set to 1 when services should stop
-extern volatile sig_atomic_t service_should_stop;
-
 /**
  * Find a service
  *

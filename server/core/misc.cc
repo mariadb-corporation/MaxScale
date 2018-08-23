@@ -36,15 +36,19 @@ int maxscale_uptime()
     return time(0) - started;
 }
 
+static sig_atomic_t n_shutdowns = 0;
+
+bool maxscale_is_shutting_down()
+{
+    return n_shutdowns != 0;
+}
+
 int maxscale_shutdown()
 {
-    static int n_shutdowns = 0;
-
-    int n = atomic_add(&n_shutdowns, 1);
+    int n = n_shutdowns++;
 
     if (n == 0)
     {
-        service_shutdown();
         mxs::RoutingWorker::shutdown_all();
     }
 

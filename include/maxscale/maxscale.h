@@ -43,4 +43,14 @@ time_t maxscale_started(void);
  */
 int maxscale_uptime(void);
 
+/**
+ * Is MaxScale shutting down
+ *
+ * This function can be used to detect whether the shutdown has been initiated. It does not tell
+ * whether the shutdown has been completed so thread-safety is still important.
+ *
+ * @return True if MaxScale is shutting down
+ */
+bool maxscale_is_shutting_down();
+
 MXS_END_DECLS

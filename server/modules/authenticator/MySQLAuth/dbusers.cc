@@ -24,6 +24,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
+#include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
@@ -923,7 +924,7 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
     int total_users = -1;
     bool no_active_servers = true;
 
-    for (server = service->dbref; !service_should_stop && server; server = server->next)
+    for (server = service->dbref; !maxscale_is_shutting_down() && server; server = server->next)
     {
         if (!SERVER_REF_IS_ACTIVE(server) || !server_is_active(server->server) ||
             (skip_local && server_is_mxs_service(server->server)))

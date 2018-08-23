@@ -2037,10 +2037,27 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    // Before we start the workers we need to check if a shutdown signal has been received
+    if (maxscale_is_shutting_down())
+    {
+        rc = MAXSCALE_SHUTDOWN;
+        goto return_main;
+    }
+
     if (!RoutingWorker::init())
     {
         MXS_ERROR("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    /**
+     * If a shutdown signal was received while we were initializing the workers, we need to exit.
+     * After this point, the shutdown will be driven by the workers.
+     */
+    if (maxscale_is_shutting_down())
+    {
+        rc = MAXSCALE_SHUTDOWN;
         goto return_main;
     }
 

@@ -481,7 +481,7 @@ int serviceStartAllPorts(Service* service)
 
     if (port)
     {
-        while (!service_should_stop && port)
+        while (!maxscale_is_shutting_down() && port)
         {
             listeners += serviceStartPort(service, port);
             port = port->next;
@@ -635,7 +635,7 @@ int service_launch_all()
             error = true;
         }
 
-        if (service_should_stop)
+        if (maxscale_is_shutting_down())
         {
             break;
         }
@@ -1518,13 +1518,6 @@ const char* serviceGetWeightingParameter(SERVICE *svc)
 {
     Service* service = static_cast<Service*>(svc);
     return service->weightby;
-}
-
-volatile sig_atomic_t service_should_stop = 0;
-
-void service_shutdown()
-{
-    service_should_stop = 1;
 }
 
 void service_destroy_instances(void)

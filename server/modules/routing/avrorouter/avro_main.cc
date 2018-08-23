@@ -24,6 +24,7 @@
 #include <ini.h>
 #include <sys/stat.h>
 #include <maxbase/atomic.h>
+#include <maxscale/maxscale.h>
 #include <maxbase/worker.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
@@ -328,7 +329,7 @@ static bool conversion_task_ctl(Avro *inst, bool start)
 {
     bool rval = false;
 
-    if (!service_should_stop)
+    if (!maxscale_is_shutting_down())
     {
         Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
         std::unique_ptr<ConversionCtlTask> task(new (std::nothrow) ConversionCtlTask(inst, start));

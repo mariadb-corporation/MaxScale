@@ -34,6 +34,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/log.h>
+#include <maxscale/maxscale.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
 
@@ -493,7 +494,7 @@ avro_binlog_end_t avro_read_all_events(Avro *router)
     std::string next_binlog;
     bool rotate_seen = false;
 
-    while (!service_should_stop)
+    while (!maxscale_is_shutting_down())
     {
         avro_binlog_end_t rc;
         REP_HEADER hdr;
