@@ -5117,7 +5117,20 @@ blr_get_parsed_command_value(char *input)
                 *ptr-- = 0;
             }
 
-            ret = MXS_STRDUP_A(strstr(value, word));
+            // Remove surrounding quotes.
+            char* p = strstr(value, word);
+            if (*p == '\'' || *p == '"')
+            {
+                char quote = *p;
+                ++p;
+                int len = strlen(p);
+                if (len > 0 && p[len - 1] == quote)
+                {
+                    p[len - 1] = 0;
+                }
+            }
+
+            ret = MXS_STRDUP_A(p);
         }
     }
 
