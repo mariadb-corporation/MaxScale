@@ -4185,13 +4185,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    MasterServerConfig current_master;
-
-    spinlock_acquire(&router->lock);
-
-    /* save current config option data */
-    blr_master_get_config(router, &current_master);
-
     /* Abort if MASTER_USE_GTID is in use and
      * router->mariadb10_master_gtid is not set
      */
@@ -4203,8 +4196,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                  "Enable 'mariadb10_master_gtid' option first.");
 
         MXS_ERROR("%s: %s", router->service->name, error);
-
-        spinlock_release(&router->lock);
 
         return -1;
     }
@@ -4231,8 +4222,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
             MXS_ERROR("%s: %s", router->service->name, error);
 
-            spinlock_release(&router->lock);
-
             return -1;
         }
     }
@@ -4253,11 +4242,16 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
             MXS_ERROR("%s: %s", router->service->name, error);
 
-            spinlock_release(&router->lock);
-
             return -1;
         }
     }
+
+    MasterServerConfig current_master;
+
+    spinlock_acquire(&router->lock);
+
+    /* save current config option data */
+    blr_master_get_config(router, &current_master);
 
     /* Change the heartbeat */
     if (h_val != -1)
