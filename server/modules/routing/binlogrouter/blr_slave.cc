@@ -164,8 +164,7 @@ static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *error);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const char *hostname);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const std::string& hostname);
-static int blr_set_master_port(ROUTER_INSTANCE *router, const char *port);
-static int blr_set_master_port(ROUTER_INSTANCE *router, const std::string& port);
+static int blr_set_master_port(ROUTER_INSTANCE *router, int port);
 static char *blr_set_master_logfile(ROUTER_INSTANCE *router,
                                     const char *filename,
                                     char *error);
@@ -240,7 +239,7 @@ static bool blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave);
 static int blr_set_master_ssl(ROUTER_INSTANCE *router,
-                              const ChangeMasterOptions& config,
+                              const ChangeMasterConfig& config,
                               char *error_message);
 static int blr_slave_read_ste(ROUTER_INSTANCE *router,
                               ROUTER_SLAVE *slave,
@@ -319,7 +318,7 @@ static int binary_logs_find_file_cb(void *data,
                                     char** names);
 static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    const MasterServerConfig& current_master,
-                                   const ChangeMasterOptions& change_master);
+                                   const ChangeMasterConfig& change_master);
 extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_close_master_in_main(void* data);
 static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
@@ -331,7 +330,7 @@ static void blr_abort_change_master(ROUTER_INSTANCE *router,
 static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
                                          const char *errmsg);
 static bool blr_binlog_change_check(const ROUTER_INSTANCE *router,
-                                    const ChangeMasterOptions& change_master,
+                                    const ChangeMasterConfig& new_config,
                                     char *error);
 static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
                                    const char *log_file,
@@ -342,7 +341,7 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
                                    char **new_logfile,
                                    char *error);
 static bool blr_apply_changes(ROUTER_INSTANCE *router,
-                              const ChangeMasterOptions& change_master,
+                              const ChangeMasterConfig& new_config,
                               char *new_logfile,
                               char *error);
 static void blr_slave_info_save(const MARIADB_GTID_INFO *info,
@@ -4240,8 +4239,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *command,
                              char *error)
 {
-    ChangeMasterOptions change_master;
-
     char* cmd_ptr = strcasestr(command, "TO");
     if (!cmd_ptr)
     {
@@ -4254,9 +4251,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     std::vector<char> cmd_string(cmd_ptr + 2, cmd_ptr + strlen(cmd_ptr) + 1);
 
     /* Parse SQL command and populate the change_master struct */
+    ChangeMasterOptions new_options;
     if (blr_parse_change_master_command(&cmd_string.front(),
                                         error,
-                                        &change_master) != 0)
+                                        &new_options) != 0)
     {
         MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
                   router->service->name,
@@ -4265,65 +4263,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    /* Abort if MASTER_USE_GTID is in use and
-     * router->mariadb10_master_gtid is not set
-     */
-    if (!router->mariadb10_master_gtid && !change_master.use_mariadb10_gtid.empty())
+    ChangeMasterConfig new_config;
+    if (!new_options.validate(router, error, &new_config))
     {
-        snprintf(error,
-                 BINLOG_ERROR_MSG_LEN,
-                 "Cannot use MASTER_USE_GTID. "
-                 "Enable 'mariadb10_master_gtid' option first.");
-
-        MXS_ERROR("%s: %s", router->service->name, error);
-
         return -1;
-    }
-
-    /**
-     * Handle connection options
-     */
-    int h_val = -1;
-    auto& master_heartbeat = change_master.heartbeat_period;
-    if (!master_heartbeat.empty())
-    {
-        h_val = (int)strtol(master_heartbeat.c_str(), NULL, 10);
-
-        if (h_val < 0 ||
-            (errno == ERANGE) ||
-            h_val > BLR_HEARTBEAT_MAX_INTERVAL)
-        {
-            snprintf(error,
-                     BINLOG_ERROR_MSG_LEN,
-                     "The requested value for the heartbeat period is "
-                     "either negative or exceeds the maximum allowed "
-                     "(%d seconds).",
-                     BLR_HEARTBEAT_MAX_INTERVAL);
-
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            return -1;
-        }
-    }
-
-    int r_val = -1;
-    auto& master_connect_retry = change_master.connect_retry;
-    if (!master_connect_retry.empty())
-    {
-        r_val = (int)strtol(master_connect_retry.c_str(), NULL, 10);
-        if (r_val <= 0 ||
-            (errno == ERANGE))
-        {
-            snprintf(error,
-                     BINLOG_ERROR_MSG_LEN,
-                     "The requested value for MASTER_CONNECT_RETRY "
-                     "interval is not valid: %s.",
-                     master_connect_retry.c_str());
-
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            return -1;
-        }
     }
 
     MasterServerConfig current_master;
@@ -4334,42 +4277,42 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     blr_master_get_config(router, &current_master);
 
     /* Change the heartbeat */
-    if (h_val != -1)
+    if (new_config.heartbeat_period != -1)
     {
-        if (h_val == 0)
+        if (new_config.heartbeat_period == 0)
         {
             blr_log_disabled_heartbeat(router);
         }
-        router->heartbeat = h_val;
+        router->heartbeat = new_config.heartbeat_period;
     }
 
     /* Change the connect retry */
-    if (r_val != -1)
+    if (new_config.connect_retry != -1)
     {
-        router->retry_interval = r_val;
+        router->retry_interval = new_config.connect_retry;
     }
 
     /* Change the replication user */
-    blr_set_master_user(router, change_master.user);
+    blr_set_master_user(router, new_config.user);
 
     /* Change the replication password */
-    blr_set_master_password(router, change_master.password);
+    blr_set_master_password(router, new_config.password);
 
     /* Change the master name/address */
-    blr_set_master_hostname(router, change_master.host);
+    blr_set_master_hostname(router, new_config.host);
 
     /* Change the master port */
-    blr_set_master_port(router, change_master.port);
+    blr_set_master_port(router, new_config.port);
 
     /* Handle SSL options */
     int ssl_error;
-    ssl_error = blr_set_master_ssl(router, change_master, error);
+    ssl_error = blr_set_master_ssl(router, new_config, error);
 
     if (ssl_error != -1 &&
         // No CA cert is defined or only one of CERT or KEY is defined
-        (change_master.ssl_ca.empty() || change_master.ssl_cert.empty() != change_master.ssl_key.empty())
+        (new_config.ssl_ca.empty() || new_config.ssl_cert.empty() != new_config.ssl_key.empty())
     {
-        if (!change_master.ssl_enabled.empty() && atoi(change_master.ssl_enabled.c_str()))
+        if (!new_config.ssl_enabled.empty() && atoi(new_config.ssl_enabled.c_str()))
         {
             snprintf(error,
                      BINLOG_ERROR_MSG_LEN,
@@ -4399,14 +4342,14 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
      */
     char *master_logfile = NULL;
     if (!blr_binlog_change_check(router,
-                                 change_master,
+                                 new_config,
                                  error) ||
         !blr_change_binlog_name(router,
-                                change_master.binlog_file,
+                                new_config.binlog_file,
                                 &master_logfile,
                                 error) ||
         !blr_apply_changes(router,
-                           change_master,
+                           new_config,
                            master_logfile,
                            error))
     {
@@ -4421,7 +4364,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     }
 
     /* Log config changes (without passwords) */
-    blr_log_config_changes(router, current_master, change_master);
+    blr_log_config_changes(router, current_master, new_config);
 
     MXS_FREE(master_logfile);
 
@@ -4474,32 +4417,20 @@ static int blr_set_master_hostname(ROUTER_INSTANCE *router, const std::string& h
  * @return      1 for applied change, 0 otherwise
  */
 
-static int blr_set_master_port(ROUTER_INSTANCE *router, const char *port)
+static int blr_set_master_port(ROUTER_INSTANCE *router, int port)
 {
-    unsigned short new_port;
-
-    if (port != NULL)
+    if (port > 0)
     {
-        new_port = atoi(port);
+        server_update_port(router->service->dbref->server, port);
 
-        if (new_port)
-        {
-            server_update_port(router->service->dbref->server, new_port);
+        MXS_INFO("%s: New MASTER_PORT is [%i]",
+                 router->service->name,
+                 router->service->dbref->server->port);
 
-            MXS_INFO("%s: New MASTER_PORT is [%i]",
-                     router->service->name,
-                     router->service->dbref->server->port);
-
-            return 1;
-        }
+        return 1;
     }
 
     return 0;
-}
-
-static int blr_set_master_port(ROUTER_INSTANCE *router, const std::string& port)
-{
-    return blr_set_master_port(router, port.empty() ? nullptr : port.c_str());
 }
 
 /*
@@ -6122,7 +6053,7 @@ blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
  */
 static int
 blr_set_master_ssl(ROUTER_INSTANCE *router,
-                   const ChangeMasterOptions& config,
+                   const ChangeMasterConfig& config,
                    char *error_message)
 {
     SSL_LISTENER *server_ssl = NULL;
@@ -8976,19 +8907,27 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
  */
 static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    const MasterServerConfig& current_master,
-                                   const ChangeMasterOptions& change_master)
+                                   const ChangeMasterConfig& change_master)
 {
     /* Prepare heartbeat and retry msgs */
     static const char heartbeat[] = ", MASTER_HEARTBEAT_PERIOD=";
     static const char retry[] = ", MASTER_CONNECT_RETRY=";
-    int h_len = change_master.heartbeat_period.length();
-    int r_len = change_master.connect_retry.length();
-    char heartbeat_msg[sizeof(heartbeat) + h_len];
-    char retry_msg[sizeof(retry) + r_len];
+    std::string h;
+    if (change_master.heartbeat_period != -1)
+    {
+        h = std::to_string(change_master.heartbeat_period);
+    }
+    std::string r;
+    if (change_master.connect_retry != -1)
+    {
+        r = std::to_string(change_master.connect_retry);
+    }
+    char heartbeat_msg[sizeof(heartbeat) + h.length()];
+    char retry_msg[sizeof(retry) + r.length()];
     heartbeat_msg[0] = 0;
     retry_msg[0] = 0;
 
-    if (h_len)
+    if (!h.empty())
     {
         sprintf(heartbeat_msg,
                 "%s%lu",
@@ -8996,7 +8935,7 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                 router->heartbeat); // Display the current "long" value
     }
 
-    if (r_len)
+    if (!r.empty())
     {
         sprintf(retry_msg,
                 "%s%d",
@@ -9179,7 +9118,7 @@ static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
  * @return                True if binlog can be changed or false.
  */
 static bool blr_binlog_change_check(const ROUTER_INSTANCE *router,
-                                    const ChangeMasterOptions& change_master,
+                                    const ChangeMasterConfig& change_master,
                                     char *error)
 {
     char *master_logfile = NULL;
@@ -9322,7 +9261,7 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
  *                         or false on errors.
  */
 static bool blr_apply_changes(ROUTER_INSTANCE *router,
-                              const ChangeMasterOptions& change_master,
+                              const ChangeMasterConfig& change_master,
                               char *new_logfile,
                               char *error)
 {
