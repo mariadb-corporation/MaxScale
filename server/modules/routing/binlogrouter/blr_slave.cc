@@ -159,6 +159,9 @@ static void blr_slave_send_error_packet(ROUTER_SLAVE *slave,
                                         const char *msg,
                                         unsigned int err_num,
                                         const char *status);
+static int blr_apply_change_master(ROUTER_INSTANCE* router,
+                                   const ChangeMasterConfig& new_config,
+                                   char* error);
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *command,
                                     char *error);
@@ -4224,51 +4227,10 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
     return true;
 }
 
-/**
- * handle a 'change master' operation
- *
- * @param router    The router instance
- * @param command   The change master SQL command
- * @param error     The error message, preallocated
- *                  BINLOG_ERROR_MSG_LEN + 1 bytes
- * @return          0 on success,
- *                  1 on success with new binlog, -1 on failure
- */
-static
-int blr_handle_change_master(ROUTER_INSTANCE* router,
-                             char *command,
-                             char *error)
+static int blr_apply_change_master(ROUTER_INSTANCE* router,
+                                   const ChangeMasterConfig& new_config,
+                                   char* error)
 {
-    char* cmd_ptr = strcasestr(command, "TO");
-    if (!cmd_ptr)
-    {
-        static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
-        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
-        strcpy(error, MESSAGE);
-        return -1;
-    }
-
-    std::vector<char> cmd_string(cmd_ptr + 2, cmd_ptr + strlen(cmd_ptr) + 1);
-
-    /* Parse SQL command and populate the change_master struct */
-    ChangeMasterOptions new_options;
-    if (blr_parse_change_master_command(&cmd_string.front(),
-                                        error,
-                                        &new_options) != 0)
-    {
-        MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
-                  router->service->name,
-                  error);
-
-        return -1;
-    }
-
-    ChangeMasterConfig new_config;
-    if (!new_options.validate(router, error, &new_config))
-    {
-        return -1;
-    }
-
     MasterServerConfig current_master;
 
     spinlock_acquire(&router->lock);
@@ -4377,6 +4339,54 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     spinlock_release(&router->lock);
 
     return change_binlog;
+}
+
+/**
+ * handle a 'change master' operation
+ *
+ * @param router    The router instance
+ * @param command   The change master SQL command
+ * @param error     The error message, preallocated
+ *                  BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return          0 on success,
+ *                  1 on success with new binlog, -1 on failure
+ */
+static
+int blr_handle_change_master(ROUTER_INSTANCE* router,
+                             char *command,
+                             char *error)
+{
+    char* cmd_ptr = strcasestr(command, "TO");
+    if (!cmd_ptr)
+    {
+        static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
+        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        strcpy(error, MESSAGE);
+        return -1;
+    }
+
+    std::vector<char> cmd_string(cmd_ptr + 2, cmd_ptr + strlen(cmd_ptr) + 1);
+
+    /* Parse SQL command and populate the change_master struct */
+    ChangeMasterOptions new_options;
+    if (blr_parse_change_master_command(&cmd_string.front(),
+                                        error,
+                                        &new_options) != 0)
+    {
+        MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
+                  router->service->name,
+                  error);
+
+        return -1;
+    }
+
+    ChangeMasterConfig new_config;
+    if (!new_options.validate(router, error, &new_config))
+    {
+        return -1;
+    }
+
+    return blr_apply_change_master(router, new_config, error);
 }
 
 /*
