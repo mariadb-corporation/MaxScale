@@ -342,7 +342,7 @@ typedef struct mariadb_gtid_info
 } MARIADB_GTID_INFO;
 
 /* Master Server configuration struct */
-typedef struct master_server_config
+struct MasterServerConfig
 {
     std::string host;
     unsigned short port;
@@ -360,10 +360,10 @@ typedef struct master_server_config
     std::string ssl_version;
     /* Connect options */
     int  heartbeat;
-} MASTER_SERVER_CFG;
+};
 
 /* Config struct for CHANGE MASTER TO options */
-typedef struct change_master_options
+struct ChangeMasterOptions
 {
     std::string host;
     std::string port;
@@ -382,7 +382,7 @@ typedef struct change_master_options
     /* Connection options */
     std::string heartbeat_period;
     std::string connect_retry;
-} CHANGE_MASTER_OPTIONS;
+};
 
 /**
  * Packet header for replication messages

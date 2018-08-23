@@ -57,9 +57,9 @@
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
-static void master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
+static void master_free_parsed_options(ChangeMasterOptions *options);
 extern int blr_test_parse_change_master_command(char *input, char *error_string,
-                                                CHANGE_MASTER_OPTIONS *config);
+                                                ChangeMasterOptions *config);
 extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, const char *filename, char *error);
 extern int blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
 
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     int ret;
     int rc;
     char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
-    CHANGE_MASTER_OPTIONS change_master;
+    ChangeMasterOptions change_master;
     char query[512 + 1] = "";
     char saved_query[512 + 1] = "";
     int command_offset = strlen("CHANGE MASTER TO");
@@ -879,7 +879,7 @@ int main(int argc, char **argv)
 }
 
 static void
-master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
+master_free_parsed_options(ChangeMasterOptions *options)
 {
     options->host.clear();
     options->port.clear();
