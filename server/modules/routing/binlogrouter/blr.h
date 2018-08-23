@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <zlib.h>
 
+#include <string>
 #include <thread>
 
 #include <maxscale/buffer.h>
@@ -364,23 +365,23 @@ typedef struct master_server_config
 /* Config struct for CHANGE MASTER TO options */
 typedef struct change_master_options
 {
-    char *host;
-    char *port;
-    char *binlog_file;
-    char *binlog_pos;
-    char *user;
-    char *password;
+    std::string host;
+    std::string port;
+    std::string binlog_file;
+    std::string binlog_pos;
+    std::string user;
+    std::string password;
     /* SSL options */
-    char *ssl_key;
-    char *ssl_cert;
-    char *ssl_ca;
-    char *ssl_enabled;
-    char *ssl_version;
+    std::string ssl_key;
+    std::string ssl_cert;
+    std::string ssl_ca;
+    std::string ssl_enabled;
+    std::string ssl_version;
     /* MariaDB 10 GTID */
-    char *use_mariadb10_gtid;
+    std::string use_mariadb10_gtid;
     /* Connection options */
-    char *heartbeat_period;
-    char *connect_retry;
+    std::string heartbeat_period;
+    std::string connect_retry;
 } CHANGE_MASTER_OPTIONS;
 
 /**

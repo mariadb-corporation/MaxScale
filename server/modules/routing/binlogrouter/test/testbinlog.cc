@@ -80,12 +80,6 @@ int main(int argc, char **argv)
     int rc;
     char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
     CHANGE_MASTER_OPTIONS change_master;
-    change_master.host = NULL;
-    change_master.port = NULL;
-    change_master.user = NULL;
-    change_master.password = NULL;
-    change_master.binlog_file = NULL;
-    change_master.binlog_pos = NULL;
     char query[512 + 1] = "";
     char saved_query[512 + 1] = "";
     int command_offset = strlen("CHANGE MASTER TO");
@@ -529,17 +523,12 @@ int main(int argc, char **argv)
     {
         printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
     }
-    MXS_FREE(change_master.host);
-    change_master.host = NULL;
-    MXS_FREE(change_master.port);
-    change_master.port = NULL;
-    MXS_FREE(change_master.user);
-    change_master.user = NULL;
-    MXS_FREE(change_master.password);
-    change_master.password = NULL;
-    MXS_FREE(change_master.binlog_pos);
-    change_master.binlog_pos = NULL;
 
+    change_master.host.clear();
+    change_master.port.clear();
+    change_master.user.clear();
+    change_master.password.clear();
+    change_master.binlog_pos.clear();
     tests++;
 
     printf("--------- MASTER_LOG_FILE tests ---------\n");
@@ -553,31 +542,32 @@ int main(int argc, char **argv)
     inst->master_state = BLRM_SLAVE_STOPPED;
     strcpy(error_string, "");
 
-    master_log_file = blr_test_set_master_logfile(inst, change_master.binlog_file, error_string);
+    master_log_file = blr_test_set_master_logfile(inst, change_master.binlog_file.c_str(), error_string);
 
     if (master_log_file == NULL)
     {
         if (strlen(error_string))
         {
-            printf("Test %d PASSED, MASTER_LOG_FILE [%s]: [%s]\n", tests, change_master.binlog_file, error_string);
+            printf("Test %d PASSED, MASTER_LOG_FILE [%s]: [%s]\n", tests,
+                   change_master.binlog_file.c_str(), error_string);
         }
         else
         {
             printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, an error message was expected\n", tests,
-                   change_master.binlog_file);
+                   change_master.binlog_file.c_str());
             return 1;
         }
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, NULL was expected from blr_test_set_master_logfile()\n",
-               tests, change_master.binlog_file);
+        printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, "
+               "NULL was expected from blr_test_set_master_logfile()\n",
+               tests, change_master.binlog_file.c_str());
         return 1;
     }
 
     tests++;
-    MXS_FREE(change_master.binlog_file);
-    change_master.binlog_file = NULL;
+    change_master.binlog_file.clear();
     printf("--- MASTER_LOG_POS and MASTER_LOG_FILE rule/constraints checks ---\n");
 
     /********************************************
@@ -891,37 +881,10 @@ int main(int argc, char **argv)
 static void
 master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
 {
-    if (options->host)
-    {
-        MXS_FREE(options->host);
-        options->host = NULL;
-    }
-    if (options->port)
-    {
-        MXS_FREE(options->port);
-        options->port = NULL;
-    }
-    if (options->user)
-    {
-        MXS_FREE(options->user);
-        options->user = NULL;
-    }
-
-    if (options->password)
-    {
-        MXS_FREE(options->password);
-        options->password = NULL;
-    }
-
-    if (options->binlog_file)
-    {
-        MXS_FREE(options->binlog_file);
-        options->binlog_file = NULL;
-    }
-
-    if (options->binlog_pos)
-    {
-        MXS_FREE(options->binlog_pos);
-        options->binlog_pos = NULL;
-    }
+    options->host.clear();
+    options->port.clear();
+    options->user.clear();
+    options->password.clear();
+    options->binlog_file.clear();
+    options->binlog_pos.clear();
 }
