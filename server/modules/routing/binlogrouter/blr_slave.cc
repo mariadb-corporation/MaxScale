@@ -192,7 +192,6 @@ static int blr_parse_change_master_command(char *input,
 static int blr_handle_change_master_token(char *input,
                                           char *error,
                                           CHANGE_MASTER_OPTIONS *config);
-static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 static int blr_slave_send_var_value(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave,
                                     const char *variable,
@@ -328,7 +327,6 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
                                        enum blr_slave_check check);
 static void blr_abort_change_master(ROUTER_INSTANCE *router,
                                     MASTER_SERVER_CFG *current_master,
-                                    CHANGE_MASTER_OPTIONS *change_master,
                                     const char *error);
 static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
                                          const char *errmsg);
@@ -4186,8 +4184,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                   router->service->name,
                   error);
 
-        blr_master_free_parsed_options(&change_master);
-
         return -1;
     }
 
@@ -4200,8 +4196,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
         MXS_ERROR("%s: %s", router->service->name, error);
-
-        blr_master_free_parsed_options(&change_master);
 
         return -1;
     }
@@ -4223,7 +4217,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
         blr_abort_change_master(router,
                                 current_master,
-                                &change_master,
                                 error);
 
         spinlock_release(&router->lock);
@@ -4252,7 +4245,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
             blr_abort_change_master(router,
                                     current_master,
-                                    &change_master,
                                     error);
 
             spinlock_release(&router->lock);
@@ -4284,7 +4276,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
             blr_abort_change_master(router,
                                     current_master,
-                                    &change_master,
                                     error);
 
             spinlock_release(&router->lock);
@@ -4331,7 +4322,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     {
         blr_abort_change_master(router,
                                 current_master,
-                                &change_master,
                                 error);
 
         spinlock_release(&router->lock);
@@ -4360,7 +4350,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     {
         blr_abort_change_master(router,
                                 current_master,
-                                &change_master,
                                 error);
         MXS_FREE(master_logfile);
 
@@ -4374,8 +4363,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     /* Free data struct */
     blr_master_free_config(current_master);
-
-    blr_master_free_parsed_options(&change_master);
 
     MXS_FREE(master_logfile);
 
@@ -5172,30 +5159,6 @@ static std::string *blr_validate_change_master_option(const char *option, CHANGE
     {
         return NULL;
     }
-}
-
-/**
- *  Free parsed master options struct pointers
- *
- * @param options    Parsed option struct
- */
-static void
-blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
-{
-    options->host.clear();
-    options->port.clear();
-    options->user.clear();
-    options->password.clear();
-    options->binlog_file.clear();
-    options->binlog_pos.clear();
-    options->ssl_enabled.clear();
-    options->ssl_key.clear();
-    options->ssl_ca.clear();
-    options->ssl_cert.clear();
-    options->ssl_version.clear();
-    options->use_mariadb10_gtid.clear();
-    options->heartbeat_period.clear();
-    options->connect_retry.clear();
 }
 
 /**
@@ -9178,14 +9141,11 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
  */
 static void blr_abort_change_master(ROUTER_INSTANCE *router,
                                     MASTER_SERVER_CFG *current_master,
-                                    CHANGE_MASTER_OPTIONS *change_master,
                                     const char *error)
 {
     MXS_ERROR("%s: %s", router->service->name, error);
     /* restore previous master_host and master_port */
     blr_master_restore_config(router, current_master);
-    /* Free parsed options */
-    blr_master_free_parsed_options(change_master);
 }
 
 /**
