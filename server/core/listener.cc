@@ -175,7 +175,7 @@ void listener_free(SERV_LISTENER* listener)
  * @return  0 on success, -1 on invalid version string
  */
 int
-listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
+listener_set_ssl_version(SSL_LISTENER *ssl_listener, const char* version)
 {
     if (strcasecmp(version, "MAX") == 0)
     {
