@@ -60,7 +60,7 @@ static void printUsage(const char *progname);
 static void master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 extern int blr_test_parse_change_master_command(char *input, char *error_string,
                                                 CHANGE_MASTER_OPTIONS *config);
-extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
+extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, const char *filename, char *error);
 extern int blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
 
 static struct option long_options[] =

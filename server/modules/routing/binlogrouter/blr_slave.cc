@@ -161,12 +161,10 @@ static void blr_slave_send_error_packet(ROUTER_SLAVE *slave,
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *command,
                                     char *error);
-static int blr_set_master_hostname(ROUTER_INSTANCE *router,
-                                   char *hostname);
-static int blr_set_master_port(ROUTER_INSTANCE *router,
-                               char *command);
+static int blr_set_master_hostname(ROUTER_INSTANCE *router, const char *hostname);
+static int blr_set_master_port(ROUTER_INSTANCE *router, const char *command);
 static char *blr_set_master_logfile(ROUTER_INSTANCE *router,
-                                    char *filename,
+                                    const char *filename,
                                     char *error);
 static void blr_master_get_config(ROUTER_INSTANCE *router,
                                   MASTER_SERVER_CFG *current_master);
@@ -182,8 +180,8 @@ static int blr_slave_send_ok_message(ROUTER_INSTANCE* router,
 static char *blr_get_parsed_command_value(char *input);
 static char **blr_validate_change_master_option(char *option,
                                                 CHANGE_MASTER_OPTIONS *config);
-static int blr_set_master_user(ROUTER_INSTANCE *router, char *user);
-static int blr_set_master_password(ROUTER_INSTANCE *router, char *password);
+static int blr_set_master_user(ROUTER_INSTANCE *router, const char *user);
+static int blr_set_master_password(ROUTER_INSTANCE *router, const char *password);
 static int blr_parse_change_master_command(char *input,
                                            char *error_string,
                                            CHANGE_MASTER_OPTIONS *config);
@@ -211,7 +209,7 @@ int blr_test_parse_change_master_command(char *input,
                                          char *error_string,
                                          CHANGE_MASTER_OPTIONS *config);
 char *blr_test_set_master_logfile(ROUTER_INSTANCE *router,
-                                  char *filename,
+                                  const char *filename,
                                   char *error);
 static int blr_slave_handle_variables(ROUTER_INSTANCE *router,
                                       ROUTER_SLAVE *slave,
@@ -4394,29 +4392,13 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
  * @param hostname    The hostname to set
  * @return            1 for applied change, 0 otherwise
  */
-static int
-blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname)
+static int blr_set_master_hostname(ROUTER_INSTANCE *router, const char *hostname)
 {
     if (hostname)
     {
-        char *ptr;
-        char *end;
-        ptr = strchr(hostname, '\'');
-        if (ptr)
-        {
-            ptr++;
-        }
-        else
-        {
-            ptr = hostname;
-        }
-        end = strchr(ptr, '\'');
-        if (end)
-        {
-            *end = '\0';
-        }
+        mxb_assert((*hostname != '\'') && (*hostname != '"'));
 
-        server_update_address(router->service->dbref->server, ptr);
+        server_update_address(router->service->dbref->server, hostname);
 
         MXS_INFO("%s: New MASTER_HOST is [%s]",
                  router->service->name,
@@ -4436,8 +4418,7 @@ blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname)
  * @return      1 for applied change, 0 otherwise
  */
 
-static int
-blr_set_master_port(ROUTER_INSTANCE *router, char *port)
+static int blr_set_master_port(ROUTER_INSTANCE *router, const char *port)
 {
     unsigned short new_port;
 
@@ -4473,32 +4454,20 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *port)
  */
 static char *
 blr_set_master_logfile(ROUTER_INSTANCE *router,
-                       char *filename,
+                       const char *filename,
                        char *error)
 {
     char *new_binlog_file = NULL;
 
     if (filename)
     {
+        mxb_assert((*filename != '\'') && (*filename != '"'));
+
         long next_binlog_seqname;
         char *file_ptr;
         char *end;
 
-        file_ptr = strchr(filename, '\'');
-        if (file_ptr)
-        {
-            file_ptr++;
-        }
-        else
-        {
-            file_ptr = filename;
-        }
-
-        end = strchr(file_ptr, '\'');
-        if (end)
-        {
-            *end = '\0';
-        }
+        file_ptr = (char*)filename;
 
         /* check binlog filename format */
         end = strchr(file_ptr, '.');
@@ -4754,34 +4723,17 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
  * @param user      The userto set
  * @return      1 for applied change, 0 otherwise
  */
-static int
-blr_set_master_user(ROUTER_INSTANCE *router, char *user)
+static int blr_set_master_user(ROUTER_INSTANCE *router, const char *user)
 {
     if (user != NULL)
     {
-        char *ptr;
-        char *end;
-        ptr = strchr(user, '\'');
-        if (ptr)
-        {
-            ptr++;
-        }
-        else
-        {
-            ptr = user;
-        }
-
-        end = strchr(ptr, '\'');
-        if (end)
-        {
-            *end = '\0';
-        }
+        mxb_assert((*user != '\'') && (*user != '"'));
 
         if (router->user)
         {
             MXS_FREE(router->user);
         }
-        router->user = MXS_STRDUP_A(ptr);
+        router->user = MXS_STRDUP_A(user);
 
         MXS_INFO("%s: New MASTER_USER is [%s]",
                  router->service->name,
@@ -4800,34 +4752,17 @@ blr_set_master_user(ROUTER_INSTANCE *router, char *user)
  * @param password  The password to set
  * @return      1 for applied change, 0 otherwise
  */
-static int
-blr_set_master_password(ROUTER_INSTANCE *router, char *password)
+static int blr_set_master_password(ROUTER_INSTANCE *router, const char *password)
 {
     if (password != NULL)
     {
-        char *ptr;
-        char *end;
-        ptr = strchr(password, '\'');
-        if (ptr)
-        {
-            ptr++;
-        }
-        else
-        {
-            ptr = password;
-        }
-
-        end = strchr(ptr, '\'');
-        if (end)
-        {
-            *end = '\0';
-        }
+        mxb_assert((*password != '\'') && (*password != '"'));
 
         if (router->password)
         {
             MXS_FREE(router->password);
         }
-        router->password = MXS_STRDUP_A(ptr);
+        router->password = MXS_STRDUP_A(password);
 
         /* don't log new password */
 
@@ -5520,7 +5455,7 @@ blr_test_parse_change_master_command(char *input,
  */
 char *
 blr_test_set_master_logfile(ROUTER_INSTANCE *router,
-                            char *filename,
+                            const char *filename,
                             char *error)
 {
     return blr_set_master_logfile(router, filename, error);
@@ -6176,45 +6111,6 @@ blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 }
 
 /**
- * Skip the ' char and return pointer to new start position.
- * The last ' char is removed.
- *
- * @param input The input string
- * @return      Position after first '
- */
-char *
-blr_escape_config_string(char *input)
-{
-    char *ptr;
-    char *end;
-
-    ptr = strchr(input, '\'');
-    if (!ptr)
-    {
-        return input;
-    }
-    else
-    {
-        if (ptr + 1)
-        {
-            ptr++;
-        }
-        else
-        {
-            *ptr = '\0';
-        }
-    }
-
-    end = strchr(ptr, '\'');
-    if (end)
-    {
-        *end = '\0';
-    }
-
-    return ptr;
-}
-
-/**
  *  Change the replication SSL options
  *
  * @param    router           Current router instance
@@ -6280,41 +6176,49 @@ blr_set_master_ssl(ROUTER_INSTANCE *router,
     /* Update options in router fields and in server_ssl struct, if present */
     if (config.ssl_key)
     {
+        mxb_assert((*config.ssl_key != '\'') && (*config.ssl_key != '"'));
+
         if (server_ssl)
         {
             MXS_FREE(server_ssl->ssl_key);
-            server_ssl->ssl_key = MXS_STRDUP_A(blr_escape_config_string(config.ssl_key));
+            server_ssl->ssl_key = MXS_STRDUP_A(config.ssl_key);
         }
         MXS_FREE(router->ssl_key);
-        router->ssl_key = MXS_STRDUP_A(blr_escape_config_string(config.ssl_key));
+        router->ssl_key = MXS_STRDUP_A(config.ssl_key);
         updated++;
     }
     if (config.ssl_ca)
     {
+        mxb_assert((*config.ssl_ca != '\'') && (*config.ssl_ca != '"'));
+
         if (server_ssl)
         {
             MXS_FREE(server_ssl->ssl_ca_cert);
-            server_ssl->ssl_ca_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_ca));
+            server_ssl->ssl_ca_cert = MXS_STRDUP_A(config.ssl_ca);
         }
         MXS_FREE(router->ssl_ca);
-        router->ssl_ca = MXS_STRDUP_A(blr_escape_config_string(config.ssl_ca));
+        router->ssl_ca = MXS_STRDUP_A(config.ssl_ca);
         updated++;
     }
     if (config.ssl_cert)
     {
+        mxb_assert((*config.ssl_cert != '\'') && (*config.ssl_cert != '"'));
+
         if (server_ssl)
         {
             MXS_FREE(server_ssl->ssl_cert);
-            server_ssl->ssl_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_cert));
+            server_ssl->ssl_cert = MXS_STRDUP_A(config.ssl_cert);
         }
         MXS_FREE(router->ssl_cert);
-        router->ssl_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_cert));
+        router->ssl_cert = MXS_STRDUP_A(config.ssl_cert);
         updated++;
     }
 
     if (config.ssl_version && server_ssl)
     {
-        char *ssl_version = blr_escape_config_string(config.ssl_version);
+        mxb_assert((*config.ssl_version != '\'') && (*config.ssl_version != '"'));
+
+        char *ssl_version = config.ssl_version;
 
         if (ssl_version && strlen(ssl_version))
         {
