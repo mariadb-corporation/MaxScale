@@ -4202,9 +4202,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                  "Cannot use MASTER_USE_GTID. "
                  "Enable 'mariadb10_master_gtid' option first.");
 
-        blr_abort_change_master(router,
-                                current_master,
-                                error);
+        MXS_ERROR("%s: %s", router->service->name, error);
 
         spinlock_release(&router->lock);
 
@@ -4214,10 +4212,11 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     /**
      * Handle connection options
      */
+    int h_val = -1;
     auto& master_heartbeat = change_master.heartbeat_period;
     if (!master_heartbeat.empty())
     {
-        int h_val = (int)strtol(master_heartbeat.c_str(), NULL, 10);
+        h_val = (int)strtol(master_heartbeat.c_str(), NULL, 10);
 
         if (h_val < 0 ||
             (errno == ERANGE) ||
@@ -4230,29 +4229,20 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                      "(%d seconds).",
                      BLR_HEARTBEAT_MAX_INTERVAL);
 
-            blr_abort_change_master(router,
-                                    current_master,
-                                    error);
+            MXS_ERROR("%s: %s", router->service->name, error);
 
             spinlock_release(&router->lock);
 
             return -1;
         }
-        else
-        {
-            if (h_val == 0)
-            {
-                blr_log_disabled_heartbeat(router);
-            }
-            router->heartbeat = h_val;
-        }
     }
 
+    int r_val = -1;
     auto& master_connect_retry = change_master.connect_retry;
     if (!master_connect_retry.empty())
     {
-        int h_val = (int)strtol(master_connect_retry.c_str(), NULL, 10);
-        if (h_val <= 0 ||
+        r_val = (int)strtol(master_connect_retry.c_str(), NULL, 10);
+        if (r_val <= 0 ||
             (errno == ERANGE))
         {
             snprintf(error,
@@ -4261,18 +4251,28 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                      "interval is not valid: %s.",
                      master_connect_retry.c_str());
 
-            blr_abort_change_master(router,
-                                    current_master,
-                                    error);
+            MXS_ERROR("%s: %s", router->service->name, error);
 
             spinlock_release(&router->lock);
 
             return -1;
         }
-        else
+    }
+
+    /* Change the heartbeat */
+    if (h_val != -1)
+    {
+        if (h_val == 0)
         {
-            router->retry_interval = h_val;
+            blr_log_disabled_heartbeat(router);
         }
+        router->heartbeat = h_val;
+    }
+
+    /* Change the connect retry */
+    if (r_val != -1)
+    {
+        router->retry_interval = r_val;
     }
 
     /* Change the replication user */
