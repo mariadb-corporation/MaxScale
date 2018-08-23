@@ -4128,6 +4128,102 @@ blr_slave_send_error_packet(ROUTER_SLAVE *slave,
     MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
 }
 
+bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
+                                   char* error,
+                                   ChangeMasterConfig* config)
+{
+    /* Abort if MASTER_USE_GTID is in use and
+     * router->mariadb10_master_gtid is not set
+     */
+    if (!router->mariadb10_master_gtid && !this->use_mariadb10_gtid.empty())
+    {
+        snprintf(error,
+                 BINLOG_ERROR_MSG_LEN,
+                 "Cannot use MASTER_USE_GTID. "
+                 "Enable 'mariadb10_master_gtid' option first.");
+
+        MXS_ERROR("%s: %s", router->service->name, error);
+
+        return false;
+    }
+
+    int heartbeat_period = -1;
+    if (!this->heartbeat_period.empty())
+    {
+        heartbeat_period = (int)strtol(this->heartbeat_period.c_str(), NULL, 10);
+
+        if (heartbeat_period < 0 ||
+            (errno == ERANGE) ||
+            heartbeat_period > BLR_HEARTBEAT_MAX_INTERVAL)
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "The requested value for the heartbeat period is "
+                     "either negative or exceeds the maximum allowed "
+                     "(%d seconds).",
+                     BLR_HEARTBEAT_MAX_INTERVAL);
+
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            return false;
+        }
+    }
+
+    int connect_retry = -1;
+    if (!this->connect_retry.empty())
+    {
+        connect_retry = (int)strtol(this->connect_retry.c_str(), NULL, 10);
+        if (connect_retry <= 0 ||
+            (errno == ERANGE))
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "The requested value for MASTER_CONNECT_RETRY "
+                     "interval is not valid: %s.",
+                     this->connect_retry.c_str());
+
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            return false;
+        }
+    }
+
+    int port = -1;
+    if (!this->port.empty())
+    {
+        port = (int)strtol(this->port.c_str(), NULL, 10);
+        if ((port < 0) || (port > std::numeric_limits<unsigned short>::max()))
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "The specified value for MASTER_PORT "
+                     "is not valid: %s.",
+                     this->port.c_str());
+
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            return false;
+        }
+    }
+
+    config->host = this->host;
+    config->port = port;
+    config->binlog_file = this->binlog_file;
+    config->binlog_pos = this->binlog_pos;
+    config->user = this->user;
+    config->password = this->password;
+    config->ssl_key = this->ssl_key;
+    config->ssl_cert = this->ssl_cert;
+    config->ssl_ca = this->ssl_ca;
+    config->ssl_enabled = this->ssl_enabled;
+    config->ssl_version = this->ssl_version;
+    config->use_mariadb10_gtid = this->use_mariadb10_gtid;
+    config->heartbeat_period = heartbeat_period;
+    config->connect_retry = connect_retry;
+
+    return true;
+}
+
 /**
  * handle a 'change master' operation
  *

@@ -342,29 +342,56 @@ typedef struct mariadb_gtid_info
 } MARIADB_GTID_INFO;
 
 /* Master Server configuration struct */
-struct MasterServerConfig
+class MasterServerConfig
 {
-    std::string host;
+public:
+    std::string    host;
     unsigned short port;
-    std::string logfile;
-    uint64_t pos;
-    uint64_t safe_pos;
+    std::string    logfile;
+    uint64_t       pos;
+    uint64_t       safe_pos;
+    std::string    user;
+    std::string    password;
+    std::string    filestem;
+    /* SSL options */
+    std::string    ssl_key;
+    std::string    ssl_cert;
+    std::string    ssl_ca;
+    int ssl_enabled;
+    std::string    ssl_version;
+    /* Connect options */
+    int            heartbeat;
+};
+
+/* Config struct for CHANGE MASTER TO */
+class ChangeMasterConfig
+{
+public:
+    std::string host;
+    int         port;
+    std::string binlog_file;
+    std::string binlog_pos;
     std::string user;
     std::string password;
-    std::string filestem;
     /* SSL options */
     std::string ssl_key;
     std::string ssl_cert;
     std::string ssl_ca;
-    int ssl_enabled;
+    std::string ssl_enabled;
     std::string ssl_version;
-    /* Connect options */
-    int  heartbeat;
+    /* MariaDB 10 GTID */
+    std::string use_mariadb10_gtid;
+    /* Connection options */
+    int         heartbeat_period;
+    int         connect_retry;
 };
 
+struct ROUTER_INSTANCE;
+
 /* Config struct for CHANGE MASTER TO options */
-struct ChangeMasterOptions
+class ChangeMasterOptions
 {
+public:
     std::string host;
     std::string port;
     std::string binlog_file;
@@ -382,6 +409,10 @@ struct ChangeMasterOptions
     /* Connection options */
     std::string heartbeat_period;
     std::string connect_retry;
+
+    bool validate(ROUTER_INSTANCE* router,
+                  char* error,
+                  ChangeMasterConfig* config);
 };
 
 /**
@@ -520,7 +551,7 @@ typedef struct router_slave
     bool            mariadb10_compat;/*< MariaDB 10.0 compatibility */
     SPINLOCK        rses_lock;       /*< Protects rses_deleted */
     pthread_t       pthread;
-    struct router_instance *router;  /*< Pointer to the owning router */
+    ROUTER_INSTANCE *router;  /*< Pointer to the owning router */
     struct router_slave *next;
     SLAVE_STATS     stats;           /*< Slave statistics */
     time_t          connect_time;    /*< Connect time of slave */
@@ -658,7 +689,7 @@ typedef struct binlog_encryption_ctx
 /**
  * The per instance data for the router.
  */
-typedef struct router_instance: public MXS_ROUTER
+struct ROUTER_INSTANCE: public MXS_ROUTER
 {
     SERVICE                 *service;       /*< Pointer to the service using this router */
     ROUTER_SLAVE            *slaves;        /*< Link list of all the slave connections  */
@@ -756,8 +787,8 @@ typedef struct router_instance: public MXS_ROUTER
     sqlite3           *gtid_maps;           /*< MariaDB 10 GTID storage */
     enum binlog_storage_type   storage_type;/*< Enables hierachical binlog file storage */
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
-    struct router_instance  *next;
-} ROUTER_INSTANCE;
+    ROUTER_INSTANCE  *next;
+};
 
 /** Master Semi-Sync capability */
 typedef enum
