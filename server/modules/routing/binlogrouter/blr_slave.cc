@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <zlib.h>
+#include <vector>
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxscale/clock.h>
@@ -4239,14 +4240,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *command,
                              char *error)
 {
-    char *master_logfile = NULL;
-    int change_binlog = 0;
     ChangeMasterOptions change_master;
-    int parse_ret;
-    char *cmd_ptr;
-    char *cmd_string;
 
-    if ((cmd_ptr = strcasestr(command, "TO")) == NULL)
+    char* cmd_ptr = strcasestr(command, "TO");
+    if (!cmd_ptr)
     {
         static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
         mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
@@ -4254,25 +4251,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    if ((cmd_string = MXS_STRDUP(cmd_ptr + 2)) == NULL)
-    {
-        static const char MESSAGE[] = "error allocating memory for statement parsing";
-        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
-        strcpy(error, MESSAGE);
-
-        MXS_ERROR("%s: %s", router->service->name, error);
-
-        return -1;
-    }
+    std::vector<char> cmd_string(cmd_ptr + 2, cmd_ptr + strlen(cmd_ptr) + 1);
 
     /* Parse SQL command and populate the change_master struct */
-    parse_ret = blr_parse_change_master_command(cmd_string,
-                                                error,
-                                                &change_master);
-
-    MXS_FREE(cmd_string);
-
-    if (parse_ret)
+    if (blr_parse_change_master_command(&cmd_string.front(),
+                                        error,
+                                        &change_master) != 0)
     {
         MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
                   router->service->name,
@@ -4413,6 +4397,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
      * New binlog file could be the next one or current one
      * or empty if router->mariadb10_master_gtid is set.
      */
+    char *master_logfile = NULL;
     if (!blr_binlog_change_check(router,
                                  change_master,
                                  error) ||
@@ -4440,6 +4425,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     MXS_FREE(master_logfile);
 
+    int change_binlog = 0;
     if (router->master_state == BLRM_UNCONFIGURED)
     {
         change_binlog = 1;
