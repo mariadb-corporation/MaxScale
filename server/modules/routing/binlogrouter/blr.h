@@ -344,20 +344,20 @@ typedef struct mariadb_gtid_info
 /* Master Server configuration struct */
 typedef struct master_server_config
 {
-    char *host;
+    std::string host;
     unsigned short port;
-    char logfile[BINLOG_FNAMELEN + 1];
+    std::string logfile;
     uint64_t pos;
     uint64_t safe_pos;
-    char *user;
-    char *password;
-    char *filestem;
+    std::string user;
+    std::string password;
+    std::string filestem;
     /* SSL options */
-    char *ssl_key;
-    char *ssl_cert;
-    char *ssl_ca;
+    std::string ssl_key;
+    std::string ssl_cert;
+    std::string ssl_ca;
     int ssl_enabled;
-    char *ssl_version;
+    std::string ssl_version;
     /* Connect options */
     int  heartbeat;
 } MASTER_SERVER_CFG;

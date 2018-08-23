@@ -170,12 +170,11 @@ static char *blr_set_master_logfile(ROUTER_INSTANCE *router,
                                     char *error);
 static void blr_master_get_config(ROUTER_INSTANCE *router,
                                   MASTER_SERVER_CFG *current_master);
-static void blr_master_free_config(MASTER_SERVER_CFG *current_master);
 static void blr_master_restore_config(ROUTER_INSTANCE *router,
-                                      MASTER_SERVER_CFG *current_master);
+                                      const MASTER_SERVER_CFG& current_master);
 static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
 static void blr_master_apply_config(ROUTER_INSTANCE *router,
-                                    MASTER_SERVER_CFG *prev_master);
+                                    const MASTER_SERVER_CFG& prev_master);
 static int blr_slave_send_ok_message(ROUTER_INSTANCE* router,
                                      ROUTER_SLAVE* slave,
                                      char *message);
@@ -326,7 +325,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
                                        ROUTER_SLAVE *slave,
                                        enum blr_slave_check check);
 static void blr_abort_change_master(ROUTER_INSTANCE *router,
-                                    MASTER_SERVER_CFG *current_master,
+                                    const MASTER_SERVER_CFG& current_master,
                                     const char *error);
 static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
                                          const char *errmsg);
@@ -4146,7 +4145,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 {
     char *master_logfile = NULL;
     int change_binlog = 0;
-    MASTER_SERVER_CFG *current_master = NULL;
     CHANGE_MASTER_OPTIONS change_master;
     int parse_ret;
     char *cmd_ptr;
@@ -4187,23 +4185,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    /* allocate struct for current replication parameters */
-    current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
-
-    if (!current_master)
-    {
-        static const char MESSAGE[] = "error allocating memory for blr_master_get_config";
-        mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
-        strcpy(error, MESSAGE);
-        MXS_ERROR("%s: %s", router->service->name, error);
-
-        return -1;
-    }
+    MASTER_SERVER_CFG current_master;
 
     spinlock_acquire(&router->lock);
 
     /* save current config option data */
-    blr_master_get_config(router, current_master);
+    blr_master_get_config(router, &current_master);
 
     /* Abort if MASTER_USE_GTID is in use and
      * router->mariadb10_master_gtid is not set
@@ -4359,10 +4346,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     }
 
     /* Log config changes (without passwords) */
-    blr_log_config_changes(router, current_master, &change_master);
-
-    /* Free data struct */
-    blr_master_free_config(current_master);
+    blr_log_config_changes(router, &current_master, &change_master);
 
     MXS_FREE(master_logfile);
 
@@ -4588,13 +4572,13 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
     SSL_LISTENER *server_ssl;
 
     curr_master->port = router->service->dbref->server->port;
-    curr_master->host = MXS_STRDUP_A(router->service->dbref->server->address);
+    curr_master->host = router->service->dbref->server->address;
     curr_master->pos = router->current_pos;
     curr_master->safe_pos = router->binlog_position;
-    strcpy(curr_master->logfile, router->binlog_name); // Same size
-    curr_master->user = MXS_STRDUP_A(router->user);
-    curr_master->password = MXS_STRDUP_A(router->password);
-    curr_master->filestem = MXS_STRDUP_A(router->fileroot);
+    curr_master->logfile = router->binlog_name;
+    curr_master->user = router->user;
+    curr_master->password = router->password;
+    curr_master->filestem = router->fileroot;
     /* SSL options */
     if (router->service->dbref->server->server_ssl)
     {
@@ -4602,44 +4586,23 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
         curr_master->ssl_enabled = router->ssl_enabled;
         if (router->ssl_version)
         {
-            curr_master->ssl_version = MXS_STRDUP_A(router->ssl_version);
+            curr_master->ssl_version = router->ssl_version;
         }
         if (server_ssl->ssl_key)
         {
-            curr_master->ssl_key = MXS_STRDUP_A(server_ssl->ssl_key);
+            curr_master->ssl_key = server_ssl->ssl_key;
         }
         if (server_ssl->ssl_cert)
         {
-            curr_master->ssl_cert = MXS_STRDUP_A(server_ssl->ssl_cert);
+            curr_master->ssl_cert = server_ssl->ssl_cert;
         }
         if (server_ssl->ssl_ca_cert)
         {
-            curr_master->ssl_ca = MXS_STRDUP_A(server_ssl->ssl_ca_cert);
+            curr_master->ssl_ca = server_ssl->ssl_ca_cert;
         }
     }
     /* Connect options */
     curr_master->heartbeat = router->heartbeat;
-}
-
-/**
- *  Free a master configuration struct
- *
- * @param master_cfg    Saved master configuration to free
- */
-static void
-blr_master_free_config(MASTER_SERVER_CFG *master_cfg)
-{
-    MXS_FREE(master_cfg->host);
-    MXS_FREE(master_cfg->user);
-    MXS_FREE(master_cfg->password);
-    MXS_FREE(master_cfg->filestem);
-    /* SSL options */
-    MXS_FREE(master_cfg->ssl_key);
-    MXS_FREE(master_cfg->ssl_cert);
-    MXS_FREE(master_cfg->ssl_ca);
-    MXS_FREE(master_cfg->ssl_version);
-
-    MXS_FREE(master_cfg);
 }
 
 /**
@@ -4650,21 +4613,19 @@ blr_master_free_config(MASTER_SERVER_CFG *master_cfg)
  */
 static void
 blr_master_restore_config(ROUTER_INSTANCE *router,
-                          MASTER_SERVER_CFG *prev_master)
+                          const MASTER_SERVER_CFG& prev_master)
 {
-    server_update_address(router->service->dbref->server, prev_master->host);
-    server_update_port(router->service->dbref->server, prev_master->port);
+    server_update_address(router->service->dbref->server, prev_master.host.c_str());
+    server_update_port(router->service->dbref->server, prev_master.port);
 
-    router->ssl_enabled = prev_master->ssl_enabled;
-    if (prev_master->ssl_version)
+    router->ssl_enabled = prev_master.ssl_enabled;
+    if (!prev_master.ssl_version.empty())
     {
         MXS_FREE(router->ssl_version);
-        router->ssl_version  = MXS_STRDUP_A(prev_master->ssl_version);
+        router->ssl_version = MXS_STRDUP_A(prev_master.ssl_version.c_str());
     }
 
-    router->heartbeat = prev_master->heartbeat;
-
-    blr_master_free_config(prev_master);
+    router->heartbeat = prev_master.heartbeat;
 }
 
 /**
@@ -4696,31 +4657,31 @@ blr_master_set_empty_config(ROUTER_INSTANCE *router)
  * @param prev_master   Previous saved master configuration
  */
 static void
-blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
+blr_master_apply_config(ROUTER_INSTANCE *router, const MASTER_SERVER_CFG& prev_master)
 {
-    server_update_address(router->service->dbref->server, prev_master->host);
-    server_update_port(router->service->dbref->server, prev_master->port);
-    router->current_pos = prev_master->pos;
-    router->binlog_position = prev_master->safe_pos;
-    router->current_safe_event = prev_master->safe_pos;
-    strcpy(router->binlog_name, prev_master->logfile);
+    server_update_address(router->service->dbref->server, prev_master.host.c_str());
+    server_update_port(router->service->dbref->server, prev_master.port);
+    router->current_pos = prev_master.pos;
+    router->binlog_position = prev_master.safe_pos;
+    router->current_safe_event = prev_master.safe_pos;
+    strcpy(router->binlog_name, prev_master.logfile.c_str());
     if (router->user)
     {
         MXS_FREE(router->user);
-        router->user = MXS_STRDUP_A(prev_master->user);
+        router->user = MXS_STRDUP_A(prev_master.user.c_str());
     }
     if (router->password)
     {
         MXS_FREE(router->password);
-        router->password = MXS_STRDUP_A(prev_master->password);
+        router->password = MXS_STRDUP_A(prev_master.password.c_str());
     }
     if (router->fileroot)
     {
         MXS_FREE(router->fileroot);
-        router->fileroot = MXS_STRDUP_A(prev_master->filestem);
+        router->fileroot = MXS_STRDUP_A(prev_master.filestem.c_str());
     }
 
-    router->heartbeat = prev_master->heartbeat;
+    router->heartbeat = prev_master.heartbeat;
 }
 
 /**
@@ -7846,39 +7807,21 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
             if (router->master_state == BLRM_SLAVE_STOPPED)
             {
                 char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
-                MASTER_SERVER_CFG *current_master = NULL;
+                MASTER_SERVER_CFG current_master;
                 int removed_cfg = 0;
 
-                /* save current replication parameters */
-                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
-                MXS_ABORT_IF_NULL(current_master);
-
-                if (!current_master)
-                {
-                    snprintf(error_string,
-                             BINLOG_ERROR_MSG_LEN,
-                             "error allocating memory for blr_master_get_config");
-                    MXS_ERROR("%s: %s", router->service->name, error_string);
-                    blr_slave_send_error_packet(slave,
-                                                error_string,
-                                                1201,
-                                                NULL);
-
-                    return true;
-                }
-
                 /* get current data */
-                blr_master_get_config(router, current_master);
+                blr_master_get_config(router, &current_master);
 
                 MXS_NOTICE("%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', "
                            "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
                            "MASTER_USER='%s'",
                            router->service->name,
-                           current_master->host,
-                           current_master->port,
-                           current_master->logfile,
-                           current_master->pos,
-                           current_master->user);
+                           current_master.host.c_str(),
+                           current_master.port,
+                           current_master.logfile.c_str(),
+                           current_master.pos,
+                           current_master.user.c_str());
 
                 /* remove master.ini */
                 static const char MASTER_INI[] = "/master.ini";
@@ -7903,7 +7846,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 /* Set the BLRM_UNCONFIGURED state */
                 router->master_state = BLRM_UNCONFIGURED;
                 blr_master_set_empty_config(router);
-                blr_master_free_config(current_master);
 
                 /* Remove any error message and errno */
                 free(router->m_errmsg);
@@ -7996,21 +7938,9 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
             {
                 int rc;
                 char error_string[BINLOG_ERROR_MSG_LEN + 1 + BINLOG_ERROR_MSG_LEN + 1] = "";
-                MASTER_SERVER_CFG *current_master = NULL;
+                MASTER_SERVER_CFG current_master;
 
-                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
-
-                if (!current_master)
-                {
-                    blr_slave_send_error_packet(slave,
-                                                error_string,
-                                                1201,
-                                                NULL);
-
-                    return true;
-                }
-
-                blr_master_get_config(router, current_master);
+                blr_master_get_config(router, &current_master);
 
                 rc = blr_handle_change_master(router, brkb, error_string);
 
@@ -8021,7 +7951,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                                                 error_string,
                                                 1234,
                                                 "42000");
-                    blr_master_free_config(current_master);
 
                     return true;
                 }
@@ -8039,7 +7968,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                         spinlock_acquire(&router->lock);
 
                         blr_master_apply_config(router, current_master);
-                        blr_master_free_config(current_master);
 
                         spinlock_release(&router->lock);
 
@@ -8093,7 +8021,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                             MXS_INFO("%s: 'master.ini' created, binlog file '%s' created",
                                      router->service->name, router->binlog_name);
                         }
-                        blr_master_free_config(current_master);
                         blr_slave_send_ok(router, slave);
                         return true;
                     }
@@ -8107,17 +8034,14 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                             snprintf(message, BINLOG_ERROR_MSG_LEN,
                                      "1105:Partial transaction in file %s starting at pos %lu, "
                                      "ending at pos %lu will be lost with next START SLAVE command",
-                                     current_master->logfile,
-                                     current_master->safe_pos,
-                                     current_master->pos);
-                            blr_master_free_config(current_master);
+                                     current_master.logfile.c_str(),
+                                     current_master.safe_pos,
+                                     current_master.pos);
 
                             blr_slave_send_warning_message(router, slave, message);
                             return true;
                         }
                     }
-
-                    blr_master_free_config(current_master);
 
                     /*
                      * The CHAMGE MASTER command might specify a new binlog file.
@@ -9019,11 +8943,11 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                "MASTER_USER='%s'"
                "%s%s%s",
                router->service->name,
-               current_master->host,
+               current_master->host.c_str(),
                current_master->port,
-               current_master->logfile,
+               current_master->logfile.c_str(),
                current_master->pos,
-               current_master->user,
+               current_master->user.c_str(),
                router->service->dbref->server->address,
                router->service->dbref->server->port,
                router->binlog_name,
@@ -9140,7 +9064,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
  * @param error             Error message to log
  */
 static void blr_abort_change_master(ROUTER_INSTANCE *router,
-                                    MASTER_SERVER_CFG *current_master,
+                                    const MASTER_SERVER_CFG& current_master,
                                     const char *error)
 {
     MXS_ERROR("%s: %s", router->service->name, error);
