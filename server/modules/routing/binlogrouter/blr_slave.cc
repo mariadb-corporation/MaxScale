@@ -164,7 +164,8 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
                                    char* error);
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *command,
-                                    char *error);
+                                    char *error,
+                                    ChangeMasterConfig* pNew_config);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const char *hostname);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const std::string& hostname);
 static int blr_set_master_port(ROUTER_INSTANCE *router, int port);
@@ -4401,17 +4402,19 @@ static char* get_connection_name(char* command, std::string* pConnection_name)
 /**
  * handle a 'change master' operation
  *
- * @param router    The router instance
- * @param command   The change master SQL command
- * @param error     The error message, preallocated
- *                  BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param router       The router instance
+ * @param command      The change master SQL command
+ * @param error        The error message, preallocated
+ *                     BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @pNew_config [out]  The new config.
  * @return          0 on success,
  *                  1 on success with new binlog, -1 on failure
  */
 static
 int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *command,
-                             char *error)
+                             char *error,
+                             ChangeMasterConfig* pNew_config)
 {
     std::string connection_name;
     command = get_connection_name(command, &connection_name);
@@ -4438,13 +4441,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    ChangeMasterConfig new_config;
-    if (!new_options.validate(router, error, &new_config))
+    if (!new_options.validate(router, error, pNew_config))
     {
         return -1;
     }
 
-    return blr_apply_change_master(router, new_config, error);
+    return blr_apply_change_master(router, *pNew_config, error);
 }
 
 /*
@@ -5496,7 +5498,8 @@ blr_test_handle_change_master(ROUTER_INSTANCE* router,
                               char *command,
                               char *error)
 {
-    return blr_handle_change_master(router, bypass_change_master(command), error);
+    ChangeMasterConfig config;
+    return blr_handle_change_master(router, bypass_change_master(command), error, &config);
 }
 
 
@@ -8036,10 +8039,10 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 int rc;
                 char error_string[BINLOG_ERROR_MSG_LEN + 1 + BINLOG_ERROR_MSG_LEN + 1] = "";
                 MasterServerConfig current_master;
-
                 blr_master_get_config(router, &current_master);
 
-                rc = blr_handle_change_master(router, brkb, error_string);
+                ChangeMasterConfig new_config;
+                rc = blr_handle_change_master(router, brkb, error_string, &new_config);
 
                 if (rc < 0)
                 {
@@ -8059,7 +8062,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     /* Write/Update master config into master.ini file */
                     ret = blr_file_write_master_config(router, error);
 
-                    if (ret)
+                    if (ret != 0)
                     {
                         /* file operation failure: restore config */
                         spinlock_acquire(&router->lock);
@@ -8085,6 +8088,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 
                     /* Mark as active the master server struct */
                     spinlock_acquire(&router->lock);
+                    router->config = new_config;
                     if (!router->service->dbref->server->is_active)
                     {
                         router->service->dbref->server->is_active = true;

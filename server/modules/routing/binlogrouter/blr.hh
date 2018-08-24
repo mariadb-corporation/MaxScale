@@ -788,6 +788,7 @@ struct ROUTER_INSTANCE: public MXS_ROUTER
     enum binlog_storage_type   storage_type;/*< Enables hierachical binlog file storage */
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     ROUTER_INSTANCE  *next;
+    ChangeMasterConfig config;              /*< Current config. */
 };
 
 /** Master Semi-Sync capability */
