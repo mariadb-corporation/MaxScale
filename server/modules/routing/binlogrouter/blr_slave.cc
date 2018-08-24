@@ -5365,6 +5365,29 @@ blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router,
     return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
 }
 
+static char* bypass_change_master(char* input)
+{
+    // Very simple, basically ASSUMES there is a "CHANGE MASTER" at the beginning.
+
+    static const char CHANGE[] = "change";
+
+    char* p = strcasestr(input, CHANGE);
+    if (p)
+    {
+        input = p + sizeof(CHANGE) - 1;
+
+        static const char MASTER[] = "master";
+
+        p = strcasestr(input, MASTER);
+        if (p)
+        {
+            input = p + sizeof(MASTER) - 1;
+        }
+    }
+
+    return input;
+}
+
 /**
  * Interface for testing blr_parse_change_master_command()
  *
@@ -5379,7 +5402,7 @@ blr_test_parse_change_master_command(char *input,
                                      char *error_string,
                                      ChangeMasterOptions *config)
 {
-    return blr_parse_change_master_command(input,
+    return blr_parse_change_master_command(bypass_change_master(input),
                                            error_string,
                                            config);
 }
@@ -5416,7 +5439,7 @@ blr_test_handle_change_master(ROUTER_INSTANCE* router,
                               char *command,
                               char *error)
 {
-    return blr_handle_change_master(router, command, error);
+    return blr_handle_change_master(router, bypass_change_master(command), error);
 }
 
 
