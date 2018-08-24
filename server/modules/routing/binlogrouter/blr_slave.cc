@@ -4342,6 +4342,63 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
 }
 
 /**
+ * Get the connection name from a CHANGE MASTER command.
+ *
+ * @param       command           What follows "CHANGE MASTER", that is " ['connection-name'] TO ..."
+ * @param [out] pConnection_name  The connection name, if provided.
+ *
+ * @return The string following "TO".
+ */
+static char* get_connection_name(char* command, std::string* pConnection_name)
+{
+    command = trim_leading(command);
+
+    char* to = strcasestr(command, "TO");
+
+    if (!to)
+    {
+        // No "TO", can't be valid.
+        command = nullptr;
+    }
+    else if (to == command)
+    {
+        // No connection name.
+        command = to + 2;
+    }
+    else
+    {
+        // We may have the case "'connection-name' TO"
+        char quote = *command;
+
+        if ((quote == '\'') || (quote == '"'))
+        {
+            // At least there was a quote.
+            ++command;
+
+            char* end = strchr(command, quote);
+
+            if (!end || (end > to))
+            {
+                // No closing quote.
+                command = nullptr;
+            }
+            else
+            {
+                *pConnection_name = std::string(command, end);
+                command = to + 2;
+            }
+        }
+        else
+        {
+            // No, must be an invalid command.
+            command = nullptr;
+        }
+    }
+
+    return command;
+}
+
+/**
  * handle a 'change master' operation
  *
  * @param router    The router instance
@@ -4356,8 +4413,9 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *command,
                              char *error)
 {
-    char* cmd_ptr = strcasestr(command, "TO");
-    if (!cmd_ptr)
+    std::string connection_name;
+    command = get_connection_name(command, &connection_name);
+    if (!command)
     {
         static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
         mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
@@ -4365,7 +4423,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    std::vector<char> cmd_string(cmd_ptr + 2, cmd_ptr + strlen(cmd_ptr) + 1);
+    std::vector<char> cmd_string(command, command + strlen(command) + 1); // Include the NULL
 
     /* Parse SQL command and populate the change_master struct */
     ChangeMasterOptions new_options;
@@ -4999,7 +5057,6 @@ blr_handle_change_master_token(char *input,
             return 1;
         }
 
-        /* value must be freed after usage */
         std::string value;
         if (!blr_get_parsed_command_value(brkb, &value))
         {
