@@ -24,30 +24,45 @@
 using std::string;
 using maxscale::string_printf;
 
-/**
- * Generic depth-first search. Iterates through child nodes (slaves) and runs the 'visit_func' on the nodes.
- * Isn't flexible enough for all uses.
- *
- * @param node Starting server. The server and all its slaves are visited.
- * @param data Caller-specific data, which is given to the 'visit_func'.
- * @param visit_func Function to run on a node when visiting it
- */
-template <typename T>
-void topology_DFS(MariaDBServer* node, T* data, void (*visit_func)(MariaDBServer* node, T* data))
+namespace
 {
-   node->m_node.index = NodeData::INDEX_FIRST;
-   if (visit_func)
-   {
-        visit_func(node, data);
-   }
-   for (MariaDBServer* slave : node->m_node.children)
-   {
-       if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-       {
-           topology_DFS<T>(slave, data, visit_func);
-       }
-   }
+using VisitorFunc = std::function<bool(MariaDBServer*)>; // Used by graph search
+
+/**
+ * Generic depth-first search. Iterates through the root and its child nodes (slaves) and runs
+ * 'visitor' on the nodes. 'NodeData::reset_indexes()' should be ran before this function
+ * depending on if previous node visits should be omitted or not.
+ *
+ * @param root Starting server. The server and all its slaves are visited.
+ * @param visitor Function to run on a node when visiting it. If it returns true,
+ * the search is continued to the children of the node.
+ */
+void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
+{
+    int next_index = NodeData::INDEX_FIRST;
+    // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
+    std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
+    [&topology_DFS_visit, &next_index] (MariaDBServer* node, VisitorFunc& visitor)
+    {
+        mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
+        node->m_node.index = next_index++;
+        if (visitor(node))
+        {
+            for (MariaDBServer* slave : node->m_node.children)
+            {
+                if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+                {
+                    topology_DFS_visit(slave, visitor);
+                }
+            }
+        }
+    };
+
+    topology_DFS_visit(root, visitor);
 }
+
+}
+
 
 static bool server_config_compare(const MariaDBServer* lhs, const MariaDBServer* rhs)
 {
@@ -354,24 +369,60 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(string* msg_out)
     return master_candidates.empty() ? NULL : find_best_reach_server(master_candidates);
 }
 
-static void node_reach_visit(MariaDBServer* node, int* reach)
-{
-    *reach = *reach + 1;
-}
-
 /**
- * Calculate the total number of reachable child nodes for the given node. A node can always reach itself.
+ * Calculate the total number of reachable child (slave) nodes for the given node. A
+ * node can reach itself if it's running. Slaves are counted if they are running.
  * The result is saved into the node data.
+ *
+ * @param search_root Start point of the search
  */
-void MariaDBMonitor::calculate_node_reach(MariaDBServer* node)
+void MariaDBMonitor::calculate_node_reach(MariaDBServer* search_root)
 {
-    mxb_assert(node && node->m_node.reach == NodeData::REACH_UNKNOWN);
+    mxb_assert(search_root && search_root->m_node.reach == NodeData::REACH_UNKNOWN);
     // Reset indexes since they will be reused.
     reset_node_index_info();
 
     int reach = 0;
-    topology_DFS<int>(node, &reach, node_reach_visit);
-    node->m_node.reach = reach;
+    VisitorFunc visitor = [&reach](MariaDBServer* node)->bool
+    {
+        bool node_running = node->is_running();
+        if (node_running)
+        {
+            reach++;
+        }
+        // The node is expanded if it's running.
+        return node_running;
+    };
+
+    topology_DFS(search_root, visitor);
+    search_root->m_node.reach = reach;
+}
+
+/**
+ * Calculate the total number of running slaves that the node has. The node itself can be down.
+ * Slaves are counted even if they are connected through an inactive relay.
+ *
+ * @param node The node to calculate for
+ * @return The number of running slaves
+ */
+int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
+{
+    // Reset indexes since they will be reused.
+    reset_node_index_info();
+
+    int n_running_slaves = 0;
+    VisitorFunc visitor = [&n_running_slaves](MariaDBServer* node)->bool
+    {
+        if (node->is_running())
+        {
+            n_running_slaves++;
+        }
+        // The node is always expanded.
+        return true;
+    };
+
+    topology_DFS(search_root, visitor);
+    return n_running_slaves;
 }
 
 /**
@@ -591,8 +642,10 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
  */
 bool MariaDBMonitor::master_is_valid(std::string* reason_out)
 {
-    // The master server of the cluster needs to be re-calculated in the following four cases:
     bool rval = true;
+    string reason;
+    // The master server of the cluster needs to be re-calculated in the following cases:
+
     // 1) There is no master. This typically only applies when MaxScale is first ran.
     if (m_master == NULL)
     {
@@ -602,14 +655,24 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     else if (m_master->is_read_only())
     {
         rval = false;
-        *reason_out = "it is in read-only mode";
+        reason = "it is in read-only mode";
     }
-    // 3) The master has been down for failcount iterations and auto_failover is not on.
-    else if (m_master->is_down() && !m_auto_failover && m_master->m_server_base->mon_err_count >= m_failcount)
+    // 3) The master has been down for more than failcount iterations and there is no hope of any kind of
+    //    failover fixing the situation. The master is a hopeless one if it has been down for a while and
+    //    has no running slaves, not even behind relays.
+    //
+    //    This condition should account for the situation when a dba or another MaxScale performs a failover
+    //    and moves all the running slaves under another master. If even one running slave remains, the switch
+    //    will not happen.
+    else if (m_master->is_down())
     {
-        rval = false;
-        *reason_out = string_printf("it has been down over %d (failcount) monitor updates and failover "
-            "is not on", m_failcount);
+        // These two conditionals are separate since cases 4&5 should not apply if master is down.
+        if (m_master->m_server_base->mon_err_count > m_failcount && running_slaves(m_master) == 0)
+        {
+            rval = false;
+            reason = string_printf("it has been down over %d (failcount) monitor updates and "
+                                   "it does not have any running slaves", m_failcount);
+        }
     }
     // 4) The master was a non-replicating master (not in a cycle) but now has a slave connection.
     else if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
@@ -618,7 +681,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
         if (!m_master->m_node.parents.empty())
         {
             rval = false;
-            *reason_out = "it has started replicating from another server in the cluster";
+            reason = "it has started replicating from another server in the cluster";
         }
     }
     // 5) The master was part of a cycle but is no longer, or one of the servers in the cycle is
@@ -635,7 +698,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             rval = false;
             ServerArray& old_members = m_master_cycle_status.cycle_members;
             string server_names_old = monitored_servers_to_string(old_members);
-            *reason_out = "it is no longer in the multimaster group (" + server_names_old + ")";
+            reason = "it is no longer in the multimaster group (" + server_names_old + ")";
         }
         // 5b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
         else
@@ -645,11 +708,13 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             {
                 rval = false;
                 string server_names_current = monitored_servers_to_string(current_members);
-                *reason_out = "a server in the master's multimaster group (" + server_names_current +
-                    ") is replicating from a server not in the group";
+                reason = "a server in the master's multimaster group (" + server_names_current +
+                         ") is replicating from a server not in the group";
             }
         }
     }
+
+    *reason_out = reason;
     return rval;
 }
 

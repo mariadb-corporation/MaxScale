@@ -81,7 +81,7 @@ struct NodeData
     static const int CYCLE_NONE = 0;
     static const int CYCLE_FIRST = 1;
     // Default value for reach
-    static const int REACH_UNKNOWN = 0;
+    static const int REACH_UNKNOWN = -1;
 
     // Bookkeeping for graph searches. May be overwritten by multiple algorithms.
     int index;           /* Marks the order in which this node was visited. */

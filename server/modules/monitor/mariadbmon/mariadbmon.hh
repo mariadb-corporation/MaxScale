@@ -202,7 +202,8 @@ private:
     void tarjan_scc_visit_node(MariaDBServer *node, ServerArray* stack, int *index, int *cycle);
     MariaDBServer* find_topology_master_server(std::string* msg_out);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
-    void calculate_node_reach(MariaDBServer* node);
+    void calculate_node_reach(MariaDBServer* search_root);
+    int running_slaves(MariaDBServer* search_root);
     MariaDBServer* find_master_inside_cycle(ServerArray& cycle_servers);
     void assign_server_roles();
     void assign_slave_and_relay_master(MariaDBServer* start_node);
