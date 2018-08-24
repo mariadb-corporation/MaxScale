@@ -27,7 +27,7 @@
  * should not be considered production ready.
  */
 
-#include "blr.h"
+#include "blr.hh"
 
 #include <inttypes.h>
 #include <stdio.h>

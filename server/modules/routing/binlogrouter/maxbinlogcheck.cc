@@ -19,7 +19,7 @@
  * It suggests the pos the file should be trucatetd at.
  */
 
-#include "blr.h"
+#include "blr.hh"
 
 #include <getopt.h>
 #include <stdio.h>

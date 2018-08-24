@@ -20,7 +20,7 @@
 
 #define MXS_MODULE_NAME "binlogrouter"
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 #include <openssl/aes.h>
 #include <pthread.h>

@@ -15,7 +15,7 @@
  * @file blr_file.c - contains code for the router binlog file management
  */
 
-#include "blr.h"
+#include "blr.hh"
 
 #include <dirent.h>
 #include <errno.h>

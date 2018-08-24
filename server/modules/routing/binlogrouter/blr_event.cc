@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "blr.h"
+#include "blr.hh"
 
 #include <inttypes.h>
 

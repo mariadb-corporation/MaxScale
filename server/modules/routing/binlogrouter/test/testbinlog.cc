@@ -22,7 +22,7 @@
  * @endverbatim
  */
 
-#include "../blr.h"
+#include "../blr.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
