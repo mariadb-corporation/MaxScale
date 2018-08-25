@@ -2902,6 +2902,12 @@ check_config_objects(CONFIG_CONTEXT *context)
         const MXS_MODULE *mod = nullptr;
         std::tie(param_set, mod) = get_module_details(obj);
 
+        if (!mod) // Error is logged in load_module
+        {
+            rval = false;
+            continue;
+        }
+
         mxb_assert(param_set);
         std::vector<std::string> to_be_removed;
 
@@ -2913,7 +2919,7 @@ check_config_objects(CONFIG_CONTEXT *context)
             {
                 fix_params = param_set;
             }
-            else if (mod && param_in_set(mod->parameters, params->name))
+            else if (param_in_set(mod->parameters, params->name))
             {
                 fix_params = mod->parameters;
             }
@@ -2962,7 +2968,7 @@ check_config_objects(CONFIG_CONTEXT *context)
         }
 
         if (missing_required_parameters(param_set, obj->parameters, obj->object) ||
-            (mod && missing_required_parameters(mod->parameters, obj->parameters, obj->object)))
+            missing_required_parameters(mod->parameters, obj->parameters, obj->object))
         {
             rval = false;
         }
