@@ -707,6 +707,29 @@ retblock:
     return errstr;
 }
 
+static bool init_log()
+{
+    bool rval = false;
+    MXS_CONFIG* cnf = config_get_global_options();
+
+    if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
+    {
+        fprintf(stderr, "Error: Cannot create log directory '%s': %d, %s\n",
+                default_logdir, errno, strerror(errno));
+
+    }
+    else if (mxs_log_init(NULL, get_logdir(), cnf->log_target))
+    {
+
+        mxs_log_set_syslog_enabled(cnf->syslog);
+        mxs_log_set_maxlog_enabled(cnf->maxlog);
+
+        atexit(mxs_log_finish);
+        rval = true;
+    }
+
+    return rval;
+}
 
 /**
  * @node Provides error printing for non-formatted error strings.
@@ -1333,7 +1356,6 @@ int main(int argc, char **argv)
     int      *maxlog_enabled = &cnf->maxlog; /** Log with MaxScale */
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    bool to_stdout = false;
     int numlocks = 0;
     bool pid_file_created = false;
     mxb::Worker* worker;
@@ -1426,17 +1448,17 @@ int main(int argc, char **argv)
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
             {
-                to_stdout = false;
+                cnf->log_target = MXB_LOG_TARGET_FS;
             }
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
             {
                 // Removed in 2.3
-                to_stdout = false;
+                cnf->log_target = MXB_LOG_TARGET_FS;
                 fprintf(stderr, "Warning: Use of `--log=shm` is deprecated. Data will be logged to file.\n");
             }
             else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
             {
-                to_stdout = true;
+                cnf->log_target = MXB_LOG_TARGET_STDOUT;
             }
             else
             {
@@ -1680,7 +1702,7 @@ int main(int argc, char **argv)
     if (cnf->config_check)
     {
         daemon_mode = false;
-        to_stdout = true;
+        cnf->log_target = MXB_LOG_TARGET_STDOUT;
     }
 
     if (!daemon_mode)
@@ -1833,39 +1855,10 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    /**
-     * Init Log Manager for MaxScale.
-     */
+    if (!init_log())
     {
-        bool succp;
-
-        if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
-        {
-            fprintf(stderr,
-                    "Error: Cannot create log directory: %s\n",
-                    default_logdir);
-            goto return_main;
-        }
-
-        mxs_log_target_t log_target = MXS_LOG_TARGET_FS;
-
-        if (to_stdout)
-        {
-            log_target = MXS_LOG_TARGET_STDOUT;
-        }
-
-        succp = mxs_log_init(NULL, get_logdir(), log_target);
-
-        if (!succp)
-        {
-            rc = MAXSCALE_BADCONFIG;
-            goto return_main;
-        }
-
-        mxs_log_set_syslog_enabled(*syslog_enabled);
-        mxs_log_set_maxlog_enabled(*maxlog_enabled);
-
-        atexit(mxs_log_finish);
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
     }
 
     if (!config_load_global(cnf_file_path))

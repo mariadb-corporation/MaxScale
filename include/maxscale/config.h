@@ -24,6 +24,7 @@
 #include <time.h>
 
 #include <maxbase/jansson.h>
+#include <maxbase/log.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
@@ -281,6 +282,7 @@ typedef struct
     char          peer_hosts[MAX_ADMIN_HOST_LEN];      /**< The protocol, address and port for peers (currently only one) */
     char          peer_user[MAX_ADMIN_HOST_LEN];       /**< Username for maxscale-to-maxscale traffic */
     char          peer_password[MAX_ADMIN_HOST_LEN];   /**< Password for maxscale-to-maxscale traffic */
+    mxb_log_target_t log_target;                       /**< Log type */
 } MXS_CONFIG;
 
 /**

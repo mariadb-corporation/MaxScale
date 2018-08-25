@@ -2653,6 +2653,7 @@ void config_set_global_defaults()
     gateway.peer_hosts[0] = '\0';
     gateway.peer_user[0] = '\0';
     gateway.peer_password[0] = '\0';
+    gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
     // Note: This is not a valid cache value: it is used to detect that the default value is used
     gateway.qc_cache_properties.max_size = -1;
