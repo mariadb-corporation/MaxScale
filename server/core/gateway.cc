@@ -2965,7 +2965,7 @@ static bool sniff_configuration(const char* filepath)
             snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
         }
 
-        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
+        print_log_n_stderr(false, true, errorbuffer, errorbuffer, 0);
     }
 
     return rv == 0;
