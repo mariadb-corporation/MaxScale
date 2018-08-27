@@ -147,7 +147,7 @@ private:
     bool read_row(std::string& dest);
     void process_schema(json_t* json);
     SRow process_row(json_t*);
-    bool is_error(const char* str);
+    bool is_error();
 
     // Lower-level functions
     int wait_for_event(short events);

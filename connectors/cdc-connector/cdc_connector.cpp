@@ -523,14 +523,14 @@ bool Connection::do_registration()
     return rval;
 }
 
-bool Connection::is_error(const char* str)
+bool Connection::is_error()
 {
     bool rval = false;
 
-    if (str[0] == 'E' && str[1] == 'R' && str[2] == 'R')
+    if (m_buffer.size() >= 3 && m_buffer[0] == 'E' && m_buffer[1] == 'R' && m_buffer[2] == 'R')
     {
         m_error = "MaxScale responded with an error: ";
-        m_error += str;
+        m_error.append(m_buffer.begin(), m_buffer.end());
         rval = true;
     }
 
@@ -545,6 +545,12 @@ bool Connection::read_row(std::string& dest)
     {
         if (!m_buffer.empty())
         {
+            if (is_error())
+            {
+                rval = false;
+                break;
+            }
+
             std::deque<char>::iterator it = std::find(m_buffer.begin(), m_buffer.end(), '\n');
 
             if (it != m_buffer.end())
@@ -577,16 +583,11 @@ bool Connection::read_row(std::string& dest)
         assert(std::find(m_buffer.begin(), m_buffer.end(), '\n') == m_buffer.end());
         std::copy(buf, buf + rc, std::back_inserter(m_buffer));
 
-        if (is_error(&m_buffer[0]))
+        if (is_error())
         {
             rval = false;
             break;
         }
-    }
-
-    if (is_error(dest.c_str()))
-    {
-        rval = false;
     }
 
     return rval;
