@@ -280,7 +280,7 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
                 {
                     rval = true;
                 }
-                else
+                else if (m_error == CDC::TIMEOUT)
                 {
                     m_error += ". Data received so far: '";
                     std::copy(m_buffer.begin(), m_buffer.end(), std::back_inserter(m_error));
