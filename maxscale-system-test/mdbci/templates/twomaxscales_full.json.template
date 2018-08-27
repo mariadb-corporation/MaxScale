@@ -51,6 +51,20 @@
                 "cnf_template_path": "${cnf_path}"
         }
   },
+
+  "galera_000" :
+  {
+        "hostname" : "galera000",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server1.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
   "galera_001" :
   {
         "hostname" : "galera001",
