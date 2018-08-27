@@ -276,15 +276,9 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
                     m_error = "Failed to write request: ";
                     m_error += strerror_r(errno, err, sizeof(err));
                 }
-                else if ((m_first_row = read()))
+                else if (read_schema())
                 {
                     rval = true;
-                }
-                else if (m_error == CDC::TIMEOUT)
-                {
-                    m_error += ". Data received so far: '";
-                    std::copy(m_buffer.begin(), m_buffer.end(), std::back_inserter(m_error));
-                    m_error += "'";
                 }
             }
         }
@@ -397,18 +391,13 @@ SRow Connection::process_row(json_t* js)
     return rval;
 }
 
-SRow Connection::read()
+bool Connection::read_schema()
 {
     m_error.clear();
-    SRow rval;
+    bool rval = false;
     std::string row;
 
-    if (m_first_row)
-    {
-        rval.swap(m_first_row);
-        assert(!m_first_row);
-    }
-    else if (read_row(row))
+    if (read_row(row))
     {
         json_error_t err;
         json_t* js = json_loads(row.c_str(), JSON_ALLOW_NUL, &err);
@@ -419,13 +408,43 @@ SRow Connection::read()
             {
                 m_schema = row;
                 process_schema(js);
-                rval = Connection::read();
-            }
-            else
-            {
-                rval = process_row(js);
+                rval = true;
             }
 
+            json_decref(js);
+        }
+        else
+        {
+            m_error = "Failed to parse JSON: ";
+            m_error += err.text;
+        }
+    }
+
+    if (m_error == CDC::TIMEOUT)
+    {
+        assert(rval == false);
+        m_error += ". Data received so far: '";
+        std::copy(m_buffer.begin(), m_buffer.end(), std::back_inserter(m_error));
+        m_error += "'";
+    }
+
+    return rval;
+}
+
+SRow Connection::read()
+{
+    m_error.clear();
+    SRow rval;
+    std::string row;
+
+    if (read_row(row))
+    {
+        json_error_t err;
+        json_t* js = json_loads(row.c_str(), JSON_ALLOW_NUL, &err);
+
+        if (js)
+        {
+            rval = process_row(js);
             json_decref(js);
         }
         else

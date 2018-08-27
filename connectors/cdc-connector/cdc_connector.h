@@ -145,6 +145,7 @@ private:
     bool do_auth();
     bool do_registration();
     bool read_row(std::string& dest);
+    bool read_schema();
     void process_schema(json_t* json);
     SRow process_row(json_t*);
     bool is_error();
