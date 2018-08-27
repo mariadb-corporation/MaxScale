@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
@@ -1537,14 +1538,15 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 
     if (session->client_dcb->authfunc.reauthenticate)
     {
+        uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
         MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-        uint8_t payload[gwbuf_length(packetbuf) - MYSQL_HEADER_LEN];
-        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, sizeof(payload), payload);
+        std::vector<uint8_t> payload;
+        payload.resize(payloadlen);
+        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
         // Will contains extra data but the username is null-terminated
-        char user[gwbuf_length(proto->stored_query) - MYSQL_HEADER_LEN - 1];
-        gwbuf_copy_data(proto->stored_query, MYSQL_HEADER_LEN + 1,
-                        sizeof(user), (uint8_t*)user);
+        char user[MYSQL_USER_MAXLEN + 1];
+        gwbuf_copy_data(proto->stored_query, MYSQL_HEADER_LEN + 1, sizeof(user), (uint8_t*)user);
 
         char* end = user + sizeof(user);
 
@@ -1559,7 +1561,7 @@ static bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
         strcpy(data->user, user);
 
         int rc = session->client_dcb->authfunc.reauthenticate(session->client_dcb, data->user,
-                                                              payload, sizeof(payload),
+                                                              &payload[0], payload.size(),
                                                               proto->scramble, sizeof(proto->scramble),
                                                               data->client_sha1, sizeof(data->client_sha1));
 
