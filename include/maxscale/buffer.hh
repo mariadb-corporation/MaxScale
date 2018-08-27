@@ -15,10 +15,25 @@
 #include <maxscale/ccdefs.hh>
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include <new>
 #include <vector>
 #include <maxbase/assert.h>
 #include <maxscale/buffer.h>
+
+namespace std
+{
+
+template<>
+struct default_delete<GWBUF>
+{
+    void operator()(GWBUF* pBuffer)
+    {
+        gwbuf_free(pBuffer);
+    }
+};
+
+}
 
 namespace maxscale
 {
