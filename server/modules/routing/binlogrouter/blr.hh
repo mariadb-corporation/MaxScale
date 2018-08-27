@@ -986,6 +986,7 @@ static const char *blrs_states[] =
 /*
  * Externals within the router
  */
+extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
@@ -1009,6 +1010,8 @@ extern int  blr_write_binlog_record(ROUTER_INSTANCE *,
 extern int  blr_file_rotate(ROUTER_INSTANCE *,
                             char *,
                             uint64_t);
+extern int blr_file_read_master_config(ROUTER_INSTANCE *router);
+extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *,
                                const char *,

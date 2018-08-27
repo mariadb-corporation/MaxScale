@@ -27,7 +27,6 @@
 #include "blr.hh"
 
 #include <ctype.h>
-#include <ini.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,13 +79,6 @@ static  void errorReply(MXS_ROUTER *instance,
                         bool *succp);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
-static int blr_handler_config(void *userdata,
-                              const char *section,
-                              const char *name,
-                              const char *value);
-static int blr_handle_config_item(const char *name,
-                                  const char *value,
-                                  ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 void blr_master_close(ROUTER_INSTANCE *);
@@ -107,8 +99,6 @@ GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router,
                                char *response);
 extern bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                        MARIADB_GTID_INFO *result);
-
-void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -827,16 +817,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
      * automatic master replication start phase
      */
 
-    static const char MASTER_INI[] = "/master.ini";
-    char filename[strlen(inst->binlogdir) + sizeof(MASTER_INI)]; // sizeof includes the NULL
-    sprintf(filename, "%s%s", inst->binlogdir, MASTER_INI);
-
-    rc = ini_parse(filename, blr_handler_config, inst);
-
-    MXS_INFO("%s: %s parse result is %d",
-             inst->service->name,
-             filename,
-             rc);
+    rc = blr_file_read_master_config(inst);
 
     /*
      * retcode:
@@ -2652,175 +2633,6 @@ blr_send_custom_error(DCB *dcb,
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     return MXS_SESSION_ROUTE_REPLY(dcb->session, errbuf);
-}
-
-/**
- * Config item handler for the ini file reader
- *
- * @param userdata      The config context element
- * @param section       The config file section
- * @param name          The Parameter name
- * @param value         The Parameter value
- * @return zero on error
- */
-
-static int
-blr_handler_config(void *userdata, const char *section, const char *name, const char *value)
-{
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) userdata;
-    SERVICE *service;
-
-    service = inst->service;
-
-    if (strcasecmp(section, "binlog_configuration") == 0)
-    {
-        return blr_handle_config_item(name, value, inst);
-    }
-    else
-    {
-        MXS_ERROR("master.ini has an invalid section [%s], it should be [binlog_configuration]. "
-                  "Service %s",
-                  section,
-                  service->name);
-
-        return 0;
-    }
-}
-
-/**
- * Configuration handler for items in the [binlog_configuration] section
- *
- * @param name  The item name
- * @param value The item value
- * @param inst  The current router instance
- * @return 0 on error
- */
-static  int
-blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst)
-{
-    SERVICE *service;
-    char *ssl_cert;
-    char *ssl_key;
-    char *ssl_ca_cert;
-    SERVER *backend_server;
-
-    service = inst->service;
-
-    backend_server = service->dbref->server;
-
-    if (strcmp(name, "master_host") == 0)
-    {
-        server_update_address(service->dbref->server, (char *)value);
-    }
-    else if (strcmp(name, "master_port") == 0)
-    {
-        server_update_port(service->dbref->server, (short)atoi(value));
-    }
-    else if (strcmp(name, "filestem") == 0)
-    {
-        MXS_FREE(inst->fileroot);
-        inst->fileroot = MXS_STRDUP_A(value);
-    }
-    else if (strcmp(name, "master_user") == 0)
-    {
-        if (inst->user)
-        {
-            MXS_FREE(inst->user);
-        }
-        inst->user = MXS_STRDUP_A(value);
-    }
-    else if (strcmp(name, "master_password") == 0)
-    {
-        if (inst->password)
-        {
-            MXS_FREE(inst->password);
-        }
-        inst->password = MXS_STRDUP_A(value);
-    }
-    /** Checl for SSL options */
-    else if (strcmp(name, "master_ssl") == 0)
-    {
-        inst->ssl_enabled = config_truth_value((char*)value);
-    }
-    else if (strcmp(name, "master_ssl_ca") == 0)
-    {
-        MXS_FREE(backend_server->server_ssl->ssl_ca_cert);
-        backend_server->server_ssl->ssl_ca_cert = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_ca);
-        inst->ssl_ca = value ? MXS_STRDUP_A(value) : NULL;
-    }
-    else if (strcmp(name, "master_ssl_cert") == 0)
-    {
-        MXS_FREE(backend_server->server_ssl->ssl_cert);
-        backend_server->server_ssl->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_cert);
-        inst->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
-    }
-    else if (strcmp(name, "master_ssl_key") == 0)
-    {
-        MXS_FREE(backend_server->server_ssl->ssl_key);
-        backend_server->server_ssl->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_key);
-        inst->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
-    }
-    else if (strcmp(name, "master_ssl_version") == 0 || strcmp(name, "master_tls_version") == 0)
-    {
-        if (value)
-        {
-            if (listener_set_ssl_version(backend_server->server_ssl, (char *)value) != 0)
-            {
-                MXS_ERROR("Found unknown optional parameter value for 'ssl_version' for"
-                          " service '%s': %s, ignoring it.",
-                          inst->service->name,
-                          value);
-            }
-            else
-            {
-                inst->ssl_version = MXS_STRDUP_A(value);
-            }
-        }
-    }
-    /* Connect options */
-    else if (strcmp(name, "master_heartbeat_period") == 0)
-    {
-        int new_val = atol((char *)value);
-        if (new_val < 0)
-        {
-            MXS_WARNING("Found invalid 'master_heartbeat_period' value"
-                        " for service '%s': %s, ignoring it.",
-                        inst->service->name,
-                        value);
-        }
-        else
-        {
-            if (inst->heartbeat > 0 && new_val == 0)
-            {
-                blr_log_disabled_heartbeat(inst);
-            }
-            inst->heartbeat = new_val;
-        }
-    }
-    else if (strcmp(name, "master_connect_retry") == 0)
-    {
-        int new_val = atol((char *)value);
-        if (new_val <= 0)
-        {
-            MXS_WARNING("Found invalid 'master_connect_retry' value"
-                        " for service '%s': %s, ignoring it.",
-                        inst->service->name,
-                        value);
-        }
-        else
-        {
-            inst->retry_interval = new_val;
-        }
-    }
-    else
-    {
-        return 0;
-    }
-
-    return 1;
 }
 
 /**
