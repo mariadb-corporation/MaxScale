@@ -122,7 +122,7 @@ public:
 
     Closer(T t):
         m_t(t),
-        m_close(false)
+        m_close(true)
     {
     }
 
