@@ -317,9 +317,9 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, lib, NULL) &&
-                qc_process_init(QC_INIT_BOTH) &&
-                qc_thread_init(QC_INIT_BOTH))
+            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, lib, NULL)
+                && qc_process_init(QC_INIT_BOTH)
+                && qc_thread_init(QC_INIT_BOTH))
             {
                 //  Version encoded as MariaDB encodes the version, i.e.:
                 //  version = major * 10000 + minor * 100 + patch
@@ -327,6 +327,8 @@ int main(int argc, char** argv)
 
                 qc_set_server_version(version);
                 rc = run(input_name, expected_name);
+
+                qc_thread_end(QC_INIT_BOTH);
                 qc_process_end(QC_INIT_BOTH);
             }
             else

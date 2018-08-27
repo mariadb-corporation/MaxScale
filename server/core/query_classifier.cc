@@ -441,19 +441,11 @@ bool qc_process_init(uint32_t kind)
         }
     }
 
-    bool rc = qc_thread_init(QC_INIT_SELF);
+    bool rc = true;
 
-    if (rc)
+    if (kind & QC_INIT_PLUGIN)
     {
-        if (kind & QC_INIT_PLUGIN)
-        {
-            rc = this_unit.classifier->qc_process_init() == 0;
-
-            if (!rc)
-            {
-                qc_thread_end(QC_INIT_SELF);
-            }
-        }
+        rc = this_unit.classifier->qc_process_init() == 0;
     }
 
     return rc;
@@ -468,8 +460,6 @@ void qc_process_end(uint32_t kind)
     {
         this_unit.classifier->qc_process_end();
     }
-
-    qc_thread_end(QC_INIT_SELF);
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -502,12 +492,19 @@ bool qc_thread_init(uint32_t kind)
 
     bool rc = false;
 
-    this_thread.pInfo_cache = new (std::nothrow) QCInfoCache;
-
-    if (this_thread.pInfo_cache)
+    if (kind & QC_INIT_SELF)
+    {
+        mxb_assert(!this_thread.pInfo_cache);
+        this_thread.pInfo_cache = new (std::nothrow) QCInfoCache;
+        rc = true;
+    }
+    else
     {
         rc = true;
+    }
 
+    if (rc)
+    {
         if (kind & QC_INIT_PLUGIN)
         {
             rc = this_unit.classifier->qc_thread_init() == 0;
@@ -515,8 +512,11 @@ bool qc_thread_init(uint32_t kind)
 
         if (!rc)
         {
-            delete this_thread.pInfo_cache;
-            this_thread.pInfo_cache = nullptr;
+            if (kind & QC_INIT_SELF)
+            {
+                delete this_thread.pInfo_cache;
+                this_thread.pInfo_cache = nullptr;
+            }
         }
     }
 
@@ -533,8 +533,11 @@ void qc_thread_end(uint32_t kind)
         this_unit.classifier->qc_thread_end();
     }
 
-    delete this_thread.pInfo_cache;
-    this_thread.pInfo_cache = nullptr;
+    if (kind & QC_INIT_SELF)
+    {
+        delete this_thread.pInfo_cache;
+        this_thread.pInfo_cache = nullptr;
+    }
 }
 
 qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)

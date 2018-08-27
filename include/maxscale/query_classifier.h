@@ -198,16 +198,14 @@ typedef struct query_classifier
     void (*qc_process_end)(void);
 
     /**
-     * Called once per each thread, except for the thread for which @c qc_process_init
-     * was called.
+     * Called once per each thread.
      *
      * @return QC_RESULT_OK, if the thread initialization succeeded.
      */
     int32_t (*qc_thread_init)(void);
 
     /**
-     * Called once when a thread finishes, except for the thread for which @c qc_process_init
-     * was called.
+     * Called once when a thread finishes.
      */
     void (*qc_thread_end)(void);
 
@@ -499,9 +497,9 @@ bool qc_process_init(uint32_t kind);
 /**
  * Finalizes the query classifier.
  *
- * A successful call of qc_init() should before program exit be followed
- * by a call to this function. MaxScale calls this function, so plugins
- * should not do that.
+ * A successful call of @c qc_process_init should before program exit be
+ * followed by a call to this function. MaxScale calls this function, so
+ * plugins should not do that.
  *
  * @param kind  What kind of finalization should be performed.
  *              Combination of qc_init_kind_t.
@@ -537,8 +535,7 @@ void qc_unload(QUERY_CLASSIFIER* classifier);
 
 /**
  * Performs thread initialization needed by the query classifier. Should
- * be called in every thread, except the one where qc_process_init()
- * was called.
+ * be called in every thread.
  *
  * MaxScale calls this function, so plugins should not do that.
  *
@@ -553,8 +550,8 @@ bool qc_thread_init(uint32_t kind);
 
 /**
  * Performs thread finalization needed by the query classifier.
- * A successful call to qc_thread_init() should at some point be followed
- * by a call to this function.
+ * A successful call to @c qc_thread_init should at some point be
+ * followed by a call to this function.
  *
  * MaxScale calls this function, so plugins should not do that.
  *
