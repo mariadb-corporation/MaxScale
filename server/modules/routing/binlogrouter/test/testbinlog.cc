@@ -112,8 +112,7 @@ int main(int argc, char **argv)
     set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
-    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
-    qc_process_init(QC_INIT_BOTH);
+    qc_init(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     hkinit();
 
     CONFIG_CONTEXT ctx{(char*)""};

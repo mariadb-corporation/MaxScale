@@ -131,16 +131,11 @@ int main(int argc, char* argv[])
 
         set_libdir(strdup(LIBDIR));
 
-        if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, QC_LIB, NULL))
+        if (qc_init(NULL, QC_SQL_MODE_DEFAULT, QC_LIB, NULL))
         {
-            if (qc_process_init(QC_INIT_BOTH) && qc_thread_init(QC_INIT_BOTH))
-            {
-                rc = test();
-            }
-            else
-            {
-                cerr << "error: Could not perform process/thread initialization for " << QC_LIB << "." << endl;
-            }
+            rc = test();
+
+            qc_end();
         }
         else
         {

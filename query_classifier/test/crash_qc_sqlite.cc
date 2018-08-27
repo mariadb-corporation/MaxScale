@@ -44,9 +44,7 @@ int main()
 
     set_libdir(strdup("../qc_sqlite"));
 
-    if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL) &&
-        qc_process_init(QC_INIT_BOTH) &&
-        qc_thread_init(QC_INIT_BOTH))
+    if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
     {
         const char s[] = "SELECT @@global.max_allowed_packet";
 
@@ -58,7 +56,7 @@ int main()
         // code generator.
         qc_parse(stmt, QC_COLLECT_ALL);
 
-        qc_process_end(QC_INIT_BOTH);
+        qc_end();
 
         rv = EXIT_SUCCESS;
     }

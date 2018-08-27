@@ -31,10 +31,12 @@ using std::endl;
 
 int main(int argc, char** argv)
 {
+    int rc = EXIT_FAILURE;
+
     if (argc != 3)
     {
         cout << "Usage: canonizer <input file> <output file>" << endl;
-        return 1;
+        return rc;
     }
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
@@ -43,7 +45,7 @@ int main(int argc, char** argv)
     if (!utils_init())
     {
         cout << "Utils library init failed." << endl;
-        return 1;
+        return rc;
     }
 
     set_libdir(strdup("../../../../query_classifier/qc_sqlite/"));
@@ -51,43 +53,46 @@ int main(int argc, char** argv)
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));
 
-    qc_setup(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL);
-    qc_process_init(QC_INIT_BOTH);
-    qc_thread_init(QC_INIT_BOTH);
-
-    std::ifstream infile(argv[1]);
-    std::ofstream outfile(argv[2]);
-
-    if (!infile || !outfile)
+    if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
     {
-        cout << "Opening files failed." << endl;
-        return 1;
-    }
+        std::ifstream infile(argv[1]);
+        std::ofstream outfile(argv[2]);
 
-    for (std::string line; getline(infile, line);)
-    {
-        while (*line.rbegin() == '\n')
+        if (infile && outfile)
         {
-            line.resize(line.size() - 1);
+            for (std::string line; getline(infile, line);)
+            {
+                while (*line.rbegin() == '\n')
+                {
+                    line.resize(line.size() - 1);
+                }
+
+                if (!line.empty())
+                {
+                    size_t psize = line.size() + 1;
+                    mxs::Buffer buf(psize + 4);
+                    auto it = buf.begin();
+                    *it++ = (uint8_t)psize;
+                    *it++ = (uint8_t)(psize >> 8);
+                    *it++ = (uint8_t)(psize >> 16);
+                    *it++ = 0;
+                    *it++ = 3;
+                    std::copy(line.begin(), line.end(), it);
+                    char* tok = qc_get_canonical(buf.get());
+                    outfile <<  tok << endl;
+                    free(tok);
+                }
+            }
+
+            rc = EXIT_SUCCESS;
+        }
+        else
+        {
+            cout << "Opening files failed." << endl;
         }
 
-        if (!line.empty())
-        {
-            size_t psize = line.size() + 1;
-            mxs::Buffer buf(psize + 4);
-            auto it = buf.begin();
-            *it++ = (uint8_t)psize;
-            *it++ = (uint8_t)(psize >> 8);
-            *it++ = (uint8_t)(psize >> 16);
-            *it++ = 0;
-            *it++ = 3;
-            std::copy(line.begin(), line.end(), it);
-            char* tok = qc_get_canonical(buf.get());
-            outfile <<  tok << endl;
-            free(tok);
-        }
+        qc_end();
     }
 
-    qc_process_end(QC_INIT_BOTH);
-    return 0;
+    return rc;
 }
