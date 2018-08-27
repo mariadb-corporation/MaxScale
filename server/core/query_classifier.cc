@@ -330,6 +330,13 @@ public:
         {
             m_canonical = mxs::get_canonical(m_pStmt);
 
+            if (modutil_is_SQL_prepare(pStmt))
+            {
+                // P as in prepare, and appended so as not to cause a
+                // need for copying the data.
+                m_canonical += ":P";
+            }
+
             QC_STMT_INFO* pInfo = this_thread.pInfo_cache->get(m_canonical);
 
             if (pInfo)
