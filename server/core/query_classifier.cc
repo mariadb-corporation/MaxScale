@@ -415,6 +415,39 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
     return (rv == QC_RESULT_OK) ? true : false;
 }
 
+bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
+             qc_sql_mode_t sql_mode,
+             const char* plugin_name,
+             const char* plugin_args)
+{
+    QC_TRACE();
+
+    bool rc = qc_setup(cache_properties, sql_mode, plugin_name, plugin_args);
+
+    if (rc)
+    {
+        rc = qc_process_init(QC_INIT_BOTH);
+
+        if (rc)
+        {
+            rc = qc_thread_init(QC_INIT_BOTH);
+
+            if (!rc)
+            {
+                qc_process_end(QC_INIT_BOTH);
+            }
+        }
+    }
+
+    return rc;
+}
+
+void qc_end()
+{
+    qc_thread_end(QC_INIT_BOTH);
+    qc_process_end(QC_INIT_BOTH);
+}
+
 bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();

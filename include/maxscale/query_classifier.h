@@ -462,20 +462,51 @@ typedef struct QC_CACHE_STATS
  *
  * MaxScale calls this function, so plugins should not do that.
  *
- * @param qc_cache     If non-NULL, specifies the properties of the QC cache.
- * @param sql_mode     The default sql mode.
- * @param plugin_name  The name of the plugin from which the query classifier
- *                     should be loaded.
- * @param plugin_args  The arguments to be provided to the query classifier.
+ * @param cache_properties  If non-NULL, specifies the properties of the QC cache.
+ * @param sql_mode          The default sql mode.
+ * @param plugin_name       The name of the plugin from which the query classifier
+ *                          should be loaded.
+ * @param plugin_args       The arguments to be provided to the query classifier.
  *
  * @return True if the query classifier could be loaded and initialized,
  *         false otherwise.
  *
- * @see qc_end qc_thread_init
+ * @see qc_process_init qc_thread_init
  */
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
               const char* plugin_name, const char* plugin_args);
+
+/**
+ * Loads and setups the default query classifier, and performs
+ * process and thread initialization.
+ *
+ * This is primary intended for making the setup of stand-alone
+ * test-programs simpler.
+ *
+ * @param cache_properties  If non-NULL, specifies the properties of the QC cache.
+ * @param sql_mode          The default sql mode.
+ * @param plugin_name       The name of the plugin from which the query classifier
+ *                          should be loaded.
+ * @param plugin_args       The arguments to be provided to the query classifier.
+ *
+ * @return True if the query classifier could be loaded and initialized,
+ *         false otherwise.
+ *
+ * @see qc_end.
+ */
+bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
+             qc_sql_mode_t sql_mode,
+             const char* plugin_name,
+             const char* plugin_args);
+
+/**
+ * Performs thread and process finalization.
+ *
+ * This is primary intended for making the tear-down of stand-alone
+ * test-programs simpler.
+ */
+void qc_end();
 
 /**
  * Intializes the query classifier.
