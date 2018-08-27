@@ -8,7 +8,7 @@ echo "MDBCI_VM_PATH=$MDBCI_VM_PATH"
 export box=${box:-"centos_7_libvirt"}
 echo "box=$box"
 
-export template=${template:-"default"}
+export template=${template:-"twomaxscales_full"}
 
 export curr_date=`date '+%Y-%m-%d_%H-%M'`
 
