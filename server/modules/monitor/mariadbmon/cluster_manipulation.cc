@@ -13,6 +13,7 @@
 
 #include "mariadbmon.hh"
 
+#include <chrono>
 #include <inttypes.h>
 #include <sstream>
 #include <maxscale/clock.h>
@@ -20,6 +21,7 @@
 #include <maxscale/utils.hh>
 
 using std::string;
+using std::chrono::steady_clock;
 using maxscale::string_printf;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
@@ -1246,6 +1248,9 @@ void MariaDBMonitor::handle_auto_failover()
     }
 
     int master_down_count = m_master->m_server_base->mon_err_count;
+    const MariaDBServer* connected_slave = NULL;
+    Duration event_age;
+
     if (m_failcount > 1 && m_warn_master_down)
     {
         int monitor_passes = m_failcount - master_down_count;
@@ -1254,9 +1259,12 @@ void MariaDBMonitor::handle_auto_failover()
         m_warn_master_down = false;
     }
     // If master seems to be down, check if slaves are receiving events.
-    else if (m_verify_master_failure && slave_receiving_events()) // TODO: Fix the events detection
+    else if (m_verify_master_failure &&
+             (connected_slave = slave_receiving_events(m_master, &event_age)) != NULL)
     {
-        MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
+        MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
+                   "seconds ago. Delaying failover.",
+                   connected_slave->name(), m_master->name(), event_age.count());
     }
     else if (master_down_count >= m_failcount)
     {
@@ -1365,32 +1373,37 @@ void MariaDBMonitor::check_cluster_operations_support()
 }
 
 /**
- * Check if a slave is receiving events from master.
+ * Check if a slave is receiving events from master. Returns the first slave that is both
+ * connected (or not realized the disconnect yet) and has an event more recent than
+ * master_failure_timeout. The age of the event is written in 'event_age_out'.
  *
- * @return True, if a slave has an event more recent than master_failure_timeout.
+ * @param demotion_target The server whose slaves should be checked
+ * @param event_age_out Output for event age
+ * @return The first connected slave or NULL if none found
  */
-bool MariaDBMonitor::slave_receiving_events()
+const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
+                                                            Duration* event_age_out)
 {
-    mxb_assert(m_master);
-    bool received_event = false;
-    int64_t master_id = m_master->m_server_base->server->node_id;
+    steady_clock::time_point alive_after = steady_clock::now() -
+                                           std::chrono::seconds(m_master_failure_timeout);
 
-    for (MariaDBServer* server : m_servers)
+    const MariaDBServer* connected_slave = NULL;
+    for (MariaDBServer* slave : demotion_target->m_node.children)
     {
-        if (!server->m_slave_status.empty() &&
-            server->m_slave_status[0].slave_io_running == SlaveStatus::SLAVE_IO_YES &&
-            server->m_slave_status[0].master_server_id == master_id &&
-            difftime(time(NULL), server->m_latest_event) < m_master_failure_timeout)
+        const SlaveStatus* slave_conn = NULL;
+        if (slave->is_running() &&
+            (slave_conn = slave->slave_connection_status(demotion_target)) != NULL &&
+            slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES &&
+            slave_conn->last_data_time >= alive_after)
         {
-            /**
-             * The slave is still connected to the correct master and has received events. This means that
-             * while MaxScale can't connect to the master, it's probably still alive.
-             */
-            received_event = true;
+            // The slave is still connected to the correct master and has received events. This means that
+            // while MaxScale can't connect to the master, it's probably still alive.
+            connected_slave = slave;
+            *event_age_out = steady_clock::now() - slave_conn->last_data_time;
             break;
         }
     }
-    return received_event;
+    return connected_slave;
 }
 
 /**

@@ -12,6 +12,7 @@
  */
  #pragma once
 #include "mariadbmon_common.hh"
+#include <chrono>
 #include <string>
 #include <memory>
 #include <maxscale/monitor.h>
@@ -47,6 +48,11 @@ public:
     GtidList gtid_io_pos;                               /* Gtid I/O position of the slave thread. */
     std::string last_error;                             /* Last IO or SQL error encountered. */
     int seconds_behind_master = MXS_RLAG_UNDEFINED;     /* How much behind the slave is. */
+    int64_t received_heartbeats = 0;                    /* How many heartbeats the connection has received */
+
+    /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
+    std::chrono::steady_clock::time_point last_data_time = std::chrono::steady_clock::now();
+
 
     std::string to_string() const;
     json_t* to_json() const;
@@ -135,10 +141,6 @@ public:
     version         m_version;              /**< Server version/type. */
     int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
     bool            m_read_only;            /**< Value of @@read_only */
-    size_t          m_n_slaves_running;     /**< Number of running slave connections */
-    int             m_n_slave_heartbeats;   /**< Number of received heartbeats */
-    double          m_heartbeat_period;     /**< The time interval between heartbeats */
-    time_t          m_latest_event;         /**< Time when latest event was received from the master */
     int64_t         m_gtid_domain_id;       /**< The value of gtid_domain_id, the domain which is used for
                                               *  new non-replicated events. */
     GtidList        m_gtid_current_pos;     /**< Gtid of latest event. */
@@ -459,7 +461,7 @@ public:
 private:
     bool update_slave_status(std::string* errmsg_out = NULL);
     bool sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
-    void sstatus_array_set_conn_status(SlaveStatusArray* new_slave_status);
+    const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
 };
 
 /**

@@ -13,6 +13,7 @@
 
 #include "mariadbserver.hh"
 
+#include <chrono>
 #include <fstream>
 #include <inttypes.h>
 #include <iomanip>
@@ -22,6 +23,7 @@
 #include <maxscale/utils.hh>
 
 using std::string;
+using std::chrono::steady_clock;
 using maxscale::string_printf;
 
 namespace
@@ -33,17 +35,12 @@ namespace
     const char NO[] = "No";
 }
 
-
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
     , m_version(version::UNKNOWN)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_read_only(false)
-    , m_n_slaves_running(0)
-    , m_n_slave_heartbeats(0)
-    , m_heartbeat_period(0)
-    , m_latest_event(time(NULL))
     , m_gtid_domain_id(GTID_DOMAIN_UNKNOWN)
     , m_topology_changed(true)
     , m_replication_lag(MXS_RLAG_UNDEFINED)
@@ -175,54 +172,74 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     }
 
     SlaveStatusArray slave_status_new;
-    int nrunning = 0;
     while (result->next_row())
     {
-        SlaveStatus sstatus_row;
-        sstatus_row.master_host = result->get_string(i_master_host);
-        sstatus_row.master_port = result->get_uint(i_master_port);
+        SlaveStatus new_row;
+        new_row.master_host = result->get_string(i_master_host);
+        new_row.master_port = result->get_uint(i_master_port);
         string last_io_error = result->get_string(i_last_io_error);
         string last_sql_error = result->get_string(i_last_sql_error);
-        sstatus_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
+        new_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-        sstatus_row.slave_io_running =
+        new_row.slave_io_running =
             SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
-        sstatus_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
-        sstatus_row.master_server_id = result->get_uint(i_master_server_id);
+        new_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
+        new_row.master_server_id = result->get_uint(i_master_server_id);
 
         auto rlag = result->get_uint(i_seconds_behind_master);
         // If slave connection is stopped, the value given by the backend is null -> -1.
-        sstatus_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
+        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
             (rlag > INT_MAX) ? INT_MAX : rlag;
-
-        if (sstatus_row.slave_io_running == SlaveStatus::SLAVE_IO_YES && sstatus_row.slave_sql_running)
-        {
-            nrunning++;
-            // TODO: Fix for multisource replication, check changes to IO_Pos here and save somewhere.
-        }
 
         if (all_slaves_status)
         {
-            sstatus_row.name = result->get_string(i_connection_name);
-            auto heartbeats = result->get_uint(i_slave_rec_hbs);
-            if (m_n_slave_heartbeats < heartbeats) // TODO: Fix for multisource replication
-            {
-                m_latest_event = time(NULL);
-                m_n_slave_heartbeats = heartbeats;
-                m_heartbeat_period = result->get_uint(i_slave_hb_period);
-            }
+            new_row.name = result->get_string(i_connection_name);
+            new_row.received_heartbeats = result->get_uint(i_slave_rec_hbs);
+
             string using_gtid = result->get_string(i_using_gtid);
             string gtid_io_pos = result->get_string(i_gtid_io_pos);
-            if (!gtid_io_pos.empty() &&
-                (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
+            if (!gtid_io_pos.empty() && (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
-                sstatus_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
+                new_row.gtid_io_pos = GtidList::from_string(gtid_io_pos);
             }
         }
-        slave_status_new.push_back(sstatus_row);
+
+        // Before adding this row to the SlaveStatus array, compare the row to the one from the previous
+        // monitor tick and fill in the last pieces of data.
+        auto old_row = sstatus_find_previous_row(new_row, slave_status_new.size());
+        if (old_row)
+        {
+            // When the new row was created, 'last_data_time' was set to the current time. If it seems
+            // like the slave is not receiving data from the master, set the time to the one
+            // in the previous monitor tick.
+            if (new_row.received_heartbeats == old_row->received_heartbeats &&
+                new_row.gtid_io_pos == old_row->gtid_io_pos)
+            {
+                new_row.last_data_time = old_row->last_data_time;
+            }
+        }
+
+        // Finally, set the connection status.
+        if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_YES)
+        {
+            mxb_assert(new_row.master_server_id > 0);
+            new_row.seen_connected = true;
+        }
+        else if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING && old_row)
+        {
+            // Old connection data found. Even in this case the server id:s could be wrong if the
+            // slave connection was cleared and remade between monitor loops.
+            if (new_row.master_server_id == old_row->master_server_id && old_row->seen_connected)
+            {
+                new_row.seen_connected = true;
+            }
+        }
+
+        // Row complete, add it to the array.
+        slave_status_new.push_back(new_row);
     }
 
-    sstatus_array_set_conn_status(&slave_status_new);
+    // Compare the previous array to the new one.
     if (!sstatus_array_topology_equal(slave_status_new))
     {
         m_topology_changed = true;
@@ -231,14 +248,6 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     // Always write to m_slave_status. Even if the new status is equal by topology,
     // gtid:s etc may have changed.
     m_slave_status = std::move(slave_status_new);
-
-    if (m_slave_status.empty())
-    {
-        /** Query returned no rows, replication is not configured */
-        m_n_slave_heartbeats = 0;
-    }
-
-    m_n_slaves_running = nrunning;
     return true;
 }
 
@@ -916,71 +925,41 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
 }
 
 /**
- * Compare the new slave status info to the old and set connection status.
+ * Check the slave status array stored in the MariaDBServer and find the row matching the connection in
+ * 'search_row'.
  *
- * @param new_slave_status The slave status just queried from the server.
+ * @param search_row What connection to search for
+ * @param guess_ind Index where the search row could be located at. If incorrect, the array is searched.
+ * @return The found row or NULL if not found
  */
-void MariaDBServer::sstatus_array_set_conn_status(SlaveStatusArray* new_slave_status)
+const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& search_row, size_t guess_ind)
 {
-    // Helper function. Checks if the connection in the new row is to the same server than in the old row
-    // sets connection status if yes.
-    auto compare_and_set = [](const SlaveStatus& old_row, SlaveStatus& new_row) -> bool
+    // Helper function. Checks if the connection in the new row is to the same server than in the old row.
+    auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool
     {
-        if (new_row.master_host == old_row.master_host && new_row.master_port == old_row.master_port)
-        {
-            // Was the correct connection. Even in this case the server id:s could be wrong if the
-            // slave connection was cleared and remade between monitor loops.
-            if (new_row.master_server_id == old_row.master_server_id && old_row.seen_connected)
-            {
-                new_row.seen_connected = true;
-            }
-            return true;
-        }
-        return false;
+        return (rhs.master_host == lhs.master_host && rhs.master_port == lhs.master_port);
     };
 
-    SlaveStatusArray& new_sstatus = *new_slave_status;
-    // Iterate through the new slave status array. If IO thread is connected, master server id is ok.
-    // If IO thread is "Connecting" check the previous slave status array for the connection status.
-    for (size_t i = 0; i < new_sstatus.size(); i++)
+    // Usually the same slave connection can be found from the same index than in the previous slave
+    // status array, but this is not 100% (e.g. dba has just added a new connection).
+    const SlaveStatus* rval = NULL;
+    if (guess_ind < m_slave_status.size() && compare_rows(m_slave_status[guess_ind], search_row))
     {
-        SlaveStatus& new_row = new_sstatus[i];
-        if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_YES)
+        rval = &m_slave_status[guess_ind];
+    }
+    else
+    {
+        // The correct connection was not found where it should have been. Try looping.
+        for (const SlaveStatus& old_row : m_slave_status)
         {
-            mxb_assert(new_row.master_server_id > 0);
-            new_row.seen_connected = true;
-        }
-        else if (new_row.slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING)
-        {
-            // Usually the same slave connection can be found from the same index in the previous slave
-            // status array, but this is not 100% (e.g. dba has just added a new connection).
-            bool need_search = false;
-            if (i < m_slave_status.size())
+            if (compare_rows(old_row, search_row))
             {
-                SlaveStatus& old_row = m_slave_status[i];
-                if (!compare_and_set(old_row, new_row))
-                {
-                    need_search = true;
-                }
-            }
-            else
-            {
-                need_search = true;
-            }
-
-            if (need_search)
-            {
-                // The correct connection was not found where it should have been. Try looping.
-                for (const SlaveStatus& old_row : m_slave_status)
-                {
-                    if (compare_and_set(old_row, new_row))
-                    {
-                        break;
-                    }
-                }
+                rval = &old_row;
+                break;
             }
         }
     }
+    return rval;
 }
 
 bool MariaDBServer::can_be_demoted_switchover(string* reason_out)

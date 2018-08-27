@@ -12,6 +12,7 @@
  */
  #pragma once
 #include "mariadbmon_common.hh"
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <string>
@@ -103,6 +104,7 @@ protected:
     void process_state_changes();
 
 private:
+    typedef std::chrono::duration<double> Duration;
 
     struct CycleInfo
     {
@@ -232,7 +234,8 @@ private:
                           MariaDBServer** demotion_target_out, json_t** error_out);
     bool failover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target,
                           json_t** error_out);
-    bool slave_receiving_events();
+    const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
+                                                Duration* event_age_out);
     bool manual_failover(json_t** output);
     void handle_auto_failover();
 
