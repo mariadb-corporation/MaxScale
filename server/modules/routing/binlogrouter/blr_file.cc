@@ -43,6 +43,8 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
+using std::string;
+
 /**
  * AES_CTR handling
  *
@@ -3290,6 +3292,43 @@ int blr_file_read_master_config(ROUTER_INSTANCE *router)
     return rc;
 }
 
+namespace
+{
+
+void write_master_config(FILE* config_file, const ChangeMasterConfig& config)
+{
+    static const char SECTION[] = "binlog_configuration";
+
+    // Section
+    fprintf(config_file, "[%s%s]\n", SECTION, config.connection_name.c_str());
+
+    // Values
+    fprintf(config_file, "master_host=%s\n", config.host.c_str());
+    fprintf(config_file, "master_port=%d\n", config.port);
+    fprintf(config_file, "master_user=%s\n", config.user.c_str());
+    fprintf(config_file, "master_password=%s\n", config.password.c_str());
+
+    if (!config.ssl_cert.empty()
+        && !config.ssl_ca.empty()
+        && !config.ssl_key.empty())
+    {
+        fprintf(config_file, "master_ssl=%d\n", config.ssl_enabled);
+        fprintf(config_file, "master_ssl_key=%s\n", config.ssl_key.c_str());
+        fprintf(config_file, "master_ssl_cert=%s\n", config.ssl_cert.c_str());
+        fprintf(config_file, "master_ssl_ca=%s\n", config.ssl_ca.c_str());
+    }
+
+    if (!config.ssl_version.empty())
+    {
+        fprintf(config_file, "master_tls_version=%s\n", config.ssl_version.c_str());
+    }
+
+    fprintf(config_file, "master_heartbeat_period=%d\n", config.heartbeat_period);
+    fprintf(config_file, "master_connect_retry=%d\n", config.connect_retry);
+}
+
+}
+
 /**
  * Write a new ini file with master configuration
  *
@@ -3341,7 +3380,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     // Assert that the configurarion as dispersed around blr and
     // as stored in the configuration item are identical.
     mxb_assert(router->configs.size() > 0);
-    const ChangeMasterConfig& primary = router->configs.front();
+    ChangeMasterConfig primary = router->configs.front();
 
     mxb_assert(primary.host == router->service->dbref->server->address);
     mxb_assert(primary.port == router->service->dbref->server->port);
@@ -3361,14 +3400,17 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     mxb_assert(primary.heartbeat_period == (int)router->heartbeat);
     mxb_assert(primary.connect_retry == router->retry_interval);
 
-    /* write ini file section */
-    fprintf(config_file, "[%s]\n", section);
+    // If not SSL enabled, store old SSL config if there is one.
+    // TODO: Why?
+    if (!router->ssl_enabled)
+    {
+        primary.ssl_ca = router->ssl_ca ? router->ssl_ca : "";
+        primary.ssl_cert = router->ssl_cert ? router->ssl_cert : "";
+        primary.ssl_key = router->ssl_key ? router->ssl_key : "";
+    }
 
-    /* write ini file key=value */
-    fprintf(config_file, "master_host=%s\n", router->service->dbref->server->address);
-    fprintf(config_file, "master_port=%d\n", router->service->dbref->server->port);
-    fprintf(config_file, "master_user=%s\n", router->user);
-    fprintf(config_file, "master_password=%s\n", router->password);
+    // Store the primary config.
+    write_master_config(config_file, primary);
 
     /* write filestem only if binlog file is set */
     if (*router->binlog_name != 0)
@@ -3376,39 +3418,11 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
         fprintf(config_file, "filestem=%s\n", router->fileroot);
     }
 
-    /* Add SSL options */
-    if (router->ssl_enabled)
+    // Store all alternative configs.
+    for (size_t i = 1; i < router->configs.size(); ++i)
     {
-        /* Use current settings */
-        ssl_ca = router->service->dbref->server->server_ssl->ssl_ca_cert;
-        ssl_cert = router->service->dbref->server->server_ssl->ssl_cert;
-        ssl_key = router->service->dbref->server->server_ssl->ssl_key;
+        write_master_config(config_file, router->configs[i]);
     }
-    else
-    {
-        /* Try using previous configuration settings */
-        ssl_ca = router->ssl_ca;
-        ssl_cert = router->ssl_cert;
-        ssl_key = router->ssl_key;
-    }
-
-    ssl_version = router->ssl_version;
-
-    if (ssl_key && ssl_cert && ssl_ca)
-    {
-        fprintf(config_file, "master_ssl=%d\n", router->ssl_enabled);
-        fprintf(config_file, "master_ssl_key=%s\n", ssl_key);
-        fprintf(config_file, "master_ssl_cert=%s\n", ssl_cert);
-        fprintf(config_file, "master_ssl_ca=%s\n", ssl_ca);
-    }
-    if (ssl_version && strlen(ssl_version))
-    {
-        fprintf(config_file, "master_tls_version=%s\n", ssl_version);
-    }
-
-    /* Connect options */
-    fprintf(config_file, "master_heartbeat_period=%lu\n", router->heartbeat);
-    fprintf(config_file, "master_connect_retry=%d\n", router->retry_interval);
 
     fclose(config_file);
 
