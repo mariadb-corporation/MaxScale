@@ -129,20 +129,18 @@ public:
     bool operator == (const GtidList& rhs) const;
 
     /**
-     * Calculate the number of events between two gtid:s with possibly multiple triplets. The
+     * Calculate the number of events this GtidList is ahead of the given GtidList. The
      * result is always 0 or greater: if a sequence number of a domain on rhs is greater than on the same
-     * domain on lhs, the sequences are considered identical. Missing domains are handled depending on the
-     * value of @c domain_substraction_mode.
+     * domain on the calling GtidList, the sequences are considered identical. Missing domains are
+     * handled depending on the value of @c domain_substraction_mode.
      *
-     * @param lhs The value substracted from
-     * @param io_pos The value doing the substracting
-     * @param domain_substraction_mode How domains that exist on one side but not the other are handled. If
-     * MISSING_DOMAIN_IGNORE, these are simply ignored. If MISSING_DOMAIN_LHS_ADD, the sequence number on lhs
-     * is added to the total difference.
+     * @param rhs The value doing the substracting
+     * @param domain_substraction_mode How domains that exist on the caller but not on @c rhs are handled.
+     * If MISSING_DOMAIN_IGNORE, these are simply ignored. If MISSING_DOMAIN_LHS_ADD,
+     * the sequence number on lhs is added to the total difference.
      * @return The number of events between the two gtid:s
      */
-    static uint64_t events_ahead(const GtidList& lhs, const GtidList& rhs,
-                                 substraction_mode_t domain_substraction_mode);
+    int64_t events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const;
 
     /**
      * Return an individual gtid with the given domain.

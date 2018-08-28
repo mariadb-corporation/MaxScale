@@ -606,7 +606,7 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target, MariaDBSe
 
     bool rval = false;
     // Step 2: Wait until relay log consumed.
-    if (promotion_target->failover_wait_relay_log(seconds_remaining, error_out))
+    if (promotion_target->failover_wait_relay_log(demotion_target, seconds_remaining, error_out))
     {
         time_t step2_time = time(NULL);
         int seconds_step2 = difftime(step2_time, step1_time);
@@ -858,8 +858,8 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
                     }
-                    else if (GtidList::events_ahead(target, slave->m_gtid_current_pos,
-                                                    GtidList::MISSING_DOMAIN_IGNORE) == 0)
+                    else if (target.events_ahead(slave->m_gtid_current_pos,
+                                                 GtidList::MISSING_DOMAIN_IGNORE) == 0)
                     {
                         // This slave has reached the same gtid as master, remove from list
                         wait_list.erase(wait_list.begin() + i);

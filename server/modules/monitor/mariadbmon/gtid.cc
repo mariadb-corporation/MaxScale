@@ -84,7 +84,7 @@ bool GtidList::can_replicate_from(const GtidList& master_gtid)
 {
     /* The result of this function is false if the source and master have a common domain id where
      * the source is ahead of the master. */
-    return (events_ahead(*this, master_gtid, MISSING_DOMAIN_IGNORE) == 0);
+    return (events_ahead(master_gtid, MISSING_DOMAIN_IGNORE) == 0);
 }
 
 bool GtidList::empty() const
@@ -97,17 +97,16 @@ bool GtidList::operator == (const GtidList& rhs) const
     return m_triplets == rhs.m_triplets;
 }
 
-uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs,
-                                substraction_mode_t domain_substraction_mode)
+int64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const
 {
-    const size_t n_lhs = lhs.m_triplets.size();
+    const size_t n_lhs = m_triplets.size();
     const size_t n_rhs = rhs.m_triplets.size();
     size_t ind_lhs = 0, ind_rhs = 0;
     uint64_t events = 0;
-
+    // GtidLists are assumed to be ordered by domain in ascending order.
     while (ind_lhs < n_lhs && ind_rhs < n_rhs)
     {
-        auto lhs_triplet = lhs.m_triplets[ind_lhs];
+        auto lhs_triplet = m_triplets[ind_lhs];
         auto rhs_triplet = rhs.m_triplets[ind_rhs];
         // Server id -1 should never be saved in a real gtid variable.
         mxb_assert(lhs_triplet.m_server_id != SERVER_ID_UNKNOWN &&
@@ -131,7 +130,7 @@ uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs,
             // Domains match, check sequences.
             if (lhs_triplet.m_sequence > rhs_triplet.m_sequence)
             {
-                /* Same domains, but lhs sequence is equal or ahead of rhs sequence.  */
+                /* Same domains, but lhs sequence is ahead of rhs sequence.  */
                 events += lhs_triplet.m_sequence - rhs_triplet.m_sequence;
             }
             // Continue to next domains.
@@ -139,7 +138,7 @@ uint64_t GtidList::events_ahead(const GtidList& lhs, const GtidList& rhs,
             ind_rhs++;
         }
     }
-    return events;
+    return (events > INT64_MAX) ? INT64_MAX : events;
 }
 
 Gtid Gtid::from_string(const char* str, char** endptr)

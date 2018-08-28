@@ -176,11 +176,13 @@ public:
     void check_permissions();
 
     /**
-     * Calculate how many events are left in the relay log.
+     * Calculate how many events are left in the relay log of the slave connection to 'master'.
      *
-     * @return Number of events in relay log according to latest queried info.
+     * @param master The master server from which the slave connection is replicating from
+     * @return Number of events in relay log according to latest queried info. Negative on error,
+     * e.g. the slave connection didn't exist.
      */
-    int64_t relay_log_events();
+    int64_t relay_log_events(const MariaDBServer* master);
 
     /**
      * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
@@ -399,12 +401,13 @@ public:
     /**
      * Waits until this server has processed all its relay log, or time is up.
      *
-     * @param seconds_remaining How much time left
-     * @param err_out Json error output
+     * @param master The master (or relay) whose relay log should be waited on
+     * @param seconds_remaining Maximum wait time
+     * @param err_out Error output
      * @return True if relay log was processed within time limit, or false if time ran out
      * or an error occurred.
      */
-    bool failover_wait_relay_log(int seconds_remaining, json_t** err_out);
+    bool failover_wait_relay_log(const MariaDBServer* master, int seconds_remaining, json_t** err_out);
 
     /**
      * Check if the server can be demoted by switchover.
