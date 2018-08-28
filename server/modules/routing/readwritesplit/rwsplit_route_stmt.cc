@@ -98,7 +98,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
     route_target_t route_target = TARGET_MASTER;
     bool in_read_only_trx = rses->target_node && session_trx_is_read_only(rses->client_dcb->session);
 
-    if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
+    if (gwbuf_length(buffer) > MYSQL_HEADER_LEN && rses->load_data_state != LOAD_DATA_ACTIVE)
     {
         *command = mxs_mysql_get_command(buffer);
 
@@ -168,9 +168,10 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
             route_target = get_route_target(rses, *command, *type, buffer->hint);
         }
     }
-    else if (rses->load_data_state == LOAD_DATA_ACTIVE)
+    else if (gwbuf_length(buffer) == MYSQL_HEADER_LEN && rses->load_data_state == LOAD_DATA_ACTIVE)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
+        ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) == 0);
         rses->load_data_state = LOAD_DATA_END;
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
                  rses->rses_load_data_sent + gwbuf_length(buffer));
@@ -210,6 +211,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
 
     if (TARGET_IS_ALL(route_target))
     {
+        ss_dassert(rses->load_data_state != LOAD_DATA_ACTIVE);
         // TODO: Handle payloads larger than (2^24 - 1) bytes that are routed to all servers
         succp = handle_target_is_all(route_target, inst, rses, querybuf, command, qtype);
     }
