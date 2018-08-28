@@ -127,18 +127,6 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
 #define CONFIG_MAX_SLAVE_RLAG -1 /**< not used */
 #define CONFIG_SQL_VARIABLES_IN TYPE_ALL
 
-#define GET_SELECT_CRITERIA(s)                                                                  \
-        (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
-        LEAST_GLOBAL_CONNECTIONS : (                                                            \
-        strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?                  \
-        LEAST_BEHIND_MASTER : (                                                                 \
-        strncmp(s,"LEAST_ROUTER_CONNECTIONS", strlen("LEAST_ROUTER_CONNECTIONS")) == 0 ?        \
-        LEAST_ROUTER_CONNECTIONS : (                                                            \
-        strncmp(s,"LEAST_CURRENT_OPERATIONS", strlen("LEAST_CURRENT_OPERATIONS")) == 0 ?        \
-        LEAST_CURRENT_OPERATIONS : (                                                            \
-        strncmp(s,"LOWEST_RESPONSE_TIME", strlen("LOWEST_RESPONSE_TIME")) == 0 ?              \
-        LOWEST_RESPONSE_TIME : UNDEFINED_CRITERIA)))))
-
 #define BACKEND_TYPE(b) (server_is_master((b)->backend_server) ? BE_MASTER :    \
         (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
