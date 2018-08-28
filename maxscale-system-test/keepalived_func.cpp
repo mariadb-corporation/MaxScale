@@ -1,4 +1,5 @@
 #include "keepalived_func.h"
+#include "get_my_ip.h"
 
 char * print_version_string(TestConnections * Test)
 {
@@ -15,7 +16,8 @@ void configure_keepalived(TestConnections* Test, char * keepalived_file)
     int i;
     char client_ip[24];
     char * last_dot;
-    Test->get_client_ip(0, client_ip);
+    //Test->get_client_ip(0, client_ip);
+    get_my_ip(Test->maxscales->IP[0], client_ip);
     last_dot = client_ip;
     Test->tprintf("My IP is %s\n", client_ip);
     for (i = 0; i < 3; i++)
