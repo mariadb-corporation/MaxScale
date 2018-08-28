@@ -444,6 +444,29 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
     return rval;
 }
 
+bool read_fde(Avro* router)
+{
+    bool rval = false;
+    avro_binlog_end_t rc;
+    REP_HEADER hdr;
+
+    if (read_header(router, 4, &hdr, &rc))
+    {
+        if (GWBUF *result = read_event_data(router, &hdr, 4))
+        {
+            router->handler.handle_event(hdr, GWBUF_DATA(result));
+            rval = true;
+        }
+    }
+    else if (rc == AVRO_OK)
+    {
+        // Empty file
+        rval = true;
+    }
+
+    return rval;
+}
+
 /**
  * @brief Read all replication events from a binlog file.
  *
@@ -457,11 +480,18 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
  */
 avro_binlog_end_t avro_read_all_events(Avro *router)
 {
+    mxb_assert(router->binlog_fd != -1);
+
+    if (!read_fde(router))
+    {
+        MXS_ERROR("Failed to read the FDE event from the binary log: %d, %s",
+                  errno, mxs_strerror(errno));
+        return AVRO_BINLOG_ERROR;
+    }
+
     uint64_t pos = router->current_pos;
     std::string next_binlog;
     bool rotate_seen = false;
-
-    mxb_assert(router->binlog_fd != -1);
 
     while (!service_should_stop)
     {

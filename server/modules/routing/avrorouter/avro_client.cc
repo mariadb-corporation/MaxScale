@@ -343,17 +343,17 @@ void AvroSession::process_command(GWBUF *queue)
             }
             else
             {
-                dcb_printf(dcb, "ERR NO-FILE File '%s' not found.", avro_binfile.c_str());
+                dcb_printf(dcb, "ERR NO-FILE File '%s' not found.\n", avro_binfile.c_str());
             }
         }
         else
         {
-            dcb_printf(dcb, "ERR REQUEST-DATA with no data");
+            dcb_printf(dcb, "ERR REQUEST-DATA with no data\n");
         }
     }
     else
     {
-        const char err[] = "ERR: Unknown command";
+        const char err[] = "ERR: Unknown command\n";
         GWBUF *reply = gwbuf_alloc_and_load(sizeof(err), err);
         dcb->func.write(dcb, reply);
     }
@@ -571,8 +571,7 @@ bool AvroSession::stream_data()
     }
     else
     {
-        fprintf(stderr, "No file specified\n");
-        dcb_printf(dcb, "ERR avro file not specified");
+        dcb_printf(dcb, "ERR avro file not specified\n");
     }
 
     return read_more;

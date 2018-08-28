@@ -21,6 +21,7 @@
 #include <string>
 #include <tr1/memory>
 #include <vector>
+#include <deque>
 #include <map>
 #include <algorithm>
 #include <jansson.h>
@@ -137,17 +138,17 @@ private:
     SValueVector m_keys;
     SValueVector m_types;
     int m_timeout;
-    std::vector<char> m_buffer;
-    std::vector<char>::iterator m_buf_ptr;
+    std::deque<char> m_buffer;
     SRow m_first_row;
     bool m_connected;
 
     bool do_auth();
     bool do_registration();
     bool read_row(std::string& dest);
+    bool read_schema();
     void process_schema(json_t* json);
     SRow process_row(json_t*);
-    bool is_error(const char* str);
+    bool is_error();
 
     // Lower-level functions
     int wait_for_event(short events);

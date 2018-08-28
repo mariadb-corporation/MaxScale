@@ -318,7 +318,6 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
             }
             else
             {
-                MXS_ERROR("Failed to initialize avrofile.");
                 maxavro_schema_free(avrofile->schema);
                 error = true;
             }
