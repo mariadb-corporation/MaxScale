@@ -181,6 +181,7 @@ typedef struct session
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
     SessionStmtQueue*      last_statements;  /*< The N last statements by the client */
     session_close_t        close_reason; /**< Reason why the session was closed */
+    bool                   load_active; /**< Data streaming state (for LOAD DATA LOCAL INFILE) */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
@@ -556,5 +557,15 @@ session_dump_statements_t session_get_dump_statements();
  *         the session was closed normally, an empty string is returned.
  */
 const char* session_get_close_reason(const MXS_SESSION* session);
+
+static inline void session_set_load_active(MXS_SESSION* session, bool value)
+{
+    session->load_active = value;
+}
+
+static inline bool session_is_load_active(const MXS_SESSION* session)
+{
+    return session->load_active;
+}
 
 MXS_END_DECLS

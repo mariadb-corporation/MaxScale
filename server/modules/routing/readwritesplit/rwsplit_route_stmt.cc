@@ -1220,6 +1220,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
                 /** The first packet contains the actual query and the server
                  * will respond to it */
                 rses->load_data_state = LOAD_DATA_ACTIVE;
+                session_set_load_active(rses->client_dcb->session, true);
             }
             else if (rses->load_data_state == LOAD_DATA_END)
             {
@@ -1227,6 +1228,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
                  * to which the server responds with an OK or an ERR packet */
                 ss_dassert(gwbuf_length(querybuf) == 4);
                 rses->load_data_state = LOAD_DATA_INACTIVE;
+                session_set_load_active(rses->client_dcb->session, false);
             }
         }
 

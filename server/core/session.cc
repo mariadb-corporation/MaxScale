@@ -130,6 +130,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->stmt.target = NULL;
     session->qualifies_for_pooling = false;
     session->close_reason = SESSION_CLOSE_NONE;
+    session->load_active = false;
 
     MXS_CONFIG *config = config_get_global_options();
     // If MaxScale is running in Oracle mode, then autocommit needs to

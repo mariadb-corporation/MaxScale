@@ -1204,6 +1204,7 @@ static void clientReply(MXS_ROUTER *instance,
     {
         // Server responded with an error to the LOAD DATA LOCAL INFILE
         rses->load_data_state = LOAD_DATA_INACTIVE;
+        session_set_load_active(backend_dcb->session, true);
     }
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
