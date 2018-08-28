@@ -358,23 +358,30 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
             {
                 candidate = ref;
             }
-            else if (ref->weight == 0 || candidate->weight == 0)
+            else if (candidate->connections == 0)
             {
-                candidate = ref->weight ? ref : candidate;
+                /* The candidate is already as good as it gets. */
             }
-            else if (((ref->connections + 1) * 1000) / ref->weight <
-                     ((candidate->connections + 1) * 1000) / candidate->weight)
+            else if (ref->connections == 0)
             {
-                /* This running server has fewer connections, set it as a new candidate */
                 candidate = ref;
             }
-            else if (((ref->connections + 1) * 1000) / ref->weight ==
-                     ((candidate->connections + 1) * 1000) / candidate->weight &&
+            else if (ref->inv_weight * ref->connections  <
+                     candidate->inv_weight * candidate->connections)
+            {
+                /* ref has a better score. */
+                candidate = ref;
+            }
+            else if (almost_equal_server_scores(ref->inv_weight * ref->connections,
+                                                candidate->inv_weight * candidate->connections) &&
                      ref->server->stats.n_connections < candidate->server->stats.n_connections)
             {
-                /* This running server has the same number of connections currently as the candidate
-                but has had fewer connections over time than candidate, set this server to
-                candidate*/
+                /* The servers are about equally good, but ref has had fewer connections over time.
+                 * TODO: On second thought, if the servers are currently about equally good,
+                 *       should selection not favor the one that has had more connections over time,
+                 *       since load balancing has previously found it to be better? Or perhaps
+                 *       this check has very little effect anyway.
+                */
                 candidate = ref;
             }
         }
@@ -686,7 +693,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
         {
             dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
                        ref->server->name,
-                       (float) ref->weight / 10,
+                       (1.0-ref->inv_weight) * 100,
                        ref->connections);
         }
     }
@@ -854,8 +861,8 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
     {
         if (ref->active && server_is_master(ref->server))
         {
-            // No master found yet or this one has higher weight.
-            if (master_host == NULL || ref->weight > master_host->weight)
+            // No master found yet or this one has better weight.
+            if (master_host == NULL || ref->inv_weight < master_host->inv_weight)
             {
                 master_host = ref;
             }

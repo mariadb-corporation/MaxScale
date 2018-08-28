@@ -19,11 +19,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <sstream>
+#include <functional>
+#include <random>
+#include <iostream>
 
 #include <maxbase/stopwatch.hh>
 #include <maxscale/router.h>
 
 using namespace maxscale;
+
+// TODO, there should be a utility with the most common used random cases.
+// FYI: rand() is about twice as fast as the below toss.
+static std::mt19937 random_engine;
+static std::uniform_real_distribution<> zero_to_one(0.0, 1.0);
+double toss()
+{
+    return zero_to_one(random_engine);
+}
 
 /**
  * The functions that implement back end selection for the read write
@@ -45,213 +57,158 @@ static bool valid_for_slave(const SRWBackend& backend, const SRWBackend& master)
            (!master || backend != master);
 }
 
-/** Compare number of connections from this router in backend servers */
-static int backend_cmp_router_conn(const SRWBackend& a, const SRWBackend& b)
+SRWBackendVector::const_iterator best_score(const SRWBackendVector& sBackends,
+                                          std::function <double(SERVER_REF* server)> server_score)
 {
-    SERVER_REF *first = a->backend();
-    SERVER_REF *second = b->backend();
-
-    if (first->weight == 0 && second->weight == 0)
+    double min {std::numeric_limits<double>::max()};
+    auto best = sBackends.end();
+    for (auto ite = sBackends.begin(); ite != sBackends.end(); ++ite)
     {
-        return first->connections - second->connections;
-    }
-    else if (first->weight == 0)
-    {
-        return 1;
-    }
-    else if (second->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * first->connections) / first->weight) -
-           ((1000 + 1000 * second->connections) / second->weight);
-}
-
-/** Compare number of global connections in backend servers */
-static int backend_cmp_global_conn(const SRWBackend& a, const SRWBackend& b)
-{
-    SERVER_REF *first = a->backend();
-    SERVER_REF *second = b->backend();
-
-    if (first->weight == 0 && second->weight == 0)
-    {
-        return first->server->stats.n_current -
-               second->server->stats.n_current;
-    }
-    else if (first->weight == 0)
-    {
-        return 1;
-    }
-    else if (second->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * first->server->stats.n_current) / first->weight) -
-           ((1000 + 1000 * second->server->stats.n_current) / second->weight);
-}
-
-/** Compare replication lag between backend servers */
-static int backend_cmp_behind_master(const SRWBackend& a, const SRWBackend& b)
-{
-    SERVER_REF *first = a->backend();
-    SERVER_REF *second = b->backend();
-
-    if (first->weight == 0 && second->weight == 0)
-    {
-        return first->server->rlag -
-               second->server->rlag;
-    }
-    else if (first->weight == 0)
-    {
-        return 1;
-    }
-    else if (second->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * first->server->rlag) / first->weight) -
-           ((1000 + 1000 * second->server->rlag) / second->weight);
-}
-
-/** Compare number of current operations in backend servers */
-static int backend_cmp_current_load(const SRWBackend& a, const SRWBackend& b)
-{
-    SERVER_REF *first = a->backend();
-    SERVER_REF *second = b->backend();
-
-    if (first->weight == 0 && second->weight == 0)
-    {
-        return first->server->stats.n_current_ops - second->server->stats.n_current_ops;
-    }
-    else if (first->weight == 0)
-    {
-        return 1;
-    }
-    else if (second->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * first->server->stats.n_current_ops) / first->weight) -
-           ((1000 + 1000 * second->server->stats.n_current_ops) / second->weight);
-}
-
-
-/** nantti. TODO. TEMP, this needs to see all eligible servers at the same time.
- */
-static int backend_cmp_response_time(const SRWBackend& a, const SRWBackend& b)
-{
-    // Minimum average response time for use in selection. Avoids special cases (zero),
-    // and new servers immediately get some traffic.
-    constexpr double min_average = 100.0/1000000000; // 100 nano seconds
-
-    // Invert the response times.
-    double lhs = 1/std::max(min_average, a->backend()->server->response_time->average());
-    double rhs = 1/std::max(min_average, b->backend()->server->response_time->average());
-
-    // Clamp values to a range where the slowest is at least some fraction of the speed of the
-    // fastest. This allows sampling of slaves that have experienced anomalies. Also, if one
-    // slave is really slow compared to another, something is wrong and perhaps we should
-    // log something informational.
-    constexpr int clamp = 20;
-    double fastest = std::max(lhs, rhs);
-    lhs = std::max(lhs, fastest / clamp);
-    rhs = std::max(rhs, fastest / clamp);
-
-    // If random numbers are too slow to generate, an array of, say 500'000
-    // random numbers in the range [0.0, 1.0] could be generated during startup.
-    double r = rand() / static_cast<double>(RAND_MAX);
-    return (r < (lhs / (lhs + rhs))) ? -1 : 1;
-}
-
-/**
- * The order of functions _must_ match with the order the select criteria are
- * listed in select_criteria_t definition in readwritesplit.h
- */
-int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&) =
-{
-    NULL,
-    backend_cmp_global_conn,
-    backend_cmp_router_conn,
-    backend_cmp_behind_master,
-    backend_cmp_current_load,
-    backend_cmp_response_time
-};
-
-// This is still the current compare method. The response-time compare, along with anything
-// using weights, have to change to use the whole array at once to be correct. Id est, everything
-// will change to use the whole array in the next iteration.
-static BackendSPtrVec::const_iterator run_comparison(const BackendSPtrVec& candidates,
-                                                     select_criteria_t sc)
-{
-    if (candidates.empty()) return candidates.end();
-
-    auto best = candidates.begin();
-
-    for (auto rival = std::next(best);
-         rival != candidates.end();
-         rival = std::next(rival))
-    {
-        if (criteria_cmpfun[sc](**best, **rival) > 0)
+        double score = server_score((***ite).backend());
+        if (min > score)
         {
-            best = rival;
+            min = score;
+            best = ite;
         }
     }
 
     return best;
 }
 
-/**
- * @brief Find the best slave candidate for a new connection.
- *
- * @param bends  backends
- * @param master the master server
- * @param sc     which select_criteria_t to use
- *
- * @return The best slave backend reference or null if no candidates could be found
- */
-static SRWBackend get_slave_candidate(const SRWBackendList& bends,
-                                      const SRWBackend& master,
-                                      select_criteria_t sc)
+/** Compare number of connections from this router in backend servers */
+SRWBackendVector::const_iterator backend_cmp_router_conn(const SRWBackendVector& sBackends)
 {
-    // TODO, nantti, see if this and get_slave_backend can be combined to a single function
-    BackendSPtrVec backends;
-    for (auto& b : bends)  // match intefaces. TODO, should go away in the future.
+    static auto server_score = [](SERVER_REF * server)
     {
-        backends.push_back(const_cast<SRWBackend*>(&b));
-    }
-    BackendSPtrVec candidates;
+        return server->inv_weight * server->connections;
+    };
 
-    for (auto& backend : backends)
+    return best_score(sBackends, server_score);
+}
+
+/** Compare number of global connections in backend servers */
+SRWBackendVector::const_iterator backend_cmp_global_conn(const SRWBackendVector& sBackends)
+{
+    static auto server_score = [](SERVER_REF * server)
     {
-        if (!(*backend)->in_use()
-            && (*backend)->can_connect()
-            && valid_for_slave(*backend, master))
+        return server->inv_weight * server->server->stats.n_current;
+    };
+
+    return best_score(sBackends, server_score);
+}
+
+/** Compare replication lag between backend servers */
+SRWBackendVector::const_iterator backend_cmp_behind_master(const SRWBackendVector& sBackends)
+{
+    static auto server_score = [](SERVER_REF * server)
+    {
+        return server->inv_weight * server->server->rlag;
+    };
+
+    return best_score(sBackends, server_score);
+}
+
+/** Compare number of current operations in backend servers */
+SRWBackendVector::const_iterator backend_cmp_current_load(const SRWBackendVector& sBackends)
+{
+    static auto server_score = [](SERVER_REF * server)
+    {
+        return server->inv_weight * server->server->stats.n_current_ops;
+    };
+
+    return best_score(sBackends, server_score);
+}
+
+SRWBackendVector::const_iterator backend_cmp_response_time(const SRWBackendVector& sBackends)
+{
+    const int SZ = sBackends.size();
+    double slot[SZ];
+
+    // fill slots with inverses of averages
+    double total {0};
+    for (int i = 0; i < SZ; ++i)
+    {
+        SERVER_REF* server = (**sBackends[i]).backend();
+        auto ave = server->server->response_time->average();
+        if (ave==0)
         {
-            candidates.push_back(backend);
+            constexpr double very_quick = 1.0/10000000; // arbitrary very short duration (0.1 microseconds)
+            slot[i] = 1 / very_quick; // will be used and updated (almost) immediately.
+        }
+        else
+        {
+            slot[i] = 1 / ave;
+        }
+        slot[i] = slot[i]*slot[i]; // favor faster servers even more
+        total += slot[i];
+    }
+
+    // turn slots into a roulette wheel, where sum of slots is 1.0
+    for (int i = 0; i < SZ; ++i)
+    {
+        slot[i] = slot[i] / total;
+    }
+
+    // Find the winner, role the ball:
+    double ball = toss();
+    double slot_walk {0};
+    int winner {0};
+
+    for (; winner < SZ; ++winner)
+    {
+        slot_walk += slot[winner];
+        if (ball < slot_walk)
+        {
+            break;
         }
     }
 
-    return !candidates.empty() ? **run_comparison(candidates, sc) : SRWBackend();
-
+    return sBackends.begin() + winner;
 }
 
-BackendSPtrVec::const_iterator find_best_backend(const BackendSPtrVec& backends,
-                                                 select_criteria_t sc,
-                                                 bool masters_accept_reads)
+BackendSelectFunction get_backend_select_function(select_criteria_t sc)
 {
-    // Divide backends to priorities. The set of highest priority backends will then compete.
-    std::map<int, BackendSPtrVec> priority_map;;
+    switch (sc)
+    {
+    case LEAST_GLOBAL_CONNECTIONS:
+        return backend_cmp_global_conn;
+    case LEAST_ROUTER_CONNECTIONS:
+        return backend_cmp_router_conn;
+    case LEAST_BEHIND_MASTER:
+        return backend_cmp_behind_master;
+    case LEAST_CURRENT_OPERATIONS:
+        return backend_cmp_current_load;
+    case  LOWEST_RESPONSE_TIME:
+        return backend_cmp_response_time;
+    }
+
+    assert(false && "incorrect use of select_criteria_t");
+    return backend_cmp_current_load;
+}
+
+
+/**
+ * @brief Find the best slave candidate for routing reads.
+ *
+ * @param backends All backends
+ * @param select   Server selection function
+ * @param masters_accepts_reads
+ *
+ * @return iterator to the best slave or backends.end() if none found
+ */
+SRWBackendVector::const_iterator find_best_backend(const SRWBackendVector& backends,
+                                                 BackendSelectFunction select,
+                                                 bool masters_accepts_reads)
+{
+    // Group backends by priority. The set of highest priority backends will then compete.
+    std::map<int, SRWBackendVector> priority_map;
     int best_priority {INT_MAX}; // low numbers are high priority
 
-    for (auto& pSBackend : backends)
+    for (auto& psBackend : backends)
     {
-        auto& backend   = **pSBackend;
+        auto& backend   = **psBackend;
         bool is_busy    = backend.in_use() && backend.has_session_commands();
-        bool acts_slave = backend.is_slave() || (backend.is_master() && masters_accept_reads);
+        bool acts_slave = backend.is_slave() || (backend.is_master() && masters_accepts_reads);
 
         int priority;
         if (acts_slave)
@@ -270,11 +227,11 @@ BackendSPtrVec::const_iterator find_best_backend(const BackendSPtrVec& backends,
             priority = 2;  // idle masters with masters_accept_reads==false
         }
 
-        priority_map[priority].push_back(pSBackend);
+        priority_map[priority].push_back(psBackend);
         best_priority = std::min(best_priority, priority);
     }
 
-    auto best = run_comparison(priority_map[best_priority], sc);
+    auto best = select(priority_map[best_priority]);
 
     return std::find(backends.begin(), backends.end(), *best);
 }
@@ -399,7 +356,7 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
                                              connection_type type)
 {
     SRWBackend master = get_root_master(backends);
-    Config cnf(config());
+    const Config& cnf {config()};
 
     if (!master && cnf.master_failure_mode == RW_FAIL_INSTANTLY)
     {
@@ -439,34 +396,66 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION *session,
 
     mxb_assert(slaves_connected <= max_nslaves || max_nslaves == 0);
 
-    if (slaves_connected < max_nslaves)
+    SRWBackendVector candidates;
+    for (auto& sBackend : backends)
     {
-        /** Connect to all possible slaves */
-        for (SRWBackend backend(get_slave_candidate(backends, master, select_criteria));
-             backend && slaves_connected < max_nslaves;
-             backend = get_slave_candidate(backends, master, select_criteria))
+        if (!sBackend->in_use()
+            && sBackend->can_connect()
+            && valid_for_slave(sBackend, master))
         {
-            if (backend->can_connect() && backend->connect(session, sescmd_list))
-            {
-                MXS_INFO("Selected Slave: %s", backend->name());
-
-                if (sescmd_list && sescmd_list->size() && expected_responses)
-                {
-                    (*expected_responses)++;
-                }
-
-                slaves_connected++;
-            }
+            candidates.push_back(&sBackend);
         }
     }
-    else
-    {
-        /**
-         * We are already connected to all possible slaves. Currently this can
-         * only happen if this function is called by handle_error_new_connection
-         * and the routing of queued queries created new connections.
-         */
-    }
 
+    while (slaves_connected < max_nslaves && candidates.size())
+    {
+        auto ite = m_config->backend_select_fct(candidates);
+        if (ite == candidates.end()) break;
+
+        auto& backend = **ite;
+
+        if (backend->connect(session, sescmd_list))
+        {
+            MXS_INFO("Selected Slave: %s", backend->name());
+
+            if (sescmd_list && sescmd_list->size() && expected_responses)
+            {
+                (*expected_responses)++;
+            }
+
+            ++slaves_connected;
+        }
+        candidates.erase(ite);
+    }
     return true;
 }
+
+/** Documenting ideas and tests. This will be removed before merging to develop.
+ * The strategi with least opearations performs very well.
+ * Lowest response time (should rename to fastest server) beats all other methods
+ * but least operations comes near. There are probably a whole set of rules for adaptive
+ * load balancing. For example,
+ * 1. If there is low traffic (few operations), pick the fastest machine. But due to its nature
+ *    other machines need to be tested once in awhile.
+ * 2. Favour the fast machines more than the distribution would suggest. Squaring the normalized
+ *    fitness (goodness) is clearly right, but maybe not the optimal choise.
+ * 3. The parameters of EMAverage do not seem to weigh in as much as my intuition suggested.
+ *    The tests with machines with very different speeds still give great results.
+ *    The important thing is that it responds fast enough to changes in speed, some of which is
+ *    caused by the load balancing itself (favoring a fast machine makes it slower).
+ * 4. My tests have used a single and simple sql query. In the face of very divergent queries,
+ *    maybe a standard query could be used to asses a servers speed, initially and once in a while,
+ *    if traffic slows down.
+ * 5. Alternatively to 4), the EMAverage could take the time between queries into account, so that
+ *    it converges faster to new measurments if they are far apart in time. I have a feeling
+ *    this could make a real difference.
+ * 5. It might make sense to do a little math to see how to best use slower machines. It is clear
+ *    some queries should be offloaded to them when volume is high, and the random method I use
+ *    could be made better.
+ * 6. Another idea is to favor faster machines even more, but at the same time increase the rating
+ *    of slower machines as time goes by. In that way slower machines are not used unecessarily,
+ *    but in time they still get some traffic, which might show them to now be faster, or immediately
+ *    be downgraded again.
+ * 7. Canonicals could be used, but I don't really see how...
+ * 8. are all those preconditions needed (like rlag)
+ */

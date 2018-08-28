@@ -25,6 +25,7 @@
 #include <map>
 #include <string>
 #include <mutex>
+#include <functional>
 
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
@@ -61,21 +62,12 @@ typedef uint32_t route_target_t;
  */
 enum select_criteria_t
 {
-    UNDEFINED_CRITERIA = 0,
     LEAST_GLOBAL_CONNECTIONS,   /**< all connections established by MaxScale */
     LEAST_ROUTER_CONNECTIONS,   /**< connections established by this router */
     LEAST_BEHIND_MASTER,
     LEAST_CURRENT_OPERATIONS,
-    LOWEST_RESPONSE_TIME,
-    LAST_CRITERIA               /**< not used except for an index */
+    LOWEST_RESPONSE_TIME
 };
-
-#define STRCRITERIA(c) ((c) == UNDEFINED_CRITERIA ? "UNDEFINED_CRITERIA" : \
-                        ((c) == LEAST_GLOBAL_CONNECTIONS ? "LEAST_GLOBAL_CONNECTIONS" : \
-                         ((c) == LEAST_ROUTER_CONNECTIONS ? "LEAST_ROUTER_CONNECTIONS" : \
-                          ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER"           : \
-                           ((c) == LEAST_CURRENT_OPERATIONS ? "LEAST_CURRENT_OPERATIONS" : \
-                            "Unknown criteria")))))
 
 /**
  * Controls how master failure is handled
@@ -136,12 +128,21 @@ static const char gtid_wait_stmt[] =
     "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
     "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
 
+/** Function that returns a "score" for a server to enable comparison.
+ *  Smaller numbers are better.
+ */
+using SRWBackendVector = std::vector<mxs::SRWBackend*>;
+using BackendSelectFunction = std::function
+                              <SRWBackendVector::const_iterator (const SRWBackendVector& sBackends)>;
+BackendSelectFunction get_backend_select_function(select_criteria_t);
+
 struct Config
 {
     Config(MXS_CONFIG_PARAMETER* params):
         slave_selection_criteria(
             (select_criteria_t)config_get_enum(
                 params, "slave_selection_criteria", slave_selection_criteria_values)),
+        backend_select_fct(get_backend_select_function(slave_selection_criteria)),
         use_sql_variables_in(
             (mxs_target_t)config_get_enum(
                 params, "use_sql_variables_in", use_sql_variables_in_values)),
@@ -173,7 +174,9 @@ struct Config
         }
     }
 
-    select_criteria_t slave_selection_criteria;  /**< The slave selection criteria */
+    select_criteria_t      slave_selection_criteria;  /**< The slave selection criteria */
+    BackendSelectFunction  backend_select_fct;
+
     mxs_target_t      use_sql_variables_in;      /**< Whether to send user variables to
                                                   * master or all nodes */
     failure_mode      master_failure_mode;       /**< Master server failure handling mode */
@@ -370,24 +373,20 @@ mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
  */
 std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBackend& master);
 
-
-/* TODO, hopefully temporary */
-using BackendSPtrVec = std::vector<mxs::SRWBackend*>;
-
 /**
- * Find the best backend based on categorizing the servers, and then applying
- * selection criteria to the best category.
+ * Find the best backend by grouping the servers by priority, and then applying
+ * selection criteria to the best group.
  *
  * @param backends: vector of SRWBackend
- * @param sc:       which select_criteria_t to use
+ * @param select:   selection function
  * @param master_accept_reads: NOTE: even if this is false, in some cases a master can
  *                             still be selected for reads.
  *
  * @return Valid iterator into argument backends, or end(backends) if empty
  */
-BackendSPtrVec::const_iterator find_best_backend(const BackendSPtrVec& backends,
-                                                 select_criteria_t sc,
-                                                 bool masters_accept_reads);
+SRWBackendVector::const_iterator find_best_backend(const SRWBackendVector& backends,
+                                                 BackendSelectFunction select,
+                                                 bool masters_accepts_reads);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c

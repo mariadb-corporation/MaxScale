@@ -62,10 +62,22 @@ typedef struct server_ref_t
 {
     struct server_ref_t *next; /**< Next server reference */
     SERVER* server;            /**< The actual server */
-    int weight;                /**< Weight of this server */
+    double inv_weight;         /**< Inverse of weight in the range [0..1], 0 is best. */
     int connections;           /**< Number of connections created through this reference */
     bool active;               /**< Whether this reference is valid and in use*/
 } SERVER_REF;
+
+/** Returns true if the two server "scores" are within 1/(see code) of each other.
+ *  The epsilon needs tweaking, and might even need to be in config. This
+ *  function is important for some compares, where one server might be only
+ *  marginally better than others, in which case historical data could determine
+ *  the outcome.
+ */
+inline bool almost_equal_server_scores(double lhs, double rhs)
+{
+    constexpr double div = 100; // within 1% of each other.
+    return std::abs(lhs - rhs) < std::abs(std::max(lhs, rhs)) * (1 / div);
+}
 
 /** Macro to check whether a SERVER_REF is active */
 #define SERVER_REF_IS_ACTIVE(ref) (ref->active && server_is_active(ref->server))

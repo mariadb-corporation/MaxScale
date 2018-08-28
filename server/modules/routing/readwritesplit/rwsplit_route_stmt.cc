@@ -36,8 +36,6 @@ using namespace maxscale;
  * write split router, and not intended to be called from anywhere else.
  */
 
-extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
-
 void RWSplitSession::handle_connection_keepalive(SRWBackend& target)
 {
     mxb_assert(target);
@@ -543,7 +541,7 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
 {
     // create a list of useable backends (includes masters, function name is a bit off),
     // then feed that list to compare.
-    BackendSPtrVec candidates;
+    SRWBackendVector candidates;
     auto counts = get_slave_counts(m_backends, m_current_master);
 
     for (auto& backend : m_backends)
@@ -566,8 +564,8 @@ SRWBackend RWSplitSession::get_slave_backend(int max_rlag)
         }
     }
 
-    BackendSPtrVec::const_iterator rval = find_best_backend(candidates,
-                                  m_config.slave_selection_criteria,
+    SRWBackendVector::const_iterator rval = find_best_backend(candidates,
+                                  m_config.backend_select_fct,
                                   m_config.master_accept_reads);
 
     return (rval == candidates.end()) ? SRWBackend() : **rval;

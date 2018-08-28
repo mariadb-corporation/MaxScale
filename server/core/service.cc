@@ -72,9 +72,6 @@ using namespace maxscale;
 using LockGuard = std::lock_guard<std::mutex>;
 using UniqueLock = std::unique_lock<std::mutex>;
 
-/** Base value for server weights */
-#define SERVICE_BASE_SERVER_WEIGHT 1000
-
 static struct
 {
     std::mutex lock;
@@ -915,7 +912,8 @@ static SERVER_REF* server_ref_create(SERVER *server)
     {
         sref->next = NULL;
         sref->server = server;
-        sref->weight = SERVICE_BASE_SERVER_WEIGHT;
+        // all servers have weight 1.0, when weights are not configured.
+        sref->inv_weight = 1.0;
         sref->connections = 0;
         sref->active = true;
     }
@@ -1628,7 +1626,6 @@ bool service_all_services_have_listeners()
 
     return rval;
 }
-
 static void service_calculate_weights(SERVICE *service)
 {
     const char *weightby = serviceGetWeightingParameter(service);
@@ -1637,30 +1634,24 @@ static void service_calculate_weights(SERVICE *service)
     {
         char buf[50]; // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
-        int total = 0;
+        double total {0};
+        bool weights_are_in_use = false;
 
         /** Calculate total weight */
         for (SERVER_REF *server = service->dbref; server; server = server->next)
         {
-            server->weight = SERVICE_BASE_SERVER_WEIGHT;
-
             if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
             {
                 total += atoi(buf);
+                weights_are_in_use = true;
             }
         }
 
-        if (total == 0)
+        if (!weights_are_in_use)
         {
             MXS_WARNING("Weighting Parameter for service '%s' will be ignored as "
                         "no servers have values for the parameter '%s'.",
                         service->name, weightby);
-        }
-        else if (total < 0)
-        {
-            MXS_ERROR("Sum of weighting parameter '%s' for service '%s' exceeds "
-                      "maximum value of %d. Weighting will be ignored.",
-                      weightby, service->name, INT_MAX);
         }
         else
         {
@@ -1669,34 +1660,27 @@ static void service_calculate_weights(SERVICE *service)
             {
                 if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
                 {
-                    int wght = atoi(buf);
-                    int perc = (wght * SERVICE_BASE_SERVER_WEIGHT) / total;
-
-                    if (perc == 0)
+                    int config_weight = atoi(buf);
+                    if (config_weight <= 0)
                     {
-                        MXS_WARNING("Weighting parameter '%s' with a value of %d for"
-                                    " server '%s' rounds down to zero with total weight"
-                                    " of %d for service '%s'. No queries will be "
-                                    "routed to this server as long as a server with"
-                                    " positive weight is available.",
-                                    weightby, wght, server->server->name,
-                                    total, service->name);
+                        MXS_WARNING("Weighting parameter '%s' is set to %d for server '%s'."
+                                    " The runtime weight will be set to 0, and the server"
+                                    " will only be used if no other servers are available.",
+                                    weightby,
+                                    config_weight,
+                                    server->server->name);
+                        config_weight = 0;
                     }
-                    else if (perc < 0)
-                    {
-                        MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
-                                  "maximum value is %d. No weighting will be used for this "
-                                  "server.", weightby, server->server->name,
-                                  INT_MAX / SERVICE_BASE_SERVER_WEIGHT);
-                        perc = SERVICE_BASE_SERVER_WEIGHT;
-                    }
-                    server->weight = perc;
+                    server->inv_weight = 1.0 - config_weight / total;
                 }
                 else
                 {
-                    MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
-                                " for service '%s'.", server->server->name,
-                                weightby, service->name);
+                    MXS_WARNING("Weighting parameter '%s' is not set for server '%s'."
+                                " The runtime weight will be set to 0, and the server"
+                                " will only be used if no other servers are available.",
+                                weightby,
+                                server->server->name);
+                    server->inv_weight = 1.0;
                 }
             }
         }
