@@ -226,8 +226,10 @@ typedef enum
  * BLR_BLR_MASTER_RETRY_COUNT   Maximum value of retries
  */
 #define BLR_MASTER_BACKOFF_TIME      10
-#define BLR_MASTER_CONNECT_RETRY    "60"
-#define BLR_MASTER_RETRY_COUNT     "1000"
+
+#define BLR_MASTER_CONNECT_RETRY_VALUE   60
+#define BLR_MASTER_CONNECT_RETRY        "60"
+#define BLR_MASTER_RETRY_COUNT        "1000"
 
 /* Default value for @@max_connections SQL var */
 #define BLR_DEFAULT_MAX_CONNS   151
@@ -239,7 +241,8 @@ typedef enum
 #define BLR_NET_LATENCY_WAIT_TIME       1
 
 /* default heartbeat interval in seconds */
-#define BLR_HEARTBEAT_DEFAULT_INTERVAL  "300"
+#define BLR_HEARTBEAT_DEFAULT_INTERVAL_VALUE  300
+#define BLR_HEARTBEAT_DEFAULT_INTERVAL       "300"
 
 /* Max heartbeat interval in seconds */
 #define BLR_HEARTBEAT_MAX_INTERVAL    4294967
@@ -368,6 +371,11 @@ public:
 class ChangeMasterConfig
 {
 public:
+    ChangeMasterConfig()
+        : heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL_VALUE)
+        , connect_retry(BLR_MASTER_CONNECT_RETRY_VALUE)
+    {
+    }
     std::string connection_name;
     std::string host;
     int         port;
@@ -379,7 +387,7 @@ public:
     std::string ssl_key;
     std::string ssl_cert;
     std::string ssl_ca;
-    std::string ssl_enabled;
+    bool        ssl_enabled;
     std::string ssl_version;
     /* MariaDB 10 GTID */
     std::string use_mariadb10_gtid;
@@ -395,11 +403,15 @@ class ChangeMasterOptions
 {
 public:
     ChangeMasterOptions()
+        : heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL)
+        , connect_retry(BLR_MASTER_CONNECT_RETRY)
     {
     }
 
     ChangeMasterOptions(const std::string& s)
         : connection_name(s)
+        , heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL)
+        , connect_retry(BLR_MASTER_CONNECT_RETRY)
     {
     }
 

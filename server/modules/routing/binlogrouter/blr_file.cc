@@ -3338,6 +3338,29 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
         return 2;
     }
 
+    // Assert that the configurarion as dispersed around blr and
+    // as stored in the configuration item are identical.
+    mxb_assert(router->configs.size() > 0);
+    const ChangeMasterConfig& primary = router->configs.front();
+
+    mxb_assert(primary.host == router->service->dbref->server->address);
+    mxb_assert(primary.port == router->service->dbref->server->port);
+    mxb_assert(primary.user == router->user);
+    mxb_assert(primary.password == router->password);
+
+    if (router->ssl_enabled)
+    {
+        mxb_assert(primary.ssl_enabled);
+        mxb_assert(primary.ssl_ca == router->service->dbref->server->server_ssl->ssl_ca_cert);
+        mxb_assert(primary.ssl_cert == router->service->dbref->server->server_ssl->ssl_cert);
+        mxb_assert(primary.ssl_key == router->service->dbref->server->server_ssl->ssl_key);
+    }
+
+    mxb_assert(!router->ssl_version || (primary.ssl_version == router->ssl_version));
+
+    mxb_assert(primary.heartbeat_period == (int)router->heartbeat);
+    mxb_assert(primary.connect_retry == router->retry_interval);
+
     /* write ini file section */
     fprintf(config_file, "[%s]\n", section);
 

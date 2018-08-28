@@ -4223,7 +4223,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
     config->ssl_key = this->ssl_key;
     config->ssl_cert = this->ssl_cert;
     config->ssl_ca = this->ssl_ca;
-    config->ssl_enabled = this->ssl_enabled;
+    config->ssl_enabled = this->ssl_enabled.empty() ? false : atoi(this->ssl_enabled.c_str());
     config->ssl_version = this->ssl_version;
     config->use_mariadb10_gtid = this->use_mariadb10_gtid;
     config->heartbeat_period = heartbeat_period;
@@ -4344,7 +4344,7 @@ int blr_apply_change_master_0(ROUTER_INSTANCE* router,
         // No CA cert is defined or only one of CERT or KEY is defined
         (new_config.ssl_ca.empty() || new_config.ssl_cert.empty() != new_config.ssl_key.empty())
     {
-        if (!new_config.ssl_enabled.empty() && atoi(new_config.ssl_enabled.c_str()))
+        if (new_config.ssl_enabled)
         {
             snprintf(error,
                      BINLOG_ERROR_MSG_LEN,
@@ -6258,9 +6258,9 @@ blr_set_master_ssl(ROUTER_INSTANCE *router,
     SSL_LISTENER *server_ssl = NULL;
     int updated = 0;
 
-    if (!config.ssl_enabled.empty())
+    if (config.ssl_enabled)
     {
-        router->ssl_enabled = atoi(config.ssl_enabled.c_str());
+        router->ssl_enabled = config.ssl_enabled;
         updated++;
     }
 
