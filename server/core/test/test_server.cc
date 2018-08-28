@@ -71,7 +71,7 @@ test1()
     char buf[120];
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
     mxb_assert_message(!server_get_parameter(server, "name", buf, sizeof(buf)), "Parameter should be null when not set");
-    server_add_parameter(server, "name", "value");
+    server_set_parameter(server, "name", "value");
     mxb_assert(server_get_parameter(server, "name", buf, sizeof(buf)));
     mxb_assert_message(strcmp("value", buf) == 0, "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");

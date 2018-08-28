@@ -391,15 +391,6 @@ extern SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params);
 bool server_serialize(const SERVER *server);
 
 /**
- * @brief Add a server parameter
- *
- * @param server Server where the parameter is added
- * @param name Parameter name
- * @param value Parameter value
- */
-void server_add_parameter(SERVER *server, const char *name, const char *value);
-
-/**
  * @brief Remove a server parameter
  *
  * @param server Server to remove the parameter from
@@ -409,13 +400,13 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
 bool server_remove_parameter(SERVER *server, const char *name);
 
 /**
- * @brief Update server parameter
+ * @brief Set server parameter
  *
  * @param server Server to update
- * @param name   Parameter to update
- * @param value  New value of parameter
+ * @param name   Parameter to set
+ * @param value  Value of parameter
  */
-void server_update_parameter(SERVER *server, const char *name, const char *value);
+void server_set_parameter(SERVER *server, const char *name, const char *value);
 
 /**
  * @brief Check if a server points to a local MaxScale service

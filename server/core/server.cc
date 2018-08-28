@@ -183,7 +183,7 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
 
     for (MXS_CONFIG_PARAMETER *p = params; p; p = p->next)
     {
-        server_add_parameter(server, p->name, p->value);
+        server_set_parameter(server, p->name, p->value);
     }
 
     Guard guard(server_lock);
@@ -845,29 +845,6 @@ static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
     return param;
 }
 
-/**
- * Add a server parameter to a server.
- *
- * Server parameters may be used by routing to weight the load
- * balancing they apply to the server.
- *
- * @param       server  The server we are adding the parameter to
- * @param       name    The parameter name
- * @param       value   The parameter value
- */
-void server_add_parameter(SERVER *server, const char *name, const char *value)
-{
-    SERVER_PARAM* param = allocate_parameter(name, value);
-
-    if (param)
-    {
-        spinlock_acquire(&server->lock);
-        param->next = server->parameters;
-        server->parameters = param;
-        spinlock_release(&server->lock);
-    }
-}
-
 bool server_remove_parameter(SERVER *server, const char *name)
 {
     bool rval = false;
@@ -887,7 +864,7 @@ bool server_remove_parameter(SERVER *server, const char *name)
     return rval;
 }
 
-void server_update_parameter(SERVER *server, const char *name, const char *value)
+void server_set_parameter(SERVER *server, const char *name, const char *value)
 {
     SERVER_PARAM* param = allocate_parameter(name, value);
 

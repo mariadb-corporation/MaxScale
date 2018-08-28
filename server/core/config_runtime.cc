@@ -439,7 +439,7 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     }
 
     mxs::SpinLockGuard guard(crt_lock);
-    server_update_parameter(server, key, value);
+    server_set_parameter(server, key, value);
 
     if (strcmp(key, CN_ADDRESS) == 0)
     {
