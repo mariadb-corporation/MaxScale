@@ -84,8 +84,11 @@ export maxscale_access_user=$maxscale_000_whoami
 export maxscale_access_sudo="sudo "
 
 # IP Of MaxScale machine
-export maxscale_IP=$maxscale_000_IP
+export maxscale_network=$maxscale_000_network
+export maxscale_keyfile=$maxscale_000_keyfile
+export maxscale_IP=$maxscale_000_network
 export maxscale_sshkey=$maxscale_000_keyfile
+
 
 # Sysbench directory (should be sysbench >= 0.5)
 export sysbench_dir=${sysbench_dir:-"$HOME/sysbench_deb7/sysbench/"}
