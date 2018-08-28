@@ -222,6 +222,8 @@ bool runtime_create_server(const char *name, const char *address, const char *po
 
         if (ok)
         {
+            config_replace_param(&ctx, CN_PROTOCOL, protocol);
+
             if (address)
             {
                 config_replace_param(&ctx, "address", address);
