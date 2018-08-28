@@ -24,13 +24,13 @@ void reset_replication(TestConnections& test)
     {
         int ind = master_id - 1;
         replicate_from(test, 0, ind);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->wait_for_monitor(2);
         get_output(test);
         int ec;
         stringstream switchover;
         switchover << "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
         test.maxscales->ssh_node_output(0, switchover.str().c_str() , true, &ec);
-        test.maxscales->wait_for_monitor();
+        test.maxscales->wait_for_monitor(2);
         master_id = get_master_server_id(test);
         cout << "Master server id is now back to " << master_id << endl;
         test.assert(master_id == 1, "Switchover back to server1 failed");
@@ -106,7 +106,7 @@ void check_test_2(TestConnections& test)
 
     // Reset state
     replicate_from(test, 1, master_id - 1);
-    test.maxscales->wait_for_monitor();
+    test.maxscales->wait_for_monitor(2);
     get_output(test);
     StringSet node_states = test.get_server_status("server2");
     test.assert(node_states.find("Slave") != node_states.end(), "Server 2 is not replicating.");
@@ -143,7 +143,7 @@ void prepare_test_3(TestConnections& test)
     test.repl->start_node(2, (char *) "");
     test.repl->start_node(3, (char *) "");
     test.maxscales->start_maxscale(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscales->wait_for_monitor(2);
 
     test.repl->connect();
     test.tprintf("Settings changed.");
