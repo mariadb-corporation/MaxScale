@@ -49,6 +49,9 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
+using std::string;
+using std::vector;
+
 /**
  * This struct is used by sqlite3_exec callback routine
  * for SHOW BINARY LOGS.
@@ -4210,6 +4213,7 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
         }
     }
 
+    config->connection_name = this->connection_name;
     config->host = this->host;
     config->port = port;
     config->binlog_file = this->binlog_file;
@@ -4228,13 +4232,78 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
     return true;
 }
 
-static int blr_apply_change_master(ROUTER_INSTANCE* router,
-                                   const ChangeMasterConfig& new_config,
-                                   char* error)
+namespace
 {
-    MasterServerConfig current_master;
 
-    spinlock_acquire(&router->lock);
+bool validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, char* error)
+{
+    static const char DEFAULT_MESSAGE[] =
+        "If a connection name is provided, it must be of the format ':N' where N "
+        "is an integer larger than 1.";
+    char custom_message[BINLOG_ERROR_MSG_LEN + 1];
+
+    const char* message = DEFAULT_MESSAGE;
+
+    if (name.length() >= 2) // At minimum ":N".
+    {
+        if (name.front() == ':')
+        {
+            string tail = name.substr(1);
+            int n = strtol(tail.c_str(), NULL, 10);
+
+            if ((n > 1) && (std::to_string(n) == tail)) // Nothing funky in the string
+            {
+                if (router->configs.size() == static_cast<size_t>(n - 1))
+                {
+                    message = nullptr;
+                }
+                else if (router->configs.size() == 0)
+                {
+                    snprintf(custom_message,
+                             BINLOG_ERROR_MSG_LEN,
+                             "The provided connection name '%s' is not valid. Currently "
+                             "no primary connection exists and it must be specified using "
+                             "a 'CHANGE MASTER TO ...' command without a connection name.",
+                             name.c_str());
+                    message = custom_message;
+                }
+                else
+                {
+                    snprintf(custom_message,
+                             BINLOG_ERROR_MSG_LEN,
+                             "The provided connection name '%s' is not valid. Currently "
+                             "the primary connection and %d alternative connections have "
+                             "been specified and the next valid name for an alternative "
+                             "connection is ':%d'.",
+                             name.c_str(),
+                             (int)router->configs.size() - 1,
+                             (int)router->configs.size() + 1);
+                    message = custom_message;
+                }
+            }
+        }
+    }
+
+    if (message)
+    {
+        snprintf(error, BINLOG_ERROR_MSG_LEN, "%s", message);
+    }
+
+    return message == nullptr;
+}
+
+}
+
+namespace
+{
+
+int blr_apply_change_master_0(ROUTER_INSTANCE* router,
+                              const ChangeMasterConfig& new_config,
+                              char* error)
+{
+    mxb_assert(new_config.connection_name.empty());
+
+    MasterServerConfig current_master;
 
     /* save current config option data */
     blr_master_get_config(router, &current_master);
@@ -4291,8 +4360,6 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
                                 current_master,
                                 error);
 
-        spinlock_release(&router->lock);
-
         return -1;
     }
 
@@ -4321,8 +4388,6 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
                                 error);
         MXS_FREE(master_logfile);
 
-        spinlock_release(&router->lock);
-
         return -1;
     }
 
@@ -4337,9 +4402,50 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
         change_binlog = 1;
     }
 
+    return change_binlog;
+}
+
+int blr_apply_change_master_N(ROUTER_INSTANCE* router,
+                              const ChangeMasterConfig& new_config,
+                              char* error)
+{
+    int rc = -1;
+
+    if (validate_connection_name(router, new_config.connection_name, error))
+    {
+        router->configs.push_back(new_config);
+        rc = 0;
+    }
+
+    return rc;
+}
+
+}
+
+static int blr_apply_change_master(ROUTER_INSTANCE* router,
+                                   const ChangeMasterConfig& new_config,
+                                   char* error)
+{
+    int rc = 0;
+
+    spinlock_acquire(&router->lock);
+
+    if (new_config.connection_name.empty())
+    {
+        // An empty connection name means we reset the whole thing.
+        router->configs.clear();
+        router->configs.push_back(new_config);
+
+        rc = blr_apply_change_master_0(router, new_config, error);
+    }
+    else
+    {
+        rc = blr_apply_change_master_N(router, new_config, error);
+    }
+
     spinlock_release(&router->lock);
 
-    return change_binlog;
+    return rc;
 }
 
 /**
@@ -4429,7 +4535,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     std::vector<char> cmd_string(command, command + strlen(command) + 1); // Include the NULL
 
     /* Parse SQL command and populate the change_master struct */
-    ChangeMasterOptions new_options;
+    ChangeMasterOptions new_options(connection_name);
     if (blr_parse_change_master_command(&cmd_string.front(),
                                         error,
                                         &new_options) != 0)
@@ -8038,8 +8144,11 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
             {
                 int rc;
                 char error_string[BINLOG_ERROR_MSG_LEN + 1 + BINLOG_ERROR_MSG_LEN + 1] = "";
+                // TODO: Why is this without a lock, but blr_master_apply_config() below with
+                // TODO: a lock. One of them must be wrong.
                 MasterServerConfig current_master;
                 blr_master_get_config(router, &current_master);
+                vector<ChangeMasterConfig> configs = router->configs;
 
                 ChangeMasterConfig new_config;
                 rc = blr_handle_change_master(router, brkb, error_string, &new_config);
@@ -8088,7 +8197,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 
                     /* Mark as active the master server struct */
                     spinlock_acquire(&router->lock);
-                    router->config = new_config;
                     if (!router->service->dbref->server->is_active)
                     {
                         router->service->dbref->server->is_active = true;

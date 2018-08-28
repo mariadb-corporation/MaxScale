@@ -136,7 +136,6 @@ static void blr_log_header(int priority, const char *msg, uint8_t *ptr);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
-int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();

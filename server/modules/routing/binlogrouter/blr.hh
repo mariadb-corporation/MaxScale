@@ -29,6 +29,7 @@
 
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
@@ -367,6 +368,7 @@ public:
 class ChangeMasterConfig
 {
 public:
+    std::string connection_name;
     std::string host;
     int         port;
     std::string binlog_file;
@@ -392,6 +394,16 @@ struct ROUTER_INSTANCE;
 class ChangeMasterOptions
 {
 public:
+    ChangeMasterOptions()
+    {
+    }
+
+    ChangeMasterOptions(const std::string& s)
+        : connection_name(s)
+    {
+    }
+
+    std::string connection_name;
     std::string host;
     std::string port;
     std::string binlog_file;
@@ -788,7 +800,7 @@ struct ROUTER_INSTANCE: public MXS_ROUTER
     enum binlog_storage_type   storage_type;/*< Enables hierachical binlog file storage */
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     ROUTER_INSTANCE  *next;
-    ChangeMasterConfig config;              /*< Current config. */
+    std::vector<ChangeMasterConfig> configs;              /*< Current config. */
 };
 
 /** Master Semi-Sync capability */
