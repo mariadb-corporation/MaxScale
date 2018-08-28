@@ -140,7 +140,7 @@ public:
      * the sequence number on lhs is added to the total difference.
      * @return The number of events between the two gtid:s
      */
-    int64_t events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const;
+    uint64_t events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const;
 
     /**
      * Return an individual gtid with the given domain.

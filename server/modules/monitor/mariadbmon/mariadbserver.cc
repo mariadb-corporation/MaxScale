@@ -73,19 +73,13 @@ void NodeData::reset_indexes()
     in_stack = false;
 }
 
-int64_t MariaDBServer::relay_log_events(const MariaDBServer* master)
+uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
 {
     /* The events_ahead-call below ignores domains where current_pos is ahead of io_pos. This situation is
      * rare but is possible (I guess?) if the server is replicating a domain from multiple masters
      * and decides to process events from one relay log before getting new events to the other. In
      * any case, such events are obsolete and the server can be considered to have processed such logs. */
-    int64_t rval = -1;
-    const SlaveStatus* sstatus = slave_connection_status(master);
-    if (sstatus)
-    {
-        rval = sstatus->gtid_io_pos.events_ahead(m_gtid_current_pos, GtidList::MISSING_DOMAIN_IGNORE);
-    }
-    return rval;
+    return slave_conn.gtid_io_pos.events_ahead(m_gtid_current_pos, GtidList::MISSING_DOMAIN_IGNORE);
 }
 
 std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, std::string* errmsg_out)
@@ -658,62 +652,6 @@ bool MariaDBServer::join_cluster(const string& change_cmd)
         MXS_WARNING(ERROR_MSG, name(), mysql_error(server_conn), query);
     }
     return success;
-}
-
-bool MariaDBServer::failover_wait_relay_log(const MariaDBServer* master, int seconds_remaining,
-                                            json_t** err_out)
-{
-    time_t begin = time(NULL);
-    bool query_ok = true;
-    bool io_pos_stable = true;
-    int64_t events = relay_log_events(master);
-    while (events > 0 && query_ok && io_pos_stable && difftime(time(NULL), begin) < seconds_remaining)
-    {
-        const SlaveStatus* sstatus = slave_connection_status(master);
-        mxb_assert(sstatus);
-        GtidList old_gtid_io_pos = sstatus->gtid_io_pos;
-
-        // Sleep for a while before querying server again.
-        MXS_NOTICE("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
-                   name(), events);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
-        // It doesn't matter here, but is a general rule.
-        query_ok = update_gtids() && do_show_slave_status();
-        if (query_ok)
-        {
-            const SlaveStatus* new_sstatus = slave_connection_status(master);
-            io_pos_stable = new_sstatus ? (old_gtid_io_pos == new_sstatus->gtid_io_pos) : false;
-            events = relay_log_events(master);
-        }
-    }
-
-    bool rval = false;
-    if (events == 0 && query_ok && io_pos_stable)
-    {
-        rval = true;
-    }
-    else
-    {
-        string reason = "Timeout";
-        if (!query_ok)
-        {
-            reason = "Query error";
-        }
-        else if (!io_pos_stable)
-        {
-            reason = "Old master sent new event(s)";
-        }
-        else if (events < 0)
-        {
-            reason = string_printf("Slave connection to '%s' was removed", master->name());
-        }
-        PRINT_MXS_JSON_ERROR(err_out, "Failover: %s while waiting for server '%s' to process relay log. "
-                             "Cancelling failover.", reason.c_str(), name());
-        rval = false;
-    }
-    return rval;
 }
 
 bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)

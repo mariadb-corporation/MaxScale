@@ -598,64 +598,54 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target, MariaDBSe
     // completed.
     int seconds_remaining = m_failover_timeout;
     time_t start_time = time(NULL);
+
     // Step 1: Populate a vector with all slaves not the selected master.
     ServerArray redirectable_slaves = get_redirectables(promotion_target, demotion_target);
 
-    time_t step1_time = time(NULL);
-    seconds_remaining -= difftime(step1_time, start_time);
-
     bool rval = false;
-    // Step 2: Wait until relay log consumed.
-    if (promotion_target->failover_wait_relay_log(demotion_target, seconds_remaining, error_out))
+    // Step 2: Stop and reset slave, set read-only to 0.
+    if (promote_new_master(promotion_target, error_out))
     {
-        time_t step2_time = time(NULL);
-        int seconds_step2 = difftime(step2_time, step1_time);
-        MXS_DEBUG("Failover: relay log processing took %d seconds.", seconds_step2);
-        seconds_remaining -= seconds_step2;
+        m_next_master = promotion_target;
+        m_cluster_modified = true;
 
-        // Step 3: Stop and reset slave, set read-only to 0.
-        if (promote_new_master(promotion_target, error_out))
+        // Step 3: Redirect slaves.
+        ServerArray redirected_slaves;
+        int redirects = redirect_slaves(promotion_target, redirectable_slaves, &redirected_slaves);
+        bool success = redirectable_slaves.empty() ? true : redirects > 0;
+        if (success)
         {
-            m_next_master = promotion_target;
-            m_cluster_modified = true;
-            // Step 4: Redirect slaves.
-            ServerArray redirected_slaves;
-            int redirects = redirect_slaves(promotion_target, redirectable_slaves, &redirected_slaves);
-            bool success = redirectable_slaves.empty() ? true : redirects > 0;
-            if (success)
-            {
-                time_t step4_time = time(NULL);
-                seconds_remaining -= difftime(step4_time, step2_time);
+            time_t step3_time = time(NULL);
+            seconds_remaining -= difftime(step3_time, start_time);
 
-                // Step 5: Finally, add an event to the new master to advance gtid and wait for the slaves
-                // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
-                // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
-                // replication, skip this step. Come up with an alternative later.
-                if (m_external_master_port != PORT_UNKNOWN)
-                {
-                    MXS_WARNING("Replicating from external master, skipping final check.");
-                    rval = true;
-                }
-                else if (redirected_slaves.empty())
-                {
-                    // No slaves to check. Assume success.
-                    rval = true;
-                    MXS_DEBUG("Failover: no slaves to redirect, skipping stabilization check.");
-                }
-                else if (wait_cluster_stabilization(promotion_target, redirected_slaves, seconds_remaining))
-                {
-                    rval = true;
-                    time_t step5_time = time(NULL);
-                    int seconds_step5 = difftime(step5_time, step4_time);
-                    seconds_remaining -= seconds_step5;
-                    MXS_DEBUG("Failover: slave replication confirmation took %d seconds with "
-                              "%d seconds to spare.", seconds_step5, seconds_remaining);
-                }
-            }
-            else
+            // Step 4: Finally, add an event to the new master to advance gtid and wait for the slaves
+            // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
+            // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
+            // replication, skip this step. Come up with an alternative later.
+            if (m_external_master_port != PORT_UNKNOWN)
             {
-                print_redirect_errors(NULL, redirectable_slaves, error_out);
+                MXS_WARNING("Replicating from external master, skipping final check.");
+                rval = true;
             }
+            else if (redirected_slaves.empty())
+            {
+                // No slaves to check. Assume success.
+                rval = true;
+                MXS_DEBUG("Failover: no slaves to redirect, skipping stabilization check.");
+            }
+            else if (wait_cluster_stabilization(promotion_target, redirected_slaves, seconds_remaining))
+            {
+                rval = true;
+                time_t step4_time = time(NULL);
+                int seconds_step4 = difftime(step4_time, step3_time);
+                seconds_remaining -= seconds_step4;
+                MXS_DEBUG("Failover: slave replication confirmation took %d seconds with "
+                          "%d seconds to spare.", seconds_step4, seconds_remaining);
+            }
+        }
+        else
+        {
+            print_redirect_errors(NULL, redirectable_slaves, error_out);
         }
     }
 
@@ -1222,9 +1212,49 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
 
     if (promotion_target && demotion_target && gtid_ok)
     {
-        *promotion_target_out = promotion_target;
-        *demotion_target_out = demotion_target;
-        return true;
+        const SlaveStatus* slave_conn = promotion_target->slave_connection_status(demotion_target);
+        mxb_assert(slave_conn);
+        uint64_t events = promotion_target->relay_log_events(*slave_conn);
+        if (events > 0)
+        {
+            // The relay log of the promotion target is not yet clear. This is not really an error,
+            // but should be communicated to the user in the case of manual failover. For automatic
+            // failover, it's best to just try again during the next monitor iteration. The difference
+            // to a typical prepare-fail is that the relay log status should be logged
+            // repeatedly since it is likely to change continuously.
+            if (error_out)
+            {
+                // Print a bit more helpful error for the user, goes to log too. This should be a very rare
+                // occurrence: either the dba managed to start failover really fast, or the relay log is
+                // massive. In the latter case it's ok that the monitor does not do the waiting since there
+                // is no telling how long the wait will be.
+                const char wait_relay_log[] = "The relay log of '%s' has %" PRIu64 " unprocessed events "
+                "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, failover should be "
+                "postponed until the log has been processed. Please try again later.";
+                string error_msg = string_printf(wait_relay_log,
+                                                 promotion_target->name(),
+                                                 events,
+                                                 slave_conn->gtid_io_pos.to_string().c_str(),
+                                                 promotion_target->m_gtid_current_pos.to_string().c_str());
+                PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+            }
+            else if (log_mode == Log::ON)
+            {
+                // For automatic failover the message is more typical. TODO: Think if this message should
+                // be logged more often.
+                MXS_WARNING("The relay log of '%s' has %" PRId64 " unprocessed events "
+                            "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, "
+                            "failover is postponed until the log has been processed.",
+                            promotion_target->name(), events, slave_conn->gtid_io_pos.to_string().c_str(),
+                            promotion_target->m_gtid_current_pos.to_string().c_str());
+            }
+        }
+        else
+        {
+            *promotion_target_out = promotion_target;
+            *demotion_target_out = demotion_target;
+            return true;
+        }
     }
     return false;
 }
@@ -1287,7 +1317,7 @@ void MariaDBMonitor::handle_auto_failover()
             // Servers were not modified, so it's ok to try this again.
             if (m_warn_failover_precond)
             {
-                MXS_WARNING("Not performing automatic failover. Will keep retrying with this message "
+                MXS_WARNING("Not performing automatic failover. Will keep retrying with most error messages "
                             "suppressed.");
                 m_warn_failover_precond = false;
             }

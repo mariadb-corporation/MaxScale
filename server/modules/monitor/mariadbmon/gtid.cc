@@ -97,12 +97,13 @@ bool GtidList::operator == (const GtidList& rhs) const
     return m_triplets == rhs.m_triplets;
 }
 
-int64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const
+uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const
 {
     const size_t n_lhs = m_triplets.size();
     const size_t n_rhs = rhs.m_triplets.size();
     size_t ind_lhs = 0, ind_rhs = 0;
     uint64_t events = 0;
+
     // GtidLists are assumed to be ordered by domain in ascending order.
     while (ind_lhs < n_lhs && ind_rhs < n_rhs)
     {
@@ -138,7 +139,7 @@ int64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_s
             ind_rhs++;
         }
     }
-    return (events > INT64_MAX) ? INT64_MAX : events;
+    return events;
 }
 
 Gtid Gtid::from_string(const char* str, char** endptr)
