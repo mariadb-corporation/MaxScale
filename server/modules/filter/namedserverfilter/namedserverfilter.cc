@@ -246,11 +246,7 @@ RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
 
     if (*source)
     {
-        if (!set_source_addresses(source, source_addresses, source_hostnames))
-        {
-            MXS_ERROR("Failure setting 'source' from %s", source);
-            error = true;
-        }
+        set_source_addresses(source, source_addresses, source_hostnames);
     }
 
     int pcre_ops = config_get_enum(params, "options", option_values);
@@ -675,53 +671,59 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
 
     for (const auto& source : m_sources)
     {
+        rval = true;
+
         if (addr.ss_family == AF_INET6)
         {
             struct sockaddr_in6* addr6 = (struct sockaddr_in6*)&addr;
-
-            if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr))
+            /* Check only bytes before netmask */
+            for (int i = 0; i < source.m_netmask / 8; ++i)
             {
-                mapped_ipv6_to_ipv4(&addr);
-            }
-            else
-            {
-                // TODO handle ipv6 address
-                return false;
+                if (addr6->sin6_addr.__in6_u.__u6_addr8[i] != source.m_ipv6.sin6_addr.__in6_u.__u6_addr8[i])
+                {
+                    rval = false;
+                    break;
+                }
             }
         }
-        struct sockaddr_in *check_ipv4 = (struct sockaddr_in*)&addr;
-
-        switch (source.m_netmask)
+        else if (addr.ss_family == AF_INET)
         {
-        case 32:
-            rval = (source.m_address == remote);
-            break;
-        case 24:
-            /* Class C check */
-            check_ipv4->sin_addr.s_addr &= 0x00FFFFFF;
-            break;
-        case 16:
-            /* Class B check */
-            check_ipv4->sin_addr.s_addr &= 0x0000FFFF;
-            break;
-        case 8:
-            /* Class A check */
-            check_ipv4->sin_addr.s_addr &= 0x000000FF;
-            break;
-        default:
-            break;
-        }
+            struct sockaddr_in *check_ipv4 = (struct sockaddr_in*)&addr;
 
-        if (source.m_netmask < 32)
-        {
-            rval = (check_ipv4->sin_addr.s_addr == source.m_ipv4.sin_addr.s_addr);
+            switch (source.m_netmask)
+            {
+            case 128:
+                break;
+            case 120:
+                /* Class C check */
+                check_ipv4->sin_addr.s_addr &= 0x00FFFFFF;
+                break;
+            case 112:
+                /* Class B check */
+                check_ipv4->sin_addr.s_addr &= 0x0000FFFF;
+                break;
+            case 104:
+                /* Class A check */
+                check_ipv4->sin_addr.s_addr &= 0x000000FF;
+                break;
+            default:
+                break;
+            }
+
+            /* If source is mapped ipv4 address the actual ipv4 address is stored
+             * in the last 4 bytes of ipv6 address. So lets compare that to the
+             * client ipv4 address. */
+            if (source.m_ipv6.sin6_addr.__in6_u.__u6_addr32[3] != check_ipv4->sin_addr.s_addr)
+            {
+                rval = false;
+            }
         }
 
         if (rval)
         {
             MXS_INFO("Client IP %s matches host source %s%s",
                     remote,
-                    source.m_netmask < 32 ? "with wildcards " : "",
+                    source.m_netmask < 128 ? "with wildcards " : "",
                     source.m_address.c_str());
             return rval;
         }
@@ -736,22 +738,9 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     memcpy(&addr, ip, sizeof(addr));
     char hbuf[NI_MAXHOST];
 
-    if (addr.ss_family == AF_INET6)
-    {
-        struct sockaddr_in6* addr6 = (struct sockaddr_in6*)&addr;
+    int rc = getnameinfo((struct sockaddr *)&addr, sizeof(addr), hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD);
 
-        if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr))
-        {
-            mapped_ipv6_to_ipv4(&addr);
-        }
-        else
-        {
-            // TODO handle ipv6 address
-            return false;
-        }
-    }
-
-    if (int rc = (getnameinfo((struct sockaddr *)&addr, sizeof(sockaddr), hbuf, sizeof(hbuf), 0, 0, NI_NAMEREQD)) != 0)
+    if (rc != 0)
     {
         MXS_INFO("Failed to resolve hostname due to %s", gai_strerror(rc));
         return false;
@@ -770,28 +759,14 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     return false;
 }
 
-void RegexHintFilter::mapped_ipv6_to_ipv4(struct sockaddr_storage* addr)
-{
-    struct sockaddr_in6* addr6 = (struct sockaddr_in6*)addr;
-    struct sockaddr_in addr4;
-    memset(&addr4, 0, sizeof(addr4));
-    addr4.sin_family = AF_INET;
-    addr4.sin_port = addr6->sin6_port;
-
-    /* When mapped to ipv6, ipv4 addresses are prepended with prefix of length 12.
-     * Lets ignore the prefix and only copy the actual ipv4 address. */
-    memcpy(&addr4.sin_addr.s_addr, addr6->sin6_addr.s6_addr + 12, sizeof(addr4.sin_addr.s_addr));
-    memcpy(addr, &addr4, sizeof(addr4));
-}
-
 /**
- * Validate IP address string againt three dots
+ * Validate IP address string against three dots
  * and last char not being a dot.
  *
  * Match any, '%' or '%.%.%.%', is not allowed
  *
  */
-bool RegexHintFilter::validate_ip_address(const char* host)
+bool RegexHintFilter::validate_ipv4_address(const char* host)
 {
     int n_dots = 0;
 
@@ -845,112 +820,57 @@ bool RegexHintFilter::validate_ip_address(const char* host)
  */
 bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVector& source_hosts)
 {
-    mxb_assert(input_host);
-
-    if (!input_host)
-    {
-        return NULL;
-    }
-
-    if (!validate_ip_address(input_host))
-    {
-        MXS_WARNING("The given 'source' parameter '%s' is not a valid IPv4 address.",
-                    input_host);
-        return NULL;
-    }
-
     std::string address(input_host);
-    struct sockaddr_in ipv4 = {};
-    int netmask = 32;
-
-    /* If no wildcards, leave netmask to 32 and return */
-    if (!strchr(input_host, '%'))
+    struct sockaddr_in6 ipv6 = {};
+    int netmask = 128;
+    std::string format_host = address;
+    /* If no wildcards, leave netmask to 128 and return */
+    if (strchr(input_host, '%') && validate_ipv4_address(input_host))
     {
-        source_hosts.emplace_back(address, ipv4, netmask);
-        return true;
-    }
-
-    char format_host[strlen(input_host) + 1];
-    char* p = (char*)input_host;
-    char* out = format_host;
-    int bytes = 0;
-
-    while (*p && bytes <= 3)
-    {
-
-        if (*p == '.')
+        size_t pos = 0;
+        while((pos = format_host.find('%', pos)) != std::string::npos)
         {
-            bytes++;
-        }
-
-        if (*p == '%')
-        {
-            *out = bytes == 3 ? '1' : '0';
+            format_host.replace(pos, 1, "0");
+            pos++;
             netmask -= 8;
-
-            out++;
-            p++;
-        }
-        else
-        {
-            *out++ = *p++;
         }
     }
-
-    *out = '\0';
 
     struct addrinfo *ai = NULL, hint = {};
-    hint.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
-    int rc = getaddrinfo(format_host, NULL, &hint, &ai);
+    hint.ai_flags = AI_ADDRCONFIG | AI_NUMERICHOST | AI_V4MAPPED;
+    hint.ai_family = AF_INET6;
+    int rc = getaddrinfo(format_host.c_str(), NULL, &hint, &ai);
 
-    /* fill IPv4 data struct */
+    /* fill IPv6 data struct */
     if (rc == 0)
     {
-        mxb_assert(ai->ai_family == AF_INET);
-        memcpy(&ipv4, ai->ai_addr, ai->ai_addrlen);
-
-        /* if netmask < 32 there are % wildcards */
-        if (netmask < 32)
-        {
-            /* let's zero the last IP byte: a.b.c.0 we may have set above to 1*/
-            ipv4.sin_addr.s_addr &= 0x00FFFFFF;
-        }
-
+        memcpy(&ipv6, ai->ai_addr, ai->ai_addrlen);
         MXS_INFO("Input %s is valid with netmask %d", address.c_str(), netmask);
         freeaddrinfo(ai);
     }
     else
     {
-        MXS_WARNING("Found invalid IP address for parameter 'source=%s': %s",
-                    input_host, gai_strerror(rc));
         return false;
     }
-    source_hosts.emplace_back(address, ipv4, netmask);
+    source_hosts.emplace_back(address, ipv6, netmask);
     return true;
 }
 
-bool RegexHintFilter::set_source_addresses(const std::string& input_host_names, SourceHostVector& source_hosts, StringVector& hostnames)
+void RegexHintFilter::set_source_addresses(const std::string& input_host_names, SourceHostVector& source_hosts, StringVector& hostnames)
 {
-
-    bool rval = true;
     std::string host_names(input_host_names);
 
     for (auto host : mxs::strtok(host_names, ","))
     {
         char* trimmed_host = trim((char*)host.c_str());
 
-        if (!validate_ip_address(trimmed_host))
+        if (!add_source_address(trimmed_host, source_hosts))
         {
-            MXS_INFO("The given 'source' parameter '%s' is not a valid IPv4 address. "
-                    "adding it as hostname.", trimmed_host);
+            MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. "
+                     "adding it as hostname.", trimmed_host);
             hostnames.emplace_back(trimmed_host);
         }
-        else if (!add_source_address(trimmed_host, source_hosts))
-        {
-            rval = false;
-        }
     }
-    return rval;
 }
 
 /**

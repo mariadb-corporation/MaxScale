@@ -47,8 +47,6 @@ private:
 
     bool check_source_host(const char *remote, const struct sockaddr_storage *ip);
     bool check_source_hostnames(const char *remote, const struct sockaddr_storage *ip);
-    /* Change ipv6 mapped ipv4 address to actual ipv4 address*/
-    void mapped_ipv6_to_ipv4(struct sockaddr_storage* ip);
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet
      * shared access. */
@@ -69,9 +67,9 @@ public:
                                           MappingVector* mapping, uint32_t* max_capcount_out);
     static bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
                                       const std::string& servers, MappingVector* mapping, uint32_t* max_capcount);
-    static bool validate_ip_address(const char *);
+    static bool validate_ipv4_address(const char *);
     static bool add_source_address(const char *, SourceHostVector&);
-    static bool set_source_addresses(const std::string& input_host_names, SourceHostVector&, StringVector&);
+    static void set_source_addresses(const std::string& input_host_names, SourceHostVector&, StringVector&);
 };
 
 /**
@@ -120,11 +118,11 @@ struct RegexToServers
 struct SourceHost
 {
     std::string m_address;
-    struct sockaddr_in m_ipv4;
+    struct sockaddr_in6 m_ipv6;
     int m_netmask;
-    SourceHost(std::string address, const struct sockaddr_in& ipv4, int netmask)
+    SourceHost(const std::string& address, const struct sockaddr_in6& ipv6, int netmask)
         : m_address(address),
-          m_ipv4(ipv4),
+          m_ipv6(ipv6),
           m_netmask(netmask)
     {}
 };
