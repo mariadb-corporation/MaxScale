@@ -392,11 +392,12 @@ blr_restart_master(ROUTER_INSTANCE *router)
 
         /* Set reconnection task */
         static const char master[] = "Master";
-        char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
+        size_t sz = strlen(router->service->name) + sizeof(master) + 2;
+        char *name = (char *)MXS_MALLOC(sz);
 
         if (name)
         {
-            sprintf(name, "%s %s", router->service->name, master);
+            snprintf(name, sz, "%s %s", router->service->name, master);
             hktask_add(name,
                        blr_start_master_in_main,
                        router,
