@@ -753,11 +753,16 @@ static void print_log_n_stderr(
 {
     if (do_log)
     {
-        MXS_ERROR("%s%s%s%s",
-                  logstr,
-                  eno == 0 ? "" : " (",
-                  eno == 0 ? "" : mxs_strerror(eno),
-                  eno == 0 ? "" : ")");
+        static bool log_is_inited = false;
+        if (log_is_inited || init_log())
+        {
+            log_is_inited = true;
+            MXS_ERROR("%s%s%s%s",
+                      logstr,
+                      eno == 0 ? "" : " (",
+                      eno == 0 ? "" : mxs_strerror(eno),
+                      eno == 0 ? "" : ")");
+        }
     }
     if (do_stderr)
     {
