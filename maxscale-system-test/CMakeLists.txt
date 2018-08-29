@@ -487,6 +487,10 @@ add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout mxs827_write_t
 # https://jira.mariadb.org/browse/MXS-872
 add_test_executable(mxs872_roles.cpp mxs872_roles replication LABELS REPL_BACKEND)
 
+# MXS-1947: Composite roles are not supported
+# https://jira.mariadb.org/browse/MXS-1947
+add_test_executable(mxs1947_composite_roles.cpp mxs1947_composite_roles replication LABELS REPL_BACKEND)
+
 # Block and unblock first and second slaves and check that they are recovered
 add_test_executable(mxs874_slave_recovery.cpp mxs874_slave_recovery mxs874 LABELS readwritesplit REPL_BACKEND)
 
