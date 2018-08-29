@@ -292,7 +292,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
             if (blr_write_binlog_record(router, &hdr, len - offset, ptr + offset) == 0)
             {
                 blr_master_close(router);
-                blr_master_delayed_connect(router);
+                blr_start_master_in_main(router);
                 return false;
             }
 
@@ -302,7 +302,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 if (!blr_rotate_event(router, ptr + offset, &hdr))
                 {
                     blr_master_close(router);
-                    blr_master_delayed_connect(router);
+                    blr_start_master_in_main(router);
                     return false;
                 }
             }
@@ -429,7 +429,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 if (!blr_handle_fake_rotate(router, &hdr, ptr))
                 {
                     blr_master_close(router);
-                    blr_master_delayed_connect(router);
+                    blr_start_master_in_main(router);
                     return false;
                 }
 

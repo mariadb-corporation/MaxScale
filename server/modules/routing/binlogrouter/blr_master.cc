@@ -47,6 +47,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.h>
 #include <maxscale/routingworker.h>
+#include <maxbase/worker.hh>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
@@ -110,7 +111,6 @@ extern int blr_write_special_event(ROUTER_INSTANCE *router,
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
                                      char *new_file);
-static void worker_cb_start_master(MXB_WORKER*, void* data);
 extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 static int blr_check_connect_retry(ROUTER_INSTANCE *router);
 
@@ -222,13 +222,8 @@ static void blr_start_master(void* data)
         spinlock_acquire(&router->lock);
         router->retry_count++;
         spinlock_release(&router->lock);
-        /* Set reconnection task */
-        std::string name = router->service->name;
-        name += " Master";
-        hktask_add(name.c_str(),
-                   blr_start_master_in_main,
-                   router,
-                   connect_retry);
+
+        blr_start_master_in_main(router, connect_retry);
 
         MXS_ERROR("%s: failure while connecting to master server '%s', "
                   "retrying in %d seconds",
@@ -283,12 +278,12 @@ static void blr_start_master(void* data)
  * @param worker  The worker in whose context the function is called.
  * @param data    The data to be passed to `blr_start_master`
  */
-static void worker_cb_start_master(MXB_WORKER* worker, void* data)
+static bool worker_cb_start_master(mxb::Worker::Call::action_t, ROUTER_INSTANCE* data)
 {
-    // This is itended to be called only in the main worker.
-    mxb_assert(worker == mxs_rworker_get(MXS_RWORKER_MAIN));
-
+    mxb_assert_message(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN),
+                       "worker_cb_start_master must be called from the main thread");
     blr_start_master(data);
+    return false;
 }
 
 /**
@@ -296,21 +291,15 @@ static void worker_cb_start_master(MXB_WORKER* worker, void* data)
  *
  * @param data  Data intended for `blr_start_master`.
  */
-bool blr_start_master_in_main(void* data)
+bool blr_start_master_in_main(ROUTER_INSTANCE* data, int32_t delay)
 {
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_start_master` there.
 
-    MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
+    mxb::Worker* worker = (mxb::Worker*)mxs_rworker_get(MXS_RWORKER_MAIN);
     mxb_assert(worker);
 
-    intptr_t arg1 = (intptr_t)worker_cb_start_master;
-    intptr_t arg2 = (intptr_t)data;
-
-    if (!mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, arg1, arg2))
-    {
-        MXS_ERROR("Could not post 'blr_start_master' message to main worker.");
-    }
+    worker->delayed_call(delay == 0 ? 1 : delay * 1000, worker_cb_start_master, data);
 
     return false;
 }
@@ -390,26 +379,13 @@ blr_restart_master(ROUTER_INSTANCE *router)
         router->retry_count++;
         spinlock_release(&router->lock);
 
-        /* Set reconnection task */
-        static const char master[] = "Master";
-        size_t sz = strlen(router->service->name) + sizeof(master) + 2;
-        char *name = (char *)MXS_MALLOC(sz);
+        blr_start_master_in_main(router, connect_retry);
 
-        if (name)
-        {
-            snprintf(name, sz, "%s %s", router->service->name, master);
-            hktask_add(name,
-                       blr_start_master_in_main,
-                       router,
-                       connect_retry);
-            MXS_FREE(name);
-
-            MXS_ERROR("%s: failed to connect to master server '%s', "
-                      "retrying in %d seconds",
-                      router->service->name,
-                      router->service->dbref->server->name,
-                      connect_retry);
-        }
+        MXS_ERROR("%s: failed to connect to master server '%s', "
+                  "retrying in %d seconds",
+                  router->service->name,
+                  router->service->dbref->server->name,
+                  connect_retry);
     }
     else
     {
@@ -487,29 +463,6 @@ blr_master_close(ROUTER_INSTANCE *router)
 
     gwbuf_free(router->stored_event);
     router->stored_event = NULL;
-}
-
-/**
- * Mark this master connection for a delayed reconnect, used during
- * error recovery to cause a reconnect after router->retry_interval seconds.
- *
- * @param router    The router instance
- */
-void
-blr_master_delayed_connect(ROUTER_INSTANCE *router)
-{
-    static const char master[] = "Master Recovery";
-    char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
-
-    if (name)
-    {
-        sprintf(name, "%s %s", router->service->name, master);
-        hktask_add(name,
-                   blr_start_master_in_main,
-                   router,
-                   router->retry_interval);
-        MXS_FREE(name);
-    }
 }
 
 /**
@@ -1084,7 +1037,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             {
                 MXS_FREE(msg);
                 blr_master_close(router);
-                blr_master_delayed_connect(router);
+                blr_start_master_in_main(router);
                 return;
             }
 

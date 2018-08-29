@@ -38,8 +38,6 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/mysql_binlog.h>
 
-MXS_BEGIN_DECLS
-
 #define BINLOG_FNAMELEN         255
 #define BLR_PROTOCOL            "MySQLBackend"
 #define BINLOG_MAGIC            { 0xfe, 0x62, 0x69, 0x6e }
@@ -1027,7 +1025,7 @@ extern const char *blr_skip_leading_sql_comments(const char *);
 extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
                                    const char *,
                                    MARIADB_GTID_INFO *);
-extern bool blr_start_master_in_main(void* data);
+extern bool blr_start_master_in_main(ROUTER_INSTANCE* data, int32_t delay = 0);
 extern bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
                                    const MARIADB_GTID_INFO *info_file);
 
@@ -1039,7 +1037,6 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_notify_all_slaves(ROUTER_INSTANCE *router);
 bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
-void blr_master_delayed_connect(ROUTER_INSTANCE *router);
 
 /**
  * Handler for binlog events
@@ -1057,7 +1054,5 @@ void blr_master_delayed_connect(ROUTER_INSTANCE *router);
  */
 bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, uint32_t len,
                           int semi_sync_send_ack);
-
-MXS_END_DECLS
 
 #endif
