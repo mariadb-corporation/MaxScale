@@ -118,7 +118,7 @@
 
   "maxscale_001" :
   {
-        "hostname" : "maxscale",
+        "hostname" : "maxscale2",
         "box" : "${box}",
         "memory_size" : "${vm_memory}",
         "product" : {
