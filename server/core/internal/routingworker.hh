@@ -433,6 +433,110 @@ private:
     uint32_t handle_epoll_events(uint32_t events);
 };
 
+// Data local to a routing worker
+template <class T>
+class rworker_local
+{
+public:
+
+    rworker_local(const rworker_local&) = delete;
+    rworker_local& operator=(const rworker_local&) = delete;
+
+    // Default initialized
+    rworker_local():
+        m_handle(mxs_rworker_create_key())
+    {
+    }
+
+    // Copy-constructed
+    rworker_local(const T& t):
+        m_handle(mxs_rworker_create_key()),
+        m_value(t)
+    {
+    }
+
+    ~rworker_local()
+    {
+        mxs_rworker_delete_data(m_handle);
+    }
+
+    // Converts to a const T reference
+    operator const T&() const
+    {
+        return *get_local_value();
+    }
+
+    // Arrow operator
+    const T* operator->() const
+    {
+        return get_local_value();
+    }
+
+    /**
+     * Assign a value
+     *
+     * Sets the master value and triggers an update on all workers. The value is updated instantly
+     * if the calling thread is a worker thread.
+     *
+     * @param t The new value to assign
+     */
+    void assign(const T& t)
+    {
+        std::unique_lock<std::mutex> guard(m_lock);
+        m_value = t;
+        guard.unlock();
+
+        // Update the value on all workers
+        mxs_rworker_broadcast(update_value, this);
+    }
+
+private:
+
+    uint64_t           m_handle;
+    mutable std::mutex m_lock;
+    T                  m_value; // The "master" value, never used directly
+
+private:
+
+    T* get_local_value() const
+    {
+        T* my_value = static_cast<T*>(mxs_rworker_get_data(m_handle));
+
+        if (my_value == nullptr)
+        {
+            // First time we get the local value, allocate it from the master value
+            std::unique_lock<std::mutex> guard(m_lock);
+            my_value = new T(m_value);
+            guard.unlock();
+
+            mxs_rworker_set_data(m_handle, my_value, destroy_value);
+        }
+
+        mxb_assert(my_value);
+        return my_value;
+    }
+
+    void update_local_value()
+    {
+        // As get_local_value can cause a lock to be taken, we need the pointer to our value before
+        // we lock the master value for the updating of our value.
+        T* my_value = get_local_value();
+
+        std::lock_guard<std::mutex> guard(m_lock);
+        *my_value = m_value;
+    }
+
+    static void update_value(void* data)
+    {
+        static_cast<rworker_local<T>*>(data)->update_local_value();
+    }
+
+    static void destroy_value(void* data)
+    {
+        delete static_cast<T*>(data);
+    }
+};
+
 }
 
 /**
