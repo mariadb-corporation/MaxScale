@@ -4377,9 +4377,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     ssl_error = blr_set_master_ssl(router, change_master, error);
 
     if (ssl_error != -1 &&
-        (!change_master.ssl_cert ||
-         !change_master.ssl_ca ||
-         !change_master.ssl_key))
+        // No CA cert is defined or only one of CERT or KEY is defined
+        (!change_master.ssl_ca || (bool)change_master.ssl_cert != (bool)change_master.ssl_key))
     {
         if (change_master.ssl_enabled &&
             atoi(change_master.ssl_enabled))
@@ -4387,7 +4386,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
             snprintf(error,
                      BINLOG_ERROR_MSG_LEN,
                      "MASTER_SSL=1 but some required options are missing: "
-                     "check MASTER_SSL_CERT, MASTER_SSL_KEY, MASTER_SSL_CA");
+                     "check that at least MASTER_SSL_CA is defined");
             ssl_error = -1;
         }
     }
