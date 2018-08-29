@@ -15,17 +15,17 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[0], "SET GLOBAL read_only=ON");
     test.maxscales->wait_for_monitor();
     test.tprintf("Check that the current master now has the slave label");
-    test.check_log_err(0, "[Master, Running] -> [Running]", true);
-    test.check_log_err(0, "[Master, Running] -> [Slave, Running]", false);
+    test.log_excludes(0, "server1.*\\[Master, Running\\] -> \\[Running\\]");
+    test.log_includes(0, "server1.*\\[Master, Running\\] -> \\[Slave, Running\\]");
     test.maxscales->ssh_node_f(0, true, "truncate -s 0 /var/log/maxscale/maxscale.log");
 
     // Check that the Master and Slave status aren't both set
     execute_query(test.repl->nodes[0], "SET GLOBAL read_only=OFF");
     test.maxscales->wait_for_monitor();
     test.tprintf("Check that the new master doesn't have both slave and master labels");
-    test.check_log_err(0, "[Slave, Running] -> [Master, Slave, Running]", false);
-    test.check_log_err(0, "[Slave, Running] -> [Master, Running]", false);
-    test.check_log_err(0, "[Running] -> [Master, Running]", true);
+    test.log_excludes(0, "server1.*\\[Slave, Running\\] -> \\[Master, Slave, Running\\]");
+    test.log_excludes(0, "server1.*\\[Running\\] -> \\[Master, Running\\]");
+    test.log_includes(0, "server1.*\\[Slave, Running\\] -> \\[Master, Running\\]");
 
     return test.global_result;
 }
