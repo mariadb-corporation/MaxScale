@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
     test.set_timeout(120);
 
     char * output = test.maxscales->ssh_node_output(0,
-                                                    "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
-                                                    true, &exit_code);
+                    "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
+                    true, &exit_code);
 
     std::istringstream iss;
     iss.str(output);

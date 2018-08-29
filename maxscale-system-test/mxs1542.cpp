@@ -23,11 +23,11 @@ int main(int argc, char** argv)
     // Wait for the data to be processed
     const char* logmsg = "Waiting until more data is written";
     test.maxscales->ssh_node_f(0, true,
-                             "for ((i=0;i<15;i++)); do grep '%s' /var/log/maxscale/maxscale.log && break || sleep 1; done", logmsg);
+                               "for ((i=0;i<15;i++)); do grep '%s' /var/log/maxscale/maxscale.log && break || sleep 1; done", logmsg);
 
     // Check if the Avro file contains the inserted value
     int rc = test.maxscales->ssh_node_f(0, true,
-                                      "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro|grep 'Hello World'");
+                                        "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro|grep 'Hello World'");
     test.add_result(rc == 0, "Data is converted when a failure to convert is expected");
 
     printf("\n"

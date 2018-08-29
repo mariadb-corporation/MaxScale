@@ -23,7 +23,7 @@ void get_output(TestConnections& test)
 
     test.tprintf("replication-manager output:");
     output = test.maxscales->ssh_node_f(0, true,
-                                      "cat /var/log/replication-manager.log && sudo truncate -s 0 /var/log/replication-manager.log");
+                                        "cat /var/log/replication-manager.log && sudo truncate -s 0 /var/log/replication-manager.log");
     test.tprintf("%s", output);
     free(output);
 }

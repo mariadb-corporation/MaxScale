@@ -33,12 +33,12 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
 {
     stringstream change_master;
     change_master << "CHANGE MASTER TO MASTER_HOST = '" << test.repl->IP[target_ind]
-        << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
-        "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+                  << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
+                  "MASTER_USER='repl', MASTER_PASSWORD='repl';";
     cout << "Server " << server_ind + 1 << " starting to replicate from server " << target_ind + 1 << endl;
     if (test.verbose)
     {
-       cout << "Query is '" << change_master.str() << "'" << endl;
+        cout << "Query is '" << change_master.str() << "'" << endl;
     }
     test.try_query(test.repl->nodes[server_ind], "STOP SLAVE;");
     test.try_query(test.repl->nodes[server_ind], change_master.str().c_str());
@@ -65,7 +65,7 @@ void restore_servers(TestConnections& test, bool events_added)
         replicate_from(test, 2, 3);
         test.maxscales->wait_for_monitor();
         o1 = test.maxscales->ssh_node_output(0,
-            "maxadmin call command mariadbmon switchover MySQL-Monitor server1 server4", true, &dummy);
+                                             "maxadmin call command mariadbmon switchover MySQL-Monitor server1 server4", true, &dummy);
         test.maxscales->wait_for_monitor();
         int master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Switchover failed to set server1 as master.");
@@ -116,8 +116,8 @@ int main(int argc, char *argv[])
 
     if (test.global_result != 0)
     {
-       restore_servers(test, false);
-       return test.global_result;
+        restore_servers(test, false);
+        return test.global_result;
     }
 
     test.maxscales->connect_maxscale(0);
@@ -158,8 +158,8 @@ int main(int argc, char *argv[])
     check_maxscale(test);
     if (test.global_result == 0)
     {
-       cout << "Test successful, restoring original state." << endl;
-       restore_servers(test, true);
+        cout << "Test successful, restoring original state." << endl;
+        restore_servers(test, true);
     }
     return test.global_result;
 }

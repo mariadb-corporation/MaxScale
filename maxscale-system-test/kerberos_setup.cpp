@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     Test->maxscales->ssh_node(0, (char *) "yum install rng-tools -y", true);
     Test->maxscales->ssh_node(0, (char *) "rngd -r /dev/urandom -o /dev/random", true);
     Test->maxscales->ssh_node(0, (char *)
-                       "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5", true);
+                              "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5", true);
 
     Test->maxscales->ssh_node_f(0, true, (char *)
                                 "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5", true);

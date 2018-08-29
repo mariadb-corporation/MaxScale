@@ -17,7 +17,7 @@ int create_key(TestConnections *test)
                               true);
     test->maxscales->ssh_node(0, "maxkeys", true);
     char *result = test->maxscales->ssh_node_output(0, "sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
-                                                    false, &exit_code);
+                   false, &exit_code);
 
     if (strncmp(result, "SUCCESS", 7) != 0)
     {

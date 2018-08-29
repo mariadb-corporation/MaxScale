@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(50);
     char *user = Test->maxscales->ssh_node_output(0, "ps -FC maxscale|tail -n 1|cut -f 1 -d \" \"", false,
-                                                  &exit_code);
+                 &exit_code);
     char *nl = user ? strchr(user, '\n') : NULL;
 
     if (nl)

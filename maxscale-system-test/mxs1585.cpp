@@ -21,7 +21,7 @@ void* query_thr(void* data)
         while (running)
         {
             if (mysql_query(mysql, "INSERT INTO test.mxs1585 VALUES (1)") ||
-                mysql_query(mysql, "DELETE FROM test.mxs1585 LIMIT 100"))
+                    mysql_query(mysql, "DELETE FROM test.mxs1585 LIMIT 100"))
             {
                 break;
             }

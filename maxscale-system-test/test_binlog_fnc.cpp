@@ -69,7 +69,7 @@ int check_sha1(TestConnections* Test)
             Test->tprintf("FILE: 000000%d", i);
             Test->set_timeout(50);
             s_maxscale = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "sha1sum %s/mar-bin.00000%d",
-                                                            Test->maxscales->maxscale_binlog_dir, i);
+                         Test->maxscales->maxscale_binlog_dir, i);
             if (s_maxscale != NULL)
             {
                 x = strchr(s_maxscale, ' ');
@@ -153,7 +153,7 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
 
 
     Test->tprintf("ROLLBACK");
@@ -167,11 +167,11 @@ void test_binlog(TestConnections* Test)
     Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "112"), "SELECT check failed");
+                     "112"), "SELECT check failed");
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "112"), "SELECT check failed");
+                     "112"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
     Test->tprintf("Checking t1");
@@ -185,11 +185,11 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
 
     Test->tprintf("SELECT, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 

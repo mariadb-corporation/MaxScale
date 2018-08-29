@@ -18,9 +18,9 @@ bool try_connect(TestConnections& test)
     bool rval = false;
 
     if (rwsplit && master && slave &&
-        execute_query(rwsplit, "SELECT 1") == 0 &&
-        execute_query(master, "SELECT 1") == 0 &&
-        execute_query(slave, "SELECT 1") == 0)
+            execute_query(rwsplit, "SELECT 1") == 0 &&
+            execute_query(master, "SELECT 1") == 0 &&
+            execute_query(slave, "SELECT 1") == 0)
 
     {
         rval = true;

@@ -19,9 +19,11 @@ int main(int argc, char *argv[])
     std::vector<uint8_t> wbuf;
     auto it = std::back_inserter(wbuf);
 
-    for (auto a: {(uint8_t)(caps), (uint8_t)(caps >> 8), (uint8_t)(caps >> 16), (uint8_t)(caps >> 24),
+    for (auto a: {
+                (uint8_t)(caps), (uint8_t)(caps >> 8), (uint8_t)(caps >> 16), (uint8_t)(caps >> 24),
                 (uint8_t)(max_packet), (uint8_t)(max_packet >> 8), (uint8_t)(max_packet >> 16), (uint8_t)(max_packet >> 24),
-                charset})
+                charset
+            })
     {
         *it++ = a;
     }

@@ -104,7 +104,19 @@
         }
   },
 
-  "maxscale" :
+  "maxscale_000" :
+  {
+        "hostname" : "maxscale",
+        "box" : "${box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                 "name" : "maxscale_ci",
+                "version" : "${target}"
+        }
+
+  },
+
+  "maxscale_001" :
   {
         "hostname" : "maxscale",
         "box" : "${box}",

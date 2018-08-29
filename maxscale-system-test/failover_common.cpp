@@ -51,7 +51,7 @@ int prepare_test_1(TestConnections& test)
 {
     cout << LINE << endl;
     cout << "Part 1: Stopping master and waiting for failover. Check that another server is promoted." <<
-        endl;
+         endl;
     cout << LINE << endl;
     int node0_id = test.repl->get_server_id(0); // Read master id now before shutdown.
     test.repl->stop_node(0);
@@ -76,7 +76,7 @@ void prepare_test_2(TestConnections& test)
 {
     cout << LINE << endl;
     cout << "Part 2: Disable replication on server 2 and kill master, check that server 3 or 4 is promoted."
-        << endl;
+         << endl;
     cout << LINE << endl;
     test.repl->connect();
     check(test);
@@ -120,8 +120,8 @@ void prepare_test_3(TestConnections& test)
 {
     cout << LINE << "\n";
     cout << "Part 3: Disable log_bin on server 2, making it invalid for promotion. Enable log-slave-updates "
-        " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
-        " master failure." << "\n" << LINE << endl;
+         " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
+         " master failure." << "\n" << LINE << endl;
     get_output(test);
     test.maxscales->stop_maxscale(0);
     test.repl->stop_node(1);
