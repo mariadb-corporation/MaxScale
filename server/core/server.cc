@@ -1182,7 +1182,7 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     for (auto p = server->parameters; p; p = p->next)
     {
-        if (known.count(p->name) == 0)
+        if (known.count(p->name) == 0 && p->active)
         {
             dprintf(file, "%s=%s\n", p->name, p->value);
         }
