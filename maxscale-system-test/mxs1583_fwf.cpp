@@ -36,22 +36,22 @@ int main(int argc, char** argv)
     test.tprintf("Trying query that matches one 'user' row, expecting failure\n");
     test.set_timeout(30);
     test.add_result(!execute_query(test.maxscales->conn_rwsplit[0], "select concat(a) from t"),
-                     "Query that matches one 'user' row should fail.\n");
+                    "Query that matches one 'user' row should fail.\n");
 
     test.tprintf("Trying query that matches other 'user' row, expecting failure\n");
     test.set_timeout(30);
     test.add_result(!execute_query(test.maxscales->conn_rwsplit[0], "select concat(b) from t"),
-                     "Query that matches other 'user' row should fail.\n");
+                    "Query that matches other 'user' row should fail.\n");
 
     test.tprintf("Trying query that matches both 'user' rows, expecting failure\n");
     test.set_timeout(30);
     test.add_result(!execute_query_silent(test.maxscales->conn_rwsplit[0], "select concat(a), concat(b) from t"),
-                     "Query that matches both 'user' rows should fail.\n");
+                    "Query that matches both 'user' rows should fail.\n");
 
     test.tprintf("Trying non-matching query to blacklisted RWSplit, expecting success\n");
     test.set_timeout(30);
     test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0], "show status"),
-                     "Non-matching query to blacklist service should succeed.\n");
+                    "Non-matching query to blacklist service should succeed.\n");
 
     test.stop_timeout();
     test.tprintf("Checking if MaxScale is alive\n");

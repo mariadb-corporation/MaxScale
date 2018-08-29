@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     test.repl->start_node(2, (char *) "");
     // Slave 3. Create a second slave connection to a non-existing server.
     const char CHANGE_CMD[] = "CHANGE MASTER 'dummy' TO MASTER_HOST = 'imagination_host.img', "
-    "MASTER_PORT = 1234, MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD='repl';";
+                              "MASTER_PORT = 1234, MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD='repl';";
     test.try_query(nodes[3], CHANGE_CMD);
     test.try_query(nodes[3], "START SLAVE;");
 

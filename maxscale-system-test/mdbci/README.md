@@ -22,7 +22,7 @@ Test setup is described in template. Templates are stored in
 Own template have to be put to the same directory.
 
 Default environment for tests consists of:
-* one VM for Maxscale
+* 2 VMs for Maxscales
 * 4 VMs for master/slave setup
 * 4 VMs for Galera cluster
 
@@ -35,6 +35,7 @@ Template name|Description
 ---|---
  ```nogalera``` |only 1 VM for Maxscale and 4 for Master/Slaves|
  ```twomaxscales``` |2 VMs for Maxscale and 4 for Master/Slaves|
+ ```onemaxscale``` |1 VM for Maxscale, 4 for Master/Slaves and 4 for Galera|
  ```big``` |1 VM for Maxscale, 8 for Master/Slaves and 4 for Galera|
  ```big15``` |1 VM for Maxscale, 15 for Master/Slaves and 4 for Galera|
 

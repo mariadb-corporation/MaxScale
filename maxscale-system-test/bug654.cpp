@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     char result[1024];
 
     Test->maxscales->get_maxadmin_param(0, (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:",
-                             result);
+                                        result);
     Test->tprintf("result %s\n", result);
 
     if (strstr(result, "show dbusers expects 1 argument") == NULL)

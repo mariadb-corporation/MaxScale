@@ -23,11 +23,11 @@ void get_output(TestConnections& test)
         test.tprintf("MaxScale output:");
     }
     output = test.maxscales->ssh_node_output(0, "cat /var/log/maxscale/maxscale.log && "
-                                            "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
-                                             true, &ec);
+             "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
+             true, &ec);
     if (test.verbose)
     {
-       test.tprintf("%s", output);
+        test.tprintf("%s", output);
     }
     free(output);
 }

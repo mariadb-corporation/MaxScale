@@ -63,7 +63,8 @@ int main(int argc, char *argv[])
 
     print_version_string(Test);
 
-    sleep(FAILOVER_WAIT_TIME);sleep(FAILOVER_WAIT_TIME);
+    sleep(FAILOVER_WAIT_TIME);
+    sleep(FAILOVER_WAIT_TIME);
 
     // initial state: 000 expected to be active, 001 - passive
     passive = check_maxscale_passive(Test, 0);

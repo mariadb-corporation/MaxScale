@@ -25,7 +25,8 @@ int main(int argc, char** argv)
                                   "CREATE USER 'test2'@'%' IDENTIFIED BY 'test2'",
                                   "GRANT dba TO 'test'@'%'",
                                   "GRANT dba TO 'test2'@'%'",
-                                  "SET DEFAULT ROLE dba FOR 'test'@'%'"}))
+                                  "SET DEFAULT ROLE dba FOR 'test'@'%'"
+                                 }))
     {
         test.try_query(test.repl->nodes[0], "%s", a.c_str());
     }
@@ -50,7 +51,8 @@ int main(int argc, char** argv)
     for (auto a : vector<string>({"DROP DATABASE IF EXISTS my_db",
                                   "DROP ROLE IF EXISTS dba",
                                   "DROP USER 'test'@'%'",
-                                  "DROP USER 'test2'@'%'"}))
+                                  "DROP USER 'test2'@'%'"
+                                 }))
     {
         execute_query_silent(test.repl->nodes[0], "%s", a.c_str());
     }

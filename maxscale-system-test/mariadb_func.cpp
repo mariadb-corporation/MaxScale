@@ -51,7 +51,7 @@ MYSQL* open_conn_db_flags(int port, std::string ip, std::string db, std::string 
 }
 
 MYSQL* open_conn_db_timeout(int port, std::string ip, std::string db, std::string user, std::string password,
-                             unsigned int timeout, bool ssl)
+                            unsigned int timeout, bool ssl)
 {
     MYSQL* conn = mysql_init(NULL);
 
@@ -542,7 +542,8 @@ Result get_result(MYSQL* conn, std::string sql)
 Row get_row(MYSQL* conn, std::string sql)
 {
     Result res = get_result(conn, sql);
-    return res.empty() ? Row{} : res[0];
+    return res.empty() ? Row{} :
+           res[0];
 }
 
 int get_int_version(std::string version)

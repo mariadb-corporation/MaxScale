@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         MYSQL* conn = open_conn_db(test.maxscales->port(), test.maxscales->ip(), db,
                                    test.maxscales->user_name, test.maxscales->password);
         if (execute_query_silent(conn, "SELECT 1") ||
-            execute_query_silent(conn, "SHOW DATABASES"))
+                execute_query_silent(conn, "SHOW DATABASES"))
         {
             errors.insert(mysql_error(conn));
         }
@@ -45,7 +45,9 @@ int main(int argc, char** argv)
 
     test.assert(errors.empty(), "None of the queries should fail: %s",
                 std::accumulate(errors.begin(), errors.end(), std::string(),
-                                [](const std::string &a, const std::string &b){return a + b + " ";}));
+    [](const std::string &a, const std::string &b) {
+        return a + b + " ";
+    }));
 
     test.tprintf("Dropping databases...");
     for (auto db : db_list)
