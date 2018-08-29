@@ -127,6 +127,6 @@ json_t* mxs_json_error(const char* format, ...);
  *
  * @return The error added to 'errors' array of the JSON object.
  */
-json_t* mxs_json_error_append(json_t* object, const char* format, ...);
+json_t* mxs_json_error_append(json_t* object, const char* format, ...) mxb_attribute((format (printf, 2, 3)));
 
 MXS_END_DECLS
