@@ -82,21 +82,7 @@ These are optional parameters specific to the MariaDB Monitor.
 
 ### `detect_replication_lag`
 
-A boolean value which controls if replication lag between the master and the
-slaves is monitored. This allows the routers to route read queries to only
-slaves that are up to date. Default value for this parameter is _false_.
-
-To measure the replication lag, MaxScale uses the
-*maxscale_schema.replication_heartbeat* table. This table is created on the
-master server and it is updated at every heartbeat with the current timestamp.
-The updates are then replicated to the slave servers and when the replicated
-timestamp is read from the slave servers, the lag between the slave and the
-master is calculated.
-
-The monitor user requires INSERT, UPDATE, DELETE and SELECT permissions on the
-*maxscale_schema.replication_heartbeat* table and CREATE permissions on the
-maxscale_schema database. The monitor creates the database and the table if they
-do not exist.
+Deprecated and unused as of MaxScale 2.3. Can be defined but is ignored.
 
 ### `detect_stale_master`
 

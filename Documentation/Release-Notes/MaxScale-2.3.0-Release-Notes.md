@@ -1,6 +1,6 @@
 # MariaDB MaxScale 2.3.0 Release Notes
 
-Release 2.2.0 is a Beta release.
+Release 2.3.0 is a Beta release.
 
 This document describes the changes in release 2.3.0, when compared to
 release 2.2.
@@ -47,12 +47,6 @@ By default the masking filter rejects statements that use functions on
 conjuction with columns that should be masked. Please see the
 [Masking Filter](../Filters/Masking.md) documentation for details.
 
-###  Switchover new master autoselection
-
-The switchover command in *mariadbmon* can now be called with just the monitor
-name as parameter. In this case the monitor will automatically select a server
-for promotion.
-
 ### `router_options` in Binlogrouter
 
 The use of `router_options` with the binlogrouter module is deprecated in
@@ -69,6 +63,57 @@ deprecated. If you need to explicitly set the stack size, do so using
 
 The `ssl` parameter now accepts boolean values ìn addition to the old `required`
 and `disabled` values.
+
+### MariaDBMonitor
+
+MariaDBMonitor has undergone several changes listed briefly below. Please see
+[MariaDBMonitor documentation](../Monitors/MariaDB-Monitor.md) for more details.
+
+#### JSON diagnostics output changed
+
+The data in the diagnostic output of the REST-API has changed, with some fields
+removed and others added.
+
+#### Master detection
+
+The monitor is now less likely to suddenly change the master server, even if
+another server has more slaves than the current master. The DBA can force a
+master reselection by setting the current master read-only, or by removing all
+its slaves if the master is down.
+
+Only one server can have the *Master* status flag at a time, even in a
+multimaster setup. Others servers in the multimaster group are given the *Relay
+Master* and *Slave* status flags.
+
+####  Switchover new master autoselection
+
+The switchover command can now be called with just the monitor instance name as
+parameter. In this case the monitor will automatically select a server for
+promotion.
+
+#### Replication lag detection
+
+The replication lag measurement now simply reads the
+*Seconds_Behind_Master*-field of the slave status output of slaves. The slave
+calculates this value by comparing the time stamp in the binlog event the slave
+is currently processing to the slave's own clock. If a slave has multiple slave
+connections, the smallest lag is used.
+
+#### Low disk space detection, automatic switchover
+
+With recent MariaDB Server versions, the monitor can check the disk space on the
+backends and detect if the server is running low. The monitor can be set to
+automatically switchover a master low on disk space. Slaves are instead set to
+maintenance mode.
+
+#### Unused parameters
+
+The following parameters are unused and are ignored if set:
+- `mysql51_replication` MySQL5.1 is no longer supported.
+- `multimaster` The monitor now always detects multimaster setups.
+- `allow_cluster_recovery` Now always on.
+- `detect_replication_lag` Lag detection no longer writes to databases so it is
+always on.
 
 ## Dropped Features
 

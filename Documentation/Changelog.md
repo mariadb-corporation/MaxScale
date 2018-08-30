@@ -5,6 +5,7 @@
 * Runtime Configuration of the Cache
 * User Specified Syslog Facility and Level for Authentication Errors
 * `config reload` removed from MaxAdmin (was deprecated in 2.2)
+* MariaDBMonitor features added, modified and removed
 
 For more details, please refer to:
 
