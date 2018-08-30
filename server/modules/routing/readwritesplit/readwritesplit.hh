@@ -33,6 +33,7 @@
 #include <maxscale/service.h>
 #include <maxscale/session_command.hh>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/routingworker.hh>
 
 #include "rwbackend.hh"
 
@@ -315,16 +316,9 @@ private:
     // Called when worker local data needs to be updated
     static void update_config(void* data);
 
-    SERVICE*           m_service; /**< Service where the router belongs*/
-    Config             m_config;
-    mutable std::mutex m_lock; /**< Protects updates of m_config */
-    Stats              m_stats;
-
-    /** Handle to worker local data for this instance. In theory we could use
-     * the `this` pointer as the key but for the sake of simplicity, a unique
-     * integer is used. This also keeps behavior similar to how the C interface
-     * works. */
-    uint64_t           m_wkey;
+    SERVICE*                   m_service; /**< Service where the router belongs*/
+    mxs::rworker_local<Config> m_config;
+    Stats                      m_stats;
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)

@@ -187,20 +187,12 @@ static bool handle_max_slaves(Config& config, const char *str)
 RWSplit::RWSplit(SERVICE* service, const Config& config):
     mxs::Router<RWSplit, RWSplitSession>(service),
     m_service(service),
-    m_config(config),
-    m_wkey(mxs_rworker_create_key())
+    m_config(config)
 {
-}
-
-static void data_destroy_callback(void* data)
-{
-    Config* my_config = static_cast<Config*>(data);
-    delete my_config;
 }
 
 RWSplit::~RWSplit()
 {
-    mxs_rworker_delete_data(m_wkey);
 }
 
 SERVICE* RWSplit::service() const
@@ -208,51 +200,9 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-Config* RWSplit::get_local_config() const
-{
-    Config* my_config = static_cast<Config*>(mxs_rworker_get_data(m_wkey));
-
-    if (my_config == nullptr)
-    {
-        // First time we get the configuration, create and update it
-        m_lock.lock();
-        my_config = new Config(m_config);
-        m_lock.unlock();
-        mxs_rworker_set_data(m_wkey, my_config, data_destroy_callback);
-    }
-
-    mxb_assert(my_config);
-    return my_config;
-}
-
-void RWSplit::update_local_config() const
-{
-    Config* my_config = get_local_config();
-
-    m_lock.lock();
-    *my_config = m_config;
-    m_lock.unlock();
-}
-
-void RWSplit::update_config(void* data)
-{
-    RWSplit* inst = static_cast<RWSplit*>(data);
-    inst->update_local_config();
-}
-
-void RWSplit::store_config(const Config& config)
-{
-    m_lock.lock();
-    m_config = config;
-    m_lock.unlock();
-
-    // Broadcast to all workers that the configuration has been updated
-    mxs_rworker_broadcast(update_config, this);
-}
-
 const Config& RWSplit::config() const
 {
-    return *get_local_config();
+    return m_config;
 }
 
 Stats& RWSplit::stats()
@@ -267,9 +217,9 @@ const Stats& RWSplit::stats() const
 int RWSplit::max_slave_count() const
 {
     int router_nservers = m_service->n_dbref;
-    int conf_max_nslaves = m_config.max_slave_connections > 0 ?
-                           m_config.max_slave_connections :
-                           (router_nservers * m_config.rw_max_slave_conn_percent) / 100;
+    int conf_max_nslaves = m_config->max_slave_connections > 0 ?
+                           m_config->max_slave_connections :
+                           (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
     return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 }
 
@@ -279,8 +229,8 @@ bool RWSplit::have_enough_servers() const
     const int min_nsrv = 1;
     const int router_nsrv = m_service->n_dbref;
 
-    int n_serv = MXS_MAX(m_config.max_slave_connections,
-                         (router_nsrv * m_config.rw_max_slave_conn_percent) / 100);
+    int n_serv = MXS_MAX(m_config->max_slave_connections,
+                         (router_nsrv * m_config->rw_max_slave_conn_percent) / 100);
 
     /** With too few servers session is not created */
     if (router_nsrv < min_nsrv || n_serv < min_nsrv)
@@ -293,15 +243,15 @@ bool RWSplit::have_enough_servers() const
         }
         else
         {
-            int pct = m_config.rw_max_slave_conn_percent / 100;
+            int pct = m_config->rw_max_slave_conn_percent / 100;
             int nservers = router_nsrv * pct;
 
-            if (m_config.max_slave_connections < min_nsrv)
+            if (m_config->max_slave_connections < min_nsrv)
             {
                 MXS_ERROR("Unable to start %s service. There are "
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d when %d is required.",
-                          m_service->name, m_config.max_slave_connections, min_nsrv);
+                          m_service->name, m_config->max_slave_connections, min_nsrv);
             }
             if (nservers < min_nsrv)
             {
@@ -310,7 +260,7 @@ bool RWSplit::have_enough_servers() const
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d%% when at least %.0f%% "
                           "would be required.", m_service->name,
-                          m_config.rw_max_slave_conn_percent, dbgpct);
+                          m_config->rw_max_slave_conn_percent, dbgpct);
             }
         }
         succp = false;
@@ -509,7 +459,7 @@ bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
 
     if (handle_max_slaves(cnf, config_get_string(params, "max_slave_connections")))
     {
-        store_config(cnf);
+        m_config.assign(cnf);
         rval = true;
     }
 
