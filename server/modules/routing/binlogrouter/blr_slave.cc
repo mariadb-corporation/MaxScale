@@ -4342,7 +4342,7 @@ int blr_apply_change_master_0(ROUTER_INSTANCE* router,
 
     if (ssl_error != -1 &&
         // No CA cert is defined or only one of CERT or KEY is defined
-        (new_config.ssl_ca.empty() || new_config.ssl_cert.empty() != new_config.ssl_key.empty())
+        (new_config.ssl_ca.empty() || new_config.ssl_cert.empty() != new_config.ssl_key.empty()))
     {
         if (new_config.ssl_enabled)
         {
