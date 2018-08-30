@@ -3123,3 +3123,87 @@ void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf)
         }
     }
 }
+
+void blr_master_set_config(ROUTER_INSTANCE *inst, const ChangeMasterConfig& config)
+{
+    SERVICE* service = inst->service;
+    SERVER* backend_server = service->dbref->server;
+
+    if (!config.host.empty())
+    {
+        server_update_address(backend_server, config.host.c_str());
+    }
+
+    if (config.port)
+    {
+        server_update_port(backend_server, config.port);
+    }
+
+    if (!config.user.empty())
+    {
+        MXS_FREE(inst->user);
+        inst->user = MXS_STRDUP_A(config.user.c_str());
+    }
+
+    if (!config.password.empty())
+    {
+        MXS_FREE(inst->password);
+        inst->password = MXS_STRDUP_A(config.password.c_str());
+    }
+
+    inst->ssl_enabled = config.ssl_enabled;
+
+    if (!config.ssl_ca.empty())
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_ca_cert);
+        backend_server->server_ssl->ssl_ca_cert = MXS_STRDUP_A(config.ssl_ca.c_str());
+        MXS_FREE(inst->ssl_ca);
+        inst->ssl_ca = MXS_STRDUP_A(config.ssl_ca.c_str());
+    }
+
+    if (!config.ssl_cert.empty())
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_cert);
+        backend_server->server_ssl->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
+        MXS_FREE(inst->ssl_cert);
+        inst->ssl_cert = MXS_STRDUP_A(config.ssl_cert.c_str());
+    }
+
+    if (!config.ssl_key.empty())
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_key);
+        backend_server->server_ssl->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
+        MXS_FREE(inst->ssl_key);
+        inst->ssl_key = MXS_STRDUP_A(config.ssl_key.c_str());
+    }
+
+    if (!config.ssl_version.empty())
+    {
+        if (listener_set_ssl_version(backend_server->server_ssl, config.ssl_version.c_str()) != 0)
+        {
+            MXS_ERROR("Found unknown optional parameter value for 'ssl_version' for"
+                      " service '%s': %s, ignoring it.",
+                      inst->service->name,
+                      config.ssl_version.c_str());
+        }
+        else
+        {
+            inst->ssl_version = MXS_STRDUP_A(config.ssl_version.c_str());
+        }
+    }
+
+    if (config.heartbeat_period >= 0)
+    {
+        if (inst->heartbeat > 0 && (config.heartbeat_period == 0))
+        {
+            blr_log_disabled_heartbeat(inst);
+        }
+
+        inst->heartbeat = config.heartbeat_period;
+    }
+
+    if (config.connect_retry > 0)
+    {
+        inst->retry_interval = config.connect_retry;
+    }
+}

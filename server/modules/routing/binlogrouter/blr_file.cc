@@ -44,6 +44,7 @@
 #include <maxscale/utils.h>
 
 using std::string;
+using std::vector;
 
 /**
  * AES_CTR handling
@@ -3111,131 +3112,82 @@ namespace
 /**
  * Configuration handler for items in the [binlog_configuration] section
  *
- * @param name  The item name
- * @param value The item value
- * @param inst  The current router instance
+ * @param       name    The item name
+ * @param       value   The item value
+ * @param       inst    The current router instance
+ * @param [out] config  The config object to modify.
  * @return 0 on error
  */
-int blr_handle_config_item(const char *name,
-                           const char *value,
-                           ROUTER_INSTANCE *inst)
+int blr_handle_config_item(const char* name,
+                           const char* value,
+                           ROUTER_INSTANCE* inst,
+                           ChangeMasterConfig* config)
 {
-    SERVICE *service;
-    char *ssl_cert;
-    char *ssl_key;
-    char *ssl_ca_cert;
-    SERVER *backend_server;
-
-    service = inst->service;
-
-    backend_server = service->dbref->server;
+    mxb_assert(strcmp(name, "filestem") != 0);
 
     if (strcmp(name, "master_host") == 0)
     {
-        server_update_address(service->dbref->server, (char *)value);
+        config->host = value;
     }
     else if (strcmp(name, "master_port") == 0)
     {
-        server_update_port(service->dbref->server, (short)atoi(value));
-    }
-    else if (strcmp(name, "filestem") == 0)
-    {
-        MXS_FREE(inst->fileroot);
-        inst->fileroot = MXS_STRDUP_A(value);
+        config->port = atoi(value);
     }
     else if (strcmp(name, "master_user") == 0)
     {
-        if (inst->user)
-        {
-            MXS_FREE(inst->user);
-        }
-        inst->user = MXS_STRDUP_A(value);
+        config->user = value;
     }
     else if (strcmp(name, "master_password") == 0)
     {
-        if (inst->password)
-        {
-            MXS_FREE(inst->password);
-        }
-        inst->password = MXS_STRDUP_A(value);
+        config->password = value;
     }
-    /** Checl for SSL options */
     else if (strcmp(name, "master_ssl") == 0)
     {
-        inst->ssl_enabled = config_truth_value((char*)value);
+        config->ssl_enabled = config_truth_value((char*)value);
     }
     else if (strcmp(name, "master_ssl_ca") == 0)
     {
-        MXS_FREE(backend_server->server_ssl->ssl_ca_cert);
-        backend_server->server_ssl->ssl_ca_cert = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_ca);
-        inst->ssl_ca = value ? MXS_STRDUP_A(value) : NULL;
+        config->ssl_ca = value;
     }
     else if (strcmp(name, "master_ssl_cert") == 0)
     {
-        MXS_FREE(backend_server->server_ssl->ssl_cert);
-        backend_server->server_ssl->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_cert);
-        inst->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
+        config->ssl_cert = value;
     }
     else if (strcmp(name, "master_ssl_key") == 0)
     {
-        MXS_FREE(backend_server->server_ssl->ssl_key);
-        backend_server->server_ssl->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
-        MXS_FREE(inst->ssl_key);
-        inst->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
+        config->ssl_key = value;
     }
     else if (strcmp(name, "master_ssl_version") == 0 || strcmp(name, "master_tls_version") == 0)
     {
-        if (value)
-        {
-            if (listener_set_ssl_version(backend_server->server_ssl, (char *)value) != 0)
-            {
-                MXS_ERROR("Found unknown optional parameter value for 'ssl_version' for"
-                          " service '%s': %s, ignoring it.",
-                          inst->service->name,
-                          value);
-            }
-            else
-            {
-                inst->ssl_version = MXS_STRDUP_A(value);
-            }
-        }
+        config->ssl_version = value;
     }
-    /* Connect options */
     else if (strcmp(name, "master_heartbeat_period") == 0)
     {
-        int new_val = atol((char *)value);
-        if (new_val < 0)
+        int heartbeat_period = atol((char *)value);
+        if (heartbeat_period < 0)
         {
             MXS_WARNING("Found invalid 'master_heartbeat_period' value"
                         " for service '%s': %s, ignoring it.",
                         inst->service->name,
                         value);
+            heartbeat_period = -1;
         }
-        else
-        {
-            if (inst->heartbeat > 0 && new_val == 0)
-            {
-                blr_log_disabled_heartbeat(inst);
-            }
-            inst->heartbeat = new_val;
-        }
+
+        config->heartbeat_period = heartbeat_period;
     }
     else if (strcmp(name, "master_connect_retry") == 0)
     {
-        int new_val = atol((char *)value);
-        if (new_val <= 0)
+        int connect_retry = atol((char *)value);
+        if (connect_retry <= 0)
         {
             MXS_WARNING("Found invalid 'master_connect_retry' value"
                         " for service '%s': %s, ignoring it.",
                         inst->service->name,
                         value);
+            connect_retry = -1;
         }
-        else
-        {
-            inst->retry_interval = new_val;
-        }
+
+        config->connect_retry = connect_retry;
     }
     else
     {
@@ -3257,35 +3209,133 @@ int blr_handle_config_item(const char *name,
 
 int blr_handler_config(void *userdata, const char *section, const char *name, const char *value)
 {
+    int rc = 1;
+
+    static const char SECTION_NAME[] = "binlog_configuration";
+
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) userdata;
-    SERVICE *service;
 
-    service = inst->service;
+    bool complain_about_section = false;
 
-    if (strcasecmp(section, "binlog_configuration") == 0)
+    if (strncasecmp(section, SECTION_NAME, sizeof(SECTION_NAME) - 1) == 0)
     {
-        return blr_handle_config_item(name, value, inst);
+        ChangeMasterConfig* config = nullptr;
+
+        const char* tail = section + sizeof(SECTION_NAME) - 1;
+
+        if (*tail == 0)
+        {
+            // This is [binlog_configuration]
+
+            if (strcmp(name, "filestem") == 0)
+            {
+                MXS_FREE(inst->fileroot);
+                inst->fileroot = MXS_STRDUP_A(value);
+            }
+            else
+            {
+                if (inst->configs.size() == 0)
+                {
+                    inst->configs.emplace_back();
+                }
+
+                config = &inst->configs[0];
+            }
+        }
+        else if (*tail == ':')
+        {
+            // This is at least [binlog_configuration:]
+
+            ++tail;
+            int value = atoi(tail);
+            if ((value >= 2) && (std::to_string(value) == tail))
+            {
+                // This is [binlog_configuration::N], with N >= 2.
+
+                unsigned n = value;
+                if (inst->configs.size() == n - 1)
+                {
+                    // A "[binlog_configuration:N]" section at a point where (if N > 2)
+                    // "[binlog_configuration:N-1]" or "[binlog_configuration]" (if N == 2)
+                    // has been seen.
+                    inst->configs.emplace_back();
+                }
+
+                if (inst->configs.size() >= n)
+                {
+                    config = &inst->configs[n - 1]; // Numbered from 1, indexed from 0.
+                }
+                else
+                {
+                    // A "[binlog_configuration:N] where the
+                    string previous;
+                    if (n > 2)
+                    {
+                        previous += ":";
+                        previous += std::to_string(n - 1);
+                    }
+
+                    MXS_ERROR("The configuration [%s:%u] appears in master.ini, before the "
+                              "configuration [%s%s] does. ",
+                              SECTION_NAME,
+                              n,
+                              SECTION_NAME,
+                              previous.c_str());
+                    rc = 0;
+
+                }
+            }
+            else
+            {
+                complain_about_section = true;
+            }
+        }
+        else
+        {
+            complain_about_section = true;
+        }
+
+        if (config)
+        {
+            rc = blr_handle_config_item(name, value, inst, config);
+        }
     }
     else
     {
-        MXS_ERROR("master.ini has an invalid section [%s], it should be [binlog_configuration]. "
+        complain_about_section = true;
+    }
+
+    if (complain_about_section)
+    {
+        MXS_ERROR("master.ini has an invalid section [%s], it should be [%s] or "
+                  "[%s:N] where the N:s are numbered consecutively from 2."
                   "Service %s",
                   section,
-                  service->name);
-
-        return 0;
+                  SECTION_NAME,
+                  SECTION_NAME,
+                  inst->service->name);
+        rc = 0;
     }
+
+    return rc;
 }
 
 }
 
 int blr_file_read_master_config(ROUTER_INSTANCE *router)
 {
+    mxb_assert(router->configs.size() == 0);
     static const char MASTER_INI[] = "/master.ini";
     char filename[strlen(router->binlogdir) + sizeof(MASTER_INI)]; // sizeof includes the NULL
     sprintf(filename, "%s%s", router->binlogdir, MASTER_INI);
 
     int rc = ini_parse(filename, blr_handler_config, router);
+
+    if (rc == 1)
+    {
+        mxb_assert(router->configs.size() > 0);
+        blr_master_set_config(router, router->configs[0]);
+    }
 
     MXS_INFO("%s: %s parse result is %d", router->service->name, filename, rc);
 

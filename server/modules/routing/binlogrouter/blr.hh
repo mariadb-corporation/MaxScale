@@ -372,10 +372,17 @@ class ChangeMasterConfig
 {
 public:
     ChangeMasterConfig()
-        : heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL_VALUE)
+        : ChangeMasterConfig("")
+    {
+    }
+
+    ChangeMasterConfig(const char* name)
+        : connection_name(name)
+        , heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL_VALUE)
         , connect_retry(BLR_MASTER_CONNECT_RETRY_VALUE)
     {
     }
+
     std::string connection_name;
     std::string host;
     int         port;
@@ -1014,6 +1021,7 @@ extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
+extern void blr_master_set_config(ROUTER_INSTANCE *, const ChangeMasterConfig& config);
 
 extern int blr_slave_request(ROUTER_INSTANCE *,
                              ROUTER_SLAVE *,
