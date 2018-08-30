@@ -15,14 +15,16 @@
 #include <maxscale/ccdefs.hh>
 
 #include <unordered_map>
+#include <vector>
+#include <mutex>
 
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/routingworker.h>
+#include <maxscale/session.hh>
 
-#include "session.hh"
 
 namespace maxscale
 {

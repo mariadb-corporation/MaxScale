@@ -51,9 +51,9 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/routingworker.hh>
 
 #include "internal/modules.h"
-#include "internal/routingworker.hh"
 #include "internal/session.h"
 
 using maxscale::RoutingWorker;

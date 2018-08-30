@@ -24,11 +24,11 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
+#include <maxscale/routingworker.hh>
 
 #include <sys/stat.h>
 
 #include "../internal/poll.hh"
-#include "../internal/routingworker.hh"
 #include "../internal/statistics.h"
 
 

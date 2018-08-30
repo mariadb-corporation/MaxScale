@@ -26,27 +26,10 @@
 
 #include "filter.hh"
 #include "service.hh"
+#include "session.h"
 
 namespace maxscale
 {
-/**
- * Specialization of RegistryTraits for the session registry.
- */
-template<>
-struct RegistryTraits<MXS_SESSION>
-{
-    typedef uint64_t id_type;
-    typedef MXS_SESSION* entry_type;
-
-    static id_type get_id(entry_type entry)
-    {
-        return entry->ses_id;
-    }
-    static entry_type null_entry()
-    {
-        return NULL;
-    }
-};
 
 typedef struct SESSION_VARIABLE
 {

@@ -45,10 +45,10 @@
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/server.hh>
+#include <maxscale/routingworker.hh>
 
 #include "internal/monitor.h"
 #include "internal/poll.hh"
-#include "internal/routingworker.hh"
 #include "internal/config.hh"
 #include "internal/service.hh"
 #include "internal/modules.h"

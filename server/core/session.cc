@@ -39,11 +39,11 @@
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/routingworker.hh>
 
 #include "internal/dcb.h"
 #include "internal/filter.hh"
-#include "internal/routingworker.hh"
-#include "internal/session.h"
+#include "internal/session.hh"
 #include "internal/service.hh"
 
 using std::string;

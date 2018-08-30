@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "internal/routingworker.hh"
+#include <maxscale/routingworker.hh>
 
 #include <errno.h>
 #include <fcntl.h>

@@ -34,8 +34,9 @@
 #include <maxscale/clock.h>
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>
+#include <maxscale/routingworker.hh>
+
 #include "internal/poll.hh"
-#include "internal/routingworker.hh"
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;

@@ -54,6 +54,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 
 #include <debugcli.h>
 
@@ -65,7 +66,6 @@
 #include "../../../core/internal/poll.hh"
 #include "../../../core/internal/session.h"
 #include "../../../core/internal/filter.hh"
-#include "../../../core/internal/routingworker.hh"
 
 #define MAXARGS 14
 

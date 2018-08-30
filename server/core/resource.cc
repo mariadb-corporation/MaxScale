@@ -25,6 +25,7 @@
 #include <maxscale/modulecmd.h>
 #include <maxscale/server.hh>
 #include <maxscale/spinlock.hh>
+#include <maxscale/routingworker.hh>
 
 #include "internal/config_runtime.h"
 #include "internal/filter.hh"
@@ -33,7 +34,6 @@
 #include "internal/modules.h"
 #include "internal/monitor.h"
 #include "internal/query_classifier.hh"
-#include "internal/routingworker.hh"
 #include "internal/service.hh"
 #include "internal/session.h"
 

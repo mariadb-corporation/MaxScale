@@ -12,10 +12,8 @@
  */
 
 #include <maxscale/protocol/mariadb_client.hh>
+#include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
-
-// TODO: Find a way to cleanly expose this
-#include "../../../core/internal/routingworker.hh"
 
 #ifdef EPOLLRDHUP
 #define ERROR_EVENTS (EPOLLRDHUP | EPOLLHUP | EPOLLERR)

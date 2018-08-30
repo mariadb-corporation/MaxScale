@@ -53,12 +53,12 @@
 #include <maxscale/version.h>
 #include <maxscale/json_api.h>
 #include <maxscale/routingworker.h>
+#include <maxscale/routingworker.hh>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
 #include "internal/modules.h"
 #include "internal/service.hh"
-#include "internal/routingworker.hh"
 #include "internal/maxscale.h"
 
 /** This define is needed in CentOS 6 systems */
