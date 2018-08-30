@@ -227,11 +227,11 @@ const DEBUG_ARGUMENT debug_arguments[] =
     },
     {
         "enable-statement-logging", enable_statement_logging,
-        "enable the logging of SQL statements sent by MaxScale to the servers"
+        "enable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"
     },
     {
         "disable-statement-logging", disable_statement_logging,
-        "disable the logging of SQL statements sent by MaxScale to the servers"
+        "disable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"
     },
     {NULL, NULL, NULL}
 };
@@ -1011,7 +1011,7 @@ static void usage(void)
     for (int i = 0; debug_arguments[i].action != NULL; i++)
     {
         fprintf(stderr,
-                "   %-24s   %s\n", debug_arguments[i].name, debug_arguments[i].description);
+                "   %-25s  %s\n", debug_arguments[i].name, debug_arguments[i].description);
     }
     fprintf(stderr,
             "  -v, --version               print version info and exit\n"

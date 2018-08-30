@@ -249,15 +249,12 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
 
     if (this_unit.log_statements)
     {
-        const char* host;
-        if (mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host) != 0)
-        {
-            // No idea about the host, but let's use something that looks like
-            // an IP-address as a placeholder.
-            host = "0.0.0.0";
-        }
-
-        MXS_NOTICE("SQL(%s): %d, \"%s\"", host, rc, query);
+        const char* host = "0.0.0.0";
+        unsigned int port = 0;
+        MXB_AT_DEBUG(int rc1 =) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
+        MXB_AT_DEBUG(int rc2 =) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
+        mxb_assert(!rc1 && !rc2);
+        MXS_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query);
     }
 
     return rc;
