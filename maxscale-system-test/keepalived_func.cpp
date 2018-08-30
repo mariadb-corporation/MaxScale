@@ -1,4 +1,5 @@
 #include "keepalived_func.h"
+#include "get_my_ip.h"
 
 char * print_version_string(TestConnections * Test)
 {
@@ -15,7 +16,8 @@ void configure_keepalived(TestConnections* Test, char * keepalived_file)
     int i;
     char client_ip[24];
     char * last_dot;
-    Test->get_client_ip(0, client_ip);
+    //Test->get_client_ip(0, client_ip);
+    get_my_ip(Test->maxscales->IP[0], client_ip);
     last_dot = client_ip;
     Test->tprintf("My IP is %s\n", client_ip);
     for (i = 0; i < 3; i++)
@@ -32,15 +34,15 @@ void configure_keepalived(TestConnections* Test, char * keepalived_file)
     for (i = 0; i < Test->maxscales->N; i++)
     {
         std::string src = std::string(test_dir)
-                + "/keepalived_cnf/"
-                + std::string(keepalived_file)
-                + std::to_string(i + 1)
-                + ".conf";
+                          + "/keepalived_cnf/"
+                          + std::string(keepalived_file)
+                          + std::to_string(i + 1)
+                          + ".conf";
         std::string cp_cmd = "cp "
-                + std::string(Test->maxscales->access_homedir[i])
-                + std::string(keepalived_file)
-                + std::to_string(i + 1) + ".conf "
-                + " /etc/keepalived/keepalived.conf";
+                             + std::string(Test->maxscales->access_homedir[i])
+                             + std::string(keepalived_file)
+                             + std::to_string(i + 1) + ".conf "
+                             + " /etc/keepalived/keepalived.conf";
         Test->tprintf("%s\n", src.c_str());
         Test->tprintf("%s\n", cp_cmd.c_str());
         Test->maxscales->ssh_node(i, "yum install -y keepalived", true);

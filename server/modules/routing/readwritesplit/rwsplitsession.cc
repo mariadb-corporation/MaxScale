@@ -550,6 +550,7 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
         {
             // Server requested a local file, go into data streaming mode
             m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+            session_set_load_active(m_pSession, true);
         }
 
         if (m_otrx_state == OTRX_ROLLBACK)

@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     int queried_id = atoi(server_id);
 
     test.add_result(queried_id != real_id, "The query server ID '%d' does not match the one from server '%d'. "
-                     "Slave was not recovered.", queried_id, real_id);
+                    "Slave was not recovered.", queried_id, real_id);
 
     char userval[200] = "";
     find_field(test.maxscales->conn_rwsplit[0], "SELECT @a", "@a", userval);

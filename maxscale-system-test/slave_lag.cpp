@@ -39,7 +39,7 @@ int check_lag(int * min_lag)
     {
         sprintf(ma_cmd, "show server server%d", i + 1);
         maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0], ma_cmd,
-                           (char *) "Slave delay:", result);
+                                      (char *) "Slave delay:", result);
         sscanf(result, "%d", &res_d);
         Test->tprintf("server%d lag: %d\n", i + 1, res_d);
         if (i == 1)
@@ -181,13 +181,13 @@ void *checks_thread( void *ptr )
     for (int i = 0; i < 1000; i++)
     {
         maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
-                           (char *) "show server server2", (char *) "Slave delay:", result);
+                                      (char *) "show server server2", (char *) "Slave delay:", result);
         printf("server2: %s\n", result);
         maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
-                           (char *) "show server server3", (char *) "Slave delay:", result);
+                                      (char *) "show server server3", (char *) "Slave delay:", result);
         printf("server3: %s\n", result);
         maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
-                           (char *) "show server server4", (char *) "Slave delay:", result);
+                                      (char *) "show server server4", (char *) "Slave delay:", result);
         printf("server4: %s\n", result);
     }
     exit_flag = 1;

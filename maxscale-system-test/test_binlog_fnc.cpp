@@ -161,7 +161,7 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
 
 
     Test->tprintf("ROLLBACK");
@@ -175,11 +175,11 @@ void test_binlog(TestConnections* Test)
     Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "112"), "SELECT check failed");
+                     "112"), "SELECT check failed");
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "112"), "SELECT check failed");
+                     "112"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
     Test->tprintf("Checking t1");
@@ -193,11 +193,11 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
 
     Test->tprintf("SELECT, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                                             "111"), "SELECT check failed");
+                     "111"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 

@@ -230,9 +230,9 @@ int Mariadb_nodes::find_master()
     while ((found == 0) && (i < N))
     {
         if (find_field(
-                nodes[i], (char *) "show slave status;",
-                (char *) "Master_Host", &str[0]
-            ) == 0 )
+                    nodes[i], (char *) "show slave status;",
+                    (char *) "Master_Host", &str[0]
+                ) == 0 )
         {
             found = 1;
             strcpy(master_IP, str);
@@ -714,7 +714,7 @@ static bool multi_source_replication(MYSQL *conn, int node)
     MYSQL_RES *res;
 
     if (mysql_query(conn, "SHOW ALL SLAVES STATUS") == 0 &&
-        (res = mysql_store_result(conn)))
+            (res = mysql_store_result(conn)))
     {
         if (mysql_num_rows(res) == 1)
         {

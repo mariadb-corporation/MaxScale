@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     int master_id_new = get_master_server_id(test);
     cout << "Master server id is " << master_id_new << endl;
     test.assert(master_id_new > 0 && master_id_new != master_id_old,
-        "Failover did not promote a new master.");
+                "Failover did not promote a new master.");
     if (test.global_result != 0)
     {
         return test.global_result;
@@ -132,7 +132,7 @@ int main(int argc, char** argv)
     cout << "Setting server " << master_id_new << " to replicate from server 1. Server " << master_id_new
          << " should remain as the master because server 1 doesn't have the latest event it has." << endl;
     const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "
-        "MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
+                                  "MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
     char cmd[256];
     int ind = master_id_new - 1;
     snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP[0], test.repl->port[0]);

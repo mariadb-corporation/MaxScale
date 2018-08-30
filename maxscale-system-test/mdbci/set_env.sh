@@ -24,9 +24,6 @@ export maxscale_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep maxsc
 sed "s/^/export /g" "$MDBCI_VM_PATH/$config_name"_network_config > "$curr_dir"/"$config_name"_network_config_export
 source "$curr_dir"/"$config_name"_network_config_export
 
-# IP Of MaxScale machine
-export maxscale_IP=$maxscale_network
-export maxscale_sshkey=$maxscale_keyfile
 
 # User name and Password for Master/Slave replication setup (should have all PRIVILEGES)
 export node_user="skysql"
@@ -83,8 +80,15 @@ do
 	done
 done
 
-export maxscale_access_user=$maxscale_whoami
+export maxscale_access_user=$maxscale_000_whoami
 export maxscale_access_sudo="sudo "
+
+# IP Of MaxScale machine
+export maxscale_network=$maxscale_000_network
+export maxscale_keyfile=$maxscale_000_keyfile
+export maxscale_IP=$maxscale_000_network
+export maxscale_sshkey=$maxscale_000_keyfile
+
 
 # Sysbench directory (should be sysbench >= 0.5)
 export sysbench_dir=${sysbench_dir:-"$HOME/sysbench_deb7/sysbench/"}

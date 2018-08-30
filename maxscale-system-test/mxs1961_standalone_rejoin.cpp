@@ -12,7 +12,9 @@ void checkpoint(TestConnections& test)
     const int v = 5;
     test.maxscales->wait_for_monitor(v);
 
-    for (auto&& s: {"server1", "server2", "server3"})
+    for (auto&& s: {
+                "server1", "server2", "server3"
+            })
     {
         auto status = test.get_server_status(s);
         cout << s << " { ";

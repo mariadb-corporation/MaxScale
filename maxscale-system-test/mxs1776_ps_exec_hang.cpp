@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
                 bool rval = true;
 
                 if (mysql_stmt_execute(stmt) ||
-                    mysql_stmt_bind_result(stmt, &bind.bind))
+                mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
@@ -107,10 +107,10 @@ int main(int argc, char* argv[])
                 bool rval = true;
 
                 if (mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt))
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt))
                 {
                     rval = false;
                 }
@@ -125,10 +125,10 @@ int main(int argc, char* argv[])
                 bool rval = true;
 
                 if (mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_bind_result(stmt, &bind.bind))
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
@@ -148,10 +148,10 @@ int main(int argc, char* argv[])
                 bool rval = true;
 
                 if (mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_bind_result(stmt, &bind.bind))
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
@@ -171,11 +171,11 @@ int main(int argc, char* argv[])
                 bool rval = true;
 
                 if (mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_stmt_execute(stmt) ||
-                    mysql_query(conn, "SET @a = 1"))
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_stmt_execute(stmt) ||
+                mysql_query(conn, "SET @a = 1"))
                 {
                     rval = false;
                 }

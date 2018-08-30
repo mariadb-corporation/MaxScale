@@ -66,7 +66,7 @@ void check_conn_num(TestConnections* Test, int * Nc)
     for (int i = 0; i < 4; i++)
     {
         int conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0],
-                                (char *) "test");
+                                    (char *) "test");
         Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i < 4) && (Nc[i] != conn_num))
         {

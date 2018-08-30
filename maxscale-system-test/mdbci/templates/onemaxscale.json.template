@@ -4,12 +4,12 @@
         "hostname" : "node000",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-	"product" : {
-      		"name": "${product}",
-		"version": "${version}",
+    "product" : {
+            "name": "${product}",
+        "version": "${version}",
                 "cnf_template" : "server1.cnf",
                 "cnf_template_path": "${cnf_path}"
-	}
+    }
 
   },
 
@@ -104,21 +104,9 @@
         }
   },
 
-  "maxscale_000" :
+  "maxscale" :
   {
         "hostname" : "maxscale",
-        "box" : "${box}",
-        "memory_size" : "${vm_memory}",
-        "product" : {
-                 "name" : "maxscale_ci",
-                "version" : "${target}"
-        }
-
-  },
-
-  "maxscale_001" :
-  {
-        "hostname" : "maxscale2",
         "box" : "${box}",
         "memory_size" : "${vm_memory}",
         "product" : {

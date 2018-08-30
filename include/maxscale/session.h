@@ -196,6 +196,7 @@ typedef struct session
         GWBUF* buffer;   /*< Buffer to deliver to up. */
     } response;                               /*< Shortcircuited response */
     session_close_t        close_reason;      /*< Reason why the session was closed */
+    bool                   load_active;       /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
 } MXS_SESSION;
 
 /**
@@ -641,5 +642,15 @@ MXS_DOWNSTREAM router_as_downstream(MXS_SESSION* session);
  *         the session was closed normally, an empty string is returned.
  */
 const char* session_get_close_reason(const MXS_SESSION* session);
+
+static inline void session_set_load_active(MXS_SESSION* session, bool value)
+{
+    session->load_active = value;
+}
+
+static inline bool session_is_load_active(const MXS_SESSION* session)
+{
+    return session->load_active;
+}
 
 MXS_END_DECLS

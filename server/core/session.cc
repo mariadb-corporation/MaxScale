@@ -121,6 +121,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->service = service;
     memset(&session->head, 0, sizeof(session->head));
     memset(&session->tail, 0, sizeof(session->tail));
+    session->load_active = false;
 
     /*<
      * Associate the session to the client DCB and set the reference count on

@@ -1528,20 +1528,24 @@ This section describes configuration parameters for both servers and listeners
 that control the TLS/SSL encryption method and the various certificate files
 involved in it.
 
-To enable TLS/SSL for a listener or a server, you must set the `ssl` parameter
-to `true` and provide the three files for `ssl_cert`, `ssl_key` and
-`ssl_ca_cert`.
+To enable TLS/SSL for a listener, you must set the `ssl` parameter to `true`
+and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`.
+
+To enable TLS/SSL for a server, you must set the `ssl` parameter to `required`
+and provide at least the `ssl_ca_cert` parameter. If the backend database server
+has certificate verification enabled, the `ssl_cert` and `ssl_key` parameters
+must also be defined.
 
 After this, MaxScale connections between the server and/or the client will be
-encrypted. Note that the database must be configured to use TLS/SSL connections
-if backend connection encryption is used.
+encrypted. Note that the database must also be configured to use TLS/SSL
+connections if backend connection encryption is used.
 
 **Note:** MaxScale does not allow mixed use of TLS/SSL and normal connections on
   the same port.
 
 If TLS encryption is enabled for a listener, any unencrypted connections to it
 will be rejected. MaxScale does this to improve security by preventing
-accidental creation on unencrypted connections.
+accidental creation of unencrypted connections.
 
 The separation of secure and insecure connections differs from the MariaDB
 server which allows both secure and insecure connections on the same port. As
@@ -1556,7 +1560,7 @@ value and is disabled by default. The parameter also accepts the special values
 `required` and `disabled` which were the only supported values before MaxScale
 2.3.0.
 
-If enabled, the three certificate files mentioned below must also be
+If enabled, the certificate files mentioned above must also be
 supplied. MaxScale connections to will then be encrypted with TLS/SSL.
 
 #### `ssl_key`
@@ -1578,9 +1582,13 @@ A string giving a file path that identifies an existing readable file. The file
 must be the Certificate Authority (CA) certificate for the CA that signed the
 certificate referred to in the previous parameter. It will be used to verify
 that the certificate is valid. This is a required parameter for both listeners
-and servers.
+and servers. The CA certificate can consist of a certificate chain.
 
 #### `ssl_version`
+
+**Note:** It is highly recommended to leave this parameter to the default value
+  of _MAX_. This will guarantee that the strongest available encryption is used.
+  **Do not change this unless you know what you are doing**.
 
 This parameter controls the level of encryption used. Accepted values are:
 
@@ -1590,16 +1598,13 @@ This parameter controls the level of encryption used. Accepted values are:
  * MAX
 
 The default is to use the highest level of encryption available. For OpenSSL 1.0
-and newer this is TLSv1.2. Older versions use TLSv1.0 as the default transport
-layer encryption.
-
-**Note:** It is highly recommended to leave this parameter to the default value
-  of _MAX_. This will guarantee that the strongest available encryption is used.
+and newer this is TLSv1.2.
 
 #### `ssl_cert_verify_depth`
 
 The maximum length of the certificate authority chain that will be accepted. The
-default value is 9. If changed, the new value must be larger than zero.
+default value is 9, same as the OpenSSL default. The configured value must be
+larger than 0.
 
 #### `ssl_verify_peer_certificate`
 
@@ -1607,9 +1612,9 @@ Peer certificate verification. This functionality is enabled by default.
 
 When this feature is enabled, the certificate sent by the peer is verified
 against the configured Certificate Authority. If you are using self-signed
-certificates, disable this feature.
+certificates, set `ssl_verify_peer_certificate=false`.
 
-**Example SSL enabled server configuration:**
+#### Example SSL enabled server configuration
 
 ```
 [server1]
@@ -1621,19 +1626,18 @@ ssl=required
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
 ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
-
 ```
 
 This example configuration requires all connections to this server to be
 encrypted with SSL. The paths to the certificate files and the Certificate
 Authority file are also provided.
 
-**Example SSL enabled listener configuration:**
+#### Example SSL enabled listener configuration
 
 ```
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MariaDBClient
 port=3306
 ssl=required

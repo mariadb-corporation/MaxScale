@@ -31,7 +31,7 @@ void add_remove_maxadmin_user(TestConnections* Test)
 
     Test->tprintf("enable account %s to maxadmin:\n", Test->maxscales->access_user[0]);
     char * st3 = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "maxadmin enable account %s",
-                                                    Test->maxscales->access_user[0]);
+                 Test->maxscales->access_user[0]);
     Test->tprintf("Result: %s\n", st3);
     sprintf(str, user_added, Test->maxscales->access_user[0]);
     if (strstr(st3, str) == NULL)
@@ -85,7 +85,7 @@ void add_remove_maxadmin_user(TestConnections* Test)
 
     Test->tprintf("trying to remove user '%s'\n", Test->maxscales->access_user[0]);
     char * st8 = Test->maxscales->ssh_node_output_f(0, false, &exit_code, "maxadmin disable account %s",
-                                                    Test->maxscales->access_user[0]);
+                 Test->maxscales->access_user[0]);
 
     if (strstr(st8, remove_last_admin))
     {
@@ -138,8 +138,8 @@ int main(int argc, char *argv[])
 
     Test->tprintf("trying long wierd user\n");
     Test->maxscales->ssh_node_output(0,
-                                                   "maxadmin enable account yygrgtrпрекури6н33имн756ККККЕН:УИГГГГ*?:*:*fj34oru34h275g23457g2v90590+u764gv56837fbv62381§SDFERGtrg45ergfergergefewfergt456ty",
-                                                   true, &exit_code);
+                                     "maxadmin enable account yygrgtrпрекури6н33имн756ККККЕН:УИГГГГ*?:*:*fj34oru34h275g23457g2v90590+u764gv56837fbv62381§SDFERGtrg45ergfergergefewfergt456ty",
+                                     true, &exit_code);
 
     Test->check_maxscale_alive(0);
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/passwd");

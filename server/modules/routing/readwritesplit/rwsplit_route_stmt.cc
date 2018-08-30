@@ -1133,6 +1133,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
                      * to which the server responds with an OK or an ERR packet */
                     mxb_assert(gwbuf_length(querybuf) == 4);
                     m_qc.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
+                    session_set_load_active(m_pSession, false);
                 }
             }
         }

@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
     }
     while ((execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1") != 0) &&
-           (elapsedTime < 10));
+            (elapsedTime < 10));
 
     Test->tprintf("Quries were blocked during %f (using clock_gettime())", elapsedTime);
     Test->tprintf("Quries were blocked during %lu (using time())", time(NULL) - start_time_clock);

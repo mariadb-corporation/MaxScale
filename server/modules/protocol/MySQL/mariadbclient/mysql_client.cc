@@ -1629,7 +1629,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             /**
              * Update the currently command being executed.
              */
-            if (!proto->changing_user)
+            if (!proto->changing_user && !session_is_load_active(session))
             {
                 update_current_command(session->client_dcb, packetbuf);
             }
@@ -1639,7 +1639,9 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                 mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
                 SERVICE *service = session->client_dcb->service;
 
-                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !service->session_track_trx_state)
+                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) &&
+                    !service->session_track_trx_state &&
+                    !session_is_load_active(session))
                 {
                     if (session_trx_is_ending(session))
                     {
