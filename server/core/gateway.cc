@@ -753,10 +753,8 @@ static void print_log_n_stderr(
 {
     if (do_log)
     {
-        static bool log_is_inited = false;
-        if (log_is_inited || init_log())
+        if (mxb_log_inited() || init_log())
         {
-            log_is_inited = true;
             MXS_ERROR("%s%s%s%s",
                       logstr,
                       eno == 0 ? "" : " (",
@@ -1858,6 +1856,14 @@ int main(int argc, char **argv)
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
+    }
+
+    if (mxb_log_inited())
+    {
+        // If the log was inited due to some error logging *and* we did not exit,
+        // we need to close it so that it can be opened again, this time with
+        // the final settings.
+        mxs_log_finish();
     }
 
     if (!init_log())
