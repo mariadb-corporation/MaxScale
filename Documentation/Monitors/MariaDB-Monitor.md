@@ -4,46 +4,62 @@ Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Overview
 
-The MariaDB Monitor monitors a Master-Slave replication cluster. It monitors the
+MariaDB Monitor monitors a Master-Slave replication cluster. It probes the
 state of the backends and assigns server roles such as master and slave, which
 are used by the routers when deciding where to route a query. It can also modify
 the replication cluster by performing failover, switchover and rejoin. Backend
-server versions older than MariaDB/MySQL 5.5 are not supported.
+server versions older than MariaDB/MySQL 5.5 are not supported. Failover and
+other similar operations require MariaDB 10.0.2 or later.
 
 ## Master selection
 
-Only one backend can be master at any given time. When a master has been
-selected, the monitor prefers to stick with the choice even if other potential
-masters are available. Only if the current master is clearly unsuitable does the
-monitor try to select another master. An existing master turns invalid if:
+Only one backend can be master at any given time. A master must be running
+(successfully connected to by the monitor) and its *read_only*-setting must be
+off. A master may not be replicating from another server in the monitored
+cluster unless the master is part of a multimaster group. Master selection
+prefers to select the server with the most slaves, possibly in multiple
+replication layers. Only slaves reachable by a chain of running relays or
+directly connected to the master count.  When multiple servers are tied for
+master status, the server which appears earlier in the `servers`-setting of the
+monitor is selected.
+
+Servers in a cyclical replication topology (multimaster group) are interpreted
+as having all the servers in the group as slaves. Even from a multimaster group
+only one server is selected as the overall master.
+
+After a master has been selected, the monitor prefers to stick with the choice
+even if other potential masters with more slave servers are available. Only if
+the current master is clearly unsuitable does the monitor try to select another
+master. An existing master turns invalid if:
 
 1. It is unwritable (*read_only* is on).
-2. It has been down for more than *failcount* monitor passes and automatic
-failover is disabled.
+2. It has been down for more than *failcount* monitor passes and has no running
+slaves. Running slaves behind a downed relay count.
 3. It did not previously replicate from another server in the cluster but it
 is now replicating.
 4. It was previously part of a multimaster group but is no longer, or the
 multimaster group is replicating from a server not in the group.
 
-Cases 1 and 2 cover the situations in which the master server is indeed invalid
-and can no longer act as master. Cases 3 and 4 are less severe, as in these
-cases the topology has changed significantly and the master should be
-re-selected, but the current master may still be the best choice.
+Cases 1 and 2 cover the situations in which the DBA, an external script or even
+another MaxScale has modified the cluster such that the old master can no longer
+act as master. Cases 3 and 4 are less severe. In these cases the topology has
+changed significantly and the master should be re-selected, although the old
+master may still be the best choice.
 
-The master change described above is not the same as the failover described in
-the section
+The master change described above is different from failover and switchover
+described in section
 [Failover, switchover and auto-rejoin](#failover,-switchover-and-auto-rejoin).
 A master change only modifies the server roles inside MaxScale but does not
-modify the replication topology. For this reason case 2 requires automatic
-failover to be off.
+modify the cluster other than changing the targets of read and write queries.
+Failover and switchover perform a master change on their own.
 
-Master selection prefers to select the server with the most slaves, possibly in
-multiple replication layers. A master must also be running (successfully
-connected) and *read_only* must be off. Servers in a cyclical replication
-topology (multimaster group) are interpreted as having all the servers in the
-group as slaves. Even from a multimaster group only one server is selected as
-the overall master. When multiple servers are tied for master status, the server
-which appears earlier in the `servers`-field of the monitor is selected.
+As a general rule, it's best to avoid situations where the cluster has multiple
+standalone servers, separate master-slave pairs or separate multimaster groups.
+Due to master invalidation rule 2, a standalone master can easily lose the
+master status to another valid master if it goes down. The new master probably
+does not have the same data as the previous one. Non-standalone masters are less
+vulnerable, as a single running slave or multimaster group member will keep the
+master valid even when down.
 
 ## Configuration
 
@@ -78,7 +94,9 @@ For a list of optional parameters that all monitors support, read the
 
 ## MariaDB Monitor optional parameters
 
-These are optional parameters specific to the MariaDB Monitor.
+These are optional parameters specific to the MariaDB Monitor. Failover,
+switchover and rejoin-specific parameters are listed in their own
+[section](#failover,-switchover-and-auto-rejoin).
 
 ### `detect_replication_lag`
 
@@ -180,25 +198,6 @@ users with the SUPER-privilege can write to the backend server. If temporary
 write access is required, this feature should be disabled before attempting to
 disable `read_only`. Otherwise the monitor would quickly re-enable it.
 
-### `switchover_on_low_disk_space`
-
-This feature is disabled by default. If set to `on`, when the disk space of a
-server is exhausted, it will cause the server to be put in maintenance mode.
-If the server is the current master, then a switchover will also be triggered.
-
-In order for this parameter to have any effect, `disk_space_threshold` must
-have been specified for the
-[server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
-or the [monitor](./Monitor-Common.md#disk_space_threshold), and
-[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
-for the monitor.
-```
-switchover_on_low_disk_space=true
-```
-Note that once the server has been put in maintenance mode, the disk space
-situation will no longer be monitored and the server will thus not automatically
-be taken out of maintanance mode even if disk space again would become available.
-
 ### `maintenance_on_low_disk_space`
 
 This feature is enabled by default. If a running server that is not the master
@@ -215,41 +214,25 @@ master), _switchover_ (swapping a slave with a running master) and _rejoin_
 (joining a standalone server to the cluster). The features and the parameters
 controlling them are presented in this section.
 
-These features require that the monitor user (`user`) has the SUPER and RELOAD privileges.
-In addition, the monitor needs to know which username and password a slave
-should use when starting replication. These are given in `replication_user` and
-`replication_password`.
+These features require that the monitor user (`user`) has the SUPER and RELOAD
+privileges. In addition, the monitor needs to know which username and password a
+slave should use when starting replication. These are given in
+`replication_user` and `replication_password`.
 
-All three operations can be activated manually through MaxAdmin/MaxCtrl. All
-commands require the monitor instance name as first parameter. Failover selects
-the new master server automatically and does not require additional parameters.
-Rejoin requires the name of the joining server as second parameter.
+All three operations can be activated manually through MaxAdmin/MaxCtrl. See
+section [Manual activation](#manual-activation) for more details.
 
-Switchover takes one to three parameters. If only the monitor name is given,
-switchover will autoselect both the slave to promote and the current master. If
-two parameters are given, the second parameter is interpreted as the slave to
-promote. If three parameters are given, the third parameter is interpreted as
-the current master. The user-given current master is compared to the master
-server currently deduced by the monitor and if the two are unequal, an error is
-given.
-
-Example commands are below:
-
-```
-call command mariadbmon failover MyMonitor
-call command mariadbmon switchover MyMonitor SlaveServ3
-call command mariadbmon switchover MyMonitor SlaveServ3 MasterServ
-call command mariadbmon rejoin MyMonitor NewServer2
-```
-
-The commands follow the standard module command syntax. All require the monitor
-configuration name (MyMonitor) as the first parameter. For switchover, the
-following parameters define the server to promote (SlaveServ3) and the server to
-demote (MasterServ). For rejoin, the server to join (NewServer2) is required.
-
-Failover can activate automatically, if `auto_failover` is on. The activation
+Failover can activate automatically if `auto_failover` is on. The activation
 begins when the master has been down for a number of monitor iterations defined
-in `failcount`.
+in `failcount`. Before modifying the cluster, the monitor checks that all
+prerequisites for the failover are fulfilled. If the cluster does not seem
+ready, an error is printed and the cluster is rechecked during the next monitor
+iteration.
+
+Switchover can also activate automatically with the
+`switchover_on_low_disk_space`-setting. The operation begins if the master
+server is low on disk space but otherwise the operating logic is quite similar
+to automatic failover.
 
 Rejoin stands for starting replication on a standalone server or redirecting a
 slave replicating from the wrong master (any server that is not the cluster
@@ -274,6 +257,82 @@ The user can define files with SQL statements which are executed on any server
 being demoted or promoted by cluster manipulation commands. See the sections on
 `promotion_sql_file` and `demotion_sql_file` for more information.
 
+### Manual activation
+
+Failover, switchover and rejoin can be activated manually through the REST API,
+MaxCtrl or MaxAdmin. The commands are only performed when MaxScale is in active
+mode. All three commands require the monitor instance name as the first
+parameter. Failover selects the new master server automatically and does not
+require additional parameters. Rejoin requires the name of the joining server as
+second parameter.
+
+Switchover takes one to three parameters. If only the monitor name is given,
+switchover will autoselect both the slave to promote and the current master as
+the server to be demoted. If two parameters are given, the second parameter is
+interpreted as the slave to promote. If three parameters are given, the third
+parameter is interpreted as the current master. The user-given current master is
+compared to the master server currently deduced by the monitor and if the two
+are unequal, an error is given.
+
+Example commands are below:
+```
+call command mariadbmon failover MyMonitor
+call command mariadbmon switchover MyMonitor SlaveServ3
+call command mariadbmon switchover MyMonitor SlaveServ3 MasterServ
+call command mariadbmon rejoin MyMonitor NewServer2
+```
+
+The commands follow the standard module command syntax. All require the monitor
+configuration name (MyMonitor) as the first parameter. For switchover, the
+following parameters define the server to promote (SlaveServ3) and the server to
+demote (MasterServ). For rejoin, the server to join (NewServer2) is required.
+
+It is safe to perform manual operations even with automatic failover, switchover
+or rejoin enabled since the automatic operations cannot happen simultaneously
+with the manual one.
+
+If a switchover or failover fails, automatic failover is disabled to prevent
+master changes to a possibly malfunctioning cluster. Automatic failover can be
+turned on manually via the REST API or MaxAdmin. Example commands are listed
+below.
+
+```
+maxadmin alter monitor MariaDB-Monitor auto_failover=true
+maxctrl alter monitor MariaDB-Monitor auto_failover true
+```
+
+When switchover is iniated via the REST-API, the URL path is:
+```
+/v1/maxscale/mariadbmon/switchover?<monitor-instance>&<new-master>&<current-master>
+```
+where `<monitor-instance>` is the monitor section mame from the MaxScale
+configuration file, `<new-master>` the name of the server that should be
+made into the new master and `<current-master>` the server that currently
+is the master. If there is no master currently, then `<current-master>`
+need not be specified.
+
+Given a MaxScale configuration file like
+```
+[Cluster1]
+type=monitor
+module=mariadbmon
+servers=server1, server2, server3, server 4
+...
+```
+with the assumption that `server2` is the current master, then the URL
+path for making `server4` the new master would be:
+```
+/v1/maxscale/mariadbmon/switchover?Cluster1&server4&server2
+```
+
+The REST-API paths for manual failover and manual rejoin are mostly similar.
+Failover does not accept any server parameters, rejoin requires the name of the
+joining server.
+```
+/v1/maxscale/mariadbmon/failover?Cluster1
+/v1/maxscale/mariadbmon/rejoin?Cluster1&server3
+```
+
 ### Limitations and requirements
 
 Switchover and failover only understand simple topologies. They will not work if
@@ -292,7 +351,7 @@ are executed and the GTID position of the master server is stable. When
 switchover begins, the monitor sets the global *read_only* flag on the old
 master backend to stop any updates. *read_only* does not affect users with the
 SUPER-privilege so any such user can issue writes during a switchover. These
-writes have a high chance to break replication, because the write may not be
+writes have a high chance of breaking replication, because the write may not be
 replicated to all slaves before they switch to the new master. To prevent this,
 any users who commonly do updates should not have the SUPER-privilege. For even
 more security, the only SUPER-user session during a switchover should be the
@@ -364,6 +423,25 @@ Slave A is still trying to replicate from the downed master, since it wasn't
 online during failover. If `auto_rejoin` is on, Slave A will quickly be
 redirected to Slave B, the current master.
 
+#### `switchover_on_low_disk_space`
+
+This feature is disabled by default. If set to `on`, when the disk space of a
+server is exhausted, it will cause the server to be put in maintenance mode.
+If the server is the current master, then a switchover will also be triggered.
+
+In order for this parameter to have any effect, `disk_space_threshold` must
+have been specified for the
+[server](../Getting-Started/Configuration-Guide.md#disk_space_threshold)
+or the [monitor](./Monitor-Common.md#disk_space_threshold), and
+[disk_space_check_interval](./Monitor-Common.md#disk_space_check_interval)
+for the monitor.
+```
+switchover_on_low_disk_space=true
+```
+Note that once the server has been put in maintenance mode, the disk space
+situation will no longer be monitored and the server will thus not automatically
+be taken out of maintanance mode even if disk space again would become available.
+
 #### `replication_user` and `replication_password`
 
 The username and password of the replication user. These are given as the values
@@ -400,17 +478,21 @@ the configured time period, failover will be initiated again.
 
 Enable additional master failure verification for automatic failover.
 `verify_master_failure` is a boolean value (default: true) which enables this
-feature and `master_failure_timeout` defines the timeout in seconds (default: 10).
+feature and `master_failure_timeout` defines the timeout in seconds (default:
+10).
 
-The failure verification is performed by checking whether the slaves are still
-connected to the master and receiving events. Effectively, if a slave has
-received an event within `master_failure_timeout` seconds, the master is not
-considered down when deciding whether to auto_failover.
+Failure verification is performed by checking whether the slave servers are
+still connected to the master and receiving events. An event is either a change
+in the *Gtid_IO_Pos*-field of the `SHOW SLAVE STATUS` output or a heartbeat
+event. Effectively, if a slave has received an event within
+`master_failure_timeout` seconds, the master is not considered down when
+deciding whether to failover, even if MaxScale cannot connect to the master.
+`master_failure_timeout` should be longer than the `Slave_heartbeat_period` of
+the slave connection to be effective.
 
 If every slave loses its connection to the master (*Slave_IO_Running* is not
 "Yes"), master failure is considered verified regardless of timeout. This allows
-a faster failover when the master server crashes, as that causes immediate
-disconnection.
+faster failover when the master properly disconnects.
 
 For automatic failover to activate, the `failcount` requirement must also be
 met.
@@ -463,58 +545,24 @@ promotion_sql_file=/home/root/scripts/promotion.sql
 demotion_sql_file=/home/root/scripts/demotion.sql
 ```
 
-### Manual activation
+### Troubleshooting
 
-Failover, switchover and rejoin can be activated manually through the REST API
-or MaxAdmin. The commands are only performed when MaxScale is in active mode.
+Before performing failover or switchover, the MariaDB Monitor first checks that
+prerequisites are fulfilled, printing any found errors. This should catch and
+explain most issues with failover or switchover not working. If the operations
+are attempted and still fail, then most likely one of the commands the monitor
+issued to a server failed or timed out. To find out exactly what the queries
+sent to the servers are, start MaxScale with `--debug=enable-statement-logging`.
+This setting prints all queries sent to the backends by monitors and
+authenticators.
 
-It is safe to perform manual operations even with `auto_failover` on, since
-the automatic operations cannot happen simultaneously with the manual one.
-
-If a switchover or failover fails, automatic failover is disabled to prevent
-master changes to a possibly malfunctioning cluster. Automatic failover can be
-turned on manually via the REST API or MaxAdmin. Example commands are listed
-below.
-
-```
-maxadmin alter monitor MariaDB-Monitor auto_failover=true
-maxctrl alter monitor MariaDB-Monitor auto_failover true
-```
-
-If automatic rejoin fails, it is disabled. To re-enable, use a similar command
-as with automatic failover, replacing `auto_failover` with `auto_rejoin`.
-
-When switchover is iniated via the REST-API, the URL path is:
-```
-/v1/maxscale/mariadbmon/switchover?<monitor-instance>&<new-master>&<current-master>
-```
-where `<monitor-instance>` is the monitor section mame from the MaxScale
-configuration file, `<new-master>` the name of the server that should be
-made into the new master and `<current-master>` the server that currently
-is the master. If there is no master currently, then `<current-master>`
-need not be specified.
-
-So, given a MaxScale configuration file like
-```
-[Cluster1]
-type=monitor
-module=mariadbmon
-servers=server1, server2, server3, server 4
-...
-```
-with the assumption that `server2` is the current master, then the URL
-path for making `server4` the new master would be:
-```
-/v1/maxscale/mariadbmon/switchover?Cluster1&server4&server2
-```
-
-The REST-API paths for manual failover and manual rejoin are mostly similar.
-Failover does not accept any server parameters, rejoin requires the name of the
-joining server.
-```
-/v1/maxscale/mariadbmon/failover?Cluster1
-/v1/maxscale/mariadbmon/rejoin?Cluster1&server3
-```
+A typical reason for failure is that a command such as `STOP SLAVE` takes longer
+than the `backend_read_timeout` of the monitor, causing the connection to break.
+In this case , increasing the timeout settings of the monitor should help.
+Another settings to look at are `query_retries` and `query_retry_timeout`. These
+are general MaxScale settings described in the
+[Configuration guide](#../Getting-Started/Configuration-Guide.md). Setting
+`query_retries` to 2 is a reasonable first try.
 
 ## Using the MariaDB Monitor With Binlogrouter
 
