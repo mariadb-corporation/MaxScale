@@ -664,12 +664,20 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target, MariaDBSe
 bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, json_t** err_out)
 {
     MXS_NOTICE("Demoting server '%s'.", current_master->name());
-    bool success = false;
     bool query_error = false;
+    bool gtid_update_error = false;
+    bool event_disable_error = false;
+
     MYSQL* conn = current_master->m_server_base->con;
     const char* query = ""; // The next query to execute. Used also for error printing.
     // The presence of an external master changes several things.
     const bool external_master = server_is_slave_of_ext_master(current_master->m_server_base->server);
+
+    // Helper function for checking if any error is on.
+    auto any_error = [&query_error, &gtid_update_error, &event_disable_error]() -> bool
+    {
+        return query_error || gtid_update_error || event_disable_error;
+    };
 
     if (external_master)
     {
@@ -697,28 +705,33 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
             {
                 query = "FLUSH TABLES;";
                 query_error = (mxs_mysql_query(conn, query) != 0);
-            }
 
-            if (!query_error)
-            {
-                query = "FLUSH LOGS;";
-                query_error = (mxs_mysql_query(conn, query) != 0);
-                if (!query_error)
+                // Disable all events here
+                if (!query_error && m_handle_event_scheduler && !current_master->disable_events())
                 {
-                    query = "";
-                    if (current_master->update_gtids())
-                    {
-                        success = true;
-                    }
+                    event_disable_error = true;
                 }
             }
 
-            if (!success)
+            if (!any_error())
+            {
+                query = "FLUSH LOGS;";
+                query_error = (mxs_mysql_query(conn, query) != 0);
+                if (!query_error && !current_master->update_gtids(&error_desc))
+                {
+                    gtid_update_error = true;
+                }
+            }
+
+            if (any_error())
             {
                 // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
                 // work since the connection is likely broken.
-                error_desc = mysql_error(conn); // Read connection error before next step.
-                error_fetched = true;
+                if (query_error)
+                {
+                    error_desc = mysql_error(conn); // Read connection error before next step.
+                    error_fetched = true;
+                }
                 mxs_mysql_query(conn, "SET GLOBAL read_only=0;");
             }
         }
@@ -729,7 +742,7 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
         error_desc = mysql_error(conn);
     }
 
-    if (!success)
+    if (any_error())
     {
         if (query_error)
         {
@@ -745,21 +758,20 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
                 PRINT_MXS_JSON_ERROR(err_out, KNOWN_ERROR, error_desc.c_str(), query);
             }
         }
-        else
+        else if (gtid_update_error)
         {
-            const char * const GTID_ERROR = "Demotion failed due to an error in updating gtid:s. "
-                                            "Check log for more details.";
-            PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR);
+            const char * const GTID_ERROR = "Demotion failed due to a query error: %s";
+            PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR, error_desc.c_str());
         }
     }
     else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, err_out))
     {
         PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when demoting server '%s'.",
                              CN_DEMOTION_SQL_FILE, current_master->name());
-        success = false;
+        query_error = true;
     }
 
-    return success;
+    return !any_error();
 }
 
 /**
@@ -910,7 +922,17 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
             query = "SET GLOBAL read_only=0;";
             if (mxs_mysql_query(new_master_conn, query) == 0)
             {
-                success = true;
+                if (m_handle_event_scheduler)
+                {
+                    if (new_master->enable_events())
+                    {
+                        success = true;
+                    }
+                }
+                else
+                {
+                    success = true;
+                }
             }
         }
     }

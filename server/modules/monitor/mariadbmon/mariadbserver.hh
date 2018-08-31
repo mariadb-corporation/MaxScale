@@ -194,6 +194,15 @@ public:
     std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
 
     /**
+     * Execute a query which does not return data. If the query returns data, an error is returned.
+     *
+     * @param cmd The query
+     * @param errmsg_out Error output. Can be null.
+     * @return True on success, false on error or if query returned data
+     */
+    bool execute_cmd(const std::string& cmd, std::string* errmsg_out = NULL);
+
+    /**
      * Update server slave connection information.
      *
      * @param gtid_domain Which gtid domain should be parsed.
@@ -449,6 +458,20 @@ public:
      */
     void set_status(uint64_t bits);
 
+    /**
+     * Disable any "ENABLED" events if event scheduler is enabled.
+     *
+     * @return True if successful
+     */
+    bool disable_events();
+
+    /**
+     * Enable any "SLAVESIDE_DISABLED" events if event scheduler is enabled.
+     *
+     * @return True if successful
+     */
+    bool enable_events();
+
 private:
     bool update_slave_status(std::string* errmsg_out = NULL);
     bool sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
@@ -480,14 +503,21 @@ public:
      *
      * @return Current row index, or -1 if no data or next_row() has not been called yet.
      */
-    int64_t get_row_index() const;
+    int64_t get_current_row_index() const;
 
     /**
      * How many columns the result set has.
      *
      * @return Column count, or -1 if no data.
      */
-    int64_t get_column_count() const;
+    int64_t get_col_count() const;
+
+    /**
+     * How many rows does the result set have?
+     *
+     * @return The number of rows or -1 on error
+     */
+    int64_t get_row_count() const;
 
     /**
      * Get a numeric index for a column name. May give wrong results if column names are not unique.
@@ -523,9 +553,8 @@ public:
     bool get_bool(int64_t column_ind) const;
 
 private:
-    MYSQL_RES* m_resultset; // Underlying result set, freed at dtor.
+    MYSQL_RES* m_resultset = NULL;      // Underlying result set, freed at dtor.
     std::unordered_map<std::string, int64_t> m_col_indexes; // Map of column name -> index
-    int64_t m_columns;     // How many columns does the data have. Usually equal to column index map size.
-    MYSQL_ROW m_rowdata;   // Data for current row
-    int64_t m_current_row; // Index of current row
+    MYSQL_ROW m_rowdata = NULL;         // Data for current row
+    int64_t m_current_row_ind = -1;     // Index of current row
 };

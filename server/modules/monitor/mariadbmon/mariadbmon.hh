@@ -167,6 +167,8 @@ private:
     bool m_switchover_on_low_disk_space; /**< Should the monitor do a switchover on low disk space. */
     bool m_maintenance_on_low_disk_space; /**< Set slave and unreplicating servers with low disk space to
                                            *   maintenance. */
+    bool m_handle_event_scheduler;       /**< Should failover/switchover handle any scheduled events on
+                                           *  the servers */
 
     // Other settings
     bool m_log_no_master;                /**< Should it be logged that there is no master */

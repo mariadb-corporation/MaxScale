@@ -86,7 +86,7 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
 {
     auto conn = m_server_base->con;
     std::unique_ptr<QueryResult> rval;
-    MYSQL_RES *result = NULL;
+    MYSQL_RES* result = NULL;
     if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
     {
         rval = std::unique_ptr<QueryResult>(new QueryResult(result));
@@ -94,6 +94,32 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
     else if (errmsg_out)
     {
         *errmsg_out = string_printf("Query '%s' failed: '%s'.", query.c_str(), mysql_error(conn));
+    }
+    return rval;
+}
+
+bool MariaDBServer::execute_cmd(const string& cmd, std::string* errmsg_out)
+{
+    bool rval = false;
+    auto conn = m_server_base->con;
+    if (mxs_mysql_query(conn, cmd.c_str()) == 0)
+    {
+        MYSQL_RES* result = mysql_store_result(conn);
+        if (result == NULL)
+        {
+            rval = true;
+        }
+        else if (errmsg_out)
+        {
+            int cols = mysql_num_fields(result);
+            int rows = mysql_num_rows(result);
+            *errmsg_out = string_printf("Query '%s' returned %d columns and %d rows of data when none "
+                                        "was expected.", cmd.c_str(), cols, rows);
+        }
+    }
+    else if (errmsg_out)
+    {
+        *errmsg_out = string_printf("Query '%s' failed: '%s'.", cmd.c_str(), mysql_error(conn));
     }
     return rval;
 }
@@ -125,10 +151,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     {
         return false;
     }
-    else if(result->get_column_count() < columns)
+    else if (result->get_col_count() < columns)
     {
         MXS_ERROR("'%s' returned less than the expected amount of columns. Expected %u columns, "
-                  "got %" PRId64 ".", query.c_str(), columns, result->get_column_count());
+                  "got %" PRId64 ".", query.c_str(), columns, result->get_col_count());
         return false;
     }
 
@@ -1039,6 +1065,85 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     return rval;
 }
 
+bool MariaDBServer::disable_events()
+{
+    string error_msg;
+
+    // Events only need to be disabled if the event scheduler is ON. The comparison to 'localhost'
+    // excludes normal users with the username 'event_scheduler'.
+    const string scheduler_query = "SELECT * FROM information_schema.PROCESSLIST "
+                                   "WHERE User = 'event_scheduler' AND Host = 'localhost';";
+    auto proc_list = execute_query(scheduler_query, &error_msg);
+    if (proc_list.get() == NULL)
+    {
+        MXS_ERROR("Could not query the event scheduler status of '%s': %s", name(), error_msg.c_str());
+        return false;
+    }
+    else if (proc_list->get_row_count() < 1)
+    {
+        // This is ok, though unexpected since user should have event handling activated for a reason.
+        MXS_NOTICE("Event scheduler is inactive on '%s', not disabling events.", name());
+        return true;
+    }
+
+    // Get info about all scheduled events on the server.
+    auto event_info = execute_query("SELECT * FROM information_schema.EVENTS;", &error_msg);
+    if (event_info.get() == NULL)
+    {
+        MXS_ERROR("Could not query event status of '%s': %s", name(), error_msg.c_str());
+        return false;
+    }
+
+    auto db_name_ind = event_info->get_col_index("EVENT_SCHEMA");
+    auto event_name_ind = event_info->get_col_index("EVENT_NAME");
+    auto event_status_ind = event_info->get_col_index("STATUS");
+    mxb_assert(db_name_ind > 0 && event_name_ind > 0 && event_status_ind > 0);
+
+    int errors = 0;
+    while (event_info->next_row())
+    {
+        string db_name = event_info->get_string(db_name_ind);
+        string event_name = event_info->get_string(event_name_ind);
+        string event_status = event_info->get_string(event_status_ind);
+        if (event_status == "ENABLED")
+        {
+            // Found an enabled event. Disable it. Must first switch to the correct database.
+            string use_db_query = string_printf("USE %s;", db_name.c_str());
+            if (execute_cmd(use_db_query, &error_msg))
+            {
+                string alter_event_query = string_printf("ALTER EVENT %s DISABLE ON SLAVE;",
+                                                         event_name.c_str());
+                if (execute_cmd(alter_event_query, &error_msg))
+                {
+                    MXS_NOTICE("Event '%s' of database '%s' disabled on '%s'.",
+                               event_name.c_str(), db_name.c_str(), name());
+                }
+                else
+                {
+                    errors++;
+                    MXS_ERROR("Could not disable event '%s' of database '%s' on '%s': %s",
+                              event_name.c_str(), db_name.c_str(), name() , error_msg.c_str());
+                }
+            }
+            else
+            {
+                errors++;
+                MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not disabled.",
+                          db_name.c_str(), name(), event_name.c_str(), error_msg.c_str());
+            }
+        }
+    }
+    return errors == 0;
+    // TODO: For better error handling, this function should try to re-enable any disabled events if a later
+    // disable fails.
+}
+
+bool MariaDBServer::enable_events()
+{
+    // TODO:
+    return true;
+}
+
 string SlaveStatus::to_string() const
 {
     // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
@@ -1115,15 +1220,12 @@ string SlaveStatus::slave_io_to_string(SlaveStatus::slave_io_running_t slave_io)
 
 QueryResult::QueryResult(MYSQL_RES* resultset)
     : m_resultset(resultset)
-    , m_columns(-1)
-    , m_rowdata(NULL)
-    , m_current_row(-1)
 {
     if (m_resultset)
     {
-        m_columns = mysql_num_fields(m_resultset);
+        auto columns = mysql_num_fields(m_resultset);
         MYSQL_FIELD* field_info = mysql_fetch_fields(m_resultset);
-        for (int64_t column_index = 0; column_index < m_columns; column_index++)
+        for (int64_t column_index = 0; column_index < columns; column_index++)
         {
             string key(field_info[column_index].name);
             // TODO: Think of a way to handle duplicate names nicely. Currently this should only be used
@@ -1144,23 +1246,29 @@ QueryResult::~QueryResult()
 
 bool QueryResult::next_row()
 {
+    mxb_assert(m_resultset);
     m_rowdata = mysql_fetch_row(m_resultset);
-    if (m_rowdata != NULL)
+    if (m_rowdata)
     {
-        m_current_row++;
+        m_current_row_ind++;
         return true;
     }
     return false;
 }
 
-int64_t QueryResult::get_row_index() const
+int64_t QueryResult::get_current_row_index() const
 {
-    return m_current_row;
+    return m_current_row_ind;
 }
 
-int64_t QueryResult::get_column_count() const
+int64_t QueryResult::get_col_count() const
 {
-    return m_columns;
+    return m_resultset ? mysql_num_fields(m_resultset): -1;
+}
+
+int64_t QueryResult::get_row_count() const
+{
+    return m_resultset ? mysql_num_rows(m_resultset) : -1;
 }
 
 int64_t QueryResult::get_col_index(const string& col_name) const
@@ -1171,14 +1279,14 @@ int64_t QueryResult::get_col_index(const string& col_name) const
 
 string QueryResult::get_string(int64_t column_ind) const
 {
-    mxb_assert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? data : "";
 }
 
 int64_t QueryResult::get_uint(int64_t column_ind) const
 {
-    mxb_assert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     int64_t rval = -1;
     if (data && *data)
@@ -1196,7 +1304,7 @@ int64_t QueryResult::get_uint(int64_t column_ind) const
 
 bool QueryResult::get_bool(int64_t column_ind) const
 {
-    mxb_assert(column_ind < m_columns && column_ind >= 0);
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0);
     char* data = m_rowdata[column_ind];
     return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
 }
