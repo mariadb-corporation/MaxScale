@@ -44,6 +44,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/pcre2.h>
 #include <binlog_common.h>
 
 #ifndef BINLOG_NAMEFMT
@@ -272,6 +273,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
             {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
             {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -481,6 +484,18 @@ createInstance(SERVICE *service, char **options)
     AVRO_INSTANCE *inst;
     int i;
 
+    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
+    pcre2_code* match = config_get_compiled_regex(params, "match", 0, NULL);
+    pcre2_code* exclude = config_get_compiled_regex(params, "exclude", 0, NULL);
+    pcre2_match_data* md_match = NULL;
+    pcre2_match_data* md_exclude = NULL;
+
+    if ((match && (md_match = pcre2_match_data_create_from_pattern(match, NULL)) == NULL) ||
+        (exclude && (md_exclude = pcre2_match_data_create_from_pattern(exclude, NULL)) == NULL))
+    {
+        return NULL;
+    }
+
     if ((inst = MXS_CALLOC(1, sizeof(AVRO_INSTANCE))) == NULL)
     {
         return NULL;
@@ -502,8 +517,6 @@ createInstance(SERVICE *service, char **options)
     inst->trx_count = 0;
     inst->binlogdir = NULL;
 
-    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
-
     inst->avrodir = MXS_STRDUP_A(config_get_string(params, "avrodir"));
     inst->fileroot = MXS_STRDUP_A(config_get_string(params, "filestem"));
     inst->row_target = config_get_integer(params, "group_rows");
@@ -511,6 +524,10 @@ createInstance(SERVICE *service, char **options)
     inst->codec = config_get_enum(params, "codec", codec_values);
     int first_file = config_get_integer(params, "start_index");
     inst->block_size = config_get_size(params, "block_size");
+    inst->match = match;
+    inst->exclude = exclude;
+    inst->md_match = md_match;
+    inst->md_exclude = md_exclude;
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
     inst->gtid.domain = 0;
@@ -1279,6 +1296,23 @@ static bool ensure_dir_ok(const char* path, int mode)
         {
             MXS_ERROR("Failed to resolve real path name for '%s': %d, %s", path,
                       errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
+}
+
+bool table_matches(AVRO_INSTANCE* inst, const char* ident)
+{
+    bool rval = false;
+
+    if (!inst->match || pcre2_match(inst->match, (PCRE2_SPTR)ident, PCRE2_ZERO_TERMINATED,
+                                    0, 0, inst->md_match, NULL) > 0)
+    {
+        if (!inst->exclude || pcre2_match(inst->exclude, (PCRE2_SPTR)ident, PCRE2_ZERO_TERMINATED,
+                                          0, 0, inst->md_exclude, NULL) == PCRE2_ERROR_NOMATCH)
+        {
+            rval = true;
         }
     }
 

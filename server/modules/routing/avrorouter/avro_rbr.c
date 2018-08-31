@@ -100,6 +100,12 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
     int ev_len = router->event_type_hdr_lens[hdr->event_type];
 
     read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
+
+    if (!table_matches(router, table_ident))
+    {
+        return true;
+    }
+
     TABLE_CREATE* create = hashtable_fetch(router->created_tables, table_ident);
 
     if (create)
@@ -292,6 +298,12 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     {
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
+
+        if (!table_matches(router, table_ident))
+        {
+            return true;
+        }
+
         AVRO_TABLE* table = hashtable_fetch(router->open_tables, table_ident);
         TABLE_CREATE* create = map->table_create;
         ss_dassert(hashtable_fetch(router->created_tables, table_ident) == create);
@@ -369,8 +381,8 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     }
     else
     {
-        MXS_ERROR("Row event for unknown table mapped to ID %lu. Data will not "
-                  "be processed.", table_id);
+        MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
+                 "be processed.", table_id);
     }
 
     return rval;

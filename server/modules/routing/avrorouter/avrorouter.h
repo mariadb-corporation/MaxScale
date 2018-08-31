@@ -303,6 +303,12 @@ typedef struct avro_instance
                                  * a flush of all tables */
     uint64_t        block_size; /**< Avro datablock size */
     enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
+
+    /** Match and exclude patterns for tables */
+    pcre2_code*       match;
+    pcre2_code*       exclude;
+    pcre2_match_data* md_match;
+    pcre2_match_data* md_exclude;
     struct avro_instance  *next;
 } AVRO_INSTANCE;
 
@@ -354,6 +360,8 @@ extern void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op
  */
 #define AVRO_CS_BUSY             0x0001
 #define AVRO_WAIT_DATA           0x0002
+
+bool table_matches(AVRO_INSTANCE* inst, const char* ident);
 
 MXS_END_DECLS
 
