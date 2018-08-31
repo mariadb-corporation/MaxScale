@@ -215,6 +215,21 @@ public:
     static size_t broadcast(std::unique_ptr<DisposableTask> sTask);
 
     /**
+     * Posts a function to all workers for execution.
+     *
+     * @param pSem If non-NULL, will be posted once the task's `execute` return.
+     * @param mode Execution mode
+     *
+     * @return How many workers the task was posted to.
+     */
+    static size_t broadcast(std::function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode);
+
+    static size_t broadcast(std::function<void ()> func, enum execute_mode_t mode)
+    {
+        return broadcast(func, NULL, mode);
+    }
+
+    /**
      * Executes a task on all workers in serial mode (the task is executed
      * on at most one worker thread at a time). When the function returns
      * the task has been executed on all workers.

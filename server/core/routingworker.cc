@@ -635,6 +635,27 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 }
 
 //static
+size_t RoutingWorker::broadcast(std::function<void ()> func, mxb::Semaphore* pSem,
+                                mxb::Worker::execute_mode_t mode)
+{
+    size_t n = 0;
+    int nWorkers = this_unit.next_worker_id;
+
+    for (int i = 0; i < nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb_assert(pWorker);
+
+        if (pWorker->execute(func, pSem, mode))
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
+
+//static
 size_t RoutingWorker::execute_serially(Task& task)
 {
     Semaphore sem;
