@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 #include <mutex>
+#include <type_traits>
 
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
@@ -462,14 +463,14 @@ public:
         mxs_rworker_delete_data(m_handle);
     }
 
-    // Converts to a const T reference
-    operator const T&() const
+    // Converts to a T reference
+    operator T&() const
     {
         return *get_local_value();
     }
 
     // Arrow operator
-    const T* operator->() const
+    T* operator->() const
     {
         return get_local_value();
     }
@@ -494,9 +495,9 @@ public:
 
 private:
 
-    uint64_t           m_handle;
-    mutable std::mutex m_lock;
-    T                  m_value; // The "master" value, never used directly
+    uint64_t                            m_handle; // The handle to the worker local data
+    typename std::remove_const<T>::type m_value;  // The master value, never used directly
+    mutable std::mutex                  m_lock;   // Protects the master value
 
 private:
 
