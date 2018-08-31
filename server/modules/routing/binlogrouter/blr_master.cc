@@ -1787,6 +1787,7 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     memcpy(msg_err, (char *)ptr + err_msg_offset, msg_len);
     *(msg_err + msg_len) = '\0';
 
+    std::string s(msg_err);
     spinlock_acquire(&router->lock);
 
     char* old_errmsg = router->m_errmsg;
@@ -1798,8 +1799,10 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     spinlock_release(&router->lock);
 
     MXS_FREE(old_errmsg);
-    MXS_ERROR("Error packet in binlog stream.%s @ %lu.",
-              router->binlog_name, router->current_pos);
+    // TODO: Would it or would it not be safe to access router->m_errmsg here?
+    // TODO: Is the locking above really needed?
+    MXS_ERROR("Error packet in binlog stream (%s@%lu): %s",
+              router->binlog_name, router->current_pos, s.c_str());
 
 }
 
