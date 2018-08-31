@@ -84,7 +84,7 @@ done
 export maxscale_access_sudo="sudo "
 
 # IP Of MaxScale machine
-if [ ${maxscale_N} > 1 ] ; then
+if [ ${maxscale_N} -gt 1 ] ; then
     export maxscale_whoami=$maxscale_000_whoami
     export maxscale_network=$maxscale_000_network
     export maxscale_keyfile=$maxscale_000_keyfile
