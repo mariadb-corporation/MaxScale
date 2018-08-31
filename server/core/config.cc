@@ -1671,7 +1671,7 @@ handle_global_item(const char *name, const char *value)
         int intval = strtol(value, &endptr, 0);
         if (*endptr == '\0' && intval > 0)
         {
-            gateway.query_retries = intval;
+            gateway.query_retry_timeout = intval;
         }
         else
         {
