@@ -14,6 +14,7 @@
 
 #include <maxbase/ccdefs.hh>
 
+#include <array>
 #include <cstring>
 #include <functional>
 #include <map>
@@ -33,33 +34,29 @@ namespace maxbase
 
 struct WORKER_STATISTICS
 {
-    WORKER_STATISTICS()
-    {
-        memset(this, 0, sizeof(WORKER_STATISTICS));
-    }
-
     enum
     {
         MAXNFDS       = 10,
         N_QUEUE_TIMES = 30
     };
 
-    int64_t  n_read;                        /*< Number of read events   */
-    int64_t  n_write;                       /*< Number of write events  */
-    int64_t  n_error;                       /*< Number of error events  */
-    int64_t  n_hup;                         /*< Number of hangup events */
-    int64_t  n_accept;                      /*< Number of accept events */
-    int64_t  n_polls;                       /*< Number of poll cycles   */
-    int64_t  n_pollev;                      /*< Number of polls returning events */
-    int64_t  n_nbpollev;                    /*< Number of polls returning events */
-    int64_t  n_fds[MAXNFDS];                /*< Number of wakeups with particular n_fds value */
-    int64_t  evq_avg;                       /*< Average event queue length */
-    int64_t  evq_max;                       /*< Maximum event queue length */
-    int64_t  blockingpolls;                 /*< Number of epoll_waits with a timeout specified */
-    uint32_t qtimes[N_QUEUE_TIMES + 1];
-    uint32_t exectimes[N_QUEUE_TIMES + 1];
-    int64_t  maxqtime;
-    int64_t  maxexectime;
+    int64_t                                 n_read = 0;         /*< Number of read events   */
+    int64_t                                 n_write = 0;        /*< Number of write events  */
+    int64_t                                 n_error = 0;        /*< Number of error events  */
+    int64_t                                 n_hup = 0;          /*< Number of hangup events */
+    int64_t                                 n_accept = 0;       /*< Number of accept events */
+    int64_t                                 n_polls = 0;        /*< Number of poll cycles   */
+    int64_t                                 n_pollev = 0;       /*< Number of polls returning events */
+    int64_t                                 n_nbpollev = 0;     /*< Number of polls returning events */
+    int64_t                                 evq_avg = 0;        /*< Average event queue length */
+    int64_t                                 evq_max = 0;        /*< Maximum event queue length */
+    int64_t                                 blockingpolls = 0;  /*< Number of epoll_waits with a timeout
+                                                                 * specified */
+    int64_t                                 maxqtime = 0;
+    int64_t                                 maxexectime = 0;
+    std::array<int64_t, MAXNFDS>            n_fds {};   /*< Number of wakeups with particular n_fds value */
+    std::array<uint32_t, N_QUEUE_TIMES + 1> qtimes {};
+    std::array<uint32_t, N_QUEUE_TIMES + 1> exectimes {};
 };
 
 /**
