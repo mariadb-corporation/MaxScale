@@ -508,6 +508,30 @@ public:
         mxs_rworker_broadcast(update_value, this);
     }
 
+    /**
+     * Get all local values
+     *
+     * Note: this method must be called from the main worker thread.
+     *
+     * @return A vector containing the individual values for each worker
+     */
+    std::vector<T> values() const
+    {
+        mxb_assert_message(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN),
+                           "this method must be called from the main worker thread");
+        std::vector<T> rval;
+        std::mutex lock;
+        mxb::Semaphore sem;
+
+        auto n = RoutingWorker::broadcast([&](){
+            std::lock_guard<std::mutex> guard(lock);
+            rval.push_back(*get_local_value());
+        }, &sem, RoutingWorker::EXECUTE_AUTO);
+
+        sem.wait_n(n);
+        return std::move(rval);
+    }
+
 private:
 
     uint64_t                            m_handle;   // The handle to the worker local data
