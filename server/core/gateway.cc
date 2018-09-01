@@ -67,7 +67,6 @@
 #include "internal/monitor.h"
 #include "internal/poll.hh"
 #include "internal/service.hh"
-#include "internal/statistics.h"
 
 using namespace maxscale;
 
@@ -2075,9 +2074,6 @@ int main(int argc, char** argv)
             goto return_main;
         }
     }
-
-    /** Initialize statistics */
-    ts_stats_init();
 
     /* Init MaxScale poll system */
     poll_init();

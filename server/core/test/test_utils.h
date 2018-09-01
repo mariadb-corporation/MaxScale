@@ -29,14 +29,12 @@
 #include <sys/stat.h>
 
 #include "../internal/poll.hh"
-#include "../internal/statistics.h"
 
 
 void init_test_env(char* path)
 {
     config_get_global_options()->n_threads = 1;
 
-    ts_stats_init();
     if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
     {
         exit(1);

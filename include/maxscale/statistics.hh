@@ -12,26 +12,12 @@
  */
 #pragma once
 
-/**
- * @file
- *
- * Internal code for the statistics system.
- */
+#include <maxscale/ccdefs.hh>
 
-#include <maxscale/statistics.h>
-
-MXS_BEGIN_DECLS
-
-/**
- * @brief Initialize statistics system
- *
- * This function should only be called once by the MaxScale core.
- */
-void ts_stats_init();
-
-/**
- * @brief Terminate statistics system
- */
-void ts_stats_end();
-
-MXS_END_DECLS
+enum ts_stats_type
+{
+    TS_STATS_MAX, /**< Maximum value */
+    TS_STATS_MIX, /**< Minimum value */
+    TS_STATS_SUM, /**< Sum of all value */
+    TS_STATS_AVG  /**< Average of all values */
+};

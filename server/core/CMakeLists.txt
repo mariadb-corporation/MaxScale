@@ -44,7 +44,6 @@ add_library(maxscale-common SHARED
   session_command.cc
   spinlock.cc
   ssl.cc
-  statistics.cc
   users.cc
   utils.cc
   )

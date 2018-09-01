@@ -33,7 +33,7 @@
 #include <maxscale/config.h>
 #include <maxscale/clock.h>
 #include <maxscale/server.h>
-#include <maxscale/statistics.h>
+#include <maxscale/statistics.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/poll.hh"

@@ -29,12 +29,12 @@
 #include <maxscale/limits.h>
 #include <maxscale/json_api.h>
 #include <maxscale/utils.hh>
+#include <maxscale/statistics.hh>
 
 #include "internal/dcb.h"
 #include "internal/modules.h"
 #include "internal/poll.hh"
 #include "internal/service.hh"
-#include "internal/statistics.h"
 
 #define WORKER_ABSENT_ID -1
 
