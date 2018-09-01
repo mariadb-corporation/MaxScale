@@ -1086,7 +1086,7 @@ public:
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
         json_t* pStats = json_object();
-        const Worker::STATISTICS& s = rworker.get_local_statistics();
+        const Worker::STATISTICS& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
         json_object_set_new(pStats, "writes", json_integer(s.n_write));
         json_object_set_new(pStats, "errors", json_integer(s.n_error));

@@ -605,16 +605,6 @@ public:
     }
 
     /**
-     * Return this worker's statistics.
-     *
-     * @return Local statistics for this worker.
-     */
-    const STATISTICS& get_local_statistics() const
-    {
-        return m_statistics;
-    }
-
-    /**
      * Return the count of descriptors.
      *
      * @param pnCurrent  On output the current number of descriptors.
