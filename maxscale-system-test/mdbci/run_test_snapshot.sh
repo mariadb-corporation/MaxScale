@@ -58,13 +58,23 @@ fi
 
 . ${script_dir}/set_env.sh "$name"
 
-${mdbci_dir}/mdbci sudo --command 'yum remove maxscale -y' $name/maxscale
-${mdbci_dir}/mdbci sudo --command 'yum clean all' $name/maxscale
+if [ ${maxscale_N} -gt 1 ] ; then
+    maxscales_vm=`env | grep maxscale | grep network | sed 's/_network.*//' | grep "_"`
+else
+    maxscales_vm="maxscale"
+fi
 
-${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/maxscale
-${mdbci_dir}/mdbci install_product --product maxscale_ci $name/maxscale
+for maxscale_vm_name in ${maxscales_vm}
+do
+    ${mdbci_dir}/mdbci sudo --command 'yum remove maxscale -y' $name/${maxscale_vm_name}
+    ${mdbci_dir}/mdbci sudo --command 'yum clean all' $name/${maxscale_vm_name}
 
-checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
+    ${mdbci_dir}/mdbci setup_repo --product maxscale_ci --product-version ${target} $name/${maxscale_vm_name}
+    ${mdbci_dir}/mdbci install_product --product maxscale_ci $name/${maxscale_vm_name}
+
+    checkExitStatus $? "Error installing Maxscale" $snapshot_lock_file
+done
+
 
 cd ${script_dir}/..
 
