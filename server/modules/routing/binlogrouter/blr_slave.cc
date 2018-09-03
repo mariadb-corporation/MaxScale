@@ -4235,16 +4235,28 @@ bool ChangeMasterOptions::validate(ROUTER_INSTANCE* router,
 namespace
 {
 
-bool validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, char* error)
+int validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, char* error)
 {
     static const char DEFAULT_MESSAGE[] =
         "If a connection name is provided, it must be of the format ':N' where N "
         "is an integer larger than 1.";
+
+    int index = -1;
+
     char custom_message[BINLOG_ERROR_MSG_LEN + 1];
 
     const char* message = DEFAULT_MESSAGE;
 
-    if (name.length() >= 2) // At minimum ":N".
+    if (name.length() == 0)
+    {
+        index = 0;
+        message = nullptr;
+    }
+    else if (name.length() == 1)
+    {
+        // We are fine with 'index' == -1, and the message being the default message.
+    }
+    else // name.length() >= 2.
     {
         if (name.front() == ':')
         {
@@ -4255,6 +4267,7 @@ bool validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, 
             {
                 if (router->configs.size() == static_cast<size_t>(n - 1))
                 {
+                    index = n - 1;
                     message = nullptr;
                 }
                 else if (router->configs.size() == 0)
@@ -4289,7 +4302,7 @@ bool validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, 
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s", message);
     }
 
-    return message == nullptr;
+    return index;
 }
 
 }
@@ -4405,21 +4418,6 @@ int blr_apply_change_master_0(ROUTER_INSTANCE* router,
     return change_binlog;
 }
 
-int blr_apply_change_master_N(ROUTER_INSTANCE* router,
-                              const ChangeMasterConfig& new_config,
-                              char* error)
-{
-    int rc = -1;
-
-    if (validate_connection_name(router, new_config.connection_name, error))
-    {
-        router->configs.push_back(new_config);
-        rc = 0;
-    }
-
-    return rc;
-}
-
 }
 
 static int blr_apply_change_master(ROUTER_INSTANCE* router,
@@ -4440,7 +4438,7 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
     }
     else
     {
-        rc = blr_apply_change_master_N(router, new_config, error);
+        router->configs.push_back(new_config);
     }
 
     spinlock_release(&router->lock);
@@ -4529,6 +4527,14 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
         mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
+        return -1;
+    }
+
+    int index = validate_connection_name(router, connection_name, error);
+
+    if (index == -1)
+    {
+        // An error was already generated.
         return -1;
     }
 
