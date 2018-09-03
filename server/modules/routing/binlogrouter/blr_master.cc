@@ -163,7 +163,7 @@ static void blr_start_master(void* data)
 
     /* Check whether master connection can be started */
     int connect_retry;
-    if ((connect_retry = blr_check_connect_retry(router)) == 0)
+    if ((connect_retry = blr_check_connect_retry(router)) == -1)
     {
         /* Force stopped state */
         router->master_state = BLRM_SLAVE_STOPPED;
@@ -359,7 +359,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
     if (router->master_state < BLRM_BINLOGDUMP)
     {
         int connect_retry;
-        if ((connect_retry = blr_check_connect_retry(router)) == 0)
+        if ((connect_retry = blr_check_connect_retry(router)) == -1)
         {
             /* Force stopped state */
             router->master_state = BLRM_SLAVE_STOPPED;
@@ -3091,7 +3091,7 @@ static int blr_check_connect_retry(ROUTER_INSTANCE *router)
     /* Stop reconnection to master */
     if (router->retry_count >= router->retry_limit)
     {
-        return 0;
+        return -1;
     }
 
     /* Return the interval for next reconnect */

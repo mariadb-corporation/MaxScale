@@ -3331,7 +3331,7 @@ int blr_file_read_master_config(ROUTER_INSTANCE *router)
 
     int rc = ini_parse(filename, blr_handler_config, router);
 
-    if (rc == 1)
+    if (rc == 0)
     {
         mxb_assert(router->configs.size() > 0);
         blr_master_set_config(router, router->configs[0]);

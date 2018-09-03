@@ -378,6 +378,8 @@ public:
 
     ChangeMasterConfig(const char* name)
         : connection_name(name)
+        , port(-1)
+        , ssl_enabled(false)
         , heartbeat_period(BLR_HEARTBEAT_DEFAULT_INTERVAL_VALUE)
         , connect_retry(BLR_MASTER_CONNECT_RETRY_VALUE)
     {
