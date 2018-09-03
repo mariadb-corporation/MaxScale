@@ -377,6 +377,23 @@ blr_restart_master(ROUTER_INSTANCE *router)
         /* Force unconnected state */
         router->master_state = BLRM_UNCONNECTED;
         router->retry_count++;
+
+        int current_config = (router->current_config + 1) % router->configs.size();
+        if (current_config != router->current_config) // Will be different unless there is but one.
+        {
+            mxb_assert(current_config < static_cast<int>(router->configs.size()));
+
+            const ChangeMasterConfig& old_config = router->configs[router->current_config];
+            router->current_config = current_config;
+            const ChangeMasterConfig& new_config = router->configs[router->current_config];
+
+            blr_master_set_config(router, new_config);
+
+            MXS_NOTICE("Connection to %s:%d failed, now trying with %s:%d.",
+                       old_config.host.c_str(), old_config.port,
+                       new_config.host.c_str(), new_config.port);
+        }
+
         spinlock_release(&router->lock);
 
         blr_start_master_in_main(router, connect_retry);
@@ -3092,6 +3109,15 @@ static int blr_check_connect_retry(ROUTER_INSTANCE *router)
     if (router->retry_count >= router->retry_limit)
     {
         return -1;
+    }
+
+    mxb_assert(router->configs.size() > 0);
+    if (router->current_config < static_cast<int>(router->configs.size() - 1))
+    {
+        // We have unused configs; no need to sleep anything at all. We will
+        // sleep only when we have unsuccessfully cycled through all available
+        // servers.
+        return 0;
     }
 
     /* Return the interval for next reconnect */
