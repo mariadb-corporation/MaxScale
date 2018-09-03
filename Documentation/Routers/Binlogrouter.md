@@ -375,6 +375,65 @@ encryption_algorithm=aes_ctr
 encryption_key_file=/var/binlogs/enc_key.txt
 ```
 
+## Using secondary masters
+
+From MaxScale 2.3 onwards it is possible to specify secondary masters that
+the binlog router can use in case the connection to the default master fails.
+
+**Note:** This is _only_ supported for gtid based replication in conjunction
+with a Galera cluster.
+
+The initial setup is performed exactly like when there is but one default master.
+```
+# mysql -h $MAXSCALE_HOST -P $MAXCALE_PORT
+MariaDB> SET @@global.gtid_slave_pos='0-198-123';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST='192.168.10.5',
+         MASTER_PORT=3306,
+         MASTER_USER='repl',
+         MASTER_PASSWORD='repl',
+         MASTER_USE_GTID=Slave_pos;
+```
+After the setup of the default master, secondary masters can be configured
+as follows:
+```
+MariaDB> CHANGE MASTER ":2" TO
+         MASTER_HOST='192.168.10.6',
+         MASTER_PORT=3306,
+         MASTER_USER='repl',
+         MASTER_PASSWORD='repl',
+         MASTER_USE_GTID=Slave_pos;
+```
+That is, a connection name must be provided and the name must be of the
+format `:N` where `N` is a positive integer. If several secondary masters
+are specified, they must be numbered consecutively, starting from `2`.
+
+All settings that are not explicitly specified are copied from the
+default master. That is, the following is equivalent with the command
+above:
+```
+MariaDB> CHANGE MASTER ":2" TO MASTER_HOST='192.168.10.6';
+```
+If a particular master configuration exists already, then any specified
+definitions will be changed and unspecified ones will remain unchanged.
+For instance, the following command would only change the password of `:2`.
+```
+MariaDB> CHANGE MASTER ":2" TO MASTER_PASSWORD='repl2';
+```
+It is not possible to delete a particular secondary master, but if
+`MASTER_HOST` is set on the default master, even if it is set to the same
+value, then _all_ secondary master configurations are deleted.
+
+When `START SLAVE` is issued, MaxScale will first attempt to connect to the
+default master and if that fails, try the secondary masters in order, until
+a connection can be created. Only if all connection attempts fail, will
+MaxScale wait as specified with `connect_retry`, before doing the cycle over
+again.
+
+Once the binlog router has successfully connected to a server, it will stay
+connected to that server until the connection breaks or `STOP SLAVE` is
+issued.
+
 ## Examples
 
 The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will
