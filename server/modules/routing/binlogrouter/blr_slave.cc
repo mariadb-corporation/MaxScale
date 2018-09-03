@@ -167,8 +167,7 @@ static int blr_apply_change_master(ROUTER_INSTANCE* router,
                                    char* error);
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
                                     char *command,
-                                    char *error,
-                                    ChangeMasterConfig* pNew_config);
+                                    char *error);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const char *hostname);
 static int blr_set_master_hostname(ROUTER_INSTANCE *router, const std::string& hostname);
 static int blr_set_master_port(ROUTER_INSTANCE *router, int port);
@@ -4510,15 +4509,13 @@ static char* get_connection_name(char* command, std::string* pConnection_name)
  * @param command      The change master SQL command
  * @param error        The error message, preallocated
  *                     BINLOG_ERROR_MSG_LEN + 1 bytes
- * @pNew_config [out]  The new config.
  * @return          0 on success,
  *                  1 on success with new binlog, -1 on failure
  */
 static
 int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *command,
-                             char *error,
-                             ChangeMasterConfig* pNew_config)
+                             char *error)
 {
     std::string connection_name;
     command = get_connection_name(command, &connection_name);
@@ -4553,12 +4550,14 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    if (!new_options.validate(router, error, pNew_config))
+    ChangeMasterConfig new_config;
+
+    if (!new_options.validate(router, error, &new_config))
     {
         return -1;
     }
 
-    return blr_apply_change_master(router, *pNew_config, error);
+    return blr_apply_change_master(router, new_config, error);
 }
 
 /*
@@ -5610,8 +5609,7 @@ blr_test_handle_change_master(ROUTER_INSTANCE* router,
                               char *command,
                               char *error)
 {
-    ChangeMasterConfig config;
-    return blr_handle_change_master(router, bypass_change_master(command), error, &config);
+    return blr_handle_change_master(router, bypass_change_master(command), error);
 }
 
 
@@ -8156,8 +8154,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 blr_master_get_config(router, &current_master);
                 vector<ChangeMasterConfig> configs = router->configs;
 
-                ChangeMasterConfig new_config;
-                rc = blr_handle_change_master(router, brkb, error_string, &new_config);
+                rc = blr_handle_change_master(router, brkb, error_string);
 
                 if (rc < 0)
                 {
