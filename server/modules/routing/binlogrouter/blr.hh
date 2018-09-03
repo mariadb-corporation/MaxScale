@@ -424,6 +424,22 @@ public:
     {
     }
 
+    void set_defaults(const ChangeMasterConfig& config)
+    {
+        host = config.host;
+        port = std::to_string(config.port);
+        binlog_file = config.binlog_file;
+        user = config.user;
+        password = config.password;
+        ssl_key = config.ssl_key;
+        ssl_cert = config.ssl_cert;
+        ssl_ca = config.ssl_ca;
+        ssl_enabled = config.ssl_enabled ? "1" : "0";
+        use_mariadb10_gtid = config.use_mariadb10_gtid;
+        heartbeat_period = std::to_string(config.heartbeat_period);
+        connect_retry = std::to_string(config.connect_retry);
+    }
+
     std::string connection_name;
     std::string host;
     std::string port;

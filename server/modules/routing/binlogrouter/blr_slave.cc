@@ -163,6 +163,7 @@ static void blr_slave_send_error_packet(ROUTER_SLAVE *slave,
                                         unsigned int err_num,
                                         const char *status);
 static int blr_apply_change_master(ROUTER_INSTANCE* router,
+                                   int index,
                                    const ChangeMasterConfig& new_config,
                                    char* error);
 static int blr_handle_change_master(ROUTER_INSTANCE* router,
@@ -3935,6 +3936,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     spinlock_acquire(&router->lock);
     router->master_state = BLRM_UNCONNECTED;
     router->retry_count = 0;
+    router->current_config = 0; // Always start from the primary configuration.
     spinlock_release(&router->lock);
 
     /**
@@ -4420,24 +4422,27 @@ int blr_apply_change_master_0(ROUTER_INSTANCE* router,
 }
 
 static int blr_apply_change_master(ROUTER_INSTANCE* router,
-                                   const ChangeMasterConfig& new_config,
+                                   int index,
+                                   const ChangeMasterConfig& config,
                                    char* error)
 {
     int rc = 0;
 
     spinlock_acquire(&router->lock);
 
-    if (new_config.connection_name.empty())
+    if (index == static_cast<int>(router->configs.size()))
     {
-        // An empty connection name means we reset the whole thing.
-        router->configs.clear();
-        router->configs.push_back(new_config);
-
-        rc = blr_apply_change_master_0(router, new_config, error);
+        router->configs.push_back(config);
     }
     else
     {
-        router->configs.push_back(new_config);
+        mxb_assert(index < static_cast<int>(router->configs.size()));
+        router->configs[index] = config;
+    }
+
+    if (index == 0)
+    {
+        rc = blr_apply_change_master_0(router, config, error);
     }
 
     spinlock_release(&router->lock);
@@ -4538,10 +4543,27 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     std::vector<char> cmd_string(command, command + strlen(command) + 1); // Include the NULL
 
     /* Parse SQL command and populate the change_master struct */
-    ChangeMasterOptions new_options(connection_name);
+    ChangeMasterOptions options(connection_name);
+
+    if (index < static_cast<int>(router->configs.size()))
+    {
+        // An existing configuration, pick defaults from it.
+        options.set_defaults(router->configs[index]);
+    }
+    else if (index != 0)
+    {
+        mxb_assert(index == static_cast<int>(router->configs.size()));
+        // A new configuration, pick defaults from the primary configuration.
+        options.set_defaults(router->configs[0]);
+        options.host.clear();
+    }
+
+    string host = options.host;
+    options.host.clear(); // So that we can detect whether it is set, even to the same value.
+
     if (blr_parse_change_master_command(&cmd_string.front(),
                                         error,
-                                        &new_options) != 0)
+                                        &options) != 0)
     {
         MXS_ERROR("%s CHANGE MASTER TO parse error: %s",
                   router->service->name,
@@ -4550,14 +4572,25 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         return -1;
     }
 
-    ChangeMasterConfig new_config;
-
-    if (!new_options.validate(router, error, &new_config))
+    ChangeMasterConfig config;
+    if (!options.validate(router, error, &config))
     {
         return -1;
     }
 
-    return blr_apply_change_master(router, new_config, error);
+    if (config.host.empty()) // Empty, if it was not specified in the options.
+    {
+        config.host = host;
+    }
+
+    if ((index == 0) && !options.host.empty())
+    {
+        // If we are manipulating the primary configuration and a host is specified,
+        // even if it would be the same, then we reset the setup.
+        router->configs.clear();
+    }
+
+    return blr_apply_change_master(router, index, config, error);
 }
 
 /*
