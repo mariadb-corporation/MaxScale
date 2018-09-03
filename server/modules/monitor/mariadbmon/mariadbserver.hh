@@ -13,6 +13,7 @@
  #pragma once
 #include "mariadbmon_common.hh"
 #include <chrono>
+#include <functional>
 #include <string>
 #include <memory>
 #include <maxscale/monitor.h>
@@ -402,9 +403,10 @@ public:
      * Joins this standalone server to the cluster.
      *
      * @param change_cmd Change master command
+     * @param disable_server_events Should events be disabled on the server
      * @return True if commands were accepted by server
      */
-    bool join_cluster(const std::string& change_cmd);
+    bool join_cluster(const std::string& change_cmd, bool disable_server_events);
 
     /**
      * Check if the server can be demoted by switchover.
@@ -473,9 +475,16 @@ public:
     bool enable_events();
 
 private:
+    typedef std::function<bool (const std::string& db_name,
+                                const std::string& event_name,
+                                const std::string& event_definer,
+                                const std::string& event_status)> ManipulatorFunc;
+
     bool update_slave_status(std::string* errmsg_out = NULL);
     bool sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
+    void warn_event_scheduler();
+    bool events_foreach(ManipulatorFunc& func);
 };
 
 /**

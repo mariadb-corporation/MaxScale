@@ -311,7 +311,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 else
                 {
                     MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                    op_success = joinable->join_cluster(change_cmd);
+                    op_success = joinable->join_cluster(change_cmd, m_handle_event_scheduler);
                 }
             }
             else
