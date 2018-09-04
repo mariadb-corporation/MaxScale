@@ -3936,7 +3936,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     spinlock_acquire(&router->lock);
     router->master_state = BLRM_UNCONNECTED;
     router->retry_count = 0;
-    router->current_config = 0; // Always start from the primary configuration.
+    router->config_index = 0; // Always start from the default configuration.
     spinlock_release(&router->lock);
 
     /**
@@ -4276,7 +4276,7 @@ int validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, c
                     snprintf(custom_message,
                              BINLOG_ERROR_MSG_LEN,
                              "The provided connection name '%s' is not valid. Currently "
-                             "no primary connection exists and it must be specified using "
+                             "no default connection exists and it must be specified using "
                              "a 'CHANGE MASTER TO ...' command without a connection name.",
                              name.c_str());
                     message = custom_message;
@@ -4286,8 +4286,8 @@ int validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, c
                     snprintf(custom_message,
                              BINLOG_ERROR_MSG_LEN,
                              "The provided connection name '%s' is not valid. Currently "
-                             "the primary connection and %d alternative connections have "
-                             "been specified and the next valid name for an alternative "
+                             "the default connection and %d secondary connections have "
+                             "been specified and the next valid name for an secondary "
                              "connection is ':%d'.",
                              name.c_str(),
                              (int)router->configs.size() - 1,
@@ -4553,7 +4553,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     else if (index != 0)
     {
         mxb_assert(index == static_cast<int>(router->configs.size()));
-        // A new configuration, pick defaults from the primary configuration.
+        // A new configuration, pick defaults from the default configuration.
         options.set_defaults(router->configs[0]);
         options.host.clear();
     }
@@ -4585,7 +4585,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     if ((index == 0) && !options.host.empty())
     {
-        // If we are manipulating the primary configuration and a host is specified,
+        // If we are manipulating the default configuration and a host is specified,
         // even if it would be the same, then we reset the setup.
         router->configs.clear();
     }

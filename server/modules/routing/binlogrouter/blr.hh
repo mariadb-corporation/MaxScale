@@ -838,7 +838,7 @@ struct ROUTER_INSTANCE: public MXS_ROUTER
     char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     ROUTER_INSTANCE  *next;
     std::vector<ChangeMasterConfig> configs;/*< Available configs. */
-    int               current_config;       /*< The config currently being used. */
+    int               config_index;         /*< The index of the config currently being used. */
 };
 
 /** Master Semi-Sync capability */

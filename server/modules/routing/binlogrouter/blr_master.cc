@@ -378,14 +378,14 @@ blr_restart_master(ROUTER_INSTANCE *router)
         router->master_state = BLRM_UNCONNECTED;
         router->retry_count++;
 
-        int current_config = (router->current_config + 1) % router->configs.size();
-        if (current_config != router->current_config) // Will be different unless there is but one.
+        int config_index = (router->config_index + 1) % router->configs.size();
+        if (config_index != router->config_index) // Will be different unless there is but one.
         {
-            mxb_assert(current_config < static_cast<int>(router->configs.size()));
+            mxb_assert(config_index < static_cast<int>(router->configs.size()));
 
-            const ChangeMasterConfig& old_config = router->configs[router->current_config];
-            router->current_config = current_config;
-            const ChangeMasterConfig& new_config = router->configs[router->current_config];
+            const ChangeMasterConfig& old_config = router->configs[router->config_index];
+            router->config_index = config_index;
+            const ChangeMasterConfig& new_config = router->configs[router->config_index];
 
             blr_master_set_config(router, new_config);
 
@@ -3112,7 +3112,7 @@ static int blr_check_connect_retry(ROUTER_INSTANCE *router)
     }
 
     mxb_assert(router->configs.size() > 0);
-    if (router->current_config < static_cast<int>(router->configs.size() - 1))
+    if (router->config_index < static_cast<int>(router->configs.size() - 1))
     {
         // We have unused configs; no need to sleep anything at all. We will
         // sleep only when we have unsuccessfully cycled through all available

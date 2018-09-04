@@ -3430,9 +3430,9 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     // Assert that the configurarion as dispersed around blr and
     // as stored in the configuration item are identical.
     mxb_assert(router->configs.size() > 0);
-    mxb_assert(router->current_config < static_cast<int>(router->configs.size()));
+    mxb_assert(router->config_index < static_cast<int>(router->configs.size()));
 #ifdef SS_DEBUG
-    const ChangeMasterConfig& current = router->configs[router->current_config];
+    const ChangeMasterConfig& current = router->configs[router->config_index];
 
     mxb_assert(current.host == router->service->dbref->server->address);
     mxb_assert(current.port == router->service->dbref->server->port);
@@ -3453,19 +3453,19 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     mxb_assert(current.connect_retry == router->retry_interval);
 #endif
 
-    ChangeMasterConfig primary = router->configs[0]; // Copied, so that it can be modified.
+    ChangeMasterConfig default_config = router->configs[0]; // Copied, so that it can be modified.
 
     // If not SSL enabled, store old SSL config if there is one.
     // TODO: Why?
     if (!router->ssl_enabled)
     {
-        primary.ssl_ca = router->ssl_ca ? router->ssl_ca : "";
-        primary.ssl_cert = router->ssl_cert ? router->ssl_cert : "";
-        primary.ssl_key = router->ssl_key ? router->ssl_key : "";
+        default_config.ssl_ca = router->ssl_ca ? router->ssl_ca : "";
+        default_config.ssl_cert = router->ssl_cert ? router->ssl_cert : "";
+        default_config.ssl_key = router->ssl_key ? router->ssl_key : "";
     }
 
-    // Store the primary config.
-    write_master_config(config_file, primary);
+    // Store the default config.
+    write_master_config(config_file, default_config);
 
     /* write filestem only if binlog file is set */
     if (*router->binlog_name != 0)
@@ -3473,7 +3473,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
         fprintf(config_file, "filestem=%s\n", router->fileroot);
     }
 
-    // Store all alternative configs.
+    // Store all secondary configs.
     for (size_t i = 1; i < router->configs.size(); ++i)
     {
         write_master_config(config_file, router->configs[i]);

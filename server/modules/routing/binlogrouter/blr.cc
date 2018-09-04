@@ -817,7 +817,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
      * automatic master replication start phase
      */
 
-    inst->current_config = 0;
+    inst->config_index = 0;
     rc = blr_file_read_master_config(inst);
 
     /*
