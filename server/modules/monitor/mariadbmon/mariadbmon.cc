@@ -80,12 +80,6 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-enum print_repl_warnings_t
-{
-    WARNINGS_ON,
-    WARNINGS_OFF
-};
-
 static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
@@ -151,6 +145,10 @@ static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
 // Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
+
+static const char NOT_A_SLAVE[] = "it is not a slave or a query failed.";
+static const char NO_BINLOG[] = "its binary log is disabled.";
+static const char NO_SLAVE_SQL[] = "its slave SQL thread is not running.";
 
 /** Default failover timeout */
 #define DEFAULT_FAILOVER_TIMEOUT "90"
@@ -3477,10 +3475,10 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
 static MySqlServerInfo* update_slave_info(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server)
 {
     MySqlServerInfo* info = get_server_info(mon, server);
-    if (info->slave_status.slave_sql_running &&
-        update_replication_settings(server, info) &&
+    if (update_replication_settings(server, info) &&
         update_gtids(mon, server, info) &&
-        do_show_slave_status(mon, info, server))
+        do_show_slave_status(mon, info, server) &&
+        info->slave_status.master_server_id >= 0)
     {
         return info;
     }
@@ -3492,40 +3490,30 @@ static MySqlServerInfo* update_slave_info(MYSQL_MONITOR* mon, MXS_MONITORED_SERV
  *
  * @param server Server to check
  * @param server_info Server info
- * @param print_on Print warnings or not
  * @return True if log_bin is on
  */
-static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
-                                       print_repl_warnings_t print_warnings = WARNINGS_ON)
+static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info)
 {
     bool rval = true;
     const char* servername = server->server->unique_name;
     if (server_info->rpl_settings.log_bin == false)
     {
-        if (print_warnings == WARNINGS_ON)
-        {
-            const char NO_BINLOG[] =
-                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
-            MXS_WARNING(NO_BINLOG, servername);
-        }
         rval = false;
     }
-    else if (print_warnings == WARNINGS_ON)
+
+    if (server_info->rpl_settings.gtid_strict_mode == false)
     {
-        if (server_info->rpl_settings.gtid_strict_mode == false)
-        {
-            const char NO_STRICT[] =
-                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-            MXS_WARNING(NO_STRICT, servername);
-        }
-        if (server_info->rpl_settings.log_slave_updates == false)
-        {
-            const char NO_SLAVE_UPDATES[] =
-                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-                "will break for lagging slaves if '%s' is promoted.";
-            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
-        }
+        const char NO_STRICT[] =
+            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+            "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+        MXS_WARNING(NO_STRICT, servername);
+    }
+    if (server_info->rpl_settings.log_slave_updates == false)
+    {
+        const char NO_SLAVE_UPDATES[] =
+            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+            "will break for lagging slaves if '%s' is promoted.";
+        MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
     return rval;
 }
@@ -3541,13 +3529,26 @@ static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySql
 bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* preferred, json_t** err_out)
 {
     ss_dassert(preferred);
-    bool rval = true;
+    bool rval = false;
+    const char NOT_VALID[] = "The requested server '%s' is not a valid promotion candidate because %s";
+    const char* name = preferred->server->unique_name;
+
     MySqlServerInfo* preferred_info = update_slave_info(mon, preferred);
-    if (preferred_info == NULL || !check_replication_settings(preferred, preferred_info))
+    if (preferred_info == NULL)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
-                             preferred->server->unique_name);
-        rval = false;
+        PRINT_MXS_JSON_ERROR(err_out, NOT_VALID, name, NOT_A_SLAVE);
+    }
+    else if (!check_replication_settings(preferred, preferred_info))
+    {
+        PRINT_MXS_JSON_ERROR(err_out, NOT_VALID, name, NO_BINLOG);
+    }
+    else if (!preferred_info->slave_status.slave_sql_running)
+    {
+        PRINT_MXS_JSON_ERROR(err_out, NOT_VALID, name, NO_SLAVE_SQL);
+    }
+    else
+    {
+        rval = true;
     }
     return rval;
 }
@@ -3612,22 +3613,42 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon, ServerVector* slaves
     for (MXS_MONITORED_SERVER *cand = mon->monitor->monitored_servers; cand; cand = cand->next)
     {
         // If a server cannot be connected to, it won't be considered for promotion or redirected.
-        // Do not worry about the exclusion list yet, querying the excluded servers is ok.
-        MySqlServerInfo* cand_info = update_slave_info(mon, cand);
-        // If master is replicating from external master, it is updated but not added to array.
-        if (cand_info && cand != mon->master)
+        if (SERVER_IS_DOWN(cand->server))
         {
-            slaves_out->push_back(cand);
-            // Check that server is not in the exclusion list while still being a valid choice.
-            if (server_is_excluded(mon, cand) && check_replication_settings(cand, cand_info, WARNINGS_OFF))
+            continue;
+        }
+        const char* name = cand->server->unique_name;
+        // Do not worry about the exclusion list yet, querying the excluded servers is ok.
+        // If master is replicating from external master, it is updated but not added to array.
+        const char WONT_PROMOTE[] = "'%s' cannot be promoted because %s";
+        MySqlServerInfo* cand_info = update_slave_info(mon, cand);
+        if (cand_info == NULL)
+        {
+            if (cand != mon->master)
             {
-                valid_but_excluded.push_back(cand);
-                const char CANNOT_SELECT[] = "Promotion candidate '%s' is excluded from new "
-                "master selection.";
-                MXS_INFO(CANNOT_SELECT, cand->server->unique_name);
+                MXS_WARNING(WONT_PROMOTE, name, NOT_A_SLAVE);
             }
-            else if (check_replication_settings(cand, cand_info))
+        }
+        else
+        {
+            slaves_out->push_back(cand); // Will be redirected.
+            if (!check_replication_settings(cand, cand_info))
             {
+                MXS_WARNING(WONT_PROMOTE, name, NO_BINLOG);
+            }
+            else if (!cand_info->slave_status.slave_sql_running)
+            {
+                MXS_WARNING(WONT_PROMOTE, name, NO_SLAVE_SQL);
+            }
+            else if (server_is_excluded(mon, cand))
+            {
+                // Server is in the exclusion list but is otherwise a valid choice.
+                valid_but_excluded.push_back(cand);
+                MXS_WARNING(WONT_PROMOTE, name, "it is excluded.");
+            }
+            else
+            {
+                // Server is ok for new master.
                 // If no new master yet, accept any valid candidate. Otherwise check.
                 if (current_best == NULL || is_candidate_better(current_best_info, cand_info))
                 {
@@ -3658,7 +3679,7 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon, ServerVector* slaves
         if (current_best == NULL)
         {
             const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
-            "but cannot be selected as it's excluded.";
+                                              "but cannot be selected as it's excluded.";
             MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
             break;
         }
