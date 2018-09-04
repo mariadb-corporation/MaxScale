@@ -26,6 +26,7 @@ using maxscale::string_printf;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
                                     "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
+const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
 
 static void print_redirect_errors(MariaDBServer* first_server,
                                   const ServerArray& servers,
@@ -181,6 +182,150 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor->name);
     }
 
+    return rval;
+}
+
+/**
+ * Reset replication of the cluster. Removes all slave connections and deletes binlogs. Then resets the
+ * gtid sequence of the cluster to 0 and directs all servers to replicate from the given master.
+ *
+ * @param master_server Server to use as master
+ * @param error_out Error output
+ * @return True if operation was successful
+ */
+bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** error_out)
+{
+    // This command is a hail-mary type, so no need to be that careful. Users are only supposed to run this
+    // when replication is broken and they know the cluster is in sync.
+
+    // If a master has been given, use that as the master. Otherwise autoselect.
+    MariaDBServer* new_master = NULL;
+    if (master_server)
+    {
+        MariaDBServer* new_master_cand = get_server(master_server);
+        if (new_master_cand == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name, m_monitor->name);
+            return false;
+        }
+        else if (!new_master_cand->is_usable())
+        {
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Server '%s' is down or in maintenance and cannot be used as master.",
+                                 new_master_cand->name());
+        }
+        else
+        {
+            new_master = new_master_cand;
+        }
+    }
+    else
+    {
+        const char BAD_MASTER[] = "Could not autoselect new master for replication reset because %s";
+        if (m_master == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, BAD_MASTER, "the cluster has no master.");
+        }
+        else if (!m_master->is_usable())
+        {
+            PRINT_MXS_JSON_ERROR(error_out, BAD_MASTER, "the master is down or in maintenance.");
+        }
+        else
+        {
+            new_master = m_master;
+        }
+    }
+
+    bool rval = false;
+    if (new_master)
+    {
+        bool error = false;
+        // Step 1: Gather the list of affected servers. If any operation on the servers fails,
+        // the reset fails as well.
+        ServerArray targets;
+        for (MariaDBServer* server : m_servers)
+        {
+            if (server->is_usable())
+            {
+                targets.push_back(server);
+            }
+        }
+
+        // Helper function for running a command on all servers in the list.
+        auto exec_cmd_on_array = [&error](const ServerArray& targets, const string& query,
+                                          json_t** error_out) {
+                if (!error)
+                {
+                    for (MariaDBServer* server : targets)
+                    {
+                        string error_msg;
+                        if (!server->execute_cmd(query, &error_msg))
+                        {
+                            error = true;
+                            PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                            break;
+                        }
+                    }
+                }
+            };
+
+        // Step 2: Stop and reset all slave connections, even external ones.
+        for (MariaDBServer* server : targets)
+        {
+            if (!server->reset_all_slave_conns(error_out))
+            {
+                error = true;
+                break;
+            }
+        }
+
+        // In theory, this is wrong if there are no slaves. Cluster is modified soon anyway.
+        m_cluster_modified = true;
+
+        // Step 3: Set read_only and delete binary logs,.
+        exec_cmd_on_array(targets, "SET GLOBAL read_only=1;", error_out);
+        exec_cmd_on_array(targets, "RESET MASTER;", error_out);
+
+        // Step 4: Set gtid_slave_pos on all servers. This is also sets gtid_current_pos.
+        if (!error)
+        {
+            string set_slave_pos = string_printf("SET GLOBAL gtid_slave_pos='%" PRIi64 "-%" PRIi64 "-0';",
+                                                 new_master->m_gtid_domain_id, new_master->m_server_id);
+            exec_cmd_on_array(targets, set_slave_pos, error_out);
+        }
+
+        // Step 5: Set all slaves to replicate from the master.
+        if (!error)
+        {
+            m_next_master = new_master;
+            // The following commands are only sent to slaves.
+            std::remove_if(targets.begin(), targets.end(), [new_master](MariaDBServer* elem) {
+                               return elem == new_master;
+                           });
+            // TODO: the following call does stop slave & reset slave again. Fix this later, although it
+            // doesn't cause error.
+            ServerArray dummy;
+            if ((size_t)redirect_slaves(new_master, targets, &dummy) < targets.size())
+            {
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Some servers were not redirected to '%s'.", new_master->name());
+                error = true;
+            }
+            // Perform this step even if previous step wasn't 100% success.
+            string error_msg;
+            if (!new_master->execute_cmd("SET GLOBAL read_only=0;", &error_msg))
+            {
+                error = true;
+                PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+            }
+        }
+        if (error)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed. Servers may be in invalid state "
+                                            "for replication.");
+        }
+        rval = !error;
+    }
     return rval;
 }
 
@@ -1587,9 +1732,8 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server,
     const auto op = ClusterOperation::SWITCHOVER;
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
-    mxb_assert(promotion_target_out && demotion_target_out
-               && !*promotion_target_out && !*demotion_target_out);
-    const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
+    mxb_assert(promotion_target_out && demotion_target_out &&
+               !*promotion_target_out && !*demotion_target_out);
 
     MariaDBServer* demotion_target = NULL;
     string demotion_msg;

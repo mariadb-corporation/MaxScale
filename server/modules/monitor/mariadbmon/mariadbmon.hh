@@ -97,6 +97,8 @@ public:
      */
     bool run_manual_rejoin(SERVER* rejoin_server, json_t** error_out);
 
+    bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
+
 protected:
     void pre_loop();
     void tick();
@@ -303,6 +305,7 @@ private:
     void disable_setting(const std::string& setting);
     bool check_sql_files();
     void enforce_read_only_on_slaves();
+    bool manual_reset_replication(SERVER* master_server, json_t** error_out);
 };
 
 /**

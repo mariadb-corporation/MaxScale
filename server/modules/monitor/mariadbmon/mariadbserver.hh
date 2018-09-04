@@ -489,6 +489,14 @@ public:
      */
     bool disable_events(BinlogMode binlog_mode, json_t** error_out);
 
+    /**
+     * Stop and delete all slave connections.
+     *
+     * @param error_out Error output
+     * @return True if successful. If false, some connections may have been successfully deleted.
+     */
+    bool reset_all_slave_conns(json_t** error_out);
+
 private:
     class EventInfo;
     typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;

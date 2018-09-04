@@ -822,6 +822,17 @@ bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out
     return send_ok && rval;
 }
 
+bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t** error_out)
+{
+    bool rval = false;
+    bool send_ok = execute_manual_command([this, &rval, master_server, error_out]() {
+                                              rval = manual_reset_replication(master_server, error_out);
+                                          }, error_out);
+    return send_ok && rval;
+}
+
+
+
 /**
  * Command handler for 'switchover'
  *
@@ -904,6 +915,28 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
         SERVER* server = args->argv[1].value.server;
         auto handle = static_cast<MariaDBMonitor*>(mon->instance);
         rv = handle->run_manual_rejoin(server, output);
+    }
+    return rv;
+}
+
+bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** output)
+{
+    mxb_assert(args->argc >= 1);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args->argc == 1 || MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+
+    bool rv = false;
+    if (config_get_global_options()->passive)
+    {
+        PRINT_MXS_JSON_ERROR(output, "Replication reset requested but not performed, as MaxScale is in "
+                                     "passive mode.");
+    }
+    else
+    {
+        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        SERVER* server = args->argv[1].value.server;
+        auto handle = static_cast<MariaDBMonitor*>(mon->instance);
+        rv = handle->run_manual_reset_replication(server, output);
     }
     return rv;
 }
@@ -999,6 +1032,23 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                MXS_ARRAY_NELEMS(rejoin_argv),
                                rejoin_argv,
                                "Rejoin server to a cluster");
+
+    static modulecmd_arg_type_t reset_gtid_argv[] =
+    {
+        {
+            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ARG_MONITOR_DESC
+        },
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Master server (optional)"}
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "reset_replication",
+                               MODULECMD_TYPE_ACTIVE,
+                               handle_manual_reset_replication,
+                               MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
+                               "Delete slave connections, delete binary logs and "
+                               "set up replication (dangerous)");
 
     static MXS_MODULE info =
     {

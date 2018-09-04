@@ -1301,6 +1301,29 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     return rval;
 }
 
+bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
+{
+    string error_msg;
+    bool error = false;
+    for (auto& sstatus : m_slave_status)
+    {
+        auto stop = string_printf("STOP SLAVE '%s';", sstatus.name.c_str());
+        auto reset = string_printf("RESET SLAVE '%s' ALL;", sstatus.name.c_str());
+        if (!execute_cmd(stop, &error_msg) || !execute_cmd(reset, &error_msg))
+        {
+            error = true;
+            string log_message = sstatus.name.empty() ?
+                string_printf("Error when reseting the default slave connection of '%s': %s",
+                              name(), error_msg.c_str()) :
+                string_printf("Error when reseting the slave connection '%s' of '%s': %s",
+                              sstatus.name.c_str(), name(), error_msg.c_str());
+            PRINT_MXS_JSON_ERROR(error_out, "%s", log_message.c_str());
+            break;
+        }
+    }
+    return !error;
+}
+
 string SlaveStatus::to_string() const
 {
     // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
