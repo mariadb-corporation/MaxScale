@@ -4542,6 +4542,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     if (index != 0)
     {
+        // Index 0 refers to the default configuration.
         string use_gtid = router->configs[0].use_mariadb10_gtid;
 
         if (use_gtid.empty() || (strcasecmp(use_gtid.c_str(), "slave_pos") != 0))

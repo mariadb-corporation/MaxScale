@@ -397,7 +397,7 @@ MariaDB> CHANGE MASTER TO
 After the setup of the default master, secondary masters can be configured
 as follows:
 ```
-MariaDB> CHANGE MASTER ":2" TO
+MariaDB> CHANGE MASTER ':2' TO
          MASTER_HOST='192.168.10.6',
          MASTER_PORT=3306,
          MASTER_USER='repl',
@@ -412,13 +412,13 @@ All settings that are not explicitly specified are copied from the
 default master. That is, the following is equivalent with the command
 above:
 ```
-MariaDB> CHANGE MASTER ":2" TO MASTER_HOST='192.168.10.6';
+MariaDB> CHANGE MASTER ':2' TO MASTER_HOST='192.168.10.6';
 ```
 If a particular master configuration exists already, then any specified
 definitions will be changed and unspecified ones will remain unchanged.
 For instance, the following command would only change the password of `:2`.
 ```
-MariaDB> CHANGE MASTER ":2" TO MASTER_PASSWORD='repl2';
+MariaDB> CHANGE MASTER ':2' TO MASTER_PASSWORD='repl2';
 ```
 It is not possible to delete a particular secondary master, but if
 `MASTER_HOST` is set on the default master, even if it is set to the same
