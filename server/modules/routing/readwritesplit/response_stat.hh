@@ -32,24 +32,26 @@ namespace maxscale
 class ResponseStat
 {
 public:
-    /* @param ignore_first_n - the first few queries tend to have more overhead
-     * @param n_filter_samples - collect num samples, use median
-     * @param num_synch_samples - this many medians before the average should be synced, or
-     * @param sync_duration     - this much time between syncs.
+    /*
+     * @param num_filter_samples - collect num samples, use median
+     * @param num_synch_medians  - this many medians before the average should be synced, or
+     * @param sync_duration      - this much time between syncs.
      */
-    ResponseStat(int ignore_first_n = 5,
-                 int num_filter_samples = 3,
+    ResponseStat(int num_filter_samples = 5,
+                 int num_synch_medians = 500,
                  maxbase::Duration sync_duration = std::chrono::seconds(5));
+
     void              query_started();
     void              query_ended();// ok to call without a query_started
+    bool              make_valid(); // make valid even if there are too few filter_samples
     bool              is_valid() const;
     int               num_samples() const;
     maxbase::Duration average() const;
-    bool              sync_time_reached(int num_synch_medians); // is it time to apply the average?
+    bool              sync_time_reached();  // is it time to apply the average?
     void              reset();
 private:
-    int                            m_ignore_first_n;
     const int                      m_num_filter_samples;
+    const int                      m_num_synch_medians;
     const maxbase::Duration        m_sync_duration;
     int                            m_sample_count;
     std::vector<maxbase::Duration> m_samples;   // N sampels from which median is used

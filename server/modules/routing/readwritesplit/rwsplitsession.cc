@@ -100,8 +100,9 @@ void RWSplitSession::close()
 
     for (auto& backend : m_backends)
     {
-        const ResponseStat& stat = backend->response_stat();
-        if (stat.is_valid())
+        ResponseStat& stat = backend->response_stat();
+
+        if (stat.make_valid())
         {
             server_add_response_average(backend->server(),
                                         stat.average().secs(), stat.num_samples());
@@ -628,7 +629,8 @@ void RWSplitSession::clientReply(GWBUF *writebuf, DCB *backend_dcb)
 
     ResponseStat& stat = backend->response_stat();
     stat.query_ended();
-    if (stat.is_valid() && stat.sync_time_reached(500)) // nantti, TODO
+    if (stat.is_valid() && (stat.sync_time_reached() ||
+                            backend->server()->response_time->num_samples()==0))
     {
         server_add_response_average(backend->server(),
                                     stat.average().secs(), stat.num_samples());

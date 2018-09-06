@@ -16,10 +16,11 @@
 
 namespace maxscale
 {
-ResponseStat::ResponseStat(int ignore_first_n, int num_filter_samples,
-                           maxbase::Duration sync_duration) :
-    m_ignore_first_n{ignore_first_n},
-    m_num_filter_samples {num_filter_samples},
+ResponseStat::ResponseStat(int num_filter_samples,
+                           int num_synch_medians,
+                           maxbase::Duration sync_duration)
+    : m_num_filter_samples {num_filter_samples},
+    m_num_synch_medians{num_synch_medians},
     m_sync_duration{sync_duration},
     m_sample_count{0},
     m_samples(num_filter_samples),
@@ -30,11 +31,6 @@ ResponseStat::ResponseStat(int ignore_first_n, int num_filter_samples,
 
 void ResponseStat::query_started()
 {
-    if (m_ignore_first_n)
-    {
-        --m_ignore_first_n;
-        return;
-    }
     m_last_start = maxbase::Clock::now();
 }
 
@@ -57,6 +53,18 @@ void ResponseStat::query_ended()
     m_last_start = maxbase::TimePoint();
 }
 
+bool ResponseStat::make_valid()
+{
+    if (!m_average.num_samples() && m_sample_count)
+    {
+        maxbase::Duration new_sample = m_samples[m_sample_count / 2];
+        m_average.add(std::chrono::duration<double>(new_sample).count());
+        m_sample_count = 0;
+    }
+
+    return is_valid();
+}
+
 bool ResponseStat::is_valid() const
 {
     return m_average.num_samples();
@@ -72,10 +80,12 @@ maxbase::Duration ResponseStat::average() const
     return maxbase::Duration(m_average.average());
 }
 
-bool ResponseStat::sync_time_reached(int num_synch_medians)
+bool ResponseStat::sync_time_reached()
 {
     auto now = maxbase::Clock::now();
-    bool reached = m_next_sync < now || m_average.num_samples() >= num_synch_medians;
+    bool reached =  m_next_sync < now
+                    || m_average.num_samples() >= m_num_synch_medians;
+
     if (reached)
     {
         m_next_sync = now + m_sync_duration;

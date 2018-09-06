@@ -70,8 +70,11 @@ EMAverage::EMAverage(double min_alpha, double max_alpha, int sample_max) :
 
 void EMAverage::add(double ave, int num_samples)
 {
+    // Give more weight to initial samples.
+    int sample_max = std::min(m_num_samples ? m_num_samples : 1, m_sample_max);
+
     double alpha = m_min_alpha + m_max_alpha *
-                   std::min(double(num_samples) / m_sample_max, 1.0);
+                   std::min(double(num_samples) / sample_max, 1.0);
 
     m_num_samples += num_samples;
     if (m_num_samples == num_samples)
