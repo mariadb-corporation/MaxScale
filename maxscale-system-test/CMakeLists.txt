@@ -969,6 +969,10 @@ add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1
 # https://jira.mariadb.org/browse/MXS-1985
 add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS REPL_BACKEND)
 
+# MXS-2037: Wildcards not working with source in Named Server Filter
+# https://jira.mariadb.org/browse/MXS-2037
+add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
