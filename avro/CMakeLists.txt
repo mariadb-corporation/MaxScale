@@ -4,7 +4,7 @@ if (AVRO_FOUND AND JANSSON_FOUND)
   target_link_libraries(maxavro maxscale-common ${JANSSON_LIBRARIES})
 
   add_executable(maxavrocheck maxavrocheck.c)
-  target_link_libraries(maxavrocheck maxavro)
+  target_link_libraries(maxavrocheck maxavro maxscale-common)
   install_executable(maxavrocheck core)
   add_subdirectory(test)
 endif()

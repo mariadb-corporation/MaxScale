@@ -511,7 +511,7 @@ int main(int argc, char** argv)
      * Expected rc is 0, if 1 test fails
      */
     strcpy(error_string, "");
-    memset(&change_master, 0, sizeof(change_master));
+    change_master = ChangeMasterOptions{};
     strcpy(query,
            "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWORD='massi', MAster_user='eee', master_log_file=     'fffff', master_log_pos= 55"
            + command_offset);
