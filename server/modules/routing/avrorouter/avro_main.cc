@@ -513,6 +513,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
             {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
             {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
             {MXS_END_MODULE_PARAMS}
         }
     };

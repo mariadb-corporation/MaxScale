@@ -226,7 +226,8 @@ public:
     Rpl& operator=(const Rpl&) = delete;
 
     // Construct a new replication stream transformer
-    Rpl(SERVICE* service, SRowEventHandler event_handler, gtid_pos_t = {});
+    Rpl(SERVICE* service, SRowEventHandler event_handler, pcre2_code* match, pcre2_code* exclude,
+        gtid_pos_t = {});
 
     // Add a stored TableCreateEvent
     void add_create(STableCreateEvent create);
@@ -256,17 +257,21 @@ public:
     }
 
 private:
-    SRowEventHandler m_handler;
-    SERVICE*         m_service;
-    pcre2_code*      m_create_table_re;
-    pcre2_code*      m_alter_table_re;
-    uint8_t          m_binlog_checksum;
-    uint8_t          m_event_types;
-    Bytes            m_event_type_hdr_lens;
-    gtid_pos_t       m_gtid;
-    ActiveMaps       m_active_maps;
-    MappedTables     m_table_maps;
-    CreatedTables    m_created_tables;
+    SRowEventHandler  m_handler;
+    SERVICE*          m_service;
+    pcre2_code*       m_create_table_re;
+    pcre2_code*       m_alter_table_re;
+    uint8_t           m_binlog_checksum;
+    uint8_t           m_event_types;
+    Bytes             m_event_type_hdr_lens;
+    gtid_pos_t        m_gtid;
+    ActiveMaps        m_active_maps;
+    MappedTables      m_table_maps;
+    CreatedTables     m_created_tables;
+    pcre2_code*       m_match;
+    pcre2_code*       m_exclude;
+    pcre2_match_data* m_md_match;
+    pcre2_match_data* m_md_exclude;
 
     void handle_query_event(REP_HEADER *hdr, uint8_t *ptr);
     bool handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr);
@@ -274,4 +279,5 @@ private:
     STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
     bool save_and_replace_table_create(STableCreateEvent created);
     bool table_create_alter(STableCreateEvent create, const char *sql, const char *end);
+    bool table_matches(const std::string& ident);
 };

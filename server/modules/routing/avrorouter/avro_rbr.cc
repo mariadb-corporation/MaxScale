@@ -472,6 +472,12 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
     int ev_len = m_event_type_hdr_lens[hdr->event_type];
 
     read_table_info(ptr, ev_len, &id, table_ident, sizeof(table_ident));
+
+    if (!table_matches(table_ident))
+    {
+        return true;
+    }
+
     auto create = m_created_tables.find(table_ident);
 
     if (create != m_created_tables.end())
@@ -600,6 +606,11 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
         char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
 
+        if (!table_matches(table_ident))
+        {
+            return true;
+        }
+
         bool ok = m_handler->prepare_table(map->database, map->table);
         auto create = m_created_tables.find(table_ident);
 
@@ -664,8 +675,8 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
     }
     else
     {
-        MXS_ERROR("Row event for unknown table mapped to ID %lu. Data will not "
-                  "be processed.", table_id);
+        MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
+                 "be processed.", table_id);
     }
 
     return rval;

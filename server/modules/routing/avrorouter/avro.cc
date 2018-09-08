@@ -42,6 +42,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.hh>
+#include <maxscale/pcre2.h>
 #include <maxscale/routingworker.h>
 #include <binlog_common.h>
 
@@ -138,7 +139,8 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     row_count(0),
     row_target(config_get_integer(params, "group_rows")),
     task_handle(0),
-    handler(service, handler)
+    handler(service, handler, config_get_compiled_regex(params, "match", 0, NULL),
+            config_get_compiled_regex(params, "exclude", 0, NULL))
 {
     if (source)
     {

@@ -604,12 +604,17 @@ TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* 
                                            std::move(cols), std::move(nulls), std::move(meta));
 }
 
-Rpl::Rpl(SERVICE* service, SRowEventHandler handler, gtid_pos_t gtid):
+Rpl::Rpl(SERVICE* service, SRowEventHandler handler, pcre2_code* match, pcre2_code* exclude,
+         gtid_pos_t gtid):
     m_handler(handler),
     m_service(service),
     m_binlog_checksum(0),
     m_event_types(0),
-    m_gtid(gtid)
+    m_gtid(gtid),
+    m_match(match),
+    m_exclude(exclude),
+    m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr),
+    m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
 {
     /** For detection of CREATE/ALTER TABLE statements */
     static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
@@ -1355,4 +1360,21 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const ch
     }
 
     return true;
+}
+
+bool Rpl::table_matches(const std::string& ident)
+{
+    bool rval = false;
+
+    if (!m_match || pcre2_match(m_match, (PCRE2_SPTR)ident.c_str(), PCRE2_ZERO_TERMINATED,
+                                0, 0, m_md_match, NULL) > 0)
+    {
+        if (!m_exclude || pcre2_match(m_exclude, (PCRE2_SPTR)ident.c_str(), PCRE2_ZERO_TERMINATED,
+                                      0, 0, m_md_exclude, NULL) == PCRE2_ERROR_NOMATCH)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
