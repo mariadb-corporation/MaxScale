@@ -238,7 +238,6 @@ void server_free(Server* server)
     }
 
     delete server->disk_space_threshold;
-    delete server->response_time;
     delete server;
 }
 
@@ -504,12 +503,14 @@ static void cleanup_persistent_connections(const SERVER* server)
  * Designed to be called within a debugger session in order
  * to display all active servers within the gateway
  */
-void dprintServer(DCB* dcb, const SERVER* server)
+void dprintServer(DCB* dcb, const SERVER* srv)
 {
-    if (!server_is_active(server))
+    if (!server_is_active(srv))
     {
         return;
     }
+
+    const Server* server = static_cast<const Server*>(srv);
 
     dcb_printf(dcb, "Server %p (%s)\n", server, server->name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
@@ -562,9 +563,9 @@ void dprintServer(DCB* dcb, const SERVER* server)
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
     dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
     std::ostringstream ave_os;
-    if (server->response_time->num_samples())
+    if (server_response_time_num_samples(server))
     {
-        maxbase::Duration dur(server->response_time->average());
+        maxbase::Duration dur(server_response_time_average(server));
         ave_os << dur;
     }
     else
@@ -1541,8 +1542,21 @@ namespace
 std::mutex add_response_mutex;
 }
 
-void server_add_response_average(SERVER* server, double ave, int num_samples)
+void server_add_response_average(SERVER* srv, double ave, int num_samples)
 {
     std::lock_guard<std::mutex> lock(add_response_mutex);
-    server->response_time->add(ave, num_samples);
+    Server* server = static_cast<Server*>(srv);
+    server->response_time_add(ave, num_samples);
+}
+
+int server_response_time_num_samples(const SERVER* srv)
+{
+    const Server* server = static_cast<const Server*>(srv);
+    return server->response_time_num_samples();
+}
+
+double server_response_time_average(const SERVER* srv)
+{
+    const Server* server = static_cast<const Server*>(srv);
+    return server->response_time_average();
 }

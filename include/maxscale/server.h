@@ -20,7 +20,6 @@
 
 #include <maxscale/cdefs.h>
 #include <maxbase/jansson.h>
-#include <maxbase/average.hh>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 
@@ -166,9 +165,6 @@ typedef struct server
                                                  *   by rwsplit. TODO: Move to rwsplit */
     bool                   warn_ssl_not_enabled;/**< SSL not used for an SSL enabled server */
     MxsDiskSpaceThreshold* disk_space_threshold;/**< Disk space thresholds */
-    // TODO, this is a plain ptr to a C++ class. Soonish, when the server is new/deleted
-    // this will become a std::unique ptr. But not in this commit.
-    maxbase::EMAverage* response_time;      /**< for calculating average response time */
 } SERVER;
 
 /**
@@ -527,5 +523,8 @@ extern void dprintAllServersJson(DCB*);
 extern void dprintServer(DCB*, const SERVER*);
 extern void dprintPersistentDCBs(DCB*, const SERVER*);
 extern void dListServers(DCB*);
+
+int server_response_time_num_samples(const SERVER* server);
+double server_response_time_average(const SERVER* server);
 
 MXS_END_DECLS

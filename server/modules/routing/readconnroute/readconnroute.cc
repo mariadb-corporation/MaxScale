@@ -79,7 +79,7 @@
 #include <string>
 #include <vector>
 #include <maxscale/alloc.h>
-#include <maxscale/server.h>
+#include <maxscale/server.hh>
 #include <maxscale/router.h>
 #include <maxbase/atomic.h>
 #include <maxscale/spinlock.h>
@@ -378,9 +378,9 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
                 /* ref has a better score. */
                 candidate = ref;
             }
-            else if (almost_equal_server_scores(ref->inv_weight * ref->connections,
-                                                candidate->inv_weight * candidate->connections)
-                     && ref->server->stats.n_connections < candidate->server->stats.n_connections)
+            else if (mxs::almost_equal_server_scores(ref->inv_weight * ref->connections,
+                                                     candidate->inv_weight * candidate->connections) &&
+                     ref->server->stats.n_connections < candidate->server->stats.n_connections)
             {
                 /* The servers are about equally good, but ref has had fewer connections over time.
                  * TODO: On second thought, if the servers are currently about equally good,

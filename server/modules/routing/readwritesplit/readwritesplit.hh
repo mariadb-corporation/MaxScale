@@ -134,7 +134,7 @@ static const char gtid_wait_stmt[]
  */
 using SRWBackendVector = std::vector<mxs::SRWBackend*>;
 using BackendSelectFunction = std::function
-    <SRWBackendVector::const_iterator (const SRWBackendVector& sBackends)>;
+    <SRWBackendVector::iterator (SRWBackendVector& sBackends)>;
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 struct Config
@@ -385,9 +385,9 @@ std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBack
  *
  * @return Valid iterator into argument backends, or end(backends) if empty
  */
-SRWBackendVector::const_iterator find_best_backend(const SRWBackendVector& backends,
-                                                   BackendSelectFunction   select,
-                                                   bool masters_accepts_reads);
+SRWBackendVector::iterator find_best_backend(SRWBackendVector& backends,
+                                             BackendSelectFunction select,
+                                             bool masters_accepts_reads);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
