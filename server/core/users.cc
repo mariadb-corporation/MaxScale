@@ -15,6 +15,7 @@
 
 #include <new>
 #include <unordered_map>
+#include <set>
 #include <string>
 #include <algorithm>
 
@@ -160,10 +161,16 @@ public:
         if (m_data.size())
         {
             const char* sep = "";
+            std::set<std::string> users;
 
             for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
             {
-                dcb_printf(dcb, "%s%s", sep, it->first.c_str());
+                users.insert(it->first);
+            }
+
+            for (const auto& a : users)
+            {
+                dcb_printf(dcb, "%s%s", sep, a.c_str());
                 sep = ", ";
             }
         }
