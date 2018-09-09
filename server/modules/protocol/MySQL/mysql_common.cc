@@ -46,7 +46,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
 {
     MySQLProtocol* p;
 
-    p = (MySQLProtocol *) MXS_CALLOC(1, sizeof(MySQLProtocol));
+    p = (MySQLProtocol*) MXS_CALLOC(1, sizeof(MySQLProtocol));
     mxb_assert(p != NULL);
 
     if (p == NULL)
@@ -74,7 +74,7 @@ return_p:
 bool mysql_protocol_done(DCB* dcb)
 {
     bool rval = false;
-    MySQLProtocol* p = (MySQLProtocol *)dcb->protocol;
+    MySQLProtocol* p = (MySQLProtocol*)dcb->protocol;
 
     if (p->protocol_state == MYSQL_PROTOCOL_ACTIVE)
     {
@@ -86,24 +86,31 @@ bool mysql_protocol_done(DCB* dcb)
     return rval;
 }
 
-const char* gw_mysql_protocol_state2string (int state)
+const char* gw_mysql_protocol_state2string(int state)
 {
     switch (state)
     {
     case MXS_AUTH_STATE_INIT:
         return "Authentication initialized";
+
     case MXS_AUTH_STATE_PENDING_CONNECT:
         return "Network connection pending";
+
     case MXS_AUTH_STATE_CONNECTED:
         return "Network connection created";
+
     case MXS_AUTH_STATE_MESSAGE_READ:
         return "Read server handshake";
+
     case MXS_AUTH_STATE_RESPONSE_SENT:
         return "Response to handshake sent";
+
     case MXS_AUTH_STATE_FAILED:
         return "Authentication failed";
+
     case MXS_AUTH_STATE_COMPLETE:
         return "Authentication is complete.";
+
     default:
         return "MySQL (unknown protocol state)";
     }
@@ -142,16 +149,16 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     *data++ = 0x0;
     *data++ = 0x0;
     *data++ = packet_number;
-    *data   = 0x1;
+    *data = 0x1;
 
     return buf;
 }
 
-int mysql_send_com_quit(DCB*   dcb,
-                        int    packet_number,
+int mysql_send_com_quit(DCB* dcb,
+                        int  packet_number,
                         GWBUF* bufparam)
 {
-    GWBUF *buf;
+    GWBUF* buf;
     int nbytes = 0;
 
     mxb_assert(packet_number <= 255);
@@ -179,8 +186,8 @@ int mysql_send_com_quit(DCB*   dcb,
 }
 
 
-GWBUF* mysql_create_custom_error(int         packet_number,
-                                 int         affected_rows,
+GWBUF* mysql_create_custom_error(int packet_number,
+                                 int affected_rows,
                                  const char* msg)
 {
     uint8_t* outbuf = NULL;
@@ -199,7 +206,7 @@ GWBUF* mysql_create_custom_error(int         packet_number,
     mysql_state = "HY000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err, /* mysql_errno */ 2003);
+    gw_mysql_set_byte2(mysql_err,    /* mysql_errno */ 2003);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -208,11 +215,11 @@ GWBUF* mysql_create_custom_error(int         packet_number,
         mysql_error_msg = msg;
     }
 
-    mysql_payload_size =
-        sizeof(field_count) +
-        sizeof(mysql_err) +
-        sizeof(mysql_statemsg) +
-        strlen(mysql_error_msg);
+    mysql_payload_size
+        = sizeof(field_count)
+            + sizeof(mysql_err)
+            + sizeof(mysql_statemsg)
+            + strlen(mysql_error_msg);
 
     /** allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
@@ -264,17 +271,16 @@ GWBUF* mysql_create_custom_error(int         packet_number,
  * @param error_message Text message to be included
  * @return GWBUF        A buffer containing the error message, ready to send
  */
-GWBUF *
-mysql_create_standard_error(int packet_number,
-                            int error_number,
-                            const char *error_message)
+GWBUF* mysql_create_standard_error(int packet_number,
+                                   int error_number,
+                                   const char* error_message)
 {
-    uint8_t *outbuf = NULL;
+    uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
     uint8_t mysql_error_number[2];
-    uint8_t *mysql_handshake_payload = NULL;
-    GWBUF *buf;
+    uint8_t* mysql_handshake_payload = NULL;
+    GWBUF* buf;
 
     mysql_payload_size = 1 + sizeof(mysql_error_number) + strlen(error_message);
 
@@ -323,13 +329,12 @@ mysql_create_standard_error(int packet_number,
  * @param error_message Text message to be included
  * @return      0 on failure, 1 on success
  */
-int
-mysql_send_standard_error(DCB *dcb,
-                          int packet_number,
-                          int error_number,
-                          const char *error_message)
+int mysql_send_standard_error(DCB* dcb,
+                              int  packet_number,
+                              int  error_number,
+                              const char* error_message)
 {
-    GWBUF *buf;
+    GWBUF* buf;
     buf = mysql_create_standard_error(packet_number, error_number, error_message);
     return buf ? dcb->func.write(dcb, buf) : 0;
 }
@@ -347,10 +352,10 @@ mysql_send_standard_error(DCB *dcb,
  * @return 1 Non-zero if data was sent
  *
  */
-int mysql_send_custom_error(DCB       *dcb,
-                            int        packet_number,
-                            int        in_affected_rows,
-                            const char *mysql_message)
+int mysql_send_custom_error(DCB* dcb,
+                            int  packet_number,
+                            int  in_affected_rows,
+                            const char* mysql_message)
 {
     GWBUF* buf;
 
@@ -371,34 +376,35 @@ int mysql_send_custom_error(DCB       *dcb,
  * @return packet length
  *
  */
-int mysql_send_auth_error(DCB        *dcb,
-                          int        packet_number,
-                          int        in_affected_rows,
-                          const char *mysql_message)
+int mysql_send_auth_error(DCB* dcb,
+                          int  packet_number,
+                          int  in_affected_rows,
+                          const char* mysql_message)
 {
-    uint8_t *outbuf = NULL;
+    uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
-    uint8_t *mysql_payload = NULL;
+    uint8_t* mysql_payload = NULL;
     uint8_t field_count = 0;
     uint8_t mysql_err[2];
     uint8_t mysql_statemsg[6];
-    const char *mysql_error_msg = NULL;
-    const char *mysql_state = NULL;
+    const char* mysql_error_msg = NULL;
+    const char* mysql_state = NULL;
 
-    GWBUF *buf;
+    GWBUF* buf;
 
     if (dcb->state != DCB_STATE_POLLING)
     {
         MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
-                  dcb, STRDCBSTATE(dcb->state));
+                  dcb,
+                  STRDCBSTATE(dcb->state));
         return 0;
     }
     mysql_error_msg = "Access denied!";
     mysql_state = "28000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err, /*mysql_errno */ 1045);
+    gw_mysql_set_byte2(mysql_err,    /*mysql_errno */ 1045);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -407,8 +413,8 @@ int mysql_send_auth_error(DCB        *dcb,
         mysql_error_msg = mysql_message;
     }
 
-    mysql_payload_size =
-        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+    mysql_payload_size
+        = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -447,16 +453,16 @@ int mysql_send_auth_error(DCB        *dcb,
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
-char* create_auth_failed_msg(GWBUF*readbuf,
-                             char* hostaddr,
+char* create_auth_failed_msg(GWBUF* readbuf,
+                             char*  hostaddr,
                              uint8_t* sha1)
 {
     char* errstr;
-    char* uname = (char *)GWBUF_DATA(readbuf) + 5;
+    char* uname = (char*)GWBUF_DATA(readbuf) + 5;
     const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
 
     /** -4 comes from 2X'%s' minus terminating char */
-    errstr = (char *)MXS_MALLOC(strlen(uname) + strlen(ferrstr) + strlen(hostaddr) + strlen("YES") - 6 + 1);
+    errstr = (char*)MXS_MALLOC(strlen(uname) + strlen(ferrstr) + strlen(hostaddr) + strlen("YES") - 6 + 1);
 
     if (errstr != NULL)
     {
@@ -477,11 +483,11 @@ char* create_auth_failed_msg(GWBUF*readbuf,
  *
  * @return      Pointer to the allocated string or NULL on failure
  */
-char *create_auth_fail_str(char *username,
-                           char *hostaddr,
-                           bool password,
-                           char *db,
-                           int errcode)
+char* create_auth_fail_str(char* username,
+                           char* hostaddr,
+                           bool  password,
+                           char* db,
+                           int   errcode)
 {
     char* errstr;
     const char* ferrstr;
@@ -508,9 +514,9 @@ char *create_auth_fail_str(char *username,
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
     }
-    errstr = (char *)MXS_MALLOC(strlen(username) + strlen(ferrstr) +
-                                strlen(hostaddr) + strlen("YES") - 6 +
-                                db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
+    errstr = (char*)MXS_MALLOC(strlen(username) + strlen(ferrstr)
+                               + strlen(hostaddr) + strlen("YES") - 6
+                               + db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
 
     if (errstr == NULL)
     {
@@ -545,16 +551,16 @@ retblock:
  * @param readbuf Pointer to a buffer where the data is stored
  * @return True on success, false if an error occurred while data was being read
  */
-bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
+bool read_complete_packet(DCB* dcb, GWBUF** readbuf)
 {
     bool rval = false;
-    GWBUF *localbuf = NULL;
+    GWBUF* localbuf = NULL;
 
     if (dcb_read(dcb, &localbuf, 0) >= 0)
     {
         rval = true;
         dcb->last_read = mxs_clock();
-        GWBUF *packets = modutil_get_complete_packets(&localbuf);
+        GWBUF* packets = modutil_get_complete_packets(&localbuf);
 
         if (packets)
         {
@@ -590,8 +596,8 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
         mxb_assert(dcb->data);
         memcpy(session, dcb->data, sizeof(MYSQL_session));
     }
-    else if (dcb->session->state != SESSION_STATE_ALLOC &&
-             dcb->session->state != SESSION_STATE_DUMMY)
+    else if (dcb->session->state != SESSION_STATE_ALLOC
+             && dcb->session->state != SESSION_STATE_DUMMY)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
@@ -617,25 +623,25 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
  *
  * @todo Support more than 255 affected rows
  */
-int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char* message)
+int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message)
 {
-    uint8_t *outbuf = NULL;
+    uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
-    uint8_t *mysql_payload = NULL;
+    uint8_t* mysql_payload = NULL;
     uint8_t field_count = 0;
     uint8_t insert_id = 0;
     uint8_t mysql_server_status[2];
     uint8_t mysql_warning_counter[2];
-    GWBUF *buf;
+    GWBUF* buf;
 
 
-    mysql_payload_size =
-        sizeof(field_count) +
-        sizeof(affected_rows) +
-        sizeof(insert_id) +
-        sizeof(mysql_server_status) +
-        sizeof(mysql_warning_counter);
+    mysql_payload_size
+        = sizeof(field_count)
+            + sizeof(affected_rows)
+            + sizeof(insert_id)
+            + sizeof(mysql_server_status)
+            + sizeof(mysql_warning_counter);
 
     if (message != NULL)
     {
@@ -706,8 +712,12 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
  *
  * @return The length of the response packet
  */
-static int response_length(bool with_ssl, bool ssl_established, char *user, uint8_t *passwd,
-                           char *dbname, const char *auth_module)
+static int response_length(bool with_ssl,
+                           bool ssl_established,
+                           char* user,
+                           uint8_t* passwd,
+                           char* dbname,
+                           const char* auth_module)
 {
     long bytes;
 
@@ -760,7 +770,7 @@ static int response_length(bool with_ssl, bool ssl_established, char *user, uint
  * @param passwd   The SHA1(password) sent by the client
  * @param output   Pointer where the resulting 20 byte hash is stored
  */
-static void calculate_hash(uint8_t *scramble, uint8_t *passwd, uint8_t *output)
+static void calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output)
 {
     uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
     uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
@@ -788,8 +798,7 @@ static void calculate_hash(uint8_t *scramble, uint8_t *passwd, uint8_t *output)
  *
  * @return Address of the next byte after the end of the stored password
  */
-static uint8_t *
-load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
+static uint8_t* load_hashed_password(uint8_t* scramble, uint8_t* payload, uint8_t* passwd)
 {
     *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
     calculate_hash(scramble, passwd, payload);
@@ -812,8 +821,10 @@ load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-static uint32_t
-create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, uint64_t capabilities)
+static uint32_t create_capabilities(MySQLProtocol* conn,
+                                    bool with_ssl,
+                                    bool db_specified,
+                                    uint64_t capabilities)
 {
     uint32_t final_capabilities;
 
@@ -823,9 +834,11 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, uint6
     if (with_ssl)
     {
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL;
-        /* Unclear whether we should include this */
-        /* Maybe it should depend on whether CA certificate is provided */
-        /* final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT; */
+        /*
+         * Unclear whether we should include this
+         * Maybe it should depend on whether CA certificate is provided
+         * final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT;
+         */
     }
 
     if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
@@ -853,12 +866,14 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, uint6
     return final_capabilities;
 }
 
-GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
-                                 bool with_ssl, bool ssl_established,
+GWBUF* gw_generate_auth_response(MYSQL_session* client,
+                                 MySQLProtocol* conn,
+                                 bool with_ssl,
+                                 bool ssl_established,
                                  uint64_t service_capabilities)
 {
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
-    uint8_t *curr_passwd = NULL;
+    uint8_t* curr_passwd = NULL;
 
     if (memcmp(client->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
     {
@@ -875,12 +890,16 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    long bytes = response_length(with_ssl, ssl_established, client->user,
-                                 curr_passwd, client->db, auth_plugin_name);
+    long bytes = response_length(with_ssl,
+                                 ssl_established,
+                                 client->user,
+                                 curr_passwd,
+                                 client->db,
+                                 auth_plugin_name);
 
     // allocating the GWBUF
-    GWBUF *buffer = gwbuf_alloc(bytes);
-    uint8_t *payload = GWBUF_DATA(buffer);
+    GWBUF* buffer = gwbuf_alloc(bytes);
+    uint8_t* payload = GWBUF_DATA(buffer);
 
     // clearing data
     memset(payload, '\0', bytes);
@@ -937,7 +956,6 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
         }
 
         memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
-
     }
 
     return buffer;
@@ -949,15 +967,15 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
  * @param dcb  Backend DCB
  * @return Authentication state after sending handshake response
  */
-mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
+mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
 {
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
-    if (dcb->session == NULL ||
-        (dcb->session->state != SESSION_STATE_READY &&
-         dcb->session->state != SESSION_STATE_ROUTER_READY) ||
-        (dcb->server->server_ssl &&
-         dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+    if (dcb->session == NULL
+        || (dcb->session->state != SESSION_STATE_READY
+            && dcb->session->state != SESSION_STATE_ROUTER_READY)
+        || (dcb->server->server_ssl
+            && dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return rval;
     }
@@ -968,8 +986,10 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
 
-    GWBUF* buffer = gw_generate_auth_response(&client, (MySQLProtocol*)dcb->protocol,
-                                              with_ssl, ssl_established,
+    GWBUF* buffer = gw_generate_auth_response(&client,
+                                              (MySQLProtocol*)dcb->protocol,
+                                              with_ssl,
+                                              ssl_established,
                                               dcb->service->capabilities);
     mxb_assert(buffer);
 
@@ -994,13 +1014,13 @@ int send_mysql_native_password_response(DCB* dcb)
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
-    uint8_t *curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-                           local_session.client_sha1 : null_client_sha1;
+    uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN)
+        ? local_session.client_sha1 : null_client_sha1;
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
-    data[3] = 2; // This is the third packet after the COM_CHANGE_USER
+    data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
     calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb_write(dcb, buffer);
@@ -1015,7 +1035,7 @@ bool send_auth_switch_request_packet(DCB* dcb)
 
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, len);
-    data[3] = 1; // First response to the COM_CHANGE_USER
+    data[3] = 1;    // First response to the COM_CHANGE_USER
     data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
     memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
     memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
@@ -1031,9 +1051,9 @@ bool send_auth_switch_request_packet(DCB* dcb)
  * @return 0 on success, < 0 on failure
  *
  */
-int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
+int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
 {
-    uint8_t *server_version_end = NULL;
+    uint8_t* server_version_end = NULL;
     uint16_t mysql_server_capabilities_one = 0;
     uint16_t mysql_server_capabilities_two = 0;
     uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
@@ -1053,7 +1073,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
     payload++;
 
     // Get server version (string)
-    server_version_end = (uint8_t *) gw_strend((char*) payload);
+    server_version_end = (uint8_t*) gw_strend((char*) payload);
 
     payload = server_version_end + 1;
 
@@ -1074,7 +1094,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
 
     mysql_server_capabilities_one = gw_mysql_get_byte2(payload);
 
-    //Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
+    // Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
     payload += 5;
 
     mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
@@ -1091,8 +1111,8 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
         mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
         mxb_assert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
 
-        if ((scramble_len < GW_SCRAMBLE_LENGTH_323) ||
-            scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
+        if ((scramble_len < GW_SCRAMBLE_LENGTH_323)
+            || scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
         {
             /* log this */
             return -2;
@@ -1123,11 +1143,11 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
  * @param dcb  Backend DCB
  * @return true on success, false on failure
  */
-bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer)
+bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 {
-    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
     bool rval = false;
-    uint8_t *payload = GWBUF_DATA(buffer) + 4;
+    uint8_t* payload = GWBUF_DATA(buffer) + 4;
 
     if (gw_decode_mysql_server_handshake(proto, payload) >= 0)
     {
@@ -1137,21 +1157,21 @@ bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer)
     return rval;
 }
 
-bool mxs_mysql_is_ok_packet(GWBUF *buffer)
+bool mxs_mysql_is_ok_packet(GWBUF* buffer)
 {
-    uint8_t cmd = 0xff; // Default should differ from the OK packet
+    uint8_t cmd = 0xff;     // Default should differ from the OK packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_OK;
 }
 
-bool mxs_mysql_is_err_packet(GWBUF *buffer)
+bool mxs_mysql_is_err_packet(GWBUF* buffer)
 {
-    uint8_t cmd = 0x00; // Default should differ from the ERR packet
+    uint8_t cmd = 0x00;     // Default should differ from the ERR packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_ERR;
 }
 
-bool mxs_mysql_is_result_set(GWBUF *buffer)
+bool mxs_mysql_is_result_set(GWBUF* buffer)
 {
     bool rval = false;
     uint8_t cmd;
@@ -1177,20 +1197,20 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
     return rval;
 }
 
-bool mxs_mysql_is_local_infile(GWBUF *buffer)
+bool mxs_mysql_is_local_infile(GWBUF* buffer)
 {
-    uint8_t cmd = 0xff; // Default should differ from the OK packet
+    uint8_t cmd = 0xff;     // Default should differ from the OK packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_LOCAL_INFILE;
 }
 
-bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer)
+bool mxs_mysql_is_prep_stmt_ok(GWBUF* buffer)
 {
     bool rval = false;
     uint8_t cmd;
 
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) &&
-        cmd == MYSQL_REPLY_OK)
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd)
+        && cmd == MYSQL_REPLY_OK)
     {
         rval = true;
     }
@@ -1200,15 +1220,15 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer)
 
 bool mxs_mysql_is_ps_command(uint8_t cmd)
 {
-    return cmd == MXS_COM_STMT_EXECUTE ||
-           cmd == MXS_COM_STMT_BULK_EXECUTE ||
-           cmd == MXS_COM_STMT_SEND_LONG_DATA ||
-           cmd == MXS_COM_STMT_CLOSE ||
-           cmd == MXS_COM_STMT_FETCH ||
-           cmd == MXS_COM_STMT_RESET;
+    return cmd == MXS_COM_STMT_EXECUTE
+           || cmd == MXS_COM_STMT_BULK_EXECUTE
+           || cmd == MXS_COM_STMT_SEND_LONG_DATA
+           || cmd == MXS_COM_STMT_CLOSE
+           || cmd == MXS_COM_STMT_FETCH
+           || cmd == MXS_COM_STMT_RESET;
 }
 
-bool mxs_mysql_more_results_after_ok(GWBUF *buffer)
+bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 {
     bool rval = false;
 
@@ -1259,10 +1279,10 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
     uint8_t params[MYSQL_PS_ID_SIZE];
     uint8_t warnings[MYSQL_PS_WARN_SIZE];
 
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id) &&
-        gwbuf_copy_data(buffer, MYSQL_PS_COLS_OFFSET, sizeof(cols), cols) == sizeof(cols) &&
-        gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params) &&
-        gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id)
+        && gwbuf_copy_data(buffer, MYSQL_PS_COLS_OFFSET, sizeof(cols), cols) == sizeof(cols)
+        && gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params)
+        && gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
     {
         out->id = gw_mysql_get_byte4(id);
         out->columns = gw_mysql_get_byte2(cols);
@@ -1289,9 +1309,9 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
 
 bool mxs_mysql_command_will_respond(uint8_t cmd)
 {
-    return cmd != MXS_COM_STMT_SEND_LONG_DATA &&
-           cmd != MXS_COM_QUIT &&
-           cmd != MXS_COM_STMT_CLOSE;
+    return cmd != MXS_COM_STMT_SEND_LONG_DATA
+           && cmd != MXS_COM_QUIT
+           && cmd != MXS_COM_STMT_CLOSE;
 }
 
 namespace
@@ -1302,50 +1322,52 @@ typedef std::map<SERVER*, std::string> TargetList;
 
 struct KillInfo
 {
-    typedef  bool (*DcbCallback)(DCB *dcb, void *data);
+    typedef  bool (* DcbCallback)(DCB* dcb, void* data);
 
-    KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback):
-        origin(mxs_rworker_get_current_id()),
-        query_base(query),
-        protocol(*(MySQLProtocol*)ses->client_dcb->protocol),
-        cb(callback)
+    KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
+        : origin(mxs_rworker_get_current_id())
+        , query_base(query)
+        , protocol(*(MySQLProtocol*)ses->client_dcb->protocol)
+        , cb(callback)
     {
         gw_get_shared_session_auth_info(ses->client_dcb, &session);
     }
 
-    int origin;
-    std::string query_base;
+    int           origin;
+    std::string   query_base;
     MYSQL_session session;
     MySQLProtocol protocol;
-    DcbCallback cb;
-    TargetList targets;
+    DcbCallback   cb;
+    TargetList    targets;
 };
 
-static bool kill_func(DCB *dcb, void *data);
+static bool kill_func(DCB* dcb, void* data);
 
-struct ConnKillInfo: public KillInfo
+struct ConnKillInfo : public KillInfo
 {
-    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses):
-        KillInfo(query, ses, kill_func),
-        target_id(id)
-    {}
+    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
+        : KillInfo(query, ses, kill_func)
+        , target_id(id)
+    {
+    }
 
     uint64_t target_id;
 };
 
-static bool kill_user_func(DCB *dcb, void *data);
+static bool kill_user_func(DCB* dcb, void* data);
 
-struct UserKillInfo: public KillInfo
+struct UserKillInfo : public KillInfo
 {
-    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses):
-        KillInfo(query, ses, kill_user_func),
-        user(name)
-    {}
+    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
+        : KillInfo(query, ses, kill_user_func)
+        , user(name)
+    {
+    }
 
     std::string user;
 };
 
-static bool kill_func(DCB *dcb, void *data)
+static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
 
@@ -1371,14 +1393,14 @@ static bool kill_func(DCB *dcb, void *data)
     return true;
 }
 
-static bool kill_user_func(DCB *dcb, void *data)
+static bool kill_user_func(DCB* dcb, void* data)
 {
     UserKillInfo* info = (UserKillInfo*)data;
 
-    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
-        strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER
+        && strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
     {
-        info->targets[dcb->server]  = info->query_base;
+        info->targets[dcb->server] = info->query_base;
     }
 
     return true;
@@ -1403,7 +1425,6 @@ static void worker_func(int thread_id, void* data)
 
     delete info;
 }
-
 }
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
@@ -1417,8 +1438,10 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
     {
         MXB_WORKER* worker = mxs_rworker_get(i);
         mxb_assert(worker);
-        mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
-                                (intptr_t)new ConnKillInfo(target_id, ss.str(), issuer));
+        mxb_worker_post_message(worker,
+                                MXB_WORKER_MSG_CALL,
+                                (intptr_t)worker_func,
+                                (intptr_t) new ConnKillInfo(target_id, ss.str(), issuer));
     }
 
     mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
@@ -1435,8 +1458,10 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
     {
         MXB_WORKER* worker = mxs_rworker_get(i);
         mxb_assert(worker);
-        mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, (intptr_t)worker_func,
-                                (intptr_t)new UserKillInfo(user, ss.str(), issuer));
+        mxb_worker_post_message(worker,
+                                MXB_WORKER_MSG_CALL,
+                                (intptr_t)worker_func,
+                                (intptr_t) new UserKillInfo(user, ss.str(), issuer));
     }
 
     mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
@@ -1448,59 +1473,64 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
  *  @param packet_offset  Ok packet offset in this buff
  *  @param packet_len     Ok packet lengh
  */
-void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_len)
+void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len)
 {
     uint8_t local_buf[packet_len];
-    uint8_t *ptr = local_buf;
-    char *trx_info, *var_name, *var_value;
+    uint8_t* ptr = local_buf;
+    char* trx_info, * var_name, * var_value;
 
     gwbuf_copy_data(buff, packet_offset, packet_len, local_buf);
-    ptr += (MYSQL_HEADER_LEN + 1); // Header and Command type
-    mxs_leint_consume(&ptr);       // Affected rows
-    mxs_leint_consume(&ptr);       // Last insert-id
+    ptr += (MYSQL_HEADER_LEN + 1);  // Header and Command type
+    mxs_leint_consume(&ptr);        // Affected rows
+    mxs_leint_consume(&ptr);        // Last insert-id
     uint16_t server_status = gw_mysql_get_byte2(ptr);
-    ptr += 2; // status
-    ptr += 2; // number of warnings
+    ptr += 2;   // status
+    ptr += 2;   // number of warnings
 
     if (ptr < (local_buf + packet_len))
     {
         size_t size;
-        mxs_lestr_consume(&ptr, &size);  // info
+        mxs_lestr_consume(&ptr, &size);     // info
 
-        if (server_status  & SERVER_SESSION_STATE_CHANGED)
+        if (server_status & SERVER_SESSION_STATE_CHANGED)
         {
-            MXB_AT_DEBUG(uint64_t data_size = )mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
+            MXB_AT_DEBUG(uint64_t data_size = ) mxs_leint_consume(&ptr);    // total
+                                                                            // SERVER_SESSION_STATE_CHANGED
+                                                                            // length
             mxb_assert(data_size == packet_len - (ptr - local_buf));
 
             while (ptr < (local_buf + packet_len))
             {
-                enum_session_state_type type =
-                    (enum enum_session_state_type)mxs_leint_consume(&ptr);
-#if defined(SS_DEBUG)
+                enum_session_state_type type
+                    = (enum enum_session_state_type)mxs_leint_consume(&ptr);
+#if defined (SS_DEBUG)
                 mxb_assert(type <= SESSION_TRACK_TRANSACTION_TYPE);
 #endif
                 switch (type)
                 {
                 case SESSION_TRACK_STATE_CHANGE:
                 case SESSION_TRACK_SCHEMA:
-                    size = mxs_leint_consume(&ptr); // Length of the overall entity.
+                    size = mxs_leint_consume(&ptr);     // Length of the overall entity.
                     ptr += size;
                     break;
+
                 case SESSION_TRACK_GTIDS:
-                    mxs_leint_consume(&ptr); // Length of the overall entity.
-                    mxs_leint_consume(&ptr); // encoding specification
+                    mxs_leint_consume(&ptr);    // Length of the overall entity.
+                    mxs_leint_consume(&ptr);    // encoding specification
                     var_value = mxs_lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
                     MXS_FREE(var_value);
                     break;
+
                 case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
-                    mxs_leint_consume(&ptr); //length
+                    mxs_leint_consume(&ptr);    // length
                     var_value = mxs_lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, "trx_characteristics", var_value);
                     MXS_FREE(var_value);
                     break;
+
                 case SESSION_TRACK_SYSTEM_VARIABLES:
-                    mxs_leint_consume(&ptr); //lenth
+                    mxs_leint_consume(&ptr);    // lenth
                     // system variables like autocommit, schema, charset ...
                     var_name = mxs_lestr_consume_dup(&ptr);
                     var_value = mxs_lestr_consume_dup(&ptr);
@@ -1509,13 +1539,15 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                     MXS_FREE(var_name);
                     MXS_FREE(var_value);
                     break;
+
                 case SESSION_TRACK_TRANSACTION_TYPE:
-                    mxs_leint_consume(&ptr); // length
+                    mxs_leint_consume(&ptr);    // length
                     trx_info = mxs_lestr_consume_dup(&ptr);
                     MXS_DEBUG("get trx_info:%s", trx_info);
-                    gwbuf_add_property(buff, (char *)"trx_state", trx_info);
+                    gwbuf_add_property(buff, (char*)"trx_state", trx_info);
                     MXS_FREE(trx_info);
                     break;
+
                 default:
                     mxs_lestr_consume(&ptr, &size);
                     MXS_WARNING("recieved unexpecting session track type:%d", type);
@@ -1531,29 +1563,32 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
  *  @param buff                 Buffer contain multi compelte packets
  *  @param server_capabilities  Server capabilities
  */
-void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
+void mxs_mysql_get_session_track_info(GWBUF* buff, MySQLProtocol* proto)
 {
     size_t offset = 0;
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
     if (proto->server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN + 1, header_and_command) == (MYSQL_HEADER_LEN + 1))
+        while (gwbuf_copy_data(buff,
+                               offset,
+                               MYSQL_HEADER_LEN + 1,
+                               header_and_command) == (MYSQL_HEADER_LEN + 1))
         {
             size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
 
-            if (packet_len > MYSQL_OK_PACKET_MIN_LEN &&
-                cmd == MYSQL_REPLY_OK &&
-                (proto->num_eof_packets % 2) == 0)
+            if (packet_len > MYSQL_OK_PACKET_MIN_LEN
+                && cmd == MYSQL_REPLY_OK
+                && (proto->num_eof_packets % 2) == 0)
             {
                 buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
                 mxs_mysql_parse_ok_packet(buff, offset, packet_len);
             }
 
-            if ((proto->current_command == MXS_COM_QUERY ||
-                 proto->current_command == MXS_COM_STMT_FETCH ||
-                 proto->current_command == MXS_COM_STMT_EXECUTE) &&
-                cmd == MYSQL_REPLY_EOF)
+            if ((proto->current_command == MXS_COM_QUERY
+                 || proto->current_command == MXS_COM_STMT_FETCH
+                 || proto->current_command == MXS_COM_STMT_EXECUTE)
+                && cmd == MYSQL_REPLY_EOF)
             {
                 proto->num_eof_packets++;
             }
@@ -1603,7 +1638,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
  * L  tables were explicitly locked using LOCK TABLES
  * _  LOCK TABLES is not active in this session
  * */
-mysql_tx_state_t parse_trx_state(const char *str)
+mysql_tx_state_t parse_trx_state(const char* str)
 {
     int s = TX_EMPTY;
     mxb_assert(str);
@@ -1614,34 +1649,42 @@ mysql_tx_state_t parse_trx_state(const char *str)
         case 'T':
             s |= TX_EXPLICIT;
             break;
+
         case 'I':
             s |= TX_IMPLICIT;
             break;
+
         case 'r':
             s |= TX_READ_UNSAFE;
             break;
+
         case 'R':
             s |= TX_READ_TRX;
             break;
+
         case 'w':
             s |= TX_WRITE_UNSAFE;
             break;
+
         case 'W':
             s |= TX_WRITE_TRX;
             break;
+
         case 's':
             s |= TX_STMT_UNSAFE;
             break;
+
         case 'S':
             s |= TX_RESULT_SET;
             break;
+
         case 'L':
             s |= TX_LOCKED_TABLES;
             break;
+
         default:
             break;
         }
-
     }
     while (*(str++) != 0);
 

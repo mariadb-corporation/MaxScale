@@ -24,9 +24,9 @@ void check_maxscale(TestConnections& test)
     test.add_result(test.maxscales->connect_maxscale(0), "Can not connect to Maxscale\n");
     test.tprintf("Trying simple query against all sevices\n");
     test.tprintf("RWSplit \n");
-    test.try_query(test.maxscales->conn_rwsplit[0], (char *) "show databases;");
+    test.try_query(test.maxscales->conn_rwsplit[0], (char*) "show databases;");
     test.tprintf("ReadConn Master \n");
-    test.try_query(test.maxscales->conn_master[0], (char *) "show databases;");
+    test.try_query(test.maxscales->conn_master[0], (char*) "show databases;");
 }
 
 void replicate_from(TestConnections& test, int server_ind, int target_ind)
@@ -34,7 +34,7 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
     stringstream change_master;
     change_master << "CHANGE MASTER TO MASTER_HOST = '" << test.repl->IP[target_ind]
                   << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
-                  "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+                                                             "MASTER_USER='repl', MASTER_PASSWORD='repl';";
     cout << "Server " << server_ind + 1 << " starting to replicate from server " << target_ind + 1 << endl;
     if (test.verbose)
     {
@@ -51,9 +51,9 @@ void restore_servers(TestConnections& test, bool events_added)
     test.repl->unblock_node(1);
     test.repl->unblock_node(2);
     int dummy;
-    char *o1 = test.maxscales->ssh_node_output(0, "maxadmin clear server server1 Maint", true, &dummy);
-    char *o2 = test.maxscales->ssh_node_output(0, "maxadmin clear server server2 Maint", true, &dummy);
-    char *o3 = test.maxscales->ssh_node_output(0, "maxadmin clear server server3 Maint", true, &dummy);
+    char* o1 = test.maxscales->ssh_node_output(0, "maxadmin clear server server1 Maint", true, &dummy);
+    char* o2 = test.maxscales->ssh_node_output(0, "maxadmin clear server server2 Maint", true, &dummy);
+    char* o3 = test.maxscales->ssh_node_output(0, "maxadmin clear server server3 Maint", true, &dummy);
     free(o1);
     free(o2);
     free(o3);
@@ -65,7 +65,9 @@ void restore_servers(TestConnections& test, bool events_added)
         replicate_from(test, 2, 3);
         test.maxscales->wait_for_monitor();
         o1 = test.maxscales->ssh_node_output(0,
-                                             "maxadmin call command mariadbmon switchover MySQL-Monitor server1 server4", true, &dummy);
+                                             "maxadmin call command mariadbmon switchover MySQL-Monitor server1 server4",
+                                             true,
+                                             &dummy);
         test.maxscales->wait_for_monitor();
         int master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Switchover failed to set server1 as master.");
@@ -77,7 +79,7 @@ void restore_servers(TestConnections& test, bool events_added)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -22,7 +22,7 @@ class Tee;
 /**
  * A Tee session
  */
-class TeeSession: public mxs::FilterSession
+class TeeSession : public mxs::FilterSession
 {
     TeeSession(const TeeSession&);
     const TeeSession& operator=(const TeeSession&);
@@ -33,16 +33,19 @@ public:
 
     void    close();
     int     routeQuery(GWBUF* pPacket);
-    void    diagnostics(DCB *pDcb);
+    void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
 
 private:
-    TeeSession(MXS_SESSION* session, LocalClient* client,
-               pcre2_code* match, pcre2_match_data* md_match,
-               pcre2_code* exclude, pcre2_match_data* md_exclude);
+    TeeSession(MXS_SESSION* session,
+               LocalClient* client,
+               pcre2_code*  match,
+               pcre2_match_data* md_match,
+               pcre2_code* exclude,
+               pcre2_match_data* md_exclude);
     bool query_matches(GWBUF* buffer);
 
-    LocalClient*      m_client;  /**< The client connection to the local service */
+    LocalClient*      m_client; /**< The client connection to the local service */
     pcre2_code*       m_match;
     pcre2_match_data* m_md_match;
     pcre2_code*       m_exclude;

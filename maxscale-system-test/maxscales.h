@@ -5,7 +5,7 @@
 #include "mariadb_func.h"
 #include "mariadb_nodes.h"
 
-class Maxscales: public Nodes
+class Maxscales : public Nodes
 {
 public:
     enum service
@@ -15,7 +15,7 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(const char *pref, const char *test_cwd, bool verbose);
+    Maxscales(const char* pref, const char* test_cwd, bool verbose);
     int read_env();
 
     /**
@@ -51,22 +51,22 @@ public:
     /**
      * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
      */
-    MYSQL *conn_rwsplit[256];
+    MYSQL* conn_rwsplit[256];
 
     /**
      * @brief conn_master   MYSQL connection struct to ReadConnection in master mode service
      */
-    MYSQL *conn_master[256];
+    MYSQL* conn_master[256];
 
     /**
      * @brief conn_slave MYSQL connection struct to ReadConnection in slave mode service
      */
-    MYSQL *conn_slave[256];
+    MYSQL* conn_slave[256];
 
     /**
      * @brief routers Array of 3 MYSQL handlers which contains copies of conn_rwsplit, conn_master, conn_slave
      */
-    MYSQL *routers[256][3];
+    MYSQL* routers[256][3];
 
     /**
      * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
@@ -79,18 +79,18 @@ public:
     char maxadmin_password[256][256];
 
     /**
-      * @brief maxscale_cnf full name of Maxscale configuration file
-      */
+     * @brief maxscale_cnf full name of Maxscale configuration file
+     */
     char maxscale_cnf[256][4096];
 
     /**
-      * @brief maxscale_log_dir name of log files directory
-      */
+     * @brief maxscale_log_dir name of log files directory
+     */
     char maxscale_log_dir[256][4096];
 
     /**
-      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
-      */
+     * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
+     */
     char maxscale_binlog_dir[256][4096];
 
     /**
@@ -100,16 +100,18 @@ public:
 
 
     /**
-    * @brief test_dir path to test application
-    */
+     * @brief test_dir path to test application
+     */
     char test_dir[4096];
 
     bool ssl;
 
     /**
-     * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
+     * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
+     *services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and maxscales->conn_slave[0] MYSQL structs
+     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and
+     *maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
     int connect_maxscale(int m = 0);
@@ -129,19 +131,22 @@ public:
     }
 
     /**
-     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in maxscales->conn_rwsplit[0]
+     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in
+     *maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
     int connect_rwsplit(int m = 0);
 
     /**
-     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in maxscales->conn_master[0]
+     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in
+     *maxscales->conn_master[0]
      * @return 0 in case of success
      */
     int connect_readconn_master(int m = 0);
 
     /**
-     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in maxscales->conn_slave[0]
+     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in
+     *maxscales->conn_slave[0]
      * @return 0 in case of success
      */
     int connect_readconn_slave(int m = 0);
@@ -151,7 +156,7 @@ public:
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_rwsplit_connection(int m = 0)
+    MYSQL* open_rwsplit_connection(int m = 0)
     {
         return open_conn(rwsplit_port[m], IP[m], user_name, password, ssl);
     }
@@ -169,10 +174,13 @@ public:
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_readconn_master_connection(int m = 0)
+    MYSQL* open_readconn_master_connection(int m = 0)
     {
-        return open_conn(readconn_master_port[m], IP[m], user_name,
-                         password, ssl);
+        return open_conn(readconn_master_port[m],
+                         IP[m],
+                         user_name,
+                         password,
+                         ssl);
     }
 
     /**
@@ -188,10 +196,13 @@ public:
      * To close connection mysql_close() have to be called
      * @return  MYSQL struct
      */
-    MYSQL * open_readconn_slave_connection(int m = 0)
+    MYSQL* open_readconn_slave_connection(int m = 0)
     {
-        return open_conn(readconn_slave_port[m], IP[m], user_name,
-                         password, ssl);
+        return open_conn(readconn_slave_port[m],
+                         IP[m],
+                         user_name,
+                         password,
+                         ssl);
     }
 
     /**
@@ -256,10 +267,10 @@ public:
         return stop_maxscale(m);
     }
 
-    int execute_maxadmin_command(int m, const char * cmd);
-    int execute_maxadmin_command_print(int m, const char * cmd);
-    int check_maxadmin_param(int m, const char *command, const  char *param, const  char *value);
-    int get_maxadmin_param(int m, const char *command, const char *param, char *result);
+    int execute_maxadmin_command(int m, const char* cmd);
+    int execute_maxadmin_command_print(int m, const char* cmd);
+    int check_maxadmin_param(int m, const char* command, const char* param, const char* value);
+    int get_maxadmin_param(int m, const char* command, const char* param, char* result);
 
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
@@ -268,12 +279,13 @@ public:
     long unsigned get_maxscale_memsize(int m = 0);
 
     /**
-     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
+     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show
+     *server'
      * @param nodes Mariadb_nodes object
      * @return node index if one master found, -1 if no master found or several masters found
      */
-    int find_master_maxadmin(Mariadb_nodes * nodes, int m = 0);
-    int find_slave_maxadmin(Mariadb_nodes * nodes, int m = 0);
+    int find_master_maxadmin(Mariadb_nodes* nodes, int m = 0);
+    int find_slave_maxadmin(Mariadb_nodes* nodes, int m = 0);
 
     /**
      * @brief Get the set of labels that are assigned to server @c name
@@ -295,7 +307,6 @@ public:
      * @param m Number of Maxscale node
      */
     void wait_for_monitor(int intervals = 1, int m = 0);
-
 };
 
 #endif // MAXSCALES_H

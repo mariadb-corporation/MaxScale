@@ -37,7 +37,7 @@
 
 #define CDC_CONNECTOR_VERSION "1.0.0"
 
-#define ERRBUF_SIZE 512
+#define ERRBUF_SIZE  512
 #define READBUF_SIZE 32 * 1024
 
 static const char OK_RESPONSE[] = "OK\n";
@@ -49,7 +49,7 @@ static const char REQUEST_MSG[] = "REQUEST-DATA ";
 namespace
 {
 
-static std::string bin2hex(const uint8_t *data, size_t len)
+static std::string bin2hex(const uint8_t* data, size_t len)
 {
     std::string result;
     static const char hexconvtab[] = "0123456789abcdef";
@@ -109,20 +109,20 @@ std::string json_to_string(json_t* json)
 
     default:
         break;
-
     }
 
     return ss.str();
 }
 
 // Helper class for closing objects
-template <class T> class Closer
+template<class T>
+class Closer
 {
 public:
 
-    Closer(T t):
-        m_t(t),
-        m_close(true)
+    Closer(T t)
+        : m_t(t)
+        , m_close(true)
     {
     }
 
@@ -148,22 +148,23 @@ public:
     }
 
 private:
-    T m_t;
+    T    m_t;
     bool m_close;
 
     void close(T t);
 };
 
-template <> void Closer<struct addrinfo*>::close(struct addrinfo* ai)
+template<>
+void Closer<struct addrinfo*>::close(struct addrinfo* ai)
 {
     freeaddrinfo(ai);
 }
 
-template <> void Closer<int>::close(int fd)
+template<>
+void Closer<int>::close(int fd)
 {
     ::close(fd);
 }
-
 }
 
 namespace CDC
@@ -177,14 +178,14 @@ Connection::Connection(const std::string& address,
                        uint16_t port,
                        const std::string& user,
                        const std::string& password,
-                       int timeout) :
-    m_fd(-1),
-    m_port(port),
-    m_address(address),
-    m_user(user),
-    m_password(password),
-    m_timeout(timeout),
-    m_connected(false)
+                       int timeout)
+    : m_fd(-1)
+    , m_port(port)
+    , m_address(address)
+    , m_user(user)
+    , m_password(password)
+    , m_timeout(timeout)
+    , m_connected(false)
 {
 }
 
@@ -207,7 +208,7 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
 
         m_error.clear();
 
-        struct addrinfo *ai = NULL, hint = {};
+        struct addrinfo* ai = NULL, hint = {};
         hint.ai_socktype = SOCK_STREAM;
         hint.ai_family = AF_UNSPEC;
         hint.ai_flags = AI_ALL;
@@ -247,8 +248,8 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
             m_error = "Failed to connect: ";
             m_error += strerror_r(errno, err, sizeof(err));
         }
-        else if ((fl = fcntl(fd, F_GETFL, 0)) == -1 ||
-                 fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
+        else if ((fl = fcntl(fd, F_GETFL, 0)) == -1
+                 || fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
         {
             char err[ERRBUF_SIZE];
             m_error = "Failed to set socket non-blocking: ";
@@ -337,7 +338,8 @@ void Connection::process_schema(json_t* json)
             type = json_object_get(v, "type");
         }
         std::string nameval = name ? json_string_value(name) : "";
-        std::string typeval = type ? (json_is_string(type) ? json_string_value(type) : "varchar(50)") : "undefined";
+        std::string typeval
+            = type ? (json_is_string(type) ? json_string_value(type) : "varchar(50)") : "undefined";
 
         if (json_is_integer(length))
         {
@@ -491,7 +493,6 @@ bool Connection::do_auth()
             buf[bytes] = '\0';
             m_error = "Authentication failed: ";
             m_error += bytes > 0 ? buf : "Request timed out";
-
         }
         else
         {
@@ -662,7 +663,6 @@ int Connection::wait_for_event(short events)
 
     while ((rc = poll(&pfd, nfds, m_timeout * 1000)) < 0 && errno == EINTR)
     {
-        ;
     }
 
     if (rc > 0 && is_poll_error(pfd.revents))
@@ -681,7 +681,7 @@ int Connection::wait_for_event(short events)
     return rc;
 }
 
-int Connection::nointr_read(void *dest, size_t size)
+int Connection::nointr_read(void* dest, size_t size)
 {
     int n_bytes = 0;
 
@@ -691,7 +691,6 @@ int Connection::nointr_read(void *dest, size_t size)
 
         while ((rc = ::read(m_fd, dest, size)) < 0 && errno == EINTR)
         {
-            ;
         }
 
         if (rc == -1 && errno != EWOULDBLOCK && errno != EAGAIN)
@@ -710,7 +709,7 @@ int Connection::nointr_read(void *dest, size_t size)
     return n_bytes;
 }
 
-int Connection::nointr_write(const void *src, size_t size)
+int Connection::nointr_write(const void* src, size_t size)
 {
     int rc = 0;
     size_t n_bytes = 0;
@@ -720,7 +719,6 @@ int Connection::nointr_write(const void *src, size_t size)
     {
         while ((rc = ::write(m_fd, ptr, size)) < 0 && errno == EINTR)
         {
-            ;
         }
 
         if (rc < 0 && errno != EWOULDBLOCK && errno != EAGAIN)
@@ -741,5 +739,4 @@ int Connection::nointr_write(const void *src, size_t size)
 
     return n_bytes;
 }
-
 }

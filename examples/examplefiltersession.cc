@@ -26,7 +26,7 @@ ExampleFilterSession::~ExampleFilterSession()
 {
 }
 
-//static
+// static
 ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, const ExampleFilter* pFilter)
 {
     return new ExampleFilterSession(pSession);

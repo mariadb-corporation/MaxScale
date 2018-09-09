@@ -15,18 +15,16 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&test](std::string q)
-    {
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str());
-    };
+    auto query = [&test](std::string q) {
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str());
+        };
 
-    auto check_result = [&test](std::string name, std::string res)
-    {
-        std::string query = "SELECT " + name;
-        char value[1024];
-        return find_field(test.maxscales->conn_rwsplit[0], query.c_str(), name.c_str(), value) == 0 &&
-               res == value;
-    };
+    auto check_result = [&test](std::string name, std::string res) {
+            std::string query = "SELECT " + name;
+            char value[1024];
+            return find_field(test.maxscales->conn_rwsplit[0], query.c_str(), name.c_str(), value) == 0
+                   && res == value;
+        };
 
     test.maxscales->connect();
     test.assert(query("DROP TABLE IF EXISTS test.t1;") == 0, "DROP TABLE should work.");

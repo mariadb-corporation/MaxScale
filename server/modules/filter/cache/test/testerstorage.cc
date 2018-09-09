@@ -79,7 +79,8 @@ int TesterStorage::HitTask::run()
                 if (CACHE_RESULT_IS_OK(result))
                 {
                     mxb_assert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
-                    mxb_assert(memcmp(GWBUF_DATA(pQuery), GWBUF_DATA(cache_item.second),
+                    mxb_assert(memcmp(GWBUF_DATA(pQuery),
+                                      GWBUF_DATA(cache_item.second),
                                       GWBUF_LENGTH(pQuery)) == 0);
 
                     gwbuf_free(pQuery);
@@ -171,8 +172,8 @@ int TesterStorage::run(size_t n_threads,
 
     while ((rv == EXIT_SUCCESS) && (i < n_items))
     {
-        size_t size = n_min_size + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX) *
-                                                       (n_max_size - n_min_size));
+        size_t size = n_min_size + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX)
+                                                       * (n_max_size - n_min_size));
         mxb_assert(size >= n_min_size);
         mxb_assert(size <= n_max_size);
 
@@ -358,7 +359,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            sleep(2); // Expected to get us passed the soft ttl.
+            sleep(2);   // Expected to get us passed the soft ttl.
             slept += 2;
 
             pValue = NULL;
@@ -384,7 +385,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            sleep(hard_ttl - slept + 1); // Expected to get us passed the hard ttl.
+            sleep(hard_ttl - slept + 1);    // Expected to get us passed the hard ttl.
             slept += hard_ttl - slept + 1;
 
             pValue = NULL;

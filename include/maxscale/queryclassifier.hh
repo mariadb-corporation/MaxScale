@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <string>
@@ -27,7 +27,7 @@ namespace maxscale
 class QueryClassifier
 {
     QueryClassifier(const QueryClassifier&) = delete;
-    QueryClassifier& operator = (const QueryClassifier&) = delete;
+    QueryClassifier& operator=(const QueryClassifier&) = delete;
 
 public:
     class RouteInfo
@@ -35,7 +35,7 @@ public:
     public:
         RouteInfo();
         RouteInfo(uint32_t target,
-                  uint8_t command,
+                  uint8_t  command,
                   uint32_t type_mask,
                   uint32_t stmt_id);
 
@@ -92,10 +92,10 @@ public:
         }
 
     private:
-        uint32_t m_target;    /**< Route target type, TARGET_UNDEFINED for unknown */
-        uint8_t  m_command;   /**< The command byte, 0xff for unknown commands */
-        uint32_t m_type_mask; /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
-        uint32_t m_stmt_id;   /**< Prepared statement ID, 0 for unknown */
+        uint32_t m_target;      /**< Route target type, TARGET_UNDEFINED for unknown */
+        uint8_t  m_command;     /**< The command byte, 0xff for unknown commands */
+        uint32_t m_type_mask;   /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
+        uint32_t m_stmt_id;     /**< Prepared statement ID, 0 for unknown */
     };
 
     class Handler
@@ -123,39 +123,39 @@ public:
 
     static bool target_is_master(uint32_t t)
     {
-        return (t & TARGET_MASTER);
+        return t & TARGET_MASTER;
     }
 
     static bool target_is_slave(uint32_t t)
     {
-        return (t & TARGET_SLAVE);
+        return t & TARGET_SLAVE;
     }
 
     static bool target_is_named_server(uint32_t t)
     {
-        return (t & TARGET_NAMED_SERVER);
+        return t & TARGET_NAMED_SERVER;
     }
 
     static bool target_is_all(uint32_t t)
     {
-        return (t & TARGET_ALL);
+        return t & TARGET_ALL;
     }
 
     static bool target_is_rlag_max(uint32_t t)
     {
-        return (t & TARGET_RLAG_MAX);
+        return t & TARGET_RLAG_MAX;
     }
 
     static bool target_is_last_used(uint32_t t)
     {
-        return (t & TARGET_LAST_USED);
+        return t & TARGET_LAST_USED;
     }
 
     enum current_target_t
     {
-        CURRENT_TARGET_UNDEFINED, /**< Current target has not been set. */
-        CURRENT_TARGET_MASTER,    /**< Current target is master */
-        CURRENT_TARGET_SLAVE      /**< Current target is a slave */
+        CURRENT_TARGET_UNDEFINED,   /**< Current target has not been set. */
+        CURRENT_TARGET_MASTER,      /**< Current target is master */
+        CURRENT_TARGET_SLAVE        /**< Current target is a slave */
     };
 
     /** States of a LOAD DATA LOCAL INFILE */
@@ -355,23 +355,22 @@ private:
         return m_pSession;
     }
 
-    void log_transaction_status(GWBUF *querybuf, uint32_t qtype);
+    void log_transaction_status(GWBUF* querybuf, uint32_t qtype);
 
-    static uint32_t determine_query_type(GWBUF *querybuf, int command);
+    static uint32_t determine_query_type(GWBUF* querybuf, int command);
 
-    void check_create_tmp_table(GWBUF *querybuf, uint32_t type);
+    void check_create_tmp_table(GWBUF* querybuf, uint32_t type);
 
-    bool is_read_tmp_table(GWBUF *querybuf, uint32_t qtype);
+    bool is_read_tmp_table(GWBUF* querybuf, uint32_t qtype);
 
-    void check_drop_tmp_table(GWBUF *querybuf);
+    void check_drop_tmp_table(GWBUF* querybuf);
 
-    bool check_for_multi_stmt(GWBUF *buf, uint8_t packet_type);
+    bool check_for_multi_stmt(GWBUF* buf, uint8_t packet_type);
 
-    current_target_t
-    handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
-                               GWBUF *querybuf,
-                               uint8_t packet_type,
-                               uint32_t *qtype);
+    current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
+                                                GWBUF* querybuf,
+                                                uint8_t packet_type,
+                                                uint32_t* qtype);
 
 private:
     class PSManager;
@@ -387,16 +386,15 @@ private:
     Handler*          m_pHandler;
     MXS_SESSION*      m_pSession;
     mxs_target_t      m_use_sql_variables_in;
-    load_data_state_t m_load_data_state;          /**< The LOAD DATA state */
-    uint64_t          m_load_data_sent;           /**< How much data has been sent */
+    load_data_state_t m_load_data_state;            /**< The LOAD DATA state */
+    uint64_t          m_load_data_sent;             /**< How much data has been sent */
     bool              m_have_tmp_tables;
-    TableSet          m_tmp_tables;               /**< Set of temporary tables */
-    bool              m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
-    bool              m_multi_statements_allowed; /**< Are multi-statements allowed */
+    TableSet          m_tmp_tables;                 /**< Set of temporary tables */
+    bool              m_large_query;                /**< Set to true when processing payloads >= 2^24 bytes */
+    bool              m_multi_statements_allowed;   /**< Are multi-statements allowed */
     SPSManager        m_sPs_manager;
-    HandleMap         m_ps_handles;               /** External ID to internal ID */
+    HandleMap         m_ps_handles;                 /** External ID to internal ID */
     RouteInfo         m_route_info;
     bool              m_trx_is_read_only;
 };
-
 }

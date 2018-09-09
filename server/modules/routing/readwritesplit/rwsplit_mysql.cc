@@ -79,8 +79,10 @@
  * @param qtype         Query type
  * @return bool indicating whether the session can continue
  */
-bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *querybuf,
-                                          int packet_type, uint32_t qtype)
+bool RWSplitSession::handle_target_is_all(route_target_t route_target,
+                                          GWBUF* querybuf,
+                                          int packet_type,
+                                          uint32_t qtype)
 {
     bool result = false;
     bool is_large = is_large_query(querybuf);
@@ -91,15 +93,20 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
          * Conflicting routing targets. Return an error to the client.
          */
 
-        char *query_str = modutil_get_query(querybuf);
-        char *qtype_str = qc_typemask_to_string(qtype);
+        char* query_str = modutil_get_query(querybuf);
+        char* qtype_str = qc_typemask_to_string(qtype);
 
         MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
                   "modification is not supported if configuration parameter "
-                  "use_sql_variables_in=all .", STRPACKETTYPE(packet_type),
-                  qtype_str, (query_str == NULL ? "(empty)" : query_str));
+                  "use_sql_variables_in=all .",
+                  STRPACKETTYPE(packet_type),
+                  qtype_str,
+                  (query_str == NULL ? "(empty)" : query_str));
 
-        GWBUF *errbuf = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+        GWBUF* errbuf = modutil_create_mysql_err_msg(1,
+                                                     0,
+                                                     1064,
+                                                     "42000",
                                                      "Routing query to backend failed. "
                                                      "See the error log for further details.");
 
@@ -139,13 +146,16 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target, GWBUF *qu
  *
  * @return True if sending the message was successful, false if an error occurred
  */
-bool send_readonly_error(DCB *dcb)
+bool send_readonly_error(DCB* dcb)
 {
     bool succp = false;
     const char* errmsg = "The MariaDB server is running with the --read-only"
                          " option so it cannot execute this statement";
-    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT,
-                                              "HY000", errmsg);
+    GWBUF* err = modutil_create_mysql_err_msg(1,
+                                              0,
+                                              ER_OPTION_PREVENTS_STATEMENT,
+                                              "HY000",
+                                              errmsg);
 
     if (err)
     {

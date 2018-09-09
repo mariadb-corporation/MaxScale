@@ -149,17 +149,17 @@ struct
     const char** values;
 } test_set[]
 {
-    { integer_types,  integer_values  },
-    { decimal_types,  decimal_values  },
-    { string_types,   string_values   },
-    { binary_types,   binary_values   },
-    { datetime_types, datetime_values },
-    { date_types,     date_values     },
-    { time_types,     time_values     },
-    { 0, 0 }
+    {integer_types, integer_values},
+    {decimal_types, decimal_values},
+    {string_types, string_values},
+    {binary_types, binary_values},
+    {datetime_types, datetime_values},
+    {date_types, date_values},
+    {time_types, time_values},
+    {0, 0}
 };
 
-void insert_data(TestConnections& test, const char *table, const char* type, const char** values)
+void insert_data(TestConnections& test, const char* table, const char* type, const char** values)
 {
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE TABLE %s(%s %s)", table, field_name, type);
@@ -198,7 +198,7 @@ std::string type_to_table_name(const char* type)
 
 static std::string unquote(std::string str)
 {
-    if (str[0] == '\"' ||str[0] == '\'')
+    if (str[0] == '\"' || str[0] == '\'')
     {
         str = str.substr(1, str.length() - 2);
     }
@@ -253,7 +253,9 @@ bool run_test(TestConnections& test)
                         else
                         {
                             test.tprintf("Result mismatch: %s(%s) => %s",
-                                         test_set[x].types[i], input.c_str(), output.c_str());
+                                         test_set[x].types[i],
+                                         input.c_str(),
+                                         output.c_str());
                             rval = false;
                         }
                     }
@@ -277,7 +279,7 @@ bool run_test(TestConnections& test)
     return rval;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections::check_nodes(false);

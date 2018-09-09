@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * Internal header for the server type
@@ -22,9 +22,9 @@
 std::unique_ptr<ResultSet> serverGetList();
 
 // Private server implementation
-class Server: public SERVER
+class Server : public SERVER
 {
     // TODO: Move everything here
 };
 
-void server_free(Server *server);
+void server_free(Server* server);

@@ -48,11 +48,10 @@
  * @param sql   The SQL that had the parse error
  * @param err   The parse error code
  */
-void
-maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
+void maxinfo_send_parse_error(DCB* dcb, char* sql, PARSE_ERROR err)
 {
-    const char *desc = "";
-    char *msg;
+    const char* desc = "";
+    char* msg;
     int len;
 
     switch (err)
@@ -60,19 +59,22 @@ maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
     case PARSE_NOERROR:
         desc = "No error";
         break;
+
     case PARSE_MALFORMED_SHOW:
         desc = "Expected show <command> [like <pattern>]";
         break;
+
     case PARSE_EXPECTED_LIKE:
         desc = "Expected LIKE <pattern>";
         break;
+
     case PARSE_SYNTAX_ERROR:
         desc = "Syntax error";
         break;
     }
 
     len = strlen(sql) + strlen(desc) + 20;
-    msg = (char *)MXS_MALLOC(len);
+    msg = (char*)MXS_MALLOC(len);
     MXS_ABORT_IF_NULL(msg);
     sprintf(msg, "%s in query '%s'", desc, sql);
     maxinfo_send_error(dcb, 1149, msg);
@@ -85,11 +87,10 @@ maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
  * @param dcb       The DCB to send the error packet to
  * @param msg       The slave server instance
  */
-void
-maxinfo_send_error(DCB *dcb, int errcode, const char *msg)
+void maxinfo_send_error(DCB* dcb, int errcode, const char* msg)
 {
-    GWBUF *pkt;
-    unsigned char *data;
+    GWBUF* pkt;
+    unsigned char* data;
     int len;
 
     len = strlen(msg) + 9;
@@ -105,8 +106,8 @@ maxinfo_send_error(DCB *dcb, int errcode, const char *msg)
     // Payload
     data[4] = 0xff;                 // Error indicator
     data[5] = errcode & 0xff;       // Error Code
-    data[6] = (errcode >> 8) & 0xff;     // Error Code
+    data[6] = (errcode >> 8) & 0xff;// Error Code
     memcpy(&data[7], "#42000", 6);
-    memcpy(&data[13], msg, strlen(msg)); // Error Message
+    memcpy(&data[13], msg, strlen(msg));    // Error Message
     dcb->func.write(dcb, pkt);
 }

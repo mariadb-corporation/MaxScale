@@ -1,29 +1,31 @@
 /**
- * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use database is sent forever with tee filter to a readwrite split service")
- * - also used for 'sql_queries_pers1' and 'sql_queries_pers10' tests (with 'persistpoolmax=1' and 'persistpoolmax=10' for all servers)
+ * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use
+ *database is sent forever with tee filter to a readwrite split service")
+ * - also used for 'sql_queries_pers1' and 'sql_queries_pers10' tests (with 'persistpoolmax=1' and
+ *'persistpoolmax=10' for all servers)
  * - for bug648:
  * @verbatim
-[RW Split Router]
-type=service
-router= readwritesplit
-servers=server1,     server2,              server3,server4
-user=skysql
-passwd=skysql
-filters=TEE
-
-[TEE]
-type=filter
-module=tee
-service=RW Split Router
-@endverbatim
+ *  [RW Split Router]
+ *  type=service
+ *  router= readwritesplit
+ *  servers=server1,     server2,              server3,server4
+ *  user=skysql
+ *  passwd=skysql
+ *  filters=TEE
+ *
+ *  [TEE]
+ *  type=filter
+ *  module=tee
+ *  service=RW Split Router
+ *  @endverbatim
  *
  * - create t1 table and INSERT a lot of date into it
  * @verbatim
-INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0), ...(15, 0);
-INSERT INTO t1 (x1, fl) VALUES (0, 1), (1, 1), ...(255, 1);
-INSERT INTO t1 (x1, fl) VALUES (0, 2), (1, 2), ...(4095, 2);
-INSERT INTO t1 (x1, fl) VALUES (0, 3), (1, 3), ...(65535, 3);
-@endverbatim
+ *  INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0), ...(15, 0);
+ *  INSERT INTO t1 (x1, fl) VALUES (0, 1), (1, 1), ...(255, 1);
+ *  INSERT INTO t1 (x1, fl) VALUES (0, 2), (1, 2), ...(4095, 2);
+ *  INSERT INTO t1 (x1, fl) VALUES (0, 3), (1, 3), ...(65535, 3);
+ *  @endverbatim
  * - check date in t1 using all Maxscale services and direct connections to backend nodes
  * - using RWSplit connections:
  *   + DROP TABLE t1
@@ -45,9 +47,9 @@ INSERT INTO t1 (x1, fl) VALUES (0, 3), (1, 3), ...(65535, 3);
 using namespace std;
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     int i, j;
     int N = 4;
     int iterations = 4;
@@ -81,11 +83,11 @@ int main(int argc, char *argv[])
         Test->repl->sync_slaves();
 
         Test->tprintf("Testing with database 'test1'\n");
-        Test->add_result(Test->use_db(0, (char *) "test1"), "use_db failed\n");
+        Test->add_result(Test->use_db(0, (char*) "test1"), "use_db failed\n");
         Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");
 
-        Test->add_result(Test->check_t1_table(0, false, (char *) "test"), "t1 is found in 'test'\n");
-        Test->add_result(Test->check_t1_table(0, true, (char *) "test1"), "t1 is not found in 'test1'\n");
+        Test->add_result(Test->check_t1_table(0, false, (char*) "test"), "t1 is found in 'test'\n");
+        Test->add_result(Test->check_t1_table(0, true, (char*) "test1"), "t1 is not found in 'test1'\n");
 
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)
@@ -100,9 +102,9 @@ int main(int argc, char *argv[])
     }
 
     Test->stop_timeout();
-    Test->check_log_err(0, (char *) "Length (0) is 0", false);
-    Test->check_log_err(0, (char *) "Unable to parse query", false);
-    Test->check_log_err(0, (char *) "query string allocation failed", false);
+    Test->check_log_err(0, (char*) "Length (0) is 0", false);
+    Test->check_log_err(0, (char*) "Unable to parse query", false);
+    Test->check_log_err(0, (char*) "query string allocation failed", false);
 
     Test->check_maxscale_alive(0);
 

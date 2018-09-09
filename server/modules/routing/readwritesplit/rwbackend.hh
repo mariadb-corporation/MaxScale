@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "response_stat.hh"
 
@@ -32,13 +32,13 @@ enum reply_state_t
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
 
-typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
+typedef std::map<uint32_t, uint32_t> BackendHandleMap;      /** Internal ID to external ID */
 
 class RWBackend;
 typedef std::shared_ptr<RWBackend> SRWBackend;
-typedef std::list<SRWBackend> SRWBackendList;
+typedef std::list<SRWBackend>      SRWBackendList;
 
-class RWBackend: public mxs::Backend
+class RWBackend : public mxs::Backend
 {
     RWBackend(const RWBackend&);
     RWBackend& operator=(const RWBackend&);
@@ -60,7 +60,7 @@ public:
         m_reply_state = state;
     }
 
-    void add_ps_handle(uint32_t id, uint32_t handle);
+    void     add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
 
     bool execute_session_command();
@@ -110,18 +110,18 @@ public:
         return m_local_infile_requested;
     }
 
-    bool reply_is_complete(GWBUF *buffer);
+    bool reply_is_complete(GWBUF* buffer);
 
     // Controlled by the session
     ResponseStat& response_stat();
 private:
     reply_state_t    m_reply_state;
-    BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
-    modutil_state    m_modutil_state; /**< @see modutil_count_signal_packets */
+    BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */
+    modutil_state    m_modutil_state;   /**< @see modutil_count_signal_packets */
     uint8_t          m_command;
-    bool             m_opening_cursor; /**< Whether we are opening a cursor */
-    uint32_t         m_expected_rows; /**< Number of rows a COM_STMT_FETCH is retrieving */
-    bool             m_local_infile_requested; /**< Whether a LOCAL INFILE was requested */
+    bool             m_opening_cursor;          /**< Whether we are opening a cursor */
+    uint32_t         m_expected_rows;           /**< Number of rows a COM_STMT_FETCH is retrieving */
+    bool             m_local_infile_requested;  /**< Whether a LOCAL INFILE was requested */
     ResponseStat     m_response_stat;
 
     inline bool is_opening_cursor() const
@@ -134,5 +134,4 @@ private:
         m_opening_cursor = false;
     }
 };
-
 }

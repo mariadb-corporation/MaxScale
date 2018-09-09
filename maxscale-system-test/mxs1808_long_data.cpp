@@ -3,24 +3,24 @@
 
 using namespace std;
 
-void print_stmt_error(MYSQL_STMT *stmt, const char* msg)
+void print_stmt_error(MYSQL_STMT* stmt, const char* msg)
 {
     cout << "Error: " << msg << ": " << mysql_stmt_error(stmt) << endl;
 }
 
-static int test_long_data(MYSQL *conn, int sqlsize)
+static int test_long_data(MYSQL* conn, int sqlsize)
 {
     int data1size = sqlsize / 2;
 
-    char * data1 = (char*) malloc(data1size);
+    char* data1 = (char*) malloc(data1size);
     memset(data1, 97, data1size);
-    char * data3 = (char*) malloc(sqlsize);
+    char* data3 = (char*) malloc(sqlsize);
     memset(data3, 99, sqlsize);
 
-    MYSQL_STMT *stmt;
+    MYSQL_STMT* stmt;
     stmt = mysql_stmt_init(conn);
-    int        int_data;
-    MYSQL_RES  *result;
+    int int_data;
+    MYSQL_RES* result;
     MYSQL_BIND my_bind[1];
 
     mysql_autocommit(conn, 1);
@@ -38,7 +38,7 @@ static int test_long_data(MYSQL *conn, int sqlsize)
 
     memset((char*) my_bind, 0, sizeof(my_bind));
 
-    my_bind[0].buffer = (void *)&int_data;
+    my_bind[0].buffer = (void*)&int_data;
     my_bind[0].buffer_type = MYSQL_TYPE_STRING;
 
     if (mysql_stmt_bind_param(stmt, my_bind) != 0)

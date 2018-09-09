@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /** @file REST API resources */
 
@@ -29,12 +29,12 @@
 #include "filter.hh"
 #include "session.h"
 
-typedef HttpResponse (*ResourceCallback)(const HttpRequest& request);
+typedef HttpResponse (* ResourceCallback)(const HttpRequest& request);
 
 class Resource
 {
     Resource(const Resource&);
-    Resource& operator = (const Resource&);
+    Resource& operator=(const Resource&);
 public:
 
     enum resource_constraint
@@ -82,10 +82,10 @@ private:
 
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
-    ResourceCallback        m_cb;          /**< Resource handler callback */
-    std::deque<std::string> m_path;        /**< Path components */
-    bool                    m_is_glob;     /**< Does this path glob? */
-    uint32_t                m_constraints; /**< Resource constraints */
+    ResourceCallback        m_cb;           /**< Resource handler callback */
+    std::deque<std::string> m_path;         /**< Path components */
+    bool                    m_is_glob;      /**< Does this path glob? */
+    uint32_t                m_constraints;  /**< Resource constraints */
 };
 
 /**

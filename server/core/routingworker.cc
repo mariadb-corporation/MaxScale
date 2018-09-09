@@ -54,30 +54,30 @@ namespace
  */
 struct this_unit
 {
-    bool            initialized;       // Whether the initialization has been performed.
-    int             nWorkers;          // How many routing workers there are.
-    RoutingWorker** ppWorkers;         // Array of routing worker instances.
-    int             next_worker_id;    // Next worker id
+    bool            initialized;        // Whether the initialization has been performed.
+    int             nWorkers;           // How many routing workers there are.
+    RoutingWorker** ppWorkers;          // Array of routing worker instances.
+    int             next_worker_id;     // Next worker id
     // DEPRECATED in 2.3, remove in 2.4.
-    int             number_poll_spins; // Maximum non-block polls
+    int number_poll_spins;      // Maximum non-block polls
     // DEPRECATED in 2.3, remove in 2.4.
-    int             max_poll_sleep;    // Maximum block time
-    int             epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
-    int             id_main_worker;    // The id of the worker running in the main thread.
-    int             id_min_worker;     // The smallest routing worker id.
-    int             id_max_worker;     // The largest routing worker id.
+    int max_poll_sleep;     // Maximum block time
+    int epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
+    int id_main_worker;     // The id of the worker running in the main thread.
+    int id_min_worker;      // The smallest routing worker id.
+    int id_max_worker;      // The largest routing worker id.
 } this_unit =
 {
-    false,            // initialized
-    0,                // nWorkers
-    NULL,             // ppWorkers
-    0,                // next_worker_id
-    0,                // number_poll_spins
-    0,                // max_poll_sleep
-    -1,               // epoll_listener_fd
-    WORKER_ABSENT_ID, // id_main_worker
-    WORKER_ABSENT_ID, // id_min_worker
-    WORKER_ABSENT_ID, // id_max_worker
+    false,              // initialized
+    0,                  // nWorkers
+    NULL,               // ppWorkers
+    0,                  // next_worker_id
+    0,                  // number_poll_spins
+    0,                  // max_poll_sleep
+    -1,                 // epoll_listener_fd
+    WORKER_ABSENT_ID,   // id_main_worker
+    WORKER_ABSENT_ID,   // id_min_worker
+    WORKER_ABSENT_ID,   // id_max_worker
 };
 
 int next_worker_id()
@@ -87,7 +87,7 @@ int next_worker_id()
 
 thread_local struct this_thread
 {
-    int current_worker_id; // The worker id of the current thread
+    int current_worker_id;      // The worker id of the current thread
 } this_thread =
 {
     WORKER_ABSENT_ID
@@ -158,7 +158,6 @@ void modules_thread_finish()
         }
     }
 }
-
 }
 
 namespace maxscale
@@ -188,7 +187,8 @@ bool RoutingWorker::init()
     if (this_unit.epoll_listener_fd != -1)
     {
         int nWorkers = config_threadcount();
-        RoutingWorker** ppWorkers = new (std::nothrow) RoutingWorker* [MXS_MAX_THREADS] (); // 0-inited array
+        RoutingWorker** ppWorkers = new( std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();      // 0-inited
+                                                                                                // array
 
         if (ppWorkers)
         {
@@ -230,7 +230,7 @@ bool RoutingWorker::init()
                         delete ppWorkers[j];
                     }
 
-                    delete [] ppWorkers;
+                    delete[] ppWorkers;
                     ppWorkers = NULL;
                     break;
                 }
@@ -284,7 +284,7 @@ void RoutingWorker::finish()
         this_unit.ppWorkers[i] = NULL;
     }
 
-    delete [] this_unit.ppWorkers;
+    delete[] this_unit.ppWorkers;
     this_unit.ppWorkers = NULL;
 
     close(this_unit.epoll_listener_fd);
@@ -293,7 +293,7 @@ void RoutingWorker::finish()
     this_unit.initialized = false;
 }
 
-//static
+// static
 bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 {
     bool rv = true;
@@ -322,7 +322,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
     return rv;
 }
 
-//static
+// static
 bool RoutingWorker::remove_shared_fd(int fd)
 {
     bool rv = true;
@@ -374,7 +374,7 @@ int RoutingWorker::get_current_id()
     return this_thread.current_worker_id;
 }
 
-//static
+// static
 bool RoutingWorker::start_threaded_workers()
 {
     bool rv = true;
@@ -401,7 +401,7 @@ bool RoutingWorker::start_threaded_workers()
     return rv;
 }
 
-//static
+// static
 void RoutingWorker::join_threaded_workers()
 {
     for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
@@ -416,13 +416,13 @@ void RoutingWorker::join_threaded_workers()
     }
 }
 
-//static
+// static
 void RoutingWorker::set_nonblocking_polls(unsigned int nbpolls)
 {
     this_unit.number_poll_spins = nbpolls;
 }
 
-//static
+// static
 void RoutingWorker::set_maxwait(unsigned int maxwait)
 {
     this_unit.max_poll_sleep = maxwait;
@@ -486,17 +486,17 @@ void RoutingWorker::post_run()
  *
  * @return A worker instance if successful, otherwise NULL.
  */
-//static
+// static
 RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
 {
-    RoutingWorker* pThis = new (std::nothrow) RoutingWorker();
+    RoutingWorker* pThis = new( std::nothrow) RoutingWorker();
 
     if (pThis)
     {
         struct epoll_event ev;
         ev.events = EPOLLIN;
         MXB_POLL_DATA* pData = pThis;
-        ev.data.ptr = pData; // Necessary for pointer adjustment, otherwise downcast will not work.
+        ev.data.ptr = pData;    // Necessary for pointer adjustment, otherwise downcast will not work.
 
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
         // because we want it to be level-triggered. That way, as long as there is a single
@@ -513,7 +513,8 @@ RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
         else
         {
             MXS_ERROR("Could not add epoll instance for listening sockets to "
-                      "epoll instance of worker: %s", mxs_strerror(errno));
+                      "epoll instance of worker: %s",
+                      mxs_strerror(errno));
             delete pThis;
             pThis = NULL;
         }
@@ -544,7 +545,7 @@ void RoutingWorker::epoll_tick()
  *
  * @return What actions were performed.
  */
-//static
+// static
 uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
@@ -588,7 +589,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     return actions;
 }
 
-//static
+// static
 size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
 {
     // No logging here, function must be signal safe.
@@ -609,7 +610,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
     return n;
 }
 
-//static
+// static
 size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 {
     DisposableTask* pTask = sTask.release();
@@ -634,8 +635,9 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
     return n;
 }
 
-//static
-size_t RoutingWorker::broadcast(std::function<void ()> func, mxb::Semaphore* pSem,
+// static
+size_t RoutingWorker::broadcast(std::function<void ()> func,
+                                mxb::Semaphore* pSem,
                                 mxb::Worker::execute_mode_t mode)
 {
     size_t n = 0;
@@ -655,7 +657,7 @@ size_t RoutingWorker::broadcast(std::function<void ()> func, mxb::Semaphore* pSe
     return n;
 }
 
-//static
+// static
 size_t RoutingWorker::execute_serially(Task& task)
 {
     Semaphore sem;
@@ -677,7 +679,7 @@ size_t RoutingWorker::execute_serially(Task& task)
     return n;
 }
 
-//static
+// static
 size_t RoutingWorker::execute_concurrently(Task& task)
 {
     Semaphore sem;
@@ -725,7 +727,7 @@ void RoutingWorker::shutdown_all()
 namespace
 {
 
-int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type)
+int64_t one_stats_get(int64_t Worker::STATISTICS::* what, enum ts_stats_type type)
 {
     int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
 
@@ -765,27 +767,26 @@ int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type
 
     return type == TS_STATS_AVG ? best / (nWorkers != 0 ? nWorkers : 1) : best;
 }
-
 }
 
-//static
+// static
 Worker::STATISTICS RoutingWorker::get_statistics()
 {
     STATISTICS cs;
 
-    cs.n_read        = one_stats_get(&STATISTICS::n_read, TS_STATS_SUM);
-    cs.n_write       = one_stats_get(&STATISTICS::n_write, TS_STATS_SUM);
-    cs.n_error       = one_stats_get(&STATISTICS::n_error, TS_STATS_SUM);
-    cs.n_hup         = one_stats_get(&STATISTICS::n_hup, TS_STATS_SUM);
-    cs.n_accept      = one_stats_get(&STATISTICS::n_accept, TS_STATS_SUM);
-    cs.n_polls       = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
-    cs.n_pollev      = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
-    cs.n_nbpollev    = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
-    cs.evq_avg       = one_stats_get(&STATISTICS::evq_avg, TS_STATS_AVG);
-    cs.evq_max       = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
+    cs.n_read = one_stats_get(&STATISTICS::n_read, TS_STATS_SUM);
+    cs.n_write = one_stats_get(&STATISTICS::n_write, TS_STATS_SUM);
+    cs.n_error = one_stats_get(&STATISTICS::n_error, TS_STATS_SUM);
+    cs.n_hup = one_stats_get(&STATISTICS::n_hup, TS_STATS_SUM);
+    cs.n_accept = one_stats_get(&STATISTICS::n_accept, TS_STATS_SUM);
+    cs.n_polls = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
+    cs.n_pollev = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
+    cs.n_nbpollev = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
+    cs.evq_avg = one_stats_get(&STATISTICS::evq_avg, TS_STATS_AVG);
+    cs.evq_max = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
     cs.blockingpolls = one_stats_get(&STATISTICS::blockingpolls, TS_STATS_SUM);
-    cs.maxqtime      = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
-    cs.maxexectime   = one_stats_get(&STATISTICS::maxexectime, TS_STATS_MAX);
+    cs.maxqtime = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
+    cs.maxexectime = one_stats_get(&STATISTICS::maxexectime, TS_STATS_MAX);
 
     for (int i = 0; i < Worker::STATISTICS::MAXNFDS - 1; i++)
     {
@@ -818,12 +819,12 @@ Worker::STATISTICS RoutingWorker::get_statistics()
     return cs;
 }
 
-//static
+// static
 int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
 {
     int64_t rv = 0;
 
-    int64_t Worker::STATISTICS::*member = NULL;
+    int64_t Worker::STATISTICS::* member = NULL;
     enum ts_stats_type approach;
 
     switch (what)
@@ -885,7 +886,7 @@ int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
     return rv;
 }
 
-//static
+// static
 bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
 {
     class Task : public Worker::Task
@@ -918,7 +919,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
     return pWorker != nullptr;
 }
 
-//static
+// static
 void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 {
     class Task : public Worker::Task
@@ -973,10 +974,9 @@ json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
 
     return pJson;
 }
-
 }
 
-//static
+// static
 std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, int id)
 {
     std::unique_ptr<json_t> sStats;
@@ -996,7 +996,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, i
     return sStats;
 }
 
-//static
+// static
 std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 {
     vector<QC_CACHE_STATS> all_stats;
@@ -1024,7 +1024,6 @@ RoutingWorker* RoutingWorker::pick_worker()
     int id = this_unit.id_min_worker + (atomic_add(&id_generator, 1) % this_unit.nWorkers);
     return get(id);
 }
-
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
@@ -1073,7 +1072,7 @@ namespace
 
 using namespace maxscale;
 
-class WorkerInfoTask: public Worker::Task
+class WorkerInfoTask : public Worker::Task
 {
 public:
     WorkerInfoTask(const char* zHost, uint32_t nThreads)
@@ -1161,11 +1160,11 @@ private:
     const char*     m_zHost;
 };
 
-class FunctionTask: public Worker::DisposableTask
+class FunctionTask : public Worker::DisposableTask
 {
 public:
-    FunctionTask(std::function<void ()> cb):
-        m_cb(cb)
+    FunctionTask(std::function<void ()> cb)
+        : m_cb(cb)
     {
     }
 
@@ -1177,15 +1176,13 @@ public:
 protected:
     std::function<void ()> m_cb;
 };
-
 }
 
-size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data)
+size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data)
 {
-    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]()
-    {
-        cb(data);
-    }));
+    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]() {
+                                                            cb(data);
+                                                        }));
 
     return RoutingWorker::broadcast(std::move(task));
 }
@@ -1195,7 +1192,7 @@ uint64_t mxs_rworker_create_key()
     return RoutingWorker::create_key();
 }
 
-void mxs_rworker_set_data(uint64_t key, void* data, void (*callback)(void*))
+void mxs_rworker_set_data(uint64_t key, void* data, void (* callback)(void*))
 {
     RoutingWorker::get_current()->set_data(key, data, callback);
 }
@@ -1207,10 +1204,9 @@ void* mxs_rworker_get_data(uint64_t key)
 
 void mxs_rworker_delete_data(uint64_t key)
 {
-    auto func = [key]()
-    {
-        RoutingWorker::get_current()->delete_data(key);
-    };
+    auto func = [key]() {
+            RoutingWorker::get_current()->delete_data(key);
+        };
 
     std::unique_ptr<FunctionTask> task(new FunctionTask(func));
     RoutingWorker::broadcast(std::move(task));

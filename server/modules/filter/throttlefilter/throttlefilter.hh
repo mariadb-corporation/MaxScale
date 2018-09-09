@@ -26,9 +26,9 @@ namespace throttle
 struct ThrottleConfig
 {
 
-    int         max_qps;             // if this many queries per second is exceeded..
-    maxbase::Duration sampling_duration;   // .. in this time window, then cap qps to max_qps ..
-    maxbase::Duration throttling_duration; // .. for this long before disconnect.
+    int               max_qps;              // if this many queries per second is exceeded..
+    maxbase::Duration sampling_duration;    // .. in this time window, then cap qps to max_qps ..
+    maxbase::Duration throttling_duration;  // .. for this long before disconnect.
     maxbase::Duration continuous_duration;  // What time window is considered continuous meddling.
 
     // Example: max 100qps and sampling 5s. As soon as more than 500 queries are made in less
@@ -51,18 +51,18 @@ class ThrottleFilter : public maxscale::Filter<ThrottleFilter, ThrottleSession>
 public:
     static ThrottleFilter* create(const char* zName, MXS_CONFIG_PARAMETER* pParams);
     ThrottleFilter(const ThrottleFilter&) = delete;
-    ThrottleFilter& operator = (const ThrottleFilter&) = delete;
+    ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 
     ThrottleSession* newSession(MXS_SESSION* mxsSession);
 
-    void diagnostics(DCB* pDcb);
-    json_t* diagnostics_json() const;
-    uint64_t getCapabilities();
+    void                  diagnostics(DCB* pDcb);
+    json_t*               diagnostics_json() const;
+    uint64_t              getCapabilities();
     const ThrottleConfig& config() const;
-    void sessionClose(ThrottleSession* session);
+    void                  sessionClose(ThrottleSession* session);
 private:
     ThrottleFilter(const ThrottleConfig& config);
 
     ThrottleConfig m_config;
 };
-} // throttle
+}   // throttle

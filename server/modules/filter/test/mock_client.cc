@@ -24,7 +24,7 @@ namespace mock
 //
 Client::Client(const char* zUser,
                const char* zHost,
-               Handler*    pHandler)
+               Handler* pHandler)
     : m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
@@ -114,7 +114,7 @@ int32_t Client::write(GWBUF* pResponse)
     return rv;
 }
 
-//static
+// static
 int32_t Client::clientReply(MXS_FILTER* pInstance,
                             MXS_FILTER_SESSION* pSession,
                             GWBUF* pResponse)
@@ -136,7 +136,5 @@ Client::Handler::~Handler()
 void Client::Handler::reset()
 {
 }
-
 }
-
 }

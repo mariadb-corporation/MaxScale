@@ -7,7 +7,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -32,9 +32,12 @@ int main(int argc, char *argv[])
             char str[256];
             sprintf(str, "shard_db%d", i);
             test.set_timeout(30);
-            MYSQL *conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
-                                       str, test.maxscales->user_name,
-                                       test.maxscales->password, test.ssl);
+            MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port[0],
+                                       test.maxscales->IP[0],
+                                       str,
+                                       test.maxscales->user_name,
+                                       test.maxscales->password,
+                                       test.ssl);
             test.set_timeout(30);
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);
             mysql_close(conn);

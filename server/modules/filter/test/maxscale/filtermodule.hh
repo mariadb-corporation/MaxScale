@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -26,16 +26,16 @@ namespace maxscale
 class FilterModule : public SpecificModule<FilterModule, MXS_FILTER_OBJECT>
 {
     FilterModule(const FilterModule&);
-    FilterModule& operator = (const FilterModule&);
+    FilterModule& operator=(const FilterModule&);
 
 public:
-    static const char* zName;  /*< The name describing the module type. */
+    static const char* zName;   /*< The name describing the module type. */
 
     class Session;
     class Instance
     {
         Instance(const Instance&);
-        Instance& operator = (const Instance&);
+        Instance& operator=(const Instance&);
     public:
         ~Instance();
 
@@ -89,7 +89,7 @@ public:
     class Session
     {
         Session(const Session&);
-        Session& operator = (const Session&);
+        Session& operator=(const Session&);
 
     public:
         ~Session();
@@ -193,5 +193,4 @@ private:
     {
     }
 };
-
 }

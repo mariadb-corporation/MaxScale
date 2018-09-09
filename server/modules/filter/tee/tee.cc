@@ -30,22 +30,26 @@
 static const MXS_ENUM_VALUE option_values[] =
 {
     {"ignorecase", PCRE2_CASELESS},
-    {"case",       0},
+    {"case",       0             },
     {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
 
-Tee::Tee(SERVICE* service, std::string user, std::string remote,
-         pcre2_code* match, std::string match_string,
-         pcre2_code* exclude, std::string exclude_string):
-    m_service(service),
-    m_user(user),
-    m_source(remote),
-    m_match_code(match),
-    m_exclude_code(exclude),
-    m_match(match_string),
-    m_exclude(exclude_string),
-    m_enabled(true)
+Tee::Tee(SERVICE* service,
+         std::string user,
+         std::string remote,
+         pcre2_code* match,
+         std::string match_string,
+         pcre2_code* exclude,
+         std::string exclude_string)
+    : m_service(service)
+    , m_user(user)
+    , m_source(remote)
+    , m_match_code(match)
+    , m_exclude_code(exclude)
+    , m_match(match_string)
+    , m_exclude(exclude_string)
+    , m_enabled(true)
 {
 }
 
@@ -59,7 +63,7 @@ Tee::Tee(SERVICE* service, std::string user, std::string remote,
  *
  * @return The instance data for this new instance
  */
-Tee* Tee::create(const char *name, MXS_CONFIG_PARAMETER *params)
+Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     SERVICE* service = config_get_service(params, "service");
     const char* source = config_get_string(params, "source");
@@ -70,8 +74,13 @@ Tee* Tee::create(const char *name, MXS_CONFIG_PARAMETER *params)
     const char* match_str = config_get_string(params, "match");
     const char* exclude_str = config_get_string(params, "exclude");
 
-    Tee* my_instance = new (std::nothrow) Tee(service, source, user, match,
-                                              match_str, exclude, exclude_str);
+    Tee* my_instance = new( std::nothrow) Tee(service,
+                                              source,
+                                              user,
+                                              match,
+                                              match_str,
+                                              exclude,
+                                              exclude_str);
 
     if (my_instance == NULL)
     {
@@ -98,28 +107,33 @@ TeeSession* Tee::newSession(MXS_SESSION* pSession)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-void Tee::diagnostics(DCB *dcb)
+void Tee::diagnostics(DCB* dcb)
 {
     if (m_source.length())
     {
-        dcb_printf(dcb, "\t\tLimit to connections from 		%s\n",
+        dcb_printf(dcb,
+                   "\t\tLimit to connections from       %s\n",
                    m_source.c_str());
     }
-    dcb_printf(dcb, "\t\tDuplicate statements to service		%s\n",
+    dcb_printf(dcb,
+               "\t\tDuplicate statements to service		%s\n",
                m_service->name);
     if (m_user.length())
     {
-        dcb_printf(dcb, "\t\tLimit to user			%s\n",
+        dcb_printf(dcb,
+                   "\t\tLimit to user			%s\n",
                    m_user.c_str());
     }
     if (m_match.length())
     {
-        dcb_printf(dcb, "\t\tInclude queries that match		%s\n",
+        dcb_printf(dcb,
+                   "\t\tInclude queries that match		%s\n",
                    m_match.c_str());
     }
     if (m_exclude.c_str())
     {
-        dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
+        dcb_printf(dcb,
+                   "\t\tExclude queries that match		%s\n",
                    m_exclude.c_str());
     }
     dcb_printf(dcb, "\t\tFilter enabled: %s\n", m_enabled ? "yes" : "no");
@@ -166,14 +180,14 @@ json_t* Tee::diagnostics_json() const
     return rval;
 }
 
-static bool enable_tee(const MODULECMD_ARG *argv, json_t** output)
+static bool enable_tee(const MODULECMD_ARG* argv, json_t** output)
 {
     Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].value.filter));
     instance->set_enabled(true);
     return true;
 }
 
-static bool disable_tee(const MODULECMD_ARG *argv, json_t** output)
+static bool disable_tee(const MODULECMD_ARG* argv, json_t** output)
 {
     Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].value.filter));
     instance->set_enabled(false);
@@ -200,10 +214,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "enable", MODULECMD_TYPE_ACTIVE,
-                               enable_tee, 1, argv, "Enable a tee filter instance");
-    modulecmd_register_command(MXS_MODULE_NAME, "disable", MODULECMD_TYPE_ACTIVE,
-                               disable_tee, 1, argv, "Disable a tee filter instance");
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "enable",
+                               MODULECMD_TYPE_ACTIVE,
+                               enable_tee,
+                               1,
+                               argv,
+                               "Enable a tee filter instance");
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "disable",
+                               MODULECMD_TYPE_ACTIVE,
+                               disable_tee,
+                               1,
+                               argv,
+                               "Disable a tee filter instance");
 
     static MXS_MODULE info =
     {
@@ -214,16 +238,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &Tee::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,                               /* Process init. */
+        NULL,                               /* Process finish. */
+        NULL,                               /* Thread init. */
+        NULL,                               /* Thread finish. */
         {
-            {"service", MXS_MODULE_PARAM_SERVICE, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"match", MXS_MODULE_PARAM_REGEX},
-            {"exclude", MXS_MODULE_PARAM_REGEX},
-            {"source", MXS_MODULE_PARAM_STRING},
-            {"user", MXS_MODULE_PARAM_STRING},
+            {"service",                      MXS_MODULE_PARAM_SERVICE,NULL, MXS_MODULE_OPT_REQUIRED},
+            {"match",                        MXS_MODULE_PARAM_REGEX},
+            {"exclude",                      MXS_MODULE_PARAM_REGEX},
+            {"source",                       MXS_MODULE_PARAM_STRING},
+            {"user",                         MXS_MODULE_PARAM_STRING},
             {
                 "options",
                 MXS_MODULE_PARAM_ENUM,

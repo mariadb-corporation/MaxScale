@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 
@@ -73,15 +73,15 @@ public:
     }
 
 protected:
-    Logger(const std::string& filename):
-        m_filename(filename)
+    Logger(const std::string& filename)
+        : m_filename(filename)
     {
     }
 
     std::string m_filename;
 };
 
-class FileLogger: public Logger
+class FileLogger : public Logger
 {
 public:
     FileLogger(const FileLogger&) = delete;
@@ -122,8 +122,8 @@ public:
     bool rotate();
 
 private:
-    int              m_fd;
-    std::mutex       m_lock;
+    int        m_fd;
+    std::mutex m_lock;
 
     FileLogger(int fd, const std::string& filename);
     bool write_header();
@@ -131,7 +131,7 @@ private:
     void close(const char* msg);
 };
 
-class StdoutLogger: public Logger
+class StdoutLogger : public Logger
 {
 public:
     StdoutLogger(const StdoutLogger&) = delete;
@@ -170,13 +170,12 @@ public:
     bool rotate()
     {
         return true;
-    };
+    }
 
 private:
-    StdoutLogger(const std::string& filename):
-        Logger(filename)
+    StdoutLogger(const std::string& filename)
+        : Logger(filename)
     {
     }
 };
-
 }

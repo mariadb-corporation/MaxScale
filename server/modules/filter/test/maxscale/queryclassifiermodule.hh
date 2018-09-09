@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -27,10 +27,10 @@ namespace maxscale
 class QueryClassifierModule : public SpecificModule<QueryClassifierModule, QUERY_CLASSIFIER>
 {
     QueryClassifierModule(const QueryClassifierModule&);
-    QueryClassifierModule& operator = (const QueryClassifierModule&);
+    QueryClassifierModule& operator=(const QueryClassifierModule&);
 
 public:
-    static const char* zName;  /*< The name describing the module type. */
+    static const char* zName;   /*< The name describing the module type. */
 
 private:
     QueryClassifierModule(const MXS_MODULE* pModule)
@@ -38,5 +38,4 @@ private:
     {
     }
 };
-
 }

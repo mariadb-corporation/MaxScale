@@ -25,22 +25,22 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
 #include <maxscale/hashtable.h>
 #include <execinfo.h>
 
-static HASHTABLE *buffer_hashtable = NULL;
+static HASHTABLE* buffer_hashtable = NULL;
 #endif
 
-static void gwbuf_free_one(GWBUF *buf);
-static buffer_object_t* gwbuf_remove_buffer_object(GWBUF*           buf,
+static void             gwbuf_free_one(GWBUF* buf);
+static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
                                                    buffer_object_t* bufobj);
 
-#if defined(BUFFER_TRACE)
-static void gwbuf_add_to_hashtable(GWBUF *buf);
-static int bhashfn (void *key);
-static int bcmpfn (void *key1, void *key2);
-static void gwbuf_remove_from_hashtable(GWBUF *buf);
+#if defined (BUFFER_TRACE)
+static void gwbuf_add_to_hashtable(GWBUF* buf);
+static int  bhashfn(void* key);
+static int  bcmpfn(void* key1, void* key2);
+static void gwbuf_remove_from_hashtable(GWBUF* buf);
 #endif
 
 /**
@@ -54,21 +54,20 @@ static void gwbuf_remove_from_hashtable(GWBUF *buf);
  * @return      Pointer to the buffer structure or NULL if memory could not
  *              be allocated.
  */
-GWBUF *
-gwbuf_alloc(unsigned int size)
+GWBUF* gwbuf_alloc(unsigned int size)
 {
-    GWBUF      *rval;
-    SHARED_BUF *sbuf;
-    size_t      sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
+    GWBUF* rval;
+    SHARED_BUF* sbuf;
+    size_t sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
 
     /* Allocate the buffer header */
-    if ((rval = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
         goto retblock;
     }
 
     /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sbuf_size)) == NULL)
+    if ((sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size)) == NULL)
     {
         MXS_FREE(rval);
         rval = NULL;
@@ -80,7 +79,7 @@ gwbuf_alloc(unsigned int size)
     sbuf->bufobj = NULL;
 
     rval->start = &sbuf->data;
-    rval->end = (void *)((char *)rval->start + size);
+    rval->end = (void*)((char*)rval->start + size);
     rval->sbuf = sbuf;
     rval->next = NULL;
     rval->tail = rval;
@@ -93,7 +92,7 @@ retblock:
     {
         MXS_ERROR("Memory allocation failed due to %s.", mxs_strerror(errno));
     }
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
     else
     {
         gwbuf_add_to_hashtable(rval);
@@ -110,10 +109,9 @@ retblock:
  * @return      Pointer to the buffer structure or NULL if memory could not
  *              be allocated.
  */
-GWBUF *
-gwbuf_alloc_and_load(unsigned int size, const void *data)
+GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
 {
-    GWBUF      *rval;
+    GWBUF* rval;
     if ((rval = gwbuf_alloc(size)) != NULL)
     {
         memcpy(GWBUF_DATA(rval), data, size);
@@ -121,19 +119,18 @@ gwbuf_alloc_and_load(unsigned int size, const void *data)
     return rval;
 }
 
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
 /**
  * Store a trace of buffer creation
  *
  * @param buf The buffer to record
  */
-static void
-gwbuf_add_to_hashtable(GWBUF *buf)
+static void gwbuf_add_to_hashtable(GWBUF* buf)
 {
-    void *array[16];
+    void* array[16];
     size_t size, i, total;
-    char **strings;
-    char *tracetext;
+    char** strings;
+    char* tracetext;
 
     size = backtrace(array, 16);
     strings = backtrace_symbols(array, size);
@@ -142,10 +139,10 @@ gwbuf_add_to_hashtable(GWBUF *buf)
     {
         total += strlen(strings[i]);
     }
-    tracetext = (char *)MXS_MALLOC(total);
+    tracetext = (char*)MXS_MALLOC(total);
     if (tracetext)
     {
-        char *ptr = tracetext;
+        char* ptr = tracetext;
         for (i = 0; i < size; i++)
         {
             sprintf(ptr, "\t%s\n", strings[i]);
@@ -158,7 +155,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
             buffer_hashtable = hashtable_alloc(10000, bhashfn, bcmpfn);
             hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, hashtable_item_free);
         }
-        hashtable_add(buffer_hashtable, buf, (void *)tracetext);
+        hashtable_add(buffer_hashtable, buf, (void*)tracetext);
     }
 }
 
@@ -167,8 +164,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
  *
  * @param key The pointer to the buffer
  */
-static int
-bhashfn(void *key)
+static int bhashfn(void* key)
 {
     return (int)((uintptr_t) key % INT_MAX);
 }
@@ -179,8 +175,7 @@ bhashfn(void *key)
  * @param key1 The pointer to the first buffer
  * @param key2 The pointer to the second buffer
  */
-static int
-bcmpfn(void *key1, void *key2)
+static int bcmpfn(void* key1, void* key2)
 {
     return key1 == key2 ? 0 : 1;
 }
@@ -190,8 +185,7 @@ bcmpfn(void *key1, void *key2)
  *
  * @param buf The buffer to be removed
  */
-static void
-gwbuf_remove_from_hashtable(GWBUF *buf)
+static void gwbuf_remove_from_hashtable(GWBUF* buf)
 {
     hashtable_delete(buffer_hashtable, buf);
 }
@@ -201,17 +195,16 @@ gwbuf_remove_from_hashtable(GWBUF *buf)
  *
  * @param pdcb  Print DCB for output
  */
-void
-dprintAllBuffers(void *pdcb)
+void dprintAllBuffers(void* pdcb)
 {
-    void *buf;
-    char *backtrace;
-    HASHITERATOR *buffers = hashtable_iterator(buffer_hashtable);
+    void* buf;
+    char* backtrace;
+    HASHITERATOR* buffers = hashtable_iterator(buffer_hashtable);
     while (NULL != (buf = hashtable_next(buffers)))
     {
-        dcb_printf((DCB *)pdcb, "Buffer: %p\n", (void *)buf);
+        dcb_printf((DCB*)pdcb, "Buffer: %p\n", (void*)buf);
         backtrace = hashtable_fetch(buffer_hashtable, buf);
-        dcb_printf((DCB *)pdcb, "%s", backtrace);
+        dcb_printf((DCB*)pdcb, "%s", backtrace);
     }
     hashtable_iterator_free(buffers);
 }
@@ -222,12 +215,11 @@ dprintAllBuffers(void *pdcb)
  *
  * @param buf The head of the list of buffers to free
  */
-void
-gwbuf_free(GWBUF *buf)
+void gwbuf_free(GWBUF* buf)
 {
-    GWBUF *nextbuf;
-    BUF_PROPERTY    *prop;
-    buffer_object_t *bo;
+    GWBUF* nextbuf;
+    BUF_PROPERTY* prop;
+    buffer_object_t* bo;
 
     while (buf)
     {
@@ -242,11 +234,10 @@ gwbuf_free(GWBUF *buf)
  *
  * @param buf The buffer to free
  */
-static void
-gwbuf_free_one(GWBUF *buf)
+static void gwbuf_free_one(GWBUF* buf)
 {
-    BUF_PROPERTY    *prop;
-    buffer_object_t *bo;
+    BUF_PROPERTY* prop;
+    buffer_object_t* bo;
 
     if (atomic_add(&buf->sbuf->refcount, -1) == 1)
     {
@@ -275,7 +266,7 @@ gwbuf_free_one(GWBUF *buf)
         buf->hint = buf->hint->next;
         hint_free(h);
     }
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
     gwbuf_remove_from_hashtable(buf);
 #endif
     MXS_FREE(buf);
@@ -291,12 +282,11 @@ gwbuf_free_one(GWBUF *buf)
  * @param buf The buffer to use
  * @return A new GWBUF structure
  */
-static GWBUF *
-gwbuf_clone_one(GWBUF *buf)
+static GWBUF* gwbuf_clone_one(GWBUF* buf)
 {
-    GWBUF *rval;
+    GWBUF* rval;
 
-    if ((rval = (GWBUF *)MXS_CALLOC(1, sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF*)MXS_CALLOC(1, sizeof(GWBUF))) == NULL)
     {
         return NULL;
     }
@@ -309,7 +299,7 @@ gwbuf_clone_one(GWBUF *buf)
     rval->gwbuf_type = buf->gwbuf_type;
     rval->tail = rval;
     rval->next = NULL;
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
     gwbuf_add_to_hashtable(rval);
 #endif
     return rval;
@@ -322,7 +312,7 @@ GWBUF* gwbuf_clone(GWBUF* buf)
         return NULL;
     }
 
-    GWBUF *rval = gwbuf_clone_one(buf);
+    GWBUF* rval = gwbuf_clone_one(buf);
 
     if (rval)
     {
@@ -369,7 +359,7 @@ GWBUF* gwbuf_deep_clone(const GWBUF* buf)
     return rval;
 }
 
-static GWBUF *gwbuf_clone_portion(GWBUF *buf,
+static GWBUF* gwbuf_clone_portion(GWBUF* buf,
                                   size_t start_offset,
                                   size_t length)
 {
@@ -377,28 +367,28 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
 
     mxb_assert(start_offset + length <= GWBUF_LENGTH(buf));
 
-    if ((clonebuf = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
+    if ((clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
         return NULL;
     }
     atomic_add(&buf->sbuf->refcount, 1);
     clonebuf->server = buf->server;
     clonebuf->sbuf = buf->sbuf;
-    clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
-    clonebuf->start = (void *)((char*)buf->start + start_offset);
-    clonebuf->end = (void *)((char *)clonebuf->start + length);
-    clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */
+    clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone info bits too */
+    clonebuf->start = (void*)((char*)buf->start + start_offset);
+    clonebuf->end = (void*)((char*)clonebuf->start + length);
+    clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone the type for now */
     clonebuf->properties = NULL;
     clonebuf->hint = NULL;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
     gwbuf_add_to_hashtable(clonebuf);
 #endif
     return clonebuf;
 }
 
-GWBUF* gwbuf_split(GWBUF **buf, size_t length)
+GWBUF* gwbuf_split(GWBUF** buf, size_t length)
 {
     GWBUF* head = NULL;
 
@@ -566,8 +556,7 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
     return rv;
 }
 
-GWBUF *
-gwbuf_append(GWBUF *head, GWBUF *tail)
+GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 {
     if (!head)
     {
@@ -583,8 +572,7 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
     return head;
 }
 
-GWBUF *
-gwbuf_consume(GWBUF *head, unsigned int length)
+GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 {
     while (head && length > 0)
     {
@@ -609,8 +597,7 @@ gwbuf_consume(GWBUF *head, unsigned int length)
     return head;
 }
 
-unsigned int
-gwbuf_length(const GWBUF *head)
+unsigned int gwbuf_length(const GWBUF* head)
 {
     int rval = 0;
 
@@ -625,8 +612,7 @@ gwbuf_length(const GWBUF *head)
     return rval;
 }
 
-int
-gwbuf_count(const GWBUF *head)
+int gwbuf_count(const GWBUF* head)
 {
     int result = 0;
     while (head)
@@ -637,10 +623,9 @@ gwbuf_count(const GWBUF *head)
     return result;
 }
 
-GWBUF *
-gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
+GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int n_bytes)
 {
-    GWBUF *rval = head;
+    GWBUF* rval = head;
     GWBUF_RTRIM(head, n_bytes);
 
     if (GWBUF_EMPTY(head))
@@ -663,10 +648,10 @@ void gwbuf_set_type(GWBUF* buf, uint32_t type)
 
 void gwbuf_add_buffer_object(GWBUF* buf,
                              bufobj_id_t id,
-                             void*  data,
-                             void (*donefun_fp)(void *))
+                             void* data,
+                             void (* donefun_fp)(void*))
 {
-    buffer_object_t* newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
+    buffer_object_t* newb = (buffer_object_t*)MXS_MALLOC(sizeof(buffer_object_t));
     MXS_ABORT_IF_NULL(newb);
 
     newb->bo_id = id;
@@ -711,12 +696,11 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     return next;
 }
 
-bool
-gwbuf_add_property(GWBUF *buf, const char *name, const char *value)
+bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value)
 {
     char* my_name = MXS_STRDUP(name);
     char* my_value = MXS_STRDUP(value);
-    BUF_PROPERTY *prop = (BUF_PROPERTY *)MXS_MALLOC(sizeof(BUF_PROPERTY));
+    BUF_PROPERTY* prop = (BUF_PROPERTY*)MXS_MALLOC(sizeof(BUF_PROPERTY));
 
     if (!my_name || !my_value || !prop)
     {
@@ -734,8 +718,7 @@ gwbuf_add_property(GWBUF *buf, const char *name, const char *value)
     return true;
 }
 
-char *
-gwbuf_get_property(GWBUF *buf, const char *name)
+char* gwbuf_get_property(GWBUF* buf, const char* name)
 {
     BUF_PROPERTY* prop = buf->properties;
 
@@ -747,7 +730,7 @@ gwbuf_get_property(GWBUF *buf, const char *name)
     return prop ? prop->value : NULL;
 }
 
-GWBUF* gwbuf_make_contiguous(GWBUF *orig)
+GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {
     if (orig == NULL)
     {
@@ -777,7 +760,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF *orig)
     return newbuf;
 }
 
-size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
+size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
     uint32_t buflen;
 
@@ -792,7 +775,7 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
 
     if (buffer)
     {
-        uint8_t *ptr = (uint8_t*) GWBUF_DATA(buffer) + offset;
+        uint8_t* ptr = (uint8_t*) GWBUF_DATA(buffer) + offset;
         uint32_t bytes_left = GWBUF_LENGTH(buffer) - offset;
 
         /** Data is in one buffer */
@@ -825,9 +808,9 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
     return bytes_read;
 }
 
-uint8_t *gwbuf_byte_pointer(GWBUF *buffer, size_t offset)
+uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset)
 {
-    uint8_t *rval = NULL;
+    uint8_t* rval = NULL;
     // Ignore NULL buffer and walk past empty or too short buffers.
     while (buffer && (GWBUF_LENGTH(buffer) <= offset))
     {

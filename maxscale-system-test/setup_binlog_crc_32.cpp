@@ -11,10 +11,10 @@
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     if (!Test->smoke)
     {
@@ -43,4 +43,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

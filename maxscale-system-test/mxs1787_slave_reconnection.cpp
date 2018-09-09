@@ -20,11 +20,11 @@ struct Bind
         bind.length = &length;
     }
 
-    MYSQL_BIND bind;
-    char err = 0;
-    char is_null = 0;
-    char is_unsigned = 0;
-    uint32_t data = 1234;
+    MYSQL_BIND    bind;
+    char          err = 0;
+    char          is_null = 0;
+    char          is_unsigned = 0;
+    uint32_t      data = 1234;
     unsigned long length = sizeof(data);
 };
 
@@ -65,15 +65,19 @@ int main(int argc, char* argv[])
         test.set_timeout(30);
 
         test.assert(mysql_stmt_prepare(stmt, query.c_str(), query.size()) == 0,
-                    "Prepared statement failure: %s", mysql_stmt_error(stmt));
+                    "Prepared statement failure: %s",
+                    mysql_stmt_error(stmt));
         test.assert(mysql_stmt_bind_param(stmt, &bind.bind) == 0,
-                    "Bind failure: %s", mysql_stmt_error(stmt));
+                    "Bind failure: %s",
+                    mysql_stmt_error(stmt));
         test.assert(mysql_stmt_execute(stmt) == 0,
-                    "Execute failure: %s", mysql_stmt_error(stmt));
+                    "Execute failure: %s",
+                    mysql_stmt_error(stmt));
 
         mysql_stmt_close(stmt);
 
-        test.assert(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0, "Normal queries should work");
+        test.assert(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
+                    "Normal queries should work");
         test.maxscales->disconnect();
     }
 

@@ -38,12 +38,12 @@ typedef struct maxscaled
 {
     SPINLOCK lock;      /**< Protocol structure lock */
     int      state;     /**< The connection state */
-    char    *username;  /**< The login name of the user */
+    char*    username;  /**< The login name of the user */
 } MAXSCALED;
 
-#define MAXSCALED_STATE_LOGIN   1   /**< Waiting for user */
-#define MAXSCALED_STATE_PASSWD  2   /**< Waiting for password */
-#define MAXSCALED_STATE_DATA    3   /**< User logged in */
+#define MAXSCALED_STATE_LOGIN  1    /**< Waiting for user */
+#define MAXSCALED_STATE_PASSWD 2    /**< Waiting for password */
+#define MAXSCALED_STATE_DATA   3    /**< User logged in */
 
 MXS_END_DECLS
 

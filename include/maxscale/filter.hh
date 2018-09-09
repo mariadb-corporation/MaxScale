@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.h>
@@ -48,7 +48,8 @@ public:
 
         Downstream(const MXS_DOWNSTREAM& down)
             : m_data(down)
-        {}
+        {
+        }
 
         /**
          * Function for sending a packet from the client to the next component
@@ -83,7 +84,8 @@ public:
 
         Upstream(const MXS_UPSTREAM& up)
             : m_data(up)
-        {}
+        {
+        }
 
         /**
          * Function for sending a packet from the backend to the next component
@@ -147,7 +149,7 @@ public:
      *
      * @param pDcb  The dcb where the diagnostics should be written.
      */
-    void diagnostics(DCB *pDcb);
+    void diagnostics(DCB* pDcb);
 
     /**
      * Called for obtaining diagnostics about the filter session.
@@ -170,9 +172,9 @@ protected:
     }
 
 protected:
-    MXS_SESSION*   m_pSession; /*< The MXS_SESSION this filter session is associated with. */
-    Downstream     m_down;     /*< The downstream component. */
-    Upstream       m_up;       /*< The upstream component. */
+    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this filter session is associated with. */
+    Downstream   m_down;        /*< The downstream component. */
+    Upstream     m_up;          /*< The upstream component. */
 };
 
 
@@ -373,5 +375,4 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };
-
 }

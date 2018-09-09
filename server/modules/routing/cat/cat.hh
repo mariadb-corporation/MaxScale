@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/router.hh>
 
@@ -19,17 +19,17 @@ class CatSession;
 /**
  * The per instance data for the router.
  */
-class Cat: public mxs::Router<Cat, CatSession>
+class Cat : public mxs::Router<Cat, CatSession>
 {
     Cat(const Cat&) = delete;
-    Cat& operator =(const Cat&) = delete;
+    Cat& operator=(const Cat&) = delete;
 public:
     ~Cat();
     static Cat* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     CatSession* newSession(MXS_SESSION* pSession);
-    void diagnostics(DCB* pDcb);
-    json_t* diagnostics_json() const;
-    uint64_t getCapabilities();
+    void        diagnostics(DCB* pDcb);
+    json_t*     diagnostics_json() const;
+    uint64_t    getCapabilities();
 
 private:
     friend class CatSession;

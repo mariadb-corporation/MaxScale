@@ -5,7 +5,7 @@
 #include "testconnections.h"
 #include <sstream>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.set_timeout(30);

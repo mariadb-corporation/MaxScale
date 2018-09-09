@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -44,7 +44,7 @@ public:
      */
     HttpResponse(int code = MHD_HTTP_OK, json_t* response = NULL);
     HttpResponse(const HttpResponse& response);
-    HttpResponse& operator = (const HttpResponse& response);
+    HttpResponse& operator=(const HttpResponse& response);
 
     ~HttpResponse();
 
@@ -85,7 +85,7 @@ public:
     const Headers& get_headers() const;
 
 private:
-    json_t* m_body;    /**< Message body */
-    int     m_code;    /**< The HTTP code for the response */
-    Headers m_headers; /**< Extra headers */
+    json_t* m_body;     /**< Message body */
+    int     m_code;     /**< The HTTP code for the response */
+    Headers m_headers;  /**< Extra headers */
 };

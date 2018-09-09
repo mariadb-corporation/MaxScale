@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "hintrouterdefs.hh"
 
@@ -29,16 +29,16 @@ class HintRouter;
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    typedef std::unordered_map<string, Dcb> BackendMap; // All backends, indexed by name
-    typedef std::vector<Dcb> BackendArray;
-    typedef std::vector<SERVER_REF*> RefArray;
-    typedef BackendMap::value_type MapElement;
-    typedef BackendArray::size_type size_type;
+    typedef std::unordered_map<string, Dcb> BackendMap;     // All backends, indexed by name
+    typedef std::vector<Dcb>                BackendArray;
+    typedef std::vector<SERVER_REF*>        RefArray;
+    typedef BackendMap::value_type          MapElement;
+    typedef BackendArray::size_type         size_type;
 
-    HintRouterSession(MXS_SESSION*    pSession,
-                      HintRouter*     pRouter,
+    HintRouterSession(MXS_SESSION* pSession,
+                      HintRouter*  pRouter,
                       const BackendMap& backends
-                     );
+                      );
 
     ~HintRouterSession();
 
@@ -48,23 +48,23 @@ public:
 
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
-    void handleError(GWBUF*             pMessage,
-                     DCB*               pProblem,
+    void handleError(GWBUF* pMessage,
+                     DCB*   pProblem,
                      mxs_error_action_t action,
-                     bool*              pSuccess);
+                     bool* pSuccess);
 
 private:
-    HintRouterSession(const HintRouterSession&); // denied
-    HintRouterSession& operator = (const HintRouterSession&); // denied
+    HintRouterSession(const HintRouterSession&);            // denied
+    HintRouterSession& operator=(const HintRouterSession&); // denied
 private:
     bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
     bool route_to_slave(GWBUF* pPacket, bool print_errors);
     void update_connections();
 
-    HintRouter* m_router;
-    BackendMap m_backends; // all connections
-    Dcb m_master; // connection to master
-    BackendArray m_slaves; // connections to slaves
-    size_type m_n_routed_to_slave; // packets routed to a single slave, used for rr
-    size_type m_surplus_replies; // how many replies should be ignored
+    HintRouter*  m_router;
+    BackendMap   m_backends;            // all connections
+    Dcb          m_master;              // connection to master
+    BackendArray m_slaves;              // connections to slaves
+    size_type    m_n_routed_to_slave;   // packets routed to a single slave, used for rr
+    size_type    m_surplus_replies;     // how many replies should be ignored
 };

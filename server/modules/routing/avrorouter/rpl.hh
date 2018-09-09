@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <vector>
 #include <cstdint>
@@ -28,12 +28,12 @@ typedef std::vector<uint8_t> Bytes;
 // A GTID position
 struct gtid_pos_t
 {
-    gtid_pos_t():
-        timestamp(0),
-        domain(0),
-        server_id(0),
-        seq(0),
-        event_num(0)
+    gtid_pos_t()
+        : timestamp(0)
+        , domain(0)
+        , server_id(0)
+        , seq(0)
+        , event_num(0)
     {
     }
 
@@ -46,20 +46,20 @@ struct gtid_pos_t
                          * an event inside a GTID event and it is used to
                          * rebuild GTID events in the correct order. */
 
-    void extract(const REP_HEADER& hdr, uint8_t* ptr);
-    bool parse(const char* str);
+    void              extract(const REP_HEADER& hdr, uint8_t* ptr);
+    bool              parse(const char* str);
     static gtid_pos_t from_string(std::string str);
-    std::string to_string() const;
-    bool empty() const;
+    std::string       to_string() const;
+    bool              empty() const;
 };
 
 /** A single column in a CREATE TABLE statement */
 struct Column
 {
-    Column(std::string name, std::string type = "unknown", int length = -1):
-        name(name),
-        type(type),
-        length(length)
+    Column(std::string name, std::string type = "unknown", int length = -1)
+        : name(name)
+        , type(type)
+        , length(length)
     {
     }
 
@@ -67,7 +67,7 @@ struct Column
     std::string type;
     int         length;
 
-    json_t* to_json() const;
+    json_t*       to_json() const;
     static Column from_json(json_t* json);
 };
 
@@ -77,12 +77,12 @@ typedef std::shared_ptr<TableCreateEvent> STableCreateEvent;
 /** A CREATE TABLE abstraction */
 struct TableCreateEvent
 {
-    TableCreateEvent(std::string db, std::string table, int version, std::vector<Column>&& cols):
-        columns(cols),
-        table(table),
-        database(db),
-        version(version),
-        was_used(false)
+    TableCreateEvent(std::string db, std::string table, int version, std::vector<Column>&& cols)
+        : columns(cols)
+        , table(table)
+        , database(db)
+        , version(version)
+        , was_used(false)
     {
     }
 
@@ -112,11 +112,11 @@ struct TableCreateEvent
      */
     static STableCreateEvent from_json(json_t* json);
 
-    std::vector<Column>        columns;
-    std::string                table;
-    std::string                database;
-    int                        version;  /**< How many versions of this table have been used */
-    bool                       was_used; /**< Has this schema been persisted to disk */
+    std::vector<Column> columns;
+    std::string         table;
+    std::string         database;
+    int                 version;        /**< How many versions of this table have been used */
+    bool                was_used;       /**< Has this schema been persisted to disk */
 };
 
 /** A representation of a table map event read from a binary log. A table map
@@ -125,15 +125,20 @@ struct TableCreateEvent
  * some meta information on the columns. */
 struct TableMapEvent
 {
-    TableMapEvent(const std::string& db, const std::string& table, uint64_t id,
-                  int version, Bytes&& cols, Bytes&& nulls, Bytes&& metadata):
-        database(db),
-        table(table),
-        id(id),
-        version(version),
-        column_types(cols),
-        null_bitmap(nulls),
-        column_metadata(metadata)
+    TableMapEvent(const std::string& db,
+                  const std::string& table,
+                  uint64_t id,
+                  int version,
+                  Bytes&& cols,
+                  Bytes&& nulls,
+                  Bytes&& metadata)
+        : database(db)
+        , table(table)
+        , id(id)
+        , version(version)
+        , column_types(cols)
+        , null_bitmap(nulls)
+        , column_metadata(metadata)
     {
     }
 
@@ -151,7 +156,7 @@ struct TableMapEvent
     Bytes       column_metadata;
 };
 
-typedef std::shared_ptr<TableMapEvent>    STableMapEvent;
+typedef std::shared_ptr<TableMapEvent> STableMapEvent;
 
 // Containers for the replication events
 typedef std::unordered_map<std::string, STableCreateEvent> CreatedTables;
@@ -226,7 +231,10 @@ public:
     Rpl& operator=(const Rpl&) = delete;
 
     // Construct a new replication stream transformer
-    Rpl(SERVICE* service, SRowEventHandler event_handler, pcre2_code* match, pcre2_code* exclude,
+    Rpl(SERVICE* service,
+        SRowEventHandler event_handler,
+        pcre2_code* match,
+        pcre2_code* exclude,
         gtid_pos_t = {});
 
     // Add a stored TableCreateEvent
@@ -273,11 +281,11 @@ private:
     pcre2_match_data* m_md_match;
     pcre2_match_data* m_md_exclude;
 
-    void handle_query_event(REP_HEADER *hdr, uint8_t *ptr);
-    bool handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr);
-    bool handle_row_event(REP_HEADER *hdr, uint8_t *ptr);
+    void              handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
+    bool              handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
+    bool              handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
     STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
-    bool save_and_replace_table_create(STableCreateEvent created);
-    bool table_create_alter(STableCreateEvent create, const char *sql, const char *end);
-    bool table_matches(const std::string& ident);
+    bool              save_and_replace_table_create(STableCreateEvent created);
+    bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
+    bool              table_matches(const std::string& ident);
 };

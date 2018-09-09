@@ -11,14 +11,14 @@
  * @param rows Expected number of rows
  * @return 0 in case of success
  */
-int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long long int rows);
+int execute_select_query_and_check(MYSQL* conn, const char* sql, unsigned long long int rows);
 
 /**
  * @brief create_t1 Create t1 table, fileds: (x1 int, fl int)
  * @param conn MYSQL handler
  * @return 0 in case of success
  */
-int create_t1(MYSQL * conn);
+int create_t1(MYSQL* conn);
 
 
 /**
@@ -26,7 +26,7 @@ int create_t1(MYSQL * conn);
  * @param conn MYSQL handler
  * @return 0 in case of success
  */
-int create_t2(MYSQL * conn);
+int create_t2(MYSQL* conn);
 
 /**
  * @brief create_insert_string Create SQL query string to insert N rows into t1
@@ -36,7 +36,7 @@ int create_t2(MYSQL * conn);
  * @param fl value to fill 'fl' field
  * @return 0
  */
-int create_insert_string(char *sql, int N, int fl);
+int create_insert_string(char* sql, int N, int fl);
 
 /**
  * @brief create_insert_string Create SQL query string to insert N rows into t1
@@ -57,7 +57,7 @@ char* allocate_insert_string(int fl, int N);
  * @param N Number of blocks to insert
  * @return 0 in case of success
  */
-int insert_into_t1(MYSQL *conn, int N);
+int insert_into_t1(MYSQL* conn, int N);
 
 /**
  * @brief select_from_t1 Check that t1 contains data as inserted by insert_into_t1()
@@ -65,13 +65,13 @@ int insert_into_t1(MYSQL *conn, int N);
  * @param N Number of blocks to insert
  * @return 0 in case of success
  */
-int select_from_t1(MYSQL *conn, int N);
+int select_from_t1(MYSQL* conn, int N);
 
 /**
  * @brief check_if_t1_exists
  * @param conn MYSQL handler
  * @return 0 if content of t1 is ok
  */
-int check_if_t1_exists(MYSQL *conn);
+int check_if_t1_exists(MYSQL* conn);
 
 #endif // SQL_T1_H

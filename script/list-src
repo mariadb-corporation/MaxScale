@@ -1,0 +1,124 @@
+#!/bin/bash
+
+default_header_ext="h hh hpp"
+default_source_ext="c cc cpp"
+path=$PWD
+
+usage() {
+    echo "Usage:" $(basename $0) "[-fhsHS --help] [path...]"
+    echo "  Produce a list of 'source' files from current dir, or path if given."
+    echo "  By default lists both headers and sources and these extentions are used:"
+    echo "  headers: '$default_header_ext'"
+    echo "  sources:  '$default_source_ext'"
+    echo "  -h list header files."
+    echo "  -s list source files."
+    echo "  -f Use the 'file' command to classify as a source, then if there is an"
+    echo "     h in the extension it is a header else source. This will match a lot"
+    echo "     of potential files, e.g. html with C source code in it."
+    echo " -H quoted list of header extensions."
+    echo "    (adds -h, unless -s given.)"
+    echo " -S quotedlist of source extensions"
+    echo "    (adds -s, unless -h given.)"
+    echo " -x quoted list of directories to exclude"
+}
+
+opts=$(getopt -o "fhsH:S:x:" --long "help" -n $(basename $0) -- "$@")
+if [ $? -ne 0 ]; then
+	usage
+	exit 1
+fi
+
+eval set -- "$opts"
+
+while true; do
+    case "$1" in
+	-f) use_file_cmd=true ;;
+	-h) list_headers=true ;;
+	-s) list_sources=true ;;
+	-H) header_ext="$2"
+	    shift
+	    ;;
+	-S) source_ext="$2"
+	    shift
+	    ;;
+    -x) exclusion_list="$2"
+        shift
+        ;;
+	--help)
+	    usage
+	    exit 1
+	    ;;
+	'--')
+	    shift
+	    break
+    esac
+    shift
+done
+shift $((OPTIND-1))
+
+if [[ -n $1 ]]; then
+    path=$1
+fi
+
+if ! [[ $list_headers || $list_sources ]]; then
+    list_headers=true
+    list_sources=true
+fi
+
+if [[ -z $header_ext ]]; then
+    header_ext=$default_header_ext
+fi
+
+if [[ -z $source_ext ]]; then
+    source_ext=$default_source_ext
+fi
+
+# regex when using file cmd
+if [[ $list_headers && $list_sources ]]; then
+    regex='.*'
+elif [[ $list_headers ]]; then
+    regex='h[^.]*$'  # h in extension
+else
+    regex='[.][^h]*$'  # no h in extension
+fi
+
+#find /home/nantti/tmp/list-src-test -type d \( -name 'exclude' -o -name 'include' \) -prune -o -type f -print
+
+# build find command
+if ! [[ -z $exclusion_list ]]; then
+    for exclude in $exclusion_list
+    do
+        if [[ -z $exclusion_cmd ]]; then
+            exclusion_cmd="-type d \("
+        else
+            exclusion_cmd="$exclusion_cmd -o"
+        fi
+
+        exclusion_cmd="$exclusion_cmd -name '$exclude'"
+    done
+    exclusion_cmd="$exclusion_cmd \) -prune -o "
+fi
+
+FIND="find $path $exclusion_cmd -type f -print"
+
+for file in $(eval $FIND)
+do
+    if [[ $use_file_cmd ]]; then
+	if [[ `file -b $file` =~ "source" ]]; then
+            if [[ $file =~ $regex ]]; then
+		echo $file
+            fi
+	fi
+    else
+	regex="\b${file##*.}\b"
+	if [[ $list_headers && $header_ext =~ $regex ]]; then
+	    echo $file
+	fi
+
+	if [[ $list_sources && $source_ext =~ $regex ]]; then
+       	    echo $file
+	fi
+
+    fi
+
+done

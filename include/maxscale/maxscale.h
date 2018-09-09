@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file include/maxscale/maxscale.h Some general definitions for MaxScale
-*/
+ */
 
 #include <maxscale/cdefs.h>
 

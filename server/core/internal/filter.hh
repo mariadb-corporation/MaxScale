@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file core/maxscale/filter.h - The private filter interface
@@ -27,33 +27,36 @@
  * options to pass to that plugin.
  */
 // TODO: Make this a class
-struct FilterDef: public MXS_FILTER_DEF
+struct FilterDef : public MXS_FILTER_DEF
 {
-    FilterDef(std::string name, std::string module, MXS_FILTER_OBJECT* object,
-              MXS_FILTER* instance, MXS_CONFIG_PARAMETER* params);
+    FilterDef(std::string name,
+              std::string module,
+              MXS_FILTER_OBJECT* object,
+              MXS_FILTER* instance,
+              MXS_CONFIG_PARAMETER* params);
     ~FilterDef();
 
-    std::string name; /**< The Filter name */
-    std::string module; /**< The module to load */
-    MXS_CONFIG_PARAMETER *parameters; /**< The filter parameters */
-    MXS_FILTER* filter; /**< The runtime filter */
-    MXS_FILTER_OBJECT *obj; /**< The "MODULE_OBJECT" for the filter */
-    mutable std::mutex lock;
+    std::string           name;         /**< The Filter name */
+    std::string           module;       /**< The module to load */
+    MXS_CONFIG_PARAMETER* parameters;   /**< The filter parameters */
+    MXS_FILTER*           filter;       /**< The runtime filter */
+    MXS_FILTER_OBJECT*    obj;          /**< The "MODULE_OBJECT" for the filter */
+    mutable std::mutex    lock;
 };
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
 
-void filter_add_parameter(SFilterDef& filter_def, const char *name, const char *value);
-SFilterDef filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params);
-MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter_def, MXS_SESSION *session, MXS_DOWNSTREAM *downstream);
-void filter_free(const SFilterDef& filter);
-int filter_standard_parameter(const char *name);
-MXS_UPSTREAM *filter_upstream(const SFilterDef& filter_def,
-                              MXS_FILTER_SESSION *fsession,
-                              MXS_UPSTREAM *upstream);
+void            filter_add_parameter(SFilterDef& filter_def, const char* name, const char* value);
+SFilterDef      filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
+MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter_def, MXS_SESSION* session, MXS_DOWNSTREAM* downstream);
+void            filter_free(const SFilterDef& filter);
+int             filter_standard_parameter(const char* name);
+MXS_UPSTREAM*   filter_upstream(const SFilterDef&   filter_def,
+                                MXS_FILTER_SESSION* fsession,
+                                MXS_UPSTREAM* upstream);
 
 // Find the internal filter representation
-SFilterDef filter_find(const char *name);
+SFilterDef filter_find(const char* name);
 
 /**
  * Check if filter can be destroyed
@@ -89,9 +92,9 @@ void filter_destroy_instances();
  */
 bool filter_serialize(const SFilterDef& filter);
 
-void dprintAllFilters(DCB *);
-void dprintFilter(DCB *, const SFilterDef&);
-void dListFilters(DCB *);
+void dprintAllFilters(DCB*);
+void dprintFilter(DCB*, const SFilterDef&);
+void dListFilters(DCB*);
 
 /**
  * @brief Convert a filter to JSON

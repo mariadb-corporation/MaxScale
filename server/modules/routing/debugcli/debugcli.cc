@@ -42,19 +42,19 @@
 #include <maxscale/log.h>
 
 /* The router entry points */
-static  MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
-static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static  json_t* diagnostics_json(const MXS_ROUTER *instance);
-static  uint64_t getCapabilities(MXS_ROUTER* instance);
+static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static int                 execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*             diagnostics_json(const MXS_ROUTER* instance);
+static uint64_t            getCapabilities(MXS_ROUTER* instance);
 
-extern int execute_cmd(CLI_SESSION *cli);
+extern int execute_cmd(CLI_SESSION* cli);
 
-static SPINLOCK     instlock;
-static CLI_INSTANCE *instances;
+static SPINLOCK instlock;
+static CLI_INSTANCE* instances;
 
 /**
  * The module entry point routine. It is this routine that
@@ -94,10 +94,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.1",
         RCAP_TYPE_NO_AUTH,
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -117,7 +117,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  */
 static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    CLI_INSTANCE    *inst;
+    CLI_INSTANCE* inst;
 
     if ((inst = static_cast<CLI_INSTANCE*>(MXS_MALLOC(sizeof(CLI_INSTANCE)))) == NULL)
     {
@@ -138,7 +138,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     instances = inst;
     spinlock_release(&instlock);
 
-    return (MXS_ROUTER *)inst;
+    return (MXS_ROUTER*)inst;
 }
 
 /**
@@ -148,13 +148,12 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION *
-newSession(MXS_ROUTER *instance, MXS_SESSION *session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
-    CLI_SESSION *client;
+    CLI_INSTANCE* inst = (CLI_INSTANCE*)instance;
+    CLI_SESSION* client;
 
-    if ((client = (CLI_SESSION *)MXS_MALLOC(sizeof(CLI_SESSION))) == NULL)
+    if ((client = (CLI_SESSION*)MXS_MALLOC(sizeof(CLI_SESSION))) == NULL)
     {
         return NULL;
     }
@@ -182,11 +181,10 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param instance      The router instance data
  * @param router_session    The session being closed
  */
-static  void
-closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
-    CLI_SESSION *session = (CLI_SESSION *)router_session;
+    CLI_INSTANCE* inst = (CLI_INSTANCE*)instance;
+    CLI_SESSION* session = (CLI_SESSION*)router_session;
 
 
     spinlock_acquire(&inst->lock);
@@ -196,7 +194,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
     }
     else
     {
-        CLI_SESSION *ptr = inst->sessions;
+        CLI_SESSION* ptr = inst->sessions;
         while (ptr && ptr->next != session)
         {
             ptr = ptr->next;
@@ -236,13 +234,12 @@ static void freeSession(MXS_ROUTER* router_instance,
  * @param queue         The queue of data buffers to route
  * @return The number of bytes sent
  */
-static  int
-execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
+static int execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
 {
-    CLI_SESSION *session = (CLI_SESSION *)router_session;
+    CLI_SESSION* session = (CLI_SESSION*)router_session;
 
 
-    char *cmdbuf = session->cmdbuf;
+    char* cmdbuf = session->cmdbuf;
     int cmdlen = 0;
 
     *cmdbuf = 0;
@@ -287,10 +284,9 @@ execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static  void
-diagnostics(MXS_ROUTER *instance, DCB *dcb)
+static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
 {
-    return; /* Nothing to do currently */
+    return;     /* Nothing to do currently */
 }
 
 /**
@@ -299,7 +295,7 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static  json_t* diagnostics_json(const MXS_ROUTER *instance)
+static json_t* diagnostics_json(const MXS_ROUTER* instance)
 {
     return NULL;
 }

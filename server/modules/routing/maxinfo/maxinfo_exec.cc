@@ -55,31 +55,31 @@
 #include "../../../core/internal/server.hh"
 #include "../../../core/internal/service.hh"
 
-static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_show_variables(DCB *dcb, MAXINFO_TREE *filter);
-static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter);
-static int maxinfo_pattern_match(const char *pattern, const char *str);
-static void exec_flush(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_set(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_clear(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_shutdown(DCB *dcb, MAXINFO_TREE *tree);
-static void exec_restart(DCB *dcb, MAXINFO_TREE *tree);
-void maxinfo_send_ok(DCB *dcb);
+static void exec_show(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_select(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_show_variables(DCB* dcb, MAXINFO_TREE* filter);
+static void exec_show_status(DCB* dcb, MAXINFO_TREE* filter);
+static int  maxinfo_pattern_match(const char* pattern, const char* str);
+static void exec_flush(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_set(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_clear(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_shutdown(DCB* dcb, MAXINFO_TREE* tree);
+static void exec_restart(DCB* dcb, MAXINFO_TREE* tree);
+void        maxinfo_send_ok(DCB* dcb);
 /**
  * Execute a parse tree and return the result set or runtime error
  *
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-void
-maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
+void maxinfo_execute(DCB* dcb, MAXINFO_TREE* tree)
 {
     switch (tree->op)
     {
     case MAXOP_SHOW:
         exec_show(dcb, tree);
         break;
+
     case MAXOP_SELECT:
         exec_select(dcb, tree);
         break;
@@ -87,15 +87,19 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
     case MAXOP_FLUSH:
         exec_flush(dcb, tree);
         break;
+
     case MAXOP_SET:
         exec_set(dcb, tree);
         break;
+
     case MAXOP_CLEAR:
         exec_clear(dcb, tree);
         break;
+
     case MAXOP_SHUTDOWN:
         exec_shutdown(dcb, tree);
         break;
+
     case MAXOP_RESTART:
         exec_restart(dcb, tree);
         break;
@@ -117,8 +121,7 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_services(DCB* dcb, MAXINFO_TREE* tree)
 {
     serviceGetList()->write(dcb);
 }
@@ -129,8 +132,7 @@ exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_listeners(DCB* dcb, MAXINFO_TREE* tree)
 {
     serviceGetListenerList()->write(dcb);
 }
@@ -141,8 +143,7 @@ exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_sessions(DCB* dcb, MAXINFO_TREE* tree)
 {
     sessionGetList()->write(dcb);
 }
@@ -153,8 +154,7 @@ exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_clients(DCB* dcb, MAXINFO_TREE* tree)
 {
     sessionGetList()->write(dcb);
 }
@@ -165,8 +165,7 @@ exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_servers(DCB* dcb, MAXINFO_TREE* tree)
 {
     serverGetList()->write(dcb);
 }
@@ -177,8 +176,7 @@ exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_modules(DCB* dcb, MAXINFO_TREE* tree)
 {
     moduleGetList()->write(dcb);
 }
@@ -189,8 +187,7 @@ exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_monitors(DCB* dcb, MAXINFO_TREE* tree)
 {
     monitor_get_list()->write(dcb);
 }
@@ -201,8 +198,7 @@ exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   DCB to which to stream result set
  * @param tree  Potential like clause (currently unused)
  */
-static void
-exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show_eventTimes(DCB* dcb, MAXINFO_TREE* tree)
 {
     eventTimesGetList()->write(dcb);
 }
@@ -212,21 +208,21 @@ exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } show_commands[] =
 {
-    { "variables", exec_show_variables },
-    { "status", exec_show_status },
-    { "services", exec_show_services },
-    { "listeners", exec_show_listeners },
-    { "sessions", exec_show_sessions },
-    { "clients", exec_show_clients },
-    { "servers", exec_show_servers },
-    { "modules", exec_show_modules },
-    { "monitors", exec_show_monitors },
-    { "eventTimes", exec_show_eventTimes },
-    { NULL, NULL }
+    {"variables",  exec_show_variables },
+    {"status",     exec_show_status    },
+    {"services",   exec_show_services  },
+    {"listeners",  exec_show_listeners },
+    {"sessions",   exec_show_sessions  },
+    {"clients",    exec_show_clients   },
+    {"servers",    exec_show_servers   },
+    {"modules",    exec_show_modules   },
+    {"monitors",   exec_show_monitors  },
+    {"eventTimes", exec_show_eventTimes},
+    {NULL,         NULL                }
 };
 
 /**
@@ -235,8 +231,7 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_show(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_show(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
@@ -263,7 +258,7 @@ exec_show(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
+void exec_flush_logs(DCB* dcb, MAXINFO_TREE* tree)
 {
     mxs_log_rotate();
     maxinfo_send_ok(dcb);
@@ -274,12 +269,12 @@ void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } flush_commands[] =
 {
-    { "logs", exec_flush_logs},
-    { NULL, NULL}
+    {"logs", exec_flush_logs},
+    {NULL,   NULL           }
 };
 
 /**
@@ -288,14 +283,13 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_flush(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_flush(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
 
     sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
-    if(!tree)
+    if (!tree)
     {
         maxinfo_send_error(dcb, 0, errmsg);
         MXS_ERROR("%s", errmsg);
@@ -309,7 +303,7 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
             return;
         }
     }
-    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    if (strlen(tree->value) > 80)   // Prevent buffer overrun
     {
         tree->value[80] = 0;
     }
@@ -322,7 +316,7 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
+void exec_set_server(DCB* dcb, MAXINFO_TREE* tree)
 {
     SERVER* server = server_find_by_unique_name(tree->value);
     char errmsg[120];
@@ -344,7 +338,7 @@ void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->right->value) > 80)    // Prevent buffer overrun
             {
                 tree->right->value[80] = 0;
             }
@@ -354,7 +348,7 @@ void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
     }
     else
     {
-        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        if (strlen(tree->value) > 80)   // Prevent buffer overrun
         {
             tree->value[80] = 0;
         }
@@ -368,12 +362,12 @@ void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } set_commands[] =
 {
-    { "server", exec_set_server},
-    { NULL, NULL}
+    {"server", exec_set_server},
+    {NULL,     NULL           }
 };
 
 /**
@@ -382,8 +376,7 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_set(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_set(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
@@ -396,7 +389,7 @@ exec_set(DCB *dcb, MAXINFO_TREE *tree)
             return;
         }
     }
-    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    if (strlen(tree->value) > 80)   // Prevent buffer overrun
     {
         tree->value[80] = 0;
     }
@@ -410,7 +403,7 @@ exec_set(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
+void exec_clear_server(DCB* dcb, MAXINFO_TREE* tree)
 {
     SERVER* server = server_find_by_unique_name(tree->value);
     char errmsg[120];
@@ -432,7 +425,7 @@ void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->right->value) > 80)    // Prevent buffer overrun
             {
                 tree->right->value[80] = 0;
             }
@@ -442,7 +435,7 @@ void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
     }
     else
     {
-        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        if (strlen(tree->value) > 80)   // Prevent buffer overrun
         {
             tree->value[80] = 0;
         }
@@ -456,12 +449,12 @@ void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } clear_commands[] =
 {
-    { "server", exec_clear_server},
-    { NULL, NULL}
+    {"server", exec_clear_server},
+    {NULL,     NULL             }
 };
 
 /**
@@ -470,8 +463,7 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_clear(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_clear(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
@@ -484,7 +476,7 @@ exec_clear(DCB *dcb, MAXINFO_TREE *tree)
             return;
         }
     }
-    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    if (strlen(tree->value) > 80)   // Prevent buffer overrun
     {
         tree->value[80] = 0;
     }
@@ -498,7 +490,7 @@ exec_clear(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_shutdown_maxscale(DCB *dcb, MAXINFO_TREE *tree)
+void exec_shutdown_maxscale(DCB* dcb, MAXINFO_TREE* tree)
 {
     maxscale_shutdown();
     maxinfo_send_ok(dcb);
@@ -509,7 +501,7 @@ void exec_shutdown_maxscale(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
+void exec_shutdown_monitor(DCB* dcb, MAXINFO_TREE* tree)
 {
     char errmsg[120];
     if (tree && tree->value)
@@ -522,7 +514,7 @@ void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->value) > 80)   // Prevent buffer overrun
             {
                 tree->value[80] = 0;
             }
@@ -542,7 +534,7 @@ void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_shutdown_service(DCB *dcb, MAXINFO_TREE *tree)
+void exec_shutdown_service(DCB* dcb, MAXINFO_TREE* tree)
 {
     char errmsg[120];
     if (tree && tree->value)
@@ -555,7 +547,7 @@ void exec_shutdown_service(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->value) > 80)   // Prevent buffer overrun
             {
                 tree->value[80] = 0;
             }
@@ -575,14 +567,14 @@ void exec_shutdown_service(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } shutdown_commands[] =
 {
-    { "maxscale", exec_shutdown_maxscale},
-    { "monitor", exec_shutdown_monitor},
-    { "service", exec_shutdown_service},
-    { NULL, NULL}
+    {"maxscale", exec_shutdown_maxscale},
+    {"monitor",  exec_shutdown_monitor },
+    {"service",  exec_shutdown_service },
+    {NULL,       NULL                  }
 };
 
 /**
@@ -591,8 +583,7 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_shutdown(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_shutdown(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
@@ -605,7 +596,7 @@ exec_shutdown(DCB *dcb, MAXINFO_TREE *tree)
             return;
         }
     }
-    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    if (strlen(tree->value) > 80)   // Prevent buffer overrun
     {
         tree->value[80] = 0;
     }
@@ -619,7 +610,7 @@ exec_shutdown(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
+void exec_restart_monitor(DCB* dcb, MAXINFO_TREE* tree)
 {
     char errmsg[120];
     if (tree && tree->value)
@@ -632,7 +623,7 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->value) > 80)   // Prevent buffer overrun
             {
                 tree->value[80] = 0;
             }
@@ -652,7 +643,7 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
  * @param dcb Client DCB
  * @param tree Parse tree
  */
-void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
+void exec_restart_service(DCB* dcb, MAXINFO_TREE* tree)
 {
     char errmsg[120];
     if (tree && tree->value)
@@ -665,7 +656,7 @@ void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
         }
         else
         {
-            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            if (strlen(tree->value) > 80)   // Prevent buffer overrun
             {
                 tree->value[80] = 0;
             }
@@ -685,13 +676,13 @@ void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *name;
-    void (*func)(DCB *, MAXINFO_TREE *);
+    const char* name;
+    void        (* func)(DCB*, MAXINFO_TREE*);
 } restart_commands[] =
 {
-    { "monitor", exec_restart_monitor},
-    { "service", exec_restart_service},
-    { NULL, NULL}
+    {"monitor", exec_restart_monitor},
+    {"service", exec_restart_service},
+    {NULL,      NULL                }
 };
 
 /**
@@ -700,8 +691,7 @@ static struct
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_restart(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_restart(DCB* dcb, MAXINFO_TREE* tree)
 {
     int i;
     char errmsg[120];
@@ -714,7 +704,7 @@ exec_restart(DCB *dcb, MAXINFO_TREE *tree)
             return;
         }
     }
-    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    if (strlen(tree->value) > 80)   // Prevent buffer overrun
     {
         tree->value[80] = 0;
     }
@@ -728,20 +718,18 @@ exec_restart(DCB *dcb, MAXINFO_TREE *tree)
  *
  * @return The version string for MaxScale
  */
-static char *
-getVersion()
+static char* getVersion()
 {
     return const_cast<char*>(MAXSCALE_VERSION);
 }
 
-static const char *versionComment = "MariaDB MaxScale";
+static const char* versionComment = "MariaDB MaxScale";
 /**
  * Return the current MaxScale version
  *
  * @return The version string for MaxScale
  */
-static char *
-getVersionComment()
+static char* getVersionComment()
 {
     return const_cast<char*>(versionComment);
 }
@@ -751,37 +739,36 @@ getVersionComment()
  *
  * @return The version string for MaxScale
  */
-static char *
-getMaxScaleHome()
+static char* getMaxScaleHome()
 {
     return getenv("MAXSCALE_HOME");
 }
 
 /* The various methods to fetch the variables */
-#define VT_STRING   1
-#define VT_INT      2
+#define VT_STRING 1
+#define VT_INT    2
 
-typedef void *(*STATSFUNC)();
+typedef void* (* STATSFUNC)();
 /**
  * Variables that may be sent in a show variables
  */
 static struct
 {
-    const char *name;
-    int  type;
+    const char* name;
+    int         type;
     STATSFUNC   func;
 } variables[] =
 {
-    { "version", VT_STRING, (STATSFUNC)getVersion },
-    { "version_comment", VT_STRING, (STATSFUNC)getVersionComment },
-    { "basedir", VT_STRING, (STATSFUNC)getMaxScaleHome},
-    { "MAXSCALE_VERSION", VT_STRING, (STATSFUNC)getVersion },
-    { "MAXSCALE_THREADS", VT_INT, (STATSFUNC)config_threadcount },
-    { "MAXSCALE_NBPOLLS", VT_INT, (STATSFUNC)config_nbpolls },
-    { "MAXSCALE_POLLSLEEP", VT_INT, (STATSFUNC)config_pollsleep },
-    { "MAXSCALE_UPTIME", VT_INT, (STATSFUNC)maxscale_uptime },
-    { "MAXSCALE_SESSIONS", VT_INT, (STATSFUNC)serviceSessionCountAll },
-    { NULL, 0,  NULL }
+    {"version",            VT_STRING, (STATSFUNC)getVersion            },
+    {"version_comment",    VT_STRING, (STATSFUNC)getVersionComment     },
+    {"basedir",            VT_STRING, (STATSFUNC)getMaxScaleHome       },
+    {"MAXSCALE_VERSION",   VT_STRING, (STATSFUNC)getVersion            },
+    {"MAXSCALE_THREADS",   VT_INT,    (STATSFUNC)config_threadcount    },
+    {"MAXSCALE_NBPOLLS",   VT_INT,    (STATSFUNC)config_nbpolls        },
+    {"MAXSCALE_POLLSLEEP", VT_INT,    (STATSFUNC)config_pollsleep      },
+    {"MAXSCALE_UPTIME",    VT_INT,    (STATSFUNC)maxscale_uptime       },
+    {"MAXSCALE_SESSIONS",  VT_INT,    (STATSFUNC)serviceSessionCountAll},
+    {NULL,                 0,         NULL                             }
 };
 
 std::string value_to_string(int type, STATSFUNC func)
@@ -827,8 +814,7 @@ static void variable_row(std::unique_ptr<ResultSet>& set, const char* like)
  * @param dcb     The DCB connected to the client
  * @param filter  A potential like clause or NULL
  */
-static void
-exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
+static void exec_show_variables(DCB* dcb, MAXINFO_TREE* filter)
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
     variable_row(set, filter ? filter->value : NULL);
@@ -850,8 +836,7 @@ std::unique_ptr<ResultSet> maxinfo_variables()
 /**
  * Interface to dcb_count_by_usage for all dcbs
  */
-static int
-maxinfo_all_dcbs()
+static int maxinfo_all_dcbs()
 {
     return dcb_count_by_usage(DCB_USAGE_ALL);
 }
@@ -859,8 +844,7 @@ maxinfo_all_dcbs()
 /**
  * Interface to dcb_count_by_usage for client dcbs
  */
-static int
-maxinfo_client_dcbs()
+static int maxinfo_client_dcbs()
 {
     return dcb_count_by_usage(DCB_USAGE_CLIENT);
 }
@@ -868,8 +852,7 @@ maxinfo_client_dcbs()
 /**
  * Interface to dcb_count_by_usage for listener dcbs
  */
-static int
-maxinfo_listener_dcbs()
+static int maxinfo_listener_dcbs()
 {
     return dcb_count_by_usage(DCB_USAGE_LISTENER);
 }
@@ -877,8 +860,7 @@ maxinfo_listener_dcbs()
 /**
  * Interface to dcb_count_by_usage for backend dcbs
  */
-static int
-maxinfo_backend_dcbs()
+static int maxinfo_backend_dcbs()
 {
     return dcb_count_by_usage(DCB_USAGE_BACKEND);
 }
@@ -886,8 +868,7 @@ maxinfo_backend_dcbs()
 /**
  * Interface to dcb_count_by_usage for internal dcbs
  */
-static int
-maxinfo_internal_dcbs()
+static int maxinfo_internal_dcbs()
 {
     return dcb_count_by_usage(DCB_USAGE_INTERNAL);
 }
@@ -895,8 +876,7 @@ maxinfo_internal_dcbs()
 /**
  * Interface to poll stats for reads
  */
-static int64_t
-maxinfo_read_events()
+static int64_t maxinfo_read_events()
 {
     return poll_get_stat(POLL_STAT_READ);
 }
@@ -904,8 +884,7 @@ maxinfo_read_events()
 /**
  * Interface to poll stats for writes
  */
-static int64_t
-maxinfo_write_events()
+static int64_t maxinfo_write_events()
 {
     return poll_get_stat(POLL_STAT_WRITE);
 }
@@ -913,8 +892,7 @@ maxinfo_write_events()
 /**
  * Interface to poll stats for errors
  */
-static int64_t
-maxinfo_error_events()
+static int64_t maxinfo_error_events()
 {
     return poll_get_stat(POLL_STAT_ERROR);
 }
@@ -922,8 +900,7 @@ maxinfo_error_events()
 /**
  * Interface to poll stats for hangup
  */
-static int64_t
-maxinfo_hangup_events()
+static int64_t maxinfo_hangup_events()
 {
     return poll_get_stat(POLL_STAT_HANGUP);
 }
@@ -931,8 +908,7 @@ maxinfo_hangup_events()
 /**
  * Interface to poll stats for accepts
  */
-static int64_t
-maxinfo_accept_events()
+static int64_t maxinfo_accept_events()
 {
     return poll_get_stat(POLL_STAT_ACCEPT);
 }
@@ -940,8 +916,7 @@ maxinfo_accept_events()
 /**
  * Interface to poll stats for event queue length
  */
-static int64_t
-maxinfo_avg_event_queue_length()
+static int64_t maxinfo_avg_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_AVG);
 }
@@ -949,8 +924,7 @@ maxinfo_avg_event_queue_length()
 /**
  * Interface to poll stats for max event queue length
  */
-static int64_t
-maxinfo_max_event_queue_length()
+static int64_t maxinfo_max_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_MAX);
 }
@@ -958,8 +932,7 @@ maxinfo_max_event_queue_length()
 /**
  * Interface to poll stats for max queue time
  */
-static int64_t
-maxinfo_max_event_queue_time()
+static int64_t maxinfo_max_event_queue_time()
 {
     return poll_get_stat(POLL_STAT_MAX_QTIME);
 }
@@ -967,8 +940,7 @@ maxinfo_max_event_queue_time()
 /**
  * Interface to poll stats for max event execution time
  */
-static int64_t
-maxinfo_max_event_exec_time()
+static int64_t maxinfo_max_event_exec_time()
 {
     return poll_get_stat(POLL_STAT_MAX_EXECTIME);
 }
@@ -978,32 +950,32 @@ maxinfo_max_event_exec_time()
  */
 static struct
 {
-    const char *name;
+    const char* name;
     int         type;
     STATSFUNC   func;
 } status[] =
 {
-    { "Uptime", VT_INT, (STATSFUNC)maxscale_uptime },
-    { "Uptime_since_flush_status", VT_INT, (STATSFUNC)maxscale_uptime },
-    { "Threads_created", VT_INT, (STATSFUNC)config_threadcount },
-    { "Threads_running", VT_INT, (STATSFUNC)config_threadcount },
-    { "Threadpool_threads", VT_INT, (STATSFUNC)config_threadcount },
-    { "Threads_connected", VT_INT, (STATSFUNC)serviceSessionCountAll },
-    { "Connections", VT_INT, (STATSFUNC)maxinfo_all_dcbs },
-    { "Client_connections", VT_INT, (STATSFUNC)maxinfo_client_dcbs },
-    { "Backend_connections", VT_INT, (STATSFUNC)maxinfo_backend_dcbs },
-    { "Listeners", VT_INT, (STATSFUNC)maxinfo_listener_dcbs },
-    { "Internal_descriptors", VT_INT, (STATSFUNC)maxinfo_internal_dcbs },
-    { "Read_events", VT_INT, (STATSFUNC)maxinfo_read_events },
-    { "Write_events", VT_INT, (STATSFUNC)maxinfo_write_events },
-    { "Hangup_events", VT_INT, (STATSFUNC)maxinfo_hangup_events },
-    { "Error_events", VT_INT, (STATSFUNC)maxinfo_error_events },
-    { "Accept_events", VT_INT, (STATSFUNC)maxinfo_accept_events },
-    { "Avg_event_queue_length", VT_INT, (STATSFUNC)maxinfo_avg_event_queue_length },
-    { "Max_event_queue_length", VT_INT, (STATSFUNC)maxinfo_max_event_queue_length },
-    { "Max_event_queue_time", VT_INT, (STATSFUNC)maxinfo_max_event_queue_time },
-    { "Max_event_execution_time", VT_INT, (STATSFUNC)maxinfo_max_event_exec_time },
-    { NULL, 0,  NULL }
+    {"Uptime",                    VT_INT, (STATSFUNC)maxscale_uptime               },
+    {"Uptime_since_flush_status", VT_INT, (STATSFUNC)maxscale_uptime               },
+    {"Threads_created",           VT_INT, (STATSFUNC)config_threadcount            },
+    {"Threads_running",           VT_INT, (STATSFUNC)config_threadcount            },
+    {"Threadpool_threads",        VT_INT, (STATSFUNC)config_threadcount            },
+    {"Threads_connected",         VT_INT, (STATSFUNC)serviceSessionCountAll        },
+    {"Connections",               VT_INT, (STATSFUNC)maxinfo_all_dcbs              },
+    {"Client_connections",        VT_INT, (STATSFUNC)maxinfo_client_dcbs           },
+    {"Backend_connections",       VT_INT, (STATSFUNC)maxinfo_backend_dcbs          },
+    {"Listeners",                 VT_INT, (STATSFUNC)maxinfo_listener_dcbs         },
+    {"Internal_descriptors",      VT_INT, (STATSFUNC)maxinfo_internal_dcbs         },
+    {"Read_events",               VT_INT, (STATSFUNC)maxinfo_read_events           },
+    {"Write_events",              VT_INT, (STATSFUNC)maxinfo_write_events          },
+    {"Hangup_events",             VT_INT, (STATSFUNC)maxinfo_hangup_events         },
+    {"Error_events",              VT_INT, (STATSFUNC)maxinfo_error_events          },
+    {"Accept_events",             VT_INT, (STATSFUNC)maxinfo_accept_events         },
+    {"Avg_event_queue_length",    VT_INT, (STATSFUNC)maxinfo_avg_event_queue_length},
+    {"Max_event_queue_length",    VT_INT, (STATSFUNC)maxinfo_max_event_queue_length},
+    {"Max_event_queue_time",      VT_INT, (STATSFUNC)maxinfo_max_event_queue_time  },
+    {"Max_event_execution_time",  VT_INT, (STATSFUNC)maxinfo_max_event_exec_time   },
+    {NULL,                        0,      NULL                                     }
 };
 
 /**
@@ -1030,7 +1002,7 @@ static void status_row(std::unique_ptr<ResultSet>& set, const char* like)
  * @param dcb       The DCB connected to the client
  * @param filter    A potential like clause or NULL
  */
-static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
+static void exec_show_status(DCB* dcb, MAXINFO_TREE* filter)
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Variable_name", "Value"});
     status_row(set, filter ? filter->value : NULL);
@@ -1056,8 +1028,7 @@ std::unique_ptr<ResultSet> maxinfo_status()
  * @param dcb   The DCB that connects to the client
  * @param tree  The parse tree for the query
  */
-static void
-exec_select(DCB *dcb, MAXINFO_TREE *tree)
+static void exec_select(DCB* dcb, MAXINFO_TREE* tree)
 {
     maxinfo_send_error(dcb, 0, "Select not yet implemented");
 }
@@ -1069,11 +1040,10 @@ exec_select(DCB *dcb, MAXINFO_TREE *tree)
  * @param str       String to match against pattern
  * @return      Zero on match
  */
-static int
-maxinfo_pattern_match(const char *pattern, const char *str)
+static int maxinfo_pattern_match(const char* pattern, const char* str)
 {
     int anchor = 0, len, trailing;
-    const char *fixed;
+    const char* fixed;
 
     if (*pattern != '%')
     {
@@ -1103,7 +1073,7 @@ maxinfo_pattern_match(const char *pattern, const char *str)
     }
     else
     {
-        char *portion = static_cast<char*>(MXS_MALLOC(len + 1));
+        char* portion = static_cast<char*>(MXS_MALLOC(len + 1));
         MXS_ABORT_IF_NULL(portion);
         int rval;
         strncpy(portion, fixed, len - trailing);
@@ -1118,7 +1088,7 @@ maxinfo_pattern_match(const char *pattern, const char *str)
  * Send an OK packet to the client.
  * @param dcb The DCB that connects to the client
  */
-void maxinfo_send_ok(DCB *dcb)
+void maxinfo_send_ok(DCB* dcb)
 {
     static const char ok_packet[] =
     {

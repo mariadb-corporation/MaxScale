@@ -22,10 +22,10 @@
 namespace maxbase
 {
 
-EventCount::EventCount(const std::string& event_id, Duration time_window, Duration granularity) :
-    m_event_id(event_id),
-    m_time_window(time_window),
-    m_granularity(granularity.count())
+EventCount::EventCount(const std::string& event_id, Duration time_window, Duration granularity)
+    : m_event_id(event_id)
+    , m_time_window(time_window)
+    , m_granularity(granularity.count())
 {
     increment();
 }
@@ -55,7 +55,9 @@ namespace
 struct TimePointLessEqual
 {
     TimePoint lhs;
-    TimePointLessEqual(TimePoint tp) : lhs(tp) {}
+    TimePointLessEqual(TimePoint tp) : lhs(tp)
+    {
+    }
     bool operator()(const EventCount::Timestamp& rhs) const
     {
         return lhs <= rhs.time_point;
@@ -72,7 +74,8 @@ void EventCount::purge() const
     StopWatch sw;
     auto windowBegin = Clock::now() - m_time_window;
 
-    auto ite = std::find_if(m_timestamps.begin(), m_timestamps.end(),
+    auto ite = std::find_if(m_timestamps.begin(),
+                            m_timestamps.end(),
                             TimePointLessEqual(windowBegin));
     m_timestamps.erase(m_timestamps.begin(), ite);
 }
@@ -89,7 +92,7 @@ int EventCount::count() const
     return count;
 }
 
-void EventCount::dump(std::ostream &os) const
+void EventCount::dump(std::ostream& os) const
 {
     os << m_event_id << ": " << count() << " " << m_timestamps.size();
 }
@@ -104,14 +107,17 @@ std::ostream& operator<<(std::ostream& os, const EventCount& EventCount)
 // a client generates lots of events but rarely reads them back (purges).
 const int CleanupCountdown = 10000;
 
-SessionCount::SessionCount(const std::string& sess_id, Duration time_window,
-                           Duration granularity) :
-    m_sess_id(sess_id), m_time_window(time_window), m_granularity(granularity),
-    m_cleanup_countdown(CleanupCountdown)
+SessionCount::SessionCount(const std::string& sess_id,
+                           Duration time_window,
+                           Duration granularity)
+    : m_sess_id(sess_id)
+    , m_time_window(time_window)
+    , m_granularity(granularity)
+    , m_cleanup_countdown(CleanupCountdown)
 {
 }
 
-const std::vector<EventCount> &SessionCount::event_counts() const
+const std::vector<EventCount>& SessionCount::event_counts() const
 {
     purge();
     return m_event_counts;
@@ -128,7 +134,9 @@ namespace
 struct MatchEventId
 {
     std::string event_id;
-    MatchEventId(const std::string& id) : event_id(id) {};
+    MatchEventId(const std::string& id) : event_id(id)
+    {
+    }
     bool operator()(const EventCount& stats) const
     {
         return event_id == stats.event_id();
@@ -143,7 +151,8 @@ void SessionCount::increment(const std::string& event_id)
 
     // Find in reverse, the entry is more likely to be towards the end. Actually no,
     // for some reason the normal search is slightly faster when measured.
-    auto ite = find_if(m_event_counts.begin(), m_event_counts.end(),
+    auto ite = find_if(m_event_counts.begin(),
+                       m_event_counts.end(),
                        MatchEventId(event_id));
     if (ite == m_event_counts.end())
     {
@@ -221,7 +230,7 @@ void dump(std::ostream& os, const std::vector<SessionCount>& sessions)
     }
 }
 
-void dumpTotals(std::ostream& os, const std::vector<SessionCount> &sessions)
+void dumpTotals(std::ostream& os, const std::vector<SessionCount>& sessions)
 {
     if (sessions.empty())
     {
@@ -251,15 +260,15 @@ void dumpTotals(std::ostream& os, const std::vector<SessionCount> &sessions)
 // EXTRA
 // This section needed for gcc 4.4, to use move semantics and variadics.
 
-EventCount::EventCount(EventCount && ss) :
-    m_event_id(std::move(ss.m_event_id)),
-    m_time_window(std::move(ss.m_time_window)),
-    m_granularity(std::move(ss.m_granularity)),
-    m_timestamps(std::move(ss.m_timestamps))
+EventCount::EventCount(EventCount&& ss)
+    : m_event_id(std::move(ss.m_event_id))
+    , m_time_window(std::move(ss.m_time_window))
+    , m_granularity(std::move(ss.m_granularity))
+    , m_timestamps(std::move(ss.m_timestamps))
 {
 }
 
-EventCount &EventCount::operator=(EventCount && ss)
+EventCount& EventCount::operator=(EventCount&& ss)
 {
     m_event_id = std::move(ss.m_event_id);
     m_time_window = std::move(ss.m_time_window);
@@ -268,16 +277,16 @@ EventCount &EventCount::operator=(EventCount && ss)
     return *this;
 }
 
-SessionCount::SessionCount(SessionCount&& ss) :
-    m_sess_id(std::move(ss.m_sess_id)),
-    m_time_window(std::move(ss.m_time_window)),
-    m_granularity(std::move(ss.m_granularity)),
-    m_cleanup_countdown(std::move(ss.m_cleanup_countdown)),
-    m_event_counts(std::move(ss.m_event_counts))
+SessionCount::SessionCount(SessionCount&& ss)
+    : m_sess_id(std::move(ss.m_sess_id))
+    , m_time_window(std::move(ss.m_time_window))
+    , m_granularity(std::move(ss.m_granularity))
+    , m_cleanup_countdown(std::move(ss.m_cleanup_countdown))
+    , m_event_counts(std::move(ss.m_event_counts))
 {
 }
 
-SessionCount & SessionCount::operator=(SessionCount&& ss)
+SessionCount& SessionCount::operator=(SessionCount&& ss)
 {
     m_sess_id = std::move(ss.m_sess_id);
     m_time_window = std::move(ss.m_time_window);
@@ -287,4 +296,4 @@ SessionCount & SessionCount::operator=(SessionCount&& ss)
 
     return *this;
 }
-} // maxbase
+}   // maxbase

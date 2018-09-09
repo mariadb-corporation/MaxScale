@@ -27,18 +27,18 @@ char req_str[] = "REQUEST-DATA test.t1";
 int insert_val = 0;
 bool exit_flag = false;
 
-void *query_thread(void *ptr);
+void* query_thread(void* ptr);
 
 /**
  * @brief cdc_com Connects to avro listenet by CDC protocal, read data, compare data with inserted data
  * @param Test TestConnections object
  * @return true if test PASSED
  */
-bool cdc_com(TestConnections *Test)
+bool cdc_com(TestConnections* Test)
 {
     int max_inserted_val = Test->smoke ? 25 : 100;
     int sock = create_tcp_socket();
-    char *ip = get_ip(Test->maxscales->IP[0]);
+    char* ip = get_ip(Test->maxscales->IP[0]);
 
     if (ip == NULL)
     {
@@ -46,11 +46,11 @@ bool cdc_com(TestConnections *Test)
         return false;
     }
 
-    struct sockaddr_in *remote = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in *));
+    struct sockaddr_in* remote = (struct sockaddr_in*)malloc(sizeof(struct sockaddr_in*));
     remote->sin_family = AF_INET;
-    int tmpres = inet_pton(AF_INET, ip, (void *)(&(remote->sin_addr.s_addr)));
+    int tmpres = inet_pton(AF_INET, ip, (void*)(&(remote->sin_addr.s_addr)));
 
-    if ( tmpres < 0)
+    if (tmpres < 0)
     {
         Test->tprintf("Can't set remote->sin_addr.s_addr");
         return false;
@@ -63,16 +63,16 @@ bool cdc_com(TestConnections *Test)
 
     remote->sin_port = htons(4001);
 
-    if (connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) < 0)
+    if (connect(sock, (struct sockaddr*)remote, sizeof(struct sockaddr)) < 0)
     {
         Test->tprintf("Could not connect");
         return false;
     }
 
-    char *get = cdc_auth_srt((char *) "skysql", (char *) "skysql");
+    char* get = cdc_auth_srt((char*) "skysql", (char*) "skysql");
     Test->tprintf("Auth string: %s", get);
 
-    //Send the query to the server
+    // Send the query to the server
     if (send_so(sock, get) != 0)
     {
         Test->tprintf("Cat't send data to scoket");
@@ -82,7 +82,7 @@ bool cdc_com(TestConnections *Test)
     char buf1[1024];
     recv(sock, buf1, 1024, 0);
 
-    //Send the query to the server
+    // Send the query to the server
     if (send_so(sock, reg_str) != 0)
     {
         Test->tprintf("Cat't send data to scoket");
@@ -91,7 +91,7 @@ bool cdc_com(TestConnections *Test)
 
     recv(sock, buf1, 1024, 0);
 
-    //Send the query to the server
+    // Send the query to the server
     if (send_so(sock, req_str) != 0)
     {
         Test->tprintf("Cat't send data to scoket");
@@ -130,12 +130,12 @@ bool cdc_com(TestConnections *Test)
 
         if (nfds > 0)
         {
-            char *json = read_sc(sock);
+            char* json = read_sc(sock);
             Test->tprintf("%s", json);
 
             if (ignore_first > 0)
             {
-                ignore_first--; // ignoring first reads
+                ignore_first--;     // ignoring first reads
                 if (ignore_first == 0)
                 {
                     // first reads done, starting inserting
@@ -175,9 +175,9 @@ bool cdc_com(TestConnections *Test)
     return true;
 }
 
-static TestConnections *Test;
+static TestConnections* Test;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections::check_nodes(false);
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     Test->repl->connect();
     create_t1(Test->repl->nodes[0]);
-    execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES (111, 222)");
+    execute_query(Test->repl->nodes[0], (char*) "INSERT INTO t1 VALUES (111, 222)");
     Test->repl->close_connections();
 
     Test->tprintf("Waiting for binlogs to be processed...");
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     return rval;
 }
 
-void *query_thread(void *ptr)
+void* query_thread(void* ptr)
 {
 
     Test->repl->connect();

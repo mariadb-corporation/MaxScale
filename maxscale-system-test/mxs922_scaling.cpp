@@ -8,11 +8,11 @@
 
 static bool running = true;
 
-void* query_thread(void *data)
+void* query_thread(void* data)
 {
-    TestConnections *test = static_cast<TestConnections*>(data);
+    TestConnections* test = static_cast<TestConnections*>(data);
 
-    MYSQL *mysql = test->maxscales->open_rwsplit_connection(0);
+    MYSQL* mysql = test->maxscales->open_rwsplit_connection(0);
     my_bool yes = true;
     mysql_options(mysql, MYSQL_OPT_RECONNECT, &yes);
 
@@ -28,9 +28,9 @@ void* query_thread(void *data)
 }
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     Config config(test);
 
     config.create_all_listeners();

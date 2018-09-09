@@ -9,53 +9,61 @@
  */
 
 /*
-
-It seems that LOAD DATA LOCAL INFILE is not handled by readwritesplit? Maybe it's a bigger problem elsewhere in MaxScale?
-
-I can execute the command, it looks like it is getting sent to the master, but ... no data is actually loaded. Does/can MaxScale handle LOAD DATA LOCAL INFILE?
-Comment 1 Kolbe Kegel 2014-09-03 02:39:47 UTC
-The LOAD DATA LOCAL INFILE statement is stuck in "Reading from net" until some timeout is hit:
-
-| 22 | maxuser     | 192.168.30.38:59996 | test | Query   |   10 | Reading from net   | load data local infile '/Users/kolbe/Devel/seattleparking/Street_Parking_Signs.csv' into table parki |    0.000 |
-
-The client never sees the statement end, though, even after the server has long ago killed its connection...
-
-When I start a *new* connection to MaxScale and I try to execute the LOAD DATA LOCAL INFILE statement again, I have some problems:
-
-mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
-ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
-mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
-ERROR 2006 (HY000): MySQL server has gone away
-No connection. Trying to reconnect...
-Connection id:    1709
-Current database: test
-
-+----------------------+
-| @@wsrep_node_address |
-+----------------------+
-| 192.168.30.32        |
-+----------------------+
-1 row in set (0.01 sec)
-
-mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
-ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
-mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
-ERROR 2006 (HY000): MySQL server has gone away
-No connection. Trying to reconnect...
-Connection id:    1709
-Current database: test
-
-+----------------------+
-| @@wsrep_node_address |
-+----------------------+
-| 192.168.30.32        |
-+----------------------+
-1 row in set (0.01 sec)
-
-mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
-ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
-mysql 5.5.38-MariaDB (maxuser) [test]> Bye
-*/
+ *
+ *  It seems that LOAD DATA LOCAL INFILE is not handled by readwritesplit? Maybe it's a bigger problem
+ * elsewhere in MaxScale?
+ *
+ *  I can execute the command, it looks like it is getting sent to the master, but ... no data is actually
+ * loaded. Does/can MaxScale handle LOAD DATA LOCAL INFILE?
+ *  Comment 1 Kolbe Kegel 2014-09-03 02:39:47 UTC
+ *  The LOAD DATA LOCAL INFILE statement is stuck in "Reading from net" until some timeout is hit:
+ *
+ | 22 | maxuser     | 192.168.30.38:59996 | test | Query   |   10 | Reading from net   | load data local
+ |infile '/Users/kolbe/Devel/seattleparking/Street_Parking_Signs.csv' into table parki |    0.000 |
+ |
+ |  The client never sees the statement end, though, even after the server has long ago killed its
+ |connection...
+ |
+ |  When I start a *new* connection to MaxScale and I try to execute the LOAD DATA LOCAL INFILE statement
+ |again, I have some problems:
+ |
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ |  ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to
+ |MySQL server during query
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
+ |  ERROR 2006 (HY000): MySQL server has gone away
+ |  No connection. Trying to reconnect...
+ |  Connection id:    1709
+ |  Current database: test
+ |
+ +----------------------+
+ | @@wsrep_node_address |
+ +----------------------+
+ | 192.168.30.32        |
+ +----------------------+
+ |  1 row in set (0.01 sec)
+ |
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ |  ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to
+ |MySQL server during query
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
+ |  ERROR 2006 (HY000): MySQL server has gone away
+ |  No connection. Trying to reconnect...
+ |  Connection id:    1709
+ |  Current database: test
+ |
+ +----------------------+
+ | @@wsrep_node_address |
+ +----------------------+
+ | 192.168.30.32        |
+ +----------------------+
+ |  1 row in set (0.01 sec)
+ |
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ |  ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to
+ |MySQL server during query
+ |  mysql 5.5.38-MariaDB (maxuser) [test]> Bye
+ */
 
 
 #include <iostream>
@@ -64,9 +72,9 @@ mysql 5.5.38-MariaDB (maxuser) [test]> Bye
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     int N = 4;
     int iterations = 2;
     if (Test->smoke)
@@ -88,27 +96,29 @@ int main(int argc, char *argv[])
     Test->repl->sync_slaves();
     Test->set_timeout(200);
 
-    sprintf(str, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp", Test->repl->access_sudo[0],
+    sprintf(str,
+            "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp",
+            Test->repl->access_sudo[0],
             Test->repl->access_sudo[0]);
     Test->tprintf("%s\n", str);
     for (int k = 0; k < Test->repl->N; k++)
     {
         Test->repl->ssh_node(k, str, false);
     }
-    //system(str);
+    // system(str);
 
     Test->tprintf("Copying data from t1 to file...\n");
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
     Test->tprintf("using ReadConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
-    Test->try_query(Test->maxscales->conn_master[0], (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_master[0], (char*) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
     Test->tprintf("using ReadConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
-    Test->try_query(Test->maxscales->conn_slave[0], (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_slave[0], (char*) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     Test->tprintf("Copying t1.cvs from Maxscale machine:\n");
     Test->repl->copy_from_node_legacy("/tmp/t1.csv", "./t1.csv", 0);
 
-    MYSQL *srv[2];
+    MYSQL* srv[2];
 
     srv[0] = Test->maxscales->conn_rwsplit[0];
     srv[1] = Test->maxscales->conn_master[0];
@@ -116,7 +126,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(100);
         Test->tprintf("Dropping t1 \n");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE t1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE t1;");
         Test->stop_timeout();
         Test->repl->sync_slaves();
 
@@ -124,7 +134,7 @@ int main(int argc, char *argv[])
         Test->tprintf("Create t1\n");
         create_t1(Test->maxscales->conn_rwsplit[0]);
         Test->tprintf("Loading data to t1 from file\n");
-        Test->try_query(srv[i], (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
+        Test->try_query(srv[i], (char*) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
         Test->stop_timeout();
         Test->repl->sync_slaves();
 
@@ -144,4 +154,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

@@ -29,24 +29,26 @@
  * @endverbatim
  */
 
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_DOWNSTREAM* downstream);
+static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
-static void destroyInstance(MXS_FILTER *instance);
+static void     destroyInstance(MXS_FILTER* instance);
 
 /**
  * A dummy instance structure
  */
 typedef struct
 {
-    const char *name;
-    int     sessions;
+    const char* name;
+    int         sessions;
 } TEST_INSTANCE;
 
 /**
@@ -55,7 +57,7 @@ typedef struct
 typedef struct
 {
     MXS_DOWNSTREAM down;
-    int count;
+    int            count;
 } TEST_SESSION;
 
 /**
@@ -75,9 +77,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         closeSession,
         freeSession,
         setDownstream,
-        NULL,  // No upstream requirement
+        NULL,   // No upstream requirement
         routeQuery,
-        NULL, // No clientReply
+        NULL,   // No clientReply
         diagnostic,
         diagnostic_json,
         getCapabilities,
@@ -93,10 +95,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -115,17 +117,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  MXS_FILTER  *
-createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    TEST_INSTANCE   *my_instance;
+    TEST_INSTANCE* my_instance;
 
     if ((my_instance = MXS_CALLOC(1, sizeof(TEST_INSTANCE))) != NULL)
     {
         my_instance->sessions = 0;
         my_instance->name = name;
     }
-    return (MXS_FILTER *)my_instance;
+    return (MXS_FILTER*)my_instance;
 }
 
 /**
@@ -135,11 +136,10 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
-    TEST_SESSION    *my_session;
+    TEST_INSTANCE* my_instance = (TEST_INSTANCE*)instance;
+    TEST_SESSION* my_session;
 
     if ((my_session = MXS_CALLOC(1, sizeof(TEST_SESSION))) != NULL)
     {
@@ -157,8 +157,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static  void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
 }
 
@@ -168,8 +167,7 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     MXS_FREE(session);
 }
@@ -181,10 +179,9 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param session   The session being closed
  * @param downstream    The downstream filter or router
  */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    TEST_SESSION    *my_session = (TEST_SESSION *)session;
+    TEST_SESSION* my_session = (TEST_SESSION*)session;
 
     my_session->down = *downstream;
 }
@@ -199,17 +196,17 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
  * @param session   The filter session
  * @param queue     The query data
  */
-static  int
-routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
+static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    TEST_SESSION    *my_session = (TEST_SESSION *)session;
+    TEST_SESSION* my_session = (TEST_SESSION*)session;
 
     if (modutil_is_SQL(queue))
     {
         my_session->count++;
     }
     return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session, queue);
+                                       my_session->down.session,
+                                       queue);
 }
 
 /**
@@ -223,18 +220,23 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static  void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
-    TEST_SESSION    *my_session = (TEST_SESSION *)fsession;
+    TEST_INSTANCE* my_instance = (TEST_INSTANCE*)instance;
+    TEST_SESSION* my_session = (TEST_SESSION*)fsession;
 
     if (my_session)
-        dcb_printf(dcb, "\t\tNo. of queries routed by filter: %d\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tNo. of queries routed by filter: %d\n",
                    my_session->count);
+    }
     else
-        dcb_printf(dcb, "\t\tNo. of sessions created: %d\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tNo. of sessions created: %d\n",
                    my_instance->sessions);
+    }
 }
 
 /**
@@ -248,7 +250,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     return NULL;
 }
@@ -268,9 +270,9 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
  *
  * @param The filter instance.
  */
-static void destroyInstance(MXS_FILTER *instance)
+static void destroyInstance(MXS_FILTER* instance)
 {
-    TEST_INSTANCE *cinstance = (TEST_INSTANCE *)instance;
+    TEST_INSTANCE* cinstance = (TEST_INSTANCE*)instance;
 
     MXS_INFO("Destroying filter %s", cinstance->name);
 }

@@ -12,7 +12,7 @@ int sql_str_size(int sqlsize)
     return sqlsize - strlen(prefx) - 1;
 }
 
-void gen_select_sqlstr(char *sqlstr, unsigned int strsize, int sqlsize)
+void gen_select_sqlstr(char* sqlstr, unsigned int strsize, int sqlsize)
 {
     strcpy(sqlstr, "select '");
     memset(sqlstr + strlen("select '"), 'f', strsize);
@@ -26,14 +26,15 @@ int main(int argc, char** argv)
     int sqlsize = 16777215;
     int strsize = sql_str_size(sqlsize);
 
-    char* sqlstr = (char *)malloc(sqlsize);
+    char* sqlstr = (char*)malloc(sqlsize);
     gen_select_sqlstr(sqlstr, strsize, sqlsize);
 
     test.set_timeout(30);
     test.maxscales->connect();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
-    test.assert(mysql_stmt_prepare(stmt, sqlstr, strlen(sqlstr)) == 0, "Prepare should not fail",
+    test.assert(mysql_stmt_prepare(stmt, sqlstr, strlen(sqlstr)) == 0,
+                "Prepare should not fail",
                 mysql_stmt_error(stmt));
     mysql_stmt_close(stmt);
 

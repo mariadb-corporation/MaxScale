@@ -1,5 +1,6 @@
 /**
- * @file ses_bigmem Executes a lot of session commands with "disable_sescmd_history=true" and check that memory consumption is not increasing
+ * @file ses_bigmem Executes a lot of session commands with "disable_sescmd_history=true" and check that
+ *memory consumption is not increasing
  * (relates to MXS-672 "maxscale possible memory leak"
  */
 
@@ -10,9 +11,9 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     unsigned long maxscale_mem;
 
     Test->set_timeout(10);

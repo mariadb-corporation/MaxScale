@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -39,10 +39,12 @@ namespace maxscale
  *
  * @param s  The string to be trimmed.
  */
-inline void ltrim(std::string &s)
+inline void ltrim(std::string& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-                                    std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(),
+            std::find_if(s.begin(),
+                         s.end(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))));
 }
 
 /**
@@ -50,10 +52,12 @@ inline void ltrim(std::string &s)
  *
  * @param s  The string to be trimmed.
  */
-inline void rtrim(std::string &s)
+inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(),
+                         s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
 }
 
 /**
@@ -61,7 +65,7 @@ inline void rtrim(std::string &s)
  *
  * @param s  The string to be trimmed.
  */
-inline void trim(std::string &s)
+inline void trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
@@ -270,12 +274,11 @@ public:
 
 private:
     Closer(const Closer&);
-    Closer& operator = (const Closer&);
+    Closer& operator=(const Closer&);
 
 private:
     T m_resource;
 };
-
 }
 
 
@@ -309,12 +312,13 @@ struct CloserTraits<FILE*>
 template<typename EntryType>
 struct RegistryTraits
 {
-    typedef int id_type;
+    typedef int        id_type;
     typedef EntryType* entry_type;
 
     static id_type get_id(entry_type entry)
     {
-        static_assert(sizeof(EntryType) != sizeof(EntryType), "get_id() and the"
+        static_assert(sizeof(EntryType) != sizeof(EntryType),
+                      "get_id() and the"
                       " surrounding struct must be specialized for every EntryType!");
         return 0;
     }
@@ -331,13 +335,13 @@ struct RegistryTraits
  * underlying container implements. When instantiating with a new EntryType, the
  * traits-class RegistryTraits should be specialized for the new type as well.
  */
-template <typename EntryType>
+template<typename EntryType>
 class Registry
 {
     Registry(const Registry&);
-    Registry& operator = (const Registry&);
+    Registry& operator=(const Registry&);
 public:
-    typedef typename RegistryTraits<EntryType>::id_type id_type;
+    typedef typename RegistryTraits<EntryType>::id_type    id_type;
     typedef typename RegistryTraits<EntryType>::entry_type entry_type;
 
     Registry()
@@ -406,7 +410,9 @@ template<typename T>
 class EqualPointees : public std::unary_function<T, bool>
 {
 public:
-    EqualPointees(const T& lhs) : m_ppLhs(&lhs) {}
+    EqualPointees(const T& lhs) : m_ppLhs(&lhs)
+    {
+    }
     bool operator()(const T& pRhs)
     {
         return **m_ppLhs == *pRhs;
@@ -430,12 +436,12 @@ EqualPointees<T> equal_pointees(const T& t)
  */
 std::string to_hex(uint8_t value);
 
-template <typename T, typename V>
+template<typename T, typename V>
 struct hex_iterator
 {
 };
 
-template <typename T>
+template<typename T>
 struct hex_iterator<T, uint8_t>
 {
     std::string operator()(T begin, T end)
@@ -457,10 +463,10 @@ struct hex_iterator<T, uint8_t>
  *
  * @return Hexadecimal string representation of the data
  */
-template <typename Iter>
+template<typename Iter>
 std::string to_hex(Iter begin, Iter end)
 {
-    return hex_iterator<Iter, typename std::iterator_traits<Iter>::value_type > ()(begin, end);
+    return hex_iterator<Iter, typename std::iterator_traits<Iter>::value_type>()(begin, end);
 }
 
 /**
@@ -470,7 +476,9 @@ class Checksum
 {
 public:
 
-    virtual ~Checksum() {}
+    virtual ~Checksum()
+    {
+    }
 
     /**
      * Update the checksum calculation
@@ -509,7 +517,7 @@ public:
 /**
  * A SHA1 checksum
  */
-class SHA1Checksum: public Checksum
+class SHA1Checksum : public Checksum
 {
 public:
 
@@ -518,7 +526,7 @@ public:
     SHA1Checksum()
     {
         SHA1_Init(&m_ctx);
-        m_sum.fill(0); // CentOS 6 doesn't like aggregate initialization...
+        m_sum.fill(0);      // CentOS 6 doesn't like aggregate initialization...
     }
 
     void update(GWBUF* buffer)
@@ -552,16 +560,16 @@ public:
 
 private:
 
-    SHA_CTX m_ctx; /**< SHA1 context */
-    Sum     m_sum; /**< Final checksum */
+    SHA_CTX m_ctx;  /**< SHA1 context */
+    Sum     m_sum;  /**< Final checksum */
 };
 
-static inline bool operator ==(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
+static inline bool operator==(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 {
     return lhs.eq(rhs);
 }
 
-static inline bool operator !=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
+static inline bool operator!=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 {
     return !(lhs == rhs);
 }
@@ -569,7 +577,7 @@ static inline bool operator !=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 /**
  * A CRC32 checksum
  */
-class CRC32Checksum: public Checksum
+class CRC32Checksum : public Checksum
 {
 public:
 
@@ -612,16 +620,16 @@ public:
 
 private:
 
-    uint32_t m_ctx; /**< Ongoing checksum value */
-    uint32_t m_sum; /**< Final checksum */
+    uint32_t m_ctx;     /**< Ongoing checksum value */
+    uint32_t m_sum;     /**< Final checksum */
 };
 
-static inline bool operator ==(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
+static inline bool operator==(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
 {
     return lhs.eq(rhs);
 }
 
-static inline bool operator !=(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
+static inline bool operator!=(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
 {
     return !(lhs == rhs);
 }
@@ -652,10 +660,10 @@ namespace http
 
 struct Result
 {
-    int code; // HTTP response code
-    std::string raw_body; // Raw response body
-    std::unique_ptr<json_t> body; // JSON form of the body if it was valid JSON
-    std::unordered_map<std::string, std::string> headers; // Headers attached to the response
+    int                                          code;      // HTTP response code
+    std::string                                  raw_body;  // Raw response body
+    std::unique_ptr<json_t>                      body;      // JSON form of the body if it was valid JSON
+    std::unordered_map<std::string, std::string> headers;   // Headers attached to the response
 };
 
 /**
@@ -668,7 +676,5 @@ struct Result
  * @return A Result
  */
 Result get(const std::string& url, const std::string& user = "", const std::string& password = "");
-
 }
-
 }

@@ -17,7 +17,6 @@
 namespace maxscale
 {
 
-//static
+// static
 const char* QueryClassifierModule::zName = MODULE_QUERY_CLASSIFIER;
-
 }

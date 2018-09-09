@@ -31,7 +31,7 @@ static bool dump = false;
 
 int check_file(const char* filename)
 {
-    MAXAVRO_FILE *file = maxavro_file_open(filename);
+    MAXAVRO_FILE* file = maxavro_file_open(filename);
 
     if (!file)
     {
@@ -67,7 +67,7 @@ int check_file(const char* filename)
             json_t* row;
             while (num_rows != 0 && (row = maxavro_record_read_json(file)))
             {
-                char *json = json_dumps(row, JSON_PRESERVE_ORDER);
+                char* json = json_dumps(row, JSON_PRESERVE_ORDER);
                 if (json)
                 {
                     printf("%s\n", json);
@@ -87,8 +87,10 @@ int check_file(const char* filename)
 
         if (verbose && !dump)
         {
-            printf("Block %lu: %lu records, %lu bytes\n", file->blocks_read,
-                   file->records_in_block, file->buffer_size);
+            printf("Block %lu: %lu records, %lu bytes\n",
+                   file->blocks_read,
+                   file->records_in_block,
+                   file->buffer_size);
         }
     }
     while (num_rows != 0 && maxavro_next_block(file));
@@ -97,13 +99,18 @@ int check_file(const char* filename)
     {
         printf("Failed to read next data block after data block %lu. "
                "Read %lu records and %lu bytes before failure.\n",
-               file->blocks_read, file->records_read, file->bytes_read);
+               file->blocks_read,
+               file->records_read,
+               file->bytes_read);
         rval = 1;
     }
     else if (!dump)
     {
-        printf("%s: %lu blocks, %lu records and %lu bytes\n", filename,
-               file->blocks_read, file->records_read, file->bytes_read);
+        printf("%s: %lu blocks, %lu records and %lu bytes\n",
+               filename,
+               file->blocks_read,
+               file->records_read,
+               file->bytes_read);
     }
 
 
@@ -113,11 +120,11 @@ int check_file(const char* filename)
 
 static struct option long_options[] =
 {
-    {"verbose",   no_argument, 0, 'v'},
-    {"dump",  no_argument, 0, 'd'},
-    {"from",  no_argument, 0, 'f'},
-    {"count", no_argument, 0, 'c'},
-    {0, 0, 0, 0}
+    {"verbose", no_argument, 0, 'v'},
+    {"dump",    no_argument, 0, 'd'},
+    {"from",    no_argument, 0, 'f'},
+    {"count",   no_argument, 0, 'c'},
+    {0,         0,           0, 0  }
 };
 
 int main(int argc, char** argv)
@@ -139,12 +146,15 @@ int main(int argc, char** argv)
         case 'v':
             verbose++;
             break;
+
         case 'd':
             dump = true;
             break;
+
         case 'f':
             seekto = strtol(optarg, NULL, 10);
             break;
+
         case 'c':
             num_rows = strtol(optarg, NULL, 10);
             break;

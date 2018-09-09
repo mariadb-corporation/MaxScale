@@ -1,14 +1,12 @@
-
-
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     int global_result = 0;
 
     Test->ReadEnv();
@@ -17,7 +15,8 @@ int main(int argc, char *argv[])
     Test->ConnectMaxscale();
 
 
-    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- max_slave_replication_lag=120");
+    execute_query(Test->maxscales->conn_rwsplit[0],
+                  (char*) "select @@server_id; -- max_slave_replication_lag=120");
 
 
 
@@ -30,5 +29,3 @@ int main(int argc, char *argv[])
     Test->Copy_all_logs();
     return global_result;
 }
-
-

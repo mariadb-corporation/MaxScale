@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file protocol.h
@@ -40,7 +40,7 @@ typedef struct mxs_protocol
      *
      * @return 1 on success, 0 on error
      */
-    int32_t (*read)(struct dcb* dcb);
+    int32_t (* read)(struct dcb* dcb);
 
     /**
      * Write data to a network socket
@@ -50,7 +50,7 @@ typedef struct mxs_protocol
      *
      * @return 1 on success, 0 on error
      */
-    int32_t (*write)(struct dcb* dcb, GWBUF* buffer);
+    int32_t (* write)(struct dcb* dcb, GWBUF* buffer);
 
     /**
      * EPOLLOUT handler, used to write buffered data
@@ -61,7 +61,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*write_ready)(struct dcb* dcb);
+    int32_t (* write_ready)(struct dcb* dcb);
 
     /**
      * EPOLLERR handler
@@ -72,7 +72,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*error)(struct dcb* dcb);
+    int32_t (* error)(struct dcb* dcb);
 
     /**
      * EPOLLHUP and EPOLLRDHUP handler
@@ -83,7 +83,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*hangup)(struct dcb* dcb);
+    int32_t (* hangup)(struct dcb* dcb);
 
     /**
      * Accept a connection, only for client side protocol modules
@@ -94,7 +94,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*accept)(struct dcb* dcb);
+    int32_t (* accept)(struct dcb* dcb);
 
     /**
      * Connect to a server, only for backend side protocol modules
@@ -105,7 +105,7 @@ typedef struct mxs_protocol
      *
      * @return The opened file descriptor or DCBFD_CLOSED on error
      */
-    int32_t (*connect)(struct dcb* dcb, struct server* server, struct session* session);
+    int32_t (* connect)(struct dcb* dcb, struct server* server, struct session* session);
 
     /**
      * Free protocol data allocated in the connect handler
@@ -116,7 +116,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*close)(struct dcb* dcb);
+    int32_t (* close)(struct dcb* dcb);
 
     /**
      * Listen on a network socket, only for client side protocol modules
@@ -126,7 +126,7 @@ typedef struct mxs_protocol
      *
      * @return 1 on success, 0 on error
      */
-    int32_t (*listen)(struct dcb* dcb, char* address);
+    int32_t (* listen)(struct dcb* dcb, char* address);
 
     /**
      * Perform user re-authentication
@@ -140,7 +140,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*auth)(struct dcb* dcb, struct server* server, struct session* session, GWBUF* buffer);
+    int32_t (* auth)(struct dcb* dcb, struct server* server, struct session* session, GWBUF* buffer);
 
     /**
      * Returns the name of the default authenticator module for this protocol
@@ -159,7 +159,7 @@ typedef struct mxs_protocol
      *
      * @note Currently the return value is ignored
      */
-    int32_t (*connlimit)(struct dcb* dcb, int limit);
+    int32_t (* connlimit)(struct dcb* dcb, int limit);
 
     /**
      * Check if the connection has been fully established, used by connection pooling
@@ -168,7 +168,7 @@ typedef struct mxs_protocol
      *
      * @return True if the connection is fully established and can be pooled
      */
-    bool (*established)(struct dcb* );
+    bool (* established)(struct dcb*);
 
     /**
      * Provide JSON formatted diagnostics about a DCB
@@ -178,7 +178,6 @@ typedef struct mxs_protocol
      * @return JSON representation of the DCB
      */
     json_t* (*diagnostics_json)(struct dcb* dcb);
-
 } MXS_PROTOCOL;
 
 /**
@@ -186,7 +185,7 @@ typedef struct mxs_protocol
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION      {2, 0, 0}
+#define MXS_PROTOCOL_VERSION {2, 0, 0}
 
 /**
  * Specifies capabilities specific for protocol.
@@ -198,7 +197,7 @@ typedef struct mxs_protocol
  */
 typedef enum protocol_capability
 {
-    PCAP_TYPE_NONE = 0x0 // TODO: remove once protocol capabilities are defined
+    PCAP_TYPE_NONE = 0x0    // TODO: remove once protocol capabilities are defined
 } protocol_capability_t;
 
 MXS_END_DECLS

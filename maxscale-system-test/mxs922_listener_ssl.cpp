@@ -5,9 +5,9 @@
 #include "testconnections.h"
 #include "config_operations.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     Config config(test);
 
     config.create_listener(Config::SERVICE_RWSPLIT);
@@ -19,9 +19,11 @@ int main(int argc, char *argv[])
     test->try_query(test->maxscales->conn_rwsplit[0], "select @@server_id");
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 
-    MYSQL *conn = open_conn(test->maxscales->readconn_master_port[0], test->maxscales->IP[0],
+    MYSQL* conn = open_conn(test->maxscales->readconn_master_port[0],
+                            test->maxscales->IP[0],
                             test->maxscales->user_name,
-                            test->maxscales->password, true);
+                            test->maxscales->password,
+                            true);
     test->add_result(execute_query(conn, "select @@server_id"), "SSL query to readconnroute failed");
     mysql_close(conn);
 

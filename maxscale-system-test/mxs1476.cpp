@@ -1,5 +1,6 @@
 /**
- * MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
+ * MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current
+ *master
  *
  * https://jira.mariadb.org/browse/MXS-1476
  */
@@ -9,7 +10,7 @@
 void list_servers(TestConnections& test)
 {
     int rc;
-    char *output = test.maxscales->ssh_node_output_f(0, true, &rc, "maxadmin list servers");
+    char* output = test.maxscales->ssh_node_output_f(0, true, &rc, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 }
@@ -49,7 +50,8 @@ void do_test(TestConnections& test, int master, int slave)
     test.maxscales->wait_for_monitor();
     list_servers(test);
 
-    test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)") == 0,
+    test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0],
+                                         "INSERT INTO test.t1 VALUES (1)") == 0,
                     "Query should fail");
     test.maxscales->close_maxscale_connections(0);
 
@@ -66,7 +68,9 @@ int main(int argc, char** argv)
     do_test(test, 1, 0);
 
     test.tprintf("Swap the priorities around and run the test again");
-    test.maxscales->ssh_node_f(0, true, "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=2/priority=1/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
     test.maxscales->restart_maxscale(0);

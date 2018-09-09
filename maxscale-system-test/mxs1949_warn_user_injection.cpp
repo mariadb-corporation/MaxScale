@@ -7,7 +7,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.check_log_err(0, " No users were loaded but 'inject_service_user' is enabled", false);

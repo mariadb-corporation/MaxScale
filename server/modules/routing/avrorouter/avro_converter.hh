@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "avrorouter.hh"
 #include "rpl.hh"
@@ -19,10 +19,10 @@
 
 struct AvroTable
 {
-    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema):
-        avro_file(file),
-        avro_writer_iface(iface),
-        avro_schema(schema)
+    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema)
+        : avro_file(file)
+        , avro_writer_iface(iface)
+        , avro_schema(schema)
     {
     }
 
@@ -34,9 +34,9 @@ struct AvroTable
         avro_schema_decref(avro_schema);
     }
 
-    avro_file_writer_t  avro_file; /*< Current Avro data file */
-    avro_value_iface_t* avro_writer_iface; /*< Avro C API writer interface */
-    avro_schema_t       avro_schema; /*< Native Avro schema of the table */
+    avro_file_writer_t  avro_file;          /*< Current Avro data file */
+    avro_value_iface_t* avro_writer_iface;  /*< Avro C API writer interface */
+    avro_schema_t       avro_schema;        /*< Native Avro schema of the table */
 };
 
 typedef std::shared_ptr<AvroTable>                  SAvroTable;

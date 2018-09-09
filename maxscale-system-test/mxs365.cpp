@@ -37,14 +37,14 @@ void create_data_file(char* filename, size_t size)
     close(fd);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     char filename[1024];
     test->tprintf("Generation file to load\n");
     test->set_timeout(30);
-    create_data_file(filename, sizeof (filename));
+    create_data_file(filename, sizeof(filename));
 
     /** Set max packet size and create test table */
     test->set_timeout(20);
@@ -68,7 +68,8 @@ int main(int argc, char *argv[])
     test->set_timeout(20);
     test->maxscales->connect_maxscale(0);
     char query[1024 + sizeof(filename)];
-    snprintf(query, sizeof (query),
+    snprintf(query,
+             sizeof(query),
              "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
              filename);
     test->tprintf("Loading data\n");

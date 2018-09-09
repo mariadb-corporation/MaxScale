@@ -99,7 +99,7 @@ namespace
 class DbfwThread
 {
 public:
-    int&      rule_version(const Dbfw* d)
+    int& rule_version(const Dbfw* d)
     {
         return m_instance_data[d].rule_version;
     }
@@ -107,7 +107,7 @@ public:
     {
         return m_instance_data[d].rules;
     }
-    UserMap&  users(const Dbfw* d)
+    UserMap& users(const Dbfw* d)
     {
         return m_instance_data[d].users;
     }
@@ -118,7 +118,8 @@ private:
     public:
         Data()
             : rule_version(0)
-        {}
+        {
+        }
 
         int      rule_version;
         RuleList rules;
@@ -129,19 +130,21 @@ private:
 };
 
 thread_local DbfwThread* this_thread = NULL;
-
 }
 
-bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
-bool parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
+bool        parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
+bool        parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
 static void rule_free_all(Rule* rule);
 static bool process_rule_file(std::string filename, RuleList* rules, UserMap* users);
-bool replace_rules(Dbfw* instance);
+bool        replace_rules(Dbfw* instance);
 
-static void print_rule(Rule *rules, char *dest)
+static void print_rule(Rule* rules, char* dest)
 {
-    sprintf(dest, "%s, %s, %d", rules->name().c_str(),
-            rules->type().c_str(), rules->times_matched);
+    sprintf(dest,
+            "%s, %s, %d",
+            rules->name().c_str(),
+            rules->type().c_str(),
+            rules->times_matched);
 }
 
 static json_t* rule_to_json(const SRule& rule)
@@ -226,8 +229,8 @@ bool parse_querytypes(const char* str, SRule rule)
     char buffer[512];
     bool done = false;
     rule->on_queries = 0;
-    const char *ptr = str;
-    char *dest = buffer;
+    const char* ptr = str;
+    char* dest = buffer;
 
     while (ptr - str < 512)
     {
@@ -328,14 +331,15 @@ bool check_time(const char* str)
 
 
 #ifdef SS_DEBUG
-#define CHK_TIMES(t) mxb_assert(t->tm_sec > -1 && t->tm_sec < 62        \
-                                && t->tm_min > -1 && t->tm_min < 60     \
-                                && t->tm_hour > -1 && t->tm_hour < 24)
+#define CHK_TIMES(t) \
+    mxb_assert(t->tm_sec > -1 && t->tm_sec<62        \
+                                           && t->tm_min> -1 && t->tm_min<60     \
+                                                                         && t->tm_hour> -1 && t->tm_hour < 24)
 #else
 #define CHK_TIMES(t)
 #endif
 
-#define IS_RVRS_TIME(tr) (mktime(&tr->end) < mktime(&tr->start))
+#define IS_RVRS_TIME(tr) (mktime(& tr->end) < mktime(& tr->start))
 
 /**
  * Parses a null-terminated string into a timerange defined by two ISO-8601 compliant
@@ -352,7 +356,7 @@ static TIMERANGE* parse_time(const char* str)
     assert(str != NULL);
 
     char strbuf[strlen(str) + 1];
-    char *separator;
+    char* separator;
     struct tm start, end;
     TIMERANGE* tr = NULL;
 
@@ -363,8 +367,8 @@ static TIMERANGE* parse_time(const char* str)
     if ((separator = strchr(strbuf, '-')))
     {
         *separator++ = '\0';
-        if (strptime(strbuf, "%H:%M:%S", &start) &&
-            strptime(separator, "%H:%M:%S", &end))
+        if (strptime(strbuf, "%H:%M:%S", &start)
+            && strptime(separator, "%H:%M:%S", &end))
         {
             /** The time string was valid */
             CHK_TIMES((&start));
@@ -406,10 +410,10 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
     return tmp;
 }
 
-bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
+bool dbfw_reload_rules(const MODULECMD_ARG* argv, json_t** output)
 {
-    MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
-    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
+    MXS_FILTER_DEF* filter = argv->argv[0].value.filter;
+    Dbfw* inst = (Dbfw*)filter_def_get_instance(filter);
     std::string filename = inst->get_rule_file();
 
     if (modulecmd_arg_is_present(argv, 1))
@@ -421,11 +425,11 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
     return inst->reload_rules(filename);
 }
 
-bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
+bool dbfw_show_rules(const MODULECMD_ARG* argv, json_t** output)
 {
-    DCB *dcb = argv->argv[0].value.dcb;
-    MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
-    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
+    DCB* dcb = argv->argv[0].value.dcb;
+    MXS_FILTER_DEF* filter = argv->argv[1].value.filter;
+    Dbfw* inst = (Dbfw*)filter_def_get_instance(filter);
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
@@ -443,7 +447,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
     for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         const SRule& rule = *it;
-        char buf[rule->name().length() + 200]; // Some extra space
+        char buf[rule->name().length() + 200];      // Some extra space
         print_rule(rule.get(), buf);
         dcb_printf(dcb, "%s\n", buf);
     }
@@ -451,10 +455,10 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
     return true;
 }
 
-bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
+bool dbfw_show_rules_json(const MODULECMD_ARG* argv, json_t** output)
 {
-    MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
-    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
+    MXS_FILTER_DEF* filter = argv->argv[0].value.filter;
+    Dbfw* inst = (Dbfw*)filter_def_get_instance(filter);
 
     json_t* arr = json_array();
 
@@ -484,7 +488,7 @@ static int dbfw_thr_init()
     mxb_assert(this_thread == NULL);
     int rval = 0;
 
-    if ((this_thread = new (std::nothrow) DbfwThread) == NULL)
+    if ((this_thread = new( std::nothrow) DbfwThread) == NULL)
     {
         MXS_OOM();
         rval = -1;
@@ -500,9 +504,9 @@ static void dbfw_thr_finish()
 
 static const MXS_ENUM_VALUE action_values[] =
 {
-    {"allow",  FW_ACTION_ALLOW},
-    {"block",  FW_ACTION_BLOCK},
-    {"ignore", FW_ACTION_IGNORE},
+    {"allow",  FW_ACTION_ALLOW  },
+    {"block",  FW_ACTION_BLOCK  },
+    {"ignore", FW_ACTION_IGNORE },
     {NULL}
 };
 
@@ -520,22 +524,30 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
-        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to reload"},
-        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Path to rule file"}
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to reload"            },
+        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,            "Path to rule file"           }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", MODULECMD_TYPE_ACTIVE,
-                               dbfw_reload_rules, MXS_ARRAY_NELEMS(args_rules_reload),
-                               args_rules_reload, "Reload dbfwfilter rules");
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "rules/reload",
+                               MODULECMD_TYPE_ACTIVE,
+                               dbfw_reload_rules,
+                               MXS_ARRAY_NELEMS(args_rules_reload),
+                               args_rules_reload,
+                               "Reload dbfwfilter rules");
 
     modulecmd_arg_type_t args_rules_show_json[] =
     {
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules_json, MXS_ARRAY_NELEMS(args_rules_show_json),
-                               args_rules_show_json, "Show dbfwfilter rule statistics");
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "rules",
+                               MODULECMD_TYPE_PASSIVE,
+                               dbfw_show_rules_json,
+                               MXS_ARRAY_NELEMS(args_rules_show_json),
+                               args_rules_show_json,
+                               "Show dbfwfilter rule statistics");
 
     static MXS_MODULE info =
     {
@@ -546,10 +558,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.2.0",
         RCAP_TYPE_STMT_INPUT,
         &Dbfw::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        dbfw_thr_init, /* Thread init. */
-        dbfw_thr_finish, /* Thread finish. */
+        NULL,           /* Process init. */
+        NULL,           /* Process finish. */
+        dbfw_thr_init,  /* Thread init. */
+        dbfw_thr_finish,/* Thread finish. */
         {
             {
                 "rules",
@@ -589,7 +601,7 @@ MXS_END_DECLS
  */
 void timerange_free(TIMERANGE* tr)
 {
-    TIMERANGE *node, *tmp;
+    TIMERANGE* node, * tmp;
 
     node = tr;
 
@@ -609,7 +621,7 @@ void timerange_free(TIMERANGE* tr)
  */
 char* get_regex_string(char** saved)
 {
-    char *start = NULL, *ptr = *saved;
+    char* start = NULL, * ptr = *saved;
     bool escaped = false, quoted = false;
     char delimiter = 0;
     while (*ptr != '\0')
@@ -638,9 +650,11 @@ char* get_regex_string(char** saved)
                         quoted = true;
                     }
                     break;
+
                 case '\\':
                     escaped = true;
                     break;
+
                 default:
                     break;
                 }
@@ -656,7 +670,8 @@ char* get_regex_string(char** saved)
     if (quoted)
     {
         MXS_ERROR("Missing ending quote, found '%c' but no matching unescaped"
-                  " one was found.", delimiter);
+                  " one was found.",
+                  delimiter);
     }
 
     return NULL;
@@ -667,14 +682,14 @@ char* get_regex_string(char** saved)
  */
 struct parser_stack
 {
-    RuleList rule;
-    ValueList user;
-    ValueList active_rules;
+    RuleList        rule;
+    ValueList       user;
+    ValueList       active_rules;
     enum match_type active_mode;
-    TemplateList templates;
-    ValueList values;
-    ValueList auxiliary_values;
-    std::string name;
+    TemplateList    templates;
+    ValueList       values;
+    ValueList       auxiliary_values;
+    std::string     name;
 
     /** Helper function for adding rules */
     void add(Rule* value)
@@ -692,8 +707,10 @@ struct parser_stack
  */
 void dbfw_yyerror(void* scanner, const char* error)
 {
-    MXS_ERROR("Error on line %d, %s: %s\n", dbfw_yyget_lineno(scanner),
-              error, dbfw_yyget_text(scanner));
+    MXS_ERROR("Error on line %d, %s: %s\n",
+              dbfw_yyget_lineno(scanner),
+              error,
+              dbfw_yyget_text(scanner));
 }
 
 /**
@@ -837,7 +854,8 @@ bool create_user_templates(void* scanner)
 
     for (ValueList::const_iterator it = rstack->user.begin(); it != rstack->user.end(); it++)
     {
-        SUserTemplate newtemp = SUserTemplate(new UserTemplate(*it, rstack->active_rules, rstack->active_mode));
+        SUserTemplate newtemp
+            = SUserTemplate(new UserTemplate(*it, rstack->active_rules, rstack->active_mode));
         rstack->templates.push_back(newtemp);
     }
 
@@ -970,11 +988,15 @@ bool define_regex_rule(void* scanner, char* pattern)
     /** This should never fail as long as the rule syntax is correct */
     PCRE2_SPTR start = (PCRE2_SPTR) get_regex_string(&pattern);
     mxb_assert(start);
-    pcre2_code *re;
+    pcre2_code* re;
     int err;
     size_t offset;
-    if ((re = pcre2_compile(start, PCRE2_ZERO_TERMINATED,
-                            0, &err, &offset, NULL)))
+    if ((re = pcre2_compile(start,
+                            PCRE2_ZERO_TERMINATED,
+                            0,
+                            &err,
+                            &offset,
+                            NULL)))
     {
         struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
         mxb_assert(rstack);
@@ -985,7 +1007,8 @@ bool define_regex_rule(void* scanner, char* pattern)
         PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
         pcre2_get_error_message(err, errbuf, sizeof(errbuf));
         MXS_ERROR("Invalid regular expression '%s': %s",
-                  start, errbuf);
+                  start,
+                  errbuf);
     }
 
     return re != NULL;
@@ -999,7 +1022,8 @@ bool define_regex_rule(void* scanner, char* pattern)
  * @param rules List of all rules
  * @return True on success, false on error.
  */
-static bool process_user_templates(UserMap& users, const TemplateList& templates,
+static bool process_user_templates(UserMap& users,
+                                   const TemplateList& templates,
                                    RuleList& rules)
 {
     bool rval = true;
@@ -1056,7 +1080,7 @@ static bool process_user_templates(UserMap& users, const TemplateList& templates
 static bool do_process_rule_file(const char* filename, RuleList* rules, UserMap* users)
 {
     int rc = 1;
-    FILE *file = fopen(filename, "r");
+    FILE* file = fopen(filename, "r");
 
     if (file)
     {
@@ -1089,9 +1113,10 @@ static bool do_process_rule_file(const char* filename, RuleList* rules, UserMap*
     }
     else
     {
-        MXS_ERROR("Failed to open rule file '%s': %d, %s", filename, errno,
+        MXS_ERROR("Failed to open rule file '%s': %d, %s",
+                  filename,
+                  errno,
                   mxs_strerror(errno));
-
     }
 
     return rc == 0;
@@ -1117,7 +1142,7 @@ bool replace_rules(Dbfw* instance)
     bool rval = true;
     std::string filename = instance->get_rule_file();
     RuleList rules;
-    UserMap  users;
+    UserMap users;
 
     if (process_rule_file(filename, &rules, &users))
     {
@@ -1133,7 +1158,8 @@ bool replace_rules(Dbfw* instance)
     else
     {
         MXS_ERROR("Failed to parse rules at '%s'. No previous rules available, "
-                  "closing session.", filename.c_str());
+                  "closing session.",
+                  filename.c_str());
         rval = false;
     }
 
@@ -1170,15 +1196,14 @@ namespace
  * where an earlier, now deleted instance existed.
  */
 int global_version = 1;
+}
 
-};
-
-Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
-    m_action((enum fw_actions)config_get_enum(params, "action", action_values)),
-    m_log_match(0),
-    m_lock(SPINLOCK_INIT),
-    m_filename(config_get_string(params, "rules")),
-    m_version(atomic_add(&global_version, 1))
+Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
+    : m_action((enum fw_actions)config_get_enum(params, "action", action_values))
+    , m_log_match(0)
+    , m_lock(SPINLOCK_INIT)
+    , m_filename(config_get_string(params, "rules"))
+    , m_version(atomic_add(&global_version, 1))
 {
     if (config_get_bool(params, "log_match"))
     {
@@ -1193,19 +1218,18 @@ Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
 
 Dbfw::~Dbfw()
 {
-
 }
 
 Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 {
     Dbfw* rval = NULL;
     RuleList rules;
-    UserMap  users;
+    UserMap users;
     std::string file = config_get_string(pParams, "rules");
 
     if (process_rule_file(file, &rules, &users))
     {
-        rval = new (std::nothrow) Dbfw(pParams);
+        rval = new( std::nothrow) Dbfw(pParams);
     }
 
     return rval;
@@ -1213,7 +1237,7 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 
 DbfwSession* Dbfw::newSession(MXS_SESSION* session)
 {
-    return new (std::nothrow) DbfwSession(this, session);
+    return new( std::nothrow) DbfwSession(this, session);
 }
 
 fw_actions Dbfw::get_action() const
@@ -1240,7 +1264,7 @@ int Dbfw::get_rule_version() const
 bool Dbfw::do_reload_rules(std::string filename)
 {
     RuleList rules;
-    UserMap  users;
+    UserMap users;
     bool rval = false;
 
     if (access(filename.c_str(), R_OK) == 0)
@@ -1255,13 +1279,16 @@ bool Dbfw::do_reload_rules(std::string filename)
         else
         {
             modulecmd_set_error("Failed to process rule file '%s'. See log "
-                                "file for more details.", filename.c_str());
+                                "file for more details.",
+                                filename.c_str());
         }
     }
     else
     {
-        modulecmd_set_error("Failed to read rules at '%s': %d, %s", filename.c_str(),
-                            errno, mxs_strerror(errno));
+        modulecmd_set_error("Failed to read rules at '%s': %d, %s",
+                            filename.c_str(),
+                            errno,
+                            mxs_strerror(errno));
     }
 
     return rval;
@@ -1289,7 +1316,7 @@ static SUser find_user_data(const UserMap& users, std::string name, std::string 
 
     if (it == users.end())
     {
-        char *ip_start = strchr(nameaddr, '@') + 1;
+        char* ip_start = strchr(nameaddr, '@') + 1;
         while (it == users.end() && next_ip_class(ip_start))
         {
             it = users.find(nameaddr);
@@ -1315,7 +1342,7 @@ static SUser find_user_data(const UserMap& users, std::string name, std::string 
     return it != users.end() ? it->second : SUser();
 }
 
-static bool command_is_mandatory(const GWBUF *buffer)
+static bool command_is_mandatory(const GWBUF* buffer)
 {
     switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
     {
@@ -1337,7 +1364,7 @@ static bool command_is_mandatory(const GWBUF *buffer)
 static std::string get_sql(GWBUF* buffer)
 {
     std::string rval;
-    char *sql;
+    char* sql;
     int len;
 
     if (modutil_extract_SQL(buffer, &sql, &len))
@@ -1349,10 +1376,10 @@ static std::string get_sql(GWBUF* buffer)
     return rval;
 }
 
-DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session):
-    mxs::FilterSession::FilterSession(session),
-    m_instance(instance),
-    m_session(session)
+DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session)
+    : mxs::FilterSession::FilterSession(session)
+    , m_instance(instance)
+    , m_session(session)
 {
 }
 
@@ -1368,7 +1395,7 @@ void DbfwSession::set_error(const char* error)
     }
 }
 
-std::string DbfwSession::get_error()const
+std::string DbfwSession::get_error() const
 {
     return m_error;
 }
@@ -1495,14 +1522,21 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                 if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
                 {
                     MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
-                               m_session->service->name, rname, suser->name(),
-                               user().c_str(), remote().c_str(), get_sql(buffer).c_str());
+                               m_session->service->name,
+                               rname,
+                               suser->name(),
+                               user().c_str(),
+                               remote().c_str(),
+                               get_sql(buffer).c_str());
                 }
                 else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
                 {
                     MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
-                               m_session->service->name, suser->name(), user().c_str(),
-                               remote().c_str(), get_sql(buffer).c_str());
+                               m_session->service->name,
+                               suser->name(),
+                               user().c_str(),
+                               remote().c_str(),
+                               get_sql(buffer).c_str());
                 }
             }
 
@@ -1632,12 +1666,12 @@ static char* create_parse_error(Dbfw* my_instance,
                                 const char* query,
                                 bool* matchesp)
 {
-    char *msg = NULL;
+    char* msg = NULL;
 
-    char format[] =
-        "Query could not be %s and will hence be rejected. "
-        "Please ensure that the SQL syntax is correct";
-    size_t len = sizeof(format) + strlen(reason); // sizeof includes the trailing NULL as well.
+    char format[]
+        = "Query could not be %s and will hence be rejected. "
+          "Please ensure that the SQL syntax is correct";
+    size_t len = sizeof(format) + strlen(reason);   // sizeof includes the trailing NULL as well.
     char message[len];
     sprintf(message, format, reason);
     MXS_WARNING("%s: %s", message, query);
@@ -1670,12 +1704,12 @@ static char* create_parse_error(Dbfw* my_instance,
  */
 bool rule_matches(Dbfw* my_instance,
                   DbfwSession* my_session,
-                  GWBUF *queue,
-                  SRule rule,
-                  char* query)
+                  GWBUF* queue,
+                  SRule  rule,
+                  char*  query)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
-    char *msg = NULL;
+    char* msg = NULL;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
 
@@ -1717,7 +1751,7 @@ bool rule_matches(Dbfw* my_instance,
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-void Dbfw::diagnostics(DCB *dcb) const
+void Dbfw::diagnostics(DCB* dcb) const
 {
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");

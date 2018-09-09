@@ -1,12 +1,12 @@
 #include "big_transaction.h"
 
-int big_transaction(MYSQL * conn, int N)
+int big_transaction(MYSQL* conn, int N)
 {
     int local_result = 0;
     char sql[1000000];
     local_result += create_t1(conn);
-    local_result += execute_query(conn, (char *) "START TRANSACTION");
-    local_result += execute_query(conn, (char *) "SET autocommit = 0");
+    local_result += execute_query(conn, (char*) "START TRANSACTION");
+    local_result += execute_query(conn, (char*) "SET autocommit = 0");
 
     for (int i = 0; i < N; i++)
     {
@@ -18,6 +18,6 @@ int big_transaction(MYSQL * conn, int N)
         local_result += execute_query(conn, "%s", sql);
     }
 
-    local_result += execute_query(conn, (char *) "COMMIT");
+    local_result += execute_query(conn, (char*) "COMMIT");
     return local_result;
 }

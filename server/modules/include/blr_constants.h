@@ -16,7 +16,7 @@
 
 /**
  * @file blr_defines.h - Various definitions for binlogrouter
-
+ *
  * @verbatim
  * Revision History
  *
@@ -30,12 +30,12 @@ MXS_BEGIN_DECLS
 
 #define BINLOG_FNAMELEN   255
 #define BLR_PROTOCOL      "MySQLBackend"
-#define BINLOG_MAGIC      { 0xfe, 0x62, 0x69, 0x6e }
+#define BINLOG_MAGIC      {0xfe, 0x62, 0x69, 0x6e}
 #define BINLOG_MAGIC_SIZE 4
 #define BINLOG_NAMEFMT    "%s.%06d"
 #define BINLOG_NAME_ROOT  "mysql-bin"
 
-#define BINLOG_EVENT_HDR_LEN     19
+#define BINLOG_EVENT_HDR_LEN 19
 
 /**
  * Binlog event types
@@ -79,8 +79,8 @@ MXS_BEGIN_DECLS
 #define MAX_EVENT_TYPE 0x23
 
 /* New MariaDB event numbers start from 0xa0 */
-#define MARIADB_NEW_EVENTS_BEGIN          0xa0
-#define MARIADB_ANNOTATE_ROWS_EVENT       0xa0
+#define MARIADB_NEW_EVENTS_BEGIN    0xa0
+#define MARIADB_ANNOTATE_ROWS_EVENT 0xa0
 /* New MariaDB 10 event numbers start from here */
 #define MARIADB10_BINLOG_CHECKPOINT_EVENT 0xa1
 #define MARIADB10_GTID_EVENT              0xa2
@@ -89,7 +89,7 @@ MXS_BEGIN_DECLS
 #define MAX_EVENT_TYPE_MARIADB10 0xa3
 
 /* Maximum event type so far */
-#define MAX_EVENT_TYPE_END          MAX_EVENT_TYPE_MARIADB10
+#define MAX_EVENT_TYPE_END MAX_EVENT_TYPE_MARIADB10
 
 /**
  * Binlog event flags

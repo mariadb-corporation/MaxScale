@@ -18,16 +18,16 @@
 
 #include "maxadmin_operations.h"
 
-int
-connectMaxScale(char *hostname, char *port)
+int connectMaxScale(char* hostname, char* port)
 {
-    struct sockaddr_in  addr;
-    int         so;
-    int         keepalive = 1;
+    struct sockaddr_in addr;
+    int so;
+    int keepalive = 1;
 
     if ((so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        fprintf(stderr, "Unable to create socket: %s\n",
+        fprintf(stderr,
+                "Unable to create socket: %s\n",
                 strerror(errno));
         return -1;
     }
@@ -35,15 +35,21 @@ connectMaxScale(char *hostname, char *port)
     addr.sin_family = AF_INET;
     setipaddress(&addr.sin_addr, hostname);
     addr.sin_port = htons(atoi(port));
-    if (connect(so, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    if (connect(so, (struct sockaddr*)&addr, sizeof(addr)) < 0)
     {
-        fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
-                hostname, port, strerror(errno));
+        fprintf(stderr,
+                "Unable to connect to MaxScale at %s, %s: %s\n",
+                hostname,
+                port,
+                strerror(errno));
         close(so);
         return -1;
     }
-    if (setsockopt(so, SOL_SOCKET,
-                   SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
+    if (setsockopt(so,
+                   SOL_SOCKET,
+                   SO_KEEPALIVE,
+                   &keepalive,
+                   sizeof(keepalive )))
     {
         perror("setsockopt");
     }
@@ -52,14 +58,13 @@ connectMaxScale(char *hostname, char *port)
 }
 
 
-int
-setipaddress(struct in_addr *a, char *p)
+int setipaddress(struct in_addr* a, char* p)
 {
 #ifdef __USE_POSIX
-    struct addrinfo *ai = NULL, hint;
-    int    rc;
-    struct sockaddr_in * res_addr;
-    memset(&hint, 0, sizeof (hint));
+    struct addrinfo* ai = NULL, hint;
+    int rc;
+    struct sockaddr_in* res_addr;
+    memset(&hint, 0, sizeof(hint));
 
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_flags = AI_CANONNAME;
@@ -73,7 +78,7 @@ setipaddress(struct in_addr *a, char *p)
     /* take the first one */
     if (ai != NULL)
     {
-        res_addr = (struct sockaddr_in *)(ai->ai_addr);
+        res_addr = (struct sockaddr_in*)(ai->ai_addr);
         memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
 
         freeaddrinfo(ai);
@@ -81,7 +86,7 @@ setipaddress(struct in_addr *a, char *p)
         return 1;
     }
 #else
-    struct hostent *h;
+    struct hostent* h;
 
     spinlock_acquire(&tmplock);
     h = gethostbyname(p);
@@ -105,10 +110,9 @@ setipaddress(struct in_addr *a, char *p)
     return 0;
 }
 
-int
-authMaxScale(int so, char *user, char *password)
+int authMaxScale(int so, char* user, char* password)
 {
-    char    buf[20];
+    char buf[20];
 
     if (read(so, buf, 4) != 4)
     {
@@ -128,10 +132,9 @@ authMaxScale(int so, char *user, char *password)
     return strncmp(buf, "FAILED", 6);
 }
 
-int
-sendCommand(int so, char *cmd, char *buf)
+int sendCommand(int so, char* cmd, char* buf)
 {
-    char    buf1[80];
+    char buf1[80];
     int i, j, newline = 1;
     int k = 0;
 
@@ -180,13 +183,12 @@ sendCommand(int so, char *cmd, char *buf)
     return 1;
 }
 
-int
-get_maxadmin_param_tcp(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
+int get_maxadmin_param_tcp(char* hostname, char* user, char* password, char* cmd, char* param, char* result)
 {
 
-    char        buf[10240];
-    char        *port = (char *) "6603";
-    int         so;
+    char buf[10240];
+    char* port = (char*) "6603";
+    int so;
 
     if ((so = connectMaxScale(hostname, port)) == -1)
     {
@@ -194,7 +196,8 @@ get_maxadmin_param_tcp(char * hostname, char *user, char *password, char * cmd, 
     }
     if (!authMaxScale(so, user, password))
     {
-        fprintf(stderr, "Failed to connect to MaxScale. "
+        fprintf(stderr,
+                "Failed to connect to MaxScale. "
                 "Incorrect username or password.\n");
         close(so);
         return 1;
@@ -202,35 +205,34 @@ get_maxadmin_param_tcp(char * hostname, char *user, char *password, char * cmd, 
 
     sendCommand(so, cmd, buf);
 
-    //printf("%s\n", buf);
+    // printf("%s\n", buf);
 
-    char * x = strstr(buf, param);
-    if (x == NULL )
+    char* x = strstr(buf, param);
+    if (x == NULL)
     {
         return 1;
     }
-    //char f_field[100];
+    // char f_field[100];
     int param_len = strlen(param);
     int cnt = 0;
-    while (x[cnt + param_len]  != '\n')
+    while (x[cnt + param_len] != '\n')
     {
         result[cnt] = x[cnt + param_len];
         cnt++;
     }
     result[cnt] = '\0';
-    //sprintf(f_field, "%s %%s", param);
-    //sscanf(x, f_field, result);
+    // sprintf(f_field, "%s %%s", param);
+    // sscanf(x, f_field, result);
     close(so);
     return 0;
 }
 
-int
-execute_maxadmin_command_tcp(char * hostname, char *user, char *password, char * cmd)
+int execute_maxadmin_command_tcp(char* hostname, char* user, char* password, char* cmd)
 {
 
-    char        buf[10240];
-    char        *port = (char *) "6603";
-    int         so;
+    char buf[10240];
+    char* port = (char*) "6603";
+    int so;
 
     if ((so = connectMaxScale(hostname, port)) == -1)
     {
@@ -238,7 +240,8 @@ execute_maxadmin_command_tcp(char * hostname, char *user, char *password, char *
     }
     if (!authMaxScale(so, user, password))
     {
-        fprintf(stderr, "Failed to connect to MaxScale. "
+        fprintf(stderr,
+                "Failed to connect to MaxScale. "
                 "Incorrect username or password.\n");
         close(so);
         return 1;
@@ -250,13 +253,12 @@ execute_maxadmin_command_tcp(char * hostname, char *user, char *password, char *
     return 0;
 }
 
-int
-execute_maxadmin_command_print_tcp(char * hostname, char *user, char *password, char * cmd)
+int execute_maxadmin_command_print_tcp(char* hostname, char* user, char* password, char* cmd)
 {
 
-    char        buf[10240];
-    char        *port = (char *) "6603";
-    int         so;
+    char buf[10240];
+    char* port = (char*) "6603";
+    int so;
 
     if ((so = connectMaxScale(hostname, port)) == -1)
     {
@@ -264,7 +266,8 @@ execute_maxadmin_command_print_tcp(char * hostname, char *user, char *password, 
     }
     if (!authMaxScale(so, user, password))
     {
-        fprintf(stderr, "Failed to connect to MaxScale. "
+        fprintf(stderr,
+                "Failed to connect to MaxScale. "
                 "Incorrect username or password.\n");
         close(so);
         return 1;

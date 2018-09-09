@@ -21,14 +21,14 @@
 using std::cout;
 using std::endl;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int exit_code;
     TestConnections::skip_maxscale_start(true);
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
     test.set_timeout(600);
-    test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
+    test.maxscales->ssh_node(0, (char*) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
     test.replicate_from_master();
@@ -47,9 +47,10 @@ int main(int argc, char *argv[])
     sleep(10);
     test.set_timeout(120);
 
-    char * output = test.maxscales->ssh_node_output(0,
-                    "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
-                    true, &exit_code);
+    char* output = test.maxscales->ssh_node_output(0,
+                                                   "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
+                                                   true,
+                                                   &exit_code);
 
     std::istringstream iss;
     iss.str(output);
@@ -65,8 +66,12 @@ int main(int argc, char *argv[])
 
         if (x1 != x1_exp || fl != fl_exp)
         {
-            test.add_result(1, "Output:x1 %lld, fl %lld, Expected: x1 %d, fl %d",
-                            x1, fl, x1_exp, fl_exp);
+            test.add_result(1,
+                            "Output:x1 %lld, fl %lld, Expected: x1 %d, fl %d",
+                            x1,
+                            fl,
+                            x1_exp,
+                            fl_exp);
             break;
         }
 

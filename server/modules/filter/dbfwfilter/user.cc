@@ -17,8 +17,8 @@
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
 
-User::User(std::string name):
-    m_name(name)
+User::User(std::string name)
+    : m_name(name)
 {
 }
 
@@ -55,8 +55,8 @@ void User::add_rules(match_type mode, const RuleList& rules)
 
 static bool should_match(GWBUF* buffer)
 {
-    return modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer) ||
-           MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer));
+    return modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)
+           || MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer));
 }
 
 /**
@@ -67,8 +67,10 @@ static bool should_match(GWBUF* buffer)
  * @param user The user whose rules are checked
  * @return True if the query matches at least one of the rules otherwise false
  */
-bool User::match_any(Dbfw* my_instance, DbfwSession* my_session,
-                     GWBUF *queue, char** rulename)
+bool User::match_any(Dbfw* my_instance,
+                     DbfwSession* my_session,
+                     GWBUF* queue,
+                     char** rulename)
 {
 
     bool rval = false;
@@ -79,7 +81,7 @@ bool User::match_any(Dbfw* my_instance, DbfwSession* my_session,
 
         if (rules_or.size() > 0 && should_match(queue))
         {
-            char *fullquery = modutil_get_SQL(queue);
+            char* fullquery = modutil_get_SQL(queue);
 
             if (fullquery)
             {
@@ -121,8 +123,11 @@ bool User::match_any(Dbfw* my_instance, DbfwSession* my_session,
  *
  * @return True if the query matches all of the rules otherwise false
  */
-bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
-                    GWBUF *queue, match_mode mode, char** rulename)
+bool User::do_match(Dbfw* my_instance,
+                    DbfwSession* my_session,
+                    GWBUF* queue,
+                    match_mode mode,
+                    char** rulename)
 {
     bool rval = false;
     bool have_active_rule = false;
@@ -135,7 +140,7 @@ bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
 
         if (rules.size() > 0 && should_match(queue))
         {
-            char *fullquery = modutil_get_SQL(queue);
+            char* fullquery = modutil_get_SQL(queue);
 
             if (fullquery)
             {
@@ -189,7 +194,7 @@ bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
 
 bool User::match(Dbfw* instance, DbfwSession* session, GWBUF* buffer, char** rulename)
 {
-    return match_any(instance, session, buffer, rulename) ||
-           do_match(instance, session, buffer, User::ALL, rulename) ||
-           do_match(instance, session, buffer, User::STRICT, rulename);
+    return match_any(instance, session, buffer, rulename)
+           || do_match(instance, session, buffer, User::ALL, rulename)
+           || do_match(instance, session, buffer, User::STRICT, rulename);
 }

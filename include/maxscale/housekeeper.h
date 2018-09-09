@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file housekeeper.h A mechanism to have task run periodically
@@ -30,7 +30,7 @@ MXS_BEGIN_DECLS
  * executed again at a later point in time. If the function returns false,
  * the task is removed.
  */
-typedef bool (*TASKFN)(void *data);
+typedef bool (* TASKFN)(void* data);
 
 /**
  * Initialises the housekeeper mechanism.
@@ -70,21 +70,21 @@ void hkfinish();
  * @param data      Data passed to function as the parameter
  * @param frequency Frequency of execution
  */
-void hktask_add(const char *name, TASKFN func, void *data, int frequency);
+void hktask_add(const char* name, TASKFN func, void* data, int frequency);
 
 /**
  * @brief Remove all tasks with this name
  *
  * @param name Task name
  */
-void hktask_remove(const char *name);
+void hktask_remove(const char* name);
 
 /**
  * @brief Show the tasks that are scheduled for the house keeper
  *
  * @param pDcb The DCB to send to output
  */
-void hkshow_tasks(DCB *pdcb);
+void hkshow_tasks(DCB* pdcb);
 
 /**
  * @brief Show tasks as JSON resource

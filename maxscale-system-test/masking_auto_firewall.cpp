@@ -45,10 +45,9 @@ void run(TestConnections& test)
     // This should NOT go through as a function is used with a masked column.
     static const char* zRejected_query = "SELECT LENGTH(a), b FROM masking_auto_firewall";
     test.tprintf("Executing '%s', should NOT succeed.", zRejected_query);
-    rv = execute_query_silent(pMysql , zRejected_query);
+    rv = execute_query_silent(pMysql, zRejected_query);
     test.add_result(rv == 0, "COULD execute query '%s'.", zRejected_query);
 }
-
 }
 
 int main(int argc, char* argv[])

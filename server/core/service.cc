@@ -62,8 +62,8 @@
 #include "internal/maxscale.h"
 
 /** This define is needed in CentOS 6 systems */
-#if !defined(UINT64_MAX)
-#define UINT64_MAX      (18446744073709551615UL)
+#if !defined (UINT64_MAX)
+#define UINT64_MAX (18446744073709551615UL)
 #endif
 
 using std::string;
@@ -74,14 +74,14 @@ using UniqueLock = std::unique_lock<std::mutex>;
 
 static struct
 {
-    std::mutex lock;
+    std::mutex            lock;
     std::vector<Service*> services;
 } this_unit;
 
-static bool service_internal_restart(void *data);
-static void service_calculate_weights(SERVICE *service);
+static bool service_internal_restart(void* data);
+static void service_calculate_weights(SERVICE* service);
 
-Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params)
+Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
     MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
 
@@ -91,7 +91,7 @@ Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETE
         return NULL;
     }
 
-    Service* service = new (std::nothrow) Service(name, router, params);
+    Service* service = new( std::nothrow) Service(name, router, params);
 
     if (service == nullptr)
     {
@@ -156,16 +156,17 @@ static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
     return version_string;
 }
 
-Service::Service(const std::string& service_name, const std::string& router_name,
-                 MXS_CONFIG_PARAMETER* params):
-    m_name(service_name),
-    m_router_name(router_name),
-    m_user(config_get_string(params, CN_USER)),
-    m_password(config_get_string(params, CN_PASSWORD)),
-    m_weightby(config_get_string(params, CN_WEIGHTBY)),
-    m_version_string(get_version_string(params)),
-    m_rate_limits(config_threadcount()),
-    m_wkey(mxs_rworker_create_key())
+Service::Service(const std::string& service_name,
+                 const std::string& router_name,
+                 MXS_CONFIG_PARAMETER* params)
+    : m_name(service_name)
+    , m_router_name(router_name)
+    , m_user(config_get_string(params, CN_USER))
+    , m_password(config_get_string(params, CN_PASSWORD))
+    , m_weightby(config_get_string(params, CN_WEIGHTBY))
+    , m_version_string(get_version_string(params))
+    , m_rate_limits(config_threadcount())
+    , m_wkey(mxs_rworker_create_key())
 {
     const MXS_MODULE* module = get_module(router_name.c_str(), MODULE_ROUTER);
     mxb_assert(module);
@@ -282,13 +283,18 @@ void service_destroy(Service* service)
     atomic_store_int(&service->active, false);
 
     char filename[PATH_MAX + 1];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf",
+             get_config_persistdir(),
              service->name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove persisted service configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
     }
 
     if (atomic_load_int(&service->client_count) == 0)
@@ -304,13 +310,15 @@ void service_destroy(Service* service)
  * @param service       The pointer to check
  * @return 1 if the service is in the list of all services
  */
-bool service_isvalid(Service *service)
+bool service_isvalid(Service* service)
 {
     LockGuard guard(this_unit.lock);
-    return std::find(this_unit.services.begin(), this_unit.services.end(), service) != this_unit.services.end();
+    return std::find(this_unit.services.begin(),
+                     this_unit.services.end(),
+                     service) != this_unit.services.end();
 }
 
-static inline void close_port(SERV_LISTENER *port)
+static inline void close_port(SERV_LISTENER* port)
 {
     if (port->service->state == SERVICE_STATE_ALLOC)
     {
@@ -334,16 +342,15 @@ static inline void close_port(SERV_LISTENER *port)
  * @param port          The port to start
  * @return              The number of listeners started
  */
-static int
-serviceStartPort(Service *service, SERV_LISTENER *port)
+static int serviceStartPort(Service* service, SERV_LISTENER* port)
 {
-    const size_t ANY_IPV4_ADDRESS_LEN = 7; // strlen("0:0:0:0");
+    const size_t ANY_IPV4_ADDRESS_LEN = 7;      // strlen("0:0:0:0");
 
     int listeners = 0;
-    size_t config_bind_len =
-        (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
-    char config_bind[config_bind_len + 1]; // +1 for NULL
-    MXS_PROTOCOL *funcs;
+    size_t config_bind_len
+        = (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
+    char config_bind[config_bind_len + 1];      // +1 for NULL
+    MXS_PROTOCOL* funcs;
 
     if (service == NULL || service->router == NULL || service->router_instance == NULL)
     {
@@ -365,17 +372,18 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
 
     port->listener->service = service;
 
-    if ((funcs = (MXS_PROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+    if ((funcs = (MXS_PROTOCOL*)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
         MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
-                  port->protocol, service->name);
+                  port->protocol,
+                  service->name);
         close_port(port);
         return 0;
     }
 
     memcpy(&(port->listener->func), funcs, sizeof(MXS_PROTOCOL));
 
-    const char *authenticator_name = "NullAuthDeny";
+    const char* authenticator_name = "NullAuthDeny";
 
     if (port->authenticator)
     {
@@ -386,12 +394,13 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
         authenticator_name = port->listener->func.auth_default();
     }
 
-    MXS_AUTHENTICATOR *authfuncs = (MXS_AUTHENTICATOR *)load_module(authenticator_name, MODULE_AUTHENTICATOR);
+    MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator_name, MODULE_AUTHENTICATOR);
 
     if (authfuncs == NULL)
     {
         MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'",
-                  authenticator_name, port->name);
+                  authenticator_name,
+                  port->name);
         close_port(port);
         return 0;
     }
@@ -425,13 +434,17 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
         {
         case MXS_AUTH_LOADUSERS_FATAL:
             MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
-                      "service is not started.", service->name, port->name);
+                      "service is not started.",
+                      service->name,
+                      port->name);
             close_port(port);
             return 0;
 
         case MXS_AUTH_LOADUSERS_ERROR:
             MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                        " might not work.", service->name, port->name);
+                        " might not work.",
+                        service->name,
+                        port->name);
             break;
 
         default:
@@ -473,7 +486,7 @@ serviceStartPort(Service *service, SERV_LISTENER *port)
  */
 int serviceStartAllPorts(Service* service)
 {
-    SERV_LISTENER *port = service->ports;
+    SERV_LISTENER* port = service->ports;
     int listeners = 0;
 
     if (port)
@@ -497,14 +510,18 @@ int serviceStartAllPorts(Service* service)
         {
             /** Service failed to start any ports. Try again later. */
             service->stats.n_failed_starts++;
-            char taskname[strlen(service->name) + strlen("_start_retry_") +
-                                                (int) ceil(log10(INT_MAX)) + 1];
+            char taskname[strlen(service->name) + strlen("_start_retry_")
+                          + (int) ceil(log10(INT_MAX)) + 1];
             int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
-            snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
-                     service->name, service->stats.n_failed_starts);
+            snprintf(taskname,
+                     sizeof(taskname),
+                     "%s_start_retry_%d",
+                     service->name,
+                     service->stats.n_failed_starts);
             hktask_add(taskname, service_internal_restart, service, retry_after);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
-                       service->name, retry_after);
+                       service->name,
+                       retry_after);
 
             /** This will prevent MaxScale from shutting down if service start is retried later */
             listeners = 1;
@@ -513,7 +530,7 @@ int serviceStartAllPorts(Service* service)
     else
     {
         MXS_WARNING("Service '%s' has no listeners defined.", service->name);
-        listeners = 1; /** Set this to one to suppress errors */
+        listeners = 1;      /** Set this to one to suppress errors */
     }
 
     return listeners;
@@ -529,7 +546,7 @@ int serviceStartAllPorts(Service* service)
  *
  * @return Returns the number of listeners created
  */
-int serviceInitialize(Service *service)
+int serviceInitialize(Service* service)
 {
     /** Calculate the server weights */
     service_calculate_weights(service);
@@ -549,7 +566,7 @@ int serviceInitialize(Service *service)
     return listeners;
 }
 
-bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
+bool serviceLaunchListener(Service* service, SERV_LISTENER* port)
 {
     mxb_assert(service->state != SERVICE_STATE_FAILED);
     bool rval = true;
@@ -565,13 +582,13 @@ bool serviceLaunchListener(Service *service, SERV_LISTENER *port)
     return rval;
 }
 
-bool serviceStopListener(SERVICE *svc, const char *name)
+bool serviceStopListener(SERVICE* svc, const char* name)
 {
     Service* service = static_cast<Service*>(svc);
     bool rval = false;
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
@@ -588,19 +605,19 @@ bool serviceStopListener(SERVICE *svc, const char *name)
     return rval;
 }
 
-bool serviceStartListener(SERVICE *svc, const char *name)
+bool serviceStartListener(SERVICE* svc, const char* name)
 {
     Service* service = static_cast<Service*>(svc);
     bool rval = false;
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
         {
-            if (listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED &&
-                poll_add_dcb(listener->listener) == 0)
+            if (listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED
+                && poll_add_dcb(listener->listener) == 0)
             {
                 listener->listener->session->state = SESSION_STATE_LISTENER;
                 rval = true;
@@ -641,7 +658,7 @@ int service_launch_all()
     return error ? -1 : n;
 }
 
-bool serviceStop(SERVICE *service)
+bool serviceStop(SERVICE* service)
 {
     int listeners = 0;
 
@@ -649,11 +666,11 @@ bool serviceStop(SERVICE *service)
     {
         LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
-            if (listener_is_active(listener) &&
-                listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER)
+            if (listener_is_active(listener)
+                && listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER)
             {
                 if (poll_remove_dcb(listener->listener) == 0)
                 {
@@ -677,7 +694,7 @@ bool serviceStop(SERVICE *service)
  * @param service       The Service that should be restarted
  * @return      Returns the number of listeners restarted
  */
-bool serviceStart(SERVICE *service)
+bool serviceStart(SERVICE* service)
 {
     int listeners = 0;
 
@@ -685,11 +702,11 @@ bool serviceStart(SERVICE *service)
     {
         LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
-            if (listener_is_active(listener) &&
-                listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+            if (listener_is_active(listener)
+                && listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
             {
                 if (poll_add_dcb(listener->listener) == 0)
                 {
@@ -724,12 +741,12 @@ static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
     while (!atomic_cas_ptr((void**)&service->ports, (void**)&proto->next, proto));
 }
 
-bool service_remove_listener(Service *service, const char* target)
+bool service_remove_listener(Service* service, const char* target)
 {
     bool rval = false;
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) && strcmp(listener->name, target) == 0)
@@ -760,12 +777,23 @@ bool service_remove_listener(Service *service, const char* target)
  *
  * @return Created listener or NULL on error
  */
-SERV_LISTENER* serviceCreateListener(Service *service, const char *name, const char *protocol,
-                                     const char *address, unsigned short port, const char *authenticator,
-                                     const char *options, SSL_LISTENER *ssl)
+SERV_LISTENER* serviceCreateListener(Service* service,
+                                     const char* name,
+                                     const char* protocol,
+                                     const char* address,
+                                     unsigned short port,
+                                     const char* authenticator,
+                                     const char* options,
+                                     SSL_LISTENER* ssl)
 {
-    SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
-                                          port, authenticator, options, ssl);
+    SERV_LISTENER* proto = listener_alloc(service,
+                                          name,
+                                          protocol,
+                                          address,
+                                          port,
+                                          authenticator,
+                                          options,
+                                          ssl);
 
     if (proto)
     {
@@ -777,20 +805,21 @@ SERV_LISTENER* serviceCreateListener(Service *service, const char *name, const c
 
 SERV_LISTENER* service_find_listener(Service* service,
                                      const char* socket,
-                                     const char* address, unsigned short port)
+                                     const char* address,
+                                     unsigned short port)
 {
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener))
         {
             bool is_same_port = false;
 
-            if (port && (port == listener->port) &&
-                ((address && listener->address && strcmp(listener->address, address) == 0) ||
-                 (address == NULL && listener->address == NULL)))
+            if (port && (port == listener->port)
+                && ((address && listener->address && strcmp(listener->address, address) == 0)
+                    || (address == NULL && listener->address == NULL)))
             {
                 is_same_port = true;
             }
@@ -824,21 +853,24 @@ SERV_LISTENER* service_find_listener(Service* service,
  * @param port          The port to listen on
  * @return      True if the protocol/port is already part of the service
  */
-bool serviceHasListener(Service* service, const char* name, const char* protocol,
-                        const char* address, unsigned short port)
+bool serviceHasListener(Service* service,
+                        const char* name,
+                        const char* protocol,
+                        const char* address,
+                        unsigned short port)
 {
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) &&
-            // Listener with same name exists
-            (strcmp(listener->name, name) == 0 ||
-             // Listener listening on the same interface and port exists
-             ((strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
-               ((address && listener->address && strcmp(listener->address, address) == 0) ||
-                (address == NULL && listener->address == NULL))))))
+        if (listener_is_active(listener)
+            &&  // Listener with same name exists
+            (strcmp(listener->name, name) == 0
+             || // Listener listening on the same interface and port exists
+             ((strcmp(listener->protocol, protocol) == 0 && listener->port == port
+               && ((address && listener->address && strcmp(listener->address, address) == 0)
+                   || (address == NULL && listener->address == NULL))))))
         {
             return true;
         }
@@ -847,11 +879,11 @@ bool serviceHasListener(Service* service, const char* name, const char* protocol
     return false;
 }
 
-bool service_has_named_listener(Service *service, const char *name)
+bool service_has_named_listener(Service* service, const char* name)
 {
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
@@ -863,12 +895,12 @@ bool service_has_named_listener(Service *service, const char *name)
     return false;
 }
 
-bool service_can_be_destroyed(Service *service)
+bool service_can_be_destroyed(Service* service)
 {
     bool rval = true;
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener))
@@ -904,9 +936,9 @@ bool service_can_be_destroyed(Service *service)
  * @param server Server to refer to
  * @return Server reference or NULL on error
  */
-static SERVER_REF* server_ref_create(SERVER *server)
+static SERVER_REF* server_ref_create(SERVER* server)
 {
-    SERVER_REF *sref = (SERVER_REF*)MXS_MALLOC(sizeof(SERVER_REF));
+    SERVER_REF* sref = (SERVER_REF*)MXS_MALLOC(sizeof(SERVER_REF));
 
     if (sref)
     {
@@ -927,14 +959,14 @@ static SERVER_REF* server_ref_create(SERVER *server)
  * @param service       The service to add the server to
  * @param server        The server to add
  */
-bool serviceAddBackend(SERVICE *svc, SERVER *server)
+bool serviceAddBackend(SERVICE* svc, SERVER* server)
 {
     Service* service = static_cast<Service*>(svc);
     bool rval = false;
 
     if (!serviceHasBackend(service, server))
     {
-        SERVER_REF *new_ref = server_ref_create(server);
+        SERVER_REF* new_ref = server_ref_create(server);
 
         if (new_ref)
         {
@@ -945,8 +977,8 @@ bool serviceAddBackend(SERVICE *svc, SERVER *server)
 
             if (service->dbref)
             {
-                SERVER_REF *ref = service->dbref;
-                SERVER_REF *prev = ref;
+                SERVER_REF* ref = service->dbref;
+                SERVER_REF* prev = ref;
 
                 while (ref)
                 {
@@ -990,11 +1022,11 @@ bool serviceAddBackend(SERVICE *svc, SERVER *server)
  * @param service Service to modify
  * @param server  Server to remove
  */
-void serviceRemoveBackend(Service *service, const SERVER *server)
+void serviceRemoveBackend(Service* service, const SERVER* server)
 {
     LockGuard guard(service->lock);
 
-    for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
     {
         if (ref->server == server && ref->active)
         {
@@ -1012,9 +1044,9 @@ void serviceRemoveBackend(Service *service, const SERVER *server)
  * @param server        The server to add
  * @return              Non-zero if the server is already part of the service
  */
-bool serviceHasBackend(Service *service, SERVER *server)
+bool serviceHasBackend(Service* service, SERVER* server)
 {
-    SERVER_REF *ptr;
+    SERVER_REF* ptr;
 
     LockGuard guard(service->lock);
     ptr = service->dbref;
@@ -1038,7 +1070,7 @@ bool serviceHasBackend(Service *service, SERVER *server)
  * @param user          The user name to use for connections
  * @param auth          The authentication data we need, e.g. MySQL SHA1 password
  */
-void serviceGetUser(SERVICE *svc, const char **user, const char **auth)
+void serviceGetUser(SERVICE* svc, const char** user, const char** auth)
 {
     Service* service = static_cast<Service*>(svc);
     *user = service->user;
@@ -1054,7 +1086,7 @@ void serviceGetUser(SERVICE *svc, const char **user, const char **auth)
  * @return              0 on failure
  */
 
-int service_enable_root(Service *svc, int action)
+int service_enable_root(Service* svc, int action)
 {
     Service* service = static_cast<Service*>(svc);
 
@@ -1145,7 +1177,7 @@ const Service::FilterList& Service::get_filters() const
     return *get_local_filters();
 }
 
-Service* service_internal_find(const char *name)
+Service* service_internal_find(const char* name)
 {
     LockGuard guard(this_unit.lock);
 
@@ -1166,7 +1198,7 @@ Service* service_internal_find(const char *name)
  * @param servname      The name of the service to find
  * @return The service or NULL if not found
  */
-SERVICE* service_find(const char *servname)
+SERVICE* service_find(const char* servname)
 {
     return service_internal_find(servname);
 }
@@ -1177,8 +1209,7 @@ SERVICE* service_find(const char *servname)
  * Designed to be called within a CLI command in order
  * to display all active services within the gateway
  */
-void
-dprintAllServices(DCB *dcb)
+void dprintAllServices(DCB* dcb)
 {
     LockGuard guard(this_unit.lock);
 
@@ -1194,10 +1225,10 @@ dprintAllServices(DCB *dcb)
  * @param dcb           DCB to print data to
  * @param service       The service to print
  */
-void dprintService(DCB *dcb, SERVICE *svc)
+void dprintService(DCB* dcb, SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
-    SERVER_REF *server = service->dbref;
+    SERVER_REF* server = service->dbref;
     struct tm result;
     char timebuf[30];
 
@@ -1208,12 +1239,15 @@ void dprintService(DCB *dcb, SERVICE *svc)
     case SERVICE_STATE_STARTED:
         dcb_printf(dcb, "\tState:                               Started\n");
         break;
+
     case SERVICE_STATE_STOPPED:
         dcb_printf(dcb, "\tState:                               Stopped\n");
         break;
+
     case SERVICE_STATE_FAILED:
         dcb_printf(dcb, "\tState:                               Failed\n");
         break;
+
     case SERVICE_STATE_ALLOC:
         dcb_printf(dcb, "\tState:                               Allocated\n");
         break;
@@ -1222,9 +1256,11 @@ void dprintService(DCB *dcb, SERVICE *svc)
     {
         service->router->diagnostics(service->router_instance, dcb);
     }
-    dcb_printf(dcb, "\tStarted:                             %s",
+    dcb_printf(dcb,
+               "\tStarted:                             %s",
                asctime_r(localtime_r(&service->stats.started, &result), timebuf));
-    dcb_printf(dcb, "\tRoot user access:                    %s\n",
+    dcb_printf(dcb,
+               "\tRoot user access:                    %s\n",
                service->enable_root ? "Enabled" : "Disabled");
     auto filters = service->get_filters();
 
@@ -1244,21 +1280,27 @@ void dprintService(DCB *dcb, SERVICE *svc)
     {
         if (SERVER_REF_IS_ACTIVE(server))
         {
-            dcb_printf(dcb, "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
-                       server->server->address, server->server->port,
-                       server->server->protocol, server->server->name);
+            dcb_printf(dcb,
+                       "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
+                       server->server->address,
+                       server->server->port,
+                       server->server->protocol,
+                       server->server->name);
         }
         server = server->next;
     }
     if (*service->weightby)
     {
-        dcb_printf(dcb, "\tRouting weight parameter:            %s\n",
+        dcb_printf(dcb,
+                   "\tRouting weight parameter:            %s\n",
                    service->weightby);
     }
 
-    dcb_printf(dcb, "\tTotal connections:                   %d\n",
+    dcb_printf(dcb,
+               "\tTotal connections:                   %d\n",
                service->stats.n_sessions);
-    dcb_printf(dcb, "\tCurrently connected:                 %d\n",
+    dcb_printf(dcb,
+               "\tCurrently connected:                 %d\n",
                service->stats.n_current);
 }
 
@@ -1267,8 +1309,7 @@ void dprintService(DCB *dcb, SERVICE *svc)
  *
  * @param dcb           DCB to print the service list to.
  */
-void
-dListServices(DCB *dcb)
+void dListServices(DCB* dcb)
 {
     const char HORIZ_SEPARATOR[] = "--------------------------+-------------------"
                                    "+--------+----------------+-------------------\n";
@@ -1278,16 +1319,21 @@ dListServices(DCB *dcb)
     {
         dcb_printf(dcb, "Services.\n");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
-        dcb_printf(dcb, "%-25s | %-17s | #Users | Total Sessions | Backend databases\n",
-                   "Service Name", "Router Module");
+        dcb_printf(dcb,
+                   "%-25s | %-17s | #Users | Total Sessions | Backend databases\n",
+                   "Service Name",
+                   "Router Module");
         dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
 
         for (Service* service : this_unit.services)
         {
             mxb_assert(service->stats.n_current >= 0);
-            dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
-                       service->name, service->routerModule,
-                       service->stats.n_current, service->stats.n_sessions);
+            dcb_printf(dcb,
+                       "%-25s | %-17s | %6d | %14d | ",
+                       service->name,
+                       service->routerModule,
+                       service->stats.n_current,
+                       service->stats.n_sessions);
 
             SERVER_REF* server_ref = service->dbref;
             bool first = true;
@@ -1318,31 +1364,40 @@ dListServices(DCB *dcb)
  *
  * @param dcb           DCB to print the service list to.
  */
-void dListListeners(DCB *dcb)
+void dListListeners(DCB* dcb)
 {
     LockGuard guard(this_unit.lock);
 
     if (!this_unit.services.empty())
     {
         dcb_printf(dcb, "Listeners.\n");
-        dcb_printf(dcb, "---------------------+---------------------+"
+        dcb_printf(dcb,
+                   "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
-        dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | Port  | State\n",
-                   "Name", "Service Name", "Protocol Module", "Address");
-        dcb_printf(dcb, "---------------------+---------------------+"
+        dcb_printf(dcb,
+                   "%-20s | %-19s | %-18s | %-15s | Port  | State\n",
+                   "Name",
+                   "Service Name",
+                   "Protocol Module",
+                   "Address");
+        dcb_printf(dcb,
+                   "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n");
     }
     for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
             if (listener_is_active(listener))
             {
-                dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
-                           listener->name, service->name, listener->protocol,
+                dcb_printf(dcb,
+                           "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
+                           listener->name,
+                           service->name,
+                           listener->protocol,
                            (listener && listener->address) ? listener->address : "*",
                            listener->port,
                            listener_state_to_string(listener));
@@ -1351,7 +1406,8 @@ void dListListeners(DCB *dcb)
     }
     if (!this_unit.services.empty())
     {
-        dcb_printf(dcb, "---------------------+---------------------+"
+        dcb_printf(dcb,
+                   "---------------------+---------------------+"
                    "--------------------+-----------------+-------+--------\n\n");
     }
 }
@@ -1383,7 +1439,8 @@ bool Service::refresh_users()
         {
             MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
                         "load of users' table.",
-                        m_name.c_str(), config->users_refresh_time);
+                        m_name.c_str(),
+                        config->users_refresh_time);
             m_rate_limits[self].warned = true;
         }
     }
@@ -1394,24 +1451,28 @@ bool Service::refresh_users()
 
         LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *listener = listener_iterator_init(this, &iter);
+        for (SERV_LISTENER* listener = listener_iterator_init(this, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
             /** Load the authentication users before before starting the listener */
-            if (listener_is_active(listener) && listener->listener &&
-                listener->listener->authfunc.loadusers)
+            if (listener_is_active(listener) && listener->listener
+                && listener->listener->authfunc.loadusers)
             {
                 switch (listener->listener->authfunc.loadusers(listener))
                 {
                 case MXS_AUTH_LOADUSERS_FATAL:
                     MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                              " authentication will not work.", m_name.c_str(), listener->name);
+                              " authentication will not work.",
+                              m_name.c_str(),
+                              listener->name);
                     ret = false;
                     break;
 
                 case MXS_AUTH_LOADUSERS_ERROR:
                     MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                                " might not work.", m_name.c_str(), listener->name);
+                                " might not work.",
+                                m_name.c_str(),
+                                listener->name);
                     ret = false;
                     break;
 
@@ -1433,31 +1494,31 @@ bool Service::refresh_users()
  * @param service Service to reload
  * @return 0 on success and 1 on error
  */
-int service_refresh_users(SERVICE *svc)
+int service_refresh_users(SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
     mxb_assert(service);
     return service->refresh_users() ? 0 : 1;
 }
 
-void service_add_parameters(Service *service, const MXS_CONFIG_PARAMETER *param)
+void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param)
 {
     while (param)
     {
-        MXS_CONFIG_PARAMETER *new_param = config_clone_param(param);
+        MXS_CONFIG_PARAMETER* new_param = config_clone_param(param);
         new_param->next = service->svc_config_param;
         service->svc_config_param = new_param;
         param = param->next;
     }
 }
 
-void service_add_parameter(Service *service, const char* key, const char* value)
+void service_add_parameter(Service* service, const char* key, const char* value)
 {
-    MXS_CONFIG_PARAMETER p{const_cast<char*>(key), const_cast<char*>(value), nullptr};
+    MXS_CONFIG_PARAMETER p {const_cast<char*>(key), const_cast<char*>(value), nullptr};
     service_add_parameters(service, &p);
 }
 
-void service_remove_parameter(Service *service, const char* key)
+void service_remove_parameter(Service* service, const char* key)
 {
     if (MXS_CONFIG_PARAMETER* params = service->svc_config_param)
     {
@@ -1492,7 +1553,7 @@ void service_remove_parameter(Service *service, const char* key)
     }
 }
 
-void service_replace_parameter(Service *service, const char* key, const char* value)
+void service_replace_parameter(Service* service, const char* key, const char* value)
 {
     for (MXS_CONFIG_PARAMETER* p = service->svc_config_param; p; p = p->next)
     {
@@ -1512,7 +1573,7 @@ void service_replace_parameter(Service *service, const char* key, const char* va
  * by
  * @param service               The Service pointer
  */
-const char* serviceGetWeightingParameter(SERVICE *svc)
+const char* serviceGetWeightingParameter(SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
     return service->weightby;
@@ -1534,8 +1595,7 @@ void service_destroy_instances(void)
  *
  * @return Count of all active sessions
  */
-int
-serviceSessionCountAll()
+int serviceSessionCountAll()
 {
     int rval = 0;
     LockGuard guard(this_unit.lock);
@@ -1555,7 +1615,8 @@ serviceSessionCountAll()
  */
 std::unique_ptr<ResultSet> serviceGetListenerList()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port", "State"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port",
+                                                        "State"});
     LockGuard guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
@@ -1580,7 +1641,8 @@ std::unique_ptr<ResultSet> serviceGetListenerList()
  */
 std::unique_ptr<ResultSet> serviceGetList()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions", "Total Sessions"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions",
+                                                        "Total Sessions"});
     LockGuard guard(this_unit.lock);
 
     for (Service* s : this_unit.services)
@@ -1596,7 +1658,7 @@ std::unique_ptr<ResultSet> serviceGetList()
  * Function called by the housekeeper thread to retry starting of a service
  * @param data Service to restart
  */
-static bool service_internal_restart(void *data)
+static bool service_internal_restart(void* data)
 {
     Service* service = (Service*)data;
     serviceStartAllPorts(service);
@@ -1615,7 +1677,7 @@ bool service_all_services_have_listeners()
     for (Service* service : this_unit.services)
     {
         LISTENER_ITERATOR iter;
-        SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+        SERV_LISTENER* listener = listener_iterator_init(service, &iter);
 
         if (listener == NULL)
         {
@@ -1626,19 +1688,19 @@ bool service_all_services_have_listeners()
 
     return rval;
 }
-static void service_calculate_weights(SERVICE *service)
+static void service_calculate_weights(SERVICE* service)
 {
-    const char *weightby = serviceGetWeightingParameter(service);
+    const char* weightby = serviceGetWeightingParameter(service);
 
     if (*weightby && service->dbref)
     {
-        char buf[50]; // Enough to hold most numbers
+        char buf[50];   // Enough to hold most numbers
         /** Service has a weighting parameter and at least one server */
         double total {0};
         bool weights_are_in_use = false;
 
         /** Calculate total weight */
-        for (SERVER_REF *server = service->dbref; server; server = server->next)
+        for (SERVER_REF* server = service->dbref; server; server = server->next)
         {
             if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
             {
@@ -1651,12 +1713,13 @@ static void service_calculate_weights(SERVICE *service)
         {
             MXS_WARNING("Weighting Parameter for service '%s' will be ignored as "
                         "no servers have values for the parameter '%s'.",
-                        service->name, weightby);
+                        service->name,
+                        weightby);
         }
         else
         {
             /** Calculate the relative weight of the servers */
-            for (SERVER_REF *server = service->dbref; server; server = server->next)
+            for (SERVER_REF* server = service->dbref; server; server = server->next)
             {
                 if (server_get_parameter(server->server, weightby, buf, sizeof(buf)))
                 {
@@ -1697,7 +1760,7 @@ void service_update_weights()
     }
 }
 
-bool service_server_in_use(const SERVER *server)
+bool service_server_in_use(const SERVER* server)
 {
     LockGuard guard(this_unit.lock);
 
@@ -1705,7 +1768,7 @@ bool service_server_in_use(const SERVER *server)
     {
         LockGuard guard(service->lock);
 
-        for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
             if (ref->active && ref->server == server)
             {
@@ -1743,14 +1806,17 @@ bool service_filter_in_use(const SFilterDef& filter)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-bool Service::dump_config(const char *filename) const
+bool Service::dump_config(const char* filename) const
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
-                  filename, m_name.c_str(), errno, mxs_strerror(errno));
+                  filename,
+                  m_name.c_str(),
+                  errno,
+                  mxs_strerror(errno));
         return false;
     }
 
@@ -1763,7 +1829,7 @@ bool Service::dump_config(const char *filename) const
     if (!m_filters.empty())
     {
         dprintf(file, "%s=", CN_FILTERS);
-        const char *sep = "";
+        const char* sep = "";
 
         for (const auto& f : m_filters)
         {
@@ -1777,9 +1843,9 @@ bool Service::dump_config(const char *filename) const
     if (dbref)
     {
         dprintf(file, "%s=", CN_SERVERS);
-        const char *sep = "";
+        const char* sep = "";
 
-        for (SERVER_REF *db = dbref; db; db = db->next)
+        for (SERVER_REF* db = dbref; db; db = db->next)
         {
             if (SERVER_REF_IS_ACTIVE(db))
             {
@@ -1793,32 +1859,40 @@ bool Service::dump_config(const char *filename) const
     const MXS_MODULE* mod = get_module(m_router_name.c_str(), NULL);
     mxb_assert(mod);
 
-    dump_param_list(file, svc_config_param, {CN_TYPE, CN_FILTERS, CN_SERVERS},
-                    config_service_params, mod->parameters);
+    dump_param_list(file,
+                    svc_config_param,
+                    {CN_TYPE, CN_FILTERS, CN_SERVERS},
+                    config_service_params,
+                    mod->parameters);
 
     close(file);
 
     return true;
 }
 
-bool service_serialize(const Service *service)
+bool service_serialize(const Service* service)
 {
     bool rval = false;
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf.tmp",
+             get_config_persistdir(),
              service->name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
     }
     else if (service->dump_config(filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
 
-        char *dot = strrchr(final_filename, '.');
+        char* dot = strrchr(final_filename, '.');
         mxb_assert(dot);
         *dot = '\0';
 
@@ -1829,22 +1903,24 @@ bool service_serialize(const Service *service)
         else
         {
             MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename,
+                      errno,
+                      mxs_strerror(errno));
         }
     }
 
     return rval;
 }
 
-void service_print_users(DCB *dcb, const SERVICE *service)
+void service_print_users(DCB* dcb, const SERVICE* service)
 {
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
-        if (listener_is_active(listener) && listener->listener &&
-            listener->listener->authfunc.diagnostic)
+        if (listener_is_active(listener) && listener->listener
+            && listener->listener->authfunc.diagnostic)
         {
             dcb_printf(dcb, "User names (%s): ", listener->name);
 
@@ -1864,7 +1940,7 @@ bool service_port_is_used(unsigned short port)
     {
         LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+        for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
              listener; listener = listener_iterator_next(&iter))
         {
             if (listener_is_active(listener) && listener->port == port)
@@ -1912,7 +1988,9 @@ json_t* service_parameters_to_json(const SERVICE* service)
     const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
     config_add_module_params_json(service->svc_config_param,
                                   {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
-                                  config_service_params, mod->parameters, rval);
+                                  config_service_params,
+                                  mod->parameters,
+                                  rval);
 
     return rval;
 }
@@ -1935,7 +2013,7 @@ static json_t* service_all_listeners_json_data(const SERVICE* service)
     json_t* arr = json_array();
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener))
@@ -1951,7 +2029,7 @@ static json_t* service_listener_json_data(const SERVICE* service, const char* na
 {
     LISTENER_ITERATOR iter;
 
-    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
@@ -2095,7 +2173,7 @@ json_t* service_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
-json_t* service_relations_to_filter(const SFilterDef&  filter, const char* host)
+json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
 {
     json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
     LockGuard guard(this_unit.lock);
@@ -2124,7 +2202,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     {
         LockGuard guard(service->lock);
 
-        for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
             if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
@@ -2149,7 +2227,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     return rel;
 }
 
-uint64_t service_get_version(const SERVICE *svc, service_version_which_t which)
+uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 {
     const Service* service = static_cast<const Service*>(svc);
     uint64_t version = 0;

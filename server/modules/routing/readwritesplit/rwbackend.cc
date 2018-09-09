@@ -7,14 +7,14 @@
 namespace maxscale
 {
 
-RWBackend::RWBackend(SERVER_REF* ref):
-    mxs::Backend(ref),
-    m_reply_state(REPLY_STATE_DONE),
-    m_modutil_state{0},
-    m_command(0),
-    m_opening_cursor(false),
-    m_expected_rows(0),
-    m_local_infile_requested(false)
+RWBackend::RWBackend(SERVER_REF* ref)
+    : mxs::Backend(ref)
+    , m_reply_state(REPLY_STATE_DONE)
+    , m_modutil_state{0}
+    , m_command(0)
+    , m_opening_cursor(false)
+    , m_expected_rows(0)
+    , m_local_infile_requested(false)
 {
 }
 
@@ -125,7 +125,7 @@ static inline bool have_next_packet(GWBUF* buffer)
  *
  * @return True if the complete response has been received
  */
-bool RWBackend::reply_is_complete(GWBUF *buffer)
+bool RWBackend::reply_is_complete(GWBUF* buffer)
 {
     if (current_command() == MXS_COM_STMT_FETCH)
     {
@@ -144,15 +144,15 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         // COM_STATISTICS returns a single string and thus requires special handling
         set_reply_state(REPLY_STATE_DONE);
     }
-    else if (get_reply_state() == REPLY_STATE_START &&
-             (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
+    else if (get_reply_state() == REPLY_STATE_START
+             && (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
         m_local_infile_requested = false;
 
-        if (GWBUF_IS_COLLECTED_RESULT(buffer) ||
-            current_command() == MXS_COM_STMT_PREPARE ||
-            !mxs_mysql_is_ok_packet(buffer) ||
-            !mxs_mysql_more_results_after_ok(buffer))
+        if (GWBUF_IS_COLLECTED_RESULT(buffer)
+            || current_command() == MXS_COM_STMT_PREPARE
+            || !mxs_mysql_is_ok_packet(buffer)
+            || !mxs_mysql_more_results_after_ok(buffer))
         {
             /** Not a result set, we have the complete response */
             set_reply_state(REPLY_STATE_DONE);
@@ -165,8 +165,8 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
         else
         {
             // This is an OK packet and more results will follow
-            mxb_assert(mxs_mysql_is_ok_packet(buffer) &&
-                       mxs_mysql_more_results_after_ok(buffer));
+            mxb_assert(mxs_mysql_is_ok_packet(buffer)
+                       && mxs_mysql_more_results_after_ok(buffer));
 
             if (have_next_packet(buffer))
             {
@@ -230,7 +230,7 @@ bool RWBackend::reply_is_complete(GWBUF *buffer)
     return get_reply_state() == REPLY_STATE_DONE;
 }
 
-ResponseStat &RWBackend::response_stat()
+ResponseStat& RWBackend::response_stat()
 {
     return m_response_stat;
 }
@@ -239,7 +239,7 @@ SRWBackendList RWBackend::from_servers(SERVER_REF* servers)
 {
     SRWBackendList backends;
 
-    for (SERVER_REF *ref = servers; ref; ref = ref->next)
+    for (SERVER_REF* ref = servers; ref; ref = ref->next)
     {
         if (ref->active)
         {
@@ -249,5 +249,4 @@ SRWBackendList RWBackend::from_servers(SERVER_REF* servers)
 
     return backends;
 }
-
 }

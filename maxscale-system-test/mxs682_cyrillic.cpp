@@ -19,18 +19,18 @@ void check_val(MYSQL* conn, TestConnections* Test)
 
     Test->tprintf("result: %s\n", val);
 
-    if (strcmp("Кот", val) != 0 )
+    if (strcmp("Кот", val) != 0)
     {
         Test->add_result(1, "Wrong SELECT result: %s\n", val);
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Mariadb_nodes * nodes;
+    Mariadb_nodes* nodes;
     if (strstr(Test->test_name, "galera") != NULL)
     {
         nodes = Test->galera;
@@ -46,10 +46,10 @@ int main(int argc, char *argv[])
     nodes->connect();
 
     Test->set_timeout(30);
-    MYSQL * conn = Test->maxscales->conn_rwsplit[0];
+    MYSQL* conn = Test->maxscales->conn_rwsplit[0];
 
-    execute_query_silent(conn, (char *) "DROP TABLE t2;");
-    Test->try_query(conn, (char *) "CREATE TABLE t2 (x varchar(10));");
+    execute_query_silent(conn, (char*) "DROP TABLE t2;");
+    Test->try_query(conn, (char*) "CREATE TABLE t2 (x varchar(10));");
     char sql[256];
     sprintf(sql, "INSERT INTO t2 VALUES (\"Кот\");");
     Test->try_query(conn, "%s", sql);
@@ -73,5 +73,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-
-

@@ -56,7 +56,6 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 
     return rv;
 }
-
 }
 
 //
@@ -67,12 +66,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t reload_argv[] =
     {
-        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name" }
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "reload",
-                               MODULECMD_TYPE_ACTIVE, masking_command_reload,
-                               MXS_ARRAY_NELEMS(reload_argv), reload_argv,
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "reload",
+                               MODULECMD_TYPE_ACTIVE,
+                               masking_command_reload,
+                               MXS_ARRAY_NELEMS(reload_argv),
+                               reload_argv,
                                "Reload masking filter rules");
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
@@ -88,28 +90,38 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
         &MaskingFilter::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,                                                                               /* Process init.
+                                                                                             * */
+        NULL,                                                                               /* Process finish.
+                                                                                             * */
+        NULL,                                                                               /* Thread init. */
+        NULL,                                                                               /* Thread finish.
+                                                                                             * */
         {
-            { Config::rules_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
+            {Config::rules_name,
+             MXS_MODULE_PARAM_STRING,
+             NULL,                 MXS_MODULE_OPT_REQUIRED},
             {
                 Config::warn_type_mismatch_name,
-                MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
-                MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values
+                MXS_MODULE_PARAM_ENUM,
+                Config::warn_type_mismatch_default,
+                MXS_MODULE_OPT_NONE,
+                Config::warn_type_mismatch_values
             },
             {
                 Config::large_payload_name,
-                MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
-                MXS_MODULE_OPT_NONE, Config::large_payload_values
+                MXS_MODULE_PARAM_ENUM,
+                Config::large_payload_default,
+                MXS_MODULE_OPT_NONE,
+                Config::large_payload_values
             },
             {
                 Config::prevent_function_usage_name,
-                MXS_MODULE_PARAM_BOOL, Config::prevent_function_usage_default,
+                MXS_MODULE_PARAM_BOOL,
+                Config::prevent_function_usage_default,
                 MXS_MODULE_OPT_NONE,
             },
-            { MXS_END_MODULE_PARAMS }
+            {MXS_END_MODULE_PARAMS}
         }
     };
 
@@ -184,7 +196,8 @@ bool MaskingFilter::reload()
     if (sRules.get())
     {
         MXS_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
-                   m_config.name().c_str(), m_config.rules().c_str());
+                   m_config.name().c_str(),
+                   m_config.rules().c_str());
 
         m_sRules.reset(sRules.release());
         rval = true;
@@ -192,7 +205,8 @@ bool MaskingFilter::reload()
     else
     {
         MXS_ERROR("Rules for masking filter '%s' could not be reloaded from '%s'.",
-                  m_config.name().c_str(), m_config.rules().c_str());
+                  m_config.name().c_str(),
+                  m_config.rules().c_str());
     }
 
     return rval;

@@ -26,8 +26,12 @@ int main(int argc, char** argv)
     {
         test.set_timeout(30);
         test.add_result(mysql_stmt_prepare(stmt, query.c_str(), query.length()),
-                        "Failed at %d: %s\n", i, mysql_error(test.maxscales->conn_rwsplit[0]));
-        test.add_result(mysql_stmt_reset(stmt), "Failed at %d: %s\n", i,
+                        "Failed at %d: %s\n",
+                        i,
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        test.add_result(mysql_stmt_reset(stmt),
+                        "Failed at %d: %s\n",
+                        i,
                         mysql_error(test.maxscales->conn_rwsplit[0]));
 
         query += ",1";

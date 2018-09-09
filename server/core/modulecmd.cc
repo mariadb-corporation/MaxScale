@@ -28,7 +28,7 @@
 #define MODULECMD_ERRBUF_SIZE 512
 
 /** Thread local error buffer */
-thread_local char *errbuf = NULL;
+thread_local char* errbuf = NULL;
 
 /** Parameter passed to functions that do not always expect arguments */
 static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
@@ -38,9 +38,9 @@ static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
  */
 typedef struct modulecmd_domain
 {
-    char                    *domain; /**< The domain */
-    MODULECMD               *commands; /**< List of registered commands */
-    struct modulecmd_domain *next; /**< Next domain */
+    char*                    domain;    /**< The domain */
+    MODULECMD*               commands;  /**< List of registered commands */
+    struct modulecmd_domain* next;      /**< Next domain */
 } MODULECMD_DOMAIN;
 
 /**
@@ -48,7 +48,7 @@ typedef struct modulecmd_domain
  */
 
 /** The global list of registered domains */
-static MODULECMD_DOMAIN *modulecmd_domains = NULL;
+static MODULECMD_DOMAIN* modulecmd_domains = NULL;
 static SPINLOCK modulecmd_lock = SPINLOCK_INIT;
 
 static inline void prepare_error()
@@ -73,7 +73,7 @@ static void reset_error()
     errbuf[0] = '\0';
 }
 
-static void report_argc_mismatch(const MODULECMD *cmd, int argc)
+static void report_argc_mismatch(const MODULECMD* cmd, int argc)
 {
     if (cmd->arg_count_min == cmd->arg_count_max)
     {
@@ -81,15 +81,17 @@ static void report_argc_mismatch(const MODULECMD *cmd, int argc)
     }
     else
     {
-        modulecmd_set_error("Expected between %d and %d arguments, got %d.", cmd->arg_count_min, cmd->arg_count_max,
+        modulecmd_set_error("Expected between %d and %d arguments, got %d.",
+                            cmd->arg_count_min,
+                            cmd->arg_count_max,
                             argc);
     }
 }
 
-static MODULECMD_DOMAIN* domain_create(const char *domain)
+static MODULECMD_DOMAIN* domain_create(const char* domain)
 {
-    MODULECMD_DOMAIN *rval = (MODULECMD_DOMAIN*)MXS_MALLOC(sizeof(*rval));
-    char *dm = MXS_STRDUP(domain);
+    MODULECMD_DOMAIN* rval = (MODULECMD_DOMAIN*)MXS_MALLOC(sizeof(*rval));
+    char* dm = MXS_STRDUP(domain);
 
     if (rval && dm)
     {
@@ -107,7 +109,7 @@ static MODULECMD_DOMAIN* domain_create(const char *domain)
     return rval;
 }
 
-static void domain_free(MODULECMD_DOMAIN *dm)
+static void domain_free(MODULECMD_DOMAIN* dm)
 {
     if (dm)
     {
@@ -116,10 +118,10 @@ static void domain_free(MODULECMD_DOMAIN *dm)
     }
 }
 
-static MODULECMD_DOMAIN* get_or_create_domain(const char *domain)
+static MODULECMD_DOMAIN* get_or_create_domain(const char* domain)
 {
 
-    MODULECMD_DOMAIN *dm;
+    MODULECMD_DOMAIN* dm;
 
     for (dm = modulecmd_domains; dm; dm = dm->next)
     {
@@ -138,20 +140,23 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char *domain)
     return dm;
 }
 
-static MODULECMD* command_create(const char *identifier, const char *domain,
-                                 enum modulecmd_type type, MODULECMDFN entry_point,
-                                 int argc, modulecmd_arg_type_t* argv,
-                                 const char *description)
+static MODULECMD* command_create(const char* identifier,
+                                 const char* domain,
+                                 enum modulecmd_type type,
+                                 MODULECMDFN entry_point,
+                                 int argc,
+                                 modulecmd_arg_type_t* argv,
+                                 const char* description)
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
     mxb_assert(description);
-    MODULECMD *rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
-    char *id = MXS_STRDUP(identifier);
-    char *dm = MXS_STRDUP(domain);
-    char *desc = MXS_STRDUP(description);
-    modulecmd_arg_type_t *types = (modulecmd_arg_type_t*)MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
+    MODULECMD* rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
+    char* id = MXS_STRDUP(identifier);
+    char* dm = MXS_STRDUP(domain);
+    char* desc = MXS_STRDUP(description);
+    modulecmd_arg_type_t* types = (modulecmd_arg_type_t*)MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
-    if (rval && id  && dm && types && desc)
+    if (rval && id && dm && types && desc)
     {
         int argc_min = 0;
 
@@ -194,7 +199,7 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
     return rval;
 }
 
-static void command_free(MODULECMD *cmd)
+static void command_free(MODULECMD* cmd)
 {
     if (cmd)
     {
@@ -205,9 +210,9 @@ static void command_free(MODULECMD *cmd)
     }
 }
 
-static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
+static bool domain_has_command(MODULECMD_DOMAIN* dm, const char* id)
 {
-    for (MODULECMD *cmd = dm->commands; cmd; cmd = cmd->next)
+    for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
     {
         if (strcasecmp(cmd->identifier, id) == 0)
         {
@@ -217,8 +222,11 @@ static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
     return false;
 }
 
-static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, const void* value,
-                             struct arg_node *arg, const char **err)
+static bool process_argument(const MODULECMD* cmd,
+                             modulecmd_arg_type_t* type,
+                             const void* value,
+                             struct arg_node* arg,
+                             const char** err)
 {
     bool rval = false;
 
@@ -267,8 +275,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
         case MODULECMD_ARG_SERVICE:
             if ((arg->value.service = service_find((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                    strcmp(cmd->domain, arg->value.service->routerModule) == 0)
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type)
+                    || strcmp(cmd->domain, arg->value.service->routerModule) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVICE;
                     rval = true;
@@ -287,8 +295,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
         case MODULECMD_ARG_SERVER:
             if ((arg->value.server = server_find_by_unique_name((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                    strcmp(cmd->domain, arg->value.server->protocol) == 0)
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type)
+                    || strcmp(cmd->domain, arg->value.server->protocol) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVER;
                     rval = true;
@@ -378,7 +386,7 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
 static MODULECMD_ARG* modulecmd_arg_create(int argc)
 {
     MODULECMD_ARG* arg = (MODULECMD_ARG*)MXS_MALLOC(sizeof(*arg));
-    struct arg_node *argv = (struct arg_node*)MXS_CALLOC(argc, sizeof(*argv));
+    struct arg_node* argv = (struct arg_node*)MXS_CALLOC(argc, sizeof(*argv));
 
     if (arg && argv)
     {
@@ -395,7 +403,7 @@ static MODULECMD_ARG* modulecmd_arg_create(int argc)
     return arg;
 }
 
-static void free_argument(struct arg_node *arg)
+static void free_argument(struct arg_node* arg)
 {
     switch (arg->type.type)
     {
@@ -416,16 +424,19 @@ static void free_argument(struct arg_node *arg)
  * Public functions declared in modulecmd.h
  */
 
-bool modulecmd_register_command(const char *domain, const char *identifier,
-                                enum modulecmd_type type, MODULECMDFN entry_point,
-                                int argc, modulecmd_arg_type_t *argv,
-                                const char *description)
+bool modulecmd_register_command(const char* domain,
+                                const char* identifier,
+                                enum modulecmd_type type,
+                                MODULECMDFN entry_point,
+                                int argc,
+                                modulecmd_arg_type_t* argv,
+                                const char* description)
 {
     reset_error();
     bool rval = false;
     spinlock_acquire(&modulecmd_lock);
 
-    MODULECMD_DOMAIN *dm = get_or_create_domain(domain);
+    MODULECMD_DOMAIN* dm = get_or_create_domain(domain);
 
     if (dm)
     {
@@ -436,8 +447,13 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
         }
         else
         {
-            MODULECMD *cmd = command_create(identifier, domain, type, entry_point,
-                                            argc, argv, description);
+            MODULECMD* cmd = command_create(identifier,
+                                            domain,
+                                            type,
+                                            entry_point,
+                                            argc,
+                                            argv,
+                                            description);
 
             if (cmd)
             {
@@ -453,20 +469,20 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
     return rval;
 }
 
-const MODULECMD* modulecmd_find_command(const char *domain, const char *identifier)
+const MODULECMD* modulecmd_find_command(const char* domain, const char* identifier)
 {
     reset_error();
 
     const char* effective_domain = mxs_module_get_effective_name(domain);
 
-    MODULECMD *rval = NULL;
+    MODULECMD* rval = NULL;
     spinlock_acquire(&modulecmd_lock);
 
-    for (MODULECMD_DOMAIN *dm = modulecmd_domains; dm; dm = dm->next)
+    for (MODULECMD_DOMAIN* dm = modulecmd_domains; dm; dm = dm->next)
     {
         if (strcasecmp(effective_domain, dm->domain) == 0)
         {
-            for (MODULECMD *cmd = dm->commands; cmd; cmd = cmd->next)
+            for (MODULECMD* cmd = dm->commands; cmd; cmd = cmd->next)
             {
                 if (strcasecmp(cmd->identifier, identifier) == 0)
                 {
@@ -488,7 +504,7 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
     return rval;
 }
 
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **argv)
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** argv)
 {
     reset_error();
 
@@ -503,12 +519,15 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
         {
             for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
             {
-                const char *err = "";
+                const char* err = "";
 
                 if (!process_argument(cmd, &cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
-                    modulecmd_set_error("Argument %d, %s: %s", i + 1, err, argv[i] ? (char*)argv[i] : "No argument given");
+                    modulecmd_set_error("Argument %d, %s: %s",
+                                        i + 1,
+                                        err,
+                                        argv[i] ? (char*)argv[i] : "No argument given");
                     break;
                 }
             }
@@ -552,7 +571,7 @@ static void modulecmd_clear_error()
     errbuf[0] = '\0';
 }
 
-bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output)
+bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, json_t** output)
 {
     bool rval = false;
     reset_error();
@@ -578,7 +597,7 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, jso
     return rval;
 }
 
-void modulecmd_set_error(const char *format, ...)
+void modulecmd_set_error(const char* format, ...)
 {
     prepare_error();
 
@@ -615,27 +634,29 @@ json_t* modulecmd_get_json_error()
     return obj;
 }
 
-bool modulecmd_foreach(const char *domain_re, const char *ident_re,
-                       bool(*fn)(const MODULECMD *cmd, void *data), void *data)
+bool modulecmd_foreach(const char* domain_re,
+                       const char* ident_re,
+                       bool (* fn)(const MODULECMD* cmd, void* data),
+                       void* data)
 {
     bool rval = true;
     bool stop = false;
     spinlock_acquire(&modulecmd_lock);
 
-    for (MODULECMD_DOMAIN *domain = modulecmd_domains; domain && rval && !stop; domain = domain->next)
+    for (MODULECMD_DOMAIN* domain = modulecmd_domains; domain && rval && !stop; domain = domain->next)
     {
         int err;
-        mxs_pcre2_result_t d_res = domain_re ?
-                                   mxs_pcre2_simple_match(domain_re, domain->domain, PCRE2_CASELESS, &err) :
-                                   MXS_PCRE2_MATCH;
+        mxs_pcre2_result_t d_res = domain_re
+            ? mxs_pcre2_simple_match(domain_re, domain->domain, PCRE2_CASELESS, &err)
+            : MXS_PCRE2_MATCH;
 
         if (d_res == MXS_PCRE2_MATCH)
         {
-            for (MODULECMD *cmd = domain->commands; cmd && rval; cmd = cmd->next)
+            for (MODULECMD* cmd = domain->commands; cmd && rval; cmd = cmd->next)
             {
-                mxs_pcre2_result_t i_res = ident_re ?
-                                           mxs_pcre2_simple_match(ident_re, cmd->identifier, PCRE2_CASELESS, &err) :
-                                           MXS_PCRE2_MATCH;
+                mxs_pcre2_result_t i_res = ident_re
+                    ? mxs_pcre2_simple_match(ident_re, cmd->identifier, PCRE2_CASELESS, &err)
+                    : MXS_PCRE2_MATCH;
 
                 if (i_res == MXS_PCRE2_MATCH)
                 {
@@ -653,7 +674,6 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
                     modulecmd_set_error("Failed to match command identifier with '%s': %s", ident_re, errbuf);
                     rval = false;
                 }
-
             }
         }
         else if (d_res == MXS_PCRE2_ERROR)
@@ -672,7 +692,7 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
 
 #define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
 
-const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
+const char* modulecmd_argtype_to_str(modulecmd_arg_type_t* type)
 {
     const char* rval = "UNKNOWN";
 
@@ -723,8 +743,8 @@ const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
     return rval;
 }
 
-bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx)
+bool modulecmd_arg_is_present(const MODULECMD_ARG* arg, int idx)
 {
-    return arg->argc > idx &&
-           MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
+    return arg->argc > idx
+           && MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
 }

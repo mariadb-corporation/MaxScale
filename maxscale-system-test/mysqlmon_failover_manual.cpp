@@ -17,7 +17,7 @@
 int main(int argc, char** argv)
 {
     const char FAILOVER_CMD[] = "maxadmin call command mysqlmon failover MySQL-Monitor";
-    //interactive = strcmp(argv[argc - 1], "interactive") == 0;
+    // interactive = strcmp(argv[argc - 1], "interactive") == 0;
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
     test.repl->connect();
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     // Part 1
     node0_id = prepare_test_1(test);
 
-    test.maxscales->ssh_node_output(0, FAILOVER_CMD , true, &ec);
+    test.maxscales->ssh_node_output(0, FAILOVER_CMD, true, &ec);
     test.maxscales->wait_for_monitor();
 
     check_test_1(test, node0_id);
@@ -62,4 +62,3 @@ int main(int argc, char** argv)
     check_test_3(test);
     return test.global_result;
 }
-

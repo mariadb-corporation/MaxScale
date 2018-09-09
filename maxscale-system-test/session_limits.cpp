@@ -2,9 +2,9 @@
  * @file session_limits.cpp - test for 'max_sescmd_history' and 'connection_timeout' parameters
  * - add follwoling to router configuration
  * @verbatim
-connection_timeout=30
-router_options=max_sescmd_history=10
-@endverbatim
+ *  connection_timeout=30
+ *  router_options=max_sescmd_history=10
+ *  @endverbatim
  * - open session
  * - wait 20 seconds, check if session is alive, expect ok
  * - wait 20 seconds more, check if session is alive, expect failure
@@ -16,7 +16,7 @@ router_options=max_sescmd_history=10
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     int first_sleep = 5;
@@ -40,7 +40,9 @@ int main(int argc, char *argv[])
     test.maxscales->connect_maxscale(0);
     for (int i = 0; i < 10; i++)
     {
-        test.try_query(test.maxscales->conn_rwsplit[0], "%s", std::string("set @test=" + std::to_string(i)).c_str());
+        test.try_query(test.maxscales->conn_rwsplit[0],
+                       "%s",
+                       std::string("set @test=" + std::to_string(i)).c_str());
     }
 
     test.tprintf("Execute one more session command and expect message in error log");

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -145,7 +145,7 @@ public:
 
     private:
         Rule(const Rule&);
-        Rule& operator = (const Rule&);
+        Rule& operator=(const Rule&);
 
         bool matches_account(const char* zUser,
                              const char* zHost) const;
@@ -211,11 +211,11 @@ public:
         void rewrite(LEncString& s) const;
 
     private:
-        std::string           m_value;
-        std::string           m_fill;
+        std::string m_value;
+        std::string m_fill;
     private:
         ReplaceRule(const ReplaceRule&);
-        ReplaceRule& operator = (const ReplaceRule&);
+        ReplaceRule& operator=(const ReplaceRule&);
     };
 
     class ObfuscateRule : public Rule
@@ -259,7 +259,7 @@ public:
 
     private:
         ObfuscateRule(const ObfuscateRule&);
-        ObfuscateRule& operator = (const ObfuscateRule&);
+        ObfuscateRule& operator=(const ObfuscateRule&);
     };
 
     class MatchRule : public Rule
@@ -321,13 +321,13 @@ public:
         void rewrite(LEncString& s) const;
 
     private:
-        pcre2_code*           m_regexp;
-        std::string           m_value;
-        std::string           m_fill;
+        pcre2_code* m_regexp;
+        std::string m_value;
+        std::string m_fill;
 
     private:
         MatchRule(const MatchRule&);
-        MatchRule& operator = (const MatchRule&);
+        MatchRule& operator=(const MatchRule&);
     };
 
     ~MaskingRules();
@@ -401,7 +401,7 @@ private:
 
 private:
     MaskingRules(const MaskingRules&);
-    MaskingRules& operator = (const MaskingRules&);
+    MaskingRules& operator=(const MaskingRules&);
 
 private:
     json_t*            m_pRoot;

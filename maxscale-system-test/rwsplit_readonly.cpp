@@ -13,7 +13,7 @@
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 
-void test_all_ok(TestConnections *Test)
+void test_all_ok(TestConnections* Test)
 {
     /** Insert should work */
     Test->set_timeout(30);
@@ -43,7 +43,7 @@ void test_all_ok(TestConnections *Test)
                      "Query to service with 'error_on_write' should succeed\n");
 }
 
-void test_basic(TestConnections *Test)
+void test_basic(TestConnections* Test)
 {
     /** Check that everything is OK before blocking the master */
     Test->maxscales->connect_maxscale(0);
@@ -131,7 +131,7 @@ void test_basic(TestConnections *Test)
     Test->maxscales->close_maxscale_connections(0);
 }
 
-void test_complex(TestConnections *Test)
+void test_complex(TestConnections* Test)
 {
     /** Check that everything works before test */
     Test->maxscales->connect_maxscale(0);
@@ -251,10 +251,10 @@ void test_complex(TestConnections *Test)
     Test->maxscales->close_maxscale_connections(0);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections *Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     /** Prepare for tests */
     Test->stop_timeout();

@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         test.assert(row == original_row, "Value of @@server_id should not change: %s", row.at(0).c_str());
     }
 
-    for (auto& a: connections)
+    for (auto& a : connections)
     {
         a.join();
         Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id");

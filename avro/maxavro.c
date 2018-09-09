@@ -24,7 +24,7 @@
 
 #define avro_decode(n) ((n >> 1) ^ -(n & 1))
 #define encode_long(n) ((n << 1) ^ (n >> 63))
-#define more_bytes(b) (b & 0x80)
+#define more_bytes(b)  (b & 0x80)
 
 /**
  * @brief Read an Avro integer
@@ -37,7 +37,7 @@
  * @param dest Destination where the read value is written
  * @return True if value was read successfully
  */
-bool maxavro_read_integer(MAXAVRO_FILE* file, uint64_t *dest)
+bool maxavro_read_integer(MAXAVRO_FILE* file, uint64_t* dest)
 {
     uint64_t rval = 0;
     uint8_t nread = 0;
@@ -70,7 +70,7 @@ bool maxavro_read_integer(MAXAVRO_FILE* file, uint64_t *dest)
     return true;
 }
 
-bool maxavro_read_integer_from_file(MAXAVRO_FILE* file, uint64_t *dest)
+bool maxavro_read_integer_from_file(MAXAVRO_FILE* file, uint64_t* dest)
 {
     uint64_t rval = 0;
     uint8_t nread = 0;
@@ -139,7 +139,7 @@ uint64_t avro_length_integer(uint64_t val)
  */
 char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 {
-    char *key = NULL;
+    char* key = NULL;
     uint64_t len;
 
     if (maxavro_read_integer(file, &len))
@@ -173,7 +173,7 @@ char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
  */
 char* maxavro_read_string_from_file(MAXAVRO_FILE* file, size_t* size)
 {
-    char *key = NULL;
+    char* key = NULL;
     uint64_t len;
 
     if (maxavro_read_integer_from_file(file, &len))
@@ -243,7 +243,7 @@ uint64_t avro_length_string(const char* str)
  *
  * @see maxavro_get_error
  */
-bool maxavro_read_float(MAXAVRO_FILE* file, float *dest)
+bool maxavro_read_float(MAXAVRO_FILE* file, float* dest)
 {
     bool rval = false;
 
@@ -282,7 +282,7 @@ uint64_t avro_length_float(float val)
  *
  * @see maxavro_get_error
  */
-bool maxavro_read_double(MAXAVRO_FILE* file, double *dest)
+bool maxavro_read_double(MAXAVRO_FILE* file, double* dest)
 {
     bool rval = false;
 
@@ -321,7 +321,7 @@ uint64_t avro_length_double(double val)
  * @return A read map or NULL if an error occurred. The return value needs to be
  * freed with maxavro_map_free().
  */
-MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
+MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE* file)
 {
     MAXAVRO_MAP* rval = NULL;
     uint64_t blocks;
@@ -337,7 +337,11 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
         {
             size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
-            if (val && (val->key = maxavro_read_string_from_file(file, &size)) && (val->value = maxavro_read_string_from_file(file, &size)))
+            if (val
+                && (val->key
+                        = maxavro_read_string_from_file(file,
+                                                        &size))
+                && (val->value = maxavro_read_string_from_file(file, &size)))
             {
                 val->next = rval;
                 rval = val;
@@ -364,7 +368,7 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
  *
  * @param value Map to free
  */
-void maxavro_map_free(MAXAVRO_MAP *value)
+void maxavro_map_free(MAXAVRO_MAP* value)
 {
     while (value)
     {

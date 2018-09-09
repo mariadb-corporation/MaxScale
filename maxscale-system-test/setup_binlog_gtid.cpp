@@ -1,6 +1,6 @@
 /**
  * @file setup_binlog_gtid.cpp test of simple binlog router setup
-
+ *
  */
 
 
@@ -12,14 +12,14 @@
 #include "test_binlog_fnc.h"
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(3000);
 
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
+    execute_query(Test->repl->nodes[0], (char*) "DROP TABLE IF EXISTS t1;");
     Test->repl->close_connections();
     sleep(5);
 

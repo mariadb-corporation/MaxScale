@@ -53,8 +53,8 @@
 #include <maxscale/secrets.h>
 #include <maxscale/session.h>
 
-#if !defined(PATH_MAX)
-# if defined(__USE_POSIX)
+#if !defined (PATH_MAX)
+# if defined (__USE_POSIX)
 #   define PATH_MAX _POSIX_PATH_MAX
 # else
 #   define PATH_MAX 256
@@ -64,10 +64,11 @@
 #define MAX_ERROR_MSG PATH_MAX
 
 /* used in the hex2bin function */
-#define char_val(X) (X >= '0' && X <= '9' ? X-'0' :     \
-                     X >= 'A' && X <= 'Z' ? X-'A'+10 :  \
-                     X >= 'a' && X <= 'z' ? X-'a'+10 :  \
-                     '\177')
+#define char_val(X) \
+    (X >= '0' && X <= '9' ? X - '0'       \
+                          : X >= 'A' && X <= 'Z' ? X - 'A' + 10    \
+                                                 : X >= 'a' && X <= 'z' ? X - 'a' + 10    \
+                                                                        : '\177')
 
 /* used in the bin2hex function */
 char hex_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -97,8 +98,8 @@ bool is_valid_posix_path(char* path)
 }
 
 /*****************************************
- * backend read event triggered by EPOLLIN
- *****************************************/
+* backend read event triggered by EPOLLIN
+*****************************************/
 
 int setnonblocking(int fd)
 {
@@ -148,32 +149,31 @@ int setblocking(int fd)
     return 0;
 }
 
-char *gw_strend(register const char *s)
+char* gw_strend(register const char* s)
 {
     while (*s++)
     {
-        ;
     }
     return (char*) (s - 1);
 }
 
 /*****************************************
- * generate a random char
- *****************************************/
+* generate a random char
+*****************************************/
 static char gw_randomchar()
 {
     return (char)((mxs_random() % 78) + 30);
 }
 
 /*****************************************
- * generate a random string
- * output must be pre allocated
- *****************************************/
-int gw_generate_random_str(char *output, int len)
+* generate a random string
+* output must be pre allocated
+*****************************************/
+int gw_generate_random_str(char* output, int len)
 {
     int i;
 
-    for (i = 0; i < len; ++i )
+    for (i = 0; i < len; ++i)
     {
         output[i] = gw_randomchar();
     }
@@ -184,12 +184,12 @@ int gw_generate_random_str(char *output, int len)
 }
 
 /*****************************************
- * hex string to binary data
- * output must be pre allocated
- *****************************************/
-int gw_hex2bin(uint8_t *out, const char *in, unsigned int len)
+* hex string to binary data
+* output must be pre allocated
+*****************************************/
+int gw_hex2bin(uint8_t* out, const char* in, unsigned int len)
 {
-    const char *in_end = in + len;
+    const char* in_end = in + len;
 
     if (len == 0 || in == NULL)
     {
@@ -201,7 +201,7 @@ int gw_hex2bin(uint8_t *out, const char *in, unsigned int len)
         register unsigned char b1 = char_val(*in);
         uint8_t b2 = 0;
         in++;
-        b2 =  (b1 << 4) | char_val(*in);
+        b2 = (b1 << 4) | char_val(*in);
         *out++ = b2;
 
         in++;
@@ -211,12 +211,12 @@ int gw_hex2bin(uint8_t *out, const char *in, unsigned int len)
 }
 
 /*****************************************
- * binary data to hex string
- * output must be pre allocated
- *****************************************/
-char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len)
+* binary data to hex string
+* output must be pre allocated
+*****************************************/
+char* gw_bin2hex(char* out, const uint8_t* in, unsigned int len)
 {
-    const uint8_t *in_end = in + len;
+    const uint8_t* in_end = in + len;
     if (len == 0 || in == NULL)
     {
         return NULL;
@@ -238,9 +238,9 @@ char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len)
  * note that XOR(str1, XOR(str1 CONCAT str2)) == str2
  * and that  XOR(str1, str2) == XOR(str2, str1)
  *****************************************************/
-void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len)
+void gw_str_xor(uint8_t* output, const uint8_t* input1, const uint8_t* input2, unsigned int len)
 {
-    const uint8_t *input1_end = NULL;
+    const uint8_t* input1_end = NULL;
     input1_end = input1 + len;
 
     while (input1 < input1_end)
@@ -250,10 +250,10 @@ void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, u
 }
 
 /**********************************************************
- * fill a 20 bytes preallocated with SHA1 digest (160 bits)
- * for one input on in_len bytes
- **********************************************************/
-void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out)
+* fill a 20 bytes preallocated with SHA1 digest (160 bits)
+* for one input on in_len bytes
+**********************************************************/
+void gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out)
 {
     unsigned char hash[SHA_DIGEST_LENGTH];
 
@@ -262,10 +262,10 @@ void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out)
 }
 
 /********************************************************
- * fill 20 bytes preallocated with SHA1 digest (160 bits)
- * for two inputs, in_len and in2_len bytes
- ********************************************************/
-void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out)
+* fill 20 bytes preallocated with SHA1 digest (160 bits)
+* for two inputs, in_len and in2_len bytes
+********************************************************/
+void gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out)
 {
     SHA_CTX context;
     unsigned char hash[SHA_DIGEST_LENGTH];
@@ -300,7 +300,7 @@ int gw_getsockerrno(int fd)
         goto return_eno;
     }
 
-    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen) != 0)
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&eno, &elen) != 0)
     {
         eno = 0;
     }
@@ -316,19 +316,19 @@ return_eno:
  * @return              The new allocated encrypted password, that the caller must free
  *
  */
-char *create_hex_sha1_sha1_passwd(char *passwd)
+char* create_hex_sha1_sha1_passwd(char* passwd)
 {
     uint8_t hash1[SHA_DIGEST_LENGTH] = "";
     uint8_t hash2[SHA_DIGEST_LENGTH] = "";
-    char *hexpasswd = NULL;
+    char* hexpasswd = NULL;
 
-    if ((hexpasswd = (char *)MXS_CALLOC(SHA_DIGEST_LENGTH * 2 + 1, 1)) == NULL)
+    if ((hexpasswd = (char*)MXS_CALLOC(SHA_DIGEST_LENGTH * 2 + 1, 1)) == NULL)
     {
         return NULL;
     }
 
     /* hash1 is SHA1(real_password) */
-    gw_sha1_str((uint8_t *)passwd, strlen(passwd), hash1);
+    gw_sha1_str((uint8_t*)passwd, strlen(passwd), hash1);
 
     /* hash2 is the SHA1(input data), where input_data = SHA1(real_password) */
     gw_sha1_str(hash1, SHA_DIGEST_LENGTH, hash2);
@@ -343,9 +343,9 @@ char *create_hex_sha1_sha1_passwd(char *passwd)
  * Remove duplicate and trailing forward slashes from a path.
  * @param path Path to clean up
  */
-bool clean_up_pathname(char *path)
+bool clean_up_pathname(char* path)
 {
-    char *data = path;
+    char* data = path;
     size_t len = strlen(path);
 
     if (len > PATH_MAX)
@@ -390,7 +390,7 @@ bool clean_up_pathname(char *path)
  * @param mask Bitmask to use
  * @return True if directory exists or it was successfully created, false on error
  */
-static bool mkdir_all_internal(char *path, mode_t mask)
+static bool mkdir_all_internal(char* path, mode_t mask)
 {
     bool rval = false;
 
@@ -399,7 +399,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
         if (errno == ENOENT)
         {
             /** Try to create the parent directory */
-            char *ndir = strrchr(path, '/');
+            char* ndir = strrchr(path, '/');
             if (ndir)
             {
                 *ndir = '\0';
@@ -415,7 +415,9 @@ static bool mkdir_all_internal(char *path, mode_t mask)
                     else
                     {
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
-                                  path, errno, mxs_strerror(errno));
+                                  path,
+                                  errno,
+                                  mxs_strerror(errno));
                     }
                 }
             }
@@ -423,7 +425,9 @@ static bool mkdir_all_internal(char *path, mode_t mask)
         else
         {
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      path, errno, mxs_strerror(errno));
+                      path,
+                      errno,
+                      mxs_strerror(errno));
         }
     }
     else
@@ -442,7 +446,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
  * @param mask Bitmask to use
  * @return True if directory exists or it was successfully created, false on error
  */
-bool mxs_mkdir_all(const char *path, int mask)
+bool mxs_mkdir_all(const char* path, int mask)
 {
     char local_path[strlen(path) + 1];
     strcpy(local_path, path);
@@ -489,7 +493,7 @@ char* trim_trailing(char* str)
     return str;
 }
 
-char* trim(char *str)
+char* trim(char* str)
 {
     return trim_leading(trim_trailing(str));
 }
@@ -563,8 +567,7 @@ char* squeeze_whitespace(char* str)
  * @param String to parse.
  * @return True if parsing was successful, false on errors.
  */
-bool
-strip_escape_chars(char* val)
+bool strip_escape_chars(char* val)
 {
     int cur, end;
 
@@ -591,9 +594,9 @@ strip_escape_chars(char* val)
 #define BUFFER_GROWTH_RATE 2.0
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-                                                  "(?:`[^`]*`\\K)|"
-                                                  "(\\/[*](?!(M?!)).*?[*]\\/)|"
-                                                  "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
+    "(?:`[^`]*`\\K)|"
+    "(\\/[*](?!(M?!)).*?[*]\\/)|"
+    "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
 
 /**
  * Remove SQL comments from the end of a string
@@ -620,14 +623,21 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
     size_t len = output ? *destsize : orig_len;
     if (orig_len > 0)
     {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
+        if ((output || (output = (char*) malloc(len * sizeof(char))))
+            && (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
         {
             size_t len_tmp = len;
-            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
+            while (pcre2_substitute(remove_comments_re,
+                                    (PCRE2_SPTR) * src,
+                                    orig_len,
+                                    0,
+                                    PCRE2_SUBSTITUTE_GLOBAL,
+                                    mdata,
+                                    NULL,
+                                    replace,
+                                    PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output,
+                                    &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
                 len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
                 char* tmp = (char*) realloc(output, len_tmp);
@@ -664,7 +674,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-                                                 "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
+                                                              "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace literal numbers and user variables with a question mark.
@@ -689,14 +699,21 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
 
     if (orig_len > 0)
     {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
+        if ((output || (output = (char*) malloc(len * sizeof(char))))
+            && (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
         {
             size_t len_tmp = len;
-            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
+            while (pcre2_substitute(replace_values_re,
+                                    (PCRE2_SPTR) * src,
+                                    orig_len,
+                                    0,
+                                    PCRE2_SUBSTITUTE_GLOBAL,
+                                    mdata,
+                                    NULL,
+                                    replace,
+                                    PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output,
+                                    &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
                 len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
                 char* tmp = (char*) realloc(output, len_tmp);
@@ -744,8 +761,8 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
  */
 char* replace_literal(char* haystack, const char* needle, const char* replacement)
 {
-    const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
-    const char* suffix = "([^[:alnum:]]|$)"; /*< alpha-num chars aren't allowed after the needle */
+    const char* prefix = "[ ='\",\\(]";     /*< ' ','=','(',''',''"',',' are allowed before needle */
+    const char* suffix = "([^[:alnum:]]|$)";/*< alpha-num chars aren't allowed after the needle */
     char* search_re;
     char* newstr;
     regex_t re;
@@ -755,11 +772,12 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
     size_t nlen = strlen(needle);
     size_t hlen = strlen(haystack);
 
-    search_re = (char *) malloc(strlen(prefix) + nlen + strlen(suffix) + 1);
+    search_re = (char*) malloc(strlen(prefix) + nlen + strlen(suffix) + 1);
 
     if (search_re == NULL)
     {
-        fprintf(stderr, "Regex memory allocation failed : %s\n",
+        fprintf(stderr,
+                "Regex memory allocation failed : %s\n",
                 mxs_strerror(errno));
         newstr = haystack;
         goto retblock;
@@ -767,11 +785,12 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
 
     sprintf(search_re, "%s%s%s", prefix, needle, suffix);
     /** Allocate memory for new string +1 for terminating byte */
-    newstr = (char *) malloc(hlen - nlen + rlen + 1);
+    newstr = (char*) malloc(hlen - nlen + rlen + 1);
 
     if (newstr == NULL)
     {
-        fprintf(stderr, "Regex memory allocation failed : %s\n",
+        fprintf(stderr,
+                "Regex memory allocation failed : %s\n",
                 mxs_strerror(errno));
         free(search_re);
         free(newstr);
@@ -786,8 +805,10 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
     {
         char error_message[MAX_ERROR_MSG];
         regerror(rc, &re, error_message, MAX_ERROR_MSG);
-        fprintf(stderr, "Regex error compiling '%s': %s\n",
-                search_re, error_message);
+        fprintf(stderr,
+                "Regex error compiling '%s': %s\n",
+                search_re,
+                error_message);
         free(search_re);
         free(newstr);
         newstr = haystack;
@@ -806,7 +827,8 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
     memcpy(newstr, haystack, match.rm_so + 1);
     memcpy(newstr + match.rm_so + 1, replacement, rlen);
     /** +1 is terminating byte */
-    memcpy(newstr + match.rm_so + 1 + rlen, haystack + match.rm_so + 1 + nlen,
+    memcpy(newstr + match.rm_so + 1 + rlen,
+           haystack + match.rm_so + 1 + nlen,
            hlen - (match.rm_so + 1) - nlen + 1);
 
     regfree(&re);
@@ -818,7 +840,7 @@ retblock:
 
 static pcre2_code* replace_quoted_re = NULL;
 static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-                                                 "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
+    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
 
 /**
  * Replace contents of single or double quoted strings with question marks.
@@ -843,14 +865,21 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
 
     if (orig_len > 0)
     {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
+        if ((output || (output = (char*) malloc(len * sizeof(char))))
+            && (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
         {
             size_t len_tmp = len;
-            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
+            while (pcre2_substitute(replace_quoted_re,
+                                    (PCRE2_SPTR) * src,
+                                    orig_len,
+                                    0,
+                                    PCRE2_SUBSTITUTE_GLOBAL,
+                                    mdata,
+                                    NULL,
+                                    replace,
+                                    PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output,
+                                    &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
                 len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
                 char* tmp = (char*) realloc(output, len_tmp);
@@ -903,24 +932,36 @@ bool utils_init()
     int errcode;
 
     mxb_assert_message(remove_comments_re == NULL, "utils_init called multiple times");
-    remove_comments_re = pcre2_compile(remove_comments_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                       &erroffset, NULL);
+    remove_comments_re = pcre2_compile(remove_comments_pattern,
+                                       PCRE2_ZERO_TERMINATED,
+                                       0,
+                                       &errcode,
+                                       &erroffset,
+                                       NULL);
     if (remove_comments_re == NULL)
     {
         rval = false;
     }
 
     mxb_assert_message(replace_quoted_re == NULL, "utils_init called multiple times");
-    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                      &erroffset, NULL);
+    replace_quoted_re = pcre2_compile(replace_quoted_pattern,
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      &errcode,
+                                      &erroffset,
+                                      NULL);
     if (replace_quoted_re == NULL)
     {
         rval = false;
     }
 
     mxb_assert_message(replace_values_re == NULL, "utils_init called multiple times");
-    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                      &erroffset, NULL);
+    replace_values_re = pcre2_compile(replace_values_pattern,
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      &errcode,
+                                      &erroffset,
+                                      NULL);
     if (replace_values_re == NULL)
     {
         rval = false;
@@ -950,9 +991,9 @@ static bool configure_network_socket(int so)
     int rcvbufsize = MXS_BACKEND_SO_RCVBUF;
     int one = 1;
 
-    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0 ||
-        setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0 ||
-        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0
+        || setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0
+        || setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
         MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
         return false;
@@ -965,8 +1006,8 @@ static bool configure_listener_socket(int so)
 {
     int one = 1;
 
-    if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0 ||
-        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0
+        || setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
         MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
         return false;
@@ -975,16 +1016,16 @@ static bool configure_listener_socket(int so)
     return setnonblocking(so) == 0;
 }
 
-static void set_port(struct sockaddr_storage *addr, uint16_t port)
+static void set_port(struct sockaddr_storage* addr, uint16_t port)
 {
     if (addr->ss_family == AF_INET)
     {
-        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        struct sockaddr_in* ip = (struct sockaddr_in*)addr;
         ip->sin_port = htons(port);
     }
     else if (addr->ss_family == AF_INET6)
     {
-        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
         ip->sin6_port = htons(port);
     }
     else
@@ -994,11 +1035,13 @@ static void set_port(struct sockaddr_storage *addr, uint16_t port)
     }
 }
 
-int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host,
+int open_network_socket(enum mxs_socket_type type,
+                        struct sockaddr_storage* addr,
+                        const char* host,
                         uint16_t port)
 {
     mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
-    struct addrinfo *ai = NULL, hint = {};
+    struct addrinfo* ai = NULL, hint = {};
     int so = 0, rc = 0;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
@@ -1024,8 +1067,8 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
 
             freeaddrinfo(ai);
 
-            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so)) ||
-                (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
+            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so))
+                || (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
                 close(so);
                 so = -1;
@@ -1033,7 +1076,10 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
             else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
             {
                 MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
-                          host, port, errno, mxs_strerror(errno));
+                          host,
+                          port,
+                          errno,
+                          mxs_strerror(errno));
                 close(so);
                 so = -1;
             }
@@ -1058,14 +1104,16 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
                         {
                             MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
                                       "connecting to server using default local address: %s",
-                                      config->local_address, mxs_strerror(errno));
+                                      config->local_address,
+                                      mxs_strerror(errno));
                         }
                     }
                     else
                     {
                         MXS_ERROR("Could not get address information for local address \"%s\", "
                                   "connecting to server using default local address: %s",
-                                  config->local_address, mxs_strerror(errno));
+                                  config->local_address,
+                                  mxs_strerror(errno));
                     }
                 }
             }
@@ -1088,14 +1136,16 @@ static bool configure_unix_socket(int so)
     return setnonblocking(so) == 0;
 }
 
-int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr, const char *path)
+int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const char* path)
 {
     int fd = -1;
 
     if (strlen(path) > sizeof(addr->sun_path) - 1)
     {
         MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
-                  "The maximum length is %lu.", path, sizeof(addr->sun_path) - 1);
+                  "The maximum length is %lu.",
+                  path,
+                  sizeof(addr->sun_path) - 1);
     }
     else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
@@ -1107,10 +1157,12 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr, const 
         strcpy(addr->sun_path, path);
 
         /* Bind the socket to the Unix domain socket */
-        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr *)addr, sizeof(*addr)) < 0)
+        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr*)addr, sizeof(*addr)) < 0)
         {
             MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
-                      path, errno, mxs_strerror(errno));
+                      path,
+                      errno,
+                      mxs_strerror(errno));
             close(fd);
             fd = -1;
         }
@@ -1203,7 +1255,7 @@ std::string string_printf(const char* format, ...)
         // 'characters' does not include the \0-byte.
         int total_size = characters + 1;
         rval.reserve(total_size);
-        rval.resize(characters); // The final "length" of the string
+        rval.resize(characters);    // The final "length" of the string
         va_start(args, format);
         // Write directly to the string internal array, avoiding any temporary arrays.
         vsnprintf(&rval[0], total_size, format, args);
@@ -1215,7 +1267,7 @@ std::string string_printf(const char* format, ...)
 namespace
 {
 
-size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     std::string* buf = static_cast<std::string*>(userdata);
 
@@ -1227,14 +1279,14 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
     return nmemb;
 }
 
-size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
-    std::unordered_map<std::string, std::string>* map =
-        static_cast<std::unordered_map<std::string, std::string>*>(userdata);
+    std::unordered_map<std::string, std::string>* map
+        = static_cast<std::unordered_map<std::string, std::string>*>(userdata);
 
     if (nmemb > 0)
     {
-        std::string data(ptr, size * nmemb);
+        std::string data(ptr, size* nmemb);
         auto pos = data.find_first_of(':');
 
         if (pos != std::string::npos)
@@ -1249,7 +1301,6 @@ size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
 
     return nmemb * size;
 }
-
 }
 
 namespace http
@@ -1263,7 +1314,7 @@ Result get(const std::string& url, const std::string& user, const std::string& p
 
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10); // For connection phase
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10); // For data transfer phase
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);        // For data transfer phase
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &res.raw_body);
@@ -1277,7 +1328,7 @@ Result get(const std::string& url, const std::string& user, const std::string& p
         curl_easy_setopt(curl, CURLOPT_USERPWD, (user + ":" + password).c_str());
     }
 
-    long code = 0; // needs to be a long
+    long code = 0;      // needs to be a long
 
     if (curl_easy_perform(curl) == CURLE_OK)
     {
@@ -1298,7 +1349,5 @@ Result get(const std::string& url, const std::string& user, const std::string& p
 
     return std::move(res);
 }
-
 }
-
 }

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/cdefs.h>
 
@@ -45,7 +45,7 @@ MXB_BEGIN_DECLS
  * Any file that is compiled into maxscale-common should *not* have
  * MXB_MODULE_NAME defined.
  */
-#if !defined(MXB_MODULE_NAME)
+#if !defined (MXB_MODULE_NAME)
 #define MXB_MODULE_NAME NULL
 #endif
 
@@ -54,13 +54,13 @@ extern int mxb_log_enabled_priorities;
 typedef enum mxb_log_target_t
 {
     MXB_LOG_TARGET_DEFAULT,
-    MXB_LOG_TARGET_FS,     // File system
-    MXB_LOG_TARGET_STDOUT, // Standard output
+    MXB_LOG_TARGET_FS,      // File system
+    MXB_LOG_TARGET_STDOUT,  // Standard output
 } mxb_log_target_t;
 
 typedef enum mxb_log_augmentation_t
 {
-    MXB_LOG_AUGMENT_WITH_FUNCTION = 1, // Each logged line is suffixed with [function-name]
+    MXB_LOG_AUGMENT_WITH_FUNCTION = 1,      // Each logged line is suffixed with [function-name]
     MXB_LOG_AUGMENTATION_MASK     = (MXB_LOG_AUGMENT_WITH_FUNCTION)
 } mxb_log_augmentation_t;
 
@@ -83,7 +83,7 @@ typedef struct MXB_LOG_THROTTLING
  *
  * @return Length of data written to buffer.
  */
-typedef size_t (*mxb_log_context_provider_t)(char* buffer, size_t len);
+typedef size_t (* mxb_log_context_provider_t)(char* buffer, size_t len);
 
 /**
  * @brief Initialize the log
@@ -241,8 +241,11 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
  */
 int mxb_log_message(int priority,
                     const char* modname,
-                    const char* file, int line, const char* function,
-                    const char* format, ...) mxb_attribute((format(printf, 6, 7)));
+                    const char* file,
+                    int line,
+                    const char* function,
+                    const char* format,
+                    ...) mxb_attribute((format(printf, 6, 7)));
 
 /**
  * Log an Out-Of-Memory message.
@@ -267,10 +270,10 @@ int mxb_log_oom(const char* message);
  * @attention Should typically not be called directly. Use some of the
  *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
-#define MXB_LOG_MESSAGE(priority, format, ...)\
-    (mxb_log_is_priority_enabled(priority) ? \
-     mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__) :\
-     0)
+#define MXB_LOG_MESSAGE(priority, format, ...) \
+    (mxb_log_is_priority_enabled(priority)   \
+     ? mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)  \
+     : 0)
 
 /**
  * Log an alert, error, warning, notice, info, or debug  message.
@@ -288,14 +291,14 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_ALERT(format, ...)   MXB_LOG_MESSAGE(LOG_ALERT,   format, ##__VA_ARGS__)
-#define MXB_ERROR(format, ...)   MXB_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
+#define MXB_ALERT(format, ...)   MXB_LOG_MESSAGE(LOG_ALERT, format, ##__VA_ARGS__)
+#define MXB_ERROR(format, ...)   MXB_LOG_MESSAGE(LOG_ERR, format, ##__VA_ARGS__)
 #define MXB_WARNING(format, ...) MXB_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
-#define MXB_NOTICE(format, ...)  MXB_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
-#define MXB_INFO(format, ...)    MXB_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
+#define MXB_NOTICE(format, ...)  MXB_LOG_MESSAGE(LOG_NOTICE, format, ##__VA_ARGS__)
+#define MXB_INFO(format, ...)    MXB_LOG_MESSAGE(LOG_INFO, format, ##__VA_ARGS__)
 
-#if defined(SS_DEBUG)
-#define MXB_DEBUG(format, ...)   MXB_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
+#if defined (SS_DEBUG)
+#define MXB_DEBUG(format, ...) MXB_LOG_MESSAGE(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
 #define MXB_DEBUG(format, ...)
 #endif
@@ -326,7 +329,7 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_IFNULL(p) do { if (!p) { MXB_OOM(); } } while (false)
+#define MXB_OOM_IFNULL(p) do {if (!p) {MXB_OOM();}} while (false)
 
 /**
  * Log an out of memory error using custom message, if the
@@ -337,6 +340,6 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE_IFNULL(p, message) do { if (!p) { MXB_OOM_MESSAGE(message); } } while (false)
+#define MXB_OOM_MESSAGE_IFNULL(p, message) do {if (!p) {MXB_OOM_MESSAGE(message);}} while (false)
 
 MXB_END_DECLS

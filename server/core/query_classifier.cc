@@ -30,10 +30,10 @@
 #include "internal/modules.h"
 #include "internal/trxboundaryparser.hh"
 
-//#define QC_TRACE_ENABLED
+// #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
 
-#if defined(QC_TRACE_ENABLED)
+#if defined (QC_TRACE_ENABLED)
 #define QC_TRACE() MXS_NOTICE(__func__)
 #else
 #define QC_TRACE()
@@ -45,7 +45,7 @@ namespace
 struct type_name_info
 {
     const char* name;
-    size_t name_len;
+    size_t      name_len;
 };
 
 const char DEFAULT_QC_NAME[] = "qc_sqlite";
@@ -274,7 +274,7 @@ private:
         {
             freed_space += i->first.size();
 
-            MXB_AT_DEBUG(bool erased =) erase(i->first);
+            MXB_AT_DEBUG(bool erased = ) erase(i->first);
             mxb_assert(erased);
         }
 
@@ -342,7 +342,7 @@ public:
             if (pInfo)
             {
                 gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
-                m_canonical.clear(); // Signals that nothing needs to be added in the destructor.
+                m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
         }
     }
@@ -363,13 +363,13 @@ private:
     GWBUF*      m_pStmt;
     std::string m_canonical;
 };
-
 }
 
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
-              const char* plugin_name, const char* plugin_args)
+              const char*   plugin_name,
+              const char*   plugin_args)
 {
     QC_TRACE();
     mxb_assert(!this_unit.classifier);
@@ -397,7 +397,8 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
             if (cache_max_size)
             {
                 MXS_NOTICE("Query classification results are cached and reused, "
-                           "cache max size: %" PRIi64 "", cache_max_size);
+                           "cache max size: %" PRIi64 "",
+                           cache_max_size);
             }
             else
             {
@@ -417,8 +418,8 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
              qc_sql_mode_t sql_mode,
-             const char* plugin_name,
-             const char* plugin_args)
+             const char*   plugin_name,
+             const char*   plugin_args)
 {
     QC_TRACE();
 
@@ -470,7 +471,8 @@ bool qc_process_init(uint32_t kind)
         else
         {
             MXS_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
-                       "Parsing using QC.", parse_using);
+                       "Parsing using QC.",
+                       parse_using);
         }
     }
 
@@ -528,7 +530,7 @@ bool qc_thread_init(uint32_t kind)
     if (kind & QC_INIT_SELF)
     {
         mxb_assert(!this_thread.pInfo_cache);
-        this_thread.pInfo_cache = new (std::nothrow) QCInfoCache;
+        this_thread.pInfo_cache = new( std::nothrow) QCInfoCache;
         rc = true;
     }
     else
@@ -657,7 +659,7 @@ char* qc_get_canonical(GWBUF* query)
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    char *rval;
+    char* rval;
 
     if (this_unit.classifier->qc_get_canonical)
     {
@@ -898,7 +900,7 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
         break;
 
     /** Not implemented yet */
-    //case QUERY_TYPE_SYSVAR_WRITE:
+    // case QUERY_TYPE_SYSVAR_WRITE:
     case QUERY_TYPE_GSYSVAR_READ:
         {
             static const char name[] = "QUERY_TYPE_GSYSVAR_READ";
@@ -1040,7 +1042,7 @@ const char* qc_type_to_string(qc_query_type_t type)
 static const qc_query_type_t QUERY_TYPES[] =
 {
     /* Excluded by design */
-    //QUERY_TYPE_UNKNOWN,
+    // QUERY_TYPE_UNKNOWN,
     QUERY_TYPE_LOCAL_READ,
     QUERY_TYPE_READ,
     QUERY_TYPE_WRITE,
@@ -1050,7 +1052,7 @@ static const qc_query_type_t QUERY_TYPES[] =
     QUERY_TYPE_USERVAR_READ,
     QUERY_TYPE_SYSVAR_READ,
     /** Not implemented yet */
-    //QUERY_TYPE_SYSVAR_WRITE,
+    // QUERY_TYPE_SYSVAR_WRITE,
     QUERY_TYPE_GSYSVAR_READ,
     QUERY_TYPE_GSYSVAR_WRITE,
     QUERY_TYPE_BEGIN_TRX,
@@ -1069,7 +1071,7 @@ static const qc_query_type_t QUERY_TYPES[] =
 };
 
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
-static const int QUERY_TYPE_MAX_LEN = 29; // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
+static const int QUERY_TYPE_MAX_LEN = 29;   // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
 
 char* qc_typemask_to_string(uint32_t types)
 {
@@ -1082,7 +1084,7 @@ char* qc_typemask_to_string(uint32_t types)
         {
             if (len != 0)
             {
-                ++len; // strlen("|");
+                ++len;      // strlen("|");
             }
 
             len += QUERY_TYPE_MAX_LEN;
@@ -1132,8 +1134,8 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 {
     uint32_t type_mask = qc_get_type_mask(stmt);
 
-    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE) &&
-        qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
+    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE)
+        && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
     {
         // This is a commit reported for "CREATE TABLE...",
         // "DROP TABLE...", etc. that cause an implicit commit.
@@ -1150,13 +1152,13 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 
         // Then leave only the bits related to transaction and
         // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX |
-                      QUERY_TYPE_WRITE |
-                      QUERY_TYPE_READ |
-                      QUERY_TYPE_COMMIT |
-                      QUERY_TYPE_ROLLBACK |
-                      QUERY_TYPE_ENABLE_AUTOCOMMIT |
-                      QUERY_TYPE_DISABLE_AUTOCOMMIT);
+        type_mask &= (QUERY_TYPE_BEGIN_TRX
+                      | QUERY_TYPE_WRITE
+                      | QUERY_TYPE_READ
+                      | QUERY_TYPE_COMMIT
+                      | QUERY_TYPE_ROLLBACK
+                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
+                      | QUERY_TYPE_DISABLE_AUTOCOMMIT);
     }
 
     return type_mask;
@@ -1326,7 +1328,6 @@ json_t* get_params(json_t* pJson)
 
     return pParams;
 }
-
 }
 
 bool qc_alter_from_json(json_t* pJson)
@@ -1354,7 +1355,7 @@ bool qc_alter_from_json(json_t* pJson)
 
         if (rv)
         {
-            MXB_AT_DEBUG(bool set =) qc_set_cache_properties(&cache_properties);
+            MXB_AT_DEBUG(bool set = ) qc_set_cache_properties(&cache_properties);
             mxb_assert(set);
         }
     }

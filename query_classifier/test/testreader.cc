@@ -25,13 +25,13 @@ namespace
 
 enum skip_action_t
 {
-    SKIP_NOTHING,        // Skip nothing.
-    SKIP_BLOCK,          // Skip until the end of next { ... }
-    SKIP_DELIMITER,      // Skip the new delimiter.
-    SKIP_LINE,           // Skip current line.
-    SKIP_NEXT_STATEMENT, // Skip statement starting on line following this line.
-    SKIP_STATEMENT,      // Skip statment starting on this line.
-    SKIP_TERMINATE,      // Cannot handle this, terminate.
+    SKIP_NOTHING,       // Skip nothing.
+    SKIP_BLOCK,         // Skip until the end of next { ... }
+    SKIP_DELIMITER,     // Skip the new delimiter.
+    SKIP_LINE,          // Skip current line.
+    SKIP_NEXT_STATEMENT,// Skip statement starting on line following this line.
+    SKIP_STATEMENT,     // Skip statment starting on this line.
+    SKIP_TERMINATE,     // Cannot handle this, terminate.
 };
 
 typedef std::map<std::string, skip_action_t> KeywordActionMapping;
@@ -43,104 +43,104 @@ void init_keywords()
 {
     struct Keyword
     {
-        const char* z_keyword;
+        const char*   z_keyword;
         skip_action_t action;
     };
 
     static const Keyword MTL_KEYWORDS[] =
     {
-        { "append_file",                SKIP_LINE },
-        { "cat_file",                   SKIP_LINE },
-        { "change_user",                SKIP_LINE },
-        { "character_set",              SKIP_LINE },
-        { "chmod",                      SKIP_LINE },
-        { "connect",                    SKIP_LINE },
-        { "connection",                 SKIP_LINE },
-        { "copy_file",                  SKIP_LINE },
-        { "dec",                        SKIP_LINE },
-        { "delimiter",                  SKIP_DELIMITER },
-        { "die",                        SKIP_LINE },
-        { "diff_files",                 SKIP_LINE },
-        { "dirty_close",                SKIP_LINE },
-        { "disable_abort_on_error",     SKIP_LINE },
-        { "disable_connect_log",        SKIP_LINE },
-        { "disable_info",               SKIP_LINE },
-        { "disable_metadata",           SKIP_LINE },
-        { "disable_parsing",            SKIP_LINE },
-        { "disable_ps_protocol",        SKIP_LINE },
-        { "disable_query_log",          SKIP_LINE },
-        { "disable_reconnect",          SKIP_LINE },
-        { "disable_result_log",         SKIP_LINE },
-        { "disable_rpl_parse",          SKIP_LINE },
-        { "disable_session_track_info", SKIP_LINE },
-        { "disable_warnings",           SKIP_LINE },
-        { "disconnect",                 SKIP_LINE },
-        { "echo",                       SKIP_LINE },
-        { "enable_abort_on_error",      SKIP_LINE },
-        { "enable_connect_log",         SKIP_LINE },
-        { "enable_info",                SKIP_LINE },
-        { "enable_metadata",            SKIP_LINE },
-        { "enable_parsing",             SKIP_LINE },
-        { "enable_ps_protocol",         SKIP_LINE },
-        { "enable_query_log",           SKIP_LINE },
-        { "enable_reconnect",           SKIP_LINE },
-        { "enable_result_log",          SKIP_LINE },
-        { "enable_rpl_parse",           SKIP_LINE },
-        { "enable_session_track_info",  SKIP_LINE },
-        { "enable_warnings",            SKIP_LINE },
-        { "end_timer",                  SKIP_LINE },
-        { "error",                      SKIP_NEXT_STATEMENT },
-        { "eval",                       SKIP_STATEMENT },
-        { "exec",                       SKIP_LINE },
-        { "file_exists",                SKIP_LINE },
-        { "horizontal_results",         SKIP_LINE },
-        { "inc",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "list_files",                 SKIP_LINE },
-        { "list_files_append_file",     SKIP_LINE },
-        { "list_files_write_file",      SKIP_LINE },
-        { "lowercase_result",           SKIP_LINE },
-        { "mkdir",                      SKIP_LINE },
-        { "move_file",                  SKIP_LINE },
-        { "output",                     SKIP_LINE },
-        { "perl",                       SKIP_TERMINATE },
-        { "ping",                       SKIP_LINE },
-        { "print",                      SKIP_LINE },
-        { "query",                      SKIP_LINE },
-        { "query_get_value",            SKIP_LINE },
-        { "query_horizontal",           SKIP_LINE },
-        { "query_vertical",             SKIP_LINE },
-        { "real_sleep",                 SKIP_LINE },
-        { "reap",                       SKIP_LINE },
-        { "remove_file",                SKIP_LINE },
-        { "remove_files_wildcard",      SKIP_LINE },
-        { "replace_column",             SKIP_LINE },
-        { "replace_regex",              SKIP_LINE },
-        { "replace_result",             SKIP_LINE },
-        { "require",                    SKIP_LINE },
-        { "reset_connection",           SKIP_LINE },
-        { "result",                     SKIP_LINE },
-        { "result_format",              SKIP_LINE },
-        { "rmdir",                      SKIP_LINE },
-        { "same_master_pos",            SKIP_LINE },
-        { "send",                       SKIP_LINE },
-        { "send_eval",                  SKIP_LINE },
-        { "send_quit",                  SKIP_LINE },
-        { "send_shutdown",              SKIP_LINE },
-        { "skip",                       SKIP_LINE },
-        { "sleep",                      SKIP_LINE },
-        { "sorted_result",              SKIP_LINE },
-        { "source",                     SKIP_LINE },
-        { "start_timer",                SKIP_LINE },
-        { "sync_slave_with_master",     SKIP_LINE },
-        { "sync_with_master",           SKIP_LINE },
-        { "system",                     SKIP_LINE },
-        { "vertical_results",           SKIP_LINE },
-        { "write_file",                 SKIP_LINE },
+        {"append_file",                SKIP_LINE          },
+        {"cat_file",                   SKIP_LINE          },
+        {"change_user",                SKIP_LINE          },
+        {"character_set",              SKIP_LINE          },
+        {"chmod",                      SKIP_LINE          },
+        {"connect",                    SKIP_LINE          },
+        {"connection",                 SKIP_LINE          },
+        {"copy_file",                  SKIP_LINE          },
+        {"dec",                        SKIP_LINE          },
+        {"delimiter",                  SKIP_DELIMITER     },
+        {"die",                        SKIP_LINE          },
+        {"diff_files",                 SKIP_LINE          },
+        {"dirty_close",                SKIP_LINE          },
+        {"disable_abort_on_error",     SKIP_LINE          },
+        {"disable_connect_log",        SKIP_LINE          },
+        {"disable_info",               SKIP_LINE          },
+        {"disable_metadata",           SKIP_LINE          },
+        {"disable_parsing",            SKIP_LINE          },
+        {"disable_ps_protocol",        SKIP_LINE          },
+        {"disable_query_log",          SKIP_LINE          },
+        {"disable_reconnect",          SKIP_LINE          },
+        {"disable_result_log",         SKIP_LINE          },
+        {"disable_rpl_parse",          SKIP_LINE          },
+        {"disable_session_track_info", SKIP_LINE          },
+        {"disable_warnings",           SKIP_LINE          },
+        {"disconnect",                 SKIP_LINE          },
+        {"echo",                       SKIP_LINE          },
+        {"enable_abort_on_error",      SKIP_LINE          },
+        {"enable_connect_log",         SKIP_LINE          },
+        {"enable_info",                SKIP_LINE          },
+        {"enable_metadata",            SKIP_LINE          },
+        {"enable_parsing",             SKIP_LINE          },
+        {"enable_ps_protocol",         SKIP_LINE          },
+        {"enable_query_log",           SKIP_LINE          },
+        {"enable_reconnect",           SKIP_LINE          },
+        {"enable_result_log",          SKIP_LINE          },
+        {"enable_rpl_parse",           SKIP_LINE          },
+        {"enable_session_track_info",  SKIP_LINE          },
+        {"enable_warnings",            SKIP_LINE          },
+        {"end_timer",                  SKIP_LINE          },
+        {"error",                      SKIP_NEXT_STATEMENT},
+        {"eval",                       SKIP_STATEMENT     },
+        {"exec",                       SKIP_LINE          },
+        {"file_exists",                SKIP_LINE          },
+        {"horizontal_results",         SKIP_LINE          },
+        {"inc",                        SKIP_LINE          },
+        {"let",                        SKIP_LINE          },
+        {"let",                        SKIP_LINE          },
+        {"list_files",                 SKIP_LINE          },
+        {"list_files_append_file",     SKIP_LINE          },
+        {"list_files_write_file",      SKIP_LINE          },
+        {"lowercase_result",           SKIP_LINE          },
+        {"mkdir",                      SKIP_LINE          },
+        {"move_file",                  SKIP_LINE          },
+        {"output",                     SKIP_LINE          },
+        {"perl",                       SKIP_TERMINATE     },
+        {"ping",                       SKIP_LINE          },
+        {"print",                      SKIP_LINE          },
+        {"query",                      SKIP_LINE          },
+        {"query_get_value",            SKIP_LINE          },
+        {"query_horizontal",           SKIP_LINE          },
+        {"query_vertical",             SKIP_LINE          },
+        {"real_sleep",                 SKIP_LINE          },
+        {"reap",                       SKIP_LINE          },
+        {"remove_file",                SKIP_LINE          },
+        {"remove_files_wildcard",      SKIP_LINE          },
+        {"replace_column",             SKIP_LINE          },
+        {"replace_regex",              SKIP_LINE          },
+        {"replace_result",             SKIP_LINE          },
+        {"require",                    SKIP_LINE          },
+        {"reset_connection",           SKIP_LINE          },
+        {"result",                     SKIP_LINE          },
+        {"result_format",              SKIP_LINE          },
+        {"rmdir",                      SKIP_LINE          },
+        {"same_master_pos",            SKIP_LINE          },
+        {"send",                       SKIP_LINE          },
+        {"send_eval",                  SKIP_LINE          },
+        {"send_quit",                  SKIP_LINE          },
+        {"send_shutdown",              SKIP_LINE          },
+        {"skip",                       SKIP_LINE          },
+        {"sleep",                      SKIP_LINE          },
+        {"sorted_result",              SKIP_LINE          },
+        {"source",                     SKIP_LINE          },
+        {"start_timer",                SKIP_LINE          },
+        {"sync_slave_with_master",     SKIP_LINE          },
+        {"sync_with_master",           SKIP_LINE          },
+        {"system",                     SKIP_LINE          },
+        {"vertical_results",           SKIP_LINE          },
+        {"write_file",                 SKIP_LINE          },
     };
 
-    const size_t N_MTL_KEYWORDS = sizeof(MTL_KEYWORDS)/sizeof(MTL_KEYWORDS[0]);
+    const size_t N_MTL_KEYWORDS = sizeof(MTL_KEYWORDS) / sizeof(MTL_KEYWORDS[0]);
 
     for (size_t i = 0; i < N_MTL_KEYWORDS; ++i)
     {
@@ -149,12 +149,12 @@ void init_keywords()
 
     static const Keyword PLSQL_KEYWORDS[] =
     {
-        { "exit",                       SKIP_LINE },
-        { "if",                         SKIP_BLOCK },
-        { "while",                      SKIP_BLOCK },
+        {"exit",  SKIP_LINE },
+        {"if",    SKIP_BLOCK},
+        {"while", SKIP_BLOCK},
     };
 
-    const size_t N_PLSQL_KEYWORDS = sizeof(PLSQL_KEYWORDS)/sizeof(PLSQL_KEYWORDS[0]);
+    const size_t N_PLSQL_KEYWORDS = sizeof(PLSQL_KEYWORDS) / sizeof(PLSQL_KEYWORDS[0]);
 
     for (size_t i = 0; i < N_PLSQL_KEYWORDS; ++i)
     {
@@ -201,23 +201,24 @@ skip_action_t get_action(const string& keyword, const string& delimiter)
     return action;
 }
 
-inline void ltrim(std::string &s)
+inline void ltrim(std::string& s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 }
 
-inline void rtrim(std::string &s)
+inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(),
+                         s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
 }
 
-void trim(std::string &s)
+void trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
 }
-
 }
 
 namespace maxscale
@@ -234,9 +235,9 @@ TestReader::TestReader(istream& in,
 
 TestReader::result_t TestReader::get_statement(std::string& stmt)
 {
-    bool error = false; // Whether an error has occurred.
-    bool found = false; // Whether we have found a statement.
-    bool skip = false;  // Whether next statement should be skipped.
+    bool error = false;     // Whether an error has occurred.
+    bool found = false;     // Whether we have found a statement.
+    bool skip = false;      // Whether next statement should be skipped.
 
     stmt.clear();
 
@@ -264,8 +265,9 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     trim(line);
                 }
 
-                string::iterator i = std::find_if(line.begin(), line.end(),
-                                                  std::ptr_fun<int,int>(std::isspace));
+                string::iterator i = std::find_if(line.begin(),
+                                                  line.end(),
+                                                  std::ptr_fun<int, int>(std::isspace));
                 string keyword = line.substr(0, i - line.begin());
 
                 skip_action_t action = get_action(keyword, m_delimiter);
@@ -332,8 +334,8 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
             if (i != string::npos)
             {
                 // Is there a "-- " or "#" after the delimiter?
-                if ((line.find("-- ", i) != string::npos) ||
-                    (line.find("#", i) != string::npos))
+                if ((line.find("-- ", i) != string::npos)
+                    || (line.find("#", i) != string::npos))
                 {
                     // If so, add a newline. Otherwise the rest of the
                     // statement would be included in the comment.
@@ -451,5 +453,4 @@ void TestReader::skip_block()
         }
     }
 }
-
 }

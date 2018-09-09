@@ -16,9 +16,9 @@
 
 static int running = 0;
 
-void* query_thread(void *data)
+void* query_thread(void* data)
 {
-    TestConnections *Test = (TestConnections*)data;
+    TestConnections* Test = (TestConnections*)data;
     int iter = 0;
 
     while (!running)
@@ -51,7 +51,12 @@ void* query_thread(void *data)
         {
             if (execute_query_silent(mysql, "select repeat('a', 1000)"))
             {
-                Test->add_result(1, "Query number %d, iteration %d for '%s' failed: %s\n", i, iter, type, mysql_error(mysql));
+                Test->add_result(1,
+                                 "Query number %d, iteration %d for '%s' failed: %s\n",
+                                 i,
+                                 iter,
+                                 type,
+                                 mysql_error(mysql));
             }
         }
         mysql_close(mysql);
@@ -61,10 +66,10 @@ void* query_thread(void *data)
     return NULL;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections *Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     pthread_t threads[THREADS];
 
     for (int i = 0; i < THREADS; i++)

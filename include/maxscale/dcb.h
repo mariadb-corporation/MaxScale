@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file dcb.h  The Descriptor Control Block
@@ -45,12 +45,12 @@ struct dcb;
  */
 typedef struct dcbstats
 {
-    int     n_reads;        /*< Number of reads on this descriptor */
-    int     n_writes;       /*< Number of writes on this descriptor */
-    int     n_accepts;      /*< Number of accepts on this descriptor */
-    int     n_buffered;     /*< Number of buffered writes */
-    int     n_high_water;   /*< Number of crosses of high water mark */
-    int     n_low_water;    /*< Number of crosses of low water mark */
+    int n_reads;        /*< Number of reads on this descriptor */
+    int n_writes;       /*< Number of writes on this descriptor */
+    int n_accepts;      /*< Number of accepts on this descriptor */
+    int n_buffered;     /*< Number of buffered writes */
+    int n_high_water;   /*< Number of crosses of high water mark */
+    int n_low_water;    /*< Number of crosses of low water mark */
 } DCBSTATS;
 
 #define DCBSTATS_INIT {0}
@@ -66,12 +66,29 @@ typedef enum
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
 } dcb_state_t;
 
-#define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
-                        ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
-                         ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
-                          ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
-                           ((s) == DCB_STATE_NOPOLLING ? "DCB_STATE_NOPOLLING" : \
-                            ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN"))))))
+#define STRDCBSTATE(s) \
+    ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC"      \
+                            : ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING"   \
+                                                        : ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING"   \
+                                                                                      : ((s) \
+                                                                                         == \
+                                                                                         DCB_STATE_DISCONNECTED \
+                                                                                         ? \
+                                                                                         "DCB_STATE_DISCONNECTED"   \
+                                                                                         : (( \
+                                                                                                s) \
+                                                                                            == \
+                                                                                            DCB_STATE_NOPOLLING \
+                                                                                            ? \
+                                                                                            "DCB_STATE_NOPOLLING"   \
+                                                                                            : (( \
+                                                                                                   s) \
+                                                                                               == \
+                                                                                               DCB_STATE_UNDEFINED \
+                                                                                               ? \
+                                                                                               "DCB_STATE_UNDEFINED" \
+                                                                                               : \
+                                                                                               "DCB_STATE_UNKNOWN"))))))
 
 typedef enum
 {
@@ -81,16 +98,28 @@ typedef enum
     DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
 } dcb_role_t;
 
-#define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
-                       ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER" : \
-                        ((r) == DCB_ROLE_BACKEND_HANDLER ? "DCB_ROLE_BACKEND_HANDLER" : \
-                         ((r) == DCB_ROLE_INTERNAL ? "DCB_ROLE_INTERNAL" : \
-                          "UNKNOWN DCB ROLE"))))
+#define STRDCBROLE(r) \
+    ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER"   \
+                                      : ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER"   \
+                                                                        : ((r) \
+                                                                           == DCB_ROLE_BACKEND_HANDLER ? \
+                                                                           "DCB_ROLE_BACKEND_HANDLER"   \
+                                                                                                       : (( \
+                                                                                                              r) \
+                                                                                                          == \
+                                                                                                          DCB_ROLE_INTERNAL \
+                                                                                                          ? \
+                                                                                                          "DCB_ROLE_INTERNAL"   \
+                                                                                                          : \
+                                                                                                          "UNKNOWN DCB ROLE"))))
 
-#define DCB_STRTYPE(dcb) (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB" : \
-                          dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER ? "Backend DCB" : \
-                          dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER ? "Listener DCB" : \
-                          dcb->dcb_role == DCB_ROLE_INTERNAL ? "Internal DCB" : "Unknown DCB")
+#define DCB_STRTYPE(dcb) \
+    (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB"   \
+                                              : dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER ? "Backend DCB"   \
+                                                                                          : dcb->dcb_role \
+     == DCB_ROLE_SERVICE_LISTENER ? "Listener DCB"   \
+                                  : \
+     dcb->dcb_role == DCB_ROLE_INTERNAL ? "Internal DCB" : "Unknown DCB")
 
 /**
  * Callback reasons for the DCB callback mechanism.
@@ -111,10 +140,10 @@ typedef enum
  */
 typedef struct dcb_callback
 {
-    DCB_REASON           reason;         /*< The reason for the callback */
-    int                 (*cb)(struct dcb *dcb, DCB_REASON reason, void *userdata);
-    void                 *userdata;      /*< User data to be sent in the callback */
-    struct dcb_callback  *next;          /*< Next callback for this DCB */
+    DCB_REASON reason;          /*< The reason for the callback */
+    int (* cb)(struct dcb* dcb, DCB_REASON reason, void* userdata);
+    void*                userdata;      /*< User data to be sent in the callback */
+    struct dcb_callback* next;          /*< Next callback for this DCB */
 } DCB_CALLBACK;
 
 /**
@@ -145,59 +174,61 @@ typedef enum
  */
 typedef struct dcb
 {
-    MXB_POLL_DATA   poll;
-    bool            dcb_errhandle_called; /*< this can be called only once */
-    dcb_role_t      dcb_role;
-    int             fd;             /**< The descriptor */
-    dcb_state_t     state;          /**< Current descriptor state */
-    SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
-    int             flags;          /**< DCB flags */
-    char            *remote;        /**< Address of remote end */
-    char            *user;          /**< User name for connection */
-    struct sockaddr_storage ip;     /**< remote IPv4/IPv6 address */
-    char            *protoname;     /**< Name of the protocol */
-    void            *protocol;      /**< The protocol specific state */
-    size_t           protocol_packet_length; /**< How long the protocol specific packet is */
-    size_t           protocol_bytes_processed; /**< How many bytes of a packet have been read */
-    struct session  *session;       /**< The owning session */
-    struct servlistener *listener;  /**< For a client DCB, the listener data */
-    MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
-    MXS_AUTHENTICATOR authfunc;     /**< The authenticator functions for this descriptor */
-    uint32_t        writeqlen;      /**< Current number of byes in the write queue */
-    uint32_t        high_water;     /**< High water mark of write queue */
-    uint32_t        low_water;      /**< Low water mark of write queue */
-    GWBUF           *writeq;        /**< Write Data Queue */
-    GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
-    GWBUF           *readq;         /**< Read queue for storing incomplete reads */
-    GWBUF           *fakeq;         /**< Fake event queue for generated events */
-    uint32_t        fake_event;     /**< Fake event to be delivered to handler */
+    MXB_POLL_DATA           poll;
+    bool                    dcb_errhandle_called;   /*< this can be called only once */
+    dcb_role_t              dcb_role;
+    int                     fd;                         /**< The descriptor */
+    dcb_state_t             state;                      /**< Current descriptor state */
+    SSL_STATE               ssl_state;                  /**< Current state of SSL if in use */
+    int                     flags;                      /**< DCB flags */
+    char*                   remote;                     /**< Address of remote end */
+    char*                   user;                       /**< User name for connection */
+    struct sockaddr_storage ip;                         /**< remote IPv4/IPv6 address */
+    char*                   protoname;                  /**< Name of the protocol */
+    void*                   protocol;                   /**< The protocol specific state */
+    size_t                  protocol_packet_length;     /**< How long the protocol specific packet is */
+    size_t                  protocol_bytes_processed;   /**< How many bytes of a packet have been read */
+    struct session*         session;                    /**< The owning session */
+    struct servlistener*    listener;                   /**< For a client DCB, the listener data */
+    MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
+    MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
+                                                         * */
+    uint32_t                writeqlen;                  /**< Current number of byes in the write queue */
+    uint32_t                high_water;                 /**< High water mark of write queue */
+    uint32_t                low_water;                  /**< Low water mark of write queue */
+    GWBUF*                  writeq;                     /**< Write Data Queue */
+    GWBUF*                  delayq;                     /**< Delay Backend Write Data Queue */
+    GWBUF*                  readq;                      /**< Read queue for storing incomplete reads */
+    GWBUF*                  fakeq;                      /**< Fake event queue for generated events */
+    uint32_t                fake_event;                 /**< Fake event to be delivered to handler */
 
-    DCBSTATS        stats;          /**< DCB related statistics */
-    struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
-    time_t          persistentstart;   /**<    0: Not in the persistent pool.
-                                              -1: Evicted from the persistent pool and being closed.
-                                           non-0: Time when placed in the persistent pool.
-                                       */
-    struct service  *service;       /**< The related service */
-    void            *data;          /**< Specific client data, shared between DCBs of this session */
-    void            *authenticator_data; /**< The authenticator data for this DCB */
-    DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
-    int64_t         last_read;      /*< Last time the DCB received data */
-    struct server   *server;        /**< The associated backend server */
-    SSL*            ssl;            /*< SSL struct for connection */
-    bool            ssl_read_want_read;    /*< Flag */
+    DCBSTATS    stats;                      /**< DCB related statistics */
+    struct dcb* nextpersistent;             /**< Next DCB in the persistent pool for SERVER */
+    time_t      persistentstart;            /**<    0: Not in the persistent pool.
+                                             *      -1: Evicted from the persistent pool and being closed.
+                                             *   non-0: Time when placed in the persistent pool.
+                                             */
+    struct service* service;                /**< The related service */
+    void*           data;                   /**< Specific client data, shared between DCBs of this session */
+    void*           authenticator_data;     /**< The authenticator data for this DCB */
+    DCB_CALLBACK*   callbacks;              /**< The list of callbacks for the DCB */
+    int64_t         last_read;              /*< Last time the DCB received data */
+    struct server*  server;                 /**< The associated backend server */
+    SSL*            ssl;                    /*< SSL struct for connection */
+    bool            ssl_read_want_read;     /*< Flag */
     bool            ssl_read_want_write;    /*< Flag */
     bool            ssl_write_want_read;    /*< Flag */
-    bool            ssl_write_want_write;    /*< Flag */
-    bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
-    bool            high_water_reached; /** High water mark reached, to determine whether need release throttle */
+    bool            ssl_write_want_write;   /*< Flag */
+    bool            was_persistent;         /**< Whether this DCB was in the persistent pool */
+    bool            high_water_reached;     /** High water mark reached, to determine whether need release
+                                             * throttle */
     struct
     {
-        struct dcb *next; /**< Next DCB in owning thread's list */
-        struct dcb *tail; /**< Last DCB in owning thread's list */
-    } thread;
-    uint32_t        n_close;         /** How many times dcb_close has been called. */
-    char            *path;           /** If a Unix socket, the path it was bound to. */
+        struct dcb* next;   /**< Next DCB in owning thread's list */
+        struct dcb* tail;   /**< Last DCB in owning thread's list */
+    }        thread;
+    uint32_t n_close;           /** How many times dcb_close has been called. */
+    char*    path;              /** If a Unix socket, the path it was bound to. */
 } DCB;
 
 /**
@@ -213,14 +244,14 @@ typedef enum
 } DCB_USAGE;
 
 /* A few useful macros */
-#define DCB_SESSION(x)                  (x)->session
-#define DCB_PROTOCOL(x, type)           (type *)((x)->protocol)
-#define DCB_WRITEQLEN(x)                (x)->writeqlen
-#define DCB_SET_LOW_WATER(x, lo)        (x)->low_water = (lo);
-#define DCB_SET_HIGH_WATER(x, hi)       (x)->low_water = (hi);
-#define DCB_BELOW_LOW_WATER(x)          ((x)->low_water && (x)->writeqlen < (x)->low_water)
-#define DCB_ABOVE_HIGH_WATER(x)         ((x)->high_water && (x)->writeqlen > (x)->high_water)
-#define DCB_THROTTLING_ENABLED(x)       ((x)->high_water && (x)->low_water)
+#define DCB_SESSION(x)            (x)->session
+#define DCB_PROTOCOL(x, type)     (type*)((x)->protocol)
+#define DCB_WRITEQLEN(x)          (x)->writeqlen
+#define DCB_SET_LOW_WATER(x, lo)  (x)->low_water = (lo);
+#define DCB_SET_HIGH_WATER(x, hi) (x)->low_water = (hi);
+#define DCB_BELOW_LOW_WATER(x)    ((x)->low_water && (x)->writeqlen < (x)->low_water)
+#define DCB_ABOVE_HIGH_WATER(x)   ((x)->high_water && (x)->writeqlen > (x)->high_water)
+#define DCB_THROTTLING_ENABLED(x) ((x)->high_water && (x)->low_water)
 /**
  * @brief DCB system initialization function
  *
@@ -228,13 +259,13 @@ typedef enum
  */
 void dcb_global_init();
 
-int dcb_write(DCB *, GWBUF *);
-DCB *dcb_accept(DCB *listener);
-DCB *dcb_alloc(dcb_role_t, struct servlistener *);
-DCB *dcb_connect(struct server *, struct session *, const char *);
-int dcb_read(DCB *, GWBUF **, int);
-int dcb_drain_writeq(DCB *);
-void dcb_close(DCB *);
+int  dcb_write(DCB*, GWBUF*);
+DCB* dcb_accept(DCB* listener);
+DCB* dcb_alloc(dcb_role_t, struct servlistener*);
+DCB* dcb_connect(struct server*, struct session*, const char*);
+int  dcb_read(DCB*, GWBUF**, int);
+int  dcb_drain_writeq(DCB*);
+void dcb_close(DCB*);
 
 /**
  * @brief Close DCB in the thread that owns it.
@@ -244,30 +275,35 @@ void dcb_close(DCB *);
  * @note Even if the calling thread owns the dcb, the closing will
  *       still be made via the event loop.
  */
-void dcb_close_in_owning_thread(DCB *dcb);
+void dcb_close_in_owning_thread(DCB* dcb);
 
-void printAllDCBs();                         /* Debug to print all DCB in the system */
-void printDCB(DCB *);                        /* Debug print routine */
-void dprintDCBList(DCB *);                 /* Debug print DCB list statistics */
-void dprintAllDCBs(DCB *);                   /* Debug to print all DCB in the system */
-void dprintOneDCB(DCB *, DCB *);             /* Debug to print one DCB */
-void dprintDCB(DCB *, DCB *);                /* Debug to print a DCB in the system */
-void dListDCBs(DCB *);                       /* List all DCBs in the system */
-void dListClients(DCB *);                    /* List al the client DCBs */
-const char *gw_dcb_state2string(dcb_state_t);              /* DCB state to string */
-void dcb_printf(DCB *, const char *, ...) __attribute__((format(printf, 2, 3))); /* DCB version of printf */
-int dcb_add_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
-int dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
-int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
-int dcb_persistent_clean_count(DCB *, int, bool);      /* Clean persistent and return count */
-void dcb_hangup_foreach (struct server* server);
+void printAllDCBs();                                                            /* Debug to print all DCB in
+                                                                                 * the system */
+void printDCB(DCB*);                                                            /* Debug print routine */
+void dprintDCBList(DCB*);                                                       /* Debug print DCB list
+                                                                                 * statistics */
+void dprintAllDCBs(DCB*);                                                       /* Debug to print all DCB in
+                                                                                 * the system */
+void dprintOneDCB(DCB*, DCB*);                                                  /* Debug to print one DCB */
+void dprintDCB(DCB*, DCB*);                                                     /* Debug to print a DCB in the
+                                                                                 * system */
+void dListDCBs(DCB*);                                                           /* List all DCBs in the system
+                                                                                 * */
+void dListClients(DCB*);                                                        /* List al the client DCBs */
+const char* gw_dcb_state2string(dcb_state_t);                                   /* DCB state to string */
+void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
+int dcb_add_callback(DCB*, DCB_REASON, int (*)(struct dcb*, DCB_REASON, void*), void*);
+int dcb_remove_callback(DCB*, DCB_REASON, int (*)(struct dcb*, DCB_REASON, void*), void*);
+int dcb_count_by_usage(DCB_USAGE);                      /* Return counts of DCBs */
+int      dcb_persistent_clean_count(DCB*, int, bool);   /* Clean persistent and return count */
+void     dcb_hangup_foreach(struct server* server);
 uint64_t dcb_get_session_id(DCB* dcb);
-char *dcb_role_name(DCB *);                  /* Return the name of a role */
-int dcb_accept_SSL(DCB* dcb);
-int dcb_connect_SSL(DCB* dcb);
-int dcb_listen(DCB *listener, const char *config, const char *protocol_name);
-void dcb_enable_session_timeouts();
-void dcb_process_idle_sessions(int thr);
+char*    dcb_role_name(DCB*);               /* Return the name of a role */
+int      dcb_accept_SSL(DCB* dcb);
+int      dcb_connect_SSL(DCB* dcb);
+int      dcb_listen(DCB* listener, const char* config, const char* protocol_name);
+void     dcb_enable_session_timeouts();
+void     dcb_process_idle_sessions(int thr);
 
 /**
  * @brief Append a buffer the DCB's readqueue
@@ -278,7 +314,7 @@ void dcb_process_idle_sessions(int thr);
  * @param dcb    The DCB to be appended to.
  * @param buffer The buffer to append.
  */
-static inline void dcb_readq_append(DCB *dcb, GWBUF *buffer)
+static inline void dcb_readq_append(DCB* dcb, GWBUF* buffer)
 {
     dcb->readq = gwbuf_append(dcb->readq, buffer);
 }
@@ -321,7 +357,7 @@ static unsigned int dcb_readq_length(DCB* dcb)
  * @param dcb    The DCB to be prepended to.
  * @param buffer The buffer to prepend
  */
-static inline void dcb_readq_prepend(DCB *dcb, GWBUF *buffer)
+static inline void dcb_readq_prepend(DCB* dcb, GWBUF* buffer)
 {
     dcb->readq = gwbuf_append(buffer, dcb->readq);
 }
@@ -349,7 +385,7 @@ static GWBUF* dcb_readq_release(DCB* dcb)
  * @param dcb    The DCB to be reset.
  * @param buffer The buffer to reset with
  */
-static inline void dcb_readq_set(DCB *dcb, GWBUF *buffer)
+static inline void dcb_readq_set(DCB* dcb, GWBUF* buffer)
 {
     if (dcb->readq)
     {
@@ -377,7 +413,7 @@ static inline void dcb_readq_set(DCB *dcb, GWBUF *buffer)
  * @param data User provided data passed as the second parameter to @c func
  * @return True if all DCBs were iterated, false if the callback returned false
  */
-bool dcb_foreach(bool (*func)(DCB *dcb, void *data), void *data);
+bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
 
 /**
  * @brief Call a function for each connected DCB on the current worker
@@ -388,7 +424,7 @@ bool dcb_foreach(bool (*func)(DCB *dcb, void *data), void *data);
  *
  * @param data User provided data passed as the second parameter to @c func
  */
-void dcb_foreach_local(bool (*func)(DCB *dcb, void *data), void *data);
+void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
 
 /**
  * @brief Return the port number this DCB is connected to
@@ -396,7 +432,7 @@ void dcb_foreach_local(bool (*func)(DCB *dcb, void *data), void *data);
  * @param dcb DCB to inspect
  * @return Port number the DCB is connected to or -1 if information is not available
  */
-int dcb_get_port(const DCB *dcb);
+int dcb_get_port(const DCB* dcb);
 
 /**
  * @brief Return the DCB currently being handled by the calling thread.
@@ -418,8 +454,8 @@ json_t* dcb_to_json(DCB* dcb);
 /**
  * DCB flags values
  */
-#define DCBF_HUNG               0x0002  /*< Hangup has been dispatched */
-#define DCBF_REPLIED    0x0004  /*< DCB was written to */
+#define DCBF_HUNG    0x0002     /*< Hangup has been dispatched */
+#define DCBF_REPLIED 0x0004     /*< DCB was written to */
 
 #define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
 

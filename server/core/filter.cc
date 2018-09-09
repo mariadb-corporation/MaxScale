@@ -50,7 +50,7 @@ using namespace maxscale;
 
 static struct
 {
-    std::mutex lock;
+    std::mutex              lock;
     std::vector<SFilterDef> filters;
 } this_unit;
 
@@ -72,7 +72,7 @@ static void filter_free_parameters(FilterDef* filter)
  *
  * @return The newly created filter or NULL if an error occurred
  */
-SFilterDef filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMETER* params)
+SFilterDef filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
 {
     MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
 
@@ -90,7 +90,7 @@ SFilterDef filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMET
         return NULL;
     }
 
-    SFilterDef filter(new (std::nothrow) FilterDef(name, module, object, instance, params));
+    SFilterDef filter(new( std::nothrow) FilterDef(name, module, object, instance, params));
 
     if (filter)
     {
@@ -105,13 +105,16 @@ SFilterDef filter_alloc(const char *name, const char *module, MXS_CONFIG_PARAMET
     return filter;
 }
 
-FilterDef::FilterDef(std::string name, std::string module, MXS_FILTER_OBJECT* object,
-                     MXS_FILTER* instance, MXS_CONFIG_PARAMETER* params):
-    name(name),
-    module(module),
-    parameters(NULL),
-    filter(instance),
-    obj(object)
+FilterDef::FilterDef(std::string name,
+                     std::string module,
+                     MXS_FILTER_OBJECT* object,
+                     MXS_FILTER* instance,
+                     MXS_CONFIG_PARAMETER* params)
+    : name(name)
+    , module(module)
+    , parameters(NULL)
+    , filter(instance)
+    , obj(object)
 {
     // TODO: Add config_clone_param_chain
     CONFIG_CONTEXT ctx = {};
@@ -153,7 +156,7 @@ void filter_free(const SFilterDef& filter)
     this_unit.filters.erase(it);
 }
 
-SFilterDef filter_find(const char *name)
+SFilterDef filter_find(const char* name)
 {
     Guard guard(this_unit.lock);
 
@@ -221,8 +224,7 @@ MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
  *
  * @param name  Parameter name to check
  */
-int
-filter_standard_parameter(const char *name)
+int filter_standard_parameter(const char* name)
 {
     if (strcmp(name, "type") == 0 || strcmp(name, "module") == 0)
     {
@@ -237,8 +239,7 @@ filter_standard_parameter(const char *name)
  * Designed to be called within a debugger session in order
  * to display all active filters within MaxScale
  */
-void
-dprintAllFilters(DCB *dcb)
+void dprintAllFilters(DCB* dcb)
 {
     Guard guard(this_unit.lock);
 
@@ -263,7 +264,7 @@ dprintAllFilters(DCB *dcb)
  * Designed to be called within a debug CLI in order
  * to display all active filters in MaxScale
  */
-void dprintFilter(DCB *dcb, const SFilterDef& filter)
+void dprintFilter(DCB* dcb, const SFilterDef& filter)
 {
     mxb_assert(filter);
     dcb_printf(dcb, "FilterDef %p (%s)\n", filter.get(), filter->name.c_str());
@@ -278,8 +279,7 @@ void dprintFilter(DCB *dcb, const SFilterDef& filter)
  * List all filters in a tabular form to a DCB
  *
  */
-void
-dListFilters(DCB *dcb)
+void dListFilters(DCB* dcb)
 {
     Guard guard(this_unit.lock);
 
@@ -287,14 +287,18 @@ dListFilters(DCB *dcb)
     {
         dcb_printf(dcb, "FilterDefs\n");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
-        dcb_printf(dcb, "%-19s | %-15s | Options\n",
-                   "FilterDef", "Module");
+        dcb_printf(dcb,
+                   "%-19s | %-15s | Options\n",
+                   "FilterDef",
+                   "Module");
         dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
 
         for (const auto& ptr : this_unit.filters)
         {
-            dcb_printf(dcb, "%-19s | %-15s | ",
-                       ptr->name.c_str(), ptr->module.c_str());
+            dcb_printf(dcb,
+                       "%-19s | %-15s | ",
+                       ptr->name.c_str(),
+                       ptr->module.c_str());
             dcb_printf(dcb, "\n");
         }
 
@@ -310,8 +314,7 @@ dListFilters(DCB *dcb)
  * @param name          The parameter name
  * @param value         The parameter value
  */
-void
-filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
+void filter_add_parameter(SFilterDef& filter, const char* name, const char* value)
 {
     mxb_assert(filter);
     CONFIG_CONTEXT ctx = {};
@@ -334,12 +337,12 @@ filter_add_parameter(SFilterDef& filter, const char *name, const char *value)
  * @return              The downstream component for the next filter or NULL
  *                      if the filter could not be created
  */
-MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
+MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
     mxb_assert(filter);
-    MXS_DOWNSTREAM *me;
+    MXS_DOWNSTREAM* me;
 
-    if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
+    if ((me = (MXS_DOWNSTREAM*)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
     {
         return NULL;
     }
@@ -369,10 +372,10 @@ MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION *session, MXS
  * @param upstream      The filter that should be upstream of this filter
  * @return              The upstream component for the next filter
  */
-MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream)
+MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION* fsession, MXS_UPSTREAM* upstream)
 {
     mxb_assert(filter);
-    MXS_UPSTREAM *me = NULL;
+    MXS_UPSTREAM* me = NULL;
 
     /*
      * The the filter has no setUpstream entry point then is does
@@ -385,7 +388,7 @@ MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fses
 
     if (filter->obj->clientReply != NULL)
     {
-        if ((me = (MXS_UPSTREAM *)MXS_CALLOC(1, sizeof(MXS_UPSTREAM))) == NULL)
+        if ((me = (MXS_UPSTREAM*)MXS_CALLOC(1, sizeof(MXS_UPSTREAM))) == NULL)
         {
             return NULL;
         }
@@ -397,20 +400,23 @@ MXS_UPSTREAM* filter_upstream(const SFilterDef& filter, MXS_FILTER_SESSION *fses
     return me;
 }
 
-json_t* filter_parameters_to_json(const SFilterDef&  filter)
+json_t* filter_parameters_to_json(const SFilterDef& filter)
 {
     mxb_assert(filter);
     json_t* rval = json_object();
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
-    config_add_module_params_json(filter->parameters, {CN_TYPE, CN_MODULE},
-                                  config_filter_params, mod->parameters, rval);
+    config_add_module_params_json(filter->parameters,
+                                  {CN_TYPE, CN_MODULE},
+                                  config_filter_params,
+                                  mod->parameters,
+                                  rval);
 
     return rval;
 }
 
-json_t* filter_json_data(const SFilterDef&  filter, const char* host)
+json_t* filter_json_data(const SFilterDef& filter, const char* host)
 {
     mxb_assert(filter);
     json_t* rval = json_object();
@@ -444,7 +450,7 @@ json_t* filter_json_data(const SFilterDef&  filter, const char* host)
     return rval;
 }
 
-json_t* filter_to_json(const SFilterDef&  filter, const char* host)
+json_t* filter_to_json(const SFilterDef& filter, const char* host)
 {
     mxb_assert(filter);
     string self = MXS_JSON_API_FILTERS;
@@ -511,7 +517,7 @@ int FilterSession::clientReply(GWBUF* pPacket)
     return m_up.clientReply(pPacket);
 }
 
-void FilterSession::diagnostics(DCB *pDcb)
+void FilterSession::diagnostics(DCB* pDcb)
 {
 }
 
@@ -519,10 +525,9 @@ json_t* FilterSession::diagnostics_json() const
 {
     return NULL;
 }
-
 }
 
-static bool create_filter_config(const SFilterDef& filter, const char *filename)
+static bool create_filter_config(const SFilterDef& filter, const char* filename)
 {
     mxb_assert(filter);
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -530,7 +535,10 @@ static bool create_filter_config(const SFilterDef& filter, const char *filename)
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing filter '%s': %d, %s",
-                  filename, filter->name.c_str(), errno, mxs_strerror(errno));
+                  filename,
+                  filter->name.c_str(),
+                  errno,
+                  mxs_strerror(errno));
         return false;
     }
 
@@ -554,20 +562,25 @@ bool filter_serialize(const SFilterDef& filter)
     mxb_assert(filter);
     bool rval = false;
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf.tmp",
+             get_config_persistdir(),
              filter->name.c_str());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary filter configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
     }
     else if (create_filter_config(filter, filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
 
-        char *dot = strrchr(final_filename, '.');
+        char* dot = strrchr(final_filename, '.');
         mxb_assert(dot);
         *dot = '\0';
 
@@ -578,7 +591,9 @@ bool filter_serialize(const SFilterDef& filter)
         else
         {
             MXS_ERROR("Failed to rename temporary filter configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename,
+                      errno,
+                      mxs_strerror(errno));
         }
     }
 

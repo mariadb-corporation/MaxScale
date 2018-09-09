@@ -24,7 +24,7 @@ NullFilterSession::~NullFilterSession()
 {
 }
 
-//static
+// static
 NullFilterSession* NullFilterSession::create(MXS_SESSION* pSession, const NullFilter* pFilter)
 {
     return new NullFilterSession(pSession, pFilter);

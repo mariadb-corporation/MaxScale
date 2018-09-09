@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /*
  * @verbatim
@@ -43,44 +43,44 @@ static const char DBUSERS_DIR[] = "cache";
 static const char DBUSERS_FILE[] = "dbusers.db";
 
 /** The table name where we store the users */
-#define MYSQLAUTH_USERS_TABLE_NAME    "mysqlauth_users"
+#define MYSQLAUTH_USERS_TABLE_NAME "mysqlauth_users"
 
 /** The table name where we store the users */
-#define MYSQLAUTH_DATABASES_TABLE_NAME    "mysqlauth_databases"
+#define MYSQLAUTH_DATABASES_TABLE_NAME "mysqlauth_databases"
 
 /** CREATE TABLE statement for the in-memory users table */
-static const char users_create_sql[] =
-    "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_USERS_TABLE_NAME
-    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, password text)";
+static const char users_create_sql[]
+    = "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_USERS_TABLE_NAME
+        "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, password text)";
 
 /** CREATE TABLE statement for the in-memory databases table */
-static const char databases_create_sql[] =
-    "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_DATABASES_TABLE_NAME "(db varchar(255))";
+static const char databases_create_sql[]
+    = "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_DATABASES_TABLE_NAME "(db varchar(255))";
 
 /** PRAGMA configuration options for SQLite */
 static const char pragma_sql[] = "PRAGMA JOURNAL_MODE=NONE";
 
 /** Query that checks if there's a grant for the user being authenticated */
-static const char mysqlauth_validate_user_query[] =
-    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
-    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
-    " LIMIT 1";
+static const char mysqlauth_validate_user_query[]
+    = "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+        " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+        " LIMIT 1";
 
 /** Query that checks if there's a grant for the user being authenticated */
-static const char mysqlauth_validate_user_query_lower[] =
-    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
-    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR LOWER('%s') LIKE LOWER(db))"
-    " LIMIT 1";
+static const char mysqlauth_validate_user_query_lower[]
+    = "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+        " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR LOWER('%s') LIKE LOWER(db))"
+        " LIMIT 1";
 
 /** Query that only checks if there's a matching user */
-static const char mysqlauth_skip_auth_query[] =
-    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
-    " WHERE user = '%s' AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
-    " LIMIT 1";
+static const char mysqlauth_skip_auth_query[]
+    = "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+        " WHERE user = '%s' AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+        " LIMIT 1";
 
 /** Query that checks that the database exists */
-static const char mysqlauth_validate_database_query[] =
-    "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE db = '%s' LIMIT 1";
+static const char mysqlauth_validate_database_query[]
+    = "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE db = '%s' LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_users_query[] = "DELETE FROM " MYSQLAUTH_USERS_TABLE_NAME;
@@ -89,35 +89,35 @@ static const char delete_users_query[] = "DELETE FROM " MYSQLAUTH_USERS_TABLE_NA
 static const char delete_databases_query[] = "DELETE FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
 
 /** The insert query template which adds users to the mysqlauth_users table */
-static const char insert_user_query[] =
-    "INSERT OR REPLACE INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+static const char insert_user_query[]
+    = "INSERT OR REPLACE INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
 /** The insert query template which adds the databases to the table */
-static const char insert_database_query[] =
-    "INSERT OR REPLACE INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
+static const char insert_database_query[]
+    = "INSERT OR REPLACE INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
 
-static const char dump_users_query[] =
-    "SELECT user, host, db, anydb, password FROM " MYSQLAUTH_USERS_TABLE_NAME;
+static const char dump_users_query[]
+    = "SELECT user, host, db, anydb, password FROM " MYSQLAUTH_USERS_TABLE_NAME;
 
-static const char dump_databases_query[] =
-    "SELECT db FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
+static const char dump_databases_query[]
+    = "SELECT db FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
 
 /** Flags for sqlite3_open_v2() */
-static int db_flags = SQLITE_OPEN_READWRITE |
-                      SQLITE_OPEN_CREATE |
-                      SQLITE_OPEN_NOMUTEX;
+static int db_flags = SQLITE_OPEN_READWRITE
+    | SQLITE_OPEN_CREATE
+    | SQLITE_OPEN_NOMUTEX;
 
 typedef struct mysql_auth
 {
-    sqlite3 **handles;        /**< SQLite3 database handle */
-    char *cache_dir;          /**< Custom cache directory location */
-    bool inject_service_user; /**< Inject the service user into the list of users */
-    bool skip_auth;           /**< Authentication will always be successful */
-    bool check_permissions;
-    bool lower_case_table_names; /**< Disable database case-sensitivity */
+    sqlite3** handles;              /**< SQLite3 database handle */
+    char*     cache_dir;            /**< Custom cache directory location */
+    bool      inject_service_user;  /**< Inject the service user into the list of users */
+    bool      skip_auth;            /**< Authentication will always be successful */
+    bool      check_permissions;
+    bool      lower_case_table_names;   /**< Disable database case-sensitivity */
 } MYSQL_AUTH;
 
 /**
@@ -125,11 +125,11 @@ typedef struct mysql_auth
  */
 typedef struct mysql_user_host_key
 {
-    char *user;
+    char*              user;
     struct sockaddr_in ipv4;
-    int netmask;
-    char *resource;
-    char hostname[MYSQL_HOST_MAXLEN + 1];
+    int                netmask;
+    char*              resource;
+    char               hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
 
 /**
@@ -150,8 +150,12 @@ sqlite3* get_handle(MYSQL_AUTH* instance);
  * @param db     Database
  * @param anydb  Global access to databases
  */
-void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
-                    const char *db, bool anydb, const char *pw);
+void add_mysql_user(sqlite3* handle,
+                    const char* user,
+                    const char* host,
+                    const char* db,
+                    bool anydb,
+                    const char* pw);
 
 /**
  * @brief Check if the service user has all required permissions to operate properly.
@@ -174,7 +178,7 @@ bool check_service_permissions(SERVICE* service);
  *
  * @return True on success
  */
-bool dbusers_load(sqlite3 *handle, const char *filename);
+bool dbusers_load(sqlite3* handle, const char* filename);
 
 /**
  * Save users to persisted database
@@ -183,7 +187,7 @@ bool dbusers_load(sqlite3 *handle, const char *filename);
  *
  * @return True on success
  */
-bool dbusers_save(sqlite3 *src, const char *filename);
+bool dbusers_save(sqlite3* src, const char* filename);
 
 /**
  * Reload and replace the currently loaded database users
@@ -193,7 +197,7 @@ bool dbusers_save(sqlite3 *src, const char *filename);
  *
  * @return -1 on any error or the number of users inserted (0 means no users at all)
  */
-int replace_mysql_users(SERV_LISTENER *listener, bool skip_local);
+int replace_mysql_users(SERV_LISTENER* listener, bool skip_local);
 
 /**
  * @brief Verify the user has access to the database
@@ -206,7 +210,10 @@ int replace_mysql_users(SERV_LISTENER *listener, bool skip_local);
  *
  * @return MXS_AUTH_SUCCEEDED if the user has access to the database
  */
-int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
-                        uint8_t *scramble, size_t scramble_len);
+int validate_mysql_user(MYSQL_AUTH* instance,
+                        DCB* dcb,
+                        MYSQL_session* session,
+                        uint8_t* scramble,
+                        size_t   scramble_len);
 
 MXS_END_DECLS

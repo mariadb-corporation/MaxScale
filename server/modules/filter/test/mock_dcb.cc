@@ -24,7 +24,6 @@ void initialize_dcb(DCB* pDcb)
     pDcb->state = DCB_STATE_ALLOC;
     pDcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
 }
-
 }
 
 namespace maxscale
@@ -34,9 +33,9 @@ namespace mock
 {
 
 Dcb::Dcb(MXS_SESSION* pSession,
-         const char* zUser,
-         const char* zHost,
-         Handler*    pHandler)
+         const char*  zUser,
+         const char*  zHost,
+         Handler* pHandler)
     : m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
@@ -83,12 +82,10 @@ int32_t Dcb::write(GWBUF* pData)
     return rv;
 }
 
-//static
+// static
 int32_t Dcb::write(DCB* pDcb, GWBUF* pData)
 {
     return static_cast<Dcb*>(pDcb)->write(pData);
 }
-
 }
-
 }

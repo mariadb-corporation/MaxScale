@@ -8,10 +8,10 @@
 using namespace std;
 
 
-int execute_cmd(char * cmd, char ** res)
+int execute_cmd(char* cmd, char** res)
 {
-    char * result;
-    FILE *output = popen(cmd, "r");
+    char* result;
+    FILE* output = popen(cmd, "r");
     if (output == NULL)
     {
         printf("Error opening ssh %s\n", strerror(errno));
@@ -19,7 +19,7 @@ int execute_cmd(char * cmd, char ** res)
     }
     char buffer[10240];
     size_t rsize = sizeof(buffer);
-    result =  (char*)calloc(rsize, sizeof(char));
+    result = (char*)calloc(rsize, sizeof(char));
 
     while (fgets(buffer, sizeof(buffer), output))
     {
@@ -40,5 +40,3 @@ int execute_cmd(char * cmd, char ** res)
         return -1;
     }
 }
-
-

@@ -22,9 +22,9 @@ struct Test
     const char* query;
     bool        should_work;
 
-    Test(const char* q = NULL, bool works = true):
-        query(q),
-        should_work(works)
+    Test(const char* q = NULL, bool works = true)
+        : query(q)
+        , should_work(works)
     {
     }
 };
@@ -38,8 +38,10 @@ void do_test(Test pre, Test post)
     if (pre.query)
     {
         rc = execute_query_silent(test.maxscales->conn_rwsplit[0], pre.query);
-        test.assert((rc == 0) == pre.should_work, "Expected query '%s' to %s: %s",
-                    pre.query, pre.should_work ? "succeed" : "fail",
+        test.assert((rc == 0) == pre.should_work,
+                    "Expected query '%s' to %s: %s",
+                    pre.query,
+                    pre.should_work ? "succeed" : "fail",
                     mysql_error(test.maxscales->conn_rwsplit[0]));
     }
 
@@ -47,8 +49,10 @@ void do_test(Test pre, Test post)
     sleep(5);
 
     rc = execute_query_silent(test.maxscales->conn_rwsplit[0], post.query);
-    test.assert((rc == 0) == post.should_work, "Expected query '%s' to %s: %s",
-                post.query, post.should_work ? "succeed" : "fail",
+    test.assert((rc == 0) == post.should_work,
+                "Expected query '%s' to %s: %s",
+                post.query,
+                post.should_work ? "succeed" : "fail",
                 mysql_error(test.maxscales->conn_rwsplit[0]));
 
     change_master(0, 1);

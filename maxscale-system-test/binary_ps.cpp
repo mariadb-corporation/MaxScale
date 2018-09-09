@@ -54,9 +54,13 @@ int main(int argc, char** argv)
     test.add_result(mysql_stmt_execute(stmt), "Failed to execute");
     test.add_result(mysql_stmt_bind_result(stmt, bind), "Failed to bind result");
     test.add_result(mysql_stmt_fetch(stmt), "Failed to fetch result");
-    test.add_result(strcmp(buffer, server_id[1]) && strcmp(buffer, server_id[2]) && strcmp(buffer, server_id[3]),
+    test.add_result(strcmp(buffer,
+                           server_id[1]) && strcmp(buffer, server_id[2]) && strcmp(buffer, server_id[3]),
                     "Expected one of the slave server IDs (%s, %s or %s), not '%s'",
-                    server_id[1], server_id[2], server_id[3], buffer);
+                    server_id[1],
+                    server_id[2],
+                    server_id[3],
+                    buffer);
 
 
     mysql_stmt_close(stmt);

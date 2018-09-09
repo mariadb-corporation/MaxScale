@@ -13,56 +13,54 @@ using namespace std;
 
 struct TestCase
 {
-    string description;
-    function<void ()> pre;   // Called before master goes down
-    function<void ()> block; // Executed in a separate thread before `main` is called
-    function<void ()> main;  // Called after master goes down
-    function<void ()> check; // Called after `main` and `block` are completed
+    string            description;
+    function<void ()> pre;      // Called before master goes down
+    function<void ()> block;    // Executed in a separate thread before `main` is called
+    function<void ()> main;     // Called after master goes down
+    function<void ()> check;    // Called after `main` and `block` are completed
 };
 
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&test](string q, int t = 0)
-    {
-        sleep(t);
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
-    };
+    auto query = [&test](string q, int t = 0) {
+            sleep(t);
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+        };
 
-    auto compare = [&test](string q, string res)
-    {
-        auto rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
-        test.assert(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
-    };
+    auto compare = [&test](string q, string res) {
+            auto rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
+            test.assert(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
+        };
 
-    auto check = [&test, &compare](string q, string res)
-    {
-        test.repl->sync_slaves();
-        test.maxscales->connect();
-        compare(q, res);
-        test.maxscales->disconnect();
-    };
+    auto check = [&test, &compare](string q, string res) {
+            test.repl->sync_slaves();
+            test.maxscales->connect();
+            compare(q, res);
+            test.maxscales->disconnect();
+        };
 
-    auto ok = [&test, &query](string q, int t = 0)
-    {
-        test.assert(query(q, t), "Query '%' should work: %s", q.c_str(), mysql_error(test.maxscales->conn_rwsplit[0]));
-    };
+    auto ok = [&test, &query](string q, int t = 0) {
+            test.assert(query(q, t),
+                        "Query '%' should work: %s",
+                        q.c_str(),
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        };
 
-    auto err = [&test, &query](string q, int t = 0)
-    {
-        test.assert(!query(q, t), "Query should fail: %s", q.c_str());
-    };
+    auto err = [&test, &query](string q, int t = 0) {
+            test.assert(!query(q, t), "Query should fail: %s", q.c_str());
+        };
 
-    auto block = [&test](int pre = 0, int node = 0)
-    {
-        sleep(pre);
-        test.repl->block_node(node);
-        sleep(10);
-        test.repl->unblock_node(node);
-    };
+    auto block = [&test](int pre = 0, int node = 0) {
+            sleep(pre);
+            test.repl->block_node(node);
+            sleep(10);
+            test.repl->unblock_node(node);
+        };
 
-    auto noop = [](){};
+    auto noop = []() {
+        };
 
     vector<TestCase> tests(
     {

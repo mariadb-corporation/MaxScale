@@ -37,36 +37,38 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.h>
 
-static void* mysql_auth_init(char **options);
-static bool mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
-static int mysql_auth_authenticate(DCB *dcb);
-static void mysql_auth_free_client_data(DCB *dcb);
-static int mysql_auth_load_users(SERV_LISTENER *port);
-static void *mysql_auth_create(void *instance);
-static void mysql_auth_destroy(void *data);
+static void* mysql_auth_init(char** options);
+static bool  mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
+static bool  mysql_auth_is_client_ssl_capable(DCB* dcb);
+static int   mysql_auth_authenticate(DCB* dcb);
+static void  mysql_auth_free_client_data(DCB* dcb);
+static int   mysql_auth_load_users(SERV_LISTENER* port);
+static void* mysql_auth_create(void* instance);
+static void  mysql_auth_destroy(void* data);
 
-static int combined_auth_check(
-    DCB             *dcb,
-    uint8_t         *auth_token,
-    size_t          auth_token_len,
-    MySQLProtocol   *protocol,
-    char            *username,
-    uint8_t         *stage1_hash,
-    char            *database
-);
-static bool mysql_auth_set_client_data(
-    MYSQL_session *client_data,
-    MySQLProtocol *protocol,
-    GWBUF         *buffer);
+static int combined_auth_check(DCB* dcb,
+                               uint8_t* auth_token,
+                               size_t   auth_token_len,
+                               MySQLProtocol* protocol,
+                               char* username,
+                               uint8_t* stage1_hash,
+                               char* database
+                               );
+static bool mysql_auth_set_client_data(MYSQL_session* client_data,
+                                       MySQLProtocol* protocol,
+                                       GWBUF* buffer);
 
-void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port);
-json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port);
+void    mysql_auth_diagnostic(DCB* dcb, SERV_LISTENER* port);
+json_t* mysql_auth_diagnostic_json(const SERV_LISTENER* port);
 
-int mysql_auth_reauthenticate(DCB *dcb, const char *user,
-                              uint8_t *token, size_t token_len,
-                              uint8_t *scramble, size_t scramble_len,
-                              uint8_t *output_token, size_t output_token_len);
+int mysql_auth_reauthenticate(DCB* dcb,
+                              const char* user,
+                              uint8_t* token,
+                              size_t   token_len,
+                              uint8_t* scramble,
+                              size_t   scramble_len,
+                              uint8_t* output_token,
+                              size_t   output_token_len);
 
 extern "C"
 {
@@ -78,45 +80,44 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        mysql_auth_init,                  /* Initialize the authenticator */
-        NULL,                             /* Create entry point */
-        mysql_auth_set_protocol_data,     /* Extract data into structure   */
-        mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-        mysql_auth_authenticate,          /* Authenticate user credentials */
-        mysql_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                             /* Destroy entry point */
-        mysql_auth_load_users,            /* Load users from backend databases */
-        mysql_auth_diagnostic,
-        mysql_auth_diagnostic_json,
-        mysql_auth_reauthenticate         /* Handle COM_CHANGE_USER */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            mysql_auth_init,                    /* Initialize the authenticator */
+            NULL,                               /* Create entry point */
+            mysql_auth_set_protocol_data,       /* Extract data into structure   */
+            mysql_auth_is_client_ssl_capable,   /* Check if client supports SSL  */
+            mysql_auth_authenticate,            /* Authenticate user credentials */
+            mysql_auth_free_client_data,        /* Free the client data held in DCB */
+            NULL,                               /* Destroy entry point */
+            mysql_auth_load_users,              /* Load users from backend databases */
+            mysql_auth_diagnostic,
+            mysql_auth_diagnostic_json,
+            mysql_auth_reauthenticate       /* Handle COM_CHANGE_USER */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The MySQL client to MaxScale authenticator implementation",
-        "V1.1.0",
-        ACAP_TYPE_ASYNC,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The MySQL client to MaxScale authenticator implementation",
+            "V1.1.0",
+            ACAP_TYPE_ASYNC,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
+        return &info;
+    }
 }
 
-}
-
-static bool open_instance_database(const char *path, sqlite3 **handle)
+static bool open_instance_database(const char* path, sqlite3** handle)
 {
     int rc = sqlite3_open_v2(path, handle, db_flags, NULL);
 
@@ -126,11 +127,11 @@ static bool open_instance_database(const char *path, sqlite3 **handle)
         return false;
     }
 
-    char *err;
+    char* err;
 
-    if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+    if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK
+        || sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK
+        || sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to create database: %s", err);
         sqlite3_free(err);
@@ -148,7 +149,7 @@ sqlite3* get_handle(MYSQL_AUTH* instance)
 
     if (instance->handles[i] == NULL)
     {
-        MXB_AT_DEBUG(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
+        MXB_AT_DEBUG(bool rval = ) open_instance_database(":memory:", &instance->handles[i]);
         mxb_assert(rval);
     }
 
@@ -174,12 +175,12 @@ static bool should_check_permissions(MYSQL_AUTH* instance)
  * @param options Authenticator options
  * @return New MYSQL_AUTH instance or NULL on error
  */
-static void* mysql_auth_init(char **options)
+static void* mysql_auth_init(char** options)
 {
-    MYSQL_AUTH *instance = static_cast<MYSQL_AUTH*>(MXS_MALLOC(sizeof(*instance)));
+    MYSQL_AUTH* instance = static_cast<MYSQL_AUTH*>(MXS_MALLOC(sizeof(*instance)));
 
-    if (instance &&
-        (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
+    if (instance
+        && (instance->handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
     {
         bool error = false;
         instance->cache_dir = NULL;
@@ -190,7 +191,7 @@ static void* mysql_auth_init(char **options)
 
         for (int i = 0; options[i]; i++)
         {
-            char *value = strchr(options[i], '=');
+            char* value = strchr(options[i], '=');
 
             if (value)
             {
@@ -198,8 +199,8 @@ static void* mysql_auth_init(char **options)
 
                 if (strcmp(options[i], "cache_dir") == 0)
                 {
-                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL ||
-                        !clean_up_pathname(instance->cache_dir))
+                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL
+                        || !clean_up_pathname(instance->cache_dir))
                     {
                         error = true;
                     }
@@ -246,13 +247,13 @@ static void* mysql_auth_init(char **options)
     return instance;
 }
 
-static bool is_localhost_address(struct sockaddr_storage *addr)
+static bool is_localhost_address(struct sockaddr_storage* addr)
 {
     bool rval = false;
 
     if (addr->ss_family == AF_INET)
     {
-        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        struct sockaddr_in* ip = (struct sockaddr_in*)addr;
         if (ip->sin_addr.s_addr == INADDR_LOOPBACK)
         {
             rval = true;
@@ -260,7 +261,7 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
     }
     else if (addr->ss_family == AF_INET6)
     {
-        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
         if (memcmp(&ip->sin6_addr, &in6addr_loopback, sizeof(ip->sin6_addr)) == 0)
         {
             rval = true;
@@ -280,26 +281,32 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-static int
-mysql_auth_authenticate(DCB *dcb)
+static int mysql_auth_authenticate(DCB* dcb)
 {
     int auth_ret = ssl_authenticate_check_status(dcb);
-    MYSQL_session *client_data = (MYSQL_session *)dcb->data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->data;
     if (auth_ret == MXS_AUTH_SSL_COMPLETE && *client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
-                  client_data->user, client_data->db);
+                  client_data->user,
+                  client_data->db);
 
-        MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
-        MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-        auth_ret = validate_mysql_user(instance, dcb, client_data,
-                                       protocol->scramble, sizeof(protocol->scramble));
+        MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+        MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        auth_ret = validate_mysql_user(instance,
+                                       dcb,
+                                       client_data,
+                                       protocol->scramble,
+                                       sizeof(protocol->scramble));
 
-        if (auth_ret != MXS_AUTH_SUCCEEDED &&
-            service_refresh_users(dcb->service) == 0)
+        if (auth_ret != MXS_AUTH_SUCCEEDED
+            && service_refresh_users(dcb->service) == 0)
         {
-            auth_ret = validate_mysql_user(instance, dcb, client_data,
-                                           protocol->scramble, sizeof(protocol->scramble));
+            auth_ret = validate_mysql_user(instance,
+                                           dcb,
+                                           client_data,
+                                           protocol->scramble,
+                                           sizeof(protocol->scramble));
         }
 
         /* on successful authentication, set user into dcb field */
@@ -327,21 +334,30 @@ mysql_auth_authenticate(DCB *dcb)
             {
                 MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                               "%s: login attempt for user '%s'@[%s]:%s, authentication failed. %s",
-                              dcb->service->name, client_data->user, dcb->remote, dcb->path, extra);
+                              dcb->service->name,
+                              client_data->user,
+                              dcb->remote,
+                              dcb->path,
+                              extra);
             }
             else
             {
                 MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                               "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                              dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb), extra);
+                              dcb->service->name,
+                              client_data->user,
+                              dcb->remote,
+                              dcb_get_port(dcb),
+                              extra);
             }
 
-            if (is_localhost_address(&dcb->ip) &&
-                !dcb->service->localhost_match_wildcard_host)
+            if (is_localhost_address(&dcb->ip)
+                && !dcb->service->localhost_match_wildcard_host)
             {
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "
-                           "service '%s'. ", dcb->service->name);
+                           "service '%s'. ",
+                           dcb->service->name);
             }
         }
 
@@ -370,15 +386,14 @@ mysql_auth_authenticate(DCB *dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-static bool
-mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
+static bool mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
 {
-    MySQLProtocol *protocol = NULL;
-    MYSQL_session *client_data = NULL;
+    MySQLProtocol* protocol = NULL;
+    MYSQL_session* client_data = NULL;
     int client_auth_packet_size = 0;
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-    client_data = (MYSQL_session *)dcb->data;
+    client_data = (MYSQL_session*)dcb->data;
 
     client_auth_packet_size = gwbuf_length(buf);
 
@@ -418,11 +433,9 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param client_auth_packet size An integer giving the size of the data
  * @return True on success, false on error
  */
-static bool
-mysql_auth_set_client_data(
-    MYSQL_session *client_data,
-    MySQLProtocol *protocol,
-    GWBUF         *buffer)
+static bool mysql_auth_set_client_data(MYSQL_session* client_data,
+                                       MySQLProtocol* protocol,
+                                       GWBUF* buffer)
 {
     int client_auth_packet_size = gwbuf_length(buffer);
     uint8_t client_auth_packet[client_auth_packet_size];
@@ -457,12 +470,14 @@ mysql_auth_set_client_data(
         {
             /* Extra 1 is for the terminating null after user name */
             packet_length_used = MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1;
-            /* We should find an authentication token next */
-            /* One byte of packet is the length of authentication token */
+            /*
+             * We should find an authentication token next
+             * One byte of packet is the length of authentication token
+             */
             client_data->auth_token_len = client_auth_packet[packet_length_used];
 
-            if (client_auth_packet_size >
-                (packet_length_used + client_data->auth_token_len))
+            if (client_auth_packet_size
+                > (packet_length_used + client_data->auth_token_len))
             {
                 client_data->auth_token = (uint8_t*)MXS_MALLOC(client_data->auth_token_len);
 
@@ -504,10 +519,9 @@ mysql_auth_set_client_data(
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-static bool
-mysql_auth_is_client_ssl_capable(DCB *dcb)
+static bool mysql_auth_is_client_ssl_capable(DCB* dcb)
 {
-    MySQLProtocol *protocol;
+    MySQLProtocol* protocol;
 
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     return (protocol->client_capabilities & (int)GW_MYSQL_CAPABILITIES_SSL) ? true : false;
@@ -525,8 +539,7 @@ mysql_auth_is_client_ssl_capable(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void
-mysql_auth_free_client_data(DCB *dcb)
+static void mysql_auth_free_client_data(DCB* dcb)
 {
     MXS_FREE(dcb->data);
 }
@@ -537,10 +550,10 @@ mysql_auth_free_client_data(DCB *dcb)
  * @param port Service listener
  * @return True on success, false on error
  */
-static bool add_service_user(SERV_LISTENER *port)
+static bool add_service_user(SERV_LISTENER* port)
 {
-    const char *user = NULL;
-    const char *password = NULL;
+    const char* user = NULL;
+    const char* password = NULL;
     bool rval = false;
 
     serviceGetUser(port->service, &user, &password);
@@ -549,11 +562,11 @@ static bool add_service_user(SERV_LISTENER *port)
 
     if ((pw = decrypt_password(password)))
     {
-        char *newpw = create_hex_sha1_sha1_passwd(pw);
+        char* newpw = create_hex_sha1_sha1_passwd(pw);
 
         if (newpw)
         {
-            MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
+            MYSQL_AUTH* inst = (MYSQL_AUTH*)port->auth_instance;
             sqlite3* handle = get_handle(inst);
             add_mysql_user(handle, user, "%", "", "Y", newpw);
             add_mysql_user(handle, user, "localhost", "", "Y", newpw);
@@ -592,11 +605,11 @@ static bool service_has_servers(SERVICE* service)
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-static int mysql_auth_load_users(SERV_LISTENER *port)
+static int mysql_auth_load_users(SERV_LISTENER* port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
-    SERVICE *service = port->listener->service;
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+    SERVICE* service = port->listener->service;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
     bool first_load = false;
 
     if (should_check_permissions(instance))
@@ -618,8 +631,11 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     {
         if (loaded < 0)
         {
-            MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.", service->name,
-                      port->name, port->address ? port->address : "::", port->port);
+            MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.",
+                      service->name,
+                      port->name,
+                      port->address ? port->address : "::",
+                      port->port);
         }
 
         if (instance->inject_service_user)
@@ -643,13 +659,15 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         {
             MXS_NOTICE("[%s] No users were loaded but 'inject_service_user' is enabled. "
                        "Enabling service credentials for authentication until "
-                       "database users have been successfully loaded.", service->name);
+                       "database users have been successfully loaded.",
+                       service->name);
         }
     }
     else if (loaded == 0 && !first_load)
     {
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
-                    " will probably fail as a result.", service->name);
+                    " will probably fail as a result.",
+                    service->name);
     }
     else if (loaded > 0 && first_load)
     {
@@ -659,12 +677,16 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     return rc;
 }
 
-int mysql_auth_reauthenticate(DCB *dcb, const char *user,
-                              uint8_t *token, size_t token_len,
-                              uint8_t *scramble, size_t scramble_len,
-                              uint8_t *output_token, size_t output_token_len)
+int mysql_auth_reauthenticate(DCB* dcb,
+                              const char* user,
+                              uint8_t* token,
+                              size_t   token_len,
+                              uint8_t* scramble,
+                              size_t   scramble_len,
+                              uint8_t* output_token,
+                              size_t   output_token_len)
 {
-    MYSQL_session *client_data = (MYSQL_session *)dcb->data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->data;
     MYSQL_session temp;
     int rval = 1;
 
@@ -673,7 +695,7 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
     temp.auth_token = token;
     temp.auth_token_len = token_len;
 
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
     int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service) == 0)
@@ -688,24 +710,26 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
     }
 
     return rval;
-
 }
 
-int diag_cb(void *data, int columns, char **row, char **field_names)
+int diag_cb(void* data, int columns, char** row, char** field_names)
 {
-    DCB *dcb = (DCB*)data;
+    DCB* dcb = (DCB*)data;
     dcb_printf(dcb, "%s@%s ", row[0], row[1]);
     return 0;
 }
 
-void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
+void mysql_auth_diagnostic(DCB* dcb, SERV_LISTENER* port)
 {
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
     sqlite3* handle = get_handle(instance);
-    char *err;
+    char* err;
 
-    if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb, dcb, &err) != SQLITE_OK)
+    if (sqlite3_exec(handle,
+                     "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+                     diag_cb,
+                     dcb,
+                     &err) != SQLITE_OK)
     {
         dcb_printf(dcb, "Could not access users: %s", err);
         MXS_ERROR("Could not access users: %s", err);
@@ -713,7 +737,7 @@ void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
     }
 }
 
-int diag_cb_json(void *data, int columns, char **row, char **field_names)
+int diag_cb_json(void* data, int columns, char** row, char** field_names)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, "user", json_string(row[0]));
@@ -724,16 +748,19 @@ int diag_cb_json(void *data, int columns, char **row, char **field_names)
     return 0;
 }
 
-json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port)
+json_t* mysql_auth_diagnostic_json(const SERV_LISTENER* port)
 {
     json_t* rval = json_array();
 
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
-    char *err;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)port->auth_instance;
+    char* err;
     sqlite3* handle = get_handle(instance);
 
-    if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb_json, rval, &err) != SQLITE_OK)
+    if (sqlite3_exec(handle,
+                     "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+                     diag_cb_json,
+                     rval,
+                     &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to print users: %s", err);
         sqlite3_free(err);

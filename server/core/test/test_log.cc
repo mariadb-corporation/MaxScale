@@ -35,12 +35,12 @@ static void skygw_log_disable(int priority)
 
 int main(int argc, char* argv[])
 {
-    int              err = 0;
-    const char*      logstr;
-    bool             succp;
-    time_t           t;
-    struct tm        tm;
-    char             c;
+    int err = 0;
+    const char* logstr;
+    bool succp;
+    time_t t;
+    struct tm tm;
+    char c;
 
     succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
 

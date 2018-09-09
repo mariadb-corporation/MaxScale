@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -33,7 +33,6 @@ struct default_delete<json_t>
         json_decref(pJson);
     }
 };
-
 }
 
 namespace maxscale
@@ -99,10 +98,8 @@ static inline std::string json_to_string(json_t* json)
     default:
         mxb_assert(false);
         break;
-
     }
 
     return ss.str();
 }
-
 }

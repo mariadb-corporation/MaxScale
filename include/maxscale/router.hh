@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.h>
@@ -66,16 +66,16 @@ public:
      * @param action    The context.
      * @param pSuccess  On output, if false, the session will be terminated.
      */
-    void handleError(GWBUF*             pMessage,
-                     DCB*               pProblem,
+    void handleError(GWBUF* pMessage,
+                     DCB*   pProblem,
                      mxs_error_action_t action,
-                     bool*              pSuccess);
+                     bool* pSuccess);
 
 protected:
     RouterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION* m_pSession; /*< The MXS_SESSION this router session is associated with. */
+    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this router session is associated with. */
 };
 
 
@@ -205,12 +205,12 @@ public:
         MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend));
     }
 
-    static void handleError(MXS_ROUTER*         pInstance,
+    static void handleError(MXS_ROUTER* pInstance,
                             MXS_ROUTER_SESSION* pData,
-                            GWBUF*              pMessage,
-                            DCB*                pProblem,
-                            mxs_error_action_t  action,
-                            bool*               pSuccess)
+                            GWBUF* pMessage,
+                            DCB*   pProblem,
+                            mxs_error_action_t action,
+                            bool* pSuccess)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
@@ -246,7 +246,7 @@ public:
     static MXS_ROUTER_OBJECT s_object;
 
 protected:
-    Router(SERVICE *pService)
+    Router(SERVICE* pService)
         : m_pService(pService)
     {
     }
@@ -271,6 +271,4 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::destroyInstance,
     &Router<RouterType, RouterSessionType>::configure,
 };
-
-
 }

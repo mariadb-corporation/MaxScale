@@ -29,10 +29,10 @@
  * @param count         Number of columns in the result set
  * @return              Non-zero on success
  */
-static int mysql_send_fieldcount(DCB *dcb, int count)
+static int mysql_send_fieldcount(DCB* dcb, int count)
 {
-    GWBUF *pkt;
-    uint8_t *ptr;
+    GWBUF* pkt;
+    uint8_t* ptr;
 
     if ((pkt = gwbuf_alloc(5)) == NULL)
     {
@@ -57,7 +57,7 @@ static int mysql_send_fieldcount(DCB *dcb, int count)
  * @param seqno         Packet sequence number
  * @return              Non-zero on success
  */
-static int mysql_send_columndef(DCB *dcb, const std::string& name, uint8_t seqno)
+static int mysql_send_columndef(DCB* dcb, const std::string& name, uint8_t seqno)
 {
     GWBUF* pkt = gwbuf_alloc(26 + name.length());
 
@@ -66,7 +66,7 @@ static int mysql_send_columndef(DCB *dcb, const std::string& name, uint8_t seqno
         return 0;
     }
 
-    int len = 255; // Column type length e.g. VARCHAR(255)
+    int len = 255;      // Column type length e.g. VARCHAR(255)
 
     uint8_t* ptr = GWBUF_DATA(pkt);
     int plen = 22 + name.length();
@@ -108,7 +108,7 @@ static int mysql_send_columndef(DCB *dcb, const std::string& name, uint8_t seqno
  * @param seqno         The sequence number of the EOF packet
  * @return              Non-zero on success
  */
-static int mysql_send_eof(DCB *dcb, int seqno)
+static int mysql_send_eof(DCB* dcb, int seqno)
 {
     GWBUF* pkt = gwbuf_alloc(9);
 
@@ -138,12 +138,11 @@ static int mysql_send_eof(DCB *dcb, int seqno)
  * @param seqno         The sequence number of the EOF packet
  * @return              Non-zero on success
  */
-static int mysql_send_row(DCB *dcb, const std::vector<std::string>& row, int seqno)
+static int mysql_send_row(DCB* dcb, const std::vector<std::string>& row, int seqno)
 {
-    auto acc = [](int l, const std::string& s)
-    {
-        return l + s.length() + 1;
-    };
+    auto acc = [](int l, const std::string& s) {
+            return l + s.length() + 1;
+        };
 
     int len = std::accumulate(row.begin(), row.end(), MYSQL_HEADER_LEN, acc);
 
@@ -171,14 +170,14 @@ static int mysql_send_row(DCB *dcb, const std::vector<std::string>& row, int seq
     return dcb->func.write(dcb, pkt);
 }
 
-ResultSet::ResultSet(std::initializer_list<std::string> names):
-    m_columns(names)
+ResultSet::ResultSet(std::initializer_list<std::string> names)
+    : m_columns(names)
 {
 }
 
 std::unique_ptr<ResultSet> ResultSet::create(std::initializer_list<std::string> names)
 {
-    return std::unique_ptr<ResultSet>(new (std::nothrow) ResultSet(names));
+    return std::unique_ptr<ResultSet>(new( std::nothrow) ResultSet(names));
 }
 
 void ResultSet::add_row(std::initializer_list<std::string> values)
@@ -191,7 +190,7 @@ void ResultSet::write(DCB* dcb)
 {
     mysql_send_fieldcount(dcb, m_columns.size());
 
-    uint8_t seqno = 2; // The second packet after field count
+    uint8_t seqno = 2;      // The second packet after field count
 
     for (const auto& c : m_columns)
     {

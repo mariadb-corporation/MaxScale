@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/query_classifier.h>
@@ -20,8 +20,8 @@ MXS_BEGIN_DECLS
 
 typedef enum qc_trx_parse_using
 {
-    QC_TRX_PARSE_USING_QC,     /**< Use the query classifier. */
-    QC_TRX_PARSE_USING_PARSER, /**< Use custom parser. */
+    QC_TRX_PARSE_USING_QC,      /**< Use the query classifier. */
+    QC_TRX_PARSE_USING_PARSER,  /**< Use custom parser. */
 } qc_trx_parse_using_t;
 
 /**

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -33,7 +33,7 @@ class Client : public MXS_FILTER_SESSION
              , public Dcb::Handler
 {
     Client(const Client&);
-    Client& operator = (const Client&);
+    Client& operator=(const Client&);
 
 public:
     /**
@@ -135,7 +135,5 @@ private:
     Handler*    m_pHandler;
     size_t      m_n_responses;
 };
-
 }
-
 }

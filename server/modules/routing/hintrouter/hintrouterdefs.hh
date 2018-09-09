@@ -10,14 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/dcb.h>
 #include <maxscale/log.h>
 
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
 #define DEBUG_HINTROUTER
 #undef DEBUG_HINTROUTER
 #else
@@ -26,7 +26,7 @@
 
 #ifdef DEBUG_HINTROUTER
 #define HR_DEBUG(msg, ...) MXS_NOTICE(msg, ##__VA_ARGS__)
-#define HR_ENTRY() HR_DEBUG(__func__)
+#define HR_ENTRY()         HR_DEBUG(__func__)
 #else
 #define HR_DEBUG(msg, ...)
 #define HR_ENTRY()

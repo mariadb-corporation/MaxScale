@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "cachesimple.hh"
@@ -30,20 +30,20 @@ public:
 
     bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
-    void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession);
+    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
 private:
-    CacheST(const std::string&              name,
-            const CACHE_CONFIG*             pConfig,
+    CacheST(const std::string& name,
+            const CACHE_CONFIG* pConfig,
             const std::vector<SCacheRules>& rules,
-            SStorageFactory                 sFactory,
-            Storage*                        pStorage);
+            SStorageFactory sFactory,
+            Storage* pStorage);
 
-    static CacheST* Create(const std::string&              name,
-                           const CACHE_CONFIG*             pConfig,
+    static CacheST* Create(const std::string& name,
+                           const CACHE_CONFIG* pConfig,
                            const std::vector<SCacheRules>& rules,
-                           SStorageFactory                 sFactory);
+                           SStorageFactory sFactory);
 private:
     CacheST(const CacheST&);
-    CacheST& operator = (const CacheST&);
+    CacheST& operator=(const CacheST&);
 };

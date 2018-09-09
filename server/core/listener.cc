@@ -42,10 +42,10 @@
 #include <maxscale/users.h>
 #include <maxscale/service.h>
 
-static RSA *rsa_512 = NULL;
-static RSA *rsa_1024 = NULL;
+static RSA* rsa_512 = NULL;
+static RSA* rsa_1024 = NULL;
 
-static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
+static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength);
 
 /**
  * Create a new listener structure
@@ -58,12 +58,16 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
  * @param ssl           SSL configuration
  * @return      New listener object or NULL if unable to allocate
  */
-SERV_LISTENER *
-listener_alloc(struct service* service, const char* name, const char *protocol,
-               const char *address, unsigned short port, const char *authenticator,
-               const char* auth_options, SSL_LISTENER *ssl)
+SERV_LISTENER* listener_alloc(struct service* service,
+                              const char* name,
+                              const char* protocol,
+                              const char* address,
+                              unsigned short port,
+                              const char* authenticator,
+                              const char* auth_options,
+                              SSL_LISTENER* ssl)
 {
-    char *my_address = NULL;
+    char* my_address = NULL;
     if (address)
     {
         my_address = MXS_STRDUP(address);
@@ -73,7 +77,7 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
         }
     }
 
-    char *my_auth_options = NULL;
+    char* my_auth_options = NULL;
 
     if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
     {
@@ -81,35 +85,39 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
         return NULL;
     }
 
-    char *my_authenticator = NULL;
+    char* my_authenticator = NULL;
 
     if (authenticator)
     {
         my_authenticator = MXS_STRDUP(authenticator);
     }
-    else if ((authenticator = get_default_authenticator(protocol)) == NULL ||
-             (my_authenticator = MXS_STRDUP(authenticator)) == NULL)
+    else if ((authenticator = get_default_authenticator(protocol)) == NULL
+             || (my_authenticator = MXS_STRDUP(authenticator)) == NULL)
     {
         MXS_ERROR("No authenticator defined for listener '%s' and could not get "
-                  "default authenticator for protocol '%s'.", name, protocol);
+                  "default authenticator for protocol '%s'.",
+                  name,
+                  protocol);
         MXS_FREE(my_address);
         return NULL;
     }
 
-    void *auth_instance = NULL;
+    void* auth_instance = NULL;
 
     if (!authenticator_init(&auth_instance, my_authenticator, my_auth_options))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for "
-                  "listener '%s'.", my_authenticator, name);
+                  "listener '%s'.",
+                  my_authenticator,
+                  name);
         MXS_FREE(my_address);
         MXS_FREE(my_authenticator);
         return NULL;
     }
 
-    char *my_protocol = MXS_STRDUP(protocol);
-    char *my_name = MXS_STRDUP(name);
-    SERV_LISTENER *proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
+    char* my_protocol = MXS_STRDUP(protocol);
+    char* my_name = MXS_STRDUP(name);
+    SERV_LISTENER* proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
 
     if (!my_protocol || !proto || !my_name || !my_authenticator)
     {
@@ -174,8 +182,7 @@ void listener_free(SERV_LISTENER* listener)
  * @param version SSL/TLS version string
  * @return  0 on success, -1 on invalid version string
  */
-int
-listener_set_ssl_version(SSL_LISTENER *ssl_listener, const char* version)
+int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
 {
     if (strcasecmp(version, "MAX") == 0)
     {
@@ -213,8 +220,7 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, const char* version)
  * @param key SSL private key
  * @param ca_cert SSL CA certificate
  */
-void
-listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert)
+void listener_set_certificates(SSL_LISTENER* ssl_listener, char* cert, char* key, char* ca_cert)
 {
     MXS_FREE(ssl_listener->ssl_cert);
     ssl_listener->ssl_cert = cert ? MXS_STRDUP_A(cert) : NULL;
@@ -250,7 +256,7 @@ static const char* get_ssl_errors()
         ssl_errbuf = new std::string;
     }
 
-    char errbuf[200]; // Enough space according to OpenSSL documentation
+    char errbuf[200];   // Enough space according to OpenSSL documentation
     ssl_errbuf->clear();
 
     for (int err = ERR_get_error(); err; err = ERR_get_error())
@@ -273,31 +279,37 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     switch (ssl->ssl_method_type)
     {
 #ifndef OPENSSL_1_1
-        case SERVICE_TLS10:
-            ssl->method = (SSL_METHOD*)TLSv1_method();
-            break;
+    case SERVICE_TLS10:
+        ssl->method = (SSL_METHOD*)TLSv1_method();
+        break;
+
 #endif
 #ifdef OPENSSL_1_0
-        case SERVICE_TLS11:
-            ssl->method = (SSL_METHOD*)TLSv1_1_method();
-            break;
-        case SERVICE_TLS12:
-            ssl->method = (SSL_METHOD*)TLSv1_2_method();
-            break;
+    case SERVICE_TLS11:
+        ssl->method = (SSL_METHOD*)TLSv1_1_method();
+        break;
+
+    case SERVICE_TLS12:
+        ssl->method = (SSL_METHOD*)TLSv1_2_method();
+        break;
+
 #endif
-            /** Rest of these use the maximum available SSL/TLS methods */
-        case SERVICE_SSL_MAX:
-            ssl->method = (SSL_METHOD*)SSLv23_method();
-            break;
-        case SERVICE_TLS_MAX:
-            ssl->method = (SSL_METHOD*)SSLv23_method();
-            break;
-        case SERVICE_SSL_TLS_MAX:
-            ssl->method = (SSL_METHOD*)SSLv23_method();
-            break;
-        default:
-            ssl->method = (SSL_METHOD*)SSLv23_method();
-            break;
+    /** Rest of these use the maximum available SSL/TLS methods */
+    case SERVICE_SSL_MAX:
+        ssl->method = (SSL_METHOD*)SSLv23_method();
+        break;
+
+    case SERVICE_TLS_MAX:
+        ssl->method = (SSL_METHOD*)SSLv23_method();
+        break;
+
+    case SERVICE_SSL_TLS_MAX:
+        ssl->method = (SSL_METHOD*)SSLv23_method();
+        break;
+
+    default:
+        ssl->method = (SSL_METHOD*)SSLv23_method();
+        break;
     }
 
     SSL_CTX* ctx = SSL_CTX_new(ssl->method);
@@ -413,10 +425,9 @@ void SSL_LISTENER_free(SSL_LISTENER* ssl)
  * @param keylength Length of the key
  * @return Pointer to RSA structure
  */
-static RSA *
-tmp_rsa_callback(SSL *s, int is_export, int keylength)
+static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
 {
-    RSA *rsa_tmp = NULL;
+    RSA* rsa_tmp = NULL;
 
     switch (keylength)
     {
@@ -429,15 +440,17 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         {
             /* generate on the fly, should not happen in this example */
             rsa_tmp = create_rsa(keylength);
-            rsa_512 = rsa_tmp; /* Remember for later reuse */
+            rsa_512 = rsa_tmp;      /* Remember for later reuse */
         }
         break;
+
     case 1024:
         if (rsa_1024)
         {
             rsa_tmp = rsa_1024;
         }
         break;
+
     default:
         /* Generating a key on the fly is very costly, so use what is there */
         if (rsa_1024)
@@ -446,10 +459,10 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         }
         else
         {
-            rsa_tmp = rsa_512; /* Use at least a shorter key */
+            rsa_tmp = rsa_512;      /* Use at least a shorter key */
         }
     }
-    return (rsa_tmp);
+    return rsa_tmp;
 }
 
 /**
@@ -459,14 +472,17 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_listener_config(const SERV_LISTENER *listener, const char *filename)
+static bool create_listener_config(const SERV_LISTENER* listener, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
-                  filename, listener->name, errno, mxs_strerror(errno));
+                  filename,
+                  listener->name,
+                  errno,
+                  mxs_strerror(errno));
         return false;
     }
 
@@ -494,24 +510,29 @@ static bool create_listener_config(const SERV_LISTENER *listener, const char *fi
     return true;
 }
 
-bool listener_serialize(const SERV_LISTENER *listener)
+bool listener_serialize(const SERV_LISTENER* listener)
 {
     bool rval = false;
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf.tmp",
+             get_config_persistdir(),
              listener->name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary listener configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
     }
     else if (create_listener_config(listener, filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
 
-        char *dot = strrchr(final_filename, '.');
+        char* dot = strrchr(final_filename, '.');
         mxb_assert(dot);
         *dot = '\0';
 
@@ -522,7 +543,9 @@ bool listener_serialize(const SERV_LISTENER *listener)
         else
         {
             MXS_ERROR("Failed to rename temporary listener configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename,
+                      errno,
+                      mxs_strerror(errno));
         }
     }
 
@@ -583,7 +606,7 @@ bool listener_is_active(SERV_LISTENER* listener)
     return atomic_load_int32(&listener->active);
 }
 
-static inline SERV_LISTENER* load_port(SERV_LISTENER const *const *const port)
+static inline SERV_LISTENER* load_port(SERV_LISTENER const* const* const port)
 {
     return (SERV_LISTENER*)atomic_load_ptr((void**)port);
 }
@@ -615,15 +638,15 @@ const char* listener_state_to_string(const SERV_LISTENER* listener)
     {
         switch (listener->listener->session->state)
         {
-            case SESSION_STATE_LISTENER_STOPPED:
-                return "Stopped";
+        case SESSION_STATE_LISTENER_STOPPED:
+            return "Stopped";
 
-            case SESSION_STATE_LISTENER:
-                return "Running";
+        case SESSION_STATE_LISTENER:
+            return "Running";
 
-            default:
-                mxb_assert(!true);
-                return "Unknown";
+        default:
+            mxb_assert(!true);
+            return "Unknown";
         }
     }
     else

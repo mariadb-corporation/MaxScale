@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "mock.hh"
 #include <maxscale/dcb.h>
@@ -28,7 +28,7 @@ namespace mock
 class Dcb : public DCB
 {
     Dcb(const Dcb&);
-    Dcb& operator = (const Dcb&);
+    Dcb& operator=(const Dcb&);
 
 public:
     class Handler
@@ -46,9 +46,9 @@ public:
      * @param pHandler  Optional handler.
      */
     Dcb(MXS_SESSION* pSession,
-        const char* zUser,
-        const char* zHost,
-        Handler*    pHandler = NULL);
+        const char*  zUser,
+        const char*  zHost,
+        Handler* pHandler = NULL);
     ~Dcb();
 
     /**
@@ -77,7 +77,5 @@ private:
     std::string m_host;
     Handler*    m_pHandler;
 };
-
 }
-
 }

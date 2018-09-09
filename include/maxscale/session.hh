@@ -22,7 +22,7 @@ namespace maxscale
 template<>
 struct RegistryTraits<MXS_SESSION>
 {
-    typedef uint64_t id_type;
+    typedef uint64_t     id_type;
     typedef MXS_SESSION* entry_type;
 
     static id_type get_id(entry_type entry)
@@ -34,5 +34,4 @@ struct RegistryTraits<MXS_SESSION>
         return NULL;
     }
 };
-
 }

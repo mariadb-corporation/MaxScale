@@ -23,25 +23,29 @@ namespace base
 class AppException : public std::runtime_error
 {
 public:
-    AppException(const std::string& msg, const std::string& file,
-                 int line) :
-        std::runtime_error(msg), m_file(file), m_line(line)
-    {}
+    AppException(const std::string& msg,
+                 const std::string& file,
+                 int line)
+        : std::runtime_error(msg)
+        , m_file(file)
+        , m_line(line)
+    {
+    }
 private:
     std::string m_file;
-    int m_line;
+    int         m_line;
 };
-} //base
+}   // base
 
 #define DEFINE_EXCEPTION(Type) \
     struct Type : public base::AppException { \
-        Type(const std::string& msg, const char* file, \
-            int line) : \
-            AppException(msg, file, line) {}}
+        Type(const std::string& msg, \
+             const char* file, \
+             int line)   \
+            : AppException(msg, file, line) {} }
 
-#define THROW(Type, msg_str) do {\
+#define THROW(Type, msg_str) \
+    do { \
         std::ostringstream os; \
         os << __FILE__ << ':' << __LINE__ << '\n' << msg_str; \
-        throw Type(os.str(), __FILE__, __LINE__);} while(false)
-
-
+        throw Type(os.str(), __FILE__, __LINE__);} while (false)

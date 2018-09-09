@@ -4,11 +4,13 @@
  * - check status using Maxadmin 'show servers' and 'show monitor "MySQL Monitor"'
  * - Set nodes 0 and 1 into read-only mode
  * - repeat status check
- * - Configure nodes 1 and 2 (server2 and server3) into a master-master pair, make node 0 a slave of node 1 and node 3 a slave of node 2
+ * - Configure nodes 1 and 2 (server2 and server3) into a master-master pair, make node 0 a slave of node 1
+ *and node 3 a slave of node 2
  * - repeat status check
  * - Set node 1 into read-only mode
  * - repeat status check
- * - Create two distinct groups (server1 and server2 are masters for eache others and same for server3 and server4)
+ * - Create two distinct groups (server1 and server2 are masters for eache others and same for server3 and
+ *server4)
  * - repeat status check
  * - Set nodes 1 and 3 (server2 and server4) into read-only mode
  */
@@ -20,14 +22,14 @@
 #include "sql_t1.h"
 #include <jansson.h>
 
-void check_status(TestConnections& test, const char *server, const char *status)
+void check_status(TestConnections& test, const char* server, const char* status)
 {
     char cmd[256];
     char maxadmin_result[1024];
 
     sprintf(cmd, "show server %s", server);
     test.set_timeout(120);
-    test.maxscales->get_maxadmin_param(0, cmd, (char *)"Status:", maxadmin_result);
+    test.maxscales->get_maxadmin_param(0, cmd, (char*)"Status:", maxadmin_result);
 
     if (maxadmin_result == NULL)
     {
@@ -37,16 +39,21 @@ void check_status(TestConnections& test, const char *server, const char *status)
 
     if (strstr(maxadmin_result, status) == NULL)
     {
-        test.add_result(1, "Test failed, server '%s' status is '%s', expected '%s'\n",
-                        server, maxadmin_result, status);
+        test.add_result(1,
+                        "Test failed, server '%s' status is '%s', expected '%s'\n",
+                        server,
+                        maxadmin_result,
+                        status);
     }
 }
 
-void check_group(TestConnections& test , const char *server, int expected_group)
+void check_group(TestConnections& test, const char* server, int expected_group)
 {
     int exit_code = 1;
-    char *output = test.maxscales->ssh_node_output(0, "maxctrl api get monitors/MySQL-Monitor",
-                                                   true, &exit_code);
+    char* output = test.maxscales->ssh_node_output(0,
+                                                   "maxctrl api get monitors/MySQL-Monitor",
+                                                   true,
+                                                   &exit_code);
     if (output == NULL)
     {
         test.add_result(1, "maxctrl execution error, no output\n");
@@ -77,19 +84,22 @@ void check_group(TestConnections& test , const char *server, int expected_group)
         }
     }
 
-    test.assert(found_group == expected_group, "Server '%s', expected group '%d', not '%d'",
-		server, expected_group, (int)found_group);
+    test.assert(found_group == expected_group,
+                "Server '%s', expected group '%d', not '%d'",
+                server,
+                expected_group,
+                (int)found_group);
 }
 
 void change_master(TestConnections& Test, int slave, int master)
 {
     const char query[] = "CHANGE MASTER TO master_host='%s', master_port=%d, "
-    "master_log_file='mar-bin.000001', master_log_pos=4, master_user='repl', master_password='repl'; "
-    "START SLAVE";
+                         "master_log_file='mar-bin.000001', master_log_pos=4, master_user='repl', master_password='repl'; "
+                         "START SLAVE";
     execute_query(Test.repl->nodes[slave], query, Test.repl->IP[master], Test.repl->port[master]);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     const char mm_master_states[] = "Master, Running";
     const char mm_slave_states[] = "Relay Master, Slave, Running";
@@ -139,7 +149,7 @@ int main(int argc, char *argv[])
     check_group(test, "server4", 0);
 
     test.tprintf("Test 3 - Configure nodes 1 and 2 into a master-master pair, make node 0 "
-                  "a slave of node 1 and node 3 a slave of node 2");
+                 "a slave of node 1 and node 3 a slave of node 2");
 
     test.set_timeout(120);
     test.repl->execute_query_all_nodes(reset_query);

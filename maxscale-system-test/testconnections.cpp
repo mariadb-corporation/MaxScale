@@ -26,7 +26,7 @@ static std::string required_repl_version;
 static std::string required_galera_version;
 }
 
-static void signal_set(int sig, void (*handler)(int))
+static void signal_set(int sig, void (* handler)(int))
 {
     struct sigaction sigact = {};
     sigact.sa_handler = handler;
@@ -56,33 +56,33 @@ void TestConnections::skip_maxscale_start(bool value)
     maxscale::start = !value;
 }
 
-void TestConnections::require_repl_version(const char *version)
+void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
 }
 
-void TestConnections::require_galera_version(const char *version)
+void TestConnections::require_galera_version(const char* version)
 {
     maxscale::required_galera_version = version;
 }
 
-TestConnections::TestConnections(int argc, char *argv[]):
-    enable_timeouts(true),
-    global_result(0),
-    use_snapshots(false),
-    no_backend_log_copy(false),
-    no_maxscale_log_copy(false),
-    verbose(false),
-    smoke(true),
-    binlog_cmd_option(0),
-    ssl(false),
-    backend_ssl(false),
-    binlog_master_gtid(false),
-    binlog_slave_gtid(false),
-    no_galera(false),
-    no_vm_revert(true),
-    threads(4),
-    use_ipv6(false)
+TestConnections::TestConnections(int argc, char* argv[])
+    : enable_timeouts(true)
+    , global_result(0)
+    , use_snapshots(false)
+    , no_backend_log_copy(false)
+    , no_maxscale_log_copy(false)
+    , verbose(false)
+    , smoke(true)
+    , binlog_cmd_option(0)
+    , ssl(false)
+    , backend_ssl(false)
+    , binlog_master_gtid(false)
+    , binlog_slave_gtid(false)
+    , no_galera(false)
+    , no_vm_revert(true)
+    , threads(4)
+    , use_ipv6(false)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -95,7 +95,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     read_env();
 
-    char * gal_env = getenv("galera_000_network");
+    char* gal_env = getenv("galera_000_network");
     if ((gal_env == NULL) || (strcmp(gal_env, "") == 0 ))
     {
         no_galera = true;
@@ -107,18 +107,18 @@ TestConnections::TestConnections(int argc, char *argv[]):
     static struct option long_options[] =
     {
 
-        {"help",              no_argument, 0, 'h'},
-        {"verbose",           no_argument, 0, 'v'},
-        {"silent",            no_argument, 0, 'n'},
-        {"quiet",             no_argument, 0, 'q'},
-        {"no-maxscale-start", no_argument, 0, 's'},
-        {"no-maxscale-init",  no_argument, 0, 'i'},
-        {"no-nodes-check",    no_argument, 0, 'r'},
-        {"restart-galera",    no_argument, 0, 'g'},
-        {"no-timeouts",       no_argument, 0, 'z'},
-        {"no-galera",         no_argument, 0, 'y'},
-        {"local-maxscale",    no_argument, 0, 'l'},
-        {0, 0, 0, 0}
+        {"help",              no_argument,              0,           'h'},
+        {"verbose",           no_argument,              0,           'v'},
+        {"silent",            no_argument,              0,           'n'},
+        {"quiet",             no_argument,              0,           'q'},
+        {"no-maxscale-start", no_argument,              0,           's'},
+        {"no-maxscale-init",  no_argument,              0,           'i'},
+        {"no-nodes-check",    no_argument,              0,           'r'},
+        {"restart-galera",    no_argument,              0,           'g'},
+        {"no-timeouts",       no_argument,              0,           'z'},
+        {"no-galera",         no_argument,              0,           'y'},
+        {"local-maxscale",    no_argument,              0,           'l'},
+        {0,                   0,                        0,           0  }
     };
 
     int c;
@@ -142,19 +142,19 @@ TestConnections::TestConnections(int argc, char *argv[]):
             break;
 
         case 'h':
-        {
-            printf("Options:\n");
-
-            struct option *o = long_options;
-
-            while (o->name)
             {
-                printf("-%c, --%s\n", o->val, o->name);
-                ++o;
+                printf("Options:\n");
+
+                struct option* o = long_options;
+
+                while (o->name)
+                {
+                    printf("-%c, --%s\n", o->val, o->name);
+                    ++o;
+                }
+                exit(0);
             }
-            exit(0);
-        }
-        break;
+            break;
 
         case 's':
             printf("Maxscale won't be started\n");
@@ -212,15 +212,17 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     sprintf(get_logs_command, "%s/get_logs.sh", test_dir);
 
-    sprintf(ssl_options, "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
-            test_dir, test_dir);
+    sprintf(ssl_options,
+            "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
+            test_dir,
+            test_dir);
     setenv("ssl_options", ssl_options, 1);
 
     repl = new Mariadb_nodes("node", test_dir, verbose);
     if (!no_galera)
     {
         galera = new Galera_nodes("galera", test_dir, verbose);
-        //galera->use_ipv6 = use_ipv6;
+        // galera->use_ipv6 = use_ipv6;
         galera->use_ipv6 = false;
         galera->take_snapshot_command = take_snapshot_command;
         galera->revert_snapshot_command = revert_snapshot_command;
@@ -288,12 +290,12 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     if (use_snapshots)
     {
-        snapshot_reverted = revert_snapshot((char *) "clean");
+        snapshot_reverted = revert_snapshot((char*) "clean");
     }
 
     if (!snapshot_reverted && maxscale::check_nodes)
     {
-        if (!repl->fix_replication() )
+        if (!repl->fix_replication())
         {
             exit(200);
         }
@@ -328,8 +330,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     timeout = 999999999;
     set_log_copy_interval(999999999);
-    pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
-    pthread_create( &log_copy_thread_p, NULL, log_copy_thread, this);
+    pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
+    pthread_create(&log_copy_thread_p, NULL, log_copy_thread, this);
     tprintf("Starting test");
     gettimeofday(&start_time, NULL);
 }
@@ -339,25 +341,25 @@ TestConnections::~TestConnections()
     if (backend_ssl)
     {
         repl->disable_ssl();
-        //galera->disable_ssl();
+        // galera->disable_ssl();
     }
 
     copy_all_logs();
 
     /* Temporary disable snapshot revert due to Galera failures
-    if (global_result != 0 )
-    {
-        if (no_vm_revert)
-        {
-            tprintf("no_vm_revert flag is set, not reverting VMs\n");
-        }
-        else
-        {
-            tprintf("Reverting snapshot\n");
-            revert_snapshot((char*) "clean");
-        }
-    }
-    */
+     *  if (global_result != 0 )
+     *  {
+     *   if (no_vm_revert)
+     *   {
+     *       tprintf("no_vm_revert flag is set, not reverting VMs\n");
+     *   }
+     *   else
+     *   {
+     *       tprintf("Reverting snapshot\n");
+     *       revert_snapshot((char*) "clean");
+     *   }
+     *  }
+     */
 
     delete repl;
     if (!no_galera)
@@ -372,7 +374,7 @@ TestConnections::~TestConnections()
     }
 }
 
-void TestConnections::report_result(const char *format, va_list argp)
+void TestConnections::report_result(const char* format, va_list argp)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
@@ -391,7 +393,7 @@ void TestConnections::report_result(const char *format, va_list argp)
     }
 }
 
-void TestConnections::add_result(bool result, const char *format, ...)
+void TestConnections::add_result(bool result, const char* format, ...)
 {
     if (result)
     {
@@ -402,7 +404,7 @@ void TestConnections::add_result(bool result, const char *format, ...)
     }
 }
 
-void TestConnections::assert(bool result, const char *format, ...)
+void TestConnections::assert(bool result, const char* format, ...)
 {
     if (!result)
     {
@@ -416,7 +418,7 @@ void TestConnections::assert(bool result, const char *format, ...)
 void TestConnections::read_env()
 {
 
-    char *env;
+    char* env;
 
     if (verbose)
     {
@@ -424,7 +426,7 @@ void TestConnections::read_env()
     }
 
 
-    //env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
+    // env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
 
     env = getenv("sysbench_dir");
     if (env != NULL)
@@ -432,43 +434,43 @@ void TestConnections::read_env()
         sprintf(sysbench_dir, "%s", env);
     }
 
-    //env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
+    // env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 
     ssl = false;
     env = getenv("ssl");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         ssl = true;
     }
     env = getenv("mysql51_only");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         maxscale::check_nodes = false;
     }
 
     env = getenv("no_nodes_check");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         maxscale::check_nodes = false;
     }
     env = getenv("no_backend_log_copy");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         no_backend_log_copy = true;
     }
     env = getenv("no_maxscale_log_copy");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         no_maxscale_log_copy = true;
     }
     env = getenv("use_ipv6");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         use_ipv6 = true;
     }
 
     env = getenv("backend_ssl");
-    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         backend_ssl = true;
     }
@@ -494,7 +496,7 @@ void TestConnections::read_env()
     }
 
     env = getenv("use_snapshots");
-    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         use_snapshots = true;
     }
@@ -522,13 +524,13 @@ void TestConnections::read_env()
     }
 
     env = getenv("no_maxscale_start");
-    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0)))
     {
         maxscale::start = false;
     }
 
     env = getenv("no_vm_revert");
-    if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0)))
     {
         no_vm_revert = false;
     }
@@ -552,7 +554,7 @@ void TestConnections::print_env()
     }
 }
 
-const char * get_template_name(char * test_name)
+const char* get_template_name(char* test_name)
 {
     int i = 0;
     while (cnf_templates[i].test_name && strcmp(cnf_templates[i].test_name, test_name) != 0)
@@ -565,12 +567,13 @@ const char * get_template_name(char * test_name)
         return cnf_templates[i].test_template;
     }
 
-    printf("Failed to find configuration template for test '%s', using default template '%s'.\n", test_name,
+    printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
+           test_name,
            default_template);
     return default_template;
 }
 
-void TestConnections::process_template(int m, const char *template_name, const char *dest)
+void TestConnections::process_template(int m, const char* template_name, const char* dest)
 {
     struct stat stb;
     char str[4096];
@@ -601,14 +604,15 @@ void TestConnections::process_template(int m, const char *template_name, const c
     if (backend_ssl)
     {
         tprintf("Adding ssl settings\n");
-        system("sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" maxscale.cnf");
+        system(
+            "sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" maxscale.cnf");
     }
 
     sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", threads);
     system(str);
 
-    Mariadb_nodes * mdn[2];
-    char * IPcnf;
+    Mariadb_nodes* mdn[2];
+    char* IPcnf;
     mdn[0] = repl;
     mdn[1] = galera;
     int i, j;
@@ -626,12 +630,18 @@ void TestConnections::process_template(int m, const char *template_name, const c
             {
                 IPcnf = mdn[j]->IP[i];
             }
-            sprintf(str, "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
-                    mdn[j]->prefix, i + 1, IPcnf);
+            sprintf(str,
+                    "sed -i \"s/###%s_server_IP_%0d###/%s/\" maxscale.cnf",
+                    mdn[j]->prefix,
+                    i + 1,
+                    IPcnf);
             system(str);
 
-            sprintf(str, "sed -i \"s/###%s_server_port_%0d###/%d/\" maxscale.cnf",
-                    mdn[j]->prefix, i + 1, mdn[j]->port[i]);
+            sprintf(str,
+                    "sed -i \"s/###%s_server_port_%0d###/%d/\" maxscale.cnf",
+                    mdn[j]->prefix,
+                    i + 1,
+                    mdn[j]->port[i]);
             system(str);
         }
 
@@ -646,7 +656,7 @@ void TestConnections::process_template(int m, const char *template_name, const c
     sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[m]);
     system(str);
 
-    maxscales->copy_to_node_legacy((char *) "maxscale.cnf", (char *) dest, m);
+    maxscales->copy_to_node_legacy((char*) "maxscale.cnf", (char*) dest, m);
 }
 
 void TestConnections::init_maxscales()
@@ -659,13 +669,15 @@ void TestConnections::init_maxscales()
 
 void TestConnections::init_maxscale(int m)
 {
-    const char * template_name = get_template_name(test_name);
+    const char* template_name = get_template_name(test_name);
 
     process_template(m, template_name, maxscales->access_homedir[m]);
-    maxscales->ssh_node_f(m, true,
+    maxscales->ssh_node_f(m,
+                          true,
                           "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
                           maxscales->maxscale_cnf[m],
-                          maxscales->access_homedir[m], maxscales->access_homedir[m]);
+                          maxscales->access_homedir[m],
+                          maxscales->access_homedir[m]);
 
     char str[4096];
     char dtr[4096];
@@ -674,7 +686,8 @@ void TestConnections::init_maxscale(int m)
     maxscales->copy_to_node_legacy(str, dtr, m);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
-    maxscales->ssh_node_f(m, true,
+    maxscales->ssh_node_f(m,
+                          true,
                           "chown maxscale:maxscale -R %s/certs;"
                           "chmod 664 %s/certs/*.pem;"
                           "chmod a+x %s;"
@@ -729,7 +742,9 @@ void TestConnections::copy_one_mariadb_log(int i, std::string filename)
     free(mariadb_log);
 }
 
-int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, std::vector<std::thread>& threads)
+int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl,
+                                       const char* prefix,
+                                       std::vector<std::thread>& threads)
 {
     int local_result = 0;
 
@@ -737,7 +752,8 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* repl, const char* prefix, 
     {
         for (int i = 0; i < repl->N; i++)
         {
-            if (strcmp(repl->IP[i], "127.0.0.1") != 0) // Do not copy MariaDB logs in case of local backend
+            if (strcmp(repl->IP[i], "127.0.0.1") != 0)      // Do not copy MariaDB logs in case of local
+                                                            // backend
             {
                 char str[4096];
                 sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
@@ -772,7 +788,7 @@ int TestConnections::copy_all_logs()
         rv = copy_maxscale_logs(0);
     }
 
-    for (auto& a: threads)
+    for (auto& a : threads)
     {
         a.join();
     }
@@ -799,17 +815,25 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         system(sys);
         if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
         {
-            maxscales->ssh_node_f(i, true,
+            maxscales->ssh_node_f(i,
+                                  true,
                                   "rm -rf %s/logs; mkdir %s/logs; \
                                   %s cp %s/*.log %s/logs/; \
                                   %s cp /tmp/core* %s/logs/;\
                                   %s cp %s %s/logs/;\
                                   %s chmod 777 -R %s/logs",
-                                  maxscales->access_homedir[i], maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i], maxscales->maxscale_log_dir[i], maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i], maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i], maxscales->maxscale_cnf[i], maxscales->access_homedir[i],
-                                  maxscales->access_sudo[i], maxscales->access_homedir[i]);
+                                  maxscales->access_homedir[i],
+                                  maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i],
+                                  maxscales->maxscale_log_dir[i],
+                                  maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i],
+                                  maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i],
+                                  maxscales->maxscale_cnf[i],
+                                  maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i],
+                                  maxscales->access_homedir[i]);
             sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
             maxscales->copy_from_node(i, sys, log_dir_i);
         }
@@ -835,7 +859,7 @@ int TestConnections::copy_all_logs_periodic()
     double elapsedTime = (t2.tv_sec - start_time.tv_sec);
     elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
 
-    return (copy_maxscale_logs(elapsedTime));
+    return copy_maxscale_logs(elapsedTime);
 }
 
 int TestConnections::prepare_binlog(int m)
@@ -846,14 +870,16 @@ int TestConnections::prepare_binlog(int m)
     find_field(repl->nodes[0], "SELECT @@version", "@@version", version_str);
     tprintf("Master server version '%s'", version_str);
 
-    if (*version_str &&
-            strstr(version_str, "10.0") == NULL &&
-            strstr(version_str, "10.1") == NULL &&
-            strstr(version_str, "10.2") == NULL)
+    if (*version_str
+        && strstr(version_str, "10.0") == NULL
+        && strstr(version_str, "10.1") == NULL
+        && strstr(version_str, "10.2") == NULL)
     {
-        add_result(maxscales->ssh_node_f(m, true,
+        add_result(maxscales->ssh_node_f(m,
+                                         true,
                                          "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                         maxscales->maxscale_cnf[m]), "Error editing maxscale.cnf");
+                                         maxscales->maxscale_cnf[m]),
+                   "Error editing maxscale.cnf");
     }
 
     tprintf("Removing all binlog data from Maxscale node");
@@ -864,10 +890,13 @@ int TestConnections::prepare_binlog(int m)
     add_result(maxscales->ssh_node_f(m, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[m]),
                "Creating binlog data dir failed");
     tprintf("Set 'maxscale' as a owner of binlog dir");
-    add_result(maxscales->ssh_node_f(m, false,
+    add_result(maxscales->ssh_node_f(m,
+                                     false,
                                      "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
-                                     maxscales->access_sudo[m], maxscales->maxscale_binlog_dir[m],
-                                     maxscales->access_sudo[m], maxscales->maxscale_binlog_dir[m]),
+                                     maxscales->access_sudo[m],
+                                     maxscales->maxscale_binlog_dir[m],
+                                     maxscales->access_sudo[m],
+                                     maxscales->maxscale_binlog_dir[m]),
                "directory ownership change failed");
     return 0;
 }
@@ -875,7 +904,7 @@ int TestConnections::prepare_binlog(int m)
 int TestConnections::start_binlog(int m)
 {
     char sys1[4096];
-    MYSQL * binlog;
+    MYSQL* binlog;
     char log_file[256];
     char log_pos[256];
     char cmd_opt[256];
@@ -891,16 +920,19 @@ int TestConnections::start_binlog(int m)
     case 1:
         sprintf(cmd_opt, "--binlog-checksum=CRC32");
         break;
+
     case 2:
         sprintf(cmd_opt, "--binlog-checksum=NONE");
         break;
+
     default:
         sprintf(cmd_opt, " ");
     }
 
     repl->stop_nodes();
 
-    binlog = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+    binlog
+        = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
     execute_query(binlog, "stop slave");
     execute_query(binlog, "reset slave all");
     mysql_close(binlog);
@@ -930,7 +962,8 @@ int TestConnections::start_binlog(int m)
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
     tprintf("ls binlog data dir on Maxscale node\n");
-    add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m]), "ls failed\n");
+    add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m]),
+               "ls failed\n");
 
     if (binlog_master_gtid)
     {
@@ -940,31 +973,33 @@ int TestConnections::start_binlog(int m)
         try_query(repl->nodes[1], "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->IP[0], repl->port[0]);
+                repl->IP[0],
+                repl->port[0]);
         try_query(repl->nodes[1], "%s", sys1);
         try_query(repl->nodes[1], "start slave");
     }
     else
     {
         tprintf("show master status\n");
-        find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
-        find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+        find_field(repl->nodes[0], (char*) "show master status", (char*) "File", &log_file[0]);
+        find_field(repl->nodes[0], (char*) "show master status", (char*) "Position", &log_pos[0]);
         tprintf("Real master file: %s\n", log_file);
         tprintf("Real master pos : %s\n", log_pos);
 
         tprintf("Stopping first slave (node 1)\n");
         try_query(repl->nodes[1], "stop slave;");
-        //repl->no_set_pos = true;
+        // repl->no_set_pos = true;
         repl->no_set_pos = false;
         tprintf("Configure first backend slave node to be slave of real master\n");
-        repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
+        repl->set_slave(repl->nodes[1], repl->IP[0], repl->port[0], log_file, log_pos);
     }
 
     tprintf("Starting back Maxscale\n");
     add_result(maxscales->start_maxscale(m), "Maxscale start failed\n");
 
     tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    binlog = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+    binlog
+        = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
 
     add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -976,7 +1011,8 @@ int TestConnections::start_binlog(int m)
         try_query(binlog, "SET @@global.gtid_slave_pos=''");
         sprintf(sys1,
                 "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                repl->IP[0], repl->port[0]);
+                repl->IP[0],
+                repl->port[0]);
         try_query(binlog, "%s", sys1);
     }
     else
@@ -984,15 +1020,15 @@ int TestConnections::start_binlog(int m)
         repl->no_set_pos = true;
         tprintf("configuring Maxscale binlog router\n");
         repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
-
-
     }
     // ssl between binlog router and Master
     if (backend_ssl)
     {
         sprintf(sys1,
                 "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
-                maxscales->access_homedir[m], maxscales->access_homedir[m], maxscales->access_homedir[m]);
+                maxscales->access_homedir[m],
+                maxscales->access_homedir[m],
+                maxscales->access_homedir[m]);
         tprintf("Configuring Master ssl: %s\n", sys1);
         try_query(binlog, "%s", sys1);
     }
@@ -1010,7 +1046,8 @@ int TestConnections::start_binlog(int m)
             try_query(repl->nodes[i], "SET @@global.gtid_slave_pos=''");
             sprintf(sys1,
                     "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                    maxscales->IP[m], maxscales->binlog_port[m]);
+                    maxscales->IP[m],
+                    maxscales->binlog_port[m]);
             try_query(repl->nodes[i], "%s", sys1);
             try_query(repl->nodes[i], "start slave");
         }
@@ -1021,8 +1058,8 @@ int TestConnections::start_binlog(int m)
 
         // get Master status from Maxscale binlog
         tprintf("show master status\n");
-        find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
-        find_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+        find_field(binlog, (char*) "show master status", (char*) "File", &log_file[0]);
+        find_field(binlog, (char*) "show master status", (char*) "Position", &log_pos[0]);
 
         tprintf("Maxscale binlog master file: %s\n", log_file);
         tprintf("Maxscale binlog master pos : %s\n", log_pos);
@@ -1032,7 +1069,7 @@ int TestConnections::start_binlog(int m)
         for (i = 2; i < repl->N; i++)
         {
             try_query(repl->nodes[i], "stop slave");
-            repl->set_slave(repl->nodes[i],  maxscales->IP[m], maxscales->binlog_port[m], log_file, log_pos);
+            repl->set_slave(repl->nodes[i], maxscales->IP[m], maxscales->binlog_port[m], log_file, log_pos);
         }
     }
 
@@ -1048,8 +1085,11 @@ bool TestConnections::replicate_from_master(int m)
     bool rval = true;
 
     /** Stop the binlogrouter */
-    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m],
-                                  repl->user_name, repl->password, ssl);
+    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[m],
+                                  maxscales->IP[m],
+                                  repl->user_name,
+                                  repl->password,
+                                  ssl);
     execute_query_silent(conn, "stop slave");
     mysql_close(conn);
 
@@ -1068,9 +1108,9 @@ bool TestConnections::replicate_from_master(int m)
 
     conn = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
 
-    if (find_field(repl->nodes[0], "show master status", "File", log_file) ||
-            repl->set_slave(conn, repl->IP[0], repl->port[0], log_file, log_pos) ||
-            execute_query(conn, "start slave"))
+    if (find_field(repl->nodes[0], "show master status", "File", log_file)
+        || repl->set_slave(conn, repl->IP[0], repl->port[0], log_file, log_pos)
+        || execute_query(conn, "start slave"))
     {
         rval = false;
     }
@@ -1112,7 +1152,7 @@ int TestConnections::start_mm(int m)
     for (i = 0; i < 2; i++)
     {
         tprintf("Starting back node %d\n", i);
-        global_result += repl->start_node(i, (char *) "");
+        global_result += repl->start_node(i, (char*) "");
     }
 
     repl->connect();
@@ -1124,14 +1164,14 @@ int TestConnections::start_mm(int m)
 
     execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
 
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "File", log_file1);
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", log_pos1);
+    find_field(repl->nodes[0], (char*) "show master status", (char*) "File", log_file1);
+    find_field(repl->nodes[0], (char*) "show master status", (char*) "Position", log_pos1);
 
-    find_field(repl->nodes[1], (char *) "show master status", (char *) "File", log_file2);
-    find_field(repl->nodes[1], (char *) "show master status", (char *) "Position", log_pos2);
+    find_field(repl->nodes[1], (char*) "show master status", (char*) "File", log_file2);
+    find_field(repl->nodes[1], (char*) "show master status", (char*) "Position", log_pos2);
 
-    repl->set_slave(repl->nodes[0], repl->IP[1],  repl->port[1], log_file2, log_pos2);
-    repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file1, log_pos1);
+    repl->set_slave(repl->nodes[0], repl->IP[1], repl->port[1], log_file2, log_pos2);
+    repl->set_slave(repl->nodes[1], repl->IP[0], repl->port[0], log_file1, log_pos1);
 
     repl->close_connections();
 
@@ -1156,11 +1196,11 @@ void TestConnections::log_excludes(int m, const char* pattern)
     add_result(log_matches(m, pattern), "Log matches pattern '%s'", pattern);
 }
 
-static int read_log(const char* name, char **err_log_content_p)
+static int read_log(const char* name, char** err_log_content_p)
 {
-    FILE *f;
+    FILE* f;
     *err_log_content_p = NULL;
-    char * err_log_content;
+    char* err_log_content;
     f = fopen(name, "rb");
     if (f != NULL)
     {
@@ -1169,7 +1209,7 @@ static int read_log(const char* name, char **err_log_content_p)
         fseek(f, 0L, SEEK_END);
         long int size = ftell(f);
         fseek(f, prev, SEEK_SET);
-        err_log_content = (char *)malloc(size + 2);
+        err_log_content = (char*)malloc(size + 2);
         if (err_log_content != NULL)
         {
             fread(err_log_content, 1, size, f);
@@ -1177,13 +1217,13 @@ static int read_log(const char* name, char **err_log_content_p)
             {
                 if (err_log_content[i] == 0)
                 {
-                    //printf("null detected at position %d\n", i);
+                    // printf("null detected at position %d\n", i);
                     err_log_content[i] = '\n';
                 }
             }
-            //printf("s=%ld\n", strlen(err_log_content));
+            // printf("s=%ld\n", strlen(err_log_content));
             err_log_content[size] = '\0';
-            //printf("s=%ld\n", strlen(err_log_content));
+            // printf("s=%ld\n", strlen(err_log_content));
             * err_log_content_p = err_log_content;
             return 0;
         }
@@ -1198,13 +1238,12 @@ static int read_log(const char* name, char **err_log_content_p)
         printf ("Error reading log %s \n", name);
         return 1;
     }
-
 }
 
-void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
+void TestConnections::check_log_err(int m, const char* err_msg, bool expected)
 {
 
-    char * err_log_content;
+    char* err_log_content;
 
     if (verbose)
     {
@@ -1215,8 +1254,10 @@ void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
     char log_file[64];
     set_timeout(500);
     sprintf(dest, "maxscale_log_%03d/", m);
-    sprintf(&sys1[0], "mkdir -p maxscale_log_%03d; rm -f %s*.log",
-            m, dest);
+    sprintf(&sys1[0],
+            "mkdir -p maxscale_log_%03d; rm -f %s*.log",
+            m,
+            dest);
 
     system(sys1);
     sprintf(sys1, "%s/*", maxscales->maxscale_log_dir[m]);
@@ -1270,7 +1311,7 @@ void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
     }
 }
 
-int TestConnections::find_connected_slave(int m, int * global_result)
+int TestConnections::find_connected_slave(int m, int* global_result)
 {
     int conn_num;
     int all_conn = 0;
@@ -1278,7 +1319,7 @@ int TestConnections::find_connected_slave(int m, int * global_result)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1))
         {
@@ -1309,7 +1350,7 @@ int TestConnections::find_connected_slave1(int m)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname[m], (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
@@ -1325,8 +1366,10 @@ int TestConnections::find_connected_slave1(int m)
 int TestConnections::check_maxscale_processes(int m, int expected)
 {
     int exit_code;
-    char* maxscale_num = maxscales->ssh_node_output(m, "ps -C maxscale | grep maxscale | wc -l", false,
-                         &exit_code);
+    char* maxscale_num = maxscales->ssh_node_output(m,
+                                                    "ps -C maxscale | grep maxscale | wc -l",
+                                                    false,
+                                                    &exit_code);
     if ((maxscale_num == NULL) || (exit_code != 0))
     {
         return -1;
@@ -1341,7 +1384,10 @@ int TestConnections::check_maxscale_processes(int m, int expected)
     {
         tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
         sleep(5);
-        maxscale_num = maxscales->ssh_node_output(m, "ps -C maxscale | grep maxscale | wc -l", false, &exit_code);
+        maxscale_num = maxscales->ssh_node_output(m,
+                                                  "ps -C maxscale | grep maxscale | wc -l",
+                                                  false,
+                                                  &exit_code);
         if (atoi(maxscale_num) != expected)
         {
             add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
@@ -1425,16 +1471,19 @@ int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_mas
 }
 
 
-int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag,
+int TestConnections::create_connections(int m,
+                                        int conn_N,
+                                        bool rwsplit_flag,
+                                        bool master_flag,
                                         bool slave_flag,
                                         bool galera_flag)
 {
     int i;
     int local_result = 0;
-    MYSQL * rwsplit_conn[conn_N];
-    MYSQL * master_conn[conn_N];
-    MYSQL * slave_conn[conn_N];
-    MYSQL * galera_conn[conn_N];
+    MYSQL* rwsplit_conn[conn_N];
+    MYSQL* master_conn[conn_N];
+    MYSQL* slave_conn[conn_N];
+    MYSQL* galera_conn[conn_N];
 
 
     tprintf("Opening %d connections to each router\n", conn_N);
@@ -1469,10 +1518,10 @@ int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bo
             }
 
             master_conn[i] = maxscales->open_readconn_master_connection(m);
-            if ( mysql_errno(master_conn[i]) != 0 )
+            if (mysql_errno(master_conn[i]) != 0)
             {
                 local_result++;
-                tprintf("ReadConn master connection failed, error: %s\n", mysql_error(master_conn[i]) );
+                tprintf("ReadConn master connection failed, error: %s\n", mysql_error(master_conn[i]));
             }
         }
         if (slave_flag)
@@ -1483,10 +1532,10 @@ int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bo
             }
 
             slave_conn[i] = maxscales->open_readconn_slave_connection(m);
-            if ( mysql_errno(slave_conn[i]) != 0 )
+            if (mysql_errno(slave_conn[i]) != 0)
             {
                 local_result++;
-                tprintf("ReadConn slave connection failed, error: %s\n", mysql_error(slave_conn[i]) );
+                tprintf("ReadConn slave connection failed, error: %s\n", mysql_error(slave_conn[i]));
             }
         }
         if (galera_flag)
@@ -1496,8 +1545,9 @@ int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bo
                 printf("Galera \n");
             }
 
-            galera_conn[i] = open_conn(4016, maxscales->IP[m], maxscales->user_name, maxscales->password, ssl);
-            if ( mysql_errno(galera_conn[i]) != 0)
+            galera_conn[i]
+                = open_conn(4016, maxscales->IP[m], maxscales->user_name, maxscales->password, ssl);
+            if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;
                 tprintf("Galera connection failed, error: %s\n", mysql_error(galera_conn[i]));
@@ -1547,7 +1597,7 @@ int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bo
         }
     }
 
-    //global_result += check_pers_conn(Test, pers_conn_expected);
+    // global_result += check_pers_conn(Test, pers_conn_expected);
     tprintf("Closing all connections\n");
     for (i = 0; i < conn_N; i++)
     {
@@ -1574,10 +1624,10 @@ int TestConnections::create_connections(int m, int conn_N, bool rwsplit_flag, bo
     return local_result;
 }
 
-int TestConnections::get_client_ip(int m, char * ip)
+int TestConnections::get_client_ip(int m, char* ip)
 {
-    MYSQL * conn;
-    MYSQL_RES *res;
+    MYSQL* conn;
+    MYSQL_RES* res;
     MYSQL_ROW row;
     int ret = 1;
     unsigned long long int rows;
@@ -1585,14 +1635,17 @@ int TestConnections::get_client_ip(int m, char * ip)
 
     maxscales->connect_rwsplit(m);
     if (execute_query(maxscales->conn_rwsplit[m],
-                      "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
+                      "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0)
     {
         return ret;
     }
     maxscales->close_rwsplit(m);
-    conn = open_conn_db(maxscales->rwsplit_port[m], maxscales->IP[m], (char *) "db_to_check_client_ip",
+    conn = open_conn_db(maxscales->rwsplit_port[m],
+                        maxscales->IP[m],
+                        (char*) "db_to_check_client_ip",
                         maxscales->user_name,
-                        maxscales->password, ssl);
+                        maxscales->password,
+                        ssl);
 
     if (conn != NULL)
     {
@@ -1615,9 +1668,9 @@ int TestConnections::get_client_ip(int m, char * ip)
                 for (i = 0; i < rows; i++)
                 {
                     row = mysql_fetch_row(res);
-                    if ( (row[2] != NULL ) && (row[3] != NULL) )
+                    if ((row[2] != NULL ) && (row[3] != NULL))
                     {
-                        if  (strstr(row[3], "db_to_check_client_ip") != NULL)
+                        if (strstr(row[3], "db_to_check_client_ip") != NULL)
                         {
                             ret = 0;
                             strcpy(ip, row[2]);
@@ -1656,7 +1709,7 @@ int TestConnections::stop_timeout()
     return 0;
 }
 
-void TestConnections::tprintf(const char *format, ...)
+void TestConnections::tprintf(const char* format, ...)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
@@ -1684,9 +1737,9 @@ void TestConnections::tprintf(const char *format, ...)
     fflush(stderr);
 }
 
-void *timeout_thread( void *ptr )
+void* timeout_thread(void* ptr)
 {
-    TestConnections * Test = (TestConnections *) ptr;
+    TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;
     while (Test->timeout > 0)
     {
@@ -1700,9 +1753,9 @@ void *timeout_thread( void *ptr )
     exit(250);
 }
 
-void *log_copy_thread( void *ptr )
+void* log_copy_thread(void* ptr)
 {
-    TestConnections * Test = (TestConnections *) ptr;
+    TestConnections* Test = (TestConnections*) ptr;
     struct timespec tim;
     while (true)
     {
@@ -1750,7 +1803,7 @@ int TestConnections::insert_select(int m, int N)
     return result;
 }
 
-int TestConnections::use_db(int m, char * db)
+int TestConnections::use_db(int m, char* db)
 {
     int local_result = 0;
     char sql[100];
@@ -1771,10 +1824,10 @@ int TestConnections::use_db(int m, char * db)
     return local_result;
 }
 
-int TestConnections::check_t1_table(int m, bool presence, char * db)
+int TestConnections::check_t1_table(int m, bool presence, char* db)
 {
-    const char *expected = presence ? "" : "NOT";
-    const char *actual = presence ? "NOT" : "";
+    const char* expected = presence ? "" : "NOT";
+    const char* actual = presence ? "NOT" : "";
     int start_result = global_result;
 
     add_result(use_db(m, db), "use db failed\n");
@@ -1803,8 +1856,10 @@ int TestConnections::check_t1_table(int m, bool presence, char * db)
     }
     else
     {
-        add_result(1, "Table t1 is %s found in '%s' database using Readconnrouter with router option master\n",
-                   actual, db);
+        add_result(1,
+                   "Table t1 is %s found in '%s' database using Readconnrouter with router option master\n",
+                   actual,
+                   db);
     }
 
     set_timeout(30);
@@ -1816,7 +1871,9 @@ int TestConnections::check_t1_table(int m, bool presence, char * db)
     }
     else
     {
-        add_result(1, "Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual,
+        add_result(1,
+                   "Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n",
+                   actual,
                    db);
     }
 
@@ -1831,7 +1888,11 @@ int TestConnections::check_t1_table(int m, bool presence, char * db)
         }
         else
         {
-            add_result(1, "Table t1 is %s found in '%s' database using direct connect to node %d\n", actual, db, i);
+            add_result(1,
+                       "Table t1 is %s found in '%s' database using direct connect to node %d\n",
+                       actual,
+                       db,
+                       i);
         }
     }
 
@@ -1840,7 +1901,7 @@ int TestConnections::check_t1_table(int m, bool presence, char * db)
     return global_result - start_result;
 }
 
-int TestConnections::try_query(MYSQL *conn, const char *format, ...)
+int TestConnections::try_query(MYSQL* conn, const char* format, ...)
 {
     va_list valist;
 
@@ -1855,16 +1916,19 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
     va_end(valist);
 
     int res = execute_query_silent(conn, sql, false);
-    add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql,
+    add_result(res,
+               "Query '%.*s%s' failed!\n",
+               message_len < 100 ? message_len : 100,
+               sql,
                message_len < 100 ? "" : "...");
     return res;
 }
 
-int TestConnections::try_query_all(int m, const char *sql)
+int TestConnections::try_query_all(int m, const char* sql)
 {
-    return try_query(maxscales->conn_rwsplit[m], "%s", sql) +
-           try_query(maxscales->conn_master[m], "%s", sql) +
-           try_query(maxscales->conn_slave[m], "%s", sql);
+    return try_query(maxscales->conn_rwsplit[m], "%s", sql)
+           + try_query(maxscales->conn_master[m], "%s", sql)
+           + try_query(maxscales->conn_slave[m], "%s", sql);
 }
 
 StringSet TestConnections::get_server_status(const char* name)
@@ -1882,7 +1946,7 @@ StringSet TestConnections::get_server_status(const char* name)
         while (tok)
         {
             char* p = tok;
-            char *end = strchr(tok, '\n');
+            char* end = strchr(tok, '\n');
             if (!end)
             {
                 end = strchr(tok, '\0');
@@ -1915,7 +1979,7 @@ int TestConnections::list_dirs(int m)
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("ls on node %d\n", i);
-        repl->ssh_node(i, (char *) "ls -la /var/lib/mysql", true);
+        repl->ssh_node(i, (char*) "ls -la /var/lib/mysql", true);
         fflush(stdout);
     }
     tprintf("ls maxscale \n");
@@ -1934,7 +1998,8 @@ void TestConnections::check_current_operations(int m, int value)
         char command[512];
         sprintf(command, "show server server%d", i + 1);
         add_result(maxscales->check_maxadmin_param(m, command, "Current no. of operations:", value_str),
-                   "Current no. of operations is not %s", value_str);
+                   "Current no. of operations is not %s",
+                   value_str);
     }
 }
 
@@ -1948,33 +2013,37 @@ void TestConnections::check_current_connections(int m, int value)
         char command[512];
         sprintf(command, "show server server%d", i + 1);
         add_result(maxscales->check_maxadmin_param(m, command, "Current no. of conns:", value_str),
-                   "Current no. of conns is not %s", value_str);
+                   "Current no. of conns is not %s",
+                   value_str);
     }
 }
 
-int TestConnections::take_snapshot(char * snapshot_name)
+int TestConnections::take_snapshot(char* snapshot_name)
 {
     char str[4096];
     sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
     return system(str);
 }
 
-int TestConnections::revert_snapshot(char * snapshot_name)
+int TestConnections::revert_snapshot(char* snapshot_name)
 {
     char str[4096];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
     return system(str);
 }
 
-bool TestConnections::test_bad_config(int m, const char *config)
+bool TestConnections::test_bad_config(int m, const char* config)
 {
     process_template(m, config, "./");
 
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
-    return maxscales->ssh_node_f(m, true, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
-                                 "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale") == 0;
+    return maxscales->ssh_node_f(m,
+                                 true,
+                                 "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
+                                 "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale")
+           == 0;
 }
 
 std::string dump_status(const StringSet& current, const StringSet& expected)

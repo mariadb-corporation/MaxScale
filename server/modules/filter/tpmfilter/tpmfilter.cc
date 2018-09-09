@@ -73,47 +73,51 @@ static const int default_sql_size = 4 * 1024;
 #define DEFAULT_QUERY_DELIMITER "@@@"
 #define DEFAULT_LOG_DELIMITER   ":::"
 #define DEFAULT_FILE_NAME       "tpm.log"
-#define DEFAULT_NAMED_PIPE       "/tmp/tpmfilter"
+#define DEFAULT_NAMED_PIPE      "/tmp/tpmfilter"
 
 /*
  * The filter entry points
  */
 struct TPM_INSTANCE;
 
-static  MXS_FILTER  *createInstance(const char *name, MXS_CONFIG_PARAMETER *);
-static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
-static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static  int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static  json_t*    diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
-static  uint64_t getCapabilities(MXS_FILTER* instance);
-static  void destroyInstance(MXS_FILTER *instance);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_DOWNSTREAM* downstream);
+static void setUpstream(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* fsession,
+                        MXS_UPSTREAM* upstream);
+static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
+static void     destroyInstance(MXS_FILTER* instance);
 
-static  void checkNamedPipe(TPM_INSTANCE *args);
+static void checkNamedPipe(TPM_INSTANCE* args);
 
 /**
  * A instance structure, every instance will write to a same file.
  */
 struct TPM_INSTANCE
 {
-    int sessions;   /* Session count */
-    char    *source;    /* The source of the client connection */
-    char    *user;  /* The user name to filter on */
-    char    *filename;  /* filename */
-    char    *delimiter; /* delimiter for columns in a log */
-    char    *query_delimiter; /* delimiter for query statements in a transaction */
-    char    *named_pipe;
-    int named_pipe_fd;
-    bool log_enabled;
+    int   sessions;         /* Session count */
+    char* source;           /* The source of the client connection */
+    char* user;             /* The user name to filter on */
+    char* filename;         /* filename */
+    char* delimiter;        /* delimiter for columns in a log */
+    char* query_delimiter;  /* delimiter for query statements in a transaction */
+    char* named_pipe;
+    int   named_pipe_fd;
+    bool  log_enabled;
 
-    int query_delimiter_size; /* the length of the query delimiter */
-    FILE* fp;
+    int         query_delimiter_size;   /* the length of the query delimiter */
+    FILE*       fp;
     std::thread thread;
-    bool shutdown;
+    bool        shutdown;
 };
 
 /**
@@ -126,24 +130,24 @@ struct TPM_INSTANCE
  */
 typedef struct
 {
-    MXS_DOWNSTREAM  down;
-    MXS_UPSTREAM    up;
-    int     active;
-    char        *clientHost;
-    char        *userName;
-    char* sql;
-    char* latency;
-    struct timeval  start;
-    char        *current;
-    int     n_statements;
-    struct timeval  total;
-    struct timeval  current_start;
-    struct timeval  last_statement_start;
-    bool query_end;
-    char    *buf;
-    int sql_index;
-    int latency_index;
-    size_t      max_sql_size;
+    MXS_DOWNSTREAM down;
+    MXS_UPSTREAM   up;
+    int            active;
+    char*          clientHost;
+    char*          userName;
+    char*          sql;
+    char*          latency;
+    struct timeval start;
+    char*          current;
+    int            n_statements;
+    struct timeval total;
+    struct timeval current_start;
+    struct timeval last_statement_start;
+    bool           query_end;
+    char*          buf;
+    int            sql_index;
+    int            latency_index;
+    size_t         max_sql_size;
 } TPM_SESSION;
 
 extern "C"
@@ -157,51 +161,54 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        setUpstream,
-        routeQuery,
-        clientReply,
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
-        MXS_FILTER_VERSION,
-        "Transaction Performance Monitoring filter",
-        "V1.0.1",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_FILTER_OBJECT MyObject =
         {
-            {"named_pipe", MXS_MODULE_PARAM_STRING, DEFAULT_NAMED_PIPE},
-            {"filename", MXS_MODULE_PARAM_STRING, DEFAULT_FILE_NAME},
-            {"delimiter", MXS_MODULE_PARAM_STRING, DEFAULT_LOG_DELIMITER},
-            {"query_delimiter", MXS_MODULE_PARAM_STRING, DEFAULT_QUERY_DELIMITER},
-            {"source", MXS_MODULE_PARAM_STRING},
-            {"user", MXS_MODULE_PARAM_STRING},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            createInstance,
+            newSession,
+            closeSession,
+            freeSession,
+            setDownstream,
+            setUpstream,
+            routeQuery,
+            clientReply,
+            diagnostic,
+            diagnostic_json,
+            getCapabilities,
+            destroyInstance
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_FILTER,
+            MXS_MODULE_GA,
+            MXS_FILTER_VERSION,
+            "Transaction Performance Monitoring filter",
+            "V1.0.1",
+            RCAP_TYPE_CONTIGUOUS_INPUT,
+            &MyObject,
+            NULL,                                       /* Process init. */
+            NULL,                                       /* Process finish. */
+            NULL,                                       /* Thread init. */
+            NULL,                                       /* Thread finish. */
+            {
+                {"named_pipe",                          MXS_MODULE_PARAM_STRING,
+                 DEFAULT_NAMED_PIPE                                  },
+                {"filename",                            MXS_MODULE_PARAM_STRING,
+                 DEFAULT_FILE_NAME                                                                },
+                {"delimiter",                           MXS_MODULE_PARAM_STRING,
+                 DEFAULT_LOG_DELIMITER                                                                                        },
+                {"query_delimiter",                     MXS_MODULE_PARAM_STRING,
+                 DEFAULT_QUERY_DELIMITER                                                                                      },
+                {"source",                              MXS_MODULE_PARAM_STRING},
+                {"user",                                MXS_MODULE_PARAM_STRING},
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /**
@@ -213,10 +220,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *
-createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    TPM_INSTANCE *my_instance = static_cast<TPM_INSTANCE*>(MXS_CALLOC(1, sizeof(TPM_INSTANCE)));
+    TPM_INSTANCE* my_instance = static_cast<TPM_INSTANCE*>(MXS_CALLOC(1, sizeof(TPM_INSTANCE)));
 
     if (my_instance)
     {
@@ -253,7 +259,8 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
             else
             {
                 MXS_ERROR("The file '%s' already exists and it is not "
-                          "a named pipe.", my_instance->named_pipe);
+                          "a named pipe.",
+                          my_instance->named_pipe);
                 error = true;
             }
         }
@@ -271,7 +278,9 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         if (my_instance->fp == NULL)
         {
             MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
-                      my_instance->filename, errno, strerror(errno));
+                      my_instance->filename,
+                      errno,
+                      strerror(errno));
             error = true;
         }
 
@@ -307,7 +316,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         }
     }
 
-    return (MXS_FILTER *)my_instance;
+    return (MXS_FILTER*)my_instance;
 }
 
 /**
@@ -319,20 +328,19 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
-    TPM_SESSION *my_session;
-    int     i;
-    const char *remote, *user;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_SESSION* my_session;
+    int i;
+    const char* remote, * user;
 
     if ((my_session = static_cast<TPM_SESSION*>(MXS_CALLOC(1, sizeof(TPM_SESSION)))) != NULL)
     {
         atomic_add(&my_instance->sessions, 1);
 
         my_session->latency = (char*)MXS_CALLOC(latency_buf_size, sizeof(char));
-        my_session->max_sql_size = default_sql_size; // default max query size of 4k.
+        my_session->max_sql_size = default_sql_size;    // default max query size of 4k.
         my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
         memset(my_session->sql, 0x00, my_session->max_sql_size);
         my_session->sql_index = 0;
@@ -380,17 +388,15 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static  void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
-    TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
     if (my_instance->fp != NULL)
     {
         // flush FP when a session is closed.
         fflush(my_instance->fp);
     }
-
 }
 
 /**
@@ -399,10 +405,9 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param instance  The filter instance
  * @param session   The filter session
  */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
 
     MXS_FREE(my_session->clientHost);
     MXS_FREE(my_session->userName);
@@ -420,10 +425,9 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param session   The filter session
  * @param downstream    The downstream filter or router.
  */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
 
     my_session->down = *downstream;
 }
@@ -436,10 +440,9 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
  * @param session   The filter session
  * @param upstream  The upstream filter or session.
  */
-static void
-setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
 {
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
 
     my_session->up = *upstream;
 }
@@ -454,12 +457,11 @@ setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *ups
  * @param session   The filter session
  * @param queue     The query data
  */
-static  int
-routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
+static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
-    char        *ptr = NULL;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
+    char* ptr = NULL;
     size_t i;
 
     if (my_session->active)
@@ -488,7 +490,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 size_t new_sql_size = my_session->max_sql_size;
                 size_t len = my_session->sql_index + strlen(ptr) + my_instance->query_delimiter_size + 1;
 
-                /* if the total length of query statements exceeds the maximum limit, print an error and return */
+                /* if the total length of query statements exceeds the maximum limit, print an error and
+                 * return */
                 if (len > sql_size_limit)
                 {
                     MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
@@ -525,10 +528,13 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 else
                 {
                     /* append a query delimiter */
-                    memcpy(my_session->sql + my_session->sql_index, my_instance->query_delimiter,
+                    memcpy(my_session->sql + my_session->sql_index,
+                           my_instance->query_delimiter,
                            my_instance->query_delimiter_size);
                     /* append the next query statement */
-                    memcpy(my_session->sql + my_session->sql_index + my_instance->query_delimiter_size, ptr, strlen(ptr));
+                    memcpy(my_session->sql + my_session->sql_index + my_instance->query_delimiter_size,
+                           ptr,
+                           strlen(ptr));
                     /* set new pointer for the buffer */
                     my_session->sql_index += (my_instance->query_delimiter_size + strlen(ptr));
                 }
@@ -542,16 +548,16 @@ retblock:
     MXS_FREE(ptr);
     /* Pass the query downstream */
     return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session, queue);
+                                       my_session->down.session,
+                                       queue);
 }
 
-static int
-clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
 {
-    TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
-    TPM_SESSION *my_session = (TPM_SESSION *)session;
-    struct      timeval     tv, diff;
-    int     i, inserted;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_SESSION* my_session = (TPM_SESSION*)session;
+    struct      timeval tv, diff;
+    int i, inserted;
 
     /* records latency of the SQL statement. */
     if (my_session->sql_index > 0)
@@ -566,7 +572,9 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
         my_session->latency_index += written;
         if (!my_session->query_end)
         {
-            written = sprintf(my_session->latency + my_session->latency_index, "%s", my_instance->query_delimiter);
+            written = sprintf(my_session->latency + my_session->latency_index,
+                              "%s",
+                              my_instance->query_delimiter);
             my_session->latency_index += written;
         }
         if (my_session->latency_index > latency_buf_size)
@@ -591,8 +599,10 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
         /* print to log. */
         if (my_instance->log_enabled)
         {
-            /* this prints "timestamp | server_name | user_name | latency of entire transaction | latencies of individual statements | sql_statements" */
-            fprintf(my_instance->fp, "%ld%s%s%s%s%s%ld%s%s%s%s\n",
+            /* this prints "timestamp | server_name | user_name | latency of entire transaction | latencies of
+             * individual statements | sql_statements" */
+            fprintf(my_instance->fp,
+                    "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
                     my_instance->delimiter,
                     reply->server->name,
@@ -612,7 +622,8 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 
     /* Pass the result upstream */
     return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session, reply);
+                                      my_session->up.session,
+                                      reply);
 }
 
 /**
@@ -626,28 +637,42 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static  void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
-    TPM_SESSION *my_session = (TPM_SESSION *)fsession;
-    int     i;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
+    TPM_SESSION* my_session = (TPM_SESSION*)fsession;
+    int i;
 
     if (my_instance->source)
-        dcb_printf(dcb, "\t\tLimit logging to connections from 	%s\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tLimit logging to connections from   %s\n",
                    my_instance->source);
+    }
     if (my_instance->user)
-        dcb_printf(dcb, "\t\tLimit logging to user		%s\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tLimit logging to user		%s\n",
                    my_instance->user);
+    }
     if (my_instance->filename)
-        dcb_printf(dcb, "\t\tLogging to file %s.\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tLogging to file %s.\n",
                    my_instance->filename);
+    }
     if (my_instance->delimiter)
-        dcb_printf(dcb, "\t\tLogging with delimiter %s.\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tLogging with delimiter %s.\n",
                    my_instance->delimiter);
+    }
     if (my_instance->query_delimiter)
-        dcb_printf(dcb, "\t\tLogging with query delimiter %s.\n",
+    {
+        dcb_printf(dcb,
+                   "\t\tLogging with query delimiter %s.\n",
                    my_instance->query_delimiter);
+    }
 }
 
 /**
@@ -660,10 +685,9 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t*
-diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    TPM_INSTANCE *my_instance = (TPM_INSTANCE*)instance;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
 
     json_t* rval = json_object();
 
@@ -707,7 +731,7 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
 
 static void destroyInstance(MXS_FILTER* instance)
 {
-    TPM_INSTANCE *my_instance = (TPM_INSTANCE *)instance;
+    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
 
     my_instance->shutdown = true;
 
@@ -717,7 +741,7 @@ static void destroyInstance(MXS_FILTER* instance)
     }
 }
 
-static void checkNamedPipe(TPM_INSTANCE *inst)
+static void checkNamedPipe(TPM_INSTANCE* inst)
 {
     int ret;
     char buffer[2];

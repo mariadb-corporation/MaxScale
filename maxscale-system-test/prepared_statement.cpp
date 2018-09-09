@@ -51,7 +51,10 @@ void test_routing(TestConnections& test)
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
     int res = atoi(buf);
-    test.add_result(res == server_id, "Query should be routed to a slave (got %d, master is %d)", res, server_id);
+    test.add_result(res == server_id,
+                    "Query should be routed to a slave (got %d, master is %d)",
+                    res,
+                    server_id);
 
 
     // Test reads inside transactions are routed to master
@@ -60,7 +63,10 @@ void test_routing(TestConnections& test)
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
     res = atoi(buf);
-    test.add_result(res != server_id, "Query should be routed to master inside a transaction (got %d, master is %d)", res, server_id);
+    test.add_result(res != server_id,
+                    "Query should be routed to master inside a transaction (got %d, master is %d)",
+                    res,
+                    server_id);
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
 
     // Test reads inside read-only transactions are routed slaves
@@ -69,7 +75,10 @@ void test_routing(TestConnections& test)
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
     res = atoi(buf);
-    test.add_result(res == server_id, "Query should be routed to a slave inside a read-only transaction (got %d, master is %d)", res, server_id);
+    test.add_result(res == server_id,
+                    "Query should be routed to a slave inside a read-only transaction (got %d, master is %d)",
+                    res,
+                    server_id);
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
 
     // Test prepared statements that modify data
@@ -82,14 +91,17 @@ void test_routing(TestConnections& test)
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "SELECT id FROM test.t1", "id", buf),
                     "Read should succeed");
     res = atoi(buf);
-    test.add_result(res != server_id, "Writes should be routed to the master (got %d, master is %d)", res, server_id);
+    test.add_result(res != server_id,
+                    "Writes should be routed to the master (got %d, master is %d)",
+                    res,
+                    server_id);
 
     // Cleanup
     test.check_maxscale_alive(0);
     test.stop_timeout();
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 

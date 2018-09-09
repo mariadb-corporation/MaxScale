@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/buffer.h>
@@ -27,9 +27,9 @@ class Tester
 public:
     class Task;
 
-    typedef std::vector<std::string> Statements;
-    typedef std::vector<std::pair<CACHE_KEY, GWBUF*> > CacheItems;
-    typedef std::vector<Task*> Tasks;
+    typedef std::vector<std::string>                  Statements;
+    typedef std::vector<std::pair<CACHE_KEY, GWBUF*>> CacheItems;
+    typedef std::vector<Task*>                        Tasks;
 
     class Thread;
     class Task
@@ -137,7 +137,7 @@ public:
 
     private:
         Task(const Task&);
-        Task& operator = (const Task&);
+        Task& operator=(const Task&);
 
     private:
         std::ostream& m_out;

@@ -65,7 +65,6 @@ bool found_in_file(TestConnections& test, const string& file, const string& patt
 
     return test.maxscales->ssh_node_f(0, true, "%s", command.c_str()) == 0;
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -94,7 +93,8 @@ int main(int argc, char* argv[])
     test.log_includes(0, user.c_str());
     // But not in /var/log/auth.log
     test.assert(!found_in_file(test, "/var/log/auth.log", user),
-                "Unexpectedly found %s in /var/log/auth.log", user.c_str());
+                "Unexpectedly found %s in /var/log/auth.log",
+                user.c_str());
 
     // Turn on 'event.authentication_failure.facility=LOG_AUTH'
     test.maxscales->stop();
@@ -111,8 +111,8 @@ int main(int argc, char* argv[])
     test.log_includes(0, user.c_str());
     // And in /var/log/auth.log as that's where authentication errors now should go.
     test.assert(found_in_file(test, "/var/log/auth.log", user),
-                "Unexpectedly NOT found %s in /var/log/auth.log", user.c_str());
+                "Unexpectedly NOT found %s in /var/log/auth.log",
+                user.c_str());
 
     return test.global_result;
 }
-

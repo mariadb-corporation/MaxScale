@@ -7,7 +7,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -30,8 +30,11 @@ int main(int argc, char *argv[])
     test.maxscales->connect_rwsplit(0);
     test.try_query(test.maxscales->conn_rwsplit[0], "USE db2");
     execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM t2", server_id[1]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM db1.t1", server_id[0]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, a.id FROM t2 as a JOIN db1.t1 as b",
+    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+                            "SELECT @@server_id, id FROM db1.t1",
+                            server_id[0]);
+    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+                            "SELECT @@server_id, a.id FROM t2 as a JOIN db1.t1 as b",
                             server_id[1]);
     test.maxscales->close_rwsplit(0);
 
@@ -39,8 +42,11 @@ int main(int argc, char *argv[])
     test.maxscales->connect_rwsplit(0);
     test.try_query(test.maxscales->conn_rwsplit[0], "USE db1");
     execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM t1", server_id[0]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM db2.t2", server_id[1]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, a.id FROM t1 as a JOIN db1.t1 as b",
+    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+                            "SELECT @@server_id, id FROM db2.t2",
+                            server_id[1]);
+    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+                            "SELECT @@server_id, a.id FROM t1 as a JOIN db1.t1 as b",
                             server_id[0]);
     test.maxscales->close_rwsplit(0);
 

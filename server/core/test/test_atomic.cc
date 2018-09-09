@@ -75,7 +75,7 @@ void test_cas(void* data)
     mxb_assert(loops > 0);
 }
 
-int run_test(void(*func)(void*))
+int run_test(void (* func)(void*))
 {
     std::thread threads[NTHR];
 

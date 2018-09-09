@@ -31,7 +31,6 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 #if INMEMORY_KEY_LENGTH > CACHE_KEY_MAXLEN
 #error storage_inmemory key is too long.
 #endif
-
 }
 
 InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
@@ -53,20 +52,23 @@ bool InMemoryStorage::Initialize(uint32_t* pCapabilities)
 
 InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
                                                   const CACHE_STORAGE_CONFIG& config,
-                                                  int argc, char* argv[])
+                                                  int argc,
+                                                  char* argv[])
 {
     mxb_assert(zName);
 
     if (config.max_count != 0)
     {
         MXS_WARNING("A maximum item count of %u specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", (unsigned int)config.max_count);
+                    "does not enforce such a limit.",
+                    (unsigned int)config.max_count);
     }
 
     if (config.max_size != 0)
     {
         MXS_WARNING("A maximum size of %lu specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", (unsigned long)config.max_size);
+                    "does not enforce such a limit.",
+                    (unsigned long)config.max_size);
     }
 
     auto_ptr<InMemoryStorage> sStorage;
@@ -81,6 +83,7 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
         mxb_assert(!true);
         MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
                   (int)config.thread_model);
+
     case CACHE_THREAD_MODEL_MT:
         sStorage = InMemoryStorageMT::Create(zName, config, argc, argv);
         break;
@@ -129,8 +132,10 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) cons
 }
 
 cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
-                                             uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
-                                             GWBUF** ppResult)
+                                             uint32_t flags,
+                                             uint32_t soft_ttl,
+                                             uint32_t hard_ttl,
+                                             GWBUF**  ppResult)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 

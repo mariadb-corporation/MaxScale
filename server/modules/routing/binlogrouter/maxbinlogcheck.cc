@@ -31,41 +31,40 @@
 #include <maxscale/log.h>
 
 
-static void printVersion(const char *progname);
-static void printUsage(const char *progname);
-static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo);
+static void printVersion(const char* progname);
+static void printUsage(const char* progname);
+static int  set_encryption_options(ROUTER_INSTANCE* inst, char* key_file, char* aes_algo);
 
 #ifdef HAVE_GLIBC
 static struct option long_options[] =
 {
-    {"debug",            no_argument, 0, 'd'},
-    {"version",          no_argument, 0, 'V'},
-    {"fix",              no_argument, 0, 'f'},
-    {"mariadb10",        no_argument, 0, 'M'},
-    {"header",           no_argument, 0, 'H'},
-    {"key_file",         required_argument, 0, 'K'},
-    {"aes_algo",         required_argument, 0, 'A'},
-    {"replace-event",    required_argument, 0, 'R'},
-    {"remove-trx",       required_argument, 0, 'T'},
-    {"help",             no_argument, 0, '?'},
-    {0, 0, 0, 0}
+    {"debug",         no_argument,            0,                 'd'},
+    {"version",       no_argument,            0,                 'V'},
+    {"fix",           no_argument,            0,                 'f'},
+    {"mariadb10",     no_argument,            0,                 'M'},
+    {"header",        no_argument,            0,                 'H'},
+    {"key_file",      required_argument,      0,                 'K'},
+    {"aes_algo",      required_argument,      0,                 'A'},
+    {"replace-event", required_argument,      0,                 'R'},
+    {"remove-trx",    required_argument,      0,                 'T'},
+    {"help",          no_argument,            0,                 '?'},
+    {0,               0,                      0,                 0  }
 };
 #endif
-const char *binlog_check_version = "2.2.1";
+const char* binlog_check_version = "2.2.1";
 
-int
-maxscale_uptime()
+int maxscale_uptime()
 {
     return 1;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int option_index = 0;
     int debug_out = 0;
     int mariadb10_compat = 0;
-    char *key_file = NULL;
-    char *aes_algo = NULL;
+    char* key_file = NULL;
+    char* aes_algo = NULL;
     int report_header = 0;
     int c;
     BINLOG_FILE_FIX binlog_file = {0, false, false};
@@ -81,30 +80,38 @@ int main(int argc, char **argv)
         case 'd':
             debug_out = 1;
             break;
+
         case 'H':
             report_header = BLR_REPORT_REP_HEADER;
             break;
+
         case 'V':
             printVersion(*argv);
             exit(EXIT_SUCCESS);
             break;
+
         case 'f':
             binlog_file.fix = true;
             break;
+
         case 'M':
             mariadb10_compat = 1;
             break;
+
         case 'K':
             key_file = optarg;
             break;
+
         case 'A':
             aes_algo = optarg;
             break;
+
         case 'R':
         case 'T':
             binlog_file.pos = atol(optarg);
             binlog_file.replace_trx = (c == 'T') ? true : false;
             break;
+
         case '?':
             printUsage(*argv);
             exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
@@ -129,7 +136,7 @@ int main(int argc, char **argv)
     char path[PATH_MAX + 1];
     strcpy(path, argv[num_args]);
 
-    char *name = strrchr(path, '/');
+    char* name = strrchr(path, '/');
     if (name)
     {
         ++name;
@@ -147,7 +154,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE));
+    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE));
     if (!inst)
     {
         exit(EXIT_FAILURE);
@@ -157,7 +164,8 @@ int main(int argc, char **argv)
     if (fd == -1)
     {
         printf("ERROR: Failed to open binlog file %s: %s.\n",
-               path, strerror(errno));
+               path,
+               strerror(errno));
         MXS_FREE(inst);
         mxs_log_finish();
         exit(EXIT_FAILURE);
@@ -220,8 +228,7 @@ int main(int argc, char **argv)
 /**
  * Print version information
  */
-static void
-printVersion(const char *progname)
+static void printVersion(const char* progname)
 {
     printf("%s Version %s\n", progname, binlog_check_version);
 }
@@ -229,8 +236,7 @@ printVersion(const char *progname)
 /**
  * Display the --help text.
  */
-static void
-printUsage(const char *progname)
+static void printUsage(const char* progname)
 {
     printVersion(progname);
 
@@ -242,10 +248,12 @@ printUsage(const char *progname)
     printf("  -M|--mariadb10        MariaDB 10 binlog compatibility\n");
     printf("  -V|--version          Print version information and exit\n");
     printf("  -K|--key_file         AES Key file for MariaDB 10.1 binlog file decryption\n");
-    printf("  -A|--aes_algo         AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
+    printf(
+        "  -A|--aes_algo         AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
     printf("  -H|--header           Print content of binlog event header\n");
     printf("  -R|--replace-event    Replace the event at pos with an IGNORABLE event\n");
-    printf("  -T|--remove-trx       Replace all events in the transaction the specified pos belongs to, with IGNORABLE events\n");
+    printf(
+        "  -T|--remove-trx       Replace all events in the transaction the specified pos belongs to, with IGNORABLE events\n");
     printf("  -?|--help             Print this help text\n");
 }
 
@@ -257,7 +265,7 @@ printUsage(const char *progname)
  * @param aes_algo    The AES algorithm
  * @return            1 on failure, 0 on success
  */
-static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo)
+static int set_encryption_options(ROUTER_INSTANCE* inst, char* key_file, char* aes_algo)
 {
     if (aes_algo && !key_file)
     {

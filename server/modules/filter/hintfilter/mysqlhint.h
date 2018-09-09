@@ -49,7 +49,7 @@ typedef enum
 typedef struct
 {
     TOKEN_VALUE token;      // The token itself
-    char        *value;     // The string version of the token
+    char*       value;      // The string version of the token
 } HINT_TOKEN;
 
 /**
@@ -60,10 +60,10 @@ typedef struct
  */
 typedef struct namedhints
 {
-    char        *name;  /*< Hintsets name */
-    HINT        *hints;
+    char* name;     /*< Hintsets name */
+    HINT* hints;
     struct namedhints
-        *next;  /*< Next named hint */
+    * next;     /*< Next named hint */
 } NAMEDHINTS;
 
 /**
@@ -74,9 +74,9 @@ typedef struct namedhints
  */
 typedef struct hintstack
 {
-    HINT        *hint;
+    HINT* hint;
     struct hintstack
-        *next;
+    * next;
 } HINTSTACK;
 
 /**
@@ -92,16 +92,17 @@ typedef struct
  */
 typedef struct
 {
-    MXS_DOWNSTREAM  down;
-    GWBUF          *request;
-    int             query_len;
-    HINTSTACK      *stack;
-    NAMEDHINTS     *named_hints;   /* The named hints defined in this session */
+    MXS_DOWNSTREAM down;
+    GWBUF*         request;
+    int            query_len;
+    HINTSTACK*     stack;
+    NAMEDHINTS*    named_hints;     /* The named hints defined in this session */
 } HINT_SESSION;
 
 /* Some useful macros */
-#define CURRENT_HINT(session)   ((session)->stack ? \
-                    (session)->stack->hints : NULL)
+#define CURRENT_HINT(session) \
+    ((session)->stack   \
+     ? (session)->stack->hints : NULL)
 
 /* Hint Parser State Machine */
 #define HS_INIT         0
@@ -112,9 +113,9 @@ typedef struct
 #define HS_PVALUE       5
 #define HS_PREPARE      6
 
-extern HINT *hint_parser(HINT_SESSION *session, GWBUF *request);
-NAMEDHINTS* free_named_hint(NAMEDHINTS* named_hint);
-HINTSTACK*  free_hint_stack(HINTSTACK* hint_stack);
+extern HINT* hint_parser(HINT_SESSION* session, GWBUF* request);
+NAMEDHINTS*  free_named_hint(NAMEDHINTS* named_hint);
+HINTSTACK*   free_hint_stack(HINTSTACK* hint_stack);
 
 MXS_END_DECLS
 

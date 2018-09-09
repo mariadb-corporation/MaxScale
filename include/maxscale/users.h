@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file users.h The functions to manipulate a set of administrative users
@@ -29,8 +29,8 @@ MXS_BEGIN_DECLS
 enum user_account_type
 {
     USER_ACCOUNT_UNKNOWN,
-    USER_ACCOUNT_BASIC, /**< Allows read-only access */
-    USER_ACCOUNT_ADMIN  /**< Allows complete access */
+    USER_ACCOUNT_BASIC,     /**< Allows read-only access */
+    USER_ACCOUNT_ADMIN      /**< Allows complete access */
 };
 
 /**
@@ -64,7 +64,7 @@ void users_free(USERS* users);
  *
  * @return True if user was added
  */
-bool users_add(USERS *users, const char *user, const char *password, enum user_account_type type);
+bool users_add(USERS* users, const char* user, const char* password, enum user_account_type type);
 
 /**
  * Delete a user from the user table.
@@ -74,7 +74,7 @@ bool users_add(USERS *users, const char *user, const char *password, enum user_a
  *
  * @return True if user was deleted
  */
-bool users_delete(USERS *users, const char *user);
+bool users_delete(USERS* users, const char* user);
 
 /**
  * Authenticate a user
@@ -125,7 +125,7 @@ int users_admin_count(USERS* users);
  *
  * @return JSON form of the users that can be used for serialization
  */
-json_t* users_to_json(USERS *users);
+json_t* users_to_json(USERS* users);
 
 /**
  * Load users from JSON
@@ -144,7 +144,7 @@ USERS* users_from_json(json_t* json);
  * @param port Listener configuration
  * @return Always AUTH_LOADUSERS_OK
  */
-int users_default_loadusers(SERV_LISTENER *port);
+int users_default_loadusers(SERV_LISTENER* port);
 
 /**
  * @brief Default authenticator diagnostic function
@@ -152,14 +152,14 @@ int users_default_loadusers(SERV_LISTENER *port);
  * @param dcb DCB where data is printed
  * @param port Port whose data is to be printed
  */
-void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port);
+void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port);
 
 /**
  * @brief Default authenticator diagnostic function
  *
  * @param port Port whose data is to be printed
  */
-json_t* users_default_diagnostic_json(const SERV_LISTENER *port);
+json_t* users_default_diagnostic_json(const SERV_LISTENER* port);
 
 /**
  * Print users to a DCB

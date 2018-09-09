@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file server.h
@@ -142,21 +142,21 @@ typedef struct server
     DCB**         persistent;   /**< List of unused persistent connections to the server */
     uint8_t       charset;      /**< Server character set. Read from backend and sent to client. */
     // Statistics and events
-    SERVER_STATS   stats;          /**< The server statistics, e.g. number of connections */
-    int            persistmax;     /**< Maximum pool size actually achieved since startup */
-    int            last_event;     /**< The last event that occurred on this server */
-    int64_t        triggered_at;   /**< Time when the last event was triggered */
+    SERVER_STATS stats;         /**< The server statistics, e.g. number of connections */
+    int          persistmax;    /**< Maximum pool size actually achieved since startup */
+    int          last_event;    /**< The last event that occurred on this server */
+    int64_t      triggered_at;  /**< Time when the last event was triggered */
     // Status descriptors. Updated automatically by a monitor or manually by the admin
-    uint64_t      status;                                   /**< Current status flag bitmap */
-    int           maint_request;                            /**< Is admin requesting Maintenance=ON/OFF on the
+    uint64_t status;                                        /**< Current status flag bitmap */
+    int      maint_request;                                 /**< Is admin requesting Maintenance=ON/OFF on the
                                                              * server? */
     char          version_string[MAX_SERVER_VERSION_LEN];   /**< Server version string as given by backend */
     uint64_t      version;                                  /**< Server version numeric representation */
     server_type_t server_type;                              /**< Server type (MariaDB or MySQL), deduced from
                                                              * version string */
-    long          node_id;                                  /**< Node id, server_id for M/S or local_index for
+    long node_id;                                           /**< Node id, server_id for M/S or local_index for
                                                              * Galera */
-    int           rlag;                                     /**< Replication Lag for Master/Slave replication
+    int rlag;                                               /**< Replication Lag for Master/Slave replication
                                                              * */
     unsigned long node_ts;                                  /**< Last timestamp set from M/S monitor module */
     long          master_id;                                /**< Master server id of this node */
@@ -196,33 +196,33 @@ typedef struct server
     (server_is_master(s)  ? "RUNNING MASTER"        \
                           : (server_is_slave(s)   ? "RUNNING SLAVE"        \
                                                   : (server_is_joined(s)  ? "RUNNING JOINED"      \
-                                                                          : (server_is_ndb(s)     ? \
-                                                                             "RUNNING NDB"        \
-                                                                                                  : (( \
-                                                                                                         server_is_running( \
-                                                                                                             s) \
-                                                                                                         && \
-                                                                                                         server_is_in_maint( \
-                                                                                                             s)) \
-                                                                                                     ? \
-                                                                                                     "RUNNING MAINTENANCE"   \
-                                                                                                     : ( \
-                                                                                                         server_is_relay( \
-                                                                                                             s) \
-                                                                                                         ? \
-                                                                                                         "RUNNING RELAY"   \
-                                                                                                         : ( \
-                                                                                                             server_is_usable( \
-                                                                                                                 s) \
-                                                                                                             ? \
-                                                                                                             "RUNNING (only)"   \
-                                                                                                             : ( \
-                                                                                                                 server_is_down( \
-                                                                                                                     s) \
-                                                                                                                 ? \
-                                                                                                                 "DOWN" \
-                                                                                                                 : \
-                                                                                                                 "UNKNOWN STATUS"))))))))
+                                                                          : (server_is_ndb(s)       \
+                                                                             ? "RUNNING NDB"        \
+                                                                             : (( \
+                                                                                    server_is_running( \
+                                                                                        s) \
+                                                                                    && \
+                                                                                    server_is_in_maint( \
+                                                                                        s)) \
+                                                                                ? \
+                                                                                "RUNNING MAINTENANCE"   \
+                                                                                : ( \
+                                                                                    server_is_relay( \
+                                                                                        s) \
+                                                                                    ? \
+                                                                                    "RUNNING RELAY"   \
+                                                                                    : ( \
+                                                                                        server_is_usable( \
+                                                                                            s) \
+                                                                                        ? \
+                                                                                        "RUNNING (only)"   \
+                                                                                        : ( \
+                                                                                            server_is_down( \
+                                                                                                s) \
+                                                                                            ? \
+                                                                                            "DOWN" \
+                                                                                            : \
+                                                                                            "UNKNOWN STATUS"))))))))
 
 /**
  * Is the server valid and active?
@@ -447,7 +447,7 @@ bool server_remove_parameter(SERVER* server, const char* name);
  * @param name   Parameter to set
  * @param value  Value of parameter
  */
-void server_set_parameter(SERVER *server, const char *name, const char *value);
+void server_set_parameter(SERVER* server, const char* name, const char* value);
 
 /**
  * @brief Check if a server points to a local MaxScale service

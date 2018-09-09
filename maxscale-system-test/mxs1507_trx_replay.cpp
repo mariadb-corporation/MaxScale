@@ -14,28 +14,29 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&](string q)
-    {
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
-    };
+    auto query = [&](string q) {
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+        };
 
-    auto ok = [&](string q)
-    {
-        test.assert(query(q), "Query '%s' should work: %s", q.c_str(), mysql_error(test.maxscales->conn_rwsplit[0]));
-    };
+    auto ok = [&](string q) {
+            test.assert(query(q),
+                        "Query '%s' should work: %s",
+                        q.c_str(),
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        };
 
-    auto err = [&](string q)
-    {
-        test.assert(!query(q), "Query should not work: %s", q.c_str());
-    };
+    auto err = [&](string q) {
+            test.assert(!query(q), "Query should not work: %s", q.c_str());
+        };
 
-    auto check = [&](string q, string res)
-    {
-        Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
-        test.assert(!row.empty() && row[0] == res, "Query '%s' should return 1: %s (%s)",
-                    q.c_str(), row.empty() ? "<empty>": row[0].c_str(),
-                    mysql_error(test.maxscales->conn_rwsplit[0]));
-    };
+    auto check = [&](string q, string res) {
+            Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
+            test.assert(!row.empty() && row[0] == res,
+                        "Query '%s' should return 1: %s (%s)",
+                        q.c_str(),
+                        row.empty() ? "<empty>" : row[0].c_str(),
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        };
 
     struct TrxTest
     {
@@ -165,7 +166,8 @@ int main(int argc, char** argv)
             "Exceed transaction length limit",
             {
                 bind(ok, "BEGIN"),
-                bind(ok, "SELECT 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                bind(ok,
+                     "SELECT 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -184,7 +186,8 @@ int main(int argc, char** argv)
             "Normal trx after hitting limit",
             {
                 bind(ok, "BEGIN"),
-                bind(ok, "SELECT 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                bind(ok,
+                     "SELECT 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

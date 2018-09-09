@@ -42,7 +42,7 @@ cache_result_t StorageReal::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
                                       uint32_t soft_ttl,
                                       uint32_t hard_ttl,
-                                      GWBUF** ppValue) const
+                                      GWBUF**  ppValue) const
 {
     return m_pApi->getValue(m_pStorage, &key, flags, soft_ttl, hard_ttl, ppValue);
 }

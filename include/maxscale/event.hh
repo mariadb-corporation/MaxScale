@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <syslog.h>
@@ -62,13 +62,13 @@ namespace event
 
 enum id_t
 {
-    AUTHENTICATION_FAILURE  /**< Authentication failure */
+    AUTHENTICATION_FAILURE      /**< Authentication failure */
 };
 
 enum
 {
     DEFAULT_FACILITY = LOG_USER,
-    DEFAULT_LEVEL = LOG_WARNING
+    DEFAULT_LEVEL    = LOG_WARNING
 };
 
 /**
@@ -155,11 +155,12 @@ int32_t get_log_level(id_t id);
  */
 void log(id_t event_id,
          const char* modname,
-         const char* file, int line, const char* function,
-         const char* format, ...) mxs_attribute((format(printf, 6, 7)));
-
+         const char* file,
+         int line,
+         const char* function,
+         const char* format,
+         ...) mxs_attribute((format(printf, 6, 7)));
 }
-
 }
 
 /**
@@ -170,5 +171,5 @@ void log(id_t event_id,
  * @param ...       Formatting string specific additional arguments.
  *
  */
-#define MXS_LOG_EVENT(event_id, format, ...)\
+#define MXS_LOG_EVENT(event_id, format, ...) \
     maxscale::event::log(event_id, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)

@@ -44,14 +44,13 @@ inline int thread_index()
 
     return u_thread_id;
 }
-
 }
 
-CachePT::CachePT(const std::string&              name,
-                 const CACHE_CONFIG*             pConfig,
+CachePT::CachePT(const std::string& name,
+                 const CACHE_CONFIG* pConfig,
                  const std::vector<SCacheRules>& rules,
-                 SStorageFactory                 sFactory,
-                 const Caches&                   caches)
+                 SStorageFactory sFactory,
+                 const Caches&   caches)
     : Cache(name, pConfig, rules, sFactory)
     , m_caches(caches)
 {
@@ -87,7 +86,7 @@ bool CachePT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSess
     return thread_cache().must_refresh(key, pSession);
 }
 
-void CachePT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
+void CachePT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     thread_cache().refreshed(key, pSession);
 }
@@ -100,11 +99,11 @@ json_t* CachePT::get_info(uint32_t what) const
     {
         if (what & (INFO_PENDING | INFO_STORAGE))
         {
-            what &= ~INFO_RULES; // The rules are the same, we don't want them duplicated.
+            what &= ~INFO_RULES;    // The rules are the same, we don't want them duplicated.
 
             for (size_t i = 0; i < m_caches.size(); ++i)
             {
-                char key[20]; // Surely enough.
+                char key[20];   // Surely enough.
                 sprintf(key, "thread-%u", (unsigned int)i + 1);
 
                 SCache sCache = m_caches[i];
@@ -129,8 +128,10 @@ cache_result_t CachePT::get_key(const char* zDefault_db, const GWBUF* pQuery, CA
 }
 
 cache_result_t CachePT::get_value(const CACHE_KEY& key,
-                                  uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
-                                  GWBUF** ppValue) const
+                                  uint32_t flags,
+                                  uint32_t soft_ttl,
+                                  uint32_t hard_ttl,
+                                  GWBUF**  ppValue) const
 {
     return thread_cache().get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
@@ -146,10 +147,10 @@ cache_result_t CachePT::del_value(const CACHE_KEY& key)
 }
 
 // static
-CachePT* CachePT::Create(const std::string&              name,
-                         const CACHE_CONFIG*             pConfig,
+CachePT* CachePT::Create(const std::string& name,
+                         const CACHE_CONFIG* pConfig,
                          const std::vector<SCacheRules>& rules,
-                         SStorageFactory                 sFactory)
+                         SStorageFactory sFactory)
 {
     CachePT* pCache = NULL;
 
@@ -164,7 +165,7 @@ CachePT* CachePT::Create(const std::string&              name,
 
         while (!error && (i < n_threads))
         {
-            char suffix[12]; // Enough for 99999 threads
+            char suffix[12];    // Enough for 99999 threads
             sprintf(suffix, "%d", i);
 
             string namest(name + "-" + suffix);

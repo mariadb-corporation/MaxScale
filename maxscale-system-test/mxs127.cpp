@@ -1,5 +1,6 @@
 /**
- * @file mxs127.cpp - bug mxs-127 regression case ("disable_sescmd_history causes MaxScale to crash under load")
+ * @file mxs127.cpp - bug mxs-127 regression case ("disable_sescmd_history causes MaxScale to crash under
+ *load")
  * - execute set @test=%d 10000 times against RWSplit, ReadConn Master and ReadConn Slave
  */
 
@@ -7,9 +8,9 @@
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
     int i;
     char sql[256];
@@ -48,4 +49,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

@@ -24,7 +24,8 @@ using std::string;
 
 DelimitedPrinter::DelimitedPrinter(const string& separator)
     : m_separator(separator)
-{}
+{
+}
 
 void DelimitedPrinter::cat(string& target, const string& addition)
 {

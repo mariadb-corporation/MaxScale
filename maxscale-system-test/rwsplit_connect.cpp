@@ -6,9 +6,9 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
     Test->repl->connect();
 
@@ -22,11 +22,17 @@ int main(int argc, char *argv[])
     Test->tprintf("Checking number of connections ot backend servers\n");
     for (int i = 0; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
+        conn_num
+            = get_conn_num(Test->repl->nodes[i],
+                           Test->maxscales->ip(0),
+                           Test->maxscales->hostname[0],
+                           (char*) "test");
         Test->tprintf("connections: %u\n", conn_num);
         if ((i == 0) && (conn_num != 1))
         {
-            Test->add_result(1, " Master should have only 1 connection, but it has %d connection(s)\n", conn_num);
+            Test->add_result(1,
+                             " Master should have only 1 connection, but it has %d connection(s)\n",
+                             conn_num);
         }
         all_conn += conn_num;
     }

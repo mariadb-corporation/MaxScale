@@ -17,12 +17,12 @@
 #include "testconnections.h"
 #include "keepalived_func.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    char * version;
+    char* version;
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
     Test->tprintf("Maxscale_N %d\n", Test->maxscales->N);
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     Test->check_maxscale_alive(1);
 
     // Get test client IP, replace last number in it with 253 and use it as Virtual IP
-    configure_keepalived(Test, (char *) "");
+    configure_keepalived(Test, (char*) "");
 
     print_version_string(Test);
 
@@ -99,4 +99,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

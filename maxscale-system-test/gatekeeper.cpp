@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
@@ -39,9 +38,9 @@ const char* denied_queries[] =
     NULL
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->maxscales->ssh_node_f(0, true, "rm -f /var/lib/maxscale/gatekeeper.data");
     Test->set_timeout(30);
 
@@ -67,21 +66,24 @@ int main(int argc, char *argv[])
     for (int i = 0; training_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], training_queries[i]), "Query should not fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], training_queries[i]),
+                         "Query should not fail: %s",
                          training_queries[i]);
     }
 
     for (int i = 0; allowed_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], allowed_queries[i]), "Query should not fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], allowed_queries[i]),
+                         "Query should not fail: %s",
                          allowed_queries[i]);
     }
 
     for (int i = 0; denied_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], denied_queries[i]) == 0, "Query should fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], denied_queries[i]) == 0,
+                         "Query should fail: %s",
                          denied_queries[i]);
     }
 

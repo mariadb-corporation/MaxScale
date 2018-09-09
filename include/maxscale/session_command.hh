@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -25,7 +25,7 @@ namespace maxscale
 
 class SessionCommand;
 typedef std::shared_ptr<SessionCommand> SSessionCommand;
-typedef std::list<SSessionCommand> SessionCommandList;
+typedef std::list<SSessionCommand>      SessionCommandList;
 
 class SessionCommand
 {
@@ -71,7 +71,7 @@ public:
      *               of @c buffer is transferred to this object.
      * @param id     A unique position identifier used to track replies
      */
-    SessionCommand(GWBUF *buffer, uint64_t id);
+    SessionCommand(GWBUF* buffer, uint64_t id);
 
     ~SessionCommand();
 
@@ -101,20 +101,19 @@ public:
     void mark_as_duplicate(const SessionCommand& rhs);
 
 private:
-    mxs::Buffer m_buffer;    /**< The buffer containing the command */
-    uint8_t     m_command;   /**< The command being executed */
-    uint64_t    m_pos;       /**< Unique position identifier */
-    bool        m_reply_sent; /**< Whether the session command reply has been sent */
+    mxs::Buffer m_buffer;       /**< The buffer containing the command */
+    uint8_t     m_command;      /**< The command being executed */
+    uint64_t    m_pos;          /**< Unique position identifier */
+    bool        m_reply_sent;   /**< Whether the session command reply has been sent */
 };
 
-inline bool operator ==(const SessionCommand& lhs, const SessionCommand& rhs)
+inline bool operator==(const SessionCommand& lhs, const SessionCommand& rhs)
 {
     return lhs.eq(rhs);
 }
 
-inline bool operator !=(const SessionCommand& lhs, const SessionCommand& rhs)
+inline bool operator!=(const SessionCommand& lhs, const SessionCommand& rhs)
 {
     return !lhs.eq(rhs);
 }
-
 }

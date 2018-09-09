@@ -1,13 +1,13 @@
 /**
-* Bad configuration test
-*/
+ * Bad configuration test
+ */
 
 
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
 
-const char *bad_configs[] =
+const char* bad_configs[] =
 {
     "bug359",
     "bug495",
@@ -25,9 +25,9 @@ const char *bad_configs[] =
     NULL
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     int rval = 0;
 
     test->maxscales->stop_maxscale(0);

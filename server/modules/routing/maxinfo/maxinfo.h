@@ -42,12 +42,12 @@ struct maxinfo_session;
  */
 typedef struct maxinfo_instance
 {
-    SPINLOCK    lock;       /*< The instance spinlock */
-    SERVICE     *service;   /*< The debug cli service */
+    SPINLOCK lock;      /*< The instance spinlock */
+    SERVICE* service;   /*< The debug cli service */
     struct maxinfo_session
-        *sessions;  /*< Linked list of sessions within this instance */
+    * sessions;     /*< Linked list of sessions within this instance */
     struct maxinfo_instance
-        *next;      /*< The next pointer for the list of instances */
+    * next;         /*< The next pointer for the list of instances */
 } INFO_INSTANCE;
 
 /**
@@ -57,11 +57,11 @@ typedef struct maxinfo_instance
 
 typedef struct maxinfo_session
 {
-    MXS_SESSION    *session;   /*< The MaxScale session */
-    DCB            *dcb;       /*< DCB of the client side */
-    GWBUF          *queue;     /*< Queue for building contiguous requests */
+    MXS_SESSION* session;   /*< The MaxScale session */
+    DCB*         dcb;       /*< DCB of the client side */
+    GWBUF*       queue;     /*< Queue for building contiguous requests */
     struct maxinfo_session
-        *next;      /*< The next pointer for the list of sessions */
+    * next;         /*< The next pointer for the list of sessions */
 } INFO_SESSION;
 
 /**
@@ -90,33 +90,33 @@ typedef enum
  */
 typedef struct maxinfo_tree
 {
-    MAXINFO_OPERATOR    op;     /*< The operator */
-    char            *value;     /*< The value */
-    struct maxinfo_tree *left;      /*< The left hand side of the operator */
-    struct maxinfo_tree *right;     /*< The right hand side of the operator */
+    MAXINFO_OPERATOR     op;    /*< The operator */
+    char*                value; /*< The value */
+    struct maxinfo_tree* left;  /*< The left hand side of the operator */
+    struct maxinfo_tree* right; /*< The right hand side of the operator */
 } MAXINFO_TREE;
 
 
 
-#define MYSQL_COMMAND(buf)  (*((uint8_t *)GWBUF_DATA(buf) + 4))
+#define MYSQL_COMMAND(buf) (*((uint8_t*)GWBUF_DATA(buf) + 4))
 
 /**
  * Token values for the tokeniser used by the parser for maxinfo
  */
-#define LT_STRING       1
-#define LT_SHOW         2
-#define LT_LIKE         3
-#define LT_SELECT       4
-#define LT_EQUAL        5
-#define LT_COMMA        6
-#define LT_FROM         7
-#define LT_STAR         8
-#define LT_VARIABLE     9
-#define LT_FLUSH        10
-#define LT_SET          11
-#define LT_CLEAR        12
-#define LT_SHUTDOWN     13
-#define LT_RESTART      14
+#define LT_STRING   1
+#define LT_SHOW     2
+#define LT_LIKE     3
+#define LT_SELECT   4
+#define LT_EQUAL    5
+#define LT_COMMA    6
+#define LT_FROM     7
+#define LT_STAR     8
+#define LT_VARIABLE 9
+#define LT_FLUSH    10
+#define LT_SET      11
+#define LT_CLEAR    12
+#define LT_SHUTDOWN 13
+#define LT_RESTART  14
 
 
 /**
@@ -131,11 +131,11 @@ typedef enum
 } PARSE_ERROR;
 
 
-extern MAXINFO_TREE *maxinfo_parse(char *, PARSE_ERROR *);
-extern void     maxinfo_free_tree(MAXINFO_TREE *);
-extern void     maxinfo_execute(DCB *, MAXINFO_TREE *);
-extern void         maxinfo_send_error(DCB *, int, const char  *);
-extern void         maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
+extern MAXINFO_TREE* maxinfo_parse(char*, PARSE_ERROR*);
+extern void          maxinfo_free_tree(MAXINFO_TREE*);
+extern void          maxinfo_execute(DCB*, MAXINFO_TREE*);
+extern void          maxinfo_send_error(DCB*, int, const char*);
+extern void maxinfo_send_parse_error(DCB*, char*, PARSE_ERROR);
 extern std::unique_ptr<ResultSet> maxinfo_variables();
 extern std::unique_ptr<ResultSet> maxinfo_status();
 

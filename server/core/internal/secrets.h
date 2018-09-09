@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file core/maxscale/secrets.h - MaxScale config file password encryption/decryption
@@ -37,7 +37,7 @@ enum
     MXS_PASSWORD_MAXLEN = 79
 };
 
-int  secrets_write_keys(const char *directory);
-char *encrypt_password(const char*, const char *);
+int   secrets_write_keys(const char* directory);
+char* encrypt_password(const char*, const char*);
 
 MXS_END_DECLS

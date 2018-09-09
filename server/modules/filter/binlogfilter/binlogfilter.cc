@@ -27,16 +27,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A binlog event filter for slave servers",
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &BinlogFilter::s_object, // This is defined in the MaxScale filter template
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        &BinlogFilter::s_object,                    // This is defined in the MaxScale filter template
+        NULL,                                       /* Process init. */
+        NULL,                                       /* Process finish. */
+        NULL,                                       /* Thread init. */
+        NULL,                                       /* Thread finish. */
         {
-            {"filter_events", MXS_MODULE_PARAM_BOOL, "false"},
-            {"skip_table", MXS_MODULE_PARAM_STRING, ""},
-            {"skip_db", MXS_MODULE_PARAM_STRING, ""},
-            { MXS_END_MODULE_PARAMS }
+            {"filter_events",                     MXS_MODULE_PARAM_BOOL,    "false"},
+            {"skip_table",                        MXS_MODULE_PARAM_STRING,  ""     },
+            {"skip_db",                           MXS_MODULE_PARAM_STRING,  ""     },
+            {MXS_END_MODULE_PARAMS}
         }
     };
 

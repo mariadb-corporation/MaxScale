@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <string>
 #include <maxscale/ccdefs.hh>
@@ -30,10 +30,12 @@ public:
     }
 
     // Destructor
-    ~BinlogConfig() {}
+    ~BinlogConfig()
+    {
+    }
 
     // Members mapped to config options
-    bool active;
+    bool        active;
     std::string dbname;
     std::string table;
 };
@@ -42,7 +44,7 @@ class BinlogFilter : public maxscale::Filter<BinlogFilter, BinlogFilterSession>
 {
     // Prevent copy-constructor and assignment operator usage
     BinlogFilter(const BinlogFilter&);
-    BinlogFilter& operator = (const BinlogFilter&);
+    BinlogFilter& operator=(const BinlogFilter&);
 
 public:
     ~BinlogFilter();

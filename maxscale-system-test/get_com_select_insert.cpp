@@ -1,12 +1,12 @@
 #include "testconnections.h"
 
 /**
-Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'
-*/
-int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nodes * nodes, int silent)
+ *  Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'
+ */
+int get_global_status_allnodes(long int* selects, long int* inserts, Mariadb_nodes* nodes, int silent)
 {
     int i;
-    MYSQL_RES *res;
+    MYSQL_RES* res;
     MYSQL_ROW row;
 
     for (i = 0; i < nodes->N; i++)
@@ -41,7 +41,7 @@ int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nod
             }
 
             mysql_free_result(res);
-            while ( mysql_next_result(nodes->nodes[i]) == 0 )
+            while (mysql_next_result(nodes->nodes[i]) == 0)
             {
                 res = mysql_store_result(nodes->nodes[i]);
                 mysql_free_result(res);
@@ -71,7 +71,7 @@ int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nod
             }
 
             mysql_free_result(res);
-            while ( mysql_next_result(nodes->nodes[i]) == 0 )
+            while (mysql_next_result(nodes->nodes[i]) == 0)
             {
                 res = mysql_store_result(nodes->nodes[i]);
                 mysql_free_result(res);
@@ -84,13 +84,15 @@ int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nod
         }
     }
     return 0;
-
 }
 
 /**
-Prints difference in COM_SELECT and COM_INSERT
-*/
-int print_delta(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts,
+ *  Prints difference in COM_SELECT and COM_INSERT
+ */
+int print_delta(long int* new_selects,
+                long int* new_inserts,
+                long int* selects,
+                long int* inserts,
                 int nodes_num)
 {
     int i;
@@ -101,5 +103,3 @@ int print_delta(long int *new_selects, long int *new_inserts, long int *selects,
     }
     return 0;
 }
-
-

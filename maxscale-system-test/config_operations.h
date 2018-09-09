@@ -15,8 +15,8 @@ public:
      */
     enum Service
     {
-        SERVICE_RWSPLIT = 0,
-        SERVICE_RCONN_SLAVE = 1,
+        SERVICE_RWSPLIT      = 0,
+        SERVICE_RCONN_SLAVE  = 1,
         SERVICE_RCONN_MASTER = 2
     };
 
@@ -32,7 +32,7 @@ public:
      *
      * @param object Object to add servers to
      */
-    void add_created_servers(const char *object);
+    void add_created_servers(const char* object);
 
     /**
      * Remove a server
@@ -55,9 +55,9 @@ public:
      * @param key Key to alter
      * @oaram value Value for @c key, empty string for no value
      */
-    void alter_server(int num, const char *key, const char *value);
-    void alter_server(int num, const char *key, int value);
-    void alter_server(int num, const char *key, float value);
+    void alter_server(int num, const char* key, const char* value);
+    void alter_server(int num, const char* key, int value);
+    void alter_server(int num, const char* key, float value);
 
     /**
      * Destroy a server
@@ -77,26 +77,26 @@ public:
      * @param type The name of the monitor module to use
      * @param interval Monitoring interval
      */
-    void create_monitor(const char *name, const char *module, int interval = 1000);
+    void create_monitor(const char* name, const char* module, int interval = 1000);
 
     /**
      * Start the created monitor
      */
-    void start_monitor(const char *name);
+    void start_monitor(const char* name);
 
     /**
      * Alter a monitor
      * @param key Key to alter
      * @oaram value Value for @c key, empty string for no value
      */
-    void alter_monitor(const char *name, const char *key, const char *value);
-    void alter_monitor(const char *name, const char *key, int value);
-    void alter_monitor(const char *name, const char *key, float value);
+    void alter_monitor(const char* name, const char* key, const char* value);
+    void alter_monitor(const char* name, const char* key, int value);
+    void alter_monitor(const char* name, const char* key, float value);
 
     /**
      * Destroy the monitor
      */
-    void destroy_monitor(const char *name);
+    void destroy_monitor(const char* name);
 
     /**
      * Restart all created monitors
@@ -136,7 +136,7 @@ public:
     void reset();
 
 private:
-    TestConnections *test_;
-    std::set<int> created_servers_;
+    TestConnections*      test_;
+    std::set<int>         created_servers_;
     std::set<std::string> created_monitors_;
 };

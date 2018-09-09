@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -34,7 +34,7 @@ class Backend;
 class RouterSession : private MXS_ROUTER_SESSION
 {
     RouterSession(const RouterSession&);
-    RouterSession& operator = (const RouterSession&);
+    RouterSession& operator=(const RouterSession&);
 
 public:
     /**
@@ -100,7 +100,5 @@ private:
     Backend*               m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
 };
-
 }
-
 }

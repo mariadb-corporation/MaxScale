@@ -12,9 +12,9 @@
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->stop_timeout();
     Test->maxscales->stop_maxscale(0);
 

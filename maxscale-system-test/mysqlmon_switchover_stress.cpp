@@ -38,16 +38,16 @@ const char* CLIENT_USER = "mysqlmon_switchover_stress";
 const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
 
 #define CMESSAGE(msg) \
-    do {\
-        stringstream ss;\
-        ss << "client(" << m_id << ") : " << msg << "\n";\
-        cout << ss.str() << flush;\
+    do { \
+        stringstream ss; \
+        ss << "client(" << m_id << ") : " << msg << "\n"; \
+        cout << ss.str() << flush; \
     } while (false)
 
-#if !defined(NDEBUG)
+#if !defined (NDEBUG)
 
-#define ss_dassert(x) do { if (!(x)) { fprintf(stderr, "Assertion failed: %s\n", #x); abort(); } } while(false)
-#define ss_debug(x) x
+#define ss_dassert(x) do {if (!(x)) {fprintf(stderr, "Assertion failed: %s\n", #x); abort();}} while (false)
+#define ss_debug(x)   x
 
 #else
 
@@ -66,7 +66,7 @@ public:
     enum
     {
         DEFAULT_N_CLIENTS = 4,
-        DEFAULT_N_ROWS = 100
+        DEFAULT_N_ROWS    = 100
     };
 
     static void init(TestConnections& test, size_t nClients, size_t nRows)
@@ -85,12 +85,20 @@ public:
     }
 
     static void start(bool verbose,
-                      const char* zHost, int port, const char* zUser, const char* zPassword)
+                      const char* zHost,
+                      int port,
+                      const char* zUser,
+                      const char* zPassword)
     {
         for (size_t i = 0; i < s_nClients; ++i)
         {
             s_threads.push_back(std::thread(&Client::thread_main,
-                                            i, verbose, zHost, port, zUser, zPassword));
+                                            i,
+                                            verbose,
+                                            zHost,
+                                            port,
+                                            zUser,
+                                            zPassword));
         }
     }
 
@@ -261,7 +269,6 @@ private:
 
                     while (!s_shutdown && run(pMysql))
                     {
-                        ;
                     }
                 }
                 else
@@ -289,8 +296,12 @@ private:
         while (!s_shutdown);
     }
 
-    static void thread_main(int i, bool verbose,
-                            const char* zHost, int port, const char* zUser, const char* zPassword)
+    static void thread_main(int i,
+                            bool verbose,
+                            const char* zHost,
+                            int port,
+                            const char* zUser,
+                            const char* zPassword)
     {
         if (mysql_thread_init() == 0)
         {
@@ -365,10 +376,10 @@ private:
         INITSTATE_SIZE = 32
     };
 
-    size_t                     m_id;
-    bool                       m_verbose;
-    size_t                     m_value;
-    mutable std::mt19937       m_rand_gen;
+    size_t                                         m_id;
+    bool                                           m_verbose;
+    size_t                                         m_value;
+    mutable std::mt19937                           m_rand_gen;
     mutable std::uniform_real_distribution<double> m_rand_dist;
 
     static size_t s_nClients;
@@ -382,7 +393,6 @@ size_t Client::s_nClients;
 size_t Client::s_nRows;
 bool Client::s_shutdown;
 std::vector<std::thread> Client::s_threads;
-
 }
 
 namespace
@@ -596,7 +606,8 @@ void run(TestConnections& test)
                 {
                     test.assert(false,
                                 "Master should have been server%d, but it was server%d.",
-                                current_master_id, master_id);
+                                current_master_id,
+                                master_id);
                 }
             }
             else
@@ -621,7 +632,6 @@ void run(TestConnections& test)
         check_server_statuses(test);
     }
 }
-
 }
 
 int main(int argc, char* argv[])

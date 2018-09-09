@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -53,7 +53,7 @@ public:
     void write(DCB* dcb);
 
 private:
-    std::vector<std::string> m_columns;
+    std::vector<std::string>              m_columns;
     std::vector<std::vector<std::string>> m_rows;
 
     ResultSet(std::initializer_list<std::string> names);

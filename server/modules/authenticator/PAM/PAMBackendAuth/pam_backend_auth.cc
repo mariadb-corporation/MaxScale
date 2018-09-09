@@ -19,13 +19,13 @@
 #include "pam_backend_session.hh"
 #include "../pam_auth_common.hh"
 
-static void* pam_backend_auth_alloc(void *instance)
+static void* pam_backend_auth_alloc(void* instance)
 {
-    PamBackendSession* pses = new (std::nothrow) PamBackendSession();
+    PamBackendSession* pses = new( std::nothrow) PamBackendSession();
     return pses;
 }
 
-static void pam_backend_auth_free(void *data)
+static void pam_backend_auth_free(void* data)
 {
     delete static_cast<PamBackendSession*>(data);
 }
@@ -39,9 +39,9 @@ static void pam_backend_auth_free(void *data)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-static bool pam_backend_auth_extract(DCB *dcb, GWBUF *buffer)
+static bool pam_backend_auth_extract(DCB* dcb, GWBUF* buffer)
 {
-    PamBackendSession *pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
+    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
     return pses->extract(dcb, buffer);
 }
 
@@ -52,7 +52,7 @@ static bool pam_backend_auth_extract(DCB *dcb, GWBUF *buffer)
  *
  * @return True if DCB supports SSL
  */
-static bool pam_backend_auth_connectssl(DCB *dcb)
+static bool pam_backend_auth_connectssl(DCB* dcb)
 {
     return dcb->server->server_ssl != NULL;
 }
@@ -65,9 +65,9 @@ static bool pam_backend_auth_connectssl(DCB *dcb)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-static int pam_backend_auth_authenticate(DCB *dcb)
+static int pam_backend_auth_authenticate(DCB* dcb)
 {
-    PamBackendSession *pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
+    PamBackendSession* pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
     return pses->authenticate(dcb);
 }
 
@@ -76,40 +76,39 @@ extern "C"
 /**
  * Module handle entry point
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                            /* No initialize entry point */
-        pam_backend_auth_alloc,          /* Allocate authenticator data */
-        pam_backend_auth_extract,        /* Extract data into structure   */
-        pam_backend_auth_connectssl,     /* Check if client supports SSL  */
-        pam_backend_auth_authenticate,   /* Authenticate user credentials */
-        NULL,                            /* Client plugin will free shared data */
-        pam_backend_auth_free,           /* Free authenticator data */
-        NULL,                            /* Load users from backend databases */
-        NULL,                            /* No diagnostic */
-        NULL,
-        NULL                             /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            NULL,                           /* No initialize entry point */
+            pam_backend_auth_alloc,         /* Allocate authenticator data */
+            pam_backend_auth_extract,       /* Extract data into structure   */
+            pam_backend_auth_connectssl,    /* Check if client supports SSL  */
+            pam_backend_auth_authenticate,  /* Authenticate user credentials */
+            NULL,                           /* Client plugin will free shared data */
+            pam_backend_auth_free,          /* Free authenticator data */
+            NULL,                           /* Load users from backend databases */
+            NULL,                           /* No diagnostic */
+            NULL,
+            NULL                        /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_ALPHA_RELEASE,
-        MXS_AUTHENTICATOR_VERSION,
-        "PAM backend authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_ALPHA_RELEASE,
+            MXS_AUTHENTICATOR_VERSION,
+            "PAM backend authenticator",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
-
+        return &info;
+    }
 }

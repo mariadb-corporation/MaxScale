@@ -23,13 +23,13 @@
 
 static const uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLET | ERROR_EVENTS;
 
-LocalClient::LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd):
-    m_state(VC_WAITING_HANDSHAKE),
-    m_sock(fd),
-    m_expected_bytes(0),
-    m_client(*session),
-    m_protocol(*proto),
-    m_self_destruct(false)
+LocalClient::LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd)
+    : m_state(VC_WAITING_HANDSHAKE)
+    , m_sock(fd)
+    , m_expected_bytes(0)
+    , m_client(*session)
+    , m_protocol(*proto)
+    , m_self_destruct(false)
 {
     MXB_POLL_DATA::handler = LocalClient::poll_handler;
 }
@@ -183,7 +183,6 @@ GWBUF* LocalClient::read_complete_packet()
             rval = m_partial.release();
             break;
         }
-
     }
 
     return rval;
@@ -238,7 +237,7 @@ LocalClient* LocalClient::create(MYSQL_session* session, MySQLProtocol* proto, c
 
     if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
     {
-        LocalClient* relay = new (std::nothrow) LocalClient(session, proto, fd);
+        LocalClient* relay = new( std::nothrow) LocalClient(session, proto, fd);
 
         if (relay)
         {

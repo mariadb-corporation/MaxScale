@@ -21,11 +21,13 @@ namespace base
 {
 using Clock = std::chrono::steady_clock;
 
-struct Duration : public Clock::duration // for ADL
+struct Duration : public Clock::duration    // for ADL
 {
     using Clock::duration::duration;
     Duration() = default;
-    Duration(Clock::duration d) : Clock::duration(d) {}
+    Duration(Clock::duration d) : Clock::duration(d)
+    {
+    }
 };
 
 using TimePoint = std::chrono::time_point<Clock, Duration>;
@@ -50,7 +52,6 @@ std::pair<double, std::string> dur_to_human_readable(Duration dur);
 std::ostream& operator<<(std::ostream&, Duration dur);
 
 // TimePoint
-std::string time_point_to_string(TimePoint tp, const std::string& fmt = "%F %T");
+std::string   time_point_to_string(TimePoint tp, const std::string& fmt = "%F %T");
 std::ostream& operator<<(std::ostream&, TimePoint tp);
-
-} // base
+}   // base

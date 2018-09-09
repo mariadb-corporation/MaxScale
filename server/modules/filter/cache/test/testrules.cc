@@ -23,7 +23,7 @@
 
 using namespace std;
 
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
 #include <maxbase/assert.h>
@@ -57,26 +57,26 @@ struct user_test_case
     struct
     {
         cache_rule_op_t op;
-        const char *value;
+        const char*     value;
     } expect;
 };
 
 #define USER_TEST_CASE(op_from, from, op_to, to)                                 \
-{ "{ \"use\": [ { \"attribute\": \"user\", \"op\": \"" #op_from "\", \"value\": \"" #from "\" } ] }",\
-    { op_to, #to } }
+    {"{ \"use\": [ { \"attribute\": \"user\", \"op\": \"" #op_from "\", \"value\": \"" #from "\" } ] }", \
+     {op_to, #to}}
 
 #define COLUMN_
 
 const struct user_test_case user_test_cases[] =
 {
-    USER_TEST_CASE(=, bob,           CACHE_OP_LIKE, bob@.*),
-    USER_TEST_CASE(=, 'bob',         CACHE_OP_LIKE, bob@.*),
-    USER_TEST_CASE(=, bob@%,         CACHE_OP_LIKE, bob@.*),
-    USER_TEST_CASE(=, 'bob'@'%.52',  CACHE_OP_LIKE, bob@.*\\.52),
-    USER_TEST_CASE(=, bob@127.0.0.1, CACHE_OP_EQ,   bob@127.0.0.1),
-    USER_TEST_CASE(=, b*b@127.0.0.1, CACHE_OP_EQ,   b*b@127.0.0.1),
-    USER_TEST_CASE(=, b*b@%.0.0.1,   CACHE_OP_LIKE, b\\*b@.*\\.0\\.0\\.1),
-    USER_TEST_CASE(=, b*b@%.0.%.1,   CACHE_OP_LIKE, b\\*b@.*\\.0\\..*\\.1),
+    USER_TEST_CASE( =, bob,                CACHE_OP_LIKE,                bob@.*),
+    USER_TEST_CASE( =, 'bob',              CACHE_OP_LIKE,                bob@.*),
+    USER_TEST_CASE( =, bob@ %,             CACHE_OP_LIKE,                bob@.*),
+    USER_TEST_CASE( =, 'bob' @'%.52',      CACHE_OP_LIKE,                bob@.*\ \ .52),
+    USER_TEST_CASE( =, bob@127 .0 .0 .1,   CACHE_OP_EQ,                  bob@127 .0 .0 .1),
+    USER_TEST_CASE( =, b * b@127 .0 .0 .1, CACHE_OP_EQ,                  b * b@127 .0 .0 .1),
+    USER_TEST_CASE( =, b * b@ % .0 .0 .1,  CACHE_OP_LIKE,                b \ \ * b@.*\ \ .0 \ \ .0 \ \ .1),
+    USER_TEST_CASE( =, b * b@ % .0.% .1,   CACHE_OP_LIKE,                b \ \ * b@.*\ \ .0 \ \..*\ \ .1),
 };
 
 const size_t n_user_test_cases = sizeof(user_test_cases) / sizeof(user_test_cases[0]);
@@ -133,62 +133,237 @@ int test_user()
 //
 struct store_test_case
 {
-    const char *rule;       // The rule in JSON format.
-    bool matches;           // Whether or not the rule should match the query.
-    const char *default_db; // The current default db.
-    const char *query;      // The query to be matched against the rule.
+    const char* rule;       // The rule in JSON format.
+    bool        matches;    // Whether or not the rule should match the query.
+    const char* default_db; // The current default db.
+    const char* query;      // The query to be matched against the rule.
 };
 
 #define STORE_TEST_CASE(attribute, op, value, matches, default_db, query) \
-{ "{ \"store\": [ { \"attribute\": \"" attribute "\", \"op\": \"" op "\", \"value\": \"" value "\" } ] }",\
-        matches, default_db, query }
+    {"{ \"store\": [ { \"attribute\": \"" attribute "\", \"op\": \"" op "\", \"value\": \"" value "\" } ] }", \
+     matches, default_db, query}
 
 // In the following,
 //   true:  The query SHOULD match the rule,
 //   false: The query should NOT match the rule.
 const struct store_test_case store_test_cases[] =
 {
-    STORE_TEST_CASE("column", "=",  "a",     true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "!=", "a",     false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "=",  "b",     false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "!=", "b",     true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "=",  "tbl.a", true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "=",  "tbl.a", true,  NULL, "SELECT tbl.a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "a",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "!=",
+                    "a",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "b",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "!=",
+                    "b",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "tbl.a",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "tbl.a",
+                    true,
+                    NULL,
+                    "SELECT tbl.a FROM tbl"),
 
-    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT a from tbl"),
-    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT tbl.a from tbl"),
-    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT db.tbl.a from tbl"),
-    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT a from tbl"),
-    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT tbl.a from tbl"),
-    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT db.tbl.a from tbl"),
-    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT a from tbl"),
-    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT tbl.a from tbl"),
-    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT db.tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*a",
+                    true,
+                    NULL,
+                    "SELECT a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*a",
+                    true,
+                    NULL,
+                    "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*a",
+                    true,
+                    NULL,
+                    "SELECT db.tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*aa",
+                    false,
+                    NULL,
+                    "SELECT a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*aa",
+                    false,
+                    NULL,
+                    "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "like",
+                    ".*aa",
+                    false,
+                    NULL,
+                    "SELECT db.tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "unlike",
+                    ".*aa",
+                    true,
+                    NULL,
+                    "SELECT a from tbl"),
+    STORE_TEST_CASE("column",
+                    "unlike",
+                    ".*aa",
+                    true,
+                    NULL,
+                    "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column",
+                    "unlike",
+                    ".*aa",
+                    true,
+                    NULL,
+                    "SELECT db.tbl.a from tbl"),
 
-    STORE_TEST_CASE("table", "=",   "tbl",    true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("table", "!=",  "tbl",    false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("table", "=",   "tbl2",   false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("table", "!=",  "tbl2",   true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("table", "=",   "db.tbl", true,  NULL, "SELECT a from db.tbl"),
-    STORE_TEST_CASE("table", "=",   "db.tbl", true,  "db", "SELECT a from tbl"),
-    STORE_TEST_CASE("table", "!=",  "db.tbl", false, NULL, "SELECT a from db.tbl"),
-    STORE_TEST_CASE("table", "!=",  "db.tbl", false, "db", "SELECT a from tbl"),
+    STORE_TEST_CASE("table",
+                    "=",
+                    "tbl",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table",
+                    "!=",
+                    "tbl",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table",
+                    "=",
+                    "tbl2",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table",
+                    "!=",
+                    "tbl2",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table",
+                    "=",
+                    "db.tbl",
+                    true,
+                    NULL,
+                    "SELECT a from db.tbl"),
+    STORE_TEST_CASE("table",
+                    "=",
+                    "db.tbl",
+                    true,
+                    "db",
+                    "SELECT a from tbl"),
+    STORE_TEST_CASE("table",
+                    "!=",
+                    "db.tbl",
+                    false,
+                    NULL,
+                    "SELECT a from db.tbl"),
+    STORE_TEST_CASE("table",
+                    "!=",
+                    "db.tbl",
+                    false,
+                    "db",
+                    "SELECT a from tbl"),
 
-    STORE_TEST_CASE("database", "=",  "db",    false, NULL,  "SELECT a FROM tbl"),
-    STORE_TEST_CASE("database", "!=", "db",    true,  NULL,  "SELECT a FROM tbl"),
-    STORE_TEST_CASE("database", "=",  "db1",   true,  NULL,  "SELECT a FROM db1.tbl"),
-    STORE_TEST_CASE("database", "!=", "db1",   false, NULL,  "SELECT a FROM db1.tbl"),
-    STORE_TEST_CASE("database", "=",  "db1",   true,  "db1", "SELECT a FROM tbl"),
-    STORE_TEST_CASE("database", "!=", "db1",   false, "db1", "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database",
+                    "=",
+                    "db",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database",
+                    "!=",
+                    "db",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database",
+                    "=",
+                    "db1",
+                    true,
+                    NULL,
+                    "SELECT a FROM db1.tbl"),
+    STORE_TEST_CASE("database",
+                    "!=",
+                    "db1",
+                    false,
+                    NULL,
+                    "SELECT a FROM db1.tbl"),
+    STORE_TEST_CASE("database",
+                    "=",
+                    "db1",
+                    true,
+                    "db1",
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database",
+                    "!=",
+                    "db1",
+                    false,
+                    "db1",
+                    "SELECT a FROM tbl"),
 
-    STORE_TEST_CASE("query", "=",  "SELECT a FROM tbl", true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("query", "!=", "SELECT a FROM tbl", false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("query", "=",  "SELECT b FROM tbl", false, NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("query", "!=", "SELECT b FROM tbl", true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query",
+                    "=",
+                    "SELECT a FROM tbl",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query",
+                    "!=",
+                    "SELECT a FROM tbl",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query",
+                    "=",
+                    "SELECT b FROM tbl",
+                    false,
+                    NULL,
+                    "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query",
+                    "!=",
+                    "SELECT b FROM tbl",
+                    true,
+                    NULL,
+                    "SELECT a FROM tbl"),
     // We are no longer able to distinguish selected columns
     // from one used in the WHERE-clause.
-    STORE_TEST_CASE("column", "=", "a", true, NULL, "SELECT b FROM tbl WHERE a = 5"),
-    STORE_TEST_CASE("column", "=", "a", true,  NULL, "SELECT a, b FROM tbl WHERE a = 5"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "a",
+                    true,
+                    NULL,
+                    "SELECT b FROM tbl WHERE a = 5"),
+    STORE_TEST_CASE("column",
+                    "=",
+                    "a",
+                    true,
+                    NULL,
+                    "SELECT a, b FROM tbl WHERE a = 5"),
 };
 
 const int n_store_test_cases = sizeof(store_test_cases) / sizeof(store_test_cases[0]);
@@ -219,7 +394,7 @@ int test_store()
 
             bool matches = cache_rules_should_store(pRules, 0, test_case.default_db, pPacket);
 
-            if  (matches != test_case.matches)
+            if (matches != test_case.matches)
             {
                 printf("Query   : %s\n"
                        "Rule    : %s\n"
@@ -245,41 +420,41 @@ int test_store()
 }
 
 
-static const char ARRAY_RULES[] =
-    "["
-    "  {"
-    "    \"store\": ["
-    "      {"
-    "        \"attribute\": \"column\","
-    "        \"op\":        \"=\","
-    "        \"value\":     \"a\""
-    "      }"
-    "    ]"
-    "  },"
-    "  {"
-    "    \"store\": ["
-    "      {"
-    "        \"attribute\": \"column\","
-    "        \"op\":        \"=\","
-    "        \"value\":     \"b\""
-    "      }"
-    "    ]"
-    "  },"
-    "  {"
-    "    \"store\": ["
-    "      {"
-    "        \"attribute\": \"column\","
-    "        \"op\":        \"=\","
-    "        \"value\":     \"c\""
-    "      }"
-    "    ]"
-    "  }"
-    "]";
+static const char ARRAY_RULES[]
+    = "["
+      "  {"
+      "    \"store\": ["
+      "      {"
+      "        \"attribute\": \"column\","
+      "        \"op\":        \"=\","
+      "        \"value\":     \"a\""
+      "      }"
+      "    ]"
+      "  },"
+      "  {"
+      "    \"store\": ["
+      "      {"
+      "        \"attribute\": \"column\","
+      "        \"op\":        \"=\","
+      "        \"value\":     \"b\""
+      "      }"
+      "    ]"
+      "  },"
+      "  {"
+      "    \"store\": ["
+      "      {"
+      "        \"attribute\": \"column\","
+      "        \"op\":        \"=\","
+      "        \"value\":     \"c\""
+      "      }"
+      "    ]"
+      "  }"
+      "]";
 
 struct ARRAY_TEST_CASE
 {
-    const char* zStmt; // Statement
-    int32_t     index; // Index of rule to match, -1 if none.
+    const char* zStmt;  // Statement
+    int32_t     index;  // Index of rule to match, -1 if none.
 } array_test_cases[] =
 {
     {
@@ -310,8 +485,8 @@ typedef CacheRules::SCacheRules SCacheRules;
 
 struct ShouldStore
 {
-    ShouldStore(GWBUF* buf):
-        pStmt(buf)
+    ShouldStore(GWBUF* buf)
+        : pStmt(buf)
     {
     }
 
@@ -352,7 +527,8 @@ int test_array_store()
                 else
                 {
                     ++errors;
-                    cout << "ERROR: Rule " << tc.index << " should have matched, but " << index << " did." << endl;
+                    cout << "ERROR: Rule " << tc.index << " should have matched, but " << index << " did."
+                         << endl;
                 }
             }
             else

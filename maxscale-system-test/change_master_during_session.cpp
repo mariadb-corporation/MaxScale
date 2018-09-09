@@ -1,5 +1,6 @@
 /**
- * @file change_master_during_seesion.cpp Tries to reconfigure replication setup to use another node as a Master
+ * @file change_master_during_seesion.cpp Tries to reconfigure replication setup to use another node as a
+ *Master
  * - connect to RWSplit
  * - reconfugure backend
  * - checks that after time > monitor_interval everything is ok
@@ -12,10 +13,10 @@
 using namespace std;
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     char sql[1024];
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
     Test->repl->connect();
@@ -25,7 +26,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->add_result(create_t1(Test->maxscales->conn_rwsplit[0]), "Error creating 't1'\n");
 
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
     Test->tprintf("Changing master to node 1\n");
     Test->set_timeout(60);
     Test->repl->change_master(1, 0);
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
     }
     Test->set_timeout(60);
     Test->tprintf("executing SELECT\n");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1;");
 
     Test->maxscales->close_rwsplit(0);
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
     Test->maxscales->connect_rwsplit(0);
     Test->tprintf("Reconnecting and executing SELECT again\n");
     Test->set_timeout(60);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1;");
 
     Test->tprintf("Changing master back to node 0\n");
     Test->set_timeout(60);

@@ -31,16 +31,16 @@
  * @file adminusers.c - Administration user account management
  */
 
-static USERS *load_linux_users();
-static USERS *load_inet_users();
+static USERS* load_linux_users();
+static USERS* load_inet_users();
 
-static USERS *linux_users = NULL;
-static USERS *inet_users = NULL;
+static USERS* linux_users = NULL;
+static USERS* inet_users = NULL;
 
 static const int LINELEN = 80;
 
 static const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
-static const char INET_USERS_FILE_NAME[]  = "passwd";
+static const char INET_USERS_FILE_NAME[] = "passwd";
 
 /**
  * Admin Users initialisation
@@ -67,7 +67,9 @@ static bool admin_dump_users(USERS* users, const char* fname)
         if (mkdir(get_datadir(), S_IRWXU) != 0 && errno != EEXIST)
         {
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      get_datadir(), errno, mxs_strerror(errno));
+                      get_datadir(),
+                      errno,
+                      mxs_strerror(errno));
             return false;
         }
     }
@@ -87,8 +89,10 @@ static bool admin_dump_users(USERS* users, const char* fname)
     return rval;
 }
 
-static const char *admin_add_user(USERS** pusers, const char* fname,
-                                  const char* uname, const char* password,
+static const char* admin_add_user(USERS** pusers,
+                                  const char* fname,
+                                  const char* uname,
+                                  const char* password,
                                   user_account_type type)
 {
     if (*pusers == NULL)
@@ -109,7 +113,7 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
     return ADMIN_SUCCESS;
 }
 
-static const char* admin_remove_user(USERS *users, const char* fname, const char *uname)
+static const char* admin_remove_user(USERS* users, const char* fname, const char* uname)
 {
     if (!users_delete(users, uname))
     {
@@ -125,7 +129,9 @@ static const char* admin_remove_user(USERS *users, const char* fname, const char
     return ADMIN_SUCCESS;
 }
 
-static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type,
+static json_t* admin_user_json_data(const char* host,
+                                    const char* user,
+                                    enum user_type user_type,
                                     enum user_account_type account)
 {
     mxb_assert(user_type != USER_TYPE_ALL);
@@ -181,8 +187,8 @@ static std::string path_from_type(enum user_type type)
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
     user_account_type account = USER_ACCOUNT_BASIC;
-    if ((type ==  USER_TYPE_INET && admin_user_is_inet_admin(user)) ||
-        (type ==  USER_TYPE_UNIX && admin_user_is_unix_admin(user)))
+    if ((type == USER_TYPE_INET && admin_user_is_inet_admin(user))
+        || (type == USER_TYPE_UNIX && admin_user_is_unix_admin(user)))
     {
         account = USER_ACCOUNT_ADMIN;
     }
@@ -214,9 +220,9 @@ json_t* admin_all_users_to_json(const char* host, enum user_type type)
 
 USERS* load_legacy_users(FILE* fp)
 {
-    USERS *rval;
-    char  path[PATH_MAX];
-    char  uname[80];
+    USERS* rval;
+    char path[PATH_MAX];
+    char uname[80];
     int added_users = 0;
 
     if ((rval = users_alloc()) == NULL)
@@ -225,7 +231,7 @@ USERS* load_legacy_users(FILE* fp)
     }
     while (fgets(uname, sizeof(uname), fp))
     {
-        char *nl = strchr(uname, '\n');
+        char* nl = strchr(uname, '\n');
 
         if (nl)
         {
@@ -234,14 +240,16 @@ USERS* load_legacy_users(FILE* fp)
         else if (!feof(fp))
         {
             MXS_ERROR("Line length exceeds %d characters, possibly corrupted "
-                      "'passwd' file in: %s", LINELEN, path);
+                      "'passwd' file in: %s",
+                      LINELEN,
+                      path);
             users_free(rval);
             rval = NULL;
             break;
         }
 
-        const char *password;
-        char *colon = strchr(uname, ':');
+        const char* password;
+        char* colon = strchr(uname, ':');
         if (colon)
         {
             // Inet case
@@ -276,9 +284,9 @@ USERS* load_legacy_users(FILE* fp)
  *
  * @return Table of users
  */
-static USERS* load_users(const char *fname)
+static USERS* load_users(const char* fname)
 {
-    USERS *rval = NULL;
+    USERS* rval = NULL;
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
     FILE* fp = fopen(path, "r");
@@ -310,19 +318,23 @@ static USERS* load_users(const char *fname)
                 if (rename(path, newpath) != 0)
                 {
                     MXS_ERROR("Failed to rename old users file: %d, %s",
-                              errno, mxs_strerror(errno));
+                              errno,
+                              mxs_strerror(errno));
                 }
                 else if (!admin_dump_users(rval, fname))
                 {
                     MXS_ERROR("Failed to dump new users. Please rename the file "
                               "'%s' manually to '%s' and restart MaxScale to "
-                              "attempt again.", newpath, path);
+                              "attempt again.",
+                              newpath,
+                              path);
                 }
                 else
                 {
                     MXS_NOTICE("Upgraded users file at '%s' to new format, "
                                "backup of the old file is stored in '%s'.",
-                               newpath, path);
+                               newpath,
+                               path);
                 }
             }
         }
@@ -334,12 +346,12 @@ static USERS* load_users(const char *fname)
 }
 
 
-static USERS *load_linux_users()
+static USERS* load_linux_users()
 {
     return load_users(LINUX_USERS_FILE_NAME);
 }
 
-static USERS *load_inet_users()
+static USERS* load_inet_users()
 {
     return load_users(INET_USERS_FILE_NAME);
 }
@@ -351,7 +363,7 @@ static USERS *load_inet_users()
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_enable_linux_account(const char *uname, enum user_account_type type)
+const char* admin_enable_linux_account(const char* uname, enum user_account_type type)
 {
     return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, type);
 }
@@ -375,7 +387,7 @@ const char* admin_disable_linux_account(const char* uname)
  *
  * @return True if the account is enabled, false otherwise.
  */
-bool admin_linux_account_enabled(const char *uname)
+bool admin_linux_account_enabled(const char* uname)
 {
     bool rv = false;
 
@@ -413,7 +425,7 @@ void mxs_crypt(const char* password, const char* salt, char* output)
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_add_inet_user(const char *uname, const char* password, enum user_account_type type)
+const char* admin_add_inet_user(const char* uname, const char* password, enum user_account_type type)
 {
     char cpassword[MXS_CRYPT_SIZE];
     mxs_crypt(password, ADMIN_SALT, cpassword);
@@ -440,7 +452,7 @@ const char* admin_remove_inet_user(const char* uname)
  *
  * @return True if the user exists, false otherwise.
  */
-bool admin_inet_user_exists(const char *uname)
+bool admin_inet_user_exists(const char* uname)
 {
     bool rv = false;
 
@@ -460,8 +472,7 @@ bool admin_inet_user_exists(const char *uname)
  *
  * @return True if the username/password combination is valid
  */
-bool
-admin_verify_inet_user(const char *username, const char *password)
+bool admin_verify_inet_user(const char* username, const char* password)
 {
     bool rv = false;
 
@@ -506,8 +517,8 @@ bool admin_have_admin()
 
 bool admin_is_last_admin(const char* user)
 {
-    return (admin_user_is_inet_admin(user) || admin_user_is_unix_admin(user)) &&
-           (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
+    return (admin_user_is_inet_admin(user) || admin_user_is_unix_admin(user))
+           && (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
 }
 
 /**
@@ -515,7 +526,7 @@ bool admin_is_last_admin(const char* user)
  *
  * @param dcb A DCB to send the output to.
  */
-void dcb_PrintAdminUsers(DCB *dcb)
+void dcb_PrintAdminUsers(DCB* dcb)
 {
     dcb_printf(dcb, "Enabled Linux accounts (secure)    : ");
 

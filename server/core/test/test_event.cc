@@ -172,14 +172,15 @@ const int N_FACILITIES = sizeof(facilities) / sizeof(facilities[0]);
 template<class T>
 int test_names_and_values(const NAME_AND_VALUE* begin,
                           const NAME_AND_VALUE* end,
-                          bool (*from_string)(T*, const char* zName),
+                          bool (* from_string)(T*, const char* zName),
                           const char* (*to_string)(T),
                           const char* zProperty)
 {
     int errors = 0;
 
-    for_each(begin, end, [&errors, zProperty, from_string, to_string](const NAME_AND_VALUE& item)
-             {
+    for_each(begin,
+             end,
+             [&errors, zProperty, from_string, to_string](const NAME_AND_VALUE& item) {
                  T value;
                  bool rv = from_string(&value, item.zName);
 
@@ -270,8 +271,9 @@ int test_event_basics()
 
     errors += test_names_and_values(begin, end, &event::from_string, &event::to_string, "event");
 
-    for_each(begin, end, [&errors](const NAME_AND_VALUE& item)
-             {
+    for_each(begin,
+             end,
+             [&errors](const NAME_AND_VALUE& item) {
                  event::id_t id = static_cast<event::id_t>(item.value);
 
                  int32_t facility = event::get_log_facility(id);
@@ -401,8 +403,9 @@ int test_event_configuration()
     const CONFIGURATION* begin = configurations;
     const CONFIGURATION* end = begin + N_CONFIGURATIONS;
 
-    for_each(begin, end, [&errors](const CONFIGURATION& c)
-             {
+    for_each(begin,
+             end,
+             [&errors](const CONFIGURATION& c) {
                  event::result_t result = event::configure(c.zParameter, c.zValue);
 
                  if (result == c.result)
@@ -565,7 +568,6 @@ int test_logging()
 
     return errors;
 }
-
 }
 
 int main()

@@ -15,9 +15,9 @@ long int new_inserts[256];
 int silent = 0;
 int tolerance;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
     Test->galera->connect();
@@ -27,9 +27,9 @@ int main(int argc, char *argv[])
     // connect to the MaxScale server (rwsplit)
     Test->maxscales->connect_rwsplit(0);
 
-    Test->maxscales->execute_maxadmin_command(0, (char *) "shutdown monitor \"Galera Monitor\"");
+    Test->maxscales->execute_maxadmin_command(0, (char*) "shutdown monitor \"Galera Monitor\"");
 
-    if (Test->maxscales->conn_rwsplit[0] == NULL )
+    if (Test->maxscales->conn_rwsplit[0] == NULL)
     {
         Test->add_result(1, "Can't connect to MaxScale\n");
         int rval = Test->global_result;

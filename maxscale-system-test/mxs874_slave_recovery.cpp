@@ -16,7 +16,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.set_timeout(10);
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     test.maxscales->connect_maxscale(0);
 
     test.set_timeout(10);
-    test.try_query(test.maxscales->conn_rwsplit[0], (char *) "SET @a=1");
+    test.try_query(test.maxscales->conn_rwsplit[0], (char*) "SET @a=1");
     test.stop_timeout();
     sleep(1);
     test.set_timeout(20);
@@ -48,7 +48,10 @@ int main(int argc, char *argv[])
     for (retries = 0; retries < 10; retries++)
     {
         char server1_status[256];
-        test.maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status", server1_status);
+        test.maxscales->get_maxadmin_param(0,
+                                           (char*) "show server server2",
+                                           (char*) "Status",
+                                           server1_status);
         if (strstr(server1_status, "Running"))
         {
             break;
@@ -65,8 +68,11 @@ int main(int argc, char *argv[])
     find_field(test.maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", server_id);
     int queried_id = atoi(server_id);
 
-    test.add_result(queried_id != real_id, "The query server ID '%d' does not match the one from server '%d'. "
-                    "Slave was not recovered.", queried_id, real_id);
+    test.add_result(queried_id != real_id,
+                    "The query server ID '%d' does not match the one from server '%d'. "
+                    "Slave was not recovered.",
+                    queried_id,
+                    real_id);
 
     char userval[200] = "";
     find_field(test.maxscales->conn_rwsplit[0], "SELECT @a", "@a", userval);

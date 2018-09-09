@@ -27,7 +27,8 @@ using maxscale::string_printf;
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
                                     "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
 
-static void print_redirect_errors(MariaDBServer* first_server, const ServerArray& servers,
+static void print_redirect_errors(MariaDBServer* first_server,
+                                  const ServerArray& servers,
                                   json_t** err_out);
 
 /**
@@ -50,8 +51,11 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
     MariaDBServer* promotion_target = NULL;
     MariaDBServer* demotion_target = NULL;
 
-    auto ok_to_switch = switchover_prepare(promotion_server, demotion_server, Log::ON,
-                                           &promotion_target, &demotion_target,
+    auto ok_to_switch = switchover_prepare(promotion_server,
+                                           demotion_server,
+                                           Log::ON,
+                                           &promotion_target,
+                                           &demotion_target,
                                            error_out);
     if (ok_to_switch)
     {
@@ -59,12 +63,14 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
         if (switchover_done)
         {
             MXS_NOTICE("Switchover '%s' -> '%s' performed.",
-                       demotion_target->name(), promotion_target->name());
+                       demotion_target->name(),
+                       promotion_target->name());
         }
         else
         {
             string msg = string_printf("Switchover %s -> %s failed",
-                                       demotion_target->name(), promotion_target->name());
+                                       demotion_target->name(),
+                                       promotion_target->name());
             bool failover_setting = config_get_bool(m_monitor->parameters, CN_AUTO_FAILOVER);
             if (failover_setting)
             {
@@ -95,12 +101,15 @@ bool MariaDBMonitor::manual_failover(json_t** output)
         if (failover_done)
         {
             MXS_NOTICE("Failover '%s' -> '%s' performed.",
-                       demotion_target->name(), promotion_target->name());
+                       demotion_target->name(),
+                       promotion_target->name());
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output, "Failover '%s' -> '%s' failed.",
-                                 demotion_target->name(), promotion_target->name());
+            PRINT_MXS_JSON_ERROR(output,
+                                 "Failover '%s' -> '%s' failed.",
+                                 demotion_target->name(),
+                                 promotion_target->name());
         }
     }
     else
@@ -142,21 +151,26 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s': "
-                                             "%s.", rejoin_serv_name, m_master->name(),
+                        PRINT_MXS_JSON_ERROR(output,
+                                             "Server '%s' cannot replicate from cluster master '%s': "
+                                             "%s.",
+                                             rejoin_serv_name,
+                                             m_master->name(),
                                              no_rejoin_reason.c_str());
                     }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
+                    PRINT_MXS_JSON_ERROR(output,
+                                         "Cluster master '%s' gtid info could not be updated.",
                                          m_master->name());
                 }
-            } // server_is_rejoin_suspect has added any error messages to the output, no need to print here
+            }   // server_is_rejoin_suspect has added any error messages to the output, no need to print here
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
+            PRINT_MXS_JSON_ERROR(output,
+                                 "The given server '%s' is not monitored by this monitor.",
                                  rejoin_serv_name);
         }
     }
@@ -181,15 +195,15 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
 {
     std::stringstream change_cmd;
     change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
-    change_cmd << "MASTER_PORT = " <<  master_port << ", ";
+    change_cmd << "MASTER_PORT = " << master_port << ", ";
     change_cmd << "MASTER_USE_GTID = current_pos, ";
     change_cmd << "MASTER_USER = '" << m_replication_user << "', ";
     const char MASTER_PW[] = "MASTER_PASSWORD = '";
     const char END[] = "';";
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
     std::stringstream change_cmd_nopw;
     change_cmd_nopw << change_cmd.str();
-    change_cmd_nopw << MASTER_PW << "******" << END;;
+    change_cmd_nopw << MASTER_PW << "******" << END;
     MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.str().c_str());
 #endif
     change_cmd << MASTER_PW << m_replication_password << END;
@@ -204,7 +218,8 @@ string MariaDBMonitor::generate_change_master_cmd(const string& master_host, int
  * @param redirected_slaves A vector where to insert successfully redirected slaves.
  * @return The number of slaves successfully redirected.
  */
-int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master, const ServerArray& slaves,
+int MariaDBMonitor::redirect_slaves(MariaDBServer* new_master,
+                                    const ServerArray& slaves,
                                     ServerArray* redirected_slaves)
 {
     mxb_assert(redirected_slaves != NULL);
@@ -235,16 +250,18 @@ bool MariaDBMonitor::start_external_replication(MariaDBServer* new_master, json_
     bool rval = false;
     MYSQL* new_master_conn = new_master->m_server_base->con;
     string change_cmd = generate_change_master_cmd(m_external_master_host, m_external_master_port);
-    if (mxs_mysql_query(new_master_conn, change_cmd.c_str()) == 0 &&
-        mxs_mysql_query(new_master_conn, "START SLAVE;") == 0)
+    if (mxs_mysql_query(new_master_conn, change_cmd.c_str()) == 0
+        && mxs_mysql_query(new_master_conn, "START SLAVE;") == 0)
     {
         MXS_NOTICE("New master starting replication from external master %s:%d.",
-                   m_external_master_host.c_str(), m_external_master_port);
+                   m_external_master_host.c_str(),
+                   m_external_master_port);
         rval = true;
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Could not start replication from external master: '%s'.",
+        PRINT_MXS_JSON_ERROR(err_out,
+                             "Could not start replication from external master: '%s'.",
                              mysql_error(new_master_conn));
     }
     return rval;
@@ -265,17 +282,19 @@ bool MariaDBMonitor::switchover_start_slave(MariaDBServer* old_master, MariaDBSe
     SERVER* new_master_server = new_master->m_server_base->server;
 
     string change_cmd = generate_change_master_cmd(new_master_server->address, new_master_server->port);
-    if (mxs_mysql_query(old_master_con, change_cmd.c_str()) == 0 &&
-        mxs_mysql_query(old_master_con, "START SLAVE;") == 0)
+    if (mxs_mysql_query(old_master_con, change_cmd.c_str()) == 0
+        && mxs_mysql_query(old_master_con, "START SLAVE;") == 0)
     {
         MXS_NOTICE("Old master '%s' starting replication from '%s'.",
-                   old_master->name(), new_master->name());
+                   old_master->name(),
+                   new_master->name());
         rval = true;
     }
     else
     {
         MXS_ERROR("Old master '%s' could not start replication: '%s'.",
-                  old_master->name(), mysql_error(old_master_con));
+                  old_master->name(),
+                  mysql_error(old_master_con));
     }
     return rval;
 }
@@ -305,8 +324,10 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             {
                 if (!m_demote_sql_file.empty() && !joinable->run_sql_from_file(m_demote_sql_file, output))
                 {
-                    PRINT_MXS_JSON_ERROR(output, "%s execution failed when attempting to rejoin server '%s'.",
-                                         CN_DEMOTION_SQL_FILE, joinable->name());
+                    PRINT_MXS_JSON_ERROR(output,
+                                         "%s execution failed when attempting to rejoin server '%s'.",
+                                         CN_DEMOTION_SQL_FILE,
+                                         joinable->name());
                 }
                 else
                 {
@@ -317,7 +338,10 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             else
             {
                 MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                           "redirecting it to '%s'.", name, master_name, master_name);
+                           "redirecting it to '%s'.",
+                           name,
+                           master_name,
+                           master_name);
                 op_success = joinable->redirect_one_slave(change_cmd);
             }
 
@@ -338,7 +362,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
  */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (m_master != NULL && m_master->is_master() && m_master_gtid_domain != GTID_DOMAIN_UNKNOWN);
+    return m_master != NULL && m_master->is_master() && m_master_gtid_domain != GTID_DOMAIN_UNKNOWN;
 }
 
 /**
@@ -384,7 +408,8 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
                     MXS_WARNING("Automatic rejoin was not attempted on server '%s' even though it is a "
                                 "valid candidate. Will keep retrying with this message suppressed for all "
                                 "servers. Errors: \n%s",
-                                suspects[i]->name(), rejoin_err_msg.c_str());
+                                suspects[i]->name(),
+                                rejoin_err_msg.c_str());
                     m_warn_cannot_rejoin = false;
                 }
             }
@@ -424,16 +449,16 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
         {
             SlaveStatus* slave_status = &rejoin_cand->m_slave_status[0];
             // which is connected to master but it's the wrong one
-            if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_YES  &&
-                slave_status->master_server_id != m_master->m_server_id)
+            if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_YES
+                && slave_status->master_server_id != m_master->m_server_id)
             {
                 is_suspect = true;
             }
             // or is disconnected but master host or port is wrong.
-            else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING &&
-                     slave_status->slave_sql_running &&
-                     (slave_status->master_host != m_master->m_server_base->server->address ||
-                      slave_status->master_port != m_master->m_server_base->server->port))
+            else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING
+                     && slave_status->slave_sql_running
+                     && (slave_status->master_host != m_master->m_server_base->server->address
+                         || slave_status->master_port != m_master->m_server_base->server->port))
             {
                 is_suspect = true;
             }
@@ -474,7 +499,8 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
  * @param error_out Error output. Can be NULL.
  * @return True if successful. If false, replication may be broken.
  */
-bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target,
+                                        MariaDBServer* demotion_target,
                                         json_t** error_out)
 {
     mxb_assert(promotion_target && demotion_target);
@@ -501,8 +527,10 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDB
         // Step 3: Wait for the slaves (including promotion target) to catch up with master.
         ServerArray catchup_slaves = redirectable_slaves;
         catchup_slaves.push_back(promotion_target);
-        if (switchover_wait_slaves_catchup(catchup_slaves, demotion_target->m_gtid_binlog_pos,
-                                           seconds_remaining, error_out))
+        if (switchover_wait_slaves_catchup(catchup_slaves,
+                                           demotion_target->m_gtid_binlog_pos,
+                                           seconds_remaining,
+                                           error_out))
         {
             time_t step3_time = time(NULL);
             int seconds_step3 = difftime(step3_time, step2_time);
@@ -538,7 +566,8 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDB
                         MXS_WARNING("Replicating from external master, skipping final check.");
                         rval = true;
                     }
-                    else if (wait_cluster_stabilization(promotion_target, redirected_slaves,
+                    else if (wait_cluster_stabilization(promotion_target,
+                                                        redirected_slaves,
                                                         seconds_remaining))
                     {
                         rval = true;
@@ -546,7 +575,9 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDB
                         int seconds_step6 = difftime(step6_time, step5_time);
                         seconds_remaining -= seconds_step6;
                         MXS_DEBUG("Switchover: slave replication confirmation took %d seconds with "
-                                  "%d seconds to spare.", seconds_step6, seconds_remaining);
+                                  "%d seconds to spare.",
+                                  seconds_step6,
+                                  seconds_remaining);
                     }
                 }
                 else
@@ -566,7 +597,8 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDB
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Could not disable read_only on server %s: '%s'.",
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Could not disable read_only on server %s: '%s'.",
                                      demotion_target->name(),
                                      mysql_error(demotion_target->m_server_base->con));
             }
@@ -589,7 +621,8 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target, MariaDB
  * @param error_out Error output. Can be NULL.
  * @return True if successful
  */
-bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target,
+                                      MariaDBServer* demotion_target,
                                       json_t** error_out)
 {
     mxb_assert(promotion_target && demotion_target);
@@ -640,7 +673,9 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target, MariaDBSe
                 int seconds_step4 = difftime(step4_time, step3_time);
                 seconds_remaining -= seconds_step4;
                 MXS_DEBUG("Failover: slave replication confirmation took %d seconds with "
-                          "%d seconds to spare.", seconds_step4, seconds_remaining);
+                          "%d seconds to spare.",
+                          seconds_step4,
+                          seconds_remaining);
             }
         }
         else
@@ -669,15 +704,14 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
     bool event_disable_error = false;
 
     MYSQL* conn = current_master->m_server_base->con;
-    const char* query = ""; // The next query to execute. Used also for error printing.
+    const char* query = "";     // The next query to execute. Used also for error printing.
     // The presence of an external master changes several things.
     const bool external_master = server_is_slave_of_ext_master(current_master->m_server_base->server);
 
     // Helper function for checking if any error is on.
-    auto any_error = [&query_error, &gtid_update_error, &event_disable_error]() -> bool
-    {
-        return query_error || gtid_update_error || event_disable_error;
-    };
+    auto any_error = [&query_error, &gtid_update_error, &event_disable_error]() -> bool {
+            return query_error || gtid_update_error || event_disable_error;
+        };
 
     if (external_master)
     {
@@ -729,7 +763,7 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
                 // work since the connection is likely broken.
                 if (query_error)
                 {
-                    error_desc = mysql_error(conn); // Read connection error before next step.
+                    error_desc = mysql_error(conn);     // Read connection error before next step.
                     error_fetched = true;
                 }
                 mxs_mysql_query(conn, "SET GLOBAL read_only=0;");
@@ -760,14 +794,16 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
         }
         else if (gtid_update_error)
         {
-            const char * const GTID_ERROR = "Demotion failed due to a query error: %s";
+            const char* const GTID_ERROR = "Demotion failed due to a query error: %s";
             PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR, error_desc.c_str());
         }
     }
     else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, err_out))
     {
-        PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when demoting server '%s'.",
-                             CN_DEMOTION_SQL_FILE, current_master->name());
+        PRINT_MXS_JSON_ERROR(err_out,
+                             "%s execution failed when demoting server '%s'.",
+                             CN_DEMOTION_SQL_FILE,
+                             current_master->name());
         query_error = true;
     }
 
@@ -783,8 +819,10 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time for all servers
  */
-bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerArray& slaves, const GtidList& gtid,
-                                                    int total_timeout, json_t** err_out)
+bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerArray& slaves,
+                                                    const GtidList& gtid,
+                                                    int total_timeout,
+                                                    json_t** err_out)
 {
     bool success = true;
     int seconds_remaining = total_timeout;
@@ -820,21 +858,22 @@ bool MariaDBMonitor::switchover_wait_slaves_catchup(const ServerArray& slaves, c
  * @param seconds_remaining How long can we wait
  * @return True, if at least one slave got the new event within the time limit
  */
-bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const ServerArray& slaves,
+bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master,
+                                                const ServerArray& slaves,
                                                 int seconds_remaining)
 {
     mxb_assert(!slaves.empty());
     bool rval = false;
     time_t begin = time(NULL);
 
-    if (mxs_mysql_query(new_master->m_server_base->con, "FLUSH TABLES;") == 0 &&
-        new_master->update_gtids())
+    if (mxs_mysql_query(new_master->m_server_base->con, "FLUSH TABLES;") == 0
+        && new_master->update_gtids())
     {
         int query_fails = 0;
         int repl_fails = 0;
         int successes = 0;
         const GtidList& target = new_master->m_gtid_current_pos;
-        ServerArray wait_list = slaves; // Check all the servers in the list
+        ServerArray wait_list = slaves;     // Check all the servers in the list
         bool first_round = true;
         bool time_is_up = false;
 
@@ -855,7 +894,8 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
                     if (!slave->m_slave_status[0].last_error.empty())
                     {
                         // IO or SQL error on slave, replication is a fail
-                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.", slave->name(),
+                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.",
+                                    slave->name(),
                                     slave->m_slave_status[0].last_error.c_str());
                         wait_list.erase(wait_list.begin() + i);
                         repl_fails++;
@@ -876,7 +916,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master, const
                 i--;
             }
 
-            first_round = false; // Sleep at start of next iteration
+            first_round = false;    // Sleep at start of next iteration
             if (difftime(time(NULL), begin) >= seconds_remaining)
             {
                 time_is_up = true;
@@ -939,16 +979,20 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
 
     if (!success)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'. Query: '%s'.",
-                             mysql_error(new_master_conn), query);
+        PRINT_MXS_JSON_ERROR(err_out,
+                             "Promotion failed: '%s'. Query: '%s'.",
+                             mysql_error(new_master_conn),
+                             query);
     }
     else
     {
         // Promotion commands ran successfully, run promotion sql script file before external replication.
         if (!m_promote_sql_file.empty() && !new_master->run_sql_from_file(m_promote_sql_file, err_out))
         {
-            PRINT_MXS_JSON_ERROR(err_out, "%s execution failed when promoting server '%s'.",
-                                 CN_PROMOTION_SQL_FILE, new_master->name());
+            PRINT_MXS_JSON_ERROR(err_out,
+                                 "%s execution failed when promoting server '%s'.",
+                                 CN_PROMOTION_SQL_FILE,
+                                 new_master->name());
             success = false;
         }
         // If the previous master was a slave to an external master, start the equivalent slave connection on
@@ -974,7 +1018,8 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
  * @return The selected promotion target or NULL if no valid candidates
  */
 MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target,
-                                                       ClusterOperation op, Log log_mode,
+                                                       ClusterOperation op,
+                                                       Log log_mode,
                                                        json_t** error_out)
 {
     /* Select a new master candidate. Selects the one with the latest event in relay log.
@@ -991,7 +1036,9 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
     }
     else
     {
-        PRINT_ERROR_IF(log_mode, error_out, "'%s' does not have any slaves to promote.",
+        PRINT_ERROR_IF(log_mode,
+                       error_out,
+                       "'%s' does not have any slaves to promote.",
                        demotion_target->name());
         return NULL;
     }
@@ -1031,7 +1078,10 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
     MariaDBServer* current_best = NULL;
     if (candidates.empty())
     {
-        PRINT_ERROR_IF(log_mode, error_out, "No suitable promotion candidate found:\n%s", all_reasons.c_str());
+        PRINT_ERROR_IF(log_mode,
+                       error_out,
+                       "No suitable promotion candidate found:\n%s",
+                       all_reasons.c_str());
     }
     else
     {
@@ -1117,8 +1167,10 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
  * @param reason_out Why is the candidate better than current_best
  * @return True if candidate is better
  */
-bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
-                                         uint32_t gtid_domain, std::string* reason_out)
+bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate,
+                                         const MariaDBServer* current_best,
+                                         uint32_t gtid_domain,
+                                         std::string* reason_out)
 {
     string reason;
     bool is_better = false;
@@ -1214,8 +1266,10 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
     if (demotion_target)
     {
         // Autoselect best server for promotion.
-        MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, op,
-                                                                     log_mode, error_out);
+        MariaDBServer* promotion_candidate = select_promotion_target(demotion_target,
+                                                                     op,
+                                                                     log_mode,
+                                                                     error_out);
         if (promotion_candidate)
         {
             promotion_target = promotion_candidate;
@@ -1251,8 +1305,8 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
                 // massive. In the latter case it's ok that the monitor does not do the waiting since there
                 // is no telling how long the wait will be.
                 const char wait_relay_log[] = "The relay log of '%s' has %" PRIu64 " unprocessed events "
-                "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, failover should be "
-                "postponed until the log has been processed. Please try again later.";
+                                                                                   "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, failover should be "
+                                                                                   "postponed until the log has been processed. Please try again later.";
                 string error_msg = string_printf(wait_relay_log,
                                                  promotion_target->name(),
                                                  events,
@@ -1265,9 +1319,11 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
                 // For automatic failover the message is more typical. TODO: Think if this message should
                 // be logged more often.
                 MXS_WARNING("The relay log of '%s' has %" PRId64 " unprocessed events "
-                            "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, "
-                            "failover is postponed until the log has been processed.",
-                            promotion_target->name(), events, slave_conn->gtid_io_pos.to_string().c_str(),
+                                                                 "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, "
+                                                                 "failover is postponed until the log has been processed.",
+                            promotion_target->name(),
+                            events,
+                            slave_conn->gtid_io_pos.to_string().c_str(),
                             promotion_target->m_gtid_current_pos.to_string().c_str());
             }
         }
@@ -1287,7 +1343,7 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
  * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
  * executes failover to select and promote a new master server. This function should be called immediately
  * after @c mon_process_state_changes. If an error occurs, this method disables automatic failover.
-*/
+ */
 void MariaDBMonitor::handle_auto_failover()
 {
     if (m_master == NULL || m_master->is_running())
@@ -1307,16 +1363,19 @@ void MariaDBMonitor::handle_auto_failover()
     {
         int monitor_passes = m_failcount - master_down_count;
         MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
-                    "begins.", (monitor_passes > 1) ? monitor_passes : 1);
+                    "begins.",
+                    (monitor_passes > 1) ? monitor_passes : 1);
         m_warn_master_down = false;
     }
     // If master seems to be down, check if slaves are receiving events.
-    else if (m_verify_master_failure &&
-             (connected_slave = slave_receiving_events(m_master, &event_age)) != NULL)
+    else if (m_verify_master_failure
+             && (connected_slave = slave_receiving_events(m_master, &event_age)) != NULL)
     {
         MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
                    "seconds ago. Delaying failover.",
-                   connected_slave->name(), m_master->name(), event_age.count());
+                   connected_slave->name(),
+                   m_master->name(),
+                   event_age.count());
     }
     else if (master_down_count >= m_failcount)
     {
@@ -1362,12 +1421,13 @@ void MariaDBMonitor::check_cluster_operations_support()
     {
         // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
         // would deactivate failover.
-        if (server->m_version != MariaDBServer::version::UNKNOWN &&
-            server->m_version != MariaDBServer::version::MARIADB_100)
+        if (server->m_version != MariaDBServer::version::UNKNOWN
+            && server->m_version != MariaDBServer::version::MARIADB_100)
         {
             supported = false;
             auto reason = string_printf("The version of server '%s' is not supported. Failover/switchover "
-                                        "requires MariaDB 10.X.", server->name());
+                                        "requires MariaDB 10.X.",
+                                        server->name());
             printer.cat(all_reasons, reason);
         }
 
@@ -1377,7 +1437,8 @@ void MariaDBMonitor::check_cluster_operations_support()
             {
                 supported = false;
                 auto reason = string_printf("Server '%s' is replicating or attempting to replicate from "
-                                            "multiple masters.", server->name());
+                                            "multiple masters.",
+                                            server->name());
                 printer.cat(all_reasons, reason);
             }
             if (!server->uses_gtid())
@@ -1392,21 +1453,24 @@ void MariaDBMonitor::check_cluster_operations_support()
         {
             supported = false;
             auto reason = string_printf("Server '%s' is a relay. Only topologies with one replication "
-                                        "layer are supported.", server->name());
+                                        "layer are supported.",
+                                        server->name());
             printer.cat(all_reasons, reason);
         }
     }
 
     if (!supported)
     {
-        const char PROBLEMS[] =
-            "The backend cluster does not support failover/switchover due to the following reason(s):\n"
-            "%s\n"
-            "Automatic failover/switchover has been disabled. They should only be enabled "
-            "after the above issues have been resolved.";
+        const char PROBLEMS[]
+            = "The backend cluster does not support failover/switchover due to the following reason(s):\n"
+              "%s\n"
+              "Automatic failover/switchover has been disabled. They should only be enabled "
+              "after the above issues have been resolved.";
         string p1 = string_printf(PROBLEMS, all_reasons.c_str());
         string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
-        string p3 = string_printf(RE_ENABLE_FMT, "switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+        string p3 = string_printf(RE_ENABLE_FMT,
+                                  "switchover",
+                                  CN_SWITCHOVER_ON_LOW_DISK_SPACE,
                                   m_monitor->name);
         string total_msg = p1 + " " + p2 + " " + p3;
         MXS_ERROR("%s", total_msg.c_str());
@@ -1436,17 +1500,17 @@ void MariaDBMonitor::check_cluster_operations_support()
 const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer* demotion_target,
                                                             Duration* event_age_out)
 {
-    steady_clock::time_point alive_after = steady_clock::now() -
-                                           std::chrono::seconds(m_master_failure_timeout);
+    steady_clock::time_point alive_after = steady_clock::now()
+        - std::chrono::seconds(m_master_failure_timeout);
 
     const MariaDBServer* connected_slave = NULL;
     for (MariaDBServer* slave : demotion_target->m_node.children)
     {
         const SlaveStatus* slave_conn = NULL;
-        if (slave->is_running() &&
-            (slave_conn = slave->slave_connection_status(demotion_target)) != NULL &&
-            slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES &&
-            slave_conn->last_data_time >= alive_after)
+        if (slave->is_running()
+            && (slave_conn = slave->slave_connection_status(demotion_target)) != NULL
+            && slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES
+            && slave_conn->last_data_time >= alive_after)
         {
             // The slave is still connected to the correct master and has received events. This means that
             // while MaxScale can't connect to the master, it's probably still alive.
@@ -1466,7 +1530,8 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
  * @param redirectable_slaves Other servers to query for errors.
  * @param err_out If not null, the error output object.
  */
-static void print_redirect_errors(MariaDBServer* first_server, const ServerArray& servers,
+static void print_redirect_errors(MariaDBServer* first_server,
+                                  const ServerArray& servers,
                                   json_t** err_out)
 {
     // Individual server errors have already been printed to the log.
@@ -1501,7 +1566,8 @@ static void print_redirect_errors(MariaDBServer* first_server, const ServerArray
  * @param error_out Error output
  * @return True if cluster is suitable and server parameters were valid
  */
-bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server,
+bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server,
+                                        SERVER* demotion_server,
                                         Log log_mode,
                                         MariaDBServer** promotion_target_out,
                                         MariaDBServer** demotion_target_out,
@@ -1510,8 +1576,8 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demoti
     const auto op = ClusterOperation::SWITCHOVER;
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
-    mxb_assert(promotion_target_out && demotion_target_out &&
-               !*promotion_target_out && !*demotion_target_out);
+    mxb_assert(promotion_target_out && demotion_target_out
+               && !*promotion_target_out && !*demotion_target_out);
     const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
 
     MariaDBServer* demotion_target = NULL;
@@ -1526,8 +1592,11 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demoti
         }
         else if (!demotion_candidate->can_be_demoted_switchover(&demotion_msg))
         {
-            PRINT_ERROR_IF(log_mode, error_out,  "'%s' is not a valid demotion target for switchover: %s",
-                           demotion_candidate->name(), demotion_msg.c_str());
+            PRINT_ERROR_IF(log_mode,
+                           error_out,
+                           "'%s' is not a valid demotion target for switchover: %s",
+                           demotion_candidate->name(),
+                           demotion_msg.c_str());
         }
         else
         {
@@ -1579,8 +1648,10 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demoti
         else
         {
             // Autoselect. More involved than the autoselecting the demotion target.
-            MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, op,
-                                                                         log_mode, error_out);
+            MariaDBServer* promotion_candidate = select_promotion_target(demotion_target,
+                                                                         op,
+                                                                         log_mode,
+                                                                         error_out);
             if (promotion_candidate)
             {
                 promotion_target = promotion_candidate;
@@ -1612,8 +1683,8 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     const char QUERY[] = "SET GLOBAL read_only=1;";
     for (MariaDBServer* server : m_servers)
     {
-        if (server->is_slave() && !server->is_read_only() &&
-            (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
+        if (server->is_slave() && !server->is_read_only()
+            && (server->m_version != MariaDBServer::version::BINLOG_ROUTER))
         {
             MYSQL* conn = server->m_server_base->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
@@ -1633,8 +1704,8 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
     // Only set pure slave and standalone servers to maintenance.
     for (MariaDBServer* server : m_servers)
     {
-        if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_usable() &&
-            !server->is_master() && !server->is_relay_master())
+        if (server->has_status(SERVER_DISK_SPACE_EXHAUSTED) && server->is_usable()
+            && !server->is_master() && !server->is_relay_master())
         {
             server->set_status(SERVER_MAINT);
             m_cluster_modified = true;
@@ -1657,8 +1728,11 @@ void MariaDBMonitor::handle_low_disk_space_master()
         MariaDBServer* demotion_target = NULL;
         MariaDBServer* promotion_target = NULL;
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
-        auto ok_to_switch = switchover_prepare(NULL, m_master->m_server_base->server, log_mode,
-                                               &promotion_target, &demotion_target,
+        auto ok_to_switch = switchover_prepare(NULL,
+                                               m_master->m_server_base->server,
+                                               log_mode,
+                                               &promotion_target,
+                                               &demotion_target,
                                                NULL);
         if (ok_to_switch)
         {
@@ -1667,11 +1741,13 @@ void MariaDBMonitor::handle_low_disk_space_master()
             if (switched)
             {
                 MXS_NOTICE("Switchover %s -> %s performed.",
-                           demotion_target->name(), promotion_target->name());
+                           demotion_target->name(),
+                           promotion_target->name());
             }
             else
             {
-                report_and_disable("switchover", CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+                report_and_disable("switchover",
+                                   CN_SWITCHOVER_ON_LOW_DISK_SPACE,
                                    &m_switchover_on_low_disk_space);
             }
         }
@@ -1693,10 +1769,12 @@ void MariaDBMonitor::handle_low_disk_space_master()
     }
 }
 
-void MariaDBMonitor::report_and_disable(const string& operation, const string& setting_name,
+void MariaDBMonitor::report_and_disable(const string& operation,
+                                        const string& setting_name,
                                         bool* setting_var)
 {
-    string p1 = string_printf("Automatic %s failed, disabling automatic %s.", operation.c_str(),
+    string p1 = string_printf("Automatic %s failed, disabling automatic %s.",
+                              operation.c_str(),
                               operation.c_str());
     string p2 = string_printf(RE_ENABLE_FMT, operation.c_str(), setting_name.c_str(), m_monitor->name);
     string error_msg = p1 + " " + p2;
@@ -1721,7 +1799,8 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode,
     bool gtid_domain_ok = false;
     if (m_master_gtid_domain == GTID_DOMAIN_UNKNOWN)
     {
-        PRINT_ERROR_IF(log_mode, error_out,
+        PRINT_ERROR_IF(log_mode,
+                       error_out,
                        "Cluster gtid domain is unknown. This is usually caused by the cluster never "
                        "having a master server while MaxScale was running.");
     }
@@ -1737,9 +1816,11 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode,
         auto sstatus = server->slave_connection_status(demotion_target);
         if (sstatus && sstatus->gtid_io_pos.empty())
         {
-            PRINT_ERROR_IF(log_mode, error_out,
+            PRINT_ERROR_IF(log_mode,
+                           error_out,
                            "The slave connection '%s' -> '%s' is not using gtid replication.",
-                           server->name(), demotion_target->name());
+                           server->name(),
+                           demotion_target->name());
             gtid_ok = false;
         }
     }

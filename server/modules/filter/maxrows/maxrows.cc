@@ -37,31 +37,31 @@
 
 #include "maxrows.h"
 
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance,
-                                      MXS_SESSION *session);
-static void    closeSession(MXS_FILTER *instance,
-                            MXS_FILTER_SESSION *sdata);
-static void    freeSession(MXS_FILTER *instance,
-                           MXS_FILTER_SESSION *sdata);
-static void    setDownstream(MXS_FILTER *instance,
-                             MXS_FILTER_SESSION *sdata,
-                             MXS_DOWNSTREAM *downstream);
-static void    setUpstream(MXS_FILTER *instance,
-                           MXS_FILTER_SESSION *sdata,
-                           MXS_UPSTREAM *upstream);
-static int     routeQuery(MXS_FILTER *instance,
-                          MXS_FILTER_SESSION *sdata,
-                          GWBUF *queue);
-static int     clientReply(MXS_FILTER *instance,
-                           MXS_FILTER_SESSION *sdata,
-                           GWBUF *queue);
-static void    diagnostics(MXS_FILTER *instance,
-                           MXS_FILTER_SESSION *sdata,
-                           DCB *dcb);
-static json_t* diagnostics_json(const MXS_FILTER *instance,
-                                const MXS_FILTER_SESSION *sdata);
-static uint64_t getCapabilities(MXS_FILTER *instance);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
+                                      MXS_SESSION* session);
+static void closeSession(MXS_FILTER* instance,
+                         MXS_FILTER_SESSION* sdata);
+static void freeSession(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* sdata);
+static void setDownstream(MXS_FILTER* instance,
+                          MXS_FILTER_SESSION* sdata,
+                          MXS_DOWNSTREAM* downstream);
+static void setUpstream(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* sdata,
+                        MXS_UPSTREAM* upstream);
+static int routeQuery(MXS_FILTER* instance,
+                      MXS_FILTER_SESSION* sdata,
+                      GWBUF* queue);
+static int clientReply(MXS_FILTER* instance,
+                       MXS_FILTER_SESSION* sdata,
+                       GWBUF* queue);
+static void diagnostics(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* sdata,
+                        DCB* dcb);
+static json_t* diagnostics_json(const MXS_FILTER* instance,
+                                const MXS_FILTER_SESSION* sdata);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 enum maxrows_return_mode
 {
@@ -73,8 +73,8 @@ enum maxrows_return_mode
 static const MXS_ENUM_VALUE return_option_values[] =
 {
     {"empty", MAXROWS_RETURN_EMPTY},
-    {"error", MAXROWS_RETURN_ERR},
-    {"ok",    MAXROWS_RETURN_OK},
+    {"error", MAXROWS_RETURN_ERR  },
+    {"ok",    MAXROWS_RETURN_OK   },
     {NULL}
 };
 
@@ -88,83 +88,82 @@ extern "C"
  *
  * @return The module object.
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT object =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        setUpstream,
-        routeQuery,
-        clientReply,
-        diagnostics,
-        diagnostics_json,
-        getCapabilities,
-        NULL, // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_IN_DEVELOPMENT,
-        MXS_FILTER_VERSION,
-        "A filter that is capable of limiting the resultset number of rows.",
-        "V1.0.0",
-        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
-        &object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_FILTER_OBJECT object =
         {
-            {
-                "max_resultset_rows",
-                MXS_MODULE_PARAM_COUNT,
-                MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
-            },
-            {
-                "max_resultset_size",
-                MXS_MODULE_PARAM_SIZE,
-                MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
-            },
-            {
-                "debug",
-                MXS_MODULE_PARAM_COUNT,
-                MAXROWS_DEFAULT_DEBUG
-            },
-            {
-                "max_resultset_return",
-                MXS_MODULE_PARAM_ENUM,
-                "empty",
-                MXS_MODULE_OPT_ENUM_UNIQUE,
-                return_option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            createInstance,
+            newSession,
+            closeSession,
+            freeSession,
+            setDownstream,
+            setUpstream,
+            routeQuery,
+            clientReply,
+            diagnostics,
+            diagnostics_json,
+            getCapabilities,
+            NULL,   // No destroyInstance
+        };
 
-    return &info;
-};
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_FILTER,
+            MXS_MODULE_IN_DEVELOPMENT,
+            MXS_FILTER_VERSION,
+            "A filter that is capable of limiting the resultset number of rows.",
+            "V1.0.0",
+            RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
+            &object,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {
+                    "max_resultset_rows",
+                    MXS_MODULE_PARAM_COUNT,
+                    MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
+                },
+                {
+                    "max_resultset_size",
+                    MXS_MODULE_PARAM_SIZE,
+                    MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
+                },
+                {
+                    "debug",
+                    MXS_MODULE_PARAM_COUNT,
+                    MAXROWS_DEFAULT_DEBUG
+                },
+                {
+                    "max_resultset_return",
+                    MXS_MODULE_PARAM_ENUM,
+                    "empty",
+                    MXS_MODULE_OPT_ENUM_UNIQUE,
+                    return_option_values
+                },
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /* Implementation */
 
 typedef struct maxrows_config
 {
-    uint32_t        max_resultset_rows;
-    uint32_t        max_resultset_size;
-    uint32_t                     debug;
-    enum maxrows_return_mode  m_return;
+    uint32_t                 max_resultset_rows;
+    uint32_t                 max_resultset_size;
+    uint32_t                 debug;
+    enum maxrows_return_mode m_return;
 } MAXROWS_CONFIG;
 
 typedef struct maxrows_instance
 {
-    const char            *name;
-    MAXROWS_CONFIG         config;
+    const char*    name;
+    MAXROWS_CONFIG config;
 } MAXROWS_INSTANCE;
 
 typedef enum maxrows_session_state
@@ -178,47 +177,47 @@ typedef enum maxrows_session_state
 
 typedef struct maxrows_response_state
 {
-    GWBUF* data;          /**< Response data, possibly incomplete. */
-    size_t n_totalfields; /**< The number of fields a resultset contains. */
-    size_t n_fields;      /**< How many fields we have received, <= n_totalfields. */
-    size_t n_rows;        /**< How many rows we have received. */
-    size_t offset;        /**< Where we are in the response buffer. */
-    size_t length;        /**< Buffer size. */
-    GWBUF* column_defs;   /**< Buffer with result set columns definitions */
+    GWBUF* data;            /**< Response data, possibly incomplete. */
+    size_t n_totalfields;   /**< The number of fields a resultset contains. */
+    size_t n_fields;        /**< How many fields we have received, <= n_totalfields. */
+    size_t n_rows;          /**< How many rows we have received. */
+    size_t offset;          /**< Where we are in the response buffer. */
+    size_t length;          /**< Buffer size. */
+    GWBUF* column_defs;     /**< Buffer with result set columns definitions */
 } MAXROWS_RESPONSE_STATE;
 
-static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state);
+static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE* state);
 
 typedef struct maxrows_session_data
 {
-    MAXROWS_INSTANCE        *instance;         /**< The maxrows instance the session is associated with. */
-    MXS_DOWNSTREAM          down;              /**< The previous filter or equivalent. */
-    MXS_UPSTREAM            up;                /**< The next filter or equivalent. */
-    MAXROWS_RESPONSE_STATE  res;               /**< The response state. */
-    MXS_SESSION             *session;          /**< The session this data is associated with. */
+    MAXROWS_INSTANCE*       instance;           /**< The maxrows instance the session is associated with. */
+    MXS_DOWNSTREAM          down;               /**< The previous filter or equivalent. */
+    MXS_UPSTREAM            up;                 /**< The next filter or equivalent. */
+    MAXROWS_RESPONSE_STATE  res;                /**< The response state. */
+    MXS_SESSION*            session;            /**< The session this data is associated with. */
     maxrows_session_state_t state;
-    bool                    large_packet;      /**< Large packet (> 16MB)) indicator */
-    bool                    discard_resultset; /**< Discard resultset indicator */
-    GWBUF                   *input_sql;        /**< Input query */
+    bool                    large_packet;       /**< Large packet (> 16MB)) indicator */
+    bool                    discard_resultset;  /**< Discard resultset indicator */
+    GWBUF*                  input_sql;          /**< Input query */
 } MAXROWS_SESSION_DATA;
 
-static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance,
-                                                         MXS_SESSION *session);
-static void maxrows_session_data_free(MAXROWS_SESSION_DATA *data);
+static MAXROWS_SESSION_DATA* maxrows_session_data_create(MAXROWS_INSTANCE* instance,
+                                                         MXS_SESSION* session);
+static void maxrows_session_data_free(MAXROWS_SESSION_DATA* data);
 
-static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata);
-static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata);
-static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata);
-static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra_offset);
-static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
-static bool process_params(char **options,
-                           MXS_CONFIG_PARAMETER *params,
+static int  handle_expecting_fields(MAXROWS_SESSION_DATA* csdata);
+static int  handle_expecting_nothing(MAXROWS_SESSION_DATA* csdata);
+static int  handle_expecting_response(MAXROWS_SESSION_DATA* csdata);
+static int  handle_rows(MAXROWS_SESSION_DATA* csdata, GWBUF* buffer, size_t extra_offset);
+static int  handle_ignoring_response(MAXROWS_SESSION_DATA* csdata);
+static bool process_params(char** options,
+                           MXS_CONFIG_PARAMETER* params,
                            MAXROWS_CONFIG* config);
 
-static int send_upstream(MAXROWS_SESSION_DATA *csdata);
-static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata);
-static int send_error_upstream(MAXROWS_SESSION_DATA *csdata);
-static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata);
+static int send_upstream(MAXROWS_SESSION_DATA* csdata);
+static int send_eof_upstream(MAXROWS_SESSION_DATA* csdata);
+static int send_error_upstream(MAXROWS_SESSION_DATA* csdata);
+static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA* csdata);
 
 /* API BEGIN */
 
@@ -232,9 +231,9 @@ static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata);
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    MAXROWS_INSTANCE *cinstance = static_cast<MAXROWS_INSTANCE*>(MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE)));
+    MAXROWS_INSTANCE* cinstance = static_cast<MAXROWS_INSTANCE*>(MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE)));
 
     if (cinstance)
     {
@@ -243,10 +242,10 @@ static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params
                                                                   "max_resultset_rows");
         cinstance->config.max_resultset_size = config_get_size(params,
                                                                "max_resultset_size");
-        cinstance->config.m_return =
-            static_cast<maxrows_return_mode>(config_get_enum(params,
-                                                             "max_resultset_return",
-                                                             return_option_values));
+        cinstance->config.m_return
+            = static_cast<maxrows_return_mode>(config_get_enum(params,
+                                                               "max_resultset_return",
+                                                               return_option_values));
         cinstance->config.debug = config_get_integer(params, "debug");
     }
 
@@ -261,10 +260,10 @@ static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params
  *
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = maxrows_session_data_create(cinstance, session);
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = maxrows_session_data_create(cinstance, session);
 
     return (MXS_FILTER_SESSION*)csdata;
 }
@@ -275,10 +274,10 @@ static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session
  * @param instance  The maxrows instance data
  * @param sdata     The session data of the session being closed
  */
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 }
 
 /**
@@ -287,10 +286,10 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
  * @param instance  The maxrows instance data
  * @param sdata     The session data of the session being closed
  */
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     maxrows_session_data_free(csdata);
 }
@@ -302,10 +301,10 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
  * @param sdata       The session data of the session
  * @param down        The downstream filter or router
  */
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_DOWNSTREAM *down)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata, MXS_DOWNSTREAM* down)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     csdata->down = *down;
 }
@@ -317,10 +316,10 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_D
  * @param sdata       The session data of the session
  * @param up          The upstream filter or router
  */
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_UPSTREAM *up)
+static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata, MXS_UPSTREAM* up)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     csdata->up = *up;
 }
@@ -332,20 +331,20 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_UPS
  * @param sdata     The filter session data
  * @param buffer    Buffer containing an MySQL protocol packet.
  */
-static int routeQuery(MXS_FILTER *instance,
-                      MXS_FILTER_SESSION *sdata,
-                      GWBUF *packet)
+static int routeQuery(MXS_FILTER* instance,
+                      MXS_FILTER_SESSION* sdata,
+                      GWBUF* packet)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
-    uint8_t *data = GWBUF_DATA(packet);
+    uint8_t* data = GWBUF_DATA(packet);
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     mxb_assert(GWBUF_IS_CONTIGUOUS(packet));
     mxb_assert(GWBUF_LENGTH(packet) >= MYSQL_HEADER_LEN + 1);
-    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) +
-               MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data)
+               + MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
 
     maxrows_response_state_reset(&csdata->res);
     csdata->state = MAXROWS_IGNORING_RESPONSE;
@@ -360,8 +359,8 @@ static int routeQuery(MXS_FILTER *instance,
     case MXS_COM_STMT_EXECUTE:
         {
             /* Set input query only with MAXROWS_RETURN_ERR */
-            if (csdata->instance->config.m_return == MAXROWS_RETURN_ERR &&
-                (csdata->input_sql = gwbuf_clone(packet)) == NULL)
+            if (csdata->instance->config.m_return == MAXROWS_RETURN_ERR
+                && (csdata->input_sql = gwbuf_clone(packet)) == NULL)
             {
                 csdata->state = MAXROWS_EXPECTING_NOTHING;
 
@@ -401,19 +400,19 @@ static int routeQuery(MXS_FILTER *instance,
  * @param sdata     The filter session data
  * @param queue     The query data
  */
-static int clientReply(MXS_FILTER *instance,
-                       MXS_FILTER_SESSION *sdata,
-                       GWBUF *data)
+static int clientReply(MXS_FILTER* instance,
+                       MXS_FILTER_SESSION* sdata,
+                       GWBUF* data)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     int rv;
 
     if (csdata->res.data)
     {
-        if (csdata->discard_resultset &&
-            csdata->state == MAXROWS_EXPECTING_ROWS)
+        if (csdata->discard_resultset
+            && csdata->state == MAXROWS_EXPECTING_ROWS)
         {
             gwbuf_free(csdata->res.data);
             csdata->res.data = data;
@@ -495,10 +494,10 @@ static int clientReply(MXS_FILTER *instance,
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb)
+static void diagnostics(MXS_FILTER* instance, MXS_FILTER_SESSION* sdata, DCB* dcb)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+    MAXROWS_INSTANCE* cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA* csdata = (MAXROWS_SESSION_DATA*)sdata;
 
     dcb_printf(dcb, "Maxrows filter is working\n");
 }
@@ -513,7 +512,7 @@ static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dc
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static json_t* diagnostics_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *sdata)
+static json_t* diagnostics_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* sdata)
 {
     return NULL;
 }
@@ -535,7 +534,7 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
  *
  * @param state Pointer to object.
  */
-static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
+static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE* state)
 {
     state->data = NULL;
     state->n_totalfields = 0;
@@ -552,17 +551,17 @@ static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
  *
  * @return Session data or NULL if creation fails.
  */
-static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance,
+static MAXROWS_SESSION_DATA* maxrows_session_data_create(MAXROWS_INSTANCE* instance,
                                                          MXS_SESSION* session)
 {
-    MAXROWS_SESSION_DATA *data = (MAXROWS_SESSION_DATA*)MXS_CALLOC(1, sizeof(MAXROWS_SESSION_DATA));
+    MAXROWS_SESSION_DATA* data = (MAXROWS_SESSION_DATA*)MXS_CALLOC(1, sizeof(MAXROWS_SESSION_DATA));
 
     if (data)
     {
         mxb_assert(session->client_dcb);
         mxb_assert(session->client_dcb->data);
 
-        MYSQL_session *mysql_session = (MYSQL_session*)session->client_dcb->data;
+        MYSQL_session* mysql_session = (MYSQL_session*)session->client_dcb->data;
         data->instance = instance;
         data->session = session;
         data->input_sql = NULL;
@@ -590,7 +589,7 @@ static void maxrows_session_data_free(MAXROWS_SESSION_DATA* data)
  *
  * @param csdata The maxrows session data.
  */
-static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
+static int handle_expecting_fields(MAXROWS_SESSION_DATA* csdata)
 {
     mxb_assert(csdata->state == MAXROWS_EXPECTING_FIELDS);
     mxb_assert(csdata->res.data);
@@ -618,15 +617,15 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
 
             switch (command)
             {
-            case 0xfe: // EOF, the one after the fields.
+            case 0xfe:      // EOF, the one after the fields.
                 csdata->res.offset += packetlen;
 
                 /**
                  * Set the buffer with column definitions.
                  * This will be used only by the empty response handler.
                  */
-                if (!csdata->res.column_defs &&
-                    csdata->instance->config.m_return == MAXROWS_RETURN_EMPTY)
+                if (!csdata->res.column_defs
+                    && csdata->instance->config.m_return == MAXROWS_RETURN_EMPTY)
                 {
                     csdata->res.column_defs = gwbuf_clone(csdata->res.data);
                 }
@@ -635,7 +634,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
                 rv = handle_rows(csdata, csdata->res.data, csdata->res.offset);
                 break;
 
-            default: // Field information.
+            default:    // Field information.
                 csdata->res.offset += packetlen;
                 ++csdata->res.n_fields;
                 mxb_assert(csdata->res.n_fields <= csdata->res.n_totalfields);
@@ -657,7 +656,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
  *
  * @param csdata The maxrows session data.
  */
-static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
+static int handle_expecting_nothing(MAXROWS_SESSION_DATA* csdata)
 {
     mxb_assert(csdata->state == MAXROWS_EXPECTING_NOTHING);
     mxb_assert(csdata->res.data);
@@ -692,7 +691,7 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
  *
  * @param csdata The maxrows session data.
  */
-static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
+static int handle_expecting_response(MAXROWS_SESSION_DATA* csdata)
 {
     mxb_assert(csdata->state == MAXROWS_EXPECTING_RESPONSE);
     mxb_assert(csdata->res.data);
@@ -706,7 +705,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
     // Reset large packet var
     csdata->large_packet = false;
 
-    if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
+    if (buflen >= MYSQL_HEADER_LEN + 1)     // We need the command byte.
     {
         // Reserve enough space to accomodate for the largest length encoded integer,
         // which is type field + 8 bytes.
@@ -720,8 +719,8 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
 
         switch ((int)MYSQL_GET_COMMAND(header))
         {
-        case 0x00: // OK
-        case 0xff: // ERR
+        case 0x00:      // OK
+        case 0xff:      // ERR
             /**
              * This also handles the OK packet that terminates
              * a Multi-Resultset seen in handle_rows()
@@ -752,7 +751,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
             }
             break;
 
-        case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+        case 0xfb:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
             if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
             {
                 MXS_NOTICE("GET_MORE_CLIENT_DATA");
@@ -815,7 +814,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
  *
  * @return The return value of the upstream component
  */
-static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra_offset)
+static int handle_rows(MAXROWS_SESSION_DATA* csdata, GWBUF* buffer, size_t extra_offset)
 {
     mxb_assert(csdata->state == MAXROWS_EXPECTING_ROWS);
     mxb_assert(csdata->res.data);
@@ -844,9 +843,9 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
              * max is 1 byte less than EOF_PACKET_LEN
              * If true skip data processing.
              */
-            if (pending_large_data &&
-                (packetlen >= MYSQL_HEADER_LEN &&
-                 packetlen < MYSQL_EOF_PACKET_LEN))
+            if (pending_large_data
+                && (packetlen >= MYSQL_HEADER_LEN
+                    && packetlen < MYSQL_EOF_PACKET_LEN))
             {
                 // Update offset, number of rows and break
                 offset += packetlen;
@@ -879,7 +878,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
 
             switch (command)
             {
-            case 0xff: // ERR packet after the rows.
+            case 0xff:      // ERR packet after the rows.
                 offset += packetlen;
 
                 // This is the end of resultset: set big packet var to false
@@ -918,7 +917,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
              *
              * NOTE: not supported right now
              */
-            case 0xfe: // EOF, the one after the rows.
+            case 0xfe:      // EOF, the one after the rows.
                 offset += packetlen;
 
                 /* EOF could be the last packet in the transmission:
@@ -982,8 +981,8 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
 
                 break;
 
-            case 0xfb: // NULL
-            default: // length-encoded-string
+            case 0xfb:  // NULL
+            default:    // length-encoded-string
                 offset += packetlen;
                 // Increase res.n_rows counter while not receiving large packets
                 if (!csdata->large_packet)
@@ -1026,7 +1025,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
  *
  * @param csdata The maxrows session data.
  */
-static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata)
+static int handle_ignoring_response(MAXROWS_SESSION_DATA* csdata)
 {
     mxb_assert(csdata->state == MAXROWS_IGNORING_RESPONSE);
     mxb_assert(csdata->res.data);
@@ -1041,7 +1040,7 @@ static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata)
  *
  * @return Whatever the upstream returns.
  */
-static int send_upstream(MAXROWS_SESSION_DATA *csdata)
+static int send_upstream(MAXROWS_SESSION_DATA* csdata)
 {
     mxb_assert(csdata->res.data != NULL);
 
@@ -1078,12 +1077,12 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
  *
  * @return          Non-Zero if successful, 0 on errors
  */
-static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
+static int send_eof_upstream(MAXROWS_SESSION_DATA* csdata)
 {
     int rv = -1;
     /* Sequence byte is #3 */
     uint8_t eof[MYSQL_EOF_PACKET_LEN] = {05, 00, 00, 01, 0xfe, 00, 00, 02, 00};
-    GWBUF *new_pkt = NULL;
+    GWBUF* new_pkt = NULL;
 
     mxb_assert(csdata->res.data != NULL);
     mxb_assert(csdata->res.column_defs != NULL);
@@ -1096,7 +1095,7 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
     size_t offset = gwbuf_length(csdata->res.column_defs);
 
     /* Data to send + added EOF */
-    uint8_t *new_result = static_cast<uint8_t*>(MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN));
+    uint8_t* new_result = static_cast<uint8_t*>(MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN));
 
     if (new_result)
     {
@@ -1151,16 +1150,16 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
  *
  * @return          Non-Zero if successful, 0 on errors
  */
-static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
+static int send_ok_upstream(MAXROWS_SESSION_DATA* csdata)
 {
     /* Note: sequence id is always 01 (4th byte) */
-    const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = { 07, 00, 00, 01, 00, 00,
-                                                         00, 02, 00, 00, 00
-                                                       };
+    const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = {07, 00, 00, 01, 00, 00,
+                                                        00, 02, 00, 00, 00
+    };
 
     mxb_assert(csdata->res.data != NULL);
 
-    GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
+    GWBUF* packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
     if (!packet)
     {
         /* Abort clienrt connection */
@@ -1170,7 +1169,7 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
         return 0;
     }
 
-    uint8_t *ptr = GWBUF_DATA(packet);
+    uint8_t* ptr = GWBUF_DATA(packet);
     memcpy(ptr, &ok, MYSQL_OK_PACKET_MIN_LEN);
 
     mxb_assert(csdata->res.data != NULL);
@@ -1195,22 +1194,22 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
  * @param   csdata    Session data
  * @return            Non-Zero if successful, 0 on errors
  */
-static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
+static int send_error_upstream(MAXROWS_SESSION_DATA* csdata)
 {
-    GWBUF *err_pkt;
+    GWBUF* err_pkt;
     uint8_t hdr_err[MYSQL_ERR_PACKET_MIN_LEN];
     unsigned long bytes_copied;
-    const char *err_msg_prefix = "Row limit/size exceeded for query: ";
+    const char* err_msg_prefix = "Row limit/size exceeded for query: ";
     int err_prefix_len = strlen(err_msg_prefix);
     unsigned long pkt_len = MYSQL_ERR_PACKET_MIN_LEN + err_prefix_len;
-    unsigned long sql_len = gwbuf_length(csdata->input_sql) -
-                            (MYSQL_HEADER_LEN + 1);
+    unsigned long sql_len = gwbuf_length(csdata->input_sql)
+        - (MYSQL_HEADER_LEN + 1);
     /**
      * The input SQL statement added in the error message
      * has a limit of MAXROWS_INPUT_SQL_MAX_LEN bytes
      */
-    sql_len = (sql_len > MAXROWS_INPUT_SQL_MAX_LEN) ?
-              MAXROWS_INPUT_SQL_MAX_LEN : sql_len;
+    sql_len = (sql_len > MAXROWS_INPUT_SQL_MAX_LEN)
+        ? MAXROWS_INPUT_SQL_MAX_LEN : sql_len;
     uint8_t sql[sql_len];
 
     mxb_assert(csdata->res.data != NULL);
@@ -1222,8 +1221,8 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
                                    sql_len,
                                    sql);
 
-    if (!bytes_copied ||
-        (err_pkt = gwbuf_alloc(MYSQL_HEADER_LEN + pkt_len)) == NULL)
+    if (!bytes_copied
+        || (err_pkt = gwbuf_alloc(MYSQL_HEADER_LEN + pkt_len)) == NULL)
     {
         /* Abort client connection */
         poll_fake_hangup_event(csdata->session->client_dcb);
@@ -1235,7 +1234,7 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
         return 0;
     }
 
-    uint8_t *ptr = GWBUF_DATA(err_pkt);
+    uint8_t* ptr = GWBUF_DATA(err_pkt);
     memcpy(ptr, &hdr_err, MYSQL_ERR_PACKET_MIN_LEN);
     unsigned int err_errno = 1415;
     char err_state[7] = "#0A000";
@@ -1249,11 +1248,11 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
     /* MySQL error code: 2 bytes */
     gw_mysql_set_byte2(&ptr[5], err_errno);
     /* Status Message 6 bytes */
-    memcpy((char *)&ptr[7], err_state, 6);
+    memcpy((char*)&ptr[7], err_state, 6);
     /* Copy error message prefix */
     memcpy(&ptr[13], err_msg_prefix, err_prefix_len);
     /* Copy SQL input */
-    memcpy(&ptr[13 +  err_prefix_len], sql, sql_len);
+    memcpy(&ptr[13 + err_prefix_len], sql, sql_len);
 
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
@@ -1277,19 +1276,22 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
  * @param   csdata    Session data
  * @return            Non-Zero if successful, 0 on errors
  */
-static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata)
+static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA* csdata)
 {
     switch (csdata->instance->config.m_return)
     {
     case MAXROWS_RETURN_EMPTY:
         return send_eof_upstream(csdata);
         break;
+
     case MAXROWS_RETURN_OK:
         return send_ok_upstream(csdata);
         break;
+
     case MAXROWS_RETURN_ERR:
         return send_error_upstream(csdata);
         break;
+
     default:
         MXS_ERROR("MaxRows config value not expected!");
         mxb_assert(!true);

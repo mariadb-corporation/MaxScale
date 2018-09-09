@@ -48,7 +48,7 @@ int main()
     {
         const char s[] = "SELECT @@global.max_allowed_packet";
 
-        GWBUF *stmt = create_gwbuf(s, sizeof(s)); // Include superfluous NULL.
+        GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
 
         // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
         // being of the opinion that the statement was not the one to be

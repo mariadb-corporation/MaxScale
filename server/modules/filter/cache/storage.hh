@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "cache_storage_api.h"
@@ -68,11 +68,11 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF** ppValue) const = 0;
+                                     GWBUF**  ppValue) const = 0;
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
-                             GWBUF** ppValue) const
+                             GWBUF**  ppValue) const
     {
         return get_value(key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
     }
@@ -174,5 +174,5 @@ protected:
     Storage();
 
     Storage(const Storage&);
-    Storage& operator = (const Storage&);
+    Storage& operator=(const Storage&);
 };

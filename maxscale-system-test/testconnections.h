@@ -28,9 +28,12 @@ typedef std::set<std::string> StringSet;
  * - Maxscale_Password - Password to access Maxscale services
  * - Maxscale_sshkey - ssh key for Maxscale machine
  * - maxscale_cnf - name of maxscale .cnf file (full)
- * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
- * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
- * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
+ * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to
+ *kill)
+ * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual
+ *machine to kill)
+ * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP
+ *address of virtual machine to kill)
  * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
  * - node_N - Number of Master/Slave setup nodes
  * - node_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
@@ -38,7 +41,8 @@ typedef std::set<std::string> StringSet;
  * - node_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
  * - node_User - User name to access Master/Slav setup
  * - node_Password - Password to access Master/Slave setup
- * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera setup
+ * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera
+ *setup
  *
  */
 class TestConnections
@@ -49,10 +53,11 @@ private:
     bool log_matches(int m, const char* pattern);
 public:
     /**
-     * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
+     * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale
+     *machine
      * @param test_exec_name Path to currect executable
      */
-    TestConnections(int argc, char *argv[]);
+    TestConnections(int argc, char* argv[]);
 
     ~TestConnections();
 
@@ -84,25 +89,26 @@ public:
     /**
      * @brief test_name Neme of the test
      */
-    char * test_name;
+    char* test_name;
 
     /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
-    Mariadb_nodes * galera;
+    Mariadb_nodes* galera;
 
     /**
      * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
      */
-    Mariadb_nodes * repl;
+    Mariadb_nodes* repl;
 
     /**
      * @brief maxscales Maxscale object containing referebces to all Maxscale machines
      */
-    Maxscales * maxscales;
+    Maxscales* maxscales;
 
     /**
-     * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
+     * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one
+     *parameter: IP address of virtual machine to kill)
      */
     char get_logs_command[4096];
 
@@ -193,8 +199,8 @@ public:
     bool no_vm_revert;
 
     /**
-    * @brief ssl_options string with ssl configuration for command line client
-    */
+     * @brief ssl_options string with ssl configuration for command line client
+     */
     char ssl_options[1024];
 
     /**
@@ -245,18 +251,18 @@ public:
     static void skip_maxscale_start(bool value);
 
     /** Test requires a certain backend version  */
-    static void require_repl_version(const char *version);
-    static void require_galera_version(const char *version);
+    static void require_repl_version(const char* version);
+    static void require_galera_version(const char* version);
 
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
      */
-    void add_result(bool result, const char *format, ...);
+    void add_result(bool result, const char* format, ...);
 
     /** Same as add_result() but inverted */
-    void assert(bool result, const char *format, ...);
+    void assert(bool result, const char* format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -280,7 +286,8 @@ public:
     void init_maxscales();
 
     /**
-     * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
+     * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as
+     *slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
     int start_binlog(int m = 0);
@@ -313,7 +320,8 @@ public:
     int copy_all_logs();
 
     /**
-     * @brief copy_all_logs_periodic Copies all MaxScale logs and (if happens) core to current workspace and sends time stemp to log copying script
+     * @brief copy_all_logs_periodic Copies all MaxScale logs and (if happens) core to current workspace and
+     *sends time stemp to log copying script
      */
     int copy_all_logs_periodic();
 
@@ -326,25 +334,37 @@ public:
 
     /**
      * @brief Test that connections to MaxScale are in the expected state
-     * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection.
-     * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.
-     * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection, false for no connection.
+     * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false
+     *for no connection.
+     * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection,
+     *false for no connection.
+     * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection,
+     *false for no connection.
      * @return  0 if connections are in the expected state
      */
-    int test_maxscale_connections(int m, bool rw_split,
+    int test_maxscale_connections(int m,
+                                  bool rw_split,
                                   bool rc_master,
                                   bool rc_slave);
 
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
      * @param conn_N number of connections
-     * @param rwsplit_flag if true connections to RWSplit router will be created, if false - no connections to RWSplit
-     * @param master_flag if true connections to ReadConn master router will be created, if false - no connections to ReadConn master
-     * @param slave_flag if true connections to ReadConn slave router will be created, if false - no connections to ReadConn slave
-     * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false - no connections to RWSplit with Galera backend
+     * @param rwsplit_flag if true connections to RWSplit router will be created, if false - no connections to
+     *RWSplit
+     * @param master_flag if true connections to ReadConn master router will be created, if false - no
+     *connections to ReadConn master
+     * @param slave_flag if true connections to ReadConn slave router will be created, if false - no
+     *connections to ReadConn slave
+     * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false
+     *- no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
+    int create_connections(int m,
+                           int conn_N,
+                           bool rwsplit_flag,
+                           bool master_flag,
+                           bool slave_flag,
                            bool galera_flag);
 
     /**
@@ -353,7 +373,7 @@ public:
      * @param ip client IP address as it visible by Maxscale
      * @return 0 in case of success
      */
-    int get_client_ip(int m, char * ip);
+    int get_client_ip(int m, char* ip);
 
     /**
      * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
@@ -378,12 +398,14 @@ public:
     /**
      * @brief printf with automatic timestamps
      */
-    void tprintf(const char *format, ...);
+    void tprintf(const char* format, ...);
 
     /**
-     * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale services
+     * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale
+     *services
      * @param Test Pointer to TestConnections object that contains references to test setup
-     * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
+     * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4
+     *last INSERT is about 700kb long
      * @return 0 in case of no error and all checks are ok
      */
     int insert_select(int m, int N);
@@ -394,7 +416,7 @@ public:
      * @param db Name of DB in 'USE' command
      * @return 0 in case of success
      */
-    int use_db(int m, char * db);
+    int use_db(int m, char* db);
 
     /**
      * @brief Checks if table t1 exists in DB
@@ -403,30 +425,31 @@ public:
      * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=false)
      */
 
-    int check_t1_table(int m, bool presence, char * db);
+    int check_t1_table(int m, bool presence, char* db);
 
     /**
      * @brief CheckLogErr Reads error log and tried to search for given string
      * @param err_msg Error message to search in the log
      * @param expected TRUE if err_msg is expedted in the log, false if err_msg should NOT be in the log
-     * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is false)
+     * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected
+     *is false)
      */
-    void check_log_err(int m, const char * err_msg, bool expected);
+    void check_log_err(int m, const char* err_msg, bool expected);
 
     /**
-    * @brief Check whether logs match a pattern
-    *
-    * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
-    * log file does not match the pattern, it is considered an error.
-    */
+     * @brief Check whether logs match a pattern
+     *
+     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+     * log file does not match the pattern, it is considered an error.
+     */
     void log_includes(int m, const char* pattern);
 
     /**
-    * @brief Check whether logs do not match a pattern
-    *
-    * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
-    * log file match the pattern, it is considered an error.
-    */
+     * @brief Check whether logs do not match a pattern
+     *
+     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+     * log file match the pattern, it is considered an error.
+     */
     void log_excludes(int m, const char* pattern);
 
     /**
@@ -435,7 +458,7 @@ public:
      * @param global_result pointer to variable which is increased in case of error
      * @return index of found slave node
      */
-    int find_connected_slave(int m, int * global_result);
+    int find_connected_slave(int m, int* global_result);
 
     /**
      * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
@@ -446,7 +469,8 @@ public:
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
-     * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to check if i is alive.
+     * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to
+     *check if i is alive.
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
@@ -458,14 +482,14 @@ public:
      * @param sql SQL string
      * @return 0 if ok
      */
-    int try_query(MYSQL *conn, const char *sql, ...) mxb_attribute((format(printf, 3, 4)));
+    int try_query(MYSQL* conn, const char* sql, ...) mxb_attribute((format(printf, 3, 4)));
 
     /**
      * @brief try_query_all Executes SQL query on all MaxScale connections
      * @param sql SQL string
      * @return 0 if ok
      */
-    int try_query_all(int m, const char *sql);
+    int try_query_all(int m, const char* sql);
 
     /**
      * @brief Get the set of labels that are assigned to server @c name
@@ -496,28 +520,28 @@ public:
      * @param snapshot_name name of created snapshot
      * @return 0 in case of success or mdbci error code in case of error
      */
-    int take_snapshot(char * snapshot_name);
+    int take_snapshot(char* snapshot_name);
 
     /**
      * @brief revert_snapshot Revert snapshot for all running VMs
      * @param snapshot_name name of snapshot to revert
      * @return 0 in case of success or mdbci error code in case of error
      */
-    int revert_snapshot(char * snapshot_name);
+    int revert_snapshot(char* snapshot_name);
 
     /**
      * @brief Test a bad configuration
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(int m, const char *config);
+    bool test_bad_config(int m, const char* config);
 
     /**
      * @brief Process a template configuration file
      *
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(int m, const char *src, const char *dest = "/etc/maxscale.cnf");
+    void process_template(int m, const char* src, const char* dest = "/etc/maxscale.cnf");
 
     /**
      * Execute a MaxCtrl command
@@ -541,12 +565,12 @@ public:
 
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
-    int stop_maxscale(int m = 0);
-    int start_maxscale(int m = 0);
-    void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+    int  stop_maxscale(int m = 0);
+    int  start_maxscale(int m = 0);
+    void process_template(const char* src, const char* dest = "/etc/maxscale.cnf");
 
 private:
-    void report_result(const char *format, va_list argp);
+    void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(int i, std::string filename);
 };
 
@@ -555,23 +579,23 @@ private:
  * @param ptr pointer to TestConnections object
  * @return void
  */
-void * timeout_thread(void *ptr );
+void* timeout_thread(void* ptr);
 
 /**
  * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
  * @param ptr pointer to TestConnections object
  * @return void
  */
-void * log_copy_thread(void *ptr );
+void* log_copy_thread(void* ptr);
 
 /**
-* Dump two server status sets as strings
-*
-* @param current  The current status
-* @param expected The expected status
-*
-* @return String form comparison of status sets
-*/
+ * Dump two server status sets as strings
+ *
+ * @param current  The current status
+ * @param expected The expected status
+ *
+ * @return String form comparison of status sets
+ */
 std::string dump_status(const StringSet& current, const StringSet& expected);
 
 #endif // TESTCONNECTIONS_H

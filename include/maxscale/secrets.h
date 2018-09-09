@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file include/maxscale/secrets.h - MaxScale config file password decryption
@@ -22,6 +22,6 @@
 
 MXS_BEGIN_DECLS
 
-char *decrypt_password(const char *);
+char* decrypt_password(const char*);
 
 MXS_END_DECLS

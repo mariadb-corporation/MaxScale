@@ -1,7 +1,8 @@
 /**
  * @file mxs564_big_dump.cpp MXS-564 regression case ("Loading database dump through readwritesplit fails")
  * - configure Maxscale to use Galera cluster
- * - start several threads which are executing session command and then sending INSERT queries agaist RWSplit router
+ * - start several threads which are executing session command and then sending INSERT queries agaist RWSplit
+ *router
  * - after a while block first slave
  * - after a while block second slave
  * - check that all INSERTs are ok
@@ -16,11 +17,11 @@
 #include <thread>
 #include <vector>
 
-static std::atomic<bool> running{true};
+static std::atomic<bool> running {true};
 
 void query_thread(TestConnections* t)
 {
-    TestConnections& test = *t; // For some reason CentOS 7 doesn't like passing references to std::thread
+    TestConnections& test = *t;     // For some reason CentOS 7 doesn't like passing references to std::thread
     std::string sql(1000000, '\0');
     create_insert_string(&sql[0], 1000, 2);
 
@@ -43,13 +44,13 @@ void query_thread(TestConnections* t)
     mysql_close(conn2);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
     int master = test.maxscales->find_master_maxadmin(test.galera);
     test.tprintf("Master: %d", master);
-    std::set<int> slaves{0, 1, 2, 3};
+    std::set<int> slaves {0, 1, 2, 3};
     slaves.erase(master);
 
     test.maxscales->connect();

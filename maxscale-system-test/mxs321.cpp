@@ -25,7 +25,8 @@ int check_connection_count(TestConnections* test, int server)
     test->set_timeout(30);
     sprintf(cmd, "show server server%d", server);
     test->add_result(test->maxscales->get_maxadmin_param(0, cmd, (char*) "Current no. of conns:", result),
-                     "maxadmin command %s failed\n", cmd);
+                     "maxadmin command %s failed\n",
+                     cmd);
     int result_d = 999;
     sscanf(result, "%d", &result_d);
     if (strlen(result) == 0)
@@ -85,13 +86,13 @@ void create_and_check_connections(TestConnections* test, int target)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(50);
 
-    Test->repl->execute_query_all_nodes((char *) "SET GLOBAL max_connections=100");
+    Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
     Test->maxscales->connect_maxscale(0);
     execute_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_connections=100");
     Test->maxscales->close_maxscale_connections(0);

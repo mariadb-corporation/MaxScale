@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <functional>
@@ -30,18 +30,18 @@ class Cache
 public:
     enum what_info_t
     {
-        INFO_RULES   = 0x01, /*< Include information about the rules. */
-        INFO_PENDING = 0x02, /*< Include information about any pending items. */
-        INFO_STORAGE = 0x04, /*< Include information about the storage. */
+        INFO_RULES   = 0x01,/*< Include information about the rules. */
+        INFO_PENDING = 0x02,/*< Include information about any pending items. */
+        INFO_STORAGE = 0x04,/*< Include information about the storage. */
         INFO_ALL     = (INFO_RULES | INFO_PENDING | INFO_STORAGE)
     };
 
-    typedef std::shared_ptr<CacheRules> SCacheRules;
+    typedef std::shared_ptr<CacheRules>     SCacheRules;
     typedef std::shared_ptr<StorageFactory> SStorageFactory;
 
     virtual ~Cache();
 
-    void show(DCB* pDcb) const;
+    void    show(DCB* pDcb) const;
     json_t* show_json() const;
 
     const CACHE_CONFIG& config() const
@@ -77,7 +77,7 @@ public:
      * @param key       The hashed key for a query.
      * @param pSession  The session cache informing.
      */
-    virtual void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession) = 0;
+    virtual void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession) = 0;
 
     /**
      * Returns a key for the statement. Takes the current config into account.
@@ -90,7 +90,7 @@ public:
      */
     cache_result_t get_key(const char* zDefault_db,
                            const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const;
+                           CACHE_KEY*   pKey) const;
 
     /**
      * Returns a key for the statement. Does not take the current config
@@ -104,7 +104,7 @@ public:
      */
     static cache_result_t get_default_key(const char* zDefault_db,
                                           const GWBUF* pQuery,
-                                          CACHE_KEY* pKey);
+                                          CACHE_KEY*   pKey);
 
     /**
      * See @Storage::get_value
@@ -113,7 +113,7 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF** ppValue) const = 0;
+                                     GWBUF**  ppValue) const = 0;
 
     /**
      * See @Storage::put_value
@@ -126,24 +126,24 @@ public:
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
 protected:
-    Cache(const std::string&              name,
-          const CACHE_CONFIG*             pConfig,
+    Cache(const std::string& name,
+          const CACHE_CONFIG* pConfig,
           const std::vector<SCacheRules>& rules,
-          SStorageFactory                 sFactory);
+          SStorageFactory sFactory);
 
-    static bool Create(const CACHE_CONFIG&       config,
+    static bool Create(const CACHE_CONFIG& config,
                        std::vector<SCacheRules>* pRules,
-                       StorageFactory**          ppFactory);
+                       StorageFactory** ppFactory);
 
     json_t* do_get_info(uint32_t what) const;
 
 private:
     Cache(const Cache&);
-    Cache& operator = (const Cache&);
+    Cache& operator=(const Cache&);
 
 protected:
-    const std::string        m_name;     // The name of the instance; the section name in the config.
-    const CACHE_CONFIG&      m_config;   // The configuration of the cache instance.
-    std::vector<SCacheRules> m_rules;    // The rules of the cache instance.
-    SStorageFactory          m_sFactory; // The storage factory.
+    const std::string        m_name;    // The name of the instance; the section name in the config.
+    const CACHE_CONFIG&      m_config;  // The configuration of the cache instance.
+    std::vector<SCacheRules> m_rules;   // The rules of the cache instance.
+    SStorageFactory          m_sFactory;// The storage factory.
 };

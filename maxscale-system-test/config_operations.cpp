@@ -1,17 +1,17 @@
 #include "config_operations.h"
 
 // The configuration should use these names for the services, listeners and monitors
-#define SERVICE_NAME1 "rwsplit-service"
-#define SERVICE_NAME2 "read-connection-router-master"
-#define SERVICE_NAME3 "read-connection-router-slave"
+#define SERVICE_NAME1  "rwsplit-service"
+#define SERVICE_NAME2  "read-connection-router-master"
+#define SERVICE_NAME3  "read-connection-router-slave"
 #define LISTENER_NAME1 "rwsplit-service-listener"
 #define LISTENER_NAME2 "read-connection-router-master-listener"
 #define LISTENER_NAME3 "read-connection-router-slave-listener"
 
 struct
 {
-    const char *service;
-    const char *listener;
+    const char* service;
+    const char* listener;
     int         port;
 } services[]
 {
@@ -20,8 +20,8 @@ struct
     {SERVICE_NAME3, LISTENER_NAME3, 4009}
 };
 
-Config::Config(TestConnections* parent):
-    test_(parent)
+Config::Config(TestConnections* parent)
+    : test_(parent)
 {
 }
 
@@ -60,7 +60,7 @@ void Config::remove_server(int num)
     test_->stop_timeout();
 }
 
-void Config::add_created_servers(const char *object)
+void Config::add_created_servers(const char* object)
 {
     for (auto a : created_servers_)
     {
@@ -79,28 +79,32 @@ void Config::destroy_server(int num)
 void Config::create_server(int num)
 {
     test_->set_timeout(120);
-    test_->maxscales->ssh_node_f(0, true, "maxadmin create server server%d %s %d",
-                                 num, test_->repl->IP[num], test_->repl->port[num]);
+    test_->maxscales->ssh_node_f(0,
+                                 true,
+                                 "maxadmin create server server%d %s %d",
+                                 num,
+                                 test_->repl->IP[num],
+                                 test_->repl->port[num]);
     created_servers_.insert(num);
     test_->stop_timeout();
 }
 
-void Config::alter_server(int num, const char *key, const char *value)
+void Config::alter_server(int num, const char* key, const char* value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter server server%d %s=%s", num, key, value);
 }
 
-void Config::alter_server(int num, const char *key, int value)
+void Config::alter_server(int num, const char* key, int value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter server server%d %s=%d", num, key, value);
 }
 
-void Config::alter_server(int num, const char *key, float value)
+void Config::alter_server(int num, const char* key, float value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter server server%d %s=%f", num, key, value);
 }
 
-void Config::create_monitor(const char *name, const char *module, int interval)
+void Config::create_monitor(const char* name, const char* module, int interval)
 {
     test_->set_timeout(120);
     test_->maxscales->ssh_node_f(0, true, "maxadmin create monitor %s %s", name, module);
@@ -113,27 +117,27 @@ void Config::create_monitor(const char *name, const char *module, int interval)
     created_monitors_.insert(std::string(name));
 }
 
-void Config::alter_monitor(const char* name, const char *key, const char *value)
+void Config::alter_monitor(const char* name, const char* key, const char* value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter monitor %s %s=%s", name, key, value);
 }
 
-void Config::alter_monitor(const char* name, const char *key, int value)
+void Config::alter_monitor(const char* name, const char* key, int value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter monitor %s %s=%d", name, key, value);
 }
 
-void Config::alter_monitor(const char* name, const char *key, float value)
+void Config::alter_monitor(const char* name, const char* key, float value)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin alter monitor %s %s=%f", name, key, value);
 }
 
-void Config::start_monitor(const char *name)
+void Config::start_monitor(const char* name)
 {
     test_->maxscales->ssh_node_f(0, true, "maxadmin restart monitor %s", name);
 }
 
-void Config::destroy_monitor(const char *name)
+void Config::destroy_monitor(const char* name)
 {
     test_->set_timeout(120);
     test_->maxscales->ssh_node_f(0, true, "maxadmin destroy monitor %s", name);
@@ -155,7 +159,9 @@ void Config::create_listener(Config::Service service)
     int i = static_cast<int>(service);
 
     test_->set_timeout(120);
-    test_->maxscales->ssh_node_f(0, true, "maxadmin create listener %s %s default %d",
+    test_->maxscales->ssh_node_f(0,
+                                 true,
+                                 "maxadmin create listener %s %s default %d",
                                  services[i].service,
                                  services[i].listener,
                                  services[i].port);
@@ -167,7 +173,9 @@ void Config::create_ssl_listener(Config::Service service)
     int i = static_cast<int>(service);
 
     test_->set_timeout(120);
-    test_->maxscales->ssh_node_f(0, true, "maxadmin create listener %s %s default %d default default default "
+    test_->maxscales->ssh_node_f(0,
+                                 true,
+                                 "maxadmin create listener %s %s default %d default default default "
                                  "/home/vagrant/certs/server-key.pem "
                                  "/home/vagrant/certs/server-cert.pem "
                                  "/home/vagrant/certs/ca.pem ",
@@ -182,8 +190,11 @@ void Config::destroy_listener(Config::Service service)
     int i = static_cast<int>(service);
 
     test_->set_timeout(120);
-    test_->maxscales->ssh_node_f(0, true, "maxadmin destroy listener %s %s",
-                                 services[i].service, services[i].listener);
+    test_->maxscales->ssh_node_f(0,
+                                 true,
+                                 "maxadmin destroy listener %s %s",
+                                 services[i].service,
+                                 services[i].listener);
     test_->stop_timeout();
 }
 
@@ -211,7 +222,8 @@ bool Config::check_server_count(int expected)
 {
     bool rval = true;
 
-    if (test_->maxscales->ssh_node_f(0, true,
+    if (test_->maxscales->ssh_node_f(0,
+                                     true,
                                      "test \"`maxadmin list servers|grep 'server[0-9]'|wc -l`\" == \"%d\"",
                                      expected))
     {

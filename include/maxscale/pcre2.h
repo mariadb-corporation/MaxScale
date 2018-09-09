@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file pcre2.h - Utility functions for regular expression matching
@@ -21,7 +21,7 @@
 
 MXS_BEGIN_DECLS
 
-#if defined(PCRE2_CODE_UNIT_WIDTH)
+#if defined (PCRE2_CODE_UNIT_WIDTH)
 #error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
 #else
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -33,8 +33,8 @@ MXS_BEGIN_DECLS
  * Print an error message explaining an error code.
  * @param errorcode value returned by pcre2 functions
  */
-#define MXS_PCRE2_PRINT_ERROR(errorcode)\
-    mxs_pcre2_print_error(errorcode, MXS_MODULE_NAME, __FILE__,__LINE__, __func__)
+#define MXS_PCRE2_PRINT_ERROR(errorcode) \
+    mxs_pcre2_print_error(errorcode, MXS_MODULE_NAME, __FILE__, __LINE__, __func__)
 
 typedef enum
 {
@@ -43,16 +43,24 @@ typedef enum
     MXS_PCRE2_ERROR
 } mxs_pcre2_result_t;
 
-mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject,
-                                        const char *replace, char** dest, size_t* size);
-mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subject,
-                                          int options, int* error);
+mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code* re,
+                                        const char* subject,
+                                        const char* replace,
+                                        char** dest,
+                                        size_t* size);
+mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern,
+                                          const char* subject,
+                                          int options,
+                                          int* error);
 /**
  * Print an error message explaining an error code. Best used through the macro
  * MXS_PCRE2_PRINT_ERROR
  */
-void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
-                           int line_num, const char* func_name);
+void mxs_pcre2_print_error(int errorcode,
+                           const char* module_name,
+                           const char* filename,
+                           int line_num,
+                           const char* func_name);
 
 /**
  * Check that @c subject is valid. A valid subject matches @c re_match yet does
@@ -72,8 +80,11 @@ void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *f
  * @return True, if subject is considered valid. False if subject is not valid or
  * an error occurred.
  */
-bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
-                                   pcre2_match_data* md, const char* subject,
-                                   int length, const char* calling_module);
+bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
+                                   pcre2_code* re_exclude,
+                                   pcre2_match_data* md,
+                                   const char* subject,
+                                   int length,
+                                   const char* calling_module);
 
 MXS_END_DECLS

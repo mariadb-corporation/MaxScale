@@ -40,7 +40,6 @@ void sleep(int s)
 
     cout << endl;
 }
-
 }
 
 namespace
@@ -151,10 +150,10 @@ void run(TestConnections& test)
 
     test.maxscales->wait_for_monitor();
 
-    expect(test, "server1", "Slave",  "Running");
+    expect(test, "server1", "Slave", "Running");
     expect(test, "server2", "Master", "Running");
-    expect(test, "server3", "Slave",  "Running");
-    expect(test, "server4", "Slave",  "Running");
+    expect(test, "server3", "Slave", "Running");
+    expect(test, "server4", "Slave", "Running");
 
     cout << "\nResetting situation." << endl;
 
@@ -165,11 +164,10 @@ void run(TestConnections& test)
     test.maxscales->wait_for_monitor();
 
     expect(test, "server1", "Master", "Running");
-    expect(test, "server2", "Slave",  "Running");
-    expect(test, "server3", "Slave",  "Running");
-    expect(test, "server4", "Slave",  "Running");
+    expect(test, "server2", "Slave", "Running");
+    expect(test, "server3", "Slave", "Running");
+    expect(test, "server4", "Slave", "Running");
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -183,4 +181,3 @@ int main(int argc, char* argv[])
 
     return test.global_result;
 }
-

@@ -17,12 +17,13 @@ void prepare()
 void get_output(TestConnections& test)
 {
     test.tprintf("Maxadmin output:");
-    char *output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
+    char* output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 
     test.tprintf("replication-manager output:");
-    output = test.maxscales->ssh_node_f(0, true,
+    output = test.maxscales->ssh_node_f(0,
+                                        true,
                                         "cat /var/log/replication-manager.log && sudo truncate -s 0 /var/log/replication-manager.log");
     test.tprintf("%s", output);
     free(output);
@@ -32,16 +33,16 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
-    const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
-    const char *query2 = "SELECT * FROM test.t1";
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    const char* query1 = "INSERT INTO test.t1 VALUES (%d)";
+    const char* query2 = "SELECT * FROM test.t1";
 
     test.try_query(conn, "BEGIN");
     test.tprintf(query1, inserts);
     test.try_query(conn, query1, inserts++);
     mysql_query(conn, query2);
 
-    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_RES* res = mysql_store_result(conn);
     test.add_result(res == NULL, "Query shoud return a result set");
 
     if (res)
@@ -49,8 +50,11 @@ void check(TestConnections& test)
         std::string values;
         MYSQL_ROW row;
         int num_rows = mysql_num_rows(res);
-        test.add_result(num_rows != inserts, "Query returned %d rows when %d rows were expected", num_rows, inserts);
-        const char *separator = "";
+        test.add_result(num_rows != inserts,
+                        "Query returned %d rows when %d rows were expected",
+                        num_rows,
+                        inserts);
+        const char* separator = "";
 
         while ((row = mysql_fetch_row(res)))
         {

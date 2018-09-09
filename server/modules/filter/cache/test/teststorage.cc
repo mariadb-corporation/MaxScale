@@ -28,11 +28,11 @@
 using namespace std;
 
 TestStorage::TestStorage(ostream* pOut,
-                         size_t threads,
-                         size_t seconds,
-                         size_t items,
-                         size_t min_size,
-                         size_t max_size)
+                         size_t   threads,
+                         size_t   seconds,
+                         size_t   items,
+                         size_t   min_size,
+                         size_t   max_size)
     : m_out(*pOut)
     , m_threads(threads)
     , m_seconds(seconds)
@@ -67,16 +67,22 @@ int TestStorage::run(int argc, char** argv)
                 {
                 default:
                     mxb_assert(!true);
+
                 case 7:
                     max_size = atoi(argv[6]);
+
                 case 6:
                     min_size = atoi(argv[5]);
+
                 case 5:
                     items = atoi(argv[4]);
+
                 case 4:
                     seconds = atoi(argv[3]);
+
                 case 3:
                     threads = atoi(argv[2]);
+
                 case 2:
                     zModule = argv[1];
                 }

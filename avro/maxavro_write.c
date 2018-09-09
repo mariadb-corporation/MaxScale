@@ -45,7 +45,7 @@ uint64_t maxavro_encode_integer(uint8_t* buffer, uint64_t val)
     return nbytes;
 }
 
-bool maxavro_write_integer(FILE *file, uint64_t val)
+bool maxavro_write_integer(FILE* file, uint64_t val)
 {
     uint8_t buffer[MAX_INTEGER_SIZE];
     uint8_t nbytes = maxavro_encode_integer(buffer, val);
@@ -68,7 +68,7 @@ uint64_t maxavro_encode_string(uint8_t* dest, const char* str)
     return slen + ilen;
 }
 
-bool maxavro_write_string(FILE *file, const char* str)
+bool maxavro_write_string(FILE* file, const char* str)
 {
     uint64_t len = strlen(str);
     return maxavro_write_integer(file, len) && fwrite(str, 1, len, file) == len;
@@ -86,7 +86,7 @@ uint64_t maxavro_encode_float(uint8_t* dest, float val)
     return sizeof(val);
 }
 
-bool maxavro_write_float(FILE *file, float val)
+bool maxavro_write_float(FILE* file, float val)
 {
     return fwrite(&val, 1, sizeof(val), file) == sizeof(val);
 }
@@ -103,7 +103,7 @@ uint64_t maxavro_encode_double(uint8_t* dest, double val)
     return sizeof(val);
 }
 
-bool maxavro_write_double(FILE *file, double val)
+bool maxavro_write_double(FILE* file, double val)
 {
     return fwrite(&val, 1, sizeof(val), file) == sizeof(val);
 }
@@ -113,7 +113,7 @@ MAXAVRO_MAP* avro_map_start()
     return (MAXAVRO_MAP*)calloc(1, sizeof(MAXAVRO_MAP));
 }
 
-uint64_t avro_map_encode(uint8_t *dest, MAXAVRO_MAP* map)
+uint64_t avro_map_encode(uint8_t* dest, MAXAVRO_MAP* map)
 {
     uint64_t len = maxavro_encode_integer(dest, map->blocks);
 

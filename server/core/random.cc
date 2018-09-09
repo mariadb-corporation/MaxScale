@@ -18,8 +18,7 @@
 namespace
 {
 
-thread_local std::mt19937 generator(std::random_device{}());
-
+thread_local std::mt19937 generator(std::random_device {} ());
 }
 
 unsigned int mxs_random(void)

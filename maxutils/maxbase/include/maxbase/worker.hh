@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 
@@ -40,22 +40,22 @@ struct WORKER_STATISTICS
 
     enum
     {
-        MAXNFDS = 10,
+        MAXNFDS       = 10,
         N_QUEUE_TIMES = 30
     };
 
-    int64_t  n_read;                      /*< Number of read events   */
-    int64_t  n_write;                     /*< Number of write events  */
-    int64_t  n_error;                     /*< Number of error events  */
-    int64_t  n_hup;                       /*< Number of hangup events */
-    int64_t  n_accept;                    /*< Number of accept events */
-    int64_t  n_polls;                     /*< Number of poll cycles   */
-    int64_t  n_pollev;                    /*< Number of polls returning events */
-    int64_t  n_nbpollev;                  /*< Number of polls returning events */
-    int64_t  n_fds[MAXNFDS];              /*< Number of wakeups with particular n_fds value */
-    int64_t  evq_avg;                     /*< Average event queue length */
-    int64_t  evq_max;                     /*< Maximum event queue length */
-    int64_t  blockingpolls;               /*< Number of epoll_waits with a timeout specified */
+    int64_t  n_read;                        /*< Number of read events   */
+    int64_t  n_write;                       /*< Number of write events  */
+    int64_t  n_error;                       /*< Number of error events  */
+    int64_t  n_hup;                         /*< Number of hangup events */
+    int64_t  n_accept;                      /*< Number of accept events */
+    int64_t  n_polls;                       /*< Number of poll cycles   */
+    int64_t  n_pollev;                      /*< Number of polls returning events */
+    int64_t  n_nbpollev;                    /*< Number of polls returning events */
+    int64_t  n_fds[MAXNFDS];                /*< Number of wakeups with particular n_fds value */
+    int64_t  evq_avg;                       /*< Average event queue length */
+    int64_t  evq_max;                       /*< Maximum event queue length */
+    int64_t  blockingpolls;                 /*< Number of epoll_waits with a timeout specified */
     uint32_t qtimes[N_QUEUE_TIMES + 1];
     uint32_t exectimes[N_QUEUE_TIMES + 1];
     int64_t  maxqtime;
@@ -76,7 +76,7 @@ struct WORKER_STATISTICS
 class WorkerLoad
 {
     WorkerLoad(const WorkerLoad&) = delete;
-    WorkerLoad& operator = (const WorkerLoad&) = delete;
+    WorkerLoad& operator=(const WorkerLoad&) = delete;
 
 public:
     enum counter_t
@@ -157,7 +157,7 @@ public:
         default:
             mxb_assert(!true);
             return 0;
-        };
+        }
     }
 
     /**
@@ -187,7 +187,7 @@ private:
     class Average
     {
         Average(const Average&) = delete;
-        Average& operator = (const Average&) = delete;
+        Average& operator=(const Average&) = delete;
 
     public:
         /**
@@ -198,7 +198,8 @@ private:
         Average(Average* pDependant = NULL)
             : m_pDependant(pDependant)
             , m_value(0)
-        {}
+        {
+        }
 
         virtual ~Average();
 
@@ -238,8 +239,8 @@ private:
         }
 
     protected:
-        Average* m_pDependant; /*< The optional dependant Average. */
-        uint32_t m_value;      /*< The current average value. */
+        Average* m_pDependant;  /*< The optional dependant Average. */
+        uint32_t m_value;       /*< The current average value. */
 
     protected:
         void set_value(uint32_t value)
@@ -314,7 +315,7 @@ private:
             }
 
             *m_i = value;
-            m_sum += *m_i; // Update the sum of all values.
+            m_sum += *m_i;      // Update the sum of all values.
 
             m_i = next(m_i);
 
@@ -409,19 +410,19 @@ private:
         }
 
     private:
-        uint8_t    m_begin[N];  /*< Buffer containing values from which the average is calculated. */
-        uint8_t*   m_end;       /*< Points to one past the end of the buffer. */
-        uint8_t*   m_i;         /*< Current position in the buffer. */
-        uint32_t   m_sum;       /*< Sum of all values in the buffer. */
-        uint32_t   m_nValues;   /*< How many values the buffer contains. */
+        uint8_t  m_begin[N];    /*< Buffer containing values from which the average is calculated. */
+        uint8_t* m_end;         /*< Points to one past the end of the buffer. */
+        uint8_t* m_i;           /*< Current position in the buffer. */
+        uint32_t m_sum;         /*< Sum of all values in the buffer. */
+        uint32_t m_nValues;     /*< How many values the buffer contains. */
     };
 
-    uint64_t      m_start_time;     /*< When was the current 1-second period started. */
-    uint64_t      m_wait_start;     /*< The time when the worker entered epoll_wait(). */
-    uint64_t      m_wait_time;      /*< How much time the worker has spent in epoll_wait(). */
-    AverageN<60>  m_load_1_hour;    /*< The average load during the last hour. */
-    AverageN<60>  m_load_1_minute;  /*< The average load during the last minute. */
-    Average1      m_load_1_second;  /*< The load during the last 1-second period. */
+    uint64_t     m_start_time;      /*< When was the current 1-second period started. */
+    uint64_t     m_wait_start;      /*< The time when the worker entered epoll_wait(). */
+    uint64_t     m_wait_time;       /*< How much time the worker has spent in epoll_wait(). */
+    AverageN<60> m_load_1_hour;     /*< The average load during the last hour. */
+    AverageN<60> m_load_1_minute;   /*< The average load during the last minute. */
+    Average1     m_load_1_second;   /*< The load during the last 1-second period. */
 };
 
 /**
@@ -434,7 +435,7 @@ private:
 class WorkerTimer : private MXB_POLL_DATA
 {
     WorkerTimer(const WorkerTimer&) = delete;
-    WorkerTimer& operator = (const WorkerTimer&) = delete;
+    WorkerTimer& operator=(const WorkerTimer&) = delete;
 
 public:
     virtual ~WorkerTimer();
@@ -474,8 +475,8 @@ private:
     static uint32_t handler(MXB_POLL_DATA* pThis, MXB_WORKER* pWorker, uint32_t events);
 
 private:
-    int     m_fd;      /**< The timerfd descriptor. */
-    Worker* m_pWorker; /**< The worker in whose context the timer runs. */
+    int     m_fd;       /**< The timerfd descriptor. */
+    Worker* m_pWorker;  /**< The worker in whose context the timer runs. */
 };
 
 /**
@@ -487,14 +488,14 @@ class Worker : public MXB_WORKER
              , private MessageQueue::Handler
 {
     Worker(const Worker&) = delete;
-    Worker& operator = (const Worker&) = delete;
+    Worker& operator=(const Worker&) = delete;
 
 public:
-    typedef WORKER_STATISTICS      STATISTICS;
-    typedef WorkerTask             Task;
-    typedef WorkerDisposableTask   DisposableTask;
-    typedef WorkerLoad             Load;
-    typedef WorkerTimer            Timer;
+    typedef WORKER_STATISTICS    STATISTICS;
+    typedef WorkerTask           Task;
+    typedef WorkerDisposableTask DisposableTask;
+    typedef WorkerLoad           Load;
+    typedef WorkerTimer          Timer;
 
     /**
      * A delegating timer that delegates the timer tick handling
@@ -504,10 +505,10 @@ public:
     class DelegatingTimer : public Timer
     {
         DelegatingTimer(const DelegatingTimer&) = delete;
-        DelegatingTimer& operator = (const DelegatingTimer&) = delete;
+        DelegatingTimer& operator=(const DelegatingTimer&) = delete;
 
     public:
-        typedef void (T::*PMethod)();
+        typedef void (T::* PMethod)();
 
         /**
          * @brief Constructor
@@ -525,7 +526,7 @@ public:
         }
 
     private:
-        void tick() /* final */
+        void tick()     /* final */
         {
             (m_pDelegatee->*m_pMethod)();
         }
@@ -546,16 +547,16 @@ public:
 
     enum execute_mode_t
     {
-        EXECUTE_AUTO,  /**< Execute tasks immediately */
-        EXECUTE_QUEUED /**< Only queue tasks for execution */
+        EXECUTE_AUTO,   /**< Execute tasks immediately */
+        EXECUTE_QUEUED  /**< Only queue tasks for execution */
     };
 
     struct Call
     {
         enum action_t
         {
-            EXECUTE, /**< Execute the call */
-            CANCEL   /**< Cancel the call */
+            EXECUTE,    /**< Execute the call */
+            CANCEL      /**< Cancel the call */
         };
     };
 
@@ -704,7 +705,7 @@ public:
      * @param mode   Execution mode
      *
      * @return True if the task could be posted to the worker (i.e. not executed yet),
-               false otherwise.
+     *          false otherwise.
      *
      * @attention  The instance must remain valid for as long as it takes for the
      *             task to be transferred to the worker and its `execute` function
@@ -823,7 +824,7 @@ public:
      *            be called again.
      */
     uint32_t delayed_call(int32_t delay,
-                          bool (*pFunction)(Worker::Call::action_t action))
+                          bool (* pFunction)(Worker::Call::action_t action))
     {
         return add_delayed_call(new DelayedCallFunctionVoid(delay, pFunction));
     }
@@ -850,7 +851,7 @@ public:
      */
     template<class D>
     uint32_t delayed_call(int32_t delay,
-                          bool (*pFunction)(Worker::Call::action_t action, D data),
+                          bool (* pFunction)(Worker::Call::action_t action, D data),
                           D data)
     {
         return add_delayed_call(new DelayedCallFunction<D>(delay, pFunction, data));
@@ -877,7 +878,7 @@ public:
      */
     template<class T>
     uint32_t delayed_call(int32_t delay,
-                          bool (T::*pMethod)(Worker::Call::action_t action),
+                          bool (T::* pMethod)(Worker::Call::action_t action),
                           T* pT)
     {
         return add_delayed_call(new DelayedCallMethodVoid<T>(delay, pMethod, pT));
@@ -905,7 +906,7 @@ public:
      */
     template<class T, class D>
     uint32_t delayed_call(int32_t delay,
-                          bool (T::*pMethod)(Worker::Call::action_t action, D data),
+                          bool (T::* pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
                           D data)
     {
@@ -926,8 +927,8 @@ public:
     bool cancel_delayed_call(uint32_t id);
 
 protected:
-    const int m_epoll_fd;             /*< The epoll file descriptor. */
-    state_t   m_state;                /*< The state of the worker */
+    const int m_epoll_fd;               /*< The epoll file descriptor. */
+    state_t   m_state;                  /*< The state of the worker */
 
     static void inc_ref(WorkerDisposableTask* pTask)
     {
@@ -993,8 +994,8 @@ private:
 
     class DelayedCall
     {
-        DelayedCall(const DelayedCall&) = delete;;
-        DelayedCall& operator = (const DelayedCall&) = delete;
+        DelayedCall(const DelayedCall&) = delete;
+        DelayedCall& operator=(const DelayedCall&) = delete;
 
     public:
         virtual ~DelayedCall()
@@ -1044,27 +1045,28 @@ private:
             mxb_assert(delay > 0);
 
             struct timespec ts;
-            MXB_AT_DEBUG(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+            MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
             mxb_assert(rv == 0);
 
             return delay + (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
         }
 
     private:
-        uint32_t m_id;    // The id of the delayed call.
-        int32_t  m_delay; // The delay in milliseconds.
-        int64_t  m_at;    // The next time the function should be invoked.
+        uint32_t m_id;      // The id of the delayed call.
+        int32_t  m_delay;   // The delay in milliseconds.
+        int64_t  m_at;      // The next time the function should be invoked.
     };
 
     template<class D>
     class DelayedCallFunction : public DelayedCall
     {
         DelayedCallFunction(const DelayedCallFunction&) = delete;
-        DelayedCallFunction& operator = (const DelayedCallFunction&) = delete;
+        DelayedCallFunction& operator=(const DelayedCallFunction&) = delete;
 
     public:
         DelayedCallFunction(int32_t delay,
-                            bool (*pFunction)(Worker::Call::action_t action, D data), D data)
+                            bool (*pFunction)(Worker::Call::action_t action, D data),
+                            D data)
             : DelayedCall(delay)
             , m_pFunction(pFunction)
             , m_data(data)
@@ -1078,15 +1080,15 @@ private:
         }
 
     private:
-        bool (*m_pFunction)(Worker::Call::action_t, D);
-        D      m_data;
+        bool (* m_pFunction)(Worker::Call::action_t, D);
+        D m_data;
     };
 
     // Explicit specialization requires namespace scope
     class DelayedCallFunctionVoid : public DelayedCall
     {
         DelayedCallFunctionVoid(const DelayedCallFunctionVoid&) = delete;
-        DelayedCallFunctionVoid& operator = (const DelayedCallFunctionVoid&) = delete;
+        DelayedCallFunctionVoid& operator=(const DelayedCallFunctionVoid&) = delete;
 
     public:
         DelayedCallFunctionVoid(int32_t delay,
@@ -1103,18 +1105,18 @@ private:
         }
 
     private:
-        bool (*m_pFunction)(Worker::Call::action_t action);
+        bool (* m_pFunction)(Worker::Call::action_t action);
     };
 
     template<class T, class D>
     class DelayedCallMethod : public DelayedCall
     {
         DelayedCallMethod(const DelayedCallMethod&) = delete;
-        DelayedCallMethod& operator = (const DelayedCallMethod&) = delete;
+        DelayedCallMethod& operator=(const DelayedCallMethod&) = delete;
 
     public:
         DelayedCallMethod(int32_t delay,
-                          bool (T::*pMethod)(Worker::Call::action_t action, D data),
+                          bool (T::* pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
                           D data)
             : DelayedCall(delay)
@@ -1131,20 +1133,20 @@ private:
         }
 
     private:
-        bool (T::*m_pMethod)(Worker::Call::action_t, D);
+        bool (T::* m_pMethod)(Worker::Call::action_t, D);
         T* m_pT;
-        D m_data;
+        D  m_data;
     };
 
     template<class T>
     class DelayedCallMethodVoid : public DelayedCall
     {
         DelayedCallMethodVoid(const DelayedCallMethodVoid&) = delete;
-        DelayedCallMethodVoid& operator = (const DelayedCallMethodVoid&) = delete;
+        DelayedCallMethodVoid& operator=(const DelayedCallMethodVoid&) = delete;
 
     public:
         DelayedCallMethodVoid(int32_t delay,
-                              bool (T::*pMethod)(Worker::Call::action_t),
+                              bool (T::* pMethod)(Worker::Call::action_t),
                               T* pT)
             : DelayedCall(delay)
             , m_pMethod(pMethod)
@@ -1159,14 +1161,14 @@ private:
         }
 
     private:
-        bool (T::*m_pMethod)(Worker::Call::action_t);
+        bool (T::* m_pMethod)(Worker::Call::action_t);
         T* m_pT;
     };
 
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);
-    void adjust_timer();
+    void     adjust_timer();
 
-    void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
+    void handle_message(MessageQueue& queue, const MessageQueue::Message& msg);     // override
 
     static void thread_main(Worker* pThis, mxb::Semaphore* pSem);
 
@@ -1178,7 +1180,7 @@ private:
     class LaterAt : public std::binary_function<const DelayedCall*, const DelayedCall*, bool>
     {
     public:
-        bool operator () (const DelayedCall* pLhs, const DelayedCall* pRhs)
+        bool operator()(const DelayedCall* pLhs, const DelayedCall* pRhs)
         {
             return pLhs->at() > pRhs->at();
         }
@@ -1186,25 +1188,24 @@ private:
 
     void run(mxb::Semaphore* pSem);
 
-    typedef DelegatingTimer<Worker>                         PrivateTimer;
-    typedef std::multimap<int64_t, DelayedCall*>            DelayedCallsByTime;
-    typedef std::unordered_map<uint32_t, DelayedCall*>      DelayedCallsById;
+    typedef DelegatingTimer<Worker>                    PrivateTimer;
+    typedef std::multimap<int64_t, DelayedCall*>       DelayedCallsByTime;
+    typedef std::unordered_map<uint32_t, DelayedCall*> DelayedCallsById;
 
-    uint32_t           m_max_events;           /*< Maximum numer of events in each epoll_wait call. */
-    STATISTICS         m_statistics;           /*< Worker statistics. */
-    MessageQueue*      m_pQueue;               /*< The message queue of the worker. */
-    std::thread        m_thread;               /*< The thread object of the worker. */
-    bool               m_started;              /*< Whether the thread has been started or not. */
-    bool               m_should_shutdown;      /*< Whether shutdown should be performed. */
-    bool               m_shutdown_initiated;   /*< Whether shutdown has been initated. */
-    uint32_t           m_nCurrent_descriptors; /*< Current number of descriptors. */
-    uint64_t           m_nTotal_descriptors;   /*< Total number of descriptors. */
-    Load               m_load;                 /*< The worker load. */
-    PrivateTimer*      m_pTimer;               /*< The worker's own timer. */
-    DelayedCallsByTime m_sorted_calls;         /*< Current delayed calls sorted by time. */
-    DelayedCallsById   m_calls;                /*< Current delayed calls indexed by id. */
+    uint32_t           m_max_events;            /*< Maximum numer of events in each epoll_wait call. */
+    STATISTICS         m_statistics;            /*< Worker statistics. */
+    MessageQueue*      m_pQueue;                /*< The message queue of the worker. */
+    std::thread        m_thread;                /*< The thread object of the worker. */
+    bool               m_started;               /*< Whether the thread has been started or not. */
+    bool               m_should_shutdown;       /*< Whether shutdown should be performed. */
+    bool               m_shutdown_initiated;    /*< Whether shutdown has been initated. */
+    uint32_t           m_nCurrent_descriptors;  /*< Current number of descriptors. */
+    uint64_t           m_nTotal_descriptors;    /*< Total number of descriptors. */
+    Load               m_load;                  /*< The worker load. */
+    PrivateTimer*      m_pTimer;                /*< The worker's own timer. */
+    DelayedCallsByTime m_sorted_calls;          /*< Current delayed calls sorted by time. */
+    DelayedCallsById   m_calls;                 /*< Current delayed calls indexed by id. */
 
-    static uint32_t    s_next_delayed_call_id; /*< The next delayed call id. */
+    static uint32_t s_next_delayed_call_id;     /*< The next delayed call id. */
 };
-
 }

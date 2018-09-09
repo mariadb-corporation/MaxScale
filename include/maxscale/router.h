@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file router.h - The query router public interface definition
@@ -94,7 +94,7 @@ typedef struct mxs_router_object
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER *(*createInstance)(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+    MXS_ROUTER*(*createInstance)(SERVICE * service, MXS_CONFIG_PARAMETER* params);
 
     /**
      * Called to create a new user session within the router
@@ -109,7 +109,7 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION *(*newSession)(MXS_ROUTER *instance, MXS_SESSION *session);
+    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session);
 
     /**
      * @brief Called when a session is closed
@@ -119,7 +119,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void     (*closeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+    void (* closeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 
     /**
      * @brief Called when a session is freed
@@ -129,7 +129,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void     (*freeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+    void (* freeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 
     /**
      * @brief Called on each query that requires routing
@@ -143,7 +143,7 @@ typedef struct mxs_router_object
      * @return If successful, the function returns 1. If an error occurs
      * and the session should be closed, the function returns 0.
      */
-    int32_t  (*routeQuery)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+    int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
 
 
     /**
@@ -152,7 +152,7 @@ typedef struct mxs_router_object
      * @param instance Router instance
      * @param dcb      DCB where the diagnostic information should be written
      */
-    void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
+    void (* diagnostics)(MXS_ROUTER* instance, DCB* dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -163,7 +163,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostics_json)(const MXS_ROUTER *instance);
+    json_t*  (*diagnostics_json)(const MXS_ROUTER * instance);
 
     /**
      * @brief Called for each reply packet
@@ -175,8 +175,10 @@ typedef struct mxs_router_object
      * @param queue          Response from the server
      * @param backend_dcb    The backend DCB which responded to the query
      */
-    void     (*clientReply)(MXS_ROUTER* instance, MXS_ROUTER_SESSION *router_session,
-                            GWBUF *queue, DCB *backend_dcb);
+    void (* clientReply)(MXS_ROUTER* instance,
+                         MXS_ROUTER_SESSION* router_session,
+                         GWBUF* queue,
+                         DCB*   backend_dcb);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -189,12 +191,12 @@ typedef struct mxs_router_object
      *
      * @param succp Pointer to a `bool` which should be set to true for success or false for error
      */
-    void     (*handleError)(MXS_ROUTER         *instance,
-                            MXS_ROUTER_SESSION *router_session,
-                            GWBUF              *errmsgbuf,
-                            DCB                *backend_dcb,
-                            mxs_error_action_t action,
-                            bool*              succp);
+    void (* handleError)(MXS_ROUTER* instance,
+                         MXS_ROUTER_SESSION* router_session,
+                         GWBUF* errmsgbuf,
+                         DCB*   backend_dcb,
+                         mxs_error_action_t action,
+                         bool* succp);
 
     /**
      * @brief Called to obtain the capabilities of the router
@@ -203,14 +205,14 @@ typedef struct mxs_router_object
      *
      * @see routing.h
      */
-    uint64_t (*getCapabilities)(MXS_ROUTER *instance);
+    uint64_t (* getCapabilities)(MXS_ROUTER* instance);
 
     /**
      * @brief Called for destroying a router instance
      *
      * @param instance Router instance
      */
-    void     (*destroyInstance)(MXS_ROUTER *instance);
+    void (* destroyInstance)(MXS_ROUTER* instance);
 
     /**
      * @brief Configure router instance at runtime
@@ -231,8 +233,7 @@ typedef struct mxs_router_object
      *         failed. If reconfiguration failed, the state of the router
      *         instance should not be modified.
      */
-    bool (*configureInstance)(MXS_ROUTER *instance, MXS_CONFIG_PARAMETER* params);
-
+    bool (* configureInstance)(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
 } MXS_ROUTER_OBJECT;
 
 /**
@@ -240,7 +241,7 @@ typedef struct mxs_router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define MXS_ROUTER_VERSION  { 4, 0, 0 }
+#define MXS_ROUTER_VERSION {4, 0, 0}
 
 /**
  * Specifies capabilities specific for routers. Common capabilities
@@ -253,11 +254,11 @@ typedef struct mxs_router_object
  */
 typedef enum router_capability
 {
-    RCAP_TYPE_NO_RSESSION    = 0x00010000, /**< Router does not use router sessions */
-    RCAP_TYPE_NO_USERS_INIT  = 0x00020000, /**< Prevent the loading of authenticator
-                                             users when the service is started */
-    RCAP_TYPE_NO_AUTH        = 0x00040000, /**< No `user` or `password` parameter required */
-    RCAP_TYPE_RUNTIME_CONFIG = 0x00080000, /**< Router supports runtime cofiguration */
+    RCAP_TYPE_NO_RSESSION    = 0x00010000,  /**< Router does not use router sessions */
+    RCAP_TYPE_NO_USERS_INIT  = 0x00020000,  /**< Prevent the loading of authenticator
+                                             *  users when the service is started */
+    RCAP_TYPE_NO_AUTH        = 0x00040000,  /**< No `user` or `password` parameter required */
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00080000,  /**< Router supports runtime cofiguration */
 } mxs_router_capability_t;
 
 typedef enum

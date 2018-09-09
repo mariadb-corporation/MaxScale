@@ -45,5 +45,4 @@ public:
 private:
     int m_so = -1;
 };
-
 }

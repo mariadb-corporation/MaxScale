@@ -26,7 +26,7 @@
 
 #include <maxscale/protocol/mysql.h>
 
-static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes);
+static uint64_t unpack_bytes(uint8_t* ptr, size_t bytes);
 
 /**
  * @brief Convert a table column type to a string
@@ -41,64 +41,94 @@ const char* column_type_to_string(uint8_t type)
     {
     case TABLE_COL_TYPE_DECIMAL:
         return "DECIMAL";
+
     case TABLE_COL_TYPE_TINY:
         return "TINY";
+
     case TABLE_COL_TYPE_SHORT:
         return "SHORT";
+
     case TABLE_COL_TYPE_LONG:
         return "LONG";
+
     case TABLE_COL_TYPE_FLOAT:
         return "FLOAT";
+
     case TABLE_COL_TYPE_DOUBLE:
         return "DOUBLE";
+
     case TABLE_COL_TYPE_NULL:
         return "NULL";
+
     case TABLE_COL_TYPE_TIMESTAMP:
         return "TIMESTAMP";
+
     case TABLE_COL_TYPE_LONGLONG:
         return "LONGLONG";
+
     case TABLE_COL_TYPE_INT24:
         return "INT24";
+
     case TABLE_COL_TYPE_DATE:
         return "DATE";
+
     case TABLE_COL_TYPE_TIME:
         return "TIME";
+
     case TABLE_COL_TYPE_DATETIME:
         return "DATETIME";
+
     case TABLE_COL_TYPE_YEAR:
         return "YEAR";
+
     case TABLE_COL_TYPE_NEWDATE:
         return "NEWDATE";
+
     case TABLE_COL_TYPE_VARCHAR:
         return "VARCHAR";
+
     case TABLE_COL_TYPE_BIT:
         return "BIT";
+
     case TABLE_COL_TYPE_TIMESTAMP2:
         return "TIMESTAMP2";
+
     case TABLE_COL_TYPE_DATETIME2:
         return "DATETIME2";
+
     case TABLE_COL_TYPE_TIME2:
         return "TIME2";
+
     case TABLE_COL_TYPE_NEWDECIMAL:
         return "NEWDECIMAL";
+
     case TABLE_COL_TYPE_ENUM:
         return "ENUM";
+
     case TABLE_COL_TYPE_SET:
         return "SET";
+
     case TABLE_COL_TYPE_TINY_BLOB:
         return "TINY_BLOB";
+
     case TABLE_COL_TYPE_MEDIUM_BLOB:
         return "MEDIUM_BLOB";
+
     case TABLE_COL_TYPE_LONG_BLOB:
         return "LONG_BLOB";
+
     case TABLE_COL_TYPE_BLOB:
         return "BLOB";
+
     case TABLE_COL_TYPE_VAR_STRING:
         return "VAR_STRING";
+
     case TABLE_COL_TYPE_STRING:
         return "STRING";
+
     case TABLE_COL_TYPE_GEOMETRY:
         return "GEOMETRY";
+
     default:
         mxb_assert(false);
         break;
@@ -137,6 +167,7 @@ bool column_is_variable_string(uint8_t type)
     case TABLE_COL_TYPE_VAR_STRING:
     case TABLE_COL_TYPE_GEOMETRY:
         return true;
+
     default:
         return false;
     }
@@ -213,7 +244,7 @@ bool fixed_string_is_enum(uint8_t type)
  * @param val Stored value
  * @param dest Destination where unpacked value is stored
  */
-static void unpack_year(uint8_t *ptr, struct tm *dest)
+static void unpack_year(uint8_t* ptr, struct tm* dest)
 {
     memset(dest, 0, sizeof(*dest));
     dest->tm_year = *ptr;
@@ -239,13 +270,13 @@ int64_t log_10_values[] =
  */
 size_t datetime_sizes[] =
 {
-    5, // DATETIME(0)
-    6, // DATETIME(1)
-    6, // DATETIME(2)
-    7, // DATETIME(3)
-    7, // DATETIME(4)
-    7, // DATETIME(5)
-    8  // DATETIME(6)
+    5,  // DATETIME(0)
+    6,  // DATETIME(1)
+    6,  // DATETIME(2)
+    7,  // DATETIME(3)
+    7,  // DATETIME(4)
+    7,  // DATETIME(5)
+    8   // DATETIME(6)
 };
 
 /**
@@ -256,7 +287,7 @@ size_t datetime_sizes[] =
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_datetime(uint8_t *ptr, int length, struct tm *dest)
+static void unpack_datetime(uint8_t* ptr, int length, struct tm* dest)
 {
     uint64_t val = 0;
     uint32_t second, minute, hour, day, month, year;
@@ -308,7 +339,7 @@ static inline uint64_t unpack5(uint8_t* data)
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_datetime2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
+static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
 {
     int64_t unpacked = unpack5(ptr) - DATETIME2_OFFSET;
     if (unpacked < 0)
@@ -341,7 +372,7 @@ static void unpack_datetime2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
  * @param val The stored value
  * @param dest Destination where the result is stored
  */
-static void unpack_timestamp(uint8_t *ptr, uint8_t decimals, struct tm *dest)
+static void unpack_timestamp(uint8_t* ptr, uint8_t decimals, struct tm* dest)
 {
     time_t t = unpack4(ptr);
     localtime_r(&t, dest);
@@ -357,7 +388,7 @@ static void unpack_timestamp(uint8_t *ptr, uint8_t decimals, struct tm *dest)
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_time(uint8_t *ptr, struct tm *dest)
+static void unpack_time(uint8_t* ptr, struct tm* dest)
 {
     uint64_t val = unpack3(ptr);
     uint32_t second = val - ((val / 100) * 100);
@@ -389,7 +420,7 @@ static void unpack_time(uint8_t *ptr, struct tm *dest)
  * @param val  Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_time2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
+static void unpack_time2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
 {
     uint64_t val = unpack3(ptr) - DATETIME2_OFFSET;
     memset(dest, 0, sizeof(struct tm));
@@ -403,7 +434,7 @@ static void unpack_time2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
  * @param ptr Pointer to packed value
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_date(uint8_t *ptr, struct tm *dest)
+static void unpack_date(uint8_t* ptr, struct tm* dest)
 {
     uint64_t val = ptr[0] + (ptr[1] << 8) + (ptr[2] << 16);
     memset(dest, 0, sizeof(struct tm));
@@ -418,7 +449,7 @@ static void unpack_date(uint8_t *ptr, struct tm *dest)
  * @param metadata Pointer to field metadata
  * @return Length of the processed field in bytes
  */
-size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest)
+size_t unpack_enum(uint8_t* ptr, uint8_t* metadata, uint8_t* dest)
 {
     memcpy(dest, ptr, metadata[1]);
     return metadata[1];
@@ -441,8 +472,12 @@ size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest)
  * @param dest Destination where the value is stored
  * @return Length of the processed field in bytes
  */
-size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
-                  uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest)
+size_t unpack_bit(uint8_t* ptr,
+                  uint8_t* null_mask,
+                  uint32_t col_count,
+                  uint32_t curr_col_index,
+                  uint8_t* metadata,
+                  uint64_t* dest)
 {
     if (metadata[1])
     {
@@ -500,7 +535,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t* decimals, int length)
  * @param val Extracted packed value
  * @param tm Pointer where the unpacked temporal value is stored
  */
-size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int length, struct tm *tm)
+size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata, int length, struct tm* tm)
 {
     switch (type)
     {
@@ -540,9 +575,9 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int 
     return temporal_field_size(type, metadata, length);
 }
 
-void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
+void format_temporal_value(char* str, size_t size, uint8_t type, struct tm* tm)
 {
-    const char *format = "";
+    const char* format = "";
 
     switch (type)
     {
@@ -587,7 +622,7 @@ void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
  * @return Number of bytes copied
  * @see extract_temporal_value
  */
-size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8_t *dest)
+size_t unpack_numeric_field(uint8_t* src, uint8_t type, uint8_t* metadata, uint8_t* dest)
 {
     size_t size = 0;
     switch (type)
@@ -624,7 +659,7 @@ size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8
     return size;
 }
 
-static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
+static uint64_t unpack_bytes(uint8_t* ptr, size_t bytes)
 {
     uint64_t val = 0;
 
@@ -633,38 +668,45 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
     case 1:
         val = ptr[0];
         break;
+
     case 2:
         val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
         break;
+
     case 3:
-        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) |
-              ((uint64_t)ptr[0] << 16);
+        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8)
+            | ((uint64_t)ptr[0] << 16);
         break;
+
     case 4:
-        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) |
-              ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8)
+            | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
         break;
+
     case 5:
-        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) |
-              ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) |
-              ((uint64_t)ptr[0] << 32);
+        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8)
+            | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24)
+            | ((uint64_t)ptr[0] << 32);
         break;
+
     case 6:
-        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) |
-              ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) |
-              ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8)
+            | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24)
+            | ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
         break;
+
     case 7:
-        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) |
-              ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) |
-              ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) |
-              ((uint64_t)ptr[0] << 48);
+        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8)
+            | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24)
+            | ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40)
+            | ((uint64_t)ptr[0] << 48);
         break;
+
     case 8:
-        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) |
-              ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) |
-              ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) |
-              ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8)
+            | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24)
+            | ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40)
+            | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
         break;
 
     default:
@@ -675,7 +717,7 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
     return val;
 }
 
-size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
+size_t unpack_decimal_field(uint8_t* ptr, uint8_t* metadata, double* val_float)
 {
     const int dec_dig = 9;
     int precision = metadata[0];

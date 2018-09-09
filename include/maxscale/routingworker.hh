@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -34,7 +34,7 @@ class RoutingWorker : public mxb::Worker
                     , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
-    RoutingWorker& operator = (const RoutingWorker&) = delete;
+    RoutingWorker& operator=(const RoutingWorker&) = delete;
 
 public:
     enum
@@ -45,8 +45,8 @@ public:
     typedef Registry<MXS_SESSION> SessionsById;
     typedef std::vector<DCB*>     Zombies;
 
-    typedef std::unordered_map<uint64_t, void*>          LocalData;
-    typedef std::unordered_map<uint64_t, void(*)(void*)> DataDeleters;
+    typedef std::unordered_map<uint64_t, void*>           LocalData;
+    typedef std::unordered_map<uint64_t, void (*)(void*)> DataDeleters;
 
     /**
      * Initialize the routing worker mechanism.
@@ -345,7 +345,7 @@ public:
      * @param key  Key acquired with create_local_data
      * @param data Data to store
      */
-    void set_data(uint64_t key, void* data, void (*callback)(void*))
+    void set_data(uint64_t key, void* data, void (* callback)(void*))
     {
         if (callback)
         {
@@ -426,33 +426,33 @@ public:
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
 private:
-    const int    m_id;       /*< The id of the worker. */
-    SessionsById m_sessions; /*< A mapping of session_id->MXS_SESSION. The map
-                              *  should contain sessions exclusive to this
-                              *  worker and not e.g. listener sessions. For now,
-                              *  it's up to the protocol to decide whether a new
-                              *  session is added to the map. */
-    Zombies      m_zombies;  /*< DCBs to be deleted. */
-    LocalData    m_local_data; /*< Data local to this worker */
-    DataDeleters m_data_deleters; /*< Delete functions for the local data */
+    const int    m_id;              /*< The id of the worker. */
+    SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
+                                     *  should contain sessions exclusive to this
+                                     *  worker and not e.g. listener sessions. For now,
+                                     *  it's up to the protocol to decide whether a new
+                                     *  session is added to the map. */
+    Zombies      m_zombies;         /*< DCBs to be deleted. */
+    LocalData    m_local_data;      /*< Data local to this worker */
+    DataDeleters m_data_deleters;   /*< Delete functions for the local data */
 
     RoutingWorker();
     virtual ~RoutingWorker();
 
     static RoutingWorker* create(int epoll_listener_fd);
 
-    bool pre_run();    // override
-    void post_run();   // override
-    void epoll_tick(); // override
+    bool pre_run();     // override
+    void post_run();    // override
+    void epoll_tick();  // override
 
     void delete_zombies();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-    uint32_t handle_epoll_events(uint32_t events);
+    uint32_t        handle_epoll_events(uint32_t events);
 };
 
 // Data local to a routing worker
-template <class T>
+template<class T>
 class rworker_local
 {
 public:
@@ -461,15 +461,15 @@ public:
     rworker_local& operator=(const rworker_local&) = delete;
 
     // Default initialized
-    rworker_local():
-        m_handle(mxs_rworker_create_key())
+    rworker_local()
+        : m_handle(mxs_rworker_create_key())
     {
     }
 
     // Copy-constructed
-    rworker_local(const T& t):
-        m_handle(mxs_rworker_create_key()),
-        m_value(t)
+    rworker_local(const T& t)
+        : m_handle(mxs_rworker_create_key())
+        , m_value(t)
     {
     }
 
@@ -510,9 +510,9 @@ public:
 
 private:
 
-    uint64_t                            m_handle; // The handle to the worker local data
-    typename std::remove_const<T>::type m_value;  // The master value, never used directly
-    mutable std::mutex                  m_lock;   // Protects the master value
+    uint64_t                            m_handle;   // The handle to the worker local data
+    typename std::remove_const<T>::type m_value;    // The master value, never used directly
+    mutable std::mutex                  m_lock;     // Protects the master value
 
 private:
 
@@ -554,7 +554,6 @@ private:
         delete static_cast<T*>(data);
     }
 };
-
 }
 
 /**

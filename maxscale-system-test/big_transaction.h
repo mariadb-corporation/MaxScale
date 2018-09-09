@@ -12,6 +12,6 @@
  * @param N Number of INSERTs
  * @return 0 if success
  */
-int big_transaction(MYSQL * conn, int N);
+int big_transaction(MYSQL* conn, int N);
 
 #endif // BIG_TRANSACTION_H

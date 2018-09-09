@@ -1,9 +1,9 @@
 /**
-* MXS-1760: Adding use_sql_variables_in=master resulted in error "Client requests unknown
-* prepared statement ID '0' that does not map to an internal ID"
-*
-* https://jira.mariadb.org/browse/MXS-1760
-*/
+ * MXS-1760: Adding use_sql_variables_in=master resulted in error "Client requests unknown
+ * prepared statement ID '0' that does not map to an internal ID"
+ *
+ * https://jira.mariadb.org/browse/MXS-1760
+ */
 
 #include "testconnections.h"
 #include <vector>
@@ -31,11 +31,12 @@ int main(int argc, char** argv)
         stmts.push_back(mysql_stmt_init(test.maxscales->conn_rwsplit[0]));
         MYSQL_STMT* stmt = stmts.back();
         const char* query = "SELECT @a";
-        test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Failed to prepare: %s",
+        test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)),
+                        "Failed to prepare: %s",
                         mysql_stmt_error(stmt));
     }
 
-    for (auto stmt: stmts)
+    for (auto stmt : stmts)
     {
         char buffer[100] = "";
         my_bool err = false;
@@ -50,11 +51,12 @@ int main(int argc, char** argv)
         // Execute a write, should return the master's server ID
 
         test.add_result(mysql_stmt_execute(stmt), "Failed to execute: %s", mysql_stmt_error(stmt));
-        test.add_result(mysql_stmt_bind_result(stmt, bind), "Failed to bind result: %s", mysql_stmt_error(stmt));
+        test.add_result(mysql_stmt_bind_result(stmt, bind),
+                        "Failed to bind result: %s",
+                        mysql_stmt_error(stmt));
 
         while (mysql_stmt_fetch(stmt) == 0)
         {
-            ;
         }
 
         test.add_result(strcmp(buffer, "123"), "Value is '%s', not '123'", buffer);

@@ -24,10 +24,10 @@ namespace
 
 using namespace maxscale;
 
-const char CN_UNKNOWN[]   = "Unknown";
+const char CN_UNKNOWN[] = "Unknown";
 
-const char CN_FACILITY[]  = "facility";
-const char CN_LEVEL[]     = "level";
+const char CN_FACILITY[] = "facility";
+const char CN_LEVEL[] = "level";
 
 const char CN_AUTHENTICATION_FAILURE[] = "authentication_failure";
 
@@ -209,7 +209,7 @@ int event_compare(const void* pLeft, const void* pRight)
 
 struct
 {
-    EVENT* events;
+    EVENT*                events;
     const NAME_AND_VALUE* levels;
     const NAME_AND_VALUE* facilities;
 } this_unit =
@@ -254,7 +254,6 @@ event::result_t configure_level(event::id_t id, const char* zValue)
 
     return rv;
 }
-
 }
 
 namespace maxscale
@@ -265,8 +264,9 @@ const char* log_level_to_string(int32_t level)
     auto begin = this_unit.levels;
     auto end = begin + N_LEVELS;
 
-    auto i = find_if(begin, end, [level](const NAME_AND_VALUE& item) -> bool
-                     {
+    auto i = find_if(begin,
+                     end,
+                     [level](const NAME_AND_VALUE& item) -> bool {
                          return item.value == level;
                      });
 
@@ -275,8 +275,11 @@ const char* log_level_to_string(int32_t level)
 
 bool log_level_from_string(int32_t* pLevel, const char* zValue)
 {
-    NAME_AND_VALUE key = { zValue };
-    void* pResult = bsearch(&key, this_unit.levels, N_LEVELS, sizeof(NAME_AND_VALUE),
+    NAME_AND_VALUE key = {zValue};
+    void* pResult = bsearch(&key,
+                            this_unit.levels,
+                            N_LEVELS,
+                            sizeof(NAME_AND_VALUE),
                             name_and_value_compare);
 
     if (pResult)
@@ -294,8 +297,9 @@ const char* log_facility_to_string(int32_t facility)
     auto begin = this_unit.facilities;
     auto end = begin + N_FACILITIES;
 
-    auto i = find_if(begin, end, [facility](const NAME_AND_VALUE& item) -> bool
-                     {
+    auto i = find_if(begin,
+                     end,
+                     [facility](const NAME_AND_VALUE& item) -> bool {
                          return item.value == facility;
                      });
 
@@ -304,8 +308,11 @@ const char* log_facility_to_string(int32_t facility)
 
 bool log_facility_from_string(int32_t* pFacility, const char* zValue)
 {
-    NAME_AND_VALUE key = { zValue };
-    void* pResult = bsearch(&key, this_unit.facilities, N_FACILITIES, sizeof(NAME_AND_VALUE),
+    NAME_AND_VALUE key = {zValue};
+    void* pResult = bsearch(&key,
+                            this_unit.facilities,
+                            N_FACILITIES,
+                            sizeof(NAME_AND_VALUE),
                             name_and_value_compare);
 
     if (pResult)
@@ -327,8 +334,9 @@ const char* to_string(id_t id)
     auto begin = this_unit.events;
     auto end = begin + N_EVENTS;
 
-    auto i = find_if(begin, end, [id](const EVENT& item) -> bool
-                     {
+    auto i = find_if(begin,
+                     end,
+                     [id](const EVENT& item) -> bool {
                          return item.id == id;
                      });
 
@@ -337,8 +345,11 @@ const char* to_string(id_t id)
 
 bool from_string(id_t* pId, const char* zValue)
 {
-    EVENT key = { zValue };
-    void* pResult = bsearch(&key, this_unit.events, N_EVENTS, sizeof(EVENT),
+    EVENT key = {zValue};
+    void* pResult = bsearch(&key,
+                            this_unit.events,
+                            N_EVENTS,
+                            sizeof(EVENT),
                             event_compare);
 
     if (pResult)
@@ -402,7 +413,7 @@ result_t configure(const char* zName, const char* zValue)
     {
         rv = INVALID;
 
-        string name(zName + sizeof(EVENT_PREFIX) - 1); // Character following '.'
+        string name(zName + sizeof(EVENT_PREFIX) - 1);      // Character following '.'
 
         auto i = name.find_first_of('.');
 
@@ -445,8 +456,11 @@ result_t configure(const char* zName, const char* zValue)
 
 void log(id_t event_id,
          const char* modname,
-         const char* file, int line, const char* function,
-         const char* format, ...)
+         const char* file,
+         int line,
+         const char* function,
+         const char* format,
+         ...)
 {
     va_list valist;
 
@@ -473,7 +487,5 @@ void log(id_t event_id,
 
     mxs_log_message(priority, modname, file, line, function, "%s", message);
 }
-
-} // event
-
-} // maxscale
+}   // event
+}   // maxscale

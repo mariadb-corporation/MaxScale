@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/buffer.h>
@@ -22,29 +22,29 @@
 class CacheFilterSession : public maxscale::FilterSession
 {
     CacheFilterSession(const CacheFilterSession&);
-    CacheFilterSession& operator = (const CacheFilterSession&);
+    CacheFilterSession& operator=(const CacheFilterSession&);
 
 public:
     enum cache_session_state_t
     {
-        CACHE_EXPECTING_RESPONSE,     // A select has been sent, and we are waiting for the response.
-        CACHE_EXPECTING_FIELDS,       // A select has been sent, and we want more fields.
-        CACHE_EXPECTING_ROWS,         // A select has been sent, and we want more rows.
-        CACHE_EXPECTING_NOTHING,      // We are not expecting anything from the server.
-        CACHE_EXPECTING_USE_RESPONSE, // A "USE DB" was issued.
-        CACHE_IGNORING_RESPONSE,      // We are not interested in the data received from the server.
+        CACHE_EXPECTING_RESPONSE,       // A select has been sent, and we are waiting for the response.
+        CACHE_EXPECTING_FIELDS,         // A select has been sent, and we want more fields.
+        CACHE_EXPECTING_ROWS,           // A select has been sent, and we want more rows.
+        CACHE_EXPECTING_NOTHING,        // We are not expecting anything from the server.
+        CACHE_EXPECTING_USE_RESPONSE,   // A "USE DB" was issued.
+        CACHE_IGNORING_RESPONSE,        // We are not interested in the data received from the server.
     };
 
     struct CACHE_RESPONSE_STATE
     {
-        GWBUF* pData;        /**< Response data, possibly incomplete. */
-        size_t offset;       /**< Where we are in the response buffer. */
-        size_t length;       /**< Length of pData. */
-        GWBUF* pData_last;   /**< Last data received. */
-        size_t offset_last;  /**< Offset of last data. */
-        size_t nTotalFields; /**< The number of fields a resultset contains. */
-        size_t nFields;      /**< How many fields we have received, <= n_totalfields. */
-        size_t nRows;        /**< How many rows we have received. */
+        GWBUF* pData;       /**< Response data, possibly incomplete. */
+        size_t offset;      /**< Where we are in the response buffer. */
+        size_t length;      /**< Length of pData. */
+        GWBUF* pData_last;  /**< Last data received. */
+        size_t offset_last; /**< Offset of last data. */
+        size_t nTotalFields;/**< The number of fields a resultset contains. */
+        size_t nFields;     /**< How many fields we have received, <= n_totalfields. */
+        size_t nRows;       /**< How many rows we have received. */
     };
 
     /**
@@ -88,7 +88,7 @@ public:
     /**
      * Print diagnostics of the session cache.
      */
-    void diagnostics(DCB *dcb);
+    void diagnostics(DCB* dcb);
 
     /**
      * Print diagnostics of the session cache.
@@ -136,8 +136,8 @@ private:
 
     enum routing_action_t
     {
-        ROUTING_ABORT,    /**< Abort normal routing activity, data is coming from cache. */
-        ROUTING_CONTINUE, /**< Continue normal routing activity. */
+        ROUTING_ABORT,      /**< Abort normal routing activity, data is coming from cache. */
+        ROUTING_CONTINUE,   /**< Continue normal routing activity. */
     };
 
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
@@ -181,17 +181,16 @@ private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
 private:
-    cache_session_state_t m_state;       /**< What state is the session in, what data is expected. */
-    Cache*                m_pCache;      /**< The cache instance the session is associated with. */
-    CACHE_RESPONSE_STATE  m_res;         /**< The response state. */
-    CACHE_KEY             m_key;         /**< Key storage. */
-    char*                 m_zDefaultDb;  /**< The default database. */
-    char*                 m_zUseDb;      /**< Pending default database. Needs server response. */
-    bool                  m_refreshing;  /**< Whether the session is updating a stale cache entry. */
-    bool                  m_is_read_only;/**< Whether the current trx has been read-only in pratice. */
-    bool                  m_use;         /**< Whether the cache should be used in this session. */
-    bool                  m_populate;    /**< Whether the cache should be populated in this session. */
-    uint32_t              m_soft_ttl;    /**< The soft TTL used in the session. */
-    uint32_t              m_hard_ttl;    /**< The hard TTL used in the session. */
+    cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
+    Cache*                m_pCache;         /**< The cache instance the session is associated with. */
+    CACHE_RESPONSE_STATE  m_res;            /**< The response state. */
+    CACHE_KEY             m_key;            /**< Key storage. */
+    char*                 m_zDefaultDb;     /**< The default database. */
+    char*                 m_zUseDb;         /**< Pending default database. Needs server response. */
+    bool                  m_refreshing;     /**< Whether the session is updating a stale cache entry. */
+    bool                  m_is_read_only;   /**< Whether the current trx has been read-only in pratice. */
+    bool                  m_use;            /**< Whether the cache should be used in this session. */
+    bool                  m_populate;       /**< Whether the cache should be populated in this session. */
+    uint32_t              m_soft_ttl;       /**< The soft TTL used in the session. */
+    uint32_t              m_hard_ttl;       /**< The hard TTL used in the session. */
 };
-

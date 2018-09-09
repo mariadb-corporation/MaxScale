@@ -37,9 +37,9 @@
  */
 static inline bool not_generated_field(const char* name)
 {
-    return strcmp(name, avro_domain) && strcmp(name, avro_server_id) &&
-           strcmp(name, avro_sequence) && strcmp(name, avro_event_number) &&
-           strcmp(name, avro_event_type) && strcmp(name, avro_timestamp);
+    return strcmp(name, avro_domain) && strcmp(name, avro_server_id)
+           && strcmp(name, avro_sequence) && strcmp(name, avro_event_number)
+           && strcmp(name, avro_event_type) && strcmp(name, avro_timestamp);
 }
 
 /**
@@ -58,7 +58,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     bool rval = false;
     json_error_t err;
     err.text[0] = '\0';
-    json_t *obj, *arr;
+    json_t* obj, * arr;
 
     if ((obj = json_load_file(filename, 0, &err)) && (arr = json_object_get(obj, "fields")))
     {
@@ -74,11 +74,11 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                 if (json_is_object(val))
                 {
 
-                    json_t *name = json_object_get(val, "name");
+                    json_t* name = json_object_get(val, "name");
 
                     if (name && json_is_string(name))
                     {
-                        const char *name_str = json_string_value(name);
+                        const char* name_str = json_string_value(name);
 
                         if (not_generated_field(name_str))
                         {
@@ -108,14 +108,16 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                     else
                     {
                         MXS_ERROR("JSON value for \"name\" was not a string in "
-                                  "file '%s'.", filename);
+                                  "file '%s'.",
+                                  filename);
                         rval = false;
                     }
                 }
                 else
                 {
                     MXS_ERROR("JSON value for \"fields\" was not an array of objects in "
-                              "file '%s'.", filename);
+                              "file '%s'.",
+                              filename);
                     rval = false;
                 }
             }
@@ -128,22 +130,25 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     }
     else
     {
-        MXS_ERROR("Failed to load JSON from file '%s': %s", filename,
+        MXS_ERROR("Failed to load JSON from file '%s': %s",
+                  filename,
                   obj && !arr ? "No 'fields' value in object." : err.text);
     }
 
     return rval;
 }
 
-TableCreateEvent* table_create_from_schema(const char* file, const char* db,
-                                           const char* table, int version)
+TableCreateEvent* table_create_from_schema(const char* file,
+                                           const char* db,
+                                           const char* table,
+                                           int version)
 {
     TableCreateEvent* newtable = NULL;
     std::vector<Column> columns;
 
     if (json_extract_field_names(file, columns))
     {
-        newtable = new (std::nothrow)TableCreateEvent(db, table, version, std::move(columns));
+        newtable = new( std::nothrow) TableCreateEvent(db, table, version, std::move(columns));
     }
 
     return newtable;

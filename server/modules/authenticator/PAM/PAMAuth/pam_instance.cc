@@ -21,7 +21,7 @@
 #include <maxscale/mysql_utils.h>
 
 #define DEFAULT_PAM_DATABASE_NAME "file:pam.db?mode=memory&cache=shared"
-#define DEFAULT_PAM_TABLE_NAME "pam_users"
+#define DEFAULT_PAM_TABLE_NAME    "pam_users"
 using std::string;
 
 /**
@@ -30,17 +30,17 @@ using std::string;
  * @param options Listener options
  * @return New client authenticator instance or NULL on error
  */
-PamInstance* PamInstance::create(char **options)
+PamInstance* PamInstance::create(char** options)
 {
     /** Name of the in-memory database */
     const string pam_db_name = DEFAULT_PAM_DATABASE_NAME;
     /** The table name where we store the users */
     const string pam_table_name = DEFAULT_PAM_TABLE_NAME;
     /** CREATE TABLE statement for the in-memory table */
-    const string create_sql = string("CREATE TABLE IF NOT EXISTS ") + pam_table_name +
-                              " (" + FIELD_USER + " varchar(255), " + FIELD_HOST + " varchar(255), " +
-                              FIELD_DB + " varchar(255), " + FIELD_ANYDB + " boolean, " +
-                              FIELD_AUTHSTR + " text);";
+    const string create_sql = string("CREATE TABLE IF NOT EXISTS ") + pam_table_name
+        + " (" + FIELD_USER + " varchar(255), " + FIELD_HOST + " varchar(255), "
+        + FIELD_DB + " varchar(255), " + FIELD_ANYDB + " boolean, "
+        + FIELD_AUTHSTR + " text);";
     if (sqlite3_threadsafe() == 0)
     {
         MXS_WARNING("SQLite3 was compiled with thread safety off. May cause "
@@ -49,15 +49,15 @@ PamInstance* PamInstance::create(char **options)
     bool error = false;
     /* This handle may be used from multiple threads, set full mutex. */
     sqlite3* dbhandle = NULL;
-    int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
-                   SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
+    int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+        | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
     if (sqlite3_open_v2(pam_db_name.c_str(), &dbhandle, db_flags, NULL) != SQLITE_OK)
     {
         MXS_ERROR("Failed to open SQLite3 handle.");
         error = true;
     }
 
-    char *err;
+    char* err;
     if (!error && sqlite3_exec(dbhandle, create_sql.c_str(), NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to create database: '%s'", err);
@@ -65,9 +65,9 @@ PamInstance* PamInstance::create(char **options)
         error = true;
     }
 
-    PamInstance *instance = NULL;
-    if (!error &&
-        ((instance = new (std::nothrow) PamInstance(dbhandle, pam_db_name, pam_table_name)) == NULL))
+    PamInstance* instance = NULL;
+    if (!error
+        && ((instance = new( std::nothrow) PamInstance(dbhandle, pam_db_name, pam_table_name)) == NULL))
     {
         sqlite3_close_v2(dbhandle);
     }
@@ -97,8 +97,11 @@ PamInstance::PamInstance(sqlite3* dbhandle, const string& dbname, const string& 
  * @param anydb  Global access to databases
  * @param pam_service The PAM service used
  */
-void PamInstance::add_pam_user(const char *user, const char *host,
-                               const char *db, bool anydb, const char *pam_service)
+void PamInstance::add_pam_user(const char* user,
+                               const char* host,
+                               const char* db,
+                               bool anydb,
+                               const char* pam_service)
 {
     /**
      * The insert query template which adds users to the pam_users table.
@@ -106,8 +109,8 @@ void PamInstance::add_pam_user(const char *user, const char *host,
      * Note that 'db' and 'pam_service' are strings that can be NULL and thus they have
      * no quotes around them. The quotes for strings are added in this function.
      */
-    const string insert_sql_template =
-        "INSERT INTO " + m_tablename + " VALUES ('%s', '%s', %s, '%s', %s)";
+    const string insert_sql_template
+        = "INSERT INTO " + m_tablename + " VALUES ('%s', '%s', %s, '%s', %s)";
 
     /** Used for NULL value creation in the INSERT query */
     const char NULL_TOKEN[] = "NULL";
@@ -132,14 +135,19 @@ void PamInstance::add_pam_user(const char *user, const char *host,
         service_str = NULL_TOKEN;
     }
 
-    size_t len = insert_sql_template.length() + strlen(user) + strlen(host) + db_str.length() +
-                 service_str.length() + 1;
+    size_t len = insert_sql_template.length() + strlen(user) + strlen(host) + db_str.length()
+        + service_str.length() + 1;
 
     char insert_sql[len + 1];
-    sprintf(insert_sql, insert_sql_template.c_str(), user, host, db_str.c_str(),
-            anydb ? "1" : "0", service_str.c_str());
+    sprintf(insert_sql,
+            insert_sql_template.c_str(),
+            user,
+            host,
+            db_str.c_str(),
+            anydb ? "1" : "0",
+            service_str.c_str());
 
-    char *err;
+    char* err;
     if (sqlite3_exec(m_dbhandle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to insert user: %s", err);
@@ -154,7 +162,7 @@ void PamInstance::delete_old_users()
 {
     /** Delete query used to clean up the database before loading new users */
     const string delete_query = "DELETE FROM " + m_tablename;
-    char *err;
+    char* err;
     if (sqlite3_exec(m_dbhandle, delete_query.c_str(), NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to delete old users: %s", err);
@@ -172,17 +180,17 @@ void PamInstance::delete_old_users()
 int PamInstance::load_users(SERVICE* service)
 {
     /** Query that gets all users that authenticate via the pam plugin */
-    const char PAM_USERS_QUERY[] =
-        "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.db AS d ON (u.user = d.user AND u.host = d.host) WHERE "
-        "(u.plugin = 'pam' AND (d.db IS NOT NULL OR u.select_priv = 'Y')) "
-        "UNION "
-        "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t ON (u.user = t.user AND u.host = t.host) WHERE "
-        "(u.plugin = 'pam' AND t.db IS NOT NULL AND u.select_priv = 'N') "
-        "ORDER BY user";
-#if defined(SS_DEBUG)
-    const unsigned int PAM_USERS_QUERY_NUM_FIELDS  = 5;
+    const char PAM_USERS_QUERY[]
+        = "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
+          "mysql.user AS u LEFT JOIN mysql.db AS d ON (u.user = d.user AND u.host = d.host) WHERE "
+          "(u.plugin = 'pam' AND (d.db IS NOT NULL OR u.select_priv = 'Y')) "
+          "UNION "
+          "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
+          "mysql.user AS u LEFT JOIN mysql.tables_priv AS t ON (u.user = t.user AND u.host = t.host) WHERE "
+          "(u.plugin = 'pam' AND t.db IS NOT NULL AND u.select_priv = 'N') "
+          "ORDER BY user";
+#if defined (SS_DEBUG)
+    const unsigned int PAM_USERS_QUERY_NUM_FIELDS = 5;
 #endif
 
     const char* user;
@@ -193,29 +201,33 @@ int PamInstance::load_users(SERVICE* service)
 
     if ((pw = decrypt_password(password)))
     {
-        for (SERVER_REF *servers = service->dbref; servers; servers = servers->next)
+        for (SERVER_REF* servers = service->dbref; servers; servers = servers->next)
         {
-            MYSQL *mysql = mysql_init(NULL);
+            MYSQL* mysql = mysql_init(NULL);
             if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
             {
                 if (mysql_query(mysql, PAM_USERS_QUERY))
                 {
                     MXS_ERROR("Failed to query server '%s' for PAM users: '%s'.",
-                              servers->server->name, mysql_error(mysql));
+                              servers->server->name,
+                              mysql_error(mysql));
                 }
                 else
                 {
-                    MYSQL_RES *res = mysql_store_result(mysql);
+                    MYSQL_RES* res = mysql_store_result(mysql);
                     delete_old_users();
                     if (res)
                     {
                         mxb_assert(mysql_num_fields(res) == PAM_USERS_QUERY_NUM_FIELDS);
-                        MXS_NOTICE("Loaded %llu users for service %s.", mysql_num_rows(res),
+                        MXS_NOTICE("Loaded %llu users for service %s.",
+                                   mysql_num_rows(res),
                                    service->name);
                         MYSQL_ROW row;
                         while ((row = mysql_fetch_row(res)))
                         {
-                            add_pam_user(row[0], row[1], row[2],
+                            add_pam_user(row[0],
+                                         row[1],
+                                         row[2],
                                          row[3] && strcasecmp(row[3], "Y") == 0,
                                          row[4]);
                         }
@@ -267,7 +279,7 @@ void PamInstance::diagnostic(DCB* dcb)
     json_decref(array);
 }
 
-static int diag_cb_json(void *data, int columns, char **row, char **field_names)
+static int diag_cb_json(void* data, int columns, char** row, char** field_names)
 {
     mxb_assert(columns == NUM_FIELDS);
     json_t* obj = json_object();
@@ -283,7 +295,7 @@ static int diag_cb_json(void *data, int columns, char **row, char **field_names)
 json_t* PamInstance::diagnostic_json()
 {
     json_t* rval = json_array();
-    char *err;
+    char* err;
     string select = "SELECT * FROM " + m_tablename + ";";
     if (sqlite3_exec(m_dbhandle, select.c_str(), diag_cb_json, rval, &err) != SQLITE_OK)
     {
@@ -308,12 +320,13 @@ bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
     if (mysql_query(conn, ANON_USER_QUERY))
     {
         MXS_ERROR("Failed to query server '%s' for the anonymous PAM user: '%s'.",
-                  server->name, mysql_error(conn));
+                  server->name,
+                  mysql_error(conn));
         success = false;
     }
     else
     {
-        MYSQL_RES *res = mysql_store_result(conn);
+        MYSQL_RES* res = mysql_store_result(conn);
         if (res)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
@@ -334,7 +347,8 @@ bool PamInstance::query_anon_proxy_user(SERVER* server, MYSQL* conn)
             if (mysql_query(conn, ANON_GRANT_QUERY))
             {
                 MXS_ERROR("Failed to query server '%s' for the grants of the anonymous PAM user: '%s'.",
-                          server->name, mysql_error(conn));
+                          server->name,
+                          mysql_error(conn));
                 success = false;
             }
             else

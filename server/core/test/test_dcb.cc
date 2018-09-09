@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 
@@ -44,22 +44,21 @@
 /**
  * test1    Allocate a dcb and do lots of other things
  *
-  */
-static int
-test1()
+ */
+static int test1()
 {
-    DCB   *dcb;
+    DCB* dcb;
     SERV_LISTENER dummy;
     /* Single buffer tests */
     fprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
     printDCB(dcb);
     fprintf(stderr, "\t..done\nAllocated dcb.");
-    //TODO: Without running workers, the following will hang. As it does not
-    //TODO: really add value (the only created dcb is the one above), we'll
-    //TODO: exclude it.
-    //TODO: Some kind of test environment with workers would be needed.
-    //printAllDCBs();
+    // TODO: Without running workers, the following will hang. As it does not
+    // TODO: really add value (the only created dcb is the one above), we'll
+    // TODO: exclude it.
+    // TODO: Some kind of test environment with workers would be needed.
+    // printAllDCBs();
     fprintf(stderr, "\t..done\n");
     dcb->state = DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
@@ -70,7 +69,7 @@ test1()
     return 0;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
 
@@ -80,6 +79,3 @@ int main(int argc, char **argv)
 
     exit(result);
 }
-
-
-

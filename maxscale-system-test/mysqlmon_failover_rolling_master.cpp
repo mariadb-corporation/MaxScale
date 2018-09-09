@@ -42,7 +42,7 @@ void sleep(int s)
 
 int get_server_id(Maxscales& maxscales)
 {
-    MYSQL *conn = maxscales.open_rwsplit_connection(0);
+    MYSQL* conn = maxscales.open_rwsplit_connection(0);
     int id = -1;
     char str[1024];
 
@@ -60,8 +60,6 @@ int get_server_id(Maxscales& maxscales)
 
     return id;
 }
-
-
 }
 
 namespace
@@ -94,7 +92,7 @@ public:
         }
     }
 
-    void try_query(MYSQL *conn, const char *format, ...)
+    void try_query(MYSQL* conn, const char* format, ...)
     {
         va_list valist;
 
@@ -109,7 +107,10 @@ public:
         va_end(valist);
 
         int res = execute_query_silent(conn, sql, false);
-        add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql,
+        add_result(res,
+                   "Query '%.*s%s' failed!\n",
+                   message_len < 100 ? message_len : 100,
+                   sql,
                    message_len < 100 ? "" : "...");
 
         if (res != 0)
@@ -133,7 +134,6 @@ void list_servers(XTestConnections& test)
     cout << endl;
     test.maxscales->execute_maxadmin_command_print(0, (char*)"list servers");
 }
-
 }
 
 namespace
@@ -186,8 +186,10 @@ void check(XTestConnections& test)
 
     std::string values;
     int num_rows = mysql_num_rows(pRes);
-    test.add_result(num_rows != i_end, "Query returned %d rows when %d rows were expected",
-                    num_rows, i_end);
+    test.add_result(num_rows != i_end,
+                    "Query returned %d rows when %d rows were expected",
+                    num_rows,
+                    i_end);
     test.nothrow().try_query(pConn, "COMMIT");
     mysql_close(pConn);
 }
@@ -250,7 +252,6 @@ void run(XTestConnections& test)
         check(test);
     }
 }
-
 }
 
 int main(int argc, char* argv[])

@@ -1,5 +1,6 @@
 /**
- * @file binlog_big_transaction.cpp test of simple binlog router setup and execute a number of big transactions
+ * @file binlog_big_transaction.cpp test of simple binlog router setup and execute a number of big
+ *transactions
  */
 
 
@@ -10,10 +11,10 @@
 #include "test_binlog_fnc.h"
 #include "big_transaction.h"
 
-void *disconnect_thread( void *ptr );
-TestConnections * Test ;
+void* disconnect_thread(void* ptr);
+TestConnections* Test;
 int exit_flag;
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
     Test = new TestConnections(argc, argv);
@@ -21,7 +22,7 @@ int main(int argc, char *argv[])
     Test->set_log_copy_interval(300);
 
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
+    execute_query(Test->repl->nodes[0], (char*) "DROP TABLE IF EXISTS t1;");
     Test->repl->close_connections();
     sleep(5);
 
@@ -29,7 +30,7 @@ int main(int argc, char *argv[])
 
     pthread_t threads;
     exit_flag = 0;
-    pthread_create( &threads, NULL, disconnect_thread, NULL);
+    pthread_create(&threads, NULL, disconnect_thread, NULL);
 
     Test->repl->connect();
     for (int i = 0; i < 100000; i++)
@@ -45,12 +46,14 @@ int main(int argc, char *argv[])
     return rval;
 }
 
-void *disconnect_thread( void *ptr )
+void* disconnect_thread(void* ptr)
 {
-    MYSQL * conn;
+    MYSQL* conn;
     char cmd[256];
     int i;
-    conn = open_conn(Test->maxscales->binlog_port[0], Test->maxscales->IP[0], Test->repl->user_name,
+    conn = open_conn(Test->maxscales->binlog_port[0],
+                     Test->maxscales->IP[0],
+                     Test->repl->user_name,
                      Test->repl->password,
                      Test->repl->ssl);
     Test->add_result(mysql_errno(conn), "Error connecting to Binlog router, error: %s\n", mysql_error(conn));
@@ -64,7 +67,7 @@ void *disconnect_thread( void *ptr )
         {
             i = 3;
             sleep(30);
-            execute_query(conn, (char *) "DISCONNECT SERVER ALL");
+            execute_query(conn, (char*) "DISCONNECT SERVER ALL");
         }
         sleep(5);
     }

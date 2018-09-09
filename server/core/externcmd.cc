@@ -40,7 +40,7 @@ static int tokenize_arguments(const char* argstr, char** argv)
     bool quoted = false;
     bool read = false;
     bool escaped = false;
-    char *ptr, *start;
+    char* ptr, * start;
     char args[strlen(argstr) + 1];
     char qc = 0;
 
@@ -60,7 +60,7 @@ static int tokenize_arguments(const char* argstr, char** argv)
             {
                 escaped = true;
             }
-            else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
+            else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
             {
                 *ptr = '\0';
                 argv[i++] = MXS_STRDUP_A(start);
@@ -72,7 +72,7 @@ static int tokenize_arguments(const char* argstr, char** argv)
                 if (isspace(*ptr))
                 {
                     *ptr = '\0';
-                    if (read) /** New token */
+                    if (read)   /** New token */
                     {
                         argv[i++] = MXS_STRDUP_A(start);
                         read = false;
@@ -124,7 +124,8 @@ EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout)
                 else
                 {
                     MXS_ERROR("Cannot execute file '%s'. Missing "
-                              "execution permissions.", cmd->argv[0]);
+                              "execution permissions.",
+                              cmd->argv[0]);
                 }
                 externcmd_free(cmd);
                 cmd = NULL;
@@ -184,27 +185,37 @@ static void log_output(const char* cmd, const std::string& str)
     int err;
 
     if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
-                               str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                               str.c_str(),
+                               0,
+                               &err) == MXS_PCRE2_MATCH)
     {
         MXS_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
-                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
     {
         MXS_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
-                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
     {
         MXS_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
-                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
     {
         MXS_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
-                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                                    str.c_str(),
+                                    0,
+                                    &err) == MXS_PCRE2_MATCH)
     {
         MXS_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
     }
@@ -238,7 +249,9 @@ int externcmd_execute(EXTERNCMD* cmd)
         close(fd[0]);
         close(fd[1]);
         MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmd->argv[0], errno, mxs_strerror(errno));
+                  cmd->argv[0],
+                  errno,
+                  mxs_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)
@@ -322,13 +335,14 @@ int externcmd_execute(EXTERNCMD* cmd)
                 {
                     rval = exit_status;
                     MXS_ERROR("Command '%s' did not exit normally. Exit status: %d",
-                              cmd->argv[0], exit_status);
+                              cmd->argv[0],
+                              exit_status);
                 }
                 break;
             }
 
             int n;
-            char buf[4096]; // This seems like enough space
+            char buf[4096];     // This seems like enough space
 
             while ((n = read(fd[0], buf, sizeof(buf))) > 0)
             {
@@ -369,7 +383,7 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
     int err;
     bool rval = true;
     size_t errpos;
-    pcre2_code *re = pcre2_compile((PCRE2_SPTR) match, PCRE2_ZERO_TERMINATED, 0, &err, &errpos, NULL);
+    pcre2_code* re = pcre2_compile((PCRE2_SPTR) match, PCRE2_ZERO_TERMINATED, 0, &err, &errpos, NULL);
     if (re)
     {
         for (int i = 0; cmd->argv[i] && rval; i++)
@@ -388,10 +402,12 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
                     MXS_FREE(dest);
                     rval = false;
                     break;
+
                 case MXS_PCRE2_MATCH:
                     MXS_FREE(cmd->argv[i]);
                     cmd->argv[i] = dest;
                     break;
+
                 case MXS_PCRE2_NOMATCH:
                     MXS_FREE(dest);
                     break;
@@ -450,7 +466,7 @@ static char* get_command(const char* str)
 bool externcmd_can_execute(const char* argstr)
 {
     bool rval = false;
-    char *command = get_command(argstr);
+    char* command = get_command(argstr);
 
     if (command)
     {

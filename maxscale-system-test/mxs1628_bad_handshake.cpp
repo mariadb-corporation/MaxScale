@@ -3,7 +3,7 @@
 
 #include <vector>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.set_timeout(30);
@@ -12,18 +12,19 @@ int main(int argc, char *argv[])
     uint32_t max_packet = 65535;
     uint8_t charset = 8;
     std::string username = "username";
-    uint8_t token_len = 20; // SHA1 hash size
+    uint8_t token_len = 20;     // SHA1 hash size
     std::string database = "database";
 
     // Capabilities, max packet size and client charset
     std::vector<uint8_t> wbuf;
     auto it = std::back_inserter(wbuf);
 
-    for (auto a: {
-                (uint8_t)(caps), (uint8_t)(caps >> 8), (uint8_t)(caps >> 16), (uint8_t)(caps >> 24),
-                (uint8_t)(max_packet), (uint8_t)(max_packet >> 8), (uint8_t)(max_packet >> 16), (uint8_t)(max_packet >> 24),
-                charset
-            })
+    for (auto a : {
+        (uint8_t)(caps), (uint8_t)(caps >> 8), (uint8_t)(caps >> 16), (uint8_t)(caps >> 24),
+        (uint8_t)(max_packet), (uint8_t)(max_packet >> 8), (uint8_t)(max_packet >> 16),
+        (uint8_t)(max_packet >> 24),
+        charset
+    })
     {
         *it++ = a;
     }
@@ -32,7 +33,7 @@ int main(int argc, char *argv[])
     std::fill_n(it, 23, 0);
 
     // Username without terminating null character
-    for (auto a: username)
+    for (auto a : username)
     {
         *it++ = (uint8_t)a;
     }
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
     std::fill_n(it, token_len, 123);
 
     // Database without terminating null character
-    for (auto a: database)
+    for (auto a : database)
     {
         *it++ = (uint8_t)a;
     }

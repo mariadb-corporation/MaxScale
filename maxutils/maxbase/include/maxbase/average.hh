@@ -23,10 +23,10 @@ class CumulativeAverage
 {
 public:
     // add an average made of num_samples
-    void   add(double ave, int num_samples = 1);
-    double average() const;
-    int    num_samples() const;
-    void   reset();
+    void               add(double ave, int num_samples = 1);
+    double             average() const;
+    int                num_samples() const;
+    void               reset();
     CumulativeAverage& operator+=(const CumulativeAverage& rhs);
 private:
     double m_ave = 0;
@@ -43,8 +43,8 @@ public:
     EMAverage(double min_alpha, double max_alpha, int sample_max);
 
     /* add an average made of num_samples
-    *  alpha = m_min_alpha + m_max_alpha * std::min(double(num_samples) / sample_max, 1.0);
-    *  ave = alpha * ave + (1 - alpha) * sample; */
+     *  alpha = m_min_alpha + m_max_alpha * std::min(double(num_samples) / sample_max, 1.0);
+     *  ave = alpha * ave + (1 - alpha) * sample; */
     void   add(double ave, int num_samples = 1);
     void   add(const CumulativeAverage& ca);
     double average() const;
@@ -53,11 +53,10 @@ public:
     int    sample_max() const;
     void   reset();
 private:
-    const double  m_min_alpha;
-    const double  m_max_alpha;
-    int           m_sample_max;
-    int           m_num_samples = 0;
-    double        m_ave = 0;
+    const double m_min_alpha;
+    const double m_max_alpha;
+    int          m_sample_max;
+    int          m_num_samples = 0;
+    double       m_ave = 0;
 };
-
-} // maxbase
+}   // maxbase

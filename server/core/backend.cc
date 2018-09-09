@@ -19,11 +19,11 @@
 
 using namespace maxscale;
 
-Backend::Backend(SERVER_REF *ref):
-    m_closed(false),
-    m_backend(ref),
-    m_dcb(NULL),
-    m_state(0)
+Backend::Backend(SERVER_REF* ref)
+    : m_closed(false)
+    , m_backend(ref)
+    , m_dcb(NULL)
+    , m_state(0)
 {
     std::stringstream ss;
     ss << "[" << server()->address << "]:" << server()->port;
@@ -83,7 +83,7 @@ bool Backend::execute_session_command()
     }
 
     SSessionCommand& sescmd = m_session_commands.front();
-    GWBUF *buffer = sescmd->deep_copy_buffer();
+    GWBUF* buffer = sescmd->deep_copy_buffer();
     bool rval = false;
 
     switch (sescmd->get_command())
@@ -150,7 +150,7 @@ void Backend::clear_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
-        MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, -1);
+        MXB_AT_DEBUG(int prev2 = ) atomic_add(&m_backend->server->stats.n_current_ops, -1);
         mxb_assert(prev2 > 0);
     }
 
@@ -161,7 +161,7 @@ void Backend::set_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
-        MXB_AT_DEBUG(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, 1);
+        MXB_AT_DEBUG(int prev2 = ) atomic_add(&m_backend->server->stats.n_current_ops, 1);
         mxb_assert(prev2 >= 0);
     }
 

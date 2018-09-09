@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 #include "mariadbmon_common.hh"
 #include <chrono>
 #include <functional>
@@ -35,30 +35,33 @@ public:
         SLAVE_IO_NO,
     };
 
-    bool seen_connected = false;                        /* Has this slave connection been seen connected,
-                                                         * meaning that the master server id is correct? */
-    std::string name;                                   /* Slave connection name. Must be unique for
-                                                         * the server.*/
-    int64_t master_server_id = SERVER_ID_UNKNOWN;       /* The master's server_id value. Valid ids are
-                                                         * 32bit unsigned. -1 is unread/error. */
-    std::string master_host;                            /* Master server host name. */
-    int master_port = PORT_UNKNOWN;                     /* Master server port. */
-    slave_io_running_t slave_io_running = SLAVE_IO_NO;  /* Slave I/O thread running state: * "Yes",
-                                                         * "Connecting" or "No" */
-    bool slave_sql_running = false;                     /* Slave SQL thread running state, true if "Yes" */
-    GtidList gtid_io_pos;                               /* Gtid I/O position of the slave thread. */
-    std::string last_error;                             /* Last IO or SQL error encountered. */
-    int seconds_behind_master = MXS_RLAG_UNDEFINED;     /* How much behind the slave is. */
-    int64_t received_heartbeats = 0;                    /* How many heartbeats the connection has received */
+    bool seen_connected = false;                            /* Has this slave connection been seen connected,
+                                                             * meaning that the master server id is correct?
+                                                             **/
+    std::string name;                                       /* Slave connection name. Must be unique for
+                                                             * the server.*/
+    int64_t master_server_id = SERVER_ID_UNKNOWN;           /* The master's server_id value. Valid ids are
+                                                             * 32bit unsigned. -1 is unread/error. */
+    std::string        master_host;                         /* Master server host name. */
+    int                master_port = PORT_UNKNOWN;          /* Master server port. */
+    slave_io_running_t slave_io_running = SLAVE_IO_NO;      /* Slave I/O thread running state: * "Yes",
+                                                             * "Connecting" or "No" */
+    bool        slave_sql_running = false;                  /* Slave SQL thread running state, true if "Yes"
+                                                             * */
+    GtidList    gtid_io_pos;                                /* Gtid I/O position of the slave thread. */
+    std::string last_error;                                 /* Last IO or SQL error encountered. */
+    int         seconds_behind_master = MXS_RLAG_UNDEFINED; /* How much behind the slave is. */
+    int64_t     received_heartbeats = 0;                    /* How many heartbeats the connection has received
+                                                             * */
 
     /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
     std::chrono::steady_clock::time_point last_data_time = std::chrono::steady_clock::now();
 
 
-    std::string to_string() const;
-    json_t* to_json() const;
+    std::string               to_string() const;
+    json_t*                   to_json() const;
     static slave_io_running_t slave_io_from_string(const std::string& str);
-    static std::string slave_io_to_string(slave_io_running_t slave_io);
+    static std::string        slave_io_to_string(slave_io_running_t slave_io);
 };
 
 // This class groups some miscellaneous replication related settings together.
@@ -72,7 +75,8 @@ public:
         : gtid_strict_mode(false)
         , log_bin(false)
         , log_slave_updates(false)
-    {}
+    {
+    }
 };
 
 /**
@@ -91,16 +95,17 @@ struct NodeData
     static const int REACH_UNKNOWN = -1;
 
     // Bookkeeping for graph searches. May be overwritten by multiple algorithms.
-    int index;           /* Marks the order in which this node was visited. */
-    int lowest_index;    /* The lowest index node this node has in its subtree. */
-    bool in_stack;       /* Is this node currently is the search stack. */
+    int  index;         /* Marks the order in which this node was visited. */
+    int  lowest_index;  /* The lowest index node this node has in its subtree. */
+    bool in_stack;      /* Is this node currently is the search stack. */
 
     // Results from algorithm runs. Should only be overwritten when server data has been queried.
-    int cycle;           /* Which cycle is this node part of, if any. */
-    int reach;           /* How many servers replicate from this server or its children. */
-    ServerArray parents; /* Which nodes is this node replicating from. External masters excluded. */
-    ServerArray children;/* Which nodes are replicating from this node. */
-    std::vector<int64_t> external_masters; /* Server id:s of external masters. */
+    int                  cycle;             /* Which cycle is this node part of, if any. */
+    int                  reach;             /* How many servers replicate from this server or its children. */
+    ServerArray          parents;           /* Which nodes is this node replicating from. External masters
+                                             * excluded. */
+    ServerArray          children;          /* Which nodes are replicating from this node. */
+    std::vector<int64_t> external_masters;  /* Server id:s of external masters. */
 
     NodeData();
 
@@ -134,29 +139,29 @@ public:
         BINLOG_ROUTER       /* MaxScale binlog server. Requires special handling. */
     };
 
-    MXS_MONITORED_SERVER* m_server_base;    /**< Monitored server base class/struct. MariaDBServer does not
-                                              *  own the struct, it is not freed (or connection closed) when
-                                              *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
-    int             m_config_index;         /**< What position this server has in the monitor config */
+    MXS_MONITORED_SERVER* m_server_base;/**< Monitored server base class/struct. MariaDBServer does not
+                                         *  own the struct, it is not freed (or connection closed) when
+                                         *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
+    int m_config_index;                 /**< What position this server has in the monitor config */
 
-    version         m_version;              /**< Server version/type. */
-    int64_t         m_server_id;            /**< Value of @@server_id. Valid values are 32bit unsigned. */
-    bool            m_read_only;            /**< Value of @@read_only */
-    int64_t         m_gtid_domain_id;       /**< The value of gtid_domain_id, the domain which is used for
-                                              *  new non-replicated events. */
-    GtidList        m_gtid_current_pos;     /**< Gtid of latest event. */
-    GtidList        m_gtid_binlog_pos;      /**< Gtid of latest event written to binlog. */
-    bool            m_topology_changed;     /**< Has anything that could affect replication topology changed
-                                              *  this iteration? Causes: server id, slave connections,
-                                              *  read-only. */
-    int             m_replication_lag;      /**< Replication lag of the server. Used during calculation so
-                                              *  that the actual SERVER struct is only written to once. */
-    NodeData        m_node;                 /**< Replication topology data */
-    SlaveStatusArray m_slave_status;        /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings m_rpl_settings;     /**< Miscellaneous replication related settings. These are not
-                                              *  normally queried from the server, call
-                                              * 'update_replication_settings' before use. */
-    bool            m_print_update_errormsg;/**< Should an update error be printed. */
+    version m_version;                  /**< Server version/type. */
+    int64_t m_server_id;                /**< Value of @@server_id. Valid values are 32bit unsigned. */
+    bool    m_read_only;                /**< Value of @@read_only */
+    int64_t m_gtid_domain_id;           /**< The value of gtid_domain_id, the domain which is used for
+                                         *  new non-replicated events. */
+    GtidList m_gtid_current_pos;        /**< Gtid of latest event. */
+    GtidList m_gtid_binlog_pos;         /**< Gtid of latest event written to binlog. */
+    bool     m_topology_changed;        /**< Has anything that could affect replication topology changed
+                                         *  this iteration? Causes: server id, slave connections,
+                                         *  read-only. */
+    int m_replication_lag;              /**< Replication lag of the server. Used during calculation so
+                                         *  that the actual SERVER struct is only written to once. */
+    NodeData            m_node;         /**< Replication topology data */
+    SlaveStatusArray    m_slave_status; /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings m_rpl_settings; /**< Miscellaneous replication related settings. These are not
+                                         *  normally queried from the server, call
+                                         * 'update_replication_settings' before use. */
+    bool m_print_update_errormsg;       /**< Should an update error be printed. */
 
     MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index);
 
@@ -166,7 +171,8 @@ public:
     void monitor_server();
 
     /**
-     * Update information which changes rarely. This method should be called after (re)connecting to a backend.
+     * Update information which changes rarely. This method should be called after (re)connecting to a
+     *backend.
      * Calling this every monitoring loop is overkill.
      */
     void update_server_version();
@@ -480,11 +486,11 @@ private:
                                 const std::string& event_definer,
                                 const std::string& event_status)> ManipulatorFunc;
 
-    bool update_slave_status(std::string* errmsg_out = NULL);
-    bool sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
+    bool               update_slave_status(std::string* errmsg_out = NULL);
+    bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
-    void warn_event_scheduler();
-    bool events_foreach(ManipulatorFunc& func);
+    void               warn_event_scheduler();
+    bool               events_foreach(ManipulatorFunc& func);
 };
 
 /**
@@ -494,7 +500,7 @@ class QueryResult
 {
     // These need to be banned to avoid premature destruction.
     QueryResult(const QueryResult&) = delete;
-    QueryResult& operator = (const QueryResult&) = delete;
+    QueryResult& operator=(const QueryResult&) = delete;
 
 public:
     QueryResult(MYSQL_RES* resultset = NULL);
@@ -562,8 +568,8 @@ public:
     bool get_bool(int64_t column_ind) const;
 
 private:
-    MYSQL_RES* m_resultset = NULL;      // Underlying result set, freed at dtor.
-    std::unordered_map<std::string, int64_t> m_col_indexes; // Map of column name -> index
-    MYSQL_ROW m_rowdata = NULL;         // Data for current row
-    int64_t m_current_row_ind = -1;     // Index of current row
+    MYSQL_RES*                               m_resultset = NULL;    // Underlying result set, freed at dtor.
+    std::unordered_map<std::string, int64_t> m_col_indexes;         // Map of column name -> index
+    MYSQL_ROW                                m_rowdata = NULL;      // Data for current row
+    int64_t                                  m_current_row_ind = -1;// Index of current row
 };

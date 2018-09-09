@@ -105,7 +105,6 @@ enum What
     POPULATE,
     USE
 };
-
 }
 
 void set(TestConnections& test, Cache::What what, bool value)
@@ -120,7 +119,6 @@ void set(TestConnections& test, Cache::What what, bool value)
     cout << stmt << endl;
     test.try_query(pMysql, "%s", stmt.c_str());
 }
-
 }
 
 
@@ -145,7 +143,7 @@ void run(TestConnections& test)
     test.assert(value == 1, "Initial value was not 1.");
 
     // And update the real value.
-    update(test, 2); // Now the cache contains 1 and the db 2.
+    update(test, 2);    // Now the cache contains 1 and the db 2.
 
     // With @maxscale.cache.use==false we should get the updated value.
     set(test, Cache::POPULATE, false);
@@ -195,7 +193,6 @@ void run(TestConnections& test)
     select(test, &value);
     test.assert(value == 3, "Got a newer value than expected.");
 }
-
 }
 
 int main(int argc, char* argv[])

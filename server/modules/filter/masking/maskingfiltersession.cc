@@ -42,7 +42,7 @@ MaskingFilterSession::~MaskingFilterSession()
 {
 }
 
-//static
+// static
 MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const MaskingFilter* pFilter)
 {
     return new MaskingFilterSession(pSession, pFilter);
@@ -104,6 +104,7 @@ int MaskingFilterSession::clientReply(GWBUF* pPacket)
         {
         case EXPECTING_NOTHING:
             MXS_WARNING("Received data, although expected nothing.");
+
         case IGNORING_RESPONSE:
             break;
 
@@ -166,7 +167,7 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
         }
         break;
 
-    case ComResponse::LOCAL_INFILE_PACKET: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+    case ComResponse::LOCAL_INFILE_PACKET:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
 
@@ -184,14 +185,14 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
 {
     ComQueryResponse::ColumnDef column_def(pPacket);
 
-    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN) // Not particularly likely...
+    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)     // Not particularly likely...
     {
         handle_large_payload();
     }
     else
     {
-        const char *zUser = session_get_user(m_pSession);
-        const char *zHost = session_get_remote(m_pSession);
+        const char* zUser = session_get_user(m_pSession);
+        const char* zHost = session_get_remote(m_pSession);
 
         if (!zUser)
         {
@@ -247,17 +248,17 @@ namespace
 void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 {
     MXS_WARNING("The rule targeting \"%s\" matches a column "
-                "that is not of string type.", rule.match().c_str());
+                "that is not of string type.",
+                rule.match().c_str());
 }
-
 }
 
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
     ComPacket response(pPacket);
 
-    if ((response.payload_len() == ComEOF::PAYLOAD_LEN) &&
-        (ComResponse(response).type() == ComResponse::EOF_PACKET))
+    if ((response.payload_len() == ComEOF::PAYLOAD_LEN)
+        && (ComResponse(response).type() == ComResponse::EOF_PACKET))
     {
         // EOF after last row.
         ComEOF eof(response);
@@ -375,8 +376,8 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
 
     SMaskingRules sRules = m_filter.rules();
 
-    const char *zUser = session_get_user(m_pSession);
-    const char *zHost = session_get_remote(m_pSession);
+    const char* zUser = session_get_user(m_pSession);
+    const char* zHost = session_get_remote(m_pSession);
 
     if (!zUser)
     {
@@ -388,15 +389,13 @@ bool MaskingFilterSession::reject_if_function_used(GWBUF* pPacket)
         zHost = "";
     }
 
-    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info)
-        {
+    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
             const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
             return pRule ? true : false;
         };
 
-    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info)
-        {
+    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
             const QC_FIELD_INFO* begin = function_info.fields;
             const QC_FIELD_INFO* end = begin + function_info.n_fields;
 

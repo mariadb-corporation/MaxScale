@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/customparser.hh>
@@ -22,9 +22,9 @@ class SqlModeParser : public maxscale::CustomParser
 public:
     enum sql_mode_t
     {
-        DEFAULT,   // "set sql_mode=DEFAULT"
-        ORACLE,    // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
-        SOMETHING  // "set sql_mode=PIPES_AS_CONCAT"
+        DEFAULT,    // "set sql_mode=DEFAULT"
+        ORACLE,     // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
+        SOMETHING   // "set sql_mode=PIPES_AS_CONCAT"
     };
 
     enum
@@ -54,7 +54,7 @@ public:
         sql_mode_t sql_mode = SOMETHING;
 
         m_pSql = pBegin;
-        m_pI   = m_pSql;
+        m_pI = m_pSql;
         m_pEnd = pEnd;
 
         return parse();
@@ -222,7 +222,8 @@ private:
             if (m_pI != m_pEnd)
             {
                 MXS_WARNING("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI), m_pI);
+                            (int)(m_pEnd - m_pI),
+                            m_pI);
             }
 
             token = PARSER_EXHAUSTED;

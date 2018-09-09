@@ -8,7 +8,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.check_maxscale_alive(0);

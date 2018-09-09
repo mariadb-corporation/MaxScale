@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file config_runtime.h  - Functions for runtime configuration modifications
@@ -53,9 +53,11 @@ void config_runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1
  * @param authenticator Authenticator module name
  * @return True on success, false if an error occurred
  */
-bool runtime_create_server(const char *name, const char *address,
-                           const char *port, const char *protocol,
-                           const char *authenticator);
+bool runtime_create_server(const char* name,
+                           const char* address,
+                           const char* port,
+                           const char* protocol,
+                           const char* authenticator);
 
 /**
  * @brief Destroy a server
@@ -66,7 +68,7 @@ bool runtime_create_server(const char *name, const char *address,
  * @param server Server to destroy
  * @return True if server was destroyed
  */
-bool runtime_destroy_server(SERVER *server);
+bool runtime_destroy_server(SERVER* server);
 
 /**
  * @brief Link a server to an object
@@ -79,7 +81,7 @@ bool runtime_destroy_server(SERVER *server);
  * @return True if the object was found and the server was linked to it, false
  * if no object matching @c target was found
  */
-bool runtime_link_server(SERVER *server, const char *target);
+bool runtime_link_server(SERVER* server, const char* target);
 
 /**
  * @brief Unlink a server from an object
@@ -92,7 +94,7 @@ bool runtime_link_server(SERVER *server, const char *target);
  * @return True if the object was found and the server was unlinked from it, false
  * if no object matching @c target was found
  */
-bool runtime_unlink_server(SERVER *server, const char *target);
+bool runtime_unlink_server(SERVER* server, const char* target);
 
 /**
  * @brief Alter server parameters
@@ -102,7 +104,7 @@ bool runtime_unlink_server(SERVER *server, const char *target);
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_server(SERVER *server, const char *key, const char *value);
+bool runtime_alter_server(SERVER* server, const char* key, const char* value);
 
 /**
  * @brief Enable SSL for a server
@@ -122,9 +124,13 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value);
  *
  * @return True if SSL was successfully enabled
  */
-bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
-                               const char *ca, const char *version, const char *depth,
-                               const char *verify);
+bool runtime_enable_server_ssl(SERVER* server,
+                               const char* key,
+                               const char* cert,
+                               const char* ca,
+                               const char* version,
+                               const char* depth,
+                               const char* verify);
 
 /**
  * @brief Alter monitor parameters
@@ -134,7 +140,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value);
+bool runtime_alter_monitor(MXS_MONITOR* monitor, const char* key, const char* value);
 
 /**
  * @brief Alter service parameters
@@ -145,7 +151,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
  *
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_service(Service *service, const char* zKey, const char* zValue);
+bool runtime_alter_service(Service* service, const char* zKey, const char* zValue);
 
 /**
  * @brief Alter MaxScale parameters
@@ -178,12 +184,19 @@ bool runtime_alter_maxscale(const char* name, const char* value);
  *
  * @return True if the listener was successfully created and started
  */
-bool runtime_create_listener(Service *service, const char *name, const char *addr,
-                             const char *port, const char *proto, const char *auth,
-                             const char *auth_opt, const char *ssl_key,
-                             const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth,
-                             const char *verify_ssl);
+bool runtime_create_listener(Service* service,
+                             const char* name,
+                             const char* addr,
+                             const char* port,
+                             const char* proto,
+                             const char* auth,
+                             const char* auth_opt,
+                             const char* ssl_key,
+                             const char* ssl_cert,
+                             const char* ssl_ca,
+                             const char* ssl_version,
+                             const char* ssl_depth,
+                             const char* verify_ssl);
 
 /**
  * @brief Destroy a listener
@@ -196,7 +209,7 @@ bool runtime_create_listener(Service *service, const char *name, const char *add
  *
  * @return True if the listener was successfully destroyed
  */
-bool runtime_destroy_listener(Service *service, const char *name);
+bool runtime_destroy_listener(Service* service, const char* name);
 
 /**
  * @brief Create a new monitor
@@ -205,7 +218,7 @@ bool runtime_destroy_listener(Service *service, const char *name);
  * @param module Monitor module
  * @return True if new monitor was created and persisted
  */
-bool runtime_create_monitor(const char *name, const char *module);
+bool runtime_create_monitor(const char* name, const char* module);
 
 /**
  * @brief Create a new filter
@@ -216,7 +229,7 @@ bool runtime_create_monitor(const char *name, const char *module);
  *
  * @return True if a new filter was created and persisted
  */
-bool runtime_create_filter(const char *name, const char *module, MXS_CONFIG_PARAMETER* params);
+bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
 
 /**
  * Destroy a filter
@@ -238,7 +251,7 @@ bool runtime_destroy_filter(const SFilterDef& filter);
  * @param monitor Monitor to destroy
  * @return True if monitor was destroyed
  */
-bool runtime_destroy_monitor(MXS_MONITOR *monitor);
+bool runtime_destroy_monitor(MXS_MONITOR* monitor);
 
 /**
  * Destroy a service

@@ -19,11 +19,11 @@
 using maxscale::SpinLockGuard;
 using std::shared_ptr;
 
-CacheMT::CacheMT(const std::string&              name,
-                 const CACHE_CONFIG*             pConfig,
+CacheMT::CacheMT(const std::string& name,
+                 const CACHE_CONFIG* pConfig,
                  const std::vector<SCacheRules>& rules,
-                 SStorageFactory                 sFactory,
-                 Storage*                        pStorage)
+                 SStorageFactory sFactory,
+                 Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
     spinlock_init(&m_lock_pending);
@@ -68,7 +68,7 @@ bool CacheMT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSess
     return do_must_refresh(key, pSession);
 }
 
-void CacheMT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
+void CacheMT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     SpinLockGuard guard(m_lock_pending);
 
@@ -76,10 +76,10 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSessio
 }
 
 // static
-CacheMT* CacheMT::Create(const std::string&              name,
-                         const CACHE_CONFIG*             pConfig,
+CacheMT* CacheMT::Create(const std::string& name,
+                         const CACHE_CONFIG* pConfig,
                          const std::vector<SCacheRules>& rules,
-                         SStorageFactory                 sFactory)
+                         SStorageFactory sFactory)
 {
     CacheMT* pCache = NULL;
 

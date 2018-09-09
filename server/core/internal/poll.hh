@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * The private poll header
@@ -27,15 +27,15 @@ enum poll_message
     POLL_MSG_CLEAN_PERSISTENT = 0x01
 };
 
-void            poll_init();
-//void          poll_finish(); // TODO: Add this.
+void poll_init();
+// void          poll_finish(); // TODO: Add this.
 
-void            poll_set_maxwait(unsigned int);
-void            poll_set_nonblocking_polls(unsigned int);
+void poll_set_maxwait(unsigned int);
+void poll_set_nonblocking_polls(unsigned int);
 
-void            dprintPollStats(DCB *);
-void            dShowThreads(DCB *dcb);
-void            dShowEventQ(DCB *dcb);
-void            dShowEventStats(DCB *dcb);
+void dprintPollStats(DCB*);
+void dShowThreads(DCB* dcb);
+void dShowEventQ(DCB* dcb);
+void dShowEventStats(DCB* dcb);
 
 std::unique_ptr<ResultSet> eventTimesGetList();

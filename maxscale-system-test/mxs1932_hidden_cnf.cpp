@@ -28,7 +28,8 @@ int main(int argc, char** argv)
     test.maxscales->copy_to_node_legacy("hidden.cnf", "~");
 
     // Move it into the maxscale.cnf.d directory and make it a hidden file
-    test.maxscales->ssh_node_f(0, true,
+    test.maxscales->ssh_node_f(0,
+                               true,
                                "mkdir -p /etc/maxscale.cnf.d/;"
                                "mv %s/hidden.cnf /etc/maxscale.cnf.d/.hidden.cnf;"
                                "chown -R maxscale:maxscale /etc/maxscale.cnf.d/",

@@ -52,15 +52,15 @@ int main(int argc, char** argv)
     const char RESET_SLAVE[] = "RESET SLAVE ALL;";
     const char READ_ONLY_OFF[] = "SET GLOBAL read_only=0;";
     test.repl->connect();
-    const int FIRST_MOD_NODE = 2; // Modify nodes 2 & 3
+    const int FIRST_MOD_NODE = 2;   // Modify nodes 2 & 3
     const int NODE_COUNT = test.repl->N;
     MYSQL** nodes = test.repl->nodes;
 
     for (int i = FIRST_MOD_NODE; i < NODE_COUNT; i++)
     {
-        if (mysql_query(nodes[i], STOP_SLAVE) != 0 ||
-                mysql_query(nodes[i], RESET_SLAVE) != 0 ||
-                mysql_query(nodes[i], READ_ONLY_OFF) != 0)
+        if (mysql_query(nodes[i], STOP_SLAVE) != 0
+            || mysql_query(nodes[i], RESET_SLAVE) != 0
+            || mysql_query(nodes[i], READ_ONLY_OFF) != 0)
         {
             test.assert(false, "Could not stop slave connections and/or disable read_only for node %d.", i);
             return test.global_result;
@@ -92,8 +92,8 @@ int main(int argc, char** argv)
     int ec;
     string rejoin_s3 = REJOIN_CMD + " server3";
     string rejoin_s4 = REJOIN_CMD + " server4";
-    test.maxscales->ssh_node_output(0, rejoin_s3.c_str() , true, &ec);
-    test.maxscales->ssh_node_output(0, rejoin_s4.c_str() , true, &ec);
+    test.maxscales->ssh_node_output(0, rejoin_s3.c_str(), true, &ec);
+    test.maxscales->ssh_node_output(0, rejoin_s4.c_str(), true, &ec);
     test.maxscales->wait_for_monitor();
     get_output(test);
 
@@ -117,21 +117,23 @@ int main(int argc, char** argv)
     mysql_query(nodes[0], "START SLAVE;");
     test.maxscales->wait_for_monitor();
     string rejoin_s2 = REJOIN_CMD + " server2";
-    test.maxscales->ssh_node_output(0, rejoin_s2.c_str() , true, &ec);
-    test.maxscales->ssh_node_output(0, rejoin_s3.c_str() , true, &ec);
+    test.maxscales->ssh_node_output(0, rejoin_s2.c_str(), true, &ec);
+    test.maxscales->ssh_node_output(0, rejoin_s3.c_str(), true, &ec);
     test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.assert(master_id == 4, "Server 4 should be the cluster master.");
     StringSet node0_states = test.get_server_status("server1");
-    bool states_n0_ok = (node0_states.find("Slave") != node0_states.end() &&
-                         node0_states.find("Relay Master") == node0_states.end());
+    bool states_n0_ok = (node0_states.find("Slave") != node0_states.end()
+                         && node0_states.find("Relay Master") == node0_states.end());
     test.assert(states_n0_ok, "Server 1 is not a slave when it should be.");
     if (states_n0_ok)
     {
         int ec;
         test.maxscales->ssh_node_output(0,
-                                        "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4" , true, &ec);
+                                        "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4",
+                                        true,
+                                        &ec);
         test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.assert(master_id == 1, "Server 1 should be the cluster master.");

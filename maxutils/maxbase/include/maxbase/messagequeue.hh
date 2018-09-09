@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 #include <maxbase/poll.hh>
@@ -28,7 +28,7 @@ class Worker;
  * the caller's and recipient's responsibility to manage the lifetime and
  * concurrent access of anything possibly pointed to from the message.
  */
-class MessageQueueMessage /* final */
+class MessageQueueMessage   /* final */
 {
 public:
     /**
@@ -110,7 +110,7 @@ public:
 class MessageQueue : private mxb::PollData
 {
     MessageQueue(const MessageQueue&);
-    MessageQueue& operator = (const MessageQueue&);
+    MessageQueue& operator=(const MessageQueue&);
 
 public:
     typedef MessageQueueHandler Handler;
@@ -193,5 +193,4 @@ private:
     int      m_write_fd;
     Worker*  m_pWorker;
 };
-
 }

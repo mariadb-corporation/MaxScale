@@ -5,12 +5,12 @@
 
 #include "testconnections.h"
 
-#define MONITOR_NAME "mysql-monitor"
+#define MONITOR_NAME  "mysql-monitor"
 #define SERVICE_NAME1 "rwsplit-service"
 #define SERVICE_NAME2 "read-connection-router-slave"
 #define SERVICE_NAME3 "read-connection-router-master"
 
-void add_servers(TestConnections *test)
+void add_servers(TestConnections* test)
 {
     test->tprintf("Adding the servers");
 
@@ -25,7 +25,7 @@ void add_servers(TestConnections *test)
     }
 }
 
-void do_query(TestConnections *test, bool should_fail)
+void do_query(TestConnections* test, bool should_fail)
 {
     test->tprintf("Trying to query, expecting %s", should_fail ? "failure" : "success");
     test->set_timeout(120);
@@ -34,9 +34,9 @@ void do_query(TestConnections *test, bool should_fail)
 
     bool failed = execute_query(test->maxscales->conn_rwsplit[0], "select @@server_id") == 0;
 
-    const char *msg = should_fail ?
-                      "Query was successful when failure was expected." :
-                      "Query failed when success was expected.";
+    const char* msg = should_fail
+        ? "Query was successful when failure was expected."
+        : "Query failed when success was expected.";
 
     test->add_result(failed == should_fail, msg);
     test->maxscales->close_maxscale_connections(0);
@@ -44,9 +44,9 @@ void do_query(TestConnections *test, bool should_fail)
     test->stop_timeout();
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
 
     test->tprintf("Creating servers");
 

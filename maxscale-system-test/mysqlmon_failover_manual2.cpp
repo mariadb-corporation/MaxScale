@@ -89,9 +89,7 @@ void fail_query(TestConnections& test)
         throw std::runtime_error(MESSAGE);
     }
 }
-
 }
-
 }
 
 namespace
@@ -173,7 +171,6 @@ void run(TestConnections& test)
     insert_data(test);
     cout << "succeeded." << endl;
 }
-
 }
 
 int main(int argc, char** argv)

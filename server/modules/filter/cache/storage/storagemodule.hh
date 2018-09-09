@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -25,7 +25,8 @@ public:
 
     static CACHE_STORAGE* createInstance(const char* zName,
                                          const CACHE_STORAGE_CONFIG* pConfig,
-                                         int argc, char* argv[])
+                                         int argc,
+                                         char* argv[])
     {
         mxb_assert(zName);
         mxb_assert(pConfig);
@@ -54,8 +55,8 @@ public:
     }
 
     static cache_result_t getInfo(CACHE_STORAGE* pCache_storage,
-                                  uint32_t       what,
-                                  json_t**       ppInfo)
+                                  uint32_t what,
+                                  json_t** ppInfo)
     {
         mxb_assert(pCache_storage);
 
@@ -73,7 +74,7 @@ public:
                                    uint32_t flags,
                                    uint32_t soft_ttl,
                                    uint32_t hard_ttl,
-                                   GWBUF** ppResult)
+                                   GWBUF**  ppResult)
     {
         mxb_assert(pCache_storage);
         mxb_assert(pKey);

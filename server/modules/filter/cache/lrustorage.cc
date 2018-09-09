@@ -30,7 +30,7 @@ LRUStorage::~LRUStorage()
 
     while (m_pHead)
     {
-        free_node(m_pHead); // Adjusts m_pHead
+        free_node(m_pHead);     // Adjusts m_pHead
     }
 
     delete m_pStorage;
@@ -76,7 +76,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
-                                        GWBUF** ppValue) const
+                                        GWBUF**  ppValue) const
 {
     return access_value(APPROACH_GET, key, flags, soft_ttl, hard_ttl, ppValue);
 }
@@ -174,7 +174,9 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue) const
     {
         mxb_assert(m_pHead->key());
         result = do_get_value(*m_pHead->key(),
-                              CACHE_FLAGS_INCLUDE_STALE, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL,
+                              CACHE_FLAGS_INCLUDE_STALE,
+                              CACHE_USE_CONFIG_TTL,
+                              CACHE_USE_CONFIG_TTL,
                               ppValue);
     }
 
@@ -218,11 +220,11 @@ cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
 }
 
 cache_result_t LRUStorage::access_value(access_approach_t approach,
-                                        const CACHE_KEY& key,
+                                        const CACHE_KEY&  key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
-                                        GWBUF** ppValue) const
+                                        GWBUF**  ppValue) const
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
@@ -403,7 +405,7 @@ void LRUStorage::free_node(Node* pNode) const
  */
 void LRUStorage::free_node(NodesByKey::iterator& i) const
 {
-    free_node(i->second); // A Node
+    free_node(i->second);   // A Node
     m_nodes_by_key.erase(i);
 }
 
@@ -556,7 +558,7 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
     }
     else
     {
-        pNode = new (std::nothrow) Node;
+        pNode = new( std::nothrow) Node;
     }
 
     if (pNode)
@@ -565,7 +567,7 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
         {
             std::pair<NodesByKey::iterator, bool> rv;
             rv = m_nodes_by_key.insert(std::make_pair(key, pNode));
-            mxb_assert(rv.second); // If true, the item was inserted as new (and not updated).
+            mxb_assert(rv.second);      // If true, the item was inserted as new (and not updated).
             *pI = rv.first;
         }
         catch (const std::exception& x)

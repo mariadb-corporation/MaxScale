@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #define MXS_MODULE_NAME "avrorouter"
 
@@ -38,28 +38,28 @@ MXS_BEGIN_DECLS
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"
 
-static const char *avro_client_states[]      = { "Unregistered", "Registered", "Processing", "Errored" };
-static const char *avro_client_client_mode[] = { "Catch-up", "Busy", "Wait_for_data" };
+static const char* avro_client_states[] = {"Unregistered", "Registered", "Processing", "Errored"};
+static const char* avro_client_client_mode[] = {"Catch-up", "Busy", "Wait_for_data"};
 
-static const char *avro_domain         = "domain";
-static const char *avro_server_id      = "server_id";
-static const char *avro_sequence       = "sequence";
-static const char *avro_event_number   = "event_number";
-static const char *avro_event_type     = "event_type";
-static const char *avro_timestamp      = "timestamp";
-static const char *avro_client_ouput[] = { "Undefined", "JSON", "Avro" };
+static const char* avro_domain = "domain";
+static const char* avro_server_id = "server_id";
+static const char* avro_sequence = "sequence";
+static const char* avro_event_number = "event_number";
+static const char* avro_event_type = "event_type";
+static const char* avro_timestamp = "timestamp";
+static const char* avro_client_ouput[] = {"Undefined", "JSON", "Avro"};
 
 static inline bool is_reserved_word(const char* word)
 {
-    return strcasecmp(word, avro_domain)       == 0 ||
-           strcasecmp(word, avro_server_id)    == 0 ||
-           strcasecmp(word, avro_sequence)     == 0 ||
-           strcasecmp(word, avro_event_number) == 0 ||
-           strcasecmp(word, avro_event_type)   == 0 ||
-           strcasecmp(word, avro_timestamp)    == 0;
+    return strcasecmp(word, avro_domain) == 0
+           || strcasecmp(word, avro_server_id) == 0
+           || strcasecmp(word, avro_sequence) == 0
+           || strcasecmp(word, avro_event_number) == 0
+           || strcasecmp(word, avro_event_type) == 0
+           || strcasecmp(word, avro_timestamp) == 0;
 }
 
-static inline void fix_reserved_word(char *tok)
+static inline void fix_reserved_word(char* tok)
 {
     if (is_reserved_word(tok))
     {
@@ -105,15 +105,15 @@ enum mxs_avro_codec_type
 
 static const MXS_ENUM_VALUE codec_values[] =
 {
-    {"null", MXS_AVRO_CODEC_NULL},
-    {"deflate",  MXS_AVRO_CODEC_DEFLATE},
+    {"null",    MXS_AVRO_CODEC_NULL      },
+    {"deflate", MXS_AVRO_CODEC_DEFLATE   },
 // Not yet implemented
 //    {"snappy", MXS_AVRO_CODEC_SNAPPY},
     {NULL}
 };
 
 
-class Avro: public MXS_ROUTER
+class Avro : public MXS_ROUTER
 {
     Avro(const Avro&) = delete;
     Avro& operator=(const Avro&) = delete;
@@ -121,26 +121,26 @@ class Avro: public MXS_ROUTER
 public:
     static Avro* create(SERVICE* service, SRowEventHandler handler);
 
-    SERVICE*                 service; /*< Pointer to the service using this router */
-    std::string              filestem; /*< Root of binlog filename */
-    std::string              binlogdir; /*< The directory where the binlog files are stored */
-    std::string              avrodir; /*< The directory with the AVRO files */
-    std::string              binlog_name; /*< Name of the current binlog file */
-    uint64_t                 current_pos; /*< Current binlog position */
-    int                      binlog_fd; /*< File descriptor of the binlog file being read */
-    uint64_t                 trx_count;  /*< Transactions processed */
-    uint64_t                 trx_target; /*< Number of transactions that trigger a flush */
-    uint64_t                 row_count;  /*< Row events processed */
-    uint64_t                 row_target; /*< Number of row events that trigger a flush */
-    uint32_t                 task_handle; /**< Delayed task handle */
-    Rpl                      handler;
+    SERVICE*    service;    /*< Pointer to the service using this router */
+    std::string filestem;   /*< Root of binlog filename */
+    std::string binlogdir;  /*< The directory where the binlog files are stored */
+    std::string avrodir;    /*< The directory with the AVRO files */
+    std::string binlog_name;/*< Name of the current binlog file */
+    uint64_t    current_pos;/*< Current binlog position */
+    int         binlog_fd;  /*< File descriptor of the binlog file being read */
+    uint64_t    trx_count;  /*< Transactions processed */
+    uint64_t    trx_target; /*< Number of transactions that trigger a flush */
+    uint64_t    row_count;  /*< Row events processed */
+    uint64_t    row_target; /*< Number of row events that trigger a flush */
+    uint32_t    task_handle;/**< Delayed task handle */
+    Rpl         handler;
 
 private:
     Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler);
     void read_source_service_options(SERVICE* source);
 };
 
-class AvroSession: public MXS_ROUTER_SESSION
+class AvroSession : public MXS_ROUTER_SESSION
 {
     AvroSession(const AvroSession&) = delete;
     AvroSession& operator=(const AvroSession&) = delete;
@@ -149,19 +149,19 @@ public:
     static AvroSession* create(Avro* router, MXS_SESSION* session);
     ~AvroSession();
 
-    DCB*                  dcb;  /*< The client DCB */
-    int                   state; /*< The state of this client */
-    enum avro_data_format format; /*< Stream JSON or Avro data */
-    std::string           uuid; /*< Client UUID */
-    SPINLOCK              catch_lock; /*< Event catchup lock */
-    Avro*                 router; /*< Pointer to the owning router */
-    MAXAVRO_FILE*         file_handle; /*< Current open file handle */
-    uint64_t              last_sent_pos; /*< The last record we sent */
+    DCB*                  dcb;          /*< The client DCB */
+    int                   state;        /*< The state of this client */
+    enum avro_data_format format;       /*< Stream JSON or Avro data */
+    std::string           uuid;         /*< Client UUID */
+    SPINLOCK              catch_lock;   /*< Event catchup lock */
+    Avro*                 router;       /*< Pointer to the owning router */
+    MAXAVRO_FILE*         file_handle;  /*< Current open file handle */
+    uint64_t              last_sent_pos;/*< The last record we sent */
     time_t                connect_time; /*< Connect time of slave */
     std::string           avro_binfile;
-    bool                  requested_gtid; /*< If the client requested */
-    gtid_pos_t            gtid; /*< Current/requested GTID */
-    gtid_pos_t            gtid_start; /*< First sent GTID */
+    bool                  requested_gtid;   /*< If the client requested */
+    gtid_pos_t            gtid;             /*< Current/requested GTID */
+    gtid_pos_t            gtid_start;       /*< First sent GTID */
 
     /**
      * Process a client request
@@ -180,10 +180,10 @@ public:
 private:
     AvroSession(Avro* instance, MXS_SESSION* session);
 
-    int do_registration(GWBUF *data);
-    void process_command(GWBUF *queue);
-    void send_gtid_info(gtid_pos_t *gtid_pos);
-    void set_current_gtid(json_t *row);
+    int  do_registration(GWBUF* data);
+    void process_command(GWBUF* queue);
+    void send_gtid_info(gtid_pos_t* gtid_pos);
+    void set_current_gtid(json_t* row);
     bool stream_json();
     bool stream_binary();
     bool seek_to_gtid();
@@ -191,26 +191,36 @@ private:
     void rotate_avro_file(std::string fullname);
 };
 
-void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id, char* dest, size_t len);
-TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create);
+void read_table_info(uint8_t* ptr,
+                     uint8_t post_header_len,
+                     uint64_t* table_id,
+                     char* dest,
+                     size_t len);
+TableMapEvent*    table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* create);
 STableCreateEvent table_create_alloc(char* ident, const char* sql, int len);
-bool table_create_save(TableCreateEvent *create, const char *filename);
-bool table_create_alter(TableCreateEvent *create, const char *sql, const char *end);
-TableCreateEvent* table_create_from_schema(const char* file, const char* db, const char* table,
+bool              table_create_save(TableCreateEvent* create, const char* filename);
+bool              table_create_alter(TableCreateEvent* create, const char* sql, const char* end);
+TableCreateEvent* table_create_from_schema(const char* file,
+                                           const char* db,
+                                           const char* table,
                                            int version);
-void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size);
-int avro_client_handle_request(Avro *, AvroSession *, GWBUF *);
-void avro_client_rotate(Avro *router, AvroSession *client, uint8_t *ptr);
-bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
-void avro_close_binlog(int fd);
-avro_binlog_end_t avro_read_all_events(Avro *router);
-char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
-bool handle_row_event(Avro *router, REP_HEADER *hdr, uint8_t *ptr);
-void handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
-REP_HEADER construct_header(uint8_t* ptr);
-bool avro_save_conversion_state(Avro *router);
-bool avro_load_conversion_state(Avro *router);
-void avro_load_metadata_from_schemas(Avro *router);
-void notify_all_clients(Avro *router);
+void read_table_identifier(const char* db,
+                           const char* sql,
+                           const char* end,
+                           char* dest,
+                           int size);
+int               avro_client_handle_request(Avro*, AvroSession*, GWBUF*);
+void              avro_client_rotate(Avro* router, AvroSession* client, uint8_t* ptr);
+bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
+void              avro_close_binlog(int fd);
+avro_binlog_end_t avro_read_all_events(Avro* router);
+char*             json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
+bool              handle_row_event(Avro* router, REP_HEADER* hdr, uint8_t* ptr);
+void              handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
+REP_HEADER        construct_header(uint8_t* ptr);
+bool              avro_save_conversion_state(Avro* router);
+bool              avro_load_conversion_state(Avro* router);
+void              avro_load_metadata_from_schemas(Avro* router);
+void              notify_all_clients(Avro* router);
 
 MXS_END_DECLS

@@ -47,28 +47,26 @@
 
 const char CDC_USERS_FILENAME[] = "cdcusers";
 
-static bool cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
-static int  cdc_auth_authenticate(DCB *dcb);
-static void cdc_auth_free_client_data(DCB *dcb);
+static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
+static bool cdc_auth_is_client_ssl_capable(DCB* dcb);
+static int  cdc_auth_authenticate(DCB* dcb);
+static void cdc_auth_free_client_data(DCB* dcb);
 
-static int cdc_set_service_user(SERV_LISTENER *listener);
-static int cdc_replace_users(SERV_LISTENER *listener);
+static int cdc_set_service_user(SERV_LISTENER* listener);
+static int cdc_replace_users(SERV_LISTENER* listener);
 
-static int cdc_auth_check(
-    DCB           *dcb,
-    CDC_protocol  *protocol,
-    char          *username,
-    uint8_t       *auth_data,
-    unsigned int  *flags
-);
+static int cdc_auth_check(DCB* dcb,
+                          CDC_protocol* protocol,
+                          char* username,
+                          uint8_t* auth_data,
+                          unsigned int* flags
+                          );
 
-static bool cdc_auth_set_client_data(
-    CDC_session *client_data,
-    CDC_protocol *protocol,
-    uint8_t *client_auth_packet,
-    int client_auth_packet_size
-);
+static bool cdc_auth_set_client_data(CDC_session* client_data,
+                                     CDC_protocol* protocol,
+                                     uint8_t* client_auth_packet,
+                                     int client_auth_packet_size
+                                     );
 
 /**
  * @brief Add a new CDC user
@@ -79,24 +77,24 @@ static bool cdc_auth_set_client_data(
  * @param args Arguments for this command
  * @return True if user was successfully added
  */
-static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
+static bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 {
-    const char *user = args->argv[1].value.string;
+    const char* user = args->argv[1].value.string;
     size_t userlen = strlen(user);
-    const char *password = args->argv[2].value.string;
+    const char* password = args->argv[2].value.string;
     uint8_t phase1[SHA_DIGEST_LENGTH];
     uint8_t phase2[SHA_DIGEST_LENGTH];
     SHA1((uint8_t*)password, strlen(password), phase1);
     SHA1(phase1, sizeof(phase1), phase2);
 
-    size_t data_size = userlen + 2 + SHA_DIGEST_LENGTH * 2; // Extra for the : and newline
+    size_t data_size = userlen + 2 + SHA_DIGEST_LENGTH * 2;     // Extra for the : and newline
     char final_data[data_size];
     strcpy(final_data, user);
     strcat(final_data, ":");
     gw_bin2hex(final_data + userlen + 1, phase2, sizeof(phase2));
     final_data[data_size - 1] = '\n';
 
-    SERVICE *service = args->argv[0].value.service;
+    SERVICE* service = args->argv[0].value.service;
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/", get_datadir(), service->name);
     bool rval = false;
@@ -115,7 +113,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
             }
             else
             {
-                const char *real_err = mxs_strerror(errno);
+                const char* real_err = mxs_strerror(errno);
                 MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
                 modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
             }
@@ -124,7 +122,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
         }
         else
         {
-            const char *real_err = mxs_strerror(errno);
+            const char* real_err = mxs_strerror(errno);
             MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
             modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
         }
@@ -132,7 +130,8 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
     else
     {
         modulecmd_set_error("Failed to create directory '%s'. Read the MaxScale "
-                            "log for more details.", path);
+                            "log for more details.",
+                            path);
     }
 
     return rval;
@@ -148,53 +147,56 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static modulecmd_arg_type_t args[] =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        { MODULECMD_ARG_SERVICE, "Service where the user is added"},
-        { MODULECMD_ARG_STRING, "User to add"},
-        { MODULECMD_ARG_STRING, "Password of the user"}
-    };
+        static modulecmd_arg_type_t args[] =
+        {
+            {MODULECMD_ARG_SERVICE, "Service where the user is added" },
+            {MODULECMD_ARG_STRING,  "User to add"                     },
+            {MODULECMD_ARG_STRING,  "Password of the user"            }
+        };
 
-    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE,
-                               cdc_add_new_user, 3, args,
-                               "Add a new CDC user");
+        modulecmd_register_command("cdc",
+                                   "add_user",
+                                   MODULECMD_TYPE_ACTIVE,
+                                   cdc_add_new_user,
+                                   3,
+                                   args,
+                                   "Add a new CDC user");
 
-    static MXS_AUTHENTICATOR MyObject =
-    {
-        NULL,                           /* No initialize entry point */
-        NULL,                           /* No create entry point */
-        cdc_auth_set_protocol_data,     /* Extract data into structure   */
-        cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-        cdc_auth_authenticate,          /* Authenticate user credentials */
-        cdc_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                           /* No destroy entry point */
-        cdc_replace_users,              /* Load CDC users */
-        users_default_diagnostic,       /* Default diagnostic */
-        users_default_diagnostic_json,  /* Default diagnostic */
-        NULL                            /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            NULL,                           /* No initialize entry point */
+            NULL,                           /* No create entry point */
+            cdc_auth_set_protocol_data,     /* Extract data into structure   */
+            cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+            cdc_auth_authenticate,          /* Authenticate user credentials */
+            cdc_auth_free_client_data,      /* Free the client data held in DCB */
+            NULL,                           /* No destroy entry point */
+            cdc_replace_users,              /* Load CDC users */
+            users_default_diagnostic,       /* Default diagnostic */
+            users_default_diagnostic_json,  /* Default diagnostic */
+            NULL                            /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The CDC client to MaxScale authenticator implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The CDC client to MaxScale authenticator implementation",
+            "V1.1.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
-
+        return &info;
+    }
 }
 
 /**
@@ -207,8 +209,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username,
-                          uint8_t *auth_data, unsigned int *flags)
+static int cdc_auth_check(DCB* dcb,
+                          CDC_protocol* protocol,
+                          char* username,
+                          uint8_t* auth_data,
+                          unsigned int* flags)
 {
     int rval = CDC_STATE_AUTH_FAILED;
 
@@ -237,11 +242,10 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username,
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int
-cdc_auth_authenticate(DCB *dcb)
+static int cdc_auth_authenticate(DCB* dcb)
 {
-    CDC_protocol *protocol = DCB_PROTOCOL(dcb, CDC_protocol);
-    CDC_session *client_data = (CDC_session *)dcb->data;
+    CDC_protocol* protocol = DCB_PROTOCOL(dcb, CDC_protocol);
+    CDC_session* client_data = (CDC_session*)dcb->data;
     int auth_ret;
 
     if (0 == strlen(client_data->user))
@@ -253,12 +257,17 @@ cdc_auth_authenticate(DCB *dcb)
         MXS_DEBUG("Receiving connection from '%s'",
                   client_data->user);
 
-        auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
+        auth_ret
+            = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret && cdc_replace_users(dcb->listener) == MXS_AUTH_LOADUSERS_OK)
         {
-            auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
+            auth_ret = cdc_auth_check(dcb,
+                                      protocol,
+                                      client_data->user,
+                                      client_data->auth_data,
+                                      client_data->flags);
         }
 
         /* on successful authentication, set user into dcb field */
@@ -270,7 +279,8 @@ cdc_auth_authenticate(DCB *dcb)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s', authentication failed.",
-                          dcb->service->name, client_data->user);
+                          dcb->service->name,
+                          client_data->user);
         }
     }
 
@@ -291,18 +301,17 @@ cdc_auth_authenticate(DCB *dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-static bool
-cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
+static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
 {
-    uint8_t *client_auth_packet = GWBUF_DATA(buf);
-    CDC_protocol *protocol = NULL;
-    CDC_session *client_data = NULL;
+    uint8_t* client_auth_packet = GWBUF_DATA(buf);
+    CDC_protocol* protocol = NULL;
+    CDC_session* client_data = NULL;
     int client_auth_packet_size = 0;
 
     protocol = DCB_PROTOCOL(dcb, CDC_protocol);
     if (dcb->data == NULL)
     {
-        if (NULL == (client_data = (CDC_session *)MXS_CALLOC(1, sizeof(CDC_session))))
+        if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))
         {
             return false;
         }
@@ -310,12 +319,14 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     }
     else
     {
-        client_data = (CDC_session *)dcb->data;
+        client_data = (CDC_session*)dcb->data;
     }
 
     client_auth_packet_size = gwbuf_length(buf);
 
-    return cdc_auth_set_client_data(client_data, protocol, client_auth_packet,
+    return cdc_auth_set_client_data(client_data,
+                                    protocol,
+                                    client_auth_packet,
                                     client_auth_packet_size);
 }
 
@@ -332,11 +343,10 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param client_auth_packet size An integer giving the size of the data
  * @return True on success, false on error
  */
-static bool
-cdc_auth_set_client_data(CDC_session *client_data,
-                         CDC_protocol *protocol,
-                         uint8_t *client_auth_packet,
-                         int client_auth_packet_size)
+static bool cdc_auth_set_client_data(CDC_session* client_data,
+                                     CDC_protocol* protocol,
+                                     uint8_t* client_auth_packet,
+                                     int client_auth_packet_size)
 {
     if (client_auth_packet_size % 2 != 0)
     {
@@ -346,15 +356,16 @@ cdc_auth_set_client_data(CDC_session *client_data,
 
     bool rval = false;
     int decoded_size = client_auth_packet_size / 2;
-    char decoded_buffer[decoded_size + 1]; // Extra for terminating null
+    char decoded_buffer[decoded_size + 1];      // Extra for terminating null
 
     /* decode input data */
     if (client_auth_packet_size <= CDC_USER_MAXLEN)
     {
-        gw_hex2bin((uint8_t*)decoded_buffer, (const char *)client_auth_packet,
+        gw_hex2bin((uint8_t*)decoded_buffer,
+                   (const char*)client_auth_packet,
                    client_auth_packet_size);
         decoded_buffer[decoded_size] = '\0';
-        char *tmp_ptr = strchr(decoded_buffer, ':');
+        char* tmp_ptr = strchr(decoded_buffer, ':');
 
         if (tmp_ptr)
         {
@@ -378,7 +389,8 @@ cdc_auth_set_client_data(CDC_session *client_data,
     else
     {
         MXS_ERROR("Authentication failed, client authentication packet length "
-                  "exceeds the maximum allowed length of %d bytes.", CDC_USER_MAXLEN);
+                  "exceeds the maximum allowed length of %d bytes.",
+                  CDC_USER_MAXLEN);
     }
 
     return rval;
@@ -394,8 +406,7 @@ cdc_auth_set_client_data(CDC_session *client_data,
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-static bool
-cdc_auth_is_client_ssl_capable(DCB *dcb)
+static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
 {
     return false;
 }
@@ -412,8 +423,7 @@ cdc_auth_is_client_ssl_capable(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void
-cdc_auth_free_client_data(DCB *dcb)
+static void cdc_auth_free_client_data(DCB* dcb)
 {
     MXS_FREE(dcb->data);
 }
@@ -425,14 +435,13 @@ cdc_auth_free_client_data(DCB *dcb)
  * @param service   The current service
  * @return      0 on success, 1 on failure
  */
-static int
-cdc_set_service_user(SERV_LISTENER *listener)
+static int cdc_set_service_user(SERV_LISTENER* listener)
 {
-    SERVICE *service = listener->service;
-    char *dpwd = NULL;
-    char *newpasswd = NULL;
-    const char *service_user = NULL;
-    const char *service_passwd = NULL;
+    SERVICE* service = listener->service;
+    char* dpwd = NULL;
+    char* newpasswd = NULL;
+    const char* service_user = NULL;
+    const char* service_passwd = NULL;
 
     serviceGetUser(service, &service_user, &service_passwd);
     dpwd = decrypt_password(service_passwd);
@@ -477,13 +486,12 @@ cdc_set_service_user(SERV_LISTENER *listener)
  * @return -1 on error or users loaded (including 0)
  */
 
-static int
-cdc_read_users(USERS *users, char *usersfile)
+static int cdc_read_users(USERS* users, char* usersfile)
 {
-    FILE  *fp;
+    FILE* fp;
     int loaded = 0;
-    char *avro_user;
-    char *user_passwd;
+    char* avro_user;
+    char* user_passwd;
     /* user maxlen ':' password hash  '\n' '\0' */
     char read_buffer[CDC_USER_MAXLEN + 1 + SHA_DIGEST_LENGTH + 1 + 1];
 
@@ -498,7 +506,7 @@ cdc_read_users(USERS *users, char *usersfile)
     {
         if (fgets(read_buffer, max_line_size, fp) != NULL)
         {
-            char *tmp_ptr = read_buffer;
+            char* tmp_ptr = read_buffer;
 
             if ((tmp_ptr = strchr(read_buffer, ':')) != NULL)
             {
@@ -528,19 +536,23 @@ cdc_read_users(USERS *users, char *usersfile)
  *
  * @param service The current service
  */
-int cdc_replace_users(SERV_LISTENER *listener)
+int cdc_replace_users(SERV_LISTENER* listener)
 {
     int rc = MXS_AUTH_LOADUSERS_ERROR;
-    USERS *newusers = users_alloc();
+    USERS* newusers = users_alloc();
 
     if (newusers)
     {
         char path[PATH_MAX + 1];
-        snprintf(path, PATH_MAX, "%s/%s/%s", get_datadir(), listener->service->name,
+        snprintf(path,
+                 PATH_MAX,
+                 "%s/%s/%s",
+                 get_datadir(),
+                 listener->service->name,
                  CDC_USERS_FILENAME);
 
         int i = cdc_read_users(newusers, path);
-        USERS *oldusers = NULL;
+        USERS* oldusers = NULL;
 
         spinlock_acquire(&listener->lock);
 

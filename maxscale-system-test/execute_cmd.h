@@ -12,6 +12,6 @@ using namespace std;
  * @param res Pointer to variable that will contain command console output (stdout)
  * @return Process exit code
  */
-int execute_cmd(char * cmd, char ** res);
+int execute_cmd(char* cmd, char** res);
 
 #endif // EXECUTE_CMD_H

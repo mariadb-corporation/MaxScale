@@ -29,7 +29,7 @@
 #include <maxbase/ccdefs.hh>
 
 typedef std::vector<std::string> Row;
-typedef std::vector<Row> Result;
+typedef std::vector<Row>         Result;
 
 /**
  * Opens connection to DB: wropper over mysql_real_connect
@@ -44,8 +44,13 @@ typedef std::vector<Row> Result;
  *
  * @return MYSQL struct
  */
-MYSQL* open_conn_db_flags(int port, std::string ip, std::string db, std::string user, std::string password,
-                          unsigned long flag, bool ssl);
+MYSQL* open_conn_db_flags(int port,
+                          std::string ip,
+                          std::string db,
+                          std::string user,
+                          std::string password,
+                          unsigned long flag,
+                          bool ssl);
 
 
 /**
@@ -61,8 +66,13 @@ MYSQL* open_conn_db_flags(int port, std::string ip, std::string db, std::string 
  *
  * @return MYSQL struct
  */
-MYSQL* open_conn_db_timeout(int port, std::string ip, std::string db, std::string user, std::string password,
-                            unsigned int timeout, bool ssl);
+MYSQL* open_conn_db_timeout(int port,
+                            std::string ip,
+                            std::string db,
+                            std::string user,
+                            std::string password,
+                            unsigned int timeout,
+                            bool ssl);
 
 /**
  * Opens connection to DB with default flags
@@ -76,7 +86,11 @@ MYSQL* open_conn_db_timeout(int port, std::string ip, std::string db, std::strin
  *
  * @return MYSQL struct
  */
-static MYSQL* open_conn_db(int port, std::string ip, std::string db, std::string user, std::string password,
+static MYSQL* open_conn_db(int port,
+                           std::string ip,
+                           std::string db,
+                           std::string user,
+                           std::string password,
                            bool ssl = false)
 {
     return open_conn_db_flags(port, ip, db, user, password, CLIENT_MULTI_STATEMENTS, ssl);
@@ -109,13 +123,18 @@ static MYSQL* open_conn(int port, std::string ip, std::string user, std::string 
  *
  * @return MYSQL struct
  */
-static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password, bool ssl = false)
+static MYSQL* open_conn_no_db(int port,
+                              std::string ip,
+                              std::string user,
+                              std::string password,
+                              bool ssl = false)
 {
     return open_conn_db_flags(port, ip, "", user, password, CLIENT_MULTI_STATEMENTS, ssl);
 }
 
 /**
- * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up returns
+ * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up
+ *returns
  * @param conn      MYSQL connection
  * @param format    SQL string with printf style formatting
  * @param ...       Parameters for @c format
@@ -124,7 +143,8 @@ static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::s
 int execute_query(MYSQL* conn, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
 /**
- * @brief execute_query_from_file Read a line from a file, trim leading and trailing whitespace and execute it.
+ * @brief execute_query_from_file Read a line from a file, trim leading and trailing whitespace and execute
+ *it.
  * @param conn MYSQL handler
  * @param file file handler
  * @return 0 in case of success
@@ -132,7 +152,8 @@ int execute_query(MYSQL* conn, const char* format, ...) mxb_attribute((format(pr
 int execute_query_from_file(MYSQL* conn, FILE* file);
 
 /**
- * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up returns
+ * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up
+ *returns
  * @param conn MYSQL connection struct
  * @param sql   SQL string
  * @return 0 in case of success
@@ -149,12 +170,12 @@ int execute_query_silent(MYSQL* conn, const char* sql, bool silent = true);
 int execute_query_affected_rows(MYSQL* conn, const char* sql, my_ulonglong* affected_rows);
 
 /**
-* @brief A more convenient form of execute_query_affected_rows()
-*
-* @param conn Connection to use for the query
-* @param sql  The SQL statement to execute
-* @return Number of rows or -1 on error
-*/
+ * @brief A more convenient form of execute_query_affected_rows()
+ *
+ * @param conn Connection to use for the query
+ * @param sql  The SQL statement to execute
+ * @return Number of rows or -1 on error
+ */
 int execute_query_count_rows(MYSQL* conn, const char* sql);
 
 /**
@@ -167,8 +188,10 @@ int execute_query_count_rows(MYSQL* conn, const char* sql);
  * @param i pointer to variable to store number of result sets
  * @return 0 in case of success
  */
-int execute_query_num_of_rows(MYSQL* conn, const char* sql, my_ulonglong* num_of_rows,
-                              unsigned long long *i);
+int execute_query_num_of_rows(MYSQL* conn,
+                              const char* sql,
+                              my_ulonglong* num_of_rows,
+                              unsigned long long* i);
 
 /**
  * @brief Executes perared statement and get number of rows in the result
@@ -179,7 +202,7 @@ int execute_query_num_of_rows(MYSQL* conn, const char* sql, my_ulonglong* num_of
  * @param i pointer to variable to store number of result sets
  * @return 0 in case of success
  */
-int execute_stmt_num_of_rows(MYSQL_STMT* stmt, my_ulonglong* num_of_rows, unsigned long long * i);
+int execute_stmt_num_of_rows(MYSQL_STMT* stmt, my_ulonglong* num_of_rows, unsigned long long* i);
 
 /**
  * @brief execute_query_check_one Executes query and check if first field of first row is equal to 'expected'
@@ -239,24 +262,29 @@ public:
     Connection(Connection&) = delete;
     Connection& operator=(Connection&) = delete;
 
-    Connection(std::string host, int port, std::string user, std::string password, std::string db = "", bool ssl = false):
-        m_host(host),
-        m_port(port),
-        m_user(user),
-        m_pw(password),
-        m_db(db),
-        m_ssl(ssl)
+    Connection(std::string host,
+               int port,
+               std::string user,
+               std::string password,
+               std::string db = "",
+               bool ssl = false)
+        : m_host(host)
+        , m_port(port)
+        , m_user(user)
+        , m_pw(password)
+        , m_db(db)
+        , m_ssl(ssl)
     {
     }
 
-    Connection(Connection&& rhs):
-        m_host(rhs.m_host),
-        m_port(rhs.m_port),
-        m_user(rhs.m_user),
-        m_pw(rhs.m_pw),
-        m_db(rhs.m_db),
-        m_ssl(rhs.m_ssl),
-        m_conn(rhs.m_conn)
+    Connection(Connection&& rhs)
+        : m_host(rhs.m_host)
+        , m_port(rhs.m_port)
+        , m_user(rhs.m_user)
+        , m_pw(rhs.m_pw)
+        , m_db(rhs.m_db)
+        , m_ssl(rhs.m_ssl)
+        , m_conn(rhs.m_conn)
     {
         rhs.m_conn = nullptr;
     }

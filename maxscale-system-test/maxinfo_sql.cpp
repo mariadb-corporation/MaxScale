@@ -36,23 +36,23 @@ int main(int argc, char** argv)
     // Create some threads so that the SHOW SESSIONS will actually do something
     for (int i = 0; i < 25; i++)
     {
-        threads.emplace_back([&]()
-        {
-            while (wait)
-            {
-                sleep(1);
-            }
+        threads.emplace_back([&]() {
+                                 while (wait)
+                                 {
+                                     sleep(1);
+                                 }
 
-            while (run)
-            {
-                MYSQL* conn = test.maxscales->open_rwsplit_connection();
-                for (int i = 0; i < 100; i++)
-                {
-                    mysql_query(conn, "SELECT REPEAT('a', 10000), sleep(0.01) FROM dual");
-                }
-                mysql_close(conn);
-            }
-        });
+                                 while (run)
+                                 {
+                                     MYSQL* conn = test.maxscales->open_rwsplit_connection();
+                                     for (int i = 0; i < 100; i++)
+                                     {
+                                         mysql_query(conn,
+                                                     "SELECT REPEAT('a', 10000), sleep(0.01) FROM dual");
+                                     }
+                                     mysql_close(conn);
+                                 }
+                             });
     }
 
     wait = false;

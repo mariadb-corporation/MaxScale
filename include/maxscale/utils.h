@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file utils.h Utility functions headers
@@ -26,9 +26,9 @@
 MXS_BEGIN_DECLS
 
 #define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
-#define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
+#define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 
-#define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array)/sizeof(array[0])))
+#define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
 
 /** Macro for safe pointer arithmetic on void pointers
  * @param a The void pointer
@@ -39,11 +39,11 @@ MXS_BEGIN_DECLS
 /** The type of the socket */
 enum mxs_socket_type
 {
-    MXS_SOCKET_LISTENER, /**< */
+    MXS_SOCKET_LISTENER,    /**< */
     MXS_SOCKET_NETWORK,
 };
 
-bool utils_init(); /*< Call this first before using any other function */
+bool utils_init();      /*< Call this first before using any other function */
 void utils_end();
 
 /**
@@ -67,8 +67,10 @@ void utils_end();
  *
  * @return The opened socket or -1 on failure
  */
-int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr,
-                        const char *host, uint16_t port);
+int open_network_socket(enum mxs_socket_type type,
+                        struct sockaddr_storage* addr,
+                        const char* host,
+                        uint16_t port);
 
 /**
  * @brief Create a UNIX domain socket
@@ -84,21 +86,22 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
  *
  * @return The opened socket or -1 on failure
  */
-int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr,
-                     const char *path);
+int open_unix_socket(enum mxs_socket_type type,
+                     struct sockaddr_un*  addr,
+                     const char* path);
 
-int setnonblocking(int fd);
-int setblocking(int fd);
-char  *gw_strend(register const char *s);
+int         setnonblocking(int fd);
+int         setblocking(int fd);
+char*       gw_strend(register const char* s);
 static char gw_randomchar();
-int gw_generate_random_str(char *output, int len);
-int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len);
-void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
-void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
-int gw_getsockerrno(int fd);
-char *create_hex_sha1_sha1_passwd(char *passwd);
+int         gw_generate_random_str(char* output, int len);
+int         gw_hex2bin(uint8_t* out, const char* in, unsigned int len);
+char*       gw_bin2hex(char* out, const uint8_t* in, unsigned int len);
+void        gw_str_xor(uint8_t* output, const uint8_t* input1, const uint8_t* input2, unsigned int len);
+void        gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
+void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
+int         gw_getsockerrno(int fd);
+char*       create_hex_sha1_sha1_passwd(char* passwd);
 
 /**
  * Trim leading whitespace from a string.
@@ -133,26 +136,30 @@ char* trim_trailing(char* str);
  *       the returned pointer is always the same the one given as
  *       argument.
  */
-char* trim(char *str);
+char* trim(char* str);
 
-void replace_whitespace(char* str);
+void  replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
-bool strip_escape_chars(char*);
+bool  strip_escape_chars(char*);
 
 bool is_valid_posix_path(char* path);
 
-char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest,
+char* remove_mysql_comments(const char** src,
+                            const size_t* srcsize,
+                            char** dest,
                             size_t* destsize);
-char* replace_values(const char** src, const size_t* srcsize, char** dest,
+char* replace_values(const char** src,
+                     const size_t* srcsize,
+                     char** dest,
                      size_t* destsize);
 char* replace_literal(char* haystack,
                       const char* needle,
                       const char* replacement);
 char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize);
 
-bool clean_up_pathname(char *path);
+bool clean_up_pathname(char* path);
 
-bool mxs_mkdir_all(const char *path, int mask);
+bool mxs_mkdir_all(const char* path, int mask);
 
 /**
  * Return the number of processors
@@ -195,8 +202,8 @@ static inline uint8_t* mxs_set_byte4(uint8_t* ptr, uint32_t value)
  */
 static inline uint32_t mxs_get_byte4(const uint8_t* ptr)
 {
-    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8) |
-        ((uint32_t) ptr[2] << 16) | ((uint32_t) ptr[3] << 24);
+    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8)
+           | ((uint32_t) ptr[2] << 16) | ((uint32_t) ptr[3] << 24);
 }
 
 MXS_END_DECLS

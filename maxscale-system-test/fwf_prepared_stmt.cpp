@@ -11,7 +11,9 @@ int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    test.maxscales->ssh_node_f(0, true, "mkdir -p /home/vagrant/rules/;"
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "mkdir -p /home/vagrant/rules/;"
                                "echo 'rule test1 deny columns c on_queries select' > /home/vagrant/rules/rules.txt;"
                                "echo 'users %%@%% match any rules test1' >> /home/vagrant/rules/rules.txt;"
                                "chmod a+r /home/vagrant/rules/rules.txt;");
@@ -37,16 +39,18 @@ int main(int argc, char** argv)
                     "Text protocol execution should fail");
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
-    const char *query = "SELECT a, b FROM test.t1";
+    const char* query = "SELECT a, b FROM test.t1";
 
-    test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Binary protocol preparation should succeed");
+    test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)),
+                    "Binary protocol preparation should succeed");
     test.add_result(mysql_stmt_execute(stmt), "Binary protocol execution should succeed");
     mysql_stmt_close(stmt);
 
     stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
     query = "SELECT c FROM test.t1";
 
-    test.add_result(!mysql_stmt_prepare(stmt, query, strlen(query)), "Binary protocol preparation should fail");
+    test.add_result(!mysql_stmt_prepare(stmt, query, strlen(query)),
+                    "Binary protocol preparation should fail");
     mysql_stmt_close(stmt);
 
     test.repl->connect();

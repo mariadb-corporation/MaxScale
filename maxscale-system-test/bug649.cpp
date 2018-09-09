@@ -1,29 +1,29 @@
 /**
  * @file bug649.cpp regression case for bug 649 ("Segfault using RW Splitter")
  * @verbatim
-
-[RW_Router]
-type=service
-router=readconnroute
-servers=server1
-user=skysql
-passwd=skysql
-version_string=5.1-OLD-Bored-Mysql
-filters=DuplicaFilter
-
-[RW_Split]
-type=service
-router=readwritesplit
-servers=server1,server3,server2
-user=skysql
-passwd=skysql
-
-[DuplicaFilter]
-type=filter
-module=tee
-service=RW_Split
-
-   @endverbatim
+ *
+ *  [RW_Router]
+ *  type=service
+ *  router=readconnroute
+ *  servers=server1
+ *  user=skysql
+ *  passwd=skysql
+ *  version_string=5.1-OLD-Bored-Mysql
+ *  filters=DuplicaFilter
+ *
+ *  [RW_Split]
+ *  type=service
+ *  router=readwritesplit
+ *  servers=server1,server3,server2
+ *  user=skysql
+ *  passwd=skysql
+ *
+ *  [DuplicaFilter]
+ *  type=filter
+ *  module=tee
+ *  service=RW_Split
+ *
+ *  @endverbatim
  * - Connect to RWSplit
  * - create load on RWSplit (25 threads doing long INSERTs in the loop)
  * - block Mariadb server on Master node by Firewall
@@ -40,13 +40,13 @@ service=RW_Split
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 
-TestConnections * Test ;
+TestConnections* Test;
 
 char sql[1000000];
 
-void *parall_traffic( void *ptr );
+void* parall_traffic(void* ptr);
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int threads_num = 20;
     pthread_t parall_traffic1[threads_num];
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    if (execute_query_silent(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;") == 0)
+    if (execute_query_silent(Test->maxscales->conn_rwsplit[0], (char*) "show processlist;") == 0)
     {
         Test->add_result(1, "Failure is expected, but query is ok\n");
     }
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Reconnecting to RWSplit ...\n");
     Test->maxscales->connect_rwsplit(0);
     Test->tprintf("                        ... and trying query\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "show processlist;");
     Test->maxscales->close_rwsplit(0);
 
     /** Clean up */
@@ -134,9 +134,9 @@ int main(int argc, char *argv[])
 }
 
 
-void *parall_traffic( void *ptr )
+void* parall_traffic(void* ptr)
 {
-    MYSQL * conn;
+    MYSQL* conn;
     mysql_thread_init();
     conn = Test->maxscales->open_rwsplit_connection(0);
     if ((conn != NULL) && (mysql_errno(conn) == 0))
@@ -152,7 +152,7 @@ void *parall_traffic( void *ptr )
         Test->tprintf("Error opening connection");
     }
 
-    if (conn != NULL )
+    if (conn != NULL)
     {
         mysql_close(conn);
     }

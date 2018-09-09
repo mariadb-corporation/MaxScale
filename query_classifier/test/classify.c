@@ -158,7 +158,7 @@ int test(FILE* input, FILE* expected)
     int rc = EXIT_SUCCESS;
 
     int buffsz = getpagesize(), strsz = 0;
-    char buffer[1024], *strbuff = (char*)calloc(buffsz, sizeof(char));
+    char buffer[1024], * strbuff = (char*)calloc(buffsz, sizeof(char));
 
     int rd;
 
@@ -184,7 +184,7 @@ int test(FILE* input, FILE* expected)
         strsz += rd;
         *(strbuff + strsz) = '\0';
 
-        char *tok, *nlptr;
+        char* tok, * nlptr;
 
         /**Remove newlines*/
         while ((nlptr = strpbrk(strbuff, "\n")) != NULL && (nlptr - strbuff) < strsz)
@@ -221,7 +221,7 @@ int test(FILE* input, FILE* expected)
             }
             expbuff[expos] = '\0';
 
-            char *qtypestr = get_types_as_string(type);
+            char* qtypestr = get_types_as_string(type);
             const char* q = (const char*) GWBUF_DATA(buff) + 5;
 
             printf("Query   : %.*s\n", qlen, q);
@@ -253,11 +253,11 @@ int run(const char* input_filename, const char* expected_filename)
 {
     int rc = EXIT_FAILURE;
 
-    FILE *input = fopen(input_filename, "rb");
+    FILE* input = fopen(input_filename, "rb");
 
     if (input)
     {
-        FILE *expected = fopen(expected_filename, "rb");
+        FILE* expected = fopen(expected_filename, "rb");
 
         if (expected)
         {
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
             expected_name = argv[3];
 
             size_t sz = strlen(lib);
-            char buffer[sz + 3 + 1]; // "../" and terminating NULL.
+            char buffer[sz + 3 + 1];    // "../" and terminating NULL.
             sprintf(buffer, "../%s", lib);
 
             libdir = strdup(buffer);
@@ -333,8 +333,10 @@ int main(int argc, char** argv)
             }
             else
             {
-                fprintf(stderr, "error: %s: Could not initialize query classifier library %s.\n",
-                        argv[0], lib);
+                fprintf(stderr,
+                        "error: %s: Could not initialize query classifier library %s.\n",
+                        argv[0],
+                        lib);
             }
 
             mxs_log_finish();

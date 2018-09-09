@@ -1,5 +1,6 @@
 /**
- * @file mxs657_restart_service.cpp mxs657 regression case ("Debug assertion when service is shut down and restarted repeatedly")
+ * @file mxs657_restart_service.cpp mxs657 regression case ("Debug assertion when service is shut down and
+ *restarted repeatedly")
  *
  * - shutdown and restart RW Split Router in the loop from a number of threads
  * Note: does not work crash reliable way with 'smoke' option
@@ -12,20 +13,20 @@
 #include "testconnections.h"
 
 using namespace std;
-void *query_thread1( void *ptr );
-TestConnections * Test;
+void* query_thread1(void* ptr);
+TestConnections* Test;
 bool exit_flag = false;
-char * shutdown_cmd;
-char * restart_cmd;
+char* shutdown_cmd;
+char* restart_cmd;
 
-char *router_sht = (char *) "shutdown service \"RW Split Router\"";
-char *router_rst = (char *) "restart service \"RW Split Router\"";
+char* router_sht = (char*) "shutdown service \"RW Split Router\"";
+char* router_rst = (char*) "restart service \"RW Split Router\"";
 
-char *listener_sht = (char *) "shutdown service \"RW Split Listener\"";
-char *listener_rst = (char *) "restart service \"RW Split Listener\"";
+char* listener_sht = (char*) "shutdown service \"RW Split Listener\"";
+char* listener_rst = (char*) "restart service \"RW Split Listener\"";
 
-char *monitor_sht = (char *) "shutdown service \"MySQL Monitor\"";
-char *monitor_rst = (char *) "restart service \"MySQL Monitor\"";
+char* monitor_sht = (char*) "shutdown service \"MySQL Monitor\"";
+char* monitor_rst = (char*) "restart service \"MySQL Monitor\"";
 
 void sht_rst_service()
 {
@@ -54,7 +55,7 @@ void sht_rst_service()
     Test->tprintf("Done!\n");
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Test = new TestConnections(argc, argv);
 
@@ -80,13 +81,13 @@ int main(int argc, char *argv[])
     sht_rst_service();
 
     Test->check_maxscale_alive(0);
-    Test->check_log_err(0, (char *) "received fatal signal", false);
+    Test->check_log_err(0, (char*) "received fatal signal", false);
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
 
-void *query_thread1( void *ptr )
+void* query_thread1(void* ptr)
 {
     while (!exit_flag)
     {

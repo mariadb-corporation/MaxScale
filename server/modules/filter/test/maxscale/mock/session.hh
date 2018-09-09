@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "mock.hh"
 #include <maxscale/protocol/mysql.h>
@@ -31,7 +31,7 @@ namespace mock
 class Session : public mxs::Session
 {
     Session(const Session&);
-    Session& operator = (Session&);
+    Session& operator=(Session&);
 
 public:
     typedef mxs_session_trx_state_t trx_state_t;
@@ -77,7 +77,5 @@ private:
     Dcb           m_client_dcb;
     MYSQL_session m_mysql_session;
 };
-
 }
-
 }

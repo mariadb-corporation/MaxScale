@@ -12,7 +12,7 @@
 
 using namespace std;
 
-int compare_server_id(TestConnections* test, char *node_id)
+int compare_server_id(TestConnections* test, char* node_id)
 {
     char str[1024];
     int rval = 0;
@@ -29,9 +29,9 @@ int compare_server_id(TestConnections* test, char *node_id)
     return rval;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     test->repl->connect();
     char server_id[1024];
 

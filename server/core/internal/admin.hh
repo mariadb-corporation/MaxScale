@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -37,9 +37,9 @@ public:
      *
      * @param connection The connection handle for this client
      */
-    Client(MHD_Connection *connection):
-        m_connection(connection),
-        m_state(INIT)
+    Client(MHD_Connection* connection)
+        : m_connection(connection)
+        , m_state(INIT)
     {
     }
 
@@ -60,7 +60,7 @@ public:
      *
      * @return MHD_YES on success, MHD_NO on error
      */
-    int process(std::string url, std::string method, const char* data, size_t *size);
+    int process(std::string url, std::string method, const char* data, size_t* size);
 
     /**
      * @brief Authenticate the client
@@ -94,9 +94,9 @@ public:
     }
 
 private:
-    MHD_Connection* m_connection; /**< Connection handle */
-    std::string     m_data;       /**< Uploaded data */
-    state           m_state;      /**< Client state */
+    MHD_Connection* m_connection;   /**< Connection handle */
+    std::string     m_data;         /**< Uploaded data */
+    state           m_state;        /**< Client state */
 };
 
 /**

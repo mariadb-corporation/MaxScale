@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file Readwritesplit common header
@@ -42,7 +42,7 @@ enum backend_type_t
 {
     BE_UNDEFINED = -1,
     BE_MASTER,
-    BE_JOINED    = BE_MASTER,
+    BE_JOINED = BE_MASTER,
     BE_SLAVE,
     BE_COUNT
 };
@@ -84,7 +84,7 @@ enum failure_mode
  */
 static const MXS_ENUM_VALUE use_sql_variables_in_values[] =
 {
-    {"all",    TYPE_ALL},
+    {"all",    TYPE_ALL   },
     {"master", TYPE_MASTER},
     {NULL}
 };
@@ -93,80 +93,81 @@ static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
 {
     {"LEAST_GLOBAL_CONNECTIONS", LEAST_GLOBAL_CONNECTIONS},
     {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
-    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER},
+    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER     },
     {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
-    {"LOWEST_RESPONSE_TIME",     LOWEST_RESPONSE_TIME},
+    {"LOWEST_RESPONSE_TIME",     LOWEST_RESPONSE_TIME    },
     {NULL}
 };
 
 static const MXS_ENUM_VALUE master_failure_mode_values[] =
 {
     {"fail_instantly", RW_FAIL_INSTANTLY},
-    {"fail_on_write",  RW_FAIL_ON_WRITE},
+    {"fail_on_write",  RW_FAIL_ON_WRITE },
     {"error_on_write", RW_ERROR_ON_WRITE},
     {NULL}
 };
 
-#define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->bref_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
-#define BREF_HAS_FAILED(s)          ((s)->bref_state & BREF_FATAL_FAILURE)
+#define BREF_IS_NOT_USED(s)       ((s)->bref_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)         ((s)->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s) ((s)->bref_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)   ((s)->bref_state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)         ((s)->bref_state & BREF_CLOSED)
+#define BREF_HAS_FAILED(s)        ((s)->bref_state & BREF_FATAL_FAILURE)
 
 /** default values for rwsplit configuration parameters */
-#define CONFIG_MAX_SLAVE_CONN 1
-#define CONFIG_MAX_SLAVE_RLAG -1 /**< not used */
+#define CONFIG_MAX_SLAVE_CONN   1
+#define CONFIG_MAX_SLAVE_RLAG   -1  /**< not used */
 #define CONFIG_SQL_VARIABLES_IN TYPE_ALL
 
-#define BACKEND_TYPE(b) (server_is_master((b)->backend_server) ? BE_MASTER :    \
-        (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+#define BACKEND_TYPE(b) \
+    (server_is_master((b)->backend_server) ? BE_MASTER      \
+                                           : (server_is_slave((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
 #define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
 #define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
-static const char gtid_wait_stmt[] =
-    "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
-    "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
+static const char gtid_wait_stmt[]
+    = "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
+      "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
 
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.
  */
 using SRWBackendVector = std::vector<mxs::SRWBackend*>;
 using BackendSelectFunction = std::function
-                              <SRWBackendVector::const_iterator (const SRWBackendVector& sBackends)>;
+    <SRWBackendVector::const_iterator (const SRWBackendVector& sBackends)>;
 BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 struct Config
 {
-    Config(MXS_CONFIG_PARAMETER* params):
-        slave_selection_criteria(
+    Config(MXS_CONFIG_PARAMETER* params)
+        : slave_selection_criteria(
             (select_criteria_t)config_get_enum(
-                params, "slave_selection_criteria", slave_selection_criteria_values)),
-        backend_select_fct(get_backend_select_function(slave_selection_criteria)),
-        use_sql_variables_in(
+                params, "slave_selection_criteria", slave_selection_criteria_values))
+        , backend_select_fct(get_backend_select_function(slave_selection_criteria))
+        , use_sql_variables_in(
             (mxs_target_t)config_get_enum(
-                params, "use_sql_variables_in", use_sql_variables_in_values)),
-        master_failure_mode(
+                params, "use_sql_variables_in", use_sql_variables_in_values))
+        , master_failure_mode(
             (enum failure_mode)config_get_enum(
-                params, "master_failure_mode", master_failure_mode_values)),
-        max_sescmd_history(config_get_integer(params, "max_sescmd_history")),
-        disable_sescmd_history(config_get_bool(params, "disable_sescmd_history")),
-        master_accept_reads(config_get_bool(params, "master_accept_reads")),
-        strict_multi_stmt(config_get_bool(params, "strict_multi_stmt")),
-        strict_sp_calls(config_get_bool(params, "strict_sp_calls")),
-        retry_failed_reads(config_get_bool(params, "retry_failed_reads")),
-        connection_keepalive(config_get_integer(params, "connection_keepalive")),
-        max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
-        rw_max_slave_conn_percent(0),
-        max_slave_connections(0),
-        causal_reads(config_get_bool(params, "causal_reads")),
-        causal_reads_timeout(config_get_string(params, "causal_reads_timeout")),
-        master_reconnection(config_get_bool(params, "master_reconnection")),
-        delayed_retry(config_get_bool(params, "delayed_retry")),
-        delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout")),
-        transaction_replay(config_get_bool(params, "transaction_replay")),
-        trx_max_size(config_get_size(params, "transaction_replay_max_size")),
-        optimistic_trx(config_get_bool(params, "optimistic_trx"))
+                params, "master_failure_mode", master_failure_mode_values))
+        , max_sescmd_history(config_get_integer(params, "max_sescmd_history"))
+        , disable_sescmd_history(config_get_bool(params, "disable_sescmd_history"))
+        , master_accept_reads(config_get_bool(params, "master_accept_reads"))
+        , strict_multi_stmt(config_get_bool(params, "strict_multi_stmt"))
+        , strict_sp_calls(config_get_bool(params, "strict_sp_calls"))
+        , retry_failed_reads(config_get_bool(params, "retry_failed_reads"))
+        , connection_keepalive(config_get_integer(params, "connection_keepalive"))
+        , max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag"))
+        , rw_max_slave_conn_percent(0)
+        , max_slave_connections(0)
+        , causal_reads(config_get_bool(params, "causal_reads"))
+        , causal_reads_timeout(config_get_string(params, "causal_reads_timeout"))
+        , master_reconnection(config_get_bool(params, "master_reconnection"))
+        , delayed_retry(config_get_bool(params, "delayed_retry"))
+        , delayed_retry_timeout(config_get_integer(params, "delayed_retry_timeout"))
+        , transaction_replay(config_get_bool(params, "transaction_replay"))
+        , trx_max_size(config_get_size(params, "transaction_replay_max_size"))
+        , optimistic_trx(config_get_bool(params, "optimistic_trx"))
     {
         if (causal_reads)
         {
@@ -174,33 +175,33 @@ struct Config
         }
     }
 
-    select_criteria_t      slave_selection_criteria;  /**< The slave selection criteria */
-    BackendSelectFunction  backend_select_fct;
+    select_criteria_t     slave_selection_criteria;     /**< The slave selection criteria */
+    BackendSelectFunction backend_select_fct;
 
-    mxs_target_t      use_sql_variables_in;      /**< Whether to send user variables to
-                                                  * master or all nodes */
-    failure_mode      master_failure_mode;       /**< Master server failure handling mode */
-    uint64_t          max_sescmd_history;        /**< Maximum amount of session commands to store */
-    bool              disable_sescmd_history;    /**< Disable session command history */
-    bool              master_accept_reads;       /**< Use master for reads */
-    bool              strict_multi_stmt;         /**< Force non-multistatement queries to be routed to
-                                                  * the master after a multistatement query. */
-    bool              strict_sp_calls;           /**< Lock session to master after an SP call */
-    bool              retry_failed_reads;        /**< Retry failed reads on other servers */
-    int               connection_keepalive;      /**< Send pings to servers that have been idle
-                                                  * for too long */
-    int               max_slave_replication_lag; /**< Maximum replication lag */
-    int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves to use for
-                                                  * each connection*/
-    int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
-    bool              causal_reads;              /**< Enable causual read */
-    std::string       causal_reads_timeout;      /**< Timeout, second parameter of function master_wait_gtid */
-    bool              master_reconnection;       /**< Allow changes in master server */
-    bool              delayed_retry;             /**< Delay routing if no target found */
-    uint64_t          delayed_retry_timeout;     /**< How long to delay until an error is returned */
-    bool              transaction_replay;        /**< Replay failed transactions */
-    size_t            trx_max_size;              /**< Max transaction size for replaying */
-    bool              optimistic_trx;            /**< Enable optimistic transactions */
+    mxs_target_t use_sql_variables_in;  /**< Whether to send user variables to
+                                         * master or all nodes */
+    failure_mode master_failure_mode;   /**< Master server failure handling mode */
+    uint64_t     max_sescmd_history;    /**< Maximum amount of session commands to store */
+    bool         disable_sescmd_history;/**< Disable session command history */
+    bool         master_accept_reads;   /**< Use master for reads */
+    bool         strict_multi_stmt;     /**< Force non-multistatement queries to be routed to
+                                         * the master after a multistatement query. */
+    bool strict_sp_calls;               /**< Lock session to master after an SP call */
+    bool retry_failed_reads;            /**< Retry failed reads on other servers */
+    int  connection_keepalive;          /**< Send pings to servers that have been idle
+                                         * for too long */
+    int max_slave_replication_lag;      /**< Maximum replication lag */
+    int rw_max_slave_conn_percent;      /**< Maximum percentage of slaves to use for
+                                         * each connection*/
+    int         max_slave_connections;  /**< Maximum number of slaves for each connection*/
+    bool        causal_reads;           /**< Enable causual read */
+    std::string causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
+    bool        master_reconnection;    /**< Allow changes in master server */
+    bool        delayed_retry;          /**< Delay routing if no target found */
+    uint64_t    delayed_retry_timeout;  /**< How long to delay until an error is returned */
+    bool        transaction_replay;     /**< Replay failed transactions */
+    size_t      trx_max_size;           /**< Max transaction size for replaying */
+    bool        optimistic_trx;         /**< Enable optimistic transactions */
 };
 
 /**
@@ -223,7 +224,7 @@ class RWSplitSession;
 /**
  * The per instance data for the router.
  */
-class RWSplit: public mxs::Router<RWSplit, RWSplitSession>
+class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
 {
     RWSplit(const RWSplit&);
     RWSplit& operator=(const RWSplit&);
@@ -232,18 +233,18 @@ public:
     RWSplit(SERVICE* service, const Config& config);
     ~RWSplit();
 
-    SERVICE* service() const;
+    SERVICE*      service() const;
     const Config& config() const;
-    Stats&   stats();
-    const Stats&   stats() const;
-    int max_slave_count() const;
-    bool have_enough_servers() const;
-    bool select_connect_backend_servers(MXS_SESSION *session,
-                                        mxs::SRWBackendList& backends,
-                                        mxs::SRWBackend& current_master,
-                                        mxs::SessionCommandList* sescmd_list,
-                                        int* expected_responses,
-                                        connection_type type);
+    Stats&        stats();
+    const Stats&  stats() const;
+    int           max_slave_count() const;
+    bool          have_enough_servers() const;
+    bool          select_connect_backend_servers(MXS_SESSION*         session,
+                                                 mxs::SRWBackendList& backends,
+                                                 mxs::SRWBackend& current_master,
+                                                 mxs::SessionCommandList* sescmd_list,
+                                                 int* expected_responses,
+                                                 connection_type type);
     // API functions
 
     /**
@@ -303,14 +304,14 @@ public:
 private:
 
     // Update configuration
-    void store_config(const Config& config);
-    void update_local_config() const;
+    void    store_config(const Config& config);
+    void    update_local_config() const;
     Config* get_local_config() const;
 
     // Called when worker local data needs to be updated
     static void update_config(void* data);
 
-    SERVICE*                   m_service; /**< Service where the router belongs*/
+    SERVICE*                   m_service;   /**< Service where the router belongs*/
     mxs::rworker_local<Config> m_config;
     Stats                      m_stats;
 };
@@ -358,8 +359,8 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
     }
 }
 
-void closed_session_reply(GWBUF *querybuf);
-bool send_readonly_error(DCB *dcb);
+void closed_session_reply(GWBUF* querybuf);
+bool send_readonly_error(DCB* dcb);
 
 mxs::SRWBackend get_root_master(const mxs::SRWBackendList& backends);
 
@@ -385,8 +386,8 @@ std::pair<int, int> get_slave_counts(mxs::SRWBackendList& backends, mxs::SRWBack
  * @return Valid iterator into argument backends, or end(backends) if empty
  */
 SRWBackendVector::const_iterator find_best_backend(const SRWBackendVector& backends,
-                                                 BackendSelectFunction select,
-                                                 bool masters_accepts_reads);
+                                                   BackendSelectFunction   select,
+                                                   bool masters_accepts_reads);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c

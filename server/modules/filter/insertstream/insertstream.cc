@@ -30,37 +30,41 @@
  * @file datastream.c - Streaming of bulk inserts
  */
 
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER*params);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream);
-static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
-static uint64_t getCapabilities(MXS_FILTER *instance);
-static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply);
-static bool extract_insert_target(GWBUF *buffer, char* target, int len);
-static GWBUF* create_load_data_command(const char *target);
-static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_DOWNSTREAM* downstream);
+static void setUpstream(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* session,
+                        MXS_UPSTREAM* upstream);
+static int32_t  routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
+static int32_t  clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply);
+static bool     extract_insert_target(GWBUF* buffer, char* target, int len);
+static GWBUF*   create_load_data_command(const char* target);
+static GWBUF*   convert_to_stream(GWBUF* buffer, uint8_t packet_num);
 
 /**
  * Instance structure
  */
 typedef struct
 {
-    char *source; /**< Source address to restrict matches */
-    char *user;   /**< User name to restrict matches */
+    char* source;   /**< Source address to restrict matches */
+    char* user;     /**< User name to restrict matches */
 } DS_INSTANCE;
 
 enum ds_state
 {
-    DS_STREAM_CLOSED,    /**< Initial state */
-    DS_REQUEST_SENT,     /**< Request for stream sent */
-    DS_REQUEST_ACCEPTED, /**< Stream request accepted */
-    DS_STREAM_OPEN,      /**< Stream is open */
-    DS_CLOSING_STREAM    /**< Stream is about to be closed */
+    DS_STREAM_CLOSED,   /**< Initial state */
+    DS_REQUEST_SENT,    /**< Request for stream sent */
+    DS_REQUEST_ACCEPTED,/**< Stream request accepted */
+    DS_STREAM_OPEN,     /**< Stream is open */
+    DS_CLOSING_STREAM   /**< Stream is about to be closed */
 };
 
 /**
@@ -68,14 +72,19 @@ enum ds_state
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down;     /**< Downstream filter */
-    MXS_UPSTREAM up;         /**< Upstream filter*/
-    GWBUF *queue;        /**< Queue containing a stored query */
-    bool active;         /**< Whether the session is active */
-    uint8_t packet_num;  /**< If stream is open, the current packet sequence number */
-    DCB* client_dcb;     /**< Client DCB */
-    enum ds_state state; /**< The current state of the stream */
-    char target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1]; /**< Current target table */
+    MXS_DOWNSTREAM down;                                                    /**< Downstream filter */
+    MXS_UPSTREAM   up;                                                      /**< Upstream filter*/
+    GWBUF*         queue;                                                   /**< Queue containing a stored
+                                                                             * query */
+    bool           active;                                                  /**< Whether the session is active
+                                                                             * */
+    uint8_t        packet_num;                                              /**< If stream is open, the
+                                                                             * current packet sequence number
+                                                                             * */
+    DCB*           client_dcb;                                              /**< Client DCB */
+    enum ds_state  state;                                                   /**< The current state of the
+                                                                             * stream */
+    char           target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1];  /**< Current target table */
 } DS_SESSION;
 
 extern "C"
@@ -89,55 +98,54 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-
-    static MXS_FILTER_OBJECT MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        setUpstream,
-        routeQuery,
-        clientReply,
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        NULL,
-    };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_EXPERIMENTAL,
-        MXS_FILTER_VERSION,
-        "Data streaming filter",
-        "1.0.0",
-        RCAP_TYPE_TRANSACTION_TRACKING,
-        &MyObject,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
+        static MXS_FILTER_OBJECT MyObject =
         {
-            {"source", MXS_MODULE_PARAM_STRING},
-            {"user", MXS_MODULE_PARAM_STRING},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            createInstance,
+            newSession,
+            closeSession,
+            freeSession,
+            setDownstream,
+            setUpstream,
+            routeQuery,
+            clientReply,
+            diagnostic,
+            diagnostic_json,
+            getCapabilities,
+            NULL,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_FILTER,
+            MXS_MODULE_EXPERIMENTAL,
+            MXS_FILTER_VERSION,
+            "Data streaming filter",
+            "1.0.0",
+            RCAP_TYPE_TRANSACTION_TRACKING,
+            &MyObject,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            {
+                {"source",                 MXS_MODULE_PARAM_STRING                    },
+                {"user",                   MXS_MODULE_PARAM_STRING                    },
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /**
  * Free a insertstream instance.
  * @param instance instance to free
  */
-void free_instance(DS_INSTANCE *instance)
+void free_instance(DS_INSTANCE* instance)
 {
     if (instance)
     {
@@ -162,10 +170,9 @@ static const char load_data_template[] = "LOAD DATA LOCAL INFILE 'maxscale.data'
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *
-createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    DS_INSTANCE *my_instance;
+    DS_INSTANCE* my_instance;
 
     if ((my_instance = static_cast<DS_INSTANCE*>(MXS_CALLOC(1, sizeof(DS_INSTANCE)))) != NULL)
     {
@@ -173,7 +180,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         my_instance->user = config_copy_string(params, "user");
     }
 
-    return (MXS_FILTER *) my_instance;
+    return (MXS_FILTER*) my_instance;
 }
 
 /**
@@ -183,11 +190,10 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    DS_INSTANCE *my_instance = (DS_INSTANCE *) instance;
-    DS_SESSION *my_session;
+    DS_INSTANCE* my_instance = (DS_INSTANCE*) instance;
+    DS_SESSION* my_session;
 
     if ((my_session = static_cast<DS_SESSION*>(MXS_CALLOC(1, sizeof(DS_SESSION)))) != NULL)
     {
@@ -196,14 +202,14 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
         my_session->active = true;
         my_session->client_dcb = session->client_dcb;
 
-        if (my_instance->source &&
-            strcmp(session->client_dcb->remote, my_instance->source) != 0)
+        if (my_instance->source
+            && strcmp(session->client_dcb->remote, my_instance->source) != 0)
         {
             my_session->active = false;
         }
 
-        if (my_instance->user &&
-            strcmp(session->client_dcb->user, my_instance->user) != 0)
+        if (my_instance->user
+            && strcmp(session->client_dcb->user, my_instance->user) != 0)
         {
             my_session->active = false;
         }
@@ -219,8 +225,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
 }
 
@@ -230,8 +235,7 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     MXS_FREE(session);
 }
@@ -243,10 +247,9 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param session   The session being closed
  * @param downstream    The downstream filter or router
  */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    DS_SESSION *my_session = (DS_SESSION*) session;
+    DS_SESSION* my_session = (DS_SESSION*) session;
     my_session->down = *downstream;
 }
 
@@ -256,9 +259,9 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
  * @param session Filter session
  * @param upstream Upstream filter
  */
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
 {
-    DS_SESSION *my_session = (DS_SESSION*) session;
+    DS_SESSION* my_session = (DS_SESSION*) session;
     my_session->up = *upstream;
 }
 
@@ -274,17 +277,17 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_U
  *
  * @return 1 on success, 0 on error
  */
-static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
+static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    DS_SESSION *my_session = (DS_SESSION *) session;
+    DS_SESSION* my_session = (DS_SESSION*) session;
     char target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1];
     bool send_ok = false;
     bool send_error = false;
     int rc = 0;
     mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
 
-    if (session_trx_is_active(my_session->client_dcb->session) &&
-        extract_insert_target(queue, target, sizeof(target)))
+    if (session_trx_is_active(my_session->client_dcb->session)
+        && extract_insert_target(queue, target, sizeof(target)))
     {
         switch (my_session->state)
         {
@@ -376,7 +379,8 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
     else
     {
         rc = my_session->down.routeQuery(my_session->down.instance,
-                                         my_session->down.session, queue);
+                                         my_session->down.session,
+                                         queue);
     }
 
     return rc;
@@ -387,12 +391,12 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
  */
 static char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* destlen)
 {
-    char *value_start = strnchr_esc_mysql(data, '(', datalen);
+    char* value_start = strnchr_esc_mysql(data, '(', datalen);
 
     if (value_start)
     {
         value_start++;
-        char *value_end = strnchr_esc_mysql(value_start, ')', datalen - (value_start - data));
+        char* value_end = strnchr_esc_mysql(value_start, ')', datalen - (value_start - data));
 
         if (value_end)
         {
@@ -416,8 +420,8 @@ static char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* dest
 static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 {
     /** Remove the INSERT INTO ... from the buffer */
-    char *dataptr = (char*)GWBUF_DATA(buffer);
-    char *modptr = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    char* dataptr = (char*)GWBUF_DATA(buffer);
+    char* modptr = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
 
     /** Leave some space for the header so we don't have to allocate a new one */
     buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
@@ -459,20 +463,20 @@ static GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
  *
  * @return 1 on success, 0 on error
  */
-static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
+static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
 {
-    DS_SESSION *my_session = (DS_SESSION*) session;
+    DS_SESSION* my_session = (DS_SESSION*) session;
     int rc = 1;
 
-    if (my_session->state == DS_CLOSING_STREAM ||
-        (my_session->state == DS_REQUEST_SENT &&
-         !MYSQL_IS_ERROR_PACKET((uint8_t*)GWBUF_DATA(reply))))
+    if (my_session->state == DS_CLOSING_STREAM
+        || (my_session->state == DS_REQUEST_SENT
+            && !MYSQL_IS_ERROR_PACKET((uint8_t*)GWBUF_DATA(reply))))
     {
         gwbuf_free(reply);
         mxb_assert(my_session->queue);
 
-        my_session->state = my_session->state == DS_CLOSING_STREAM ?
-                            DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;
+        my_session->state = my_session->state == DS_CLOSING_STREAM
+            ? DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;
 
         GWBUF* queue = my_session->queue;
         my_session->queue = NULL;
@@ -489,7 +493,8 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GW
     else
     {
         rc = my_session->up.clientReply(my_session->up.instance,
-                                        my_session->up.session, reply);
+                                        my_session->up.session,
+                                        reply);
     }
 
     return rc;
@@ -506,9 +511,9 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GW
  * @param   fsession Filter session, may be NULL
  * @param   dcb      The DCB for diagnostic output
  */
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    DS_INSTANCE *my_instance = (DS_INSTANCE *) instance;
+    DS_INSTANCE* my_instance = (DS_INSTANCE*) instance;
 
     if (my_instance->source)
     {
@@ -530,9 +535,9 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
  * @param   instance The filter instance
  * @param   fsession Filter session, may be NULL
  */
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    DS_INSTANCE *my_instance = (DS_INSTANCE*)instance;
+    DS_INSTANCE* my_instance = (DS_INSTANCE*)instance;
 
     json_t* rval = json_object();
 
@@ -566,11 +571,11 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
  *
  * @return True if the insert does not define the order of the values
  */
-static bool only_implicit_values(GWBUF *buffer)
+static bool only_implicit_values(GWBUF* buffer)
 {
     bool rval = false;
-    char *data = (char*)GWBUF_DATA(buffer);
-    char *ptr = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    char* data = (char*)GWBUF_DATA(buffer);
+    char* ptr = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
 
     if (ptr && (ptr = strnchr_esc_mysql(ptr, ')', GWBUF_LENGTH(buffer) - (ptr - data))))
     {
@@ -607,16 +612,16 @@ static bool only_implicit_values(GWBUF *buffer)
  * @return  True if the buffer contains an insert statement and the target table
  * was successfully extracted
  */
-static bool extract_insert_target(GWBUF *buffer, char* target, int len)
+static bool extract_insert_target(GWBUF* buffer, char* target, int len)
 {
     bool rval = false;
 
-    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MXS_COM_QUERY &&
-        qc_get_operation(buffer) == QUERY_OP_INSERT &&
-        only_implicit_values(buffer))
+    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MXS_COM_QUERY
+        && qc_get_operation(buffer) == QUERY_OP_INSERT
+        && only_implicit_values(buffer))
     {
         int n_tables = 0;
-        char **tables = qc_get_table_names(buffer, &n_tables, true);
+        char** tables = qc_get_table_names(buffer, &n_tables, true);
 
         if (n_tables == 1)
         {
@@ -645,16 +650,16 @@ static bool extract_insert_target(GWBUF *buffer, char* target, int len)
  *
  * @return Buffer containing the statement or NULL if memory allocation failed
  */
-static GWBUF* create_load_data_command(const char *target)
+static GWBUF* create_load_data_command(const char* target)
 {
     char str[sizeof(load_data_template) + strlen(target) + 1];
     snprintf(str, sizeof(str), load_data_template, target);
     uint32_t payload = strlen(str) + 1;
 
-    GWBUF *rval = gwbuf_alloc(payload + MYSQL_HEADER_LEN);
+    GWBUF* rval = gwbuf_alloc(payload + MYSQL_HEADER_LEN);
     if (rval)
     {
-        uint8_t *ptr = GWBUF_DATA(rval);
+        uint8_t* ptr = GWBUF_DATA(rval);
         *ptr++ = payload;
         *ptr++ = payload >> 8;
         *ptr++ = payload >> 16;

@@ -58,23 +58,23 @@
  * @endverbatim
  */
 
-static int telnetd_read_event(DCB* dcb);
-static int telnetd_write_event(DCB *dcb);
-static int telnetd_write(DCB *dcb, GWBUF *queue);
-static int telnetd_error(DCB *dcb);
-static int telnetd_hangup(DCB *dcb);
-static int telnetd_accept(DCB *dcb);
-static int telnetd_close(DCB *dcb);
-static int telnetd_listen(DCB *dcb, char *config);
-static char *telnetd_default_auth();
+static int   telnetd_read_event(DCB* dcb);
+static int   telnetd_write_event(DCB* dcb);
+static int   telnetd_write(DCB* dcb, GWBUF* queue);
+static int   telnetd_error(DCB* dcb);
+static int   telnetd_hangup(DCB* dcb);
+static int   telnetd_accept(DCB* dcb);
+static int   telnetd_close(DCB* dcb);
+static int   telnetd_listen(DCB* dcb, char* config);
+static char* telnetd_default_auth();
 
 /**
  * The "module object" for the telnetd protocol module.
  */
 
 
-static void telnetd_command(DCB *, unsigned char *cmd);
-static void telnetd_echo(DCB *dcb, int enable);
+static void telnetd_command(DCB*, unsigned char* cmd);
+static void telnetd_echo(DCB* dcb, int enable);
 
 extern "C"
 {
@@ -86,48 +86,47 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_INFO("Initialise Telnetd Protocol module.");
-
-    static MXS_PROTOCOL MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        telnetd_read_event,             /**< Read - EPOLLIN handler        */
-        telnetd_write,                  /**< Write - data from gateway     */
-        telnetd_write_event,            /**< WriteReady - EPOLLOUT handler */
-        telnetd_error,                  /**< Error - EPOLLERR handler      */
-        telnetd_hangup,                 /**< HangUp - EPOLLHUP handler     */
-        telnetd_accept,                 /**< Accept                        */
-        NULL,                           /**< Connect                       */
-        telnetd_close,                  /**< Close                         */
-        telnetd_listen,                 /**< Create a listener             */
-        NULL,                           /**< Authentication                */
-        telnetd_default_auth,           /**< Default authenticator         */
-        NULL,                           /**< Connection limit reached      */
-        NULL,
-        NULL,
-    };
+        MXS_INFO("Initialise Telnetd Protocol module.");
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_GA,
-        MXS_PROTOCOL_VERSION,
-        "A telnet deamon protocol for simple administration interface",
-        "V1.1.1",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_PROTOCOL MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-    return &info;
-}
+            telnetd_read_event,         /**< Read - EPOLLIN handler        */
+            telnetd_write,              /**< Write - data from gateway     */
+            telnetd_write_event,        /**< WriteReady - EPOLLOUT handler */
+            telnetd_error,              /**< Error - EPOLLERR handler      */
+            telnetd_hangup,             /**< HangUp - EPOLLHUP handler     */
+            telnetd_accept,             /**< Accept                        */
+            NULL,                       /**< Connect                       */
+            telnetd_close,              /**< Close                         */
+            telnetd_listen,             /**< Create a listener             */
+            NULL,                       /**< Authentication                */
+            telnetd_default_auth,       /**< Default authenticator         */
+            NULL,                       /**< Connection limit reached      */
+            NULL,
+            NULL,
+        };
 
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_PROTOCOL,
+            MXS_MODULE_GA,
+            MXS_PROTOCOL_VERSION,
+            "A telnet deamon protocol for simple administration interface",
+            "V1.1.1",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+        return &info;
+    }
 }
 /*lint +e14 */
 
@@ -136,7 +135,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return name of authenticator
  */
-static char *telnetd_default_auth()
+static char* telnetd_default_auth()
 {
     return const_cast<char*>("NullAuthAllow");
 }
@@ -150,16 +149,16 @@ static char *telnetd_default_auth()
 static int telnetd_read_event(DCB* dcb)
 {
     int n;
-    GWBUF *head = NULL;
-    MXS_SESSION *session = dcb->session;
-    TELNETD *telnetd = (TELNETD *)dcb->protocol;
-    char *password, *t;
+    GWBUF* head = NULL;
+    MXS_SESSION* session = dcb->session;
+    TELNETD* telnetd = (TELNETD*)dcb->protocol;
+    char* password, * t;
 
     if ((n = dcb_read(dcb, &head, 0)) != -1)
     {
         if (head)
         {
-            unsigned char *ptr = GWBUF_DATA(head);
+            unsigned char* ptr = GWBUF_DATA(head);
             ptr = GWBUF_DATA(head);
             while (GWBUF_LENGTH(head) && *ptr == TELNET_IAC)
             {
@@ -184,6 +183,7 @@ static int telnetd_read_event(DCB* dcb)
                     telnetd_echo(dcb, 0);
                     gwbuf_consume(head, GWBUF_LENGTH(head));
                     break;
+
                 case TELNETD_STATE_PASSWD:
                     password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                     /* Strip the cr/lf from the username */
@@ -208,6 +208,7 @@ static int telnetd_read_event(DCB* dcb)
                     gwbuf_consume(head, GWBUF_LENGTH(head));
                     MXS_FREE(password);
                     break;
+
                 case TELNETD_STATE_DATA:
                     MXS_SESSION_ROUTE_QUERY(session, head);
                     break;
@@ -229,7 +230,7 @@ static int telnetd_read_event(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return
  */
-static int telnetd_write_event(DCB *dcb)
+static int telnetd_write_event(DCB* dcb)
 {
     return dcb_drain_writeq(dcb);
 }
@@ -243,7 +244,7 @@ static int telnetd_write_event(DCB *dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int telnetd_write(DCB *dcb, GWBUF *queue)
+static int telnetd_write(DCB* dcb, GWBUF* queue)
 {
     int rc;
     rc = dcb_write(dcb, queue);
@@ -255,7 +256,7 @@ static int telnetd_write(DCB *dcb, GWBUF *queue)
  *
  * @param dcb   The descriptor control block
  */
-static int telnetd_error(DCB *dcb)
+static int telnetd_error(DCB* dcb)
 {
     return 0;
 }
@@ -265,7 +266,7 @@ static int telnetd_error(DCB *dcb)
  *
  * @param dcb   The descriptor control block
  */
-static int telnetd_hangup(DCB *dcb)
+static int telnetd_hangup(DCB* dcb)
 {
     return 0;
 }
@@ -277,23 +278,23 @@ static int telnetd_hangup(DCB *dcb)
  * @param listener   The descriptor control block
  * @return The number of new connections created
  */
-static int telnetd_accept(DCB *listener)
+static int telnetd_accept(DCB* listener)
 {
     int n_connect = 0;
-    DCB *client_dcb;
+    DCB* client_dcb;
 
     while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         TELNETD* telnetd_protocol = NULL;
 
-        if ((telnetd_protocol = (TELNETD *)MXS_CALLOC(1, sizeof(TELNETD))) == NULL)
+        if ((telnetd_protocol = (TELNETD*)MXS_CALLOC(1, sizeof(TELNETD))) == NULL)
         {
             dcb_close(client_dcb);
             continue;
         }
         telnetd_protocol->state = TELNETD_STATE_LOGIN;
         telnetd_protocol->username = NULL;
-        client_dcb->protocol = (void *)telnetd_protocol;
+        client_dcb->protocol = (void*)telnetd_protocol;
 
         client_dcb->session = session_alloc(listener->session->service, client_dcb);
         if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
@@ -317,9 +318,9 @@ static int telnetd_accept(DCB *listener)
  * @param dcb   The descriptor control block
  */
 
-static int telnetd_close(DCB *dcb)
+static int telnetd_close(DCB* dcb)
 {
-    TELNETD *telnetd = static_cast<TELNETD*>(dcb->protocol);
+    TELNETD* telnetd = static_cast<TELNETD*>(dcb->protocol);
 
     if (telnetd && telnetd->username)
     {
@@ -335,7 +336,7 @@ static int telnetd_close(DCB *dcb)
  * @param       listener        The Listener DCB
  * @param       config          Configuration (ip:port)
  */
-static int telnetd_listen(DCB *listener, char *config)
+static int telnetd_listen(DCB* listener, char* config)
 {
     return (dcb_listen(listener, config, "telnet") < 0) ? 0 : 1;
 }
@@ -350,7 +351,7 @@ static int telnetd_listen(DCB *listener, char *config)
  * @param       dcb     The client DCB
  * @param       cmd     The command stream
  */
-static void telnetd_command(DCB *dcb, unsigned char *cmd)
+static void telnetd_command(DCB* dcb, unsigned char* cmd)
 {
 }
 
@@ -360,10 +361,10 @@ static void telnetd_command(DCB *dcb, unsigned char *cmd)
  * @param dcb           DCB of the telnet connection
  * @param enable        Enable or disable echo functionality
  */
-static void telnetd_echo(DCB *dcb, int enable)
+static void telnetd_echo(DCB* dcb, int enable)
 {
-    GWBUF *gwbuf;
-    unsigned char *buf;
+    GWBUF* gwbuf;
+    unsigned char* buf;
 
     if ((gwbuf = gwbuf_alloc(3)) == NULL)
     {

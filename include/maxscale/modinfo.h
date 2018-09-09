@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file modinfo.h The module information interface
@@ -67,32 +67,32 @@ typedef enum
  */
 typedef struct
 {
-    int     major;
-    int     minor;
-    int     patch;
+    int major;
+    int minor;
+    int patch;
 } MXS_MODULE_VERSION;
 
 enum mxs_module_param_type
 {
-    MXS_MODULE_PARAM_COUNT, /**< Non-negative number */
-    MXS_MODULE_PARAM_INT, /**< Integer number */
-    MXS_MODULE_PARAM_SIZE, /**< Size in bytes */
-    MXS_MODULE_PARAM_BOOL, /**< Boolean value */
-    MXS_MODULE_PARAM_STRING, /**< String value */
-    MXS_MODULE_PARAM_QUOTEDSTRING, /**< String enclosed in '"':s */
-    MXS_MODULE_PARAM_ENUM, /**< Enumeration of string values */
-    MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
-    MXS_MODULE_PARAM_SERVICE, /**< Service name */
-    MXS_MODULE_PARAM_SERVER, /**< Server name */
-    MXS_MODULE_PARAM_SERVERLIST, /**< List of server names, separated by ',' */
-    MXS_MODULE_PARAM_REGEX /**< A regex string enclosed in '/' */
+    MXS_MODULE_PARAM_COUNT,         /**< Non-negative number */
+    MXS_MODULE_PARAM_INT,           /**< Integer number */
+    MXS_MODULE_PARAM_SIZE,          /**< Size in bytes */
+    MXS_MODULE_PARAM_BOOL,          /**< Boolean value */
+    MXS_MODULE_PARAM_STRING,        /**< String value */
+    MXS_MODULE_PARAM_QUOTEDSTRING,  /**< String enclosed in '"':s */
+    MXS_MODULE_PARAM_ENUM,          /**< Enumeration of string values */
+    MXS_MODULE_PARAM_PATH,          /**< Path to a file or a directory */
+    MXS_MODULE_PARAM_SERVICE,       /**< Service name */
+    MXS_MODULE_PARAM_SERVER,        /**< Server name */
+    MXS_MODULE_PARAM_SERVERLIST,    /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_REGEX          /**< A regex string enclosed in '/' */
 };
 
 /** Maximum and minimum values for integer types */
 #define MXS_MODULE_PARAM_COUNT_MAX "2147483647"
 #define MXS_MODULE_PARAM_COUNT_MIN "0"
-#define MXS_MODULE_PARAM_INT_MAX "2147483647"
-#define MXS_MODULE_PARAM_INT_MIN "-2147483647"
+#define MXS_MODULE_PARAM_INT_MAX   "2147483647"
+#define MXS_MODULE_PARAM_INT_MIN   "-2147483647"
 
 /** Parameter options
  *
@@ -101,34 +101,35 @@ enum mxs_module_param_type
 enum mxs_module_param_options
 {
     MXS_MODULE_OPT_NONE        = 0,
-    MXS_MODULE_OPT_REQUIRED    = (1 << 0), /**< A required parameter */
-    MXS_MODULE_OPT_PATH_X_OK   = (1 << 1), /**< PATH: Execute permission to path required */
-    MXS_MODULE_OPT_PATH_R_OK   = (1 << 2), /**< PATH: Read permission to path required */
-    MXS_MODULE_OPT_PATH_W_OK   = (1 << 3), /**< PATH: Write permission to path required */
-    MXS_MODULE_OPT_PATH_F_OK   = (1 << 4), /**< PATH: Path must exist */
-    MXS_MODULE_OPT_PATH_CREAT  = (1 << 5), /**< PATH: Create path if it doesn't exist */
-    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6), /**< ENUM: Only one value can be defined */
+    MXS_MODULE_OPT_REQUIRED    = (1 << 0),  /**< A required parameter */
+    MXS_MODULE_OPT_PATH_X_OK   = (1 << 1),  /**< PATH: Execute permission to path required */
+    MXS_MODULE_OPT_PATH_R_OK   = (1 << 2),  /**< PATH: Read permission to path required */
+    MXS_MODULE_OPT_PATH_W_OK   = (1 << 3),  /**< PATH: Write permission to path required */
+    MXS_MODULE_OPT_PATH_F_OK   = (1 << 4),  /**< PATH: Path must exist */
+    MXS_MODULE_OPT_PATH_CREAT  = (1 << 5),  /**< PATH: Create path if it doesn't exist */
+    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6),  /**< ENUM: Only one value can be defined */
 
     /**< Parameter is deprecated: Causes a warning to be logged if the parameter
      * is used but will not cause a configuration error. */
-    MXS_MODULE_OPT_DEPRECATED  = (1 << 7),
+    MXS_MODULE_OPT_DEPRECATED = (1 << 7),
 };
 
 /** String to enum value mappings */
 typedef struct mxs_enum_value
 {
-    const char *name; /**< Name of the enum value */
+    const char* name;       /**< Name of the enum value */
     uint64_t    enum_value; /**< The integer value of the enum */
 } MXS_ENUM_VALUE;
 
 /** Module parameter declaration */
 typedef struct mxs_module_param
 {
-    const char *name; /**< Name of the parameter */
-    enum mxs_module_param_type type; /**< Type of the parameter */
-    const char *default_value; /**< Default value for the parameter, NULL for no default value */
-    uint64_t options; /**< Parameter options */
-    const MXS_ENUM_VALUE *accepted_values; /**< Only for enum values */
+    const char*                name;            /**< Name of the parameter */
+    enum mxs_module_param_type type;            /**< Type of the parameter */
+    const char*                default_value;   /**< Default value for the parameter, NULL for no default
+                                                 * value */
+    uint64_t                   options;         /**< Parameter options */
+    const MXS_ENUM_VALUE*      accepted_values; /**< Only for enum values */
 } MXS_MODULE_PARAM;
 
 /** Maximum number of parameters that modules can declare */
@@ -139,26 +140,26 @@ typedef struct mxs_module_param
  */
 typedef struct mxs_module
 {
-    MXS_MODULE_API      modapi;        /**< Module API type */
-    MXS_MODULE_STATUS   status;        /**< Module development status */
-    MXS_MODULE_VERSION  api_version;   /**< Module API version */
-    const char         *description;   /**< Module description */
-    const char         *version;       /**< Module version */
-    uint64_t            module_capabilities; /**< Declared module capabilities */
-    void               *module_object; /**< Module type specific API implementation */
+    MXS_MODULE_API     modapi;              /**< Module API type */
+    MXS_MODULE_STATUS  status;              /**< Module development status */
+    MXS_MODULE_VERSION api_version;         /**< Module API version */
+    const char*        description;         /**< Module description */
+    const char*        version;             /**< Module version */
+    uint64_t           module_capabilities; /**< Declared module capabilities */
+    void*              module_object;       /**< Module type specific API implementation */
     /**
      * If non-NULL, this function is called once at process startup. If the
      * function fails, MariaDB MaxScale will not start.
      *
      * @return 0 on success, non-zero on failure.
      */
-    int (*process_init)();
+    int (* process_init)();
 
     /**
      * If non-NULL, this function is called once at process shutdown, provided
      * the call to @c init succeeded.
      */
-    void (*process_finish)();
+    void (* process_finish)();
 
     /**
      * If non-NULL, this function is called once at the startup of every new thread.
@@ -168,7 +169,7 @@ typedef struct mxs_module
      *
      * @return 0 on success, non-zero on failure.
      */
-    int (*thread_init)();
+    int (* thread_init)();
 
     /**
      * If non-NULL, this function is called when a thread terminates, provided the
@@ -176,9 +177,9 @@ typedef struct mxs_module
      *
      * @attention This function is *not* called for the thread where @c init is called.
      */
-    void (*thread_finish)();
+    void (* thread_finish)();
 
-    MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];  /**< Declared parameters */
+    MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
 } MXS_MODULE;
 
 /**
@@ -231,28 +232,40 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
     {
     case MXS_MODULE_PARAM_COUNT:
         return "count";
+
     case MXS_MODULE_PARAM_INT:
         return "int";
+
     case MXS_MODULE_PARAM_SIZE:
         return "size";
+
     case MXS_MODULE_PARAM_BOOL:
         return "bool";
+
     case MXS_MODULE_PARAM_STRING:
         return "string";
+
     case MXS_MODULE_PARAM_QUOTEDSTRING:
         return "quoted string";
+
     case MXS_MODULE_PARAM_ENUM:
         return "enum";
+
     case MXS_MODULE_PARAM_PATH:
         return "path";
+
     case MXS_MODULE_PARAM_SERVICE:
         return "service";
+
     case MXS_MODULE_PARAM_SERVER:
         return "server";
+
     case MXS_MODULE_PARAM_SERVERLIST:
         return "serverlist";
+
     case MXS_MODULE_PARAM_REGEX:
         return "regular expression";
+
     default:
         mxb_assert(!true);
         return "unknown";
@@ -265,16 +278,22 @@ static inline const char* mxs_module_api_to_string(MXS_MODULE_API type)
     {
     case MXS_MODULE_API_PROTOCOL:
         return "protocol";
+
     case MXS_MODULE_API_ROUTER:
         return "router";
+
     case MXS_MODULE_API_MONITOR:
         return "monitor";
+
     case MXS_MODULE_API_FILTER:
         return "filter";
+
     case MXS_MODULE_API_AUTHENTICATOR:
         return "authenticator";
+
     case MXS_MODULE_API_QUERY_CLASSIFIER:
         return "query_classifier";
+
     default:
         mxb_assert(!true);
         return "unknown";
@@ -287,14 +306,19 @@ static inline const char* mxs_module_status_to_string(MXS_MODULE_STATUS type)
     {
     case MXS_MODULE_IN_DEVELOPMENT:
         return "In development";
+
     case MXS_MODULE_ALPHA_RELEASE:
         return "Alpha";
+
     case MXS_MODULE_BETA_RELEASE:
         return "Beta";
+
     case MXS_MODULE_GA:
         return "GA";
+
     case MXS_MODULE_EXPERIMENTAL:
         return "Experimental";
+
     default:
         mxb_assert(!true);
         return "Unknown";

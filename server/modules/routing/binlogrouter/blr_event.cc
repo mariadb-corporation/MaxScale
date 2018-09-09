@@ -32,9 +32,9 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
      */
 
     spinlock_acquire(&router->binlog_lock);
-    if (router->trx_safe == 0 ||
-        (router->trx_safe &&
-         router->pending_transaction.state == BLRM_NO_TRANSACTION))
+    if (router->trx_safe == 0
+        || (router->trx_safe
+            && router->pending_transaction.state == BLRM_NO_TRANSACTION))
     {
         /* no pending transaction: set current_pos to binlog_position */
         router->binlog_position = router->current_pos;
@@ -55,8 +55,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
     if (router->trx_safe)
     {
         // MariaDB 10 GTID event check
-        if (router->mariadb10_compat &&
-            hdr.event_type == MARIADB10_GTID_EVENT)
+        if (router->mariadb10_compat
+            && hdr.event_type == MARIADB10_GTID_EVENT)
         {
             /**
              * If MariaDB 10 compatibility:
@@ -102,7 +102,9 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
             if (router->mariadb10_gtid)
             {
                 char mariadb_gtid[GTID_MAX_LEN + 1];
-                snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                snprintf(mariadb_gtid,
+                         GTID_MAX_LEN,
+                         "%u-%u-%lu",
                          domainid,
                          hdr.serverid,
                          n_sequence);
@@ -130,18 +132,18 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
         // Query Event check
         if (hdr.event_type == QUERY_EVENT)
         {
-            char *statement_sql;
+            char* statement_sql;
             int db_name_len, var_block_len, statement_len;
             db_name_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4];
             var_block_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2];
 
             statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
                                    + var_block_len + 1 + db_name_len);
-            statement_sql =
-                static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
+            statement_sql
+                = static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
             MXS_ABORT_IF_NULL(statement_sql);
             memcpy(statement_sql,
-                   (char *)ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
+                   (char*)ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
                    + var_block_len + 1 + db_name_len,
                    statement_len);
 
@@ -156,7 +158,6 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                               "@ %lu and a new one starts @ %lu",
                               router->binlog_position,
                               router->current_pos);
-
                 }
 
                 router->pending_transaction.state = BLRM_TRANSACTION_START;
@@ -174,8 +175,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
              * If it's a standalone transaction event we're done:
              * this query event, only one, terminates the transaction.
              */
-            if (router->pending_transaction.state > BLRM_NO_TRANSACTION &&
-                router->pending_transaction.standalone)
+            if (router->pending_transaction.state > BLRM_NO_TRANSACTION
+                && router->pending_transaction.standalone)
             {
                 router->pending_transaction.state = BLRM_STANDALONE_SEEN;
             }
@@ -204,8 +205,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
      * the replication event types
      * else stop replication from master
      */
-    int event_limit = router->mariadb10_compat ?
-                      MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+    int event_limit = router->mariadb10_compat
+        ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
     if (hdr.event_type <= event_limit)
     {
@@ -283,7 +284,7 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                 spinlock_release(&router->binlog_lock);
             }
 
-            uint32_t offset = MYSQL_HEADER_LEN + 1; // Skip header and OK byte
+            uint32_t offset = MYSQL_HEADER_LEN + 1;     // Skip header and OK byte
 
             /**
              * Write the raw event data to disk without the network
@@ -308,14 +309,15 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
             }
 
             /* Handle semi-sync request from master */
-            if (router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE &&
-                semisync == BLR_MASTER_SEMI_SYNC_ACK_REQ)
+            if (router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE
+                && semisync == BLR_MASTER_SEMI_SYNC_ACK_REQ)
             {
 
                 MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
                           "SEMI_SYNC_ACK_REQ and needs a Semi-Sync ACK packet to "
                           "be sent to the master server [%s]:%d",
-                          router->service->name, router->binlog_name,
+                          router->service->name,
+                          router->binlog_name,
                           router->current_pos,
                           router->service->dbref->server->address,
                           router->service->dbref->server->port);
@@ -334,9 +336,9 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
 
             spinlock_acquire(&router->binlog_lock);
 
-            if (router->trx_safe == 0 ||
-                (router->trx_safe &&
-                 router->pending_transaction.state == BLRM_NO_TRANSACTION))
+            if (router->trx_safe == 0
+                || (router->trx_safe
+                    && router->pending_transaction.state == BLRM_NO_TRANSACTION))
             {
                 router->binlog_position = router->current_pos;
                 router->current_safe_event = router->last_event_pos;
@@ -369,8 +371,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
                          */
                         router->pending_transaction.end_pos = router->current_pos;
 
-                        if (router->mariadb10_compat &&
-                            router->mariadb10_gtid)
+                        if (router->mariadb10_compat
+                            && router->mariadb10_gtid)
                         {
                             /* Update last seen MariaDB GTID */
                             strcpy(router->last_mariadb_gtid,

@@ -29,14 +29,14 @@ uint64_t maxavro_encode_float(uint8_t* dest, float val);
 uint64_t maxavro_encode_double(uint8_t* dest, double val);
 
 /** Writing values straight to disk*/
-bool maxavro_write_integer(FILE *file, uint64_t val);
-bool maxavro_write_string(FILE *file, const char* str);
-bool maxavro_write_float(FILE *file, float val);
-bool maxavro_write_double(FILE *file, double val);
+bool maxavro_write_integer(FILE* file, uint64_t val);
+bool maxavro_write_string(FILE* file, const char* str);
+bool maxavro_write_float(FILE* file, float val);
+bool maxavro_write_double(FILE* file, double val);
 
-MAXAVRO_DATABLOCK* maxavro_datablock_allocate(MAXAVRO_FILE *file, size_t buffersize)
+MAXAVRO_DATABLOCK* maxavro_datablock_allocate(MAXAVRO_FILE* file, size_t buffersize)
 {
-    MAXAVRO_DATABLOCK *datablock = malloc(sizeof(MAXAVRO_DATABLOCK));
+    MAXAVRO_DATABLOCK* datablock = malloc(sizeof(MAXAVRO_DATABLOCK));
 
     if (datablock && (datablock->buffer = malloc(buffersize)))
     {
@@ -61,15 +61,15 @@ void maxavro_datablock_free(MAXAVRO_DATABLOCK* block)
 bool maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block)
 {
     bool rval = true;
-    FILE *file = block->avrofile->file;
+    FILE* file = block->avrofile->file;
 
     /** Store the current position so we can truncate the file if a write fails */
     long pos = ftell(file);
 
-    if (!maxavro_write_integer(file, block->records) ||
-        !maxavro_write_integer(file, block->datasize) ||
-        fwrite(block->buffer, 1, block->datasize, file) != block->datasize ||
-        fwrite(block->avrofile->sync, 1, SYNC_MARKER_SIZE, file) != SYNC_MARKER_SIZE)
+    if (!maxavro_write_integer(file, block->records)
+        || !maxavro_write_integer(file, block->datasize)
+        || fwrite(block->buffer, 1, block->datasize, file) != block->datasize
+        || fwrite(block->avrofile->sync, 1, SYNC_MARKER_SIZE, file) != SYNC_MARKER_SIZE)
     {
         int fd = fileno(file);
         ftruncate(fd, pos);
@@ -86,9 +86,9 @@ bool maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block)
     return rval;
 }
 
-static bool reallocate_datablock(MAXAVRO_DATABLOCK *block)
+static bool reallocate_datablock(MAXAVRO_DATABLOCK* block)
 {
-    void *tmp = realloc(block->buffer, block->buffersize * 2);
+    void* tmp = realloc(block->buffer, block->buffersize * 2);
     if (tmp == NULL)
     {
         return false;
@@ -99,7 +99,7 @@ static bool reallocate_datablock(MAXAVRO_DATABLOCK *block)
     return true;
 }
 
-bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK *block, uint64_t val)
+bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK* block, uint64_t val)
 {
     if (block->datasize + 9 >= block->buffersize && !reallocate_datablock(block))
     {
@@ -111,7 +111,7 @@ bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK *block, uint64_t val)
     return true;
 }
 
-bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK *block, const char* str)
+bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK* block, const char* str)
 {
     if (block->datasize + 9 + strlen(str) >= block->buffersize && !reallocate_datablock(block))
     {
@@ -123,7 +123,7 @@ bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK *block, const char* str)
     return true;
 }
 
-bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK *block, float val)
+bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK* block, float val)
 {
     if (block->datasize + sizeof(val) >= block->buffersize && !reallocate_datablock(block))
     {
@@ -135,7 +135,7 @@ bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK *block, float val)
     return true;
 }
 
-bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK *block, double val)
+bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK* block, double val)
 {
     if (block->datasize + sizeof(val) >= block->buffersize && !reallocate_datablock(block))
     {

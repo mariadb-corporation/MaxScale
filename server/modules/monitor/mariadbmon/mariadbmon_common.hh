@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * Common definitions for MariaDBMonitor module. Should be included in every header or source file.
@@ -24,20 +24,20 @@
 #include <maxscale/json_api.h>
 
 /** Utility macros for printing both MXS_ERROR and json error */
-#define PRINT_MXS_JSON_ERROR(err_out, format, ...)\
-    do {\
-       MXS_ERROR(format, ##__VA_ARGS__);\
-       if (err_out)\
-       {\
-            *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__);\
-       }\
+#define PRINT_MXS_JSON_ERROR(err_out, format, ...) \
+    do { \
+        MXS_ERROR(format, ##__VA_ARGS__); \
+        if (err_out) \
+        { \
+            *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__); \
+        } \
     } while (false)
 
-#define PRINT_ERROR_IF(log_mode, err_out, format, ...)\
-    if (log_mode == Log::ON)\
-    {\
-        PRINT_MXS_JSON_ERROR(err_out, format, ##__VA_ARGS__);\
-    }\
+#define PRINT_ERROR_IF(log_mode, err_out, format, ...) \
+    if (log_mode == Log::ON) \
+    { \
+        PRINT_MXS_JSON_ERROR(err_out, format, ##__VA_ARGS__); \
+    } \
 
 extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
@@ -48,7 +48,7 @@ class DelimitedPrinter
 {
 private:
     DelimitedPrinter(const DelimitedPrinter&) = delete;
-    DelimitedPrinter& operator = (const DelimitedPrinter&) = delete;
+    DelimitedPrinter& operator=(const DelimitedPrinter&) = delete;
     DelimitedPrinter() = delete;
 public:
     DelimitedPrinter(const std::string& separator);
@@ -62,7 +62,7 @@ public:
     void cat(std::string& target, const std::string& addition);
 private:
     const std::string m_separator;
-    std::string m_current_separator;
+    std::string       m_current_separator;
 };
 
 enum class ClusterOperation

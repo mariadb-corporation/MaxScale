@@ -10,7 +10,7 @@
  * @param size desired size of event
  * @return SQL query string
  */
-char * create_event_size(unsigned long size);
+char* create_event_size(unsigned long size);
 
 /**
  * @brief connect_to_serv Open connection
@@ -18,15 +18,16 @@ char * create_event_size(unsigned long size);
  * @param binlog if true - connects to Master, otherwise - to RWSplit router
  * @return MYSQL handler
  */
-MYSQL * connect_to_serv(TestConnections* Test, bool binlog);
+MYSQL* connect_to_serv(TestConnections* Test, bool binlog);
 
 /**
- * @brief set_max_packet Executes 'cmd' on Master of RWSplit ('cmd' should be 'set global max_paxket_size=...')
+ * @brief set_max_packet Executes 'cmd' on Master of RWSplit ('cmd' should be 'set global
+ *max_paxket_size=...')
  * @param Test TestConnections object
  * @param binlog if true - connects to Master, otherwise - to RWSplit router
  * @param cmd command to execute
  */
-void set_max_packet(TestConnections* Test, bool binlog, char * cmd);
+void set_max_packet(TestConnections* Test, bool binlog, char* cmd);
 
 /**
  * @brief different_packet_size Tries INSERTs with size close to 0x0ffffff * N (N is 1, 2 and 3)

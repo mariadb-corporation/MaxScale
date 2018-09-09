@@ -5,15 +5,15 @@
 
 #include <thread>
 
-#define DOWN                     "Down"
-#define RUNNING                  "Running"
-#define MASTER                   "Master"
-#define SLAVE                    "Slave"
+#define DOWN    "Down"
+#define RUNNING "Running"
+#define MASTER  "Master"
+#define SLAVE   "Slave"
 
 const StringSet master_running = {MASTER, RUNNING};
-const StringSet slave_running  = {SLAVE, RUNNING};
-const StringSet running        = {RUNNING};
-const StringSet down           = {DOWN};
+const StringSet slave_running = {SLAVE, RUNNING};
+const StringSet running = {RUNNING};
+const StringSet down = {DOWN};
 
 void check_status(TestConnections& test, const char* server, const StringSet& expected, const char* message)
 {
@@ -27,8 +27,11 @@ void writer_func(TestConnections* test)
 {
     while (is_running)
     {
-        MYSQL* conn = open_conn(test->maxscales->rwsplit_port[0], test->maxscales->IP[0],
-                                "test", "test", false);
+        MYSQL* conn = open_conn(test->maxscales->rwsplit_port[0],
+                                test->maxscales->IP[0],
+                                "test",
+                                "test",
+                                false);
 
         for (int i = 0; i < 100; i++)
         {

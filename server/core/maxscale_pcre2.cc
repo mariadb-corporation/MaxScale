@@ -45,23 +45,33 @@
  * @return MXS_PCRE2_MATCH if replacements were made, MXS_PCRE2_NOMATCH if nothing
  * was replaced or MXS_PCRE2_ERROR if memory reallocation failed
  */
-mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, const char *replace,
-                                        char** dest, size_t* size)
+mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code* re,
+                                        const char* subject,
+                                        const char* replace,
+                                        char** dest,
+                                        size_t* size)
 {
     int rc;
     mxs_pcre2_result_t rval = MXS_PCRE2_ERROR;
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(re, NULL);
+    pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(re, NULL);
 
     if (mdata)
     {
         size_t size_tmp = *size;
-        while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject, PCRE2_ZERO_TERMINATED, 0,
-                                      PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                      (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                      (PCRE2_UCHAR*) *dest, &size_tmp)) == PCRE2_ERROR_NOMEMORY)
+        while ((rc = pcre2_substitute(re,
+                                      (PCRE2_SPTR) subject,
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      PCRE2_SUBSTITUTE_GLOBAL,
+                                      mdata,
+                                      NULL,
+                                      (PCRE2_SPTR) replace,
+                                      PCRE2_ZERO_TERMINATED,
+                                      (PCRE2_UCHAR*) *dest,
+                                      &size_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
             size_tmp = 2 * (*size);
-            char *tmp = (char*)MXS_REALLOC(*dest, size_tmp);
+            char* tmp = (char*)MXS_REALLOC(*dest, size_tmp);
             if (tmp == NULL)
             {
                 break;
@@ -98,21 +108,32 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, con
  * within the PCRE2 library, @c error will contain the error code. Otherwise it is
  * set to 0.
  */
-mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subject,
-                                          int options, int *error)
+mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern,
+                                          const char* subject,
+                                          int options,
+                                          int* error)
 {
     int err;
     size_t erroff;
     mxs_pcre2_result_t rval = MXS_PCRE2_ERROR;
-    pcre2_code *re = pcre2_compile((PCRE2_SPTR) pattern, PCRE2_ZERO_TERMINATED,
-                                   options, &err, &erroff, NULL);
+    pcre2_code* re = pcre2_compile((PCRE2_SPTR) pattern,
+                                   PCRE2_ZERO_TERMINATED,
+                                   options,
+                                   &err,
+                                   &erroff,
+                                   NULL);
     if (re)
     {
-        pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(re, NULL);
+        pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(re, NULL);
         if (mdata)
         {
-            int rc = pcre2_match(re, (PCRE2_SPTR) subject, PCRE2_ZERO_TERMINATED,
-                                 0, 0, mdata, NULL);
+            int rc = pcre2_match(re,
+                                 (PCRE2_SPTR) subject,
+                                 PCRE2_ZERO_TERMINATED,
+                                 0,
+                                 0,
+                                 mdata,
+                                 NULL);
             if (rc == PCRE2_ERROR_NOMATCH)
             {
                 rval = MXS_PCRE2_NOMATCH;
@@ -138,8 +159,11 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
     return rval;
 }
 
-void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
-                           int line_num, const char* func_name)
+void mxs_pcre2_print_error(int errorcode,
+                           const char* module_name,
+                           const char* filename,
+                           int line_num,
+                           const char* func_name)
 {
     mxb_assert(filename);
     mxb_assert(func_name);
@@ -149,14 +173,22 @@ void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *f
         const PCRE2_SIZE errbuf_len = 120;
         PCRE2_UCHAR errorbuf[errbuf_len];
         pcre2_get_error_message(errorcode, errorbuf, errbuf_len);
-        mxs_log_message(LOG_ERR, module_name, filename, line_num, func_name,
-                        "PCRE2 Error message: '%s'.", errorbuf);
+        mxs_log_message(LOG_ERR,
+                        module_name,
+                        filename,
+                        line_num,
+                        func_name,
+                        "PCRE2 Error message: '%s'.",
+                        errorbuf);
     }
 }
 
-bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
-                                   pcre2_match_data* md, const char* subject,
-                                   int length, const char* calling_module)
+bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
+                                   pcre2_code* re_exclude,
+                                   pcre2_match_data* md,
+                                   const char* subject,
+                                   int length,
+                                   const char* calling_module)
 {
     mxb_assert((!re_match && !re_exclude) || (md && subject));
     bool rval = true;
@@ -166,12 +198,17 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
         int result = pcre2_match(re_match, (PCRE2_SPTR)subject, string_len, 0, 0, md, NULL);
         if (result == PCRE2_ERROR_NOMATCH)
         {
-            rval = false; // Didn't match the "match"-regex
+            rval = false;   // Didn't match the "match"-regex
             if (mxs_log_is_priority_enabled(LOG_INFO))
             {
-                mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
+                mxs_log_message(LOG_INFO,
+                                calling_module,
+                                __FILE__,
+                                __LINE__,
+                                __func__,
                                 "Subject does not match the 'match' pattern: %.*s",
-                                string_len, subject);
+                                string_len,
+                                subject);
             }
         }
         else if (result < 0)
@@ -187,12 +224,17 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
         int result = pcre2_match(re_exclude, (PCRE2_SPTR)subject, string_len, 0, 0, md, NULL);
         if (result >= 0)
         {
-            rval = false; // Matched the "exclude"-regex
+            rval = false;   // Matched the "exclude"-regex
             if (mxs_log_is_priority_enabled(LOG_INFO))
             {
-                mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
+                mxs_log_message(LOG_INFO,
+                                calling_module,
+                                __FILE__,
+                                __LINE__,
+                                __func__,
                                 "Query matches the 'exclude' pattern: %.*s",
-                                string_len, subject);
+                                string_len,
+                                subject);
             }
         }
         else if (result != PCRE2_ERROR_NOMATCH)

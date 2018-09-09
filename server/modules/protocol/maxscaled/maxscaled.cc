@@ -56,17 +56,17 @@
 
 #define GETPWUID_BUF_LEN 255
 
-static int maxscaled_read_event(DCB* dcb);
-static int maxscaled_write_event(DCB *dcb);
-static int maxscaled_write(DCB *dcb, GWBUF *queue);
-static int maxscaled_error(DCB *dcb);
-static int maxscaled_hangup(DCB *dcb);
-static int maxscaled_accept(DCB *dcb);
-static int maxscaled_close(DCB *dcb);
-static int maxscaled_listen(DCB *dcb, char *config);
-static char *mxsd_default_auth();
+static int   maxscaled_read_event(DCB* dcb);
+static int   maxscaled_write_event(DCB* dcb);
+static int   maxscaled_write(DCB* dcb, GWBUF* queue);
+static int   maxscaled_error(DCB* dcb);
+static int   maxscaled_hangup(DCB* dcb);
+static int   maxscaled_accept(DCB* dcb);
+static int   maxscaled_close(DCB* dcb);
+static int   maxscaled_listen(DCB* dcb, char* config);
+static char* mxsd_default_auth();
 
-static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
+static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* dcb)
 {
     bool authenticated = false;
 
@@ -77,13 +77,13 @@ static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
     if (getsockopt(dcb->fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == 0)
     {
         struct passwd pw_entry;
-        struct passwd *pw_tmp;
+        struct passwd* pw_tmp;
         char buf[GETPWUID_BUF_LEN];
 
         /* Fetch username from UID */
         if (getpwuid_r(ucred.uid, &pw_entry, buf, sizeof(buf), &pw_tmp) == 0)
         {
-            GWBUF *username;
+            GWBUF* username;
 
             /* Set user in protocol */
             protocol->username = strdup(pw_entry.pw_name);
@@ -93,8 +93,8 @@ static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->authfunc.extract(dcb, username) &&
-                dcb->authfunc.authenticate(dcb) == 0)
+            if (dcb->authfunc.extract(dcb, username)
+                && dcb->authfunc.authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;
@@ -124,13 +124,13 @@ static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
 }
 
 
-static bool authenticate_inet_socket(MAXSCALED *protocol, DCB *dcb)
+static bool authenticate_inet_socket(MAXSCALED* protocol, DCB* dcb)
 {
     dcb_printf(dcb, MAXADMIN_AUTH_USER_PROMPT);
     return true;
 }
 
-static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
+static bool authenticate_socket(MAXSCALED* protocol, DCB* dcb)
 {
     bool authenticated = false;
 
@@ -167,49 +167,48 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_INFO("Initialise MaxScaled Protocol module.");
-
-    static MXS_PROTOCOL MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        maxscaled_read_event,           /**< Read - EPOLLIN handler        */
-        maxscaled_write,                /**< Write - data from gateway     */
-        maxscaled_write_event,          /**< WriteReady - EPOLLOUT handler */
-        maxscaled_error,                /**< Error - EPOLLERR handler      */
-        maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
-        maxscaled_accept,               /**< Accept                        */
-        NULL,                           /**< Connect                       */
-        maxscaled_close,                /**< Close                         */
-        maxscaled_listen,               /**< Create a listener             */
-        NULL,                           /**< Authentication                */
-        mxsd_default_auth,              /**< Default authenticator         */
-        NULL,                           /**< Connection limit reached      */
-        NULL,
-        NULL,
-    };
+        MXS_INFO("Initialise MaxScaled Protocol module.");
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_GA,
-        MXS_PROTOCOL_VERSION,
-        "A maxscale protocol for the administration interface",
-        "V2.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_PROTOCOL MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            maxscaled_read_event,       /**< Read - EPOLLIN handler        */
+            maxscaled_write,            /**< Write - data from gateway     */
+            maxscaled_write_event,      /**< WriteReady - EPOLLOUT handler */
+            maxscaled_error,            /**< Error - EPOLLERR handler      */
+            maxscaled_hangup,           /**< HangUp - EPOLLHUP handler     */
+            maxscaled_accept,           /**< Accept                        */
+            NULL,                       /**< Connect                       */
+            maxscaled_close,            /**< Close                         */
+            maxscaled_listen,           /**< Create a listener             */
+            NULL,                       /**< Authentication                */
+            mxsd_default_auth,          /**< Default authenticator         */
+            NULL,                       /**< Connection limit reached      */
+            NULL,
+            NULL,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_PROTOCOL,
+            MXS_MODULE_GA,
+            MXS_PROTOCOL_VERSION,
+            "A maxscale protocol for the administration interface",
+            "V2.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 /*lint +e14 */
 
@@ -218,7 +217,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return name of authenticator
  */
-static char *mxsd_default_auth()
+static char* mxsd_default_auth()
 {
     return const_cast<char*>("MaxAdminAuth");
 }
@@ -232,8 +231,8 @@ static char *mxsd_default_auth()
 static int maxscaled_read_event(DCB* dcb)
 {
     int n;
-    GWBUF *head = NULL;
-    MAXSCALED *maxscaled = (MAXSCALED *)dcb->protocol;
+    GWBUF* head = NULL;
+    MAXSCALED* maxscaled = (MAXSCALED*)dcb->protocol;
 
     if ((n = dcb_read(dcb, &head, 0)) != -1)
     {
@@ -259,7 +258,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_PASSWD:
                     {
-                        char *password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        char* password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                         if (admin_verify_inet_user(maxscaled->username, password))
                         {
                             dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
@@ -299,7 +298,7 @@ static int maxscaled_read_event(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return
  */
-static int maxscaled_write_event(DCB *dcb)
+static int maxscaled_write_event(DCB* dcb)
 {
     return dcb_drain_writeq(dcb);
 }
@@ -313,7 +312,7 @@ static int maxscaled_write_event(DCB *dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int maxscaled_write(DCB *dcb, GWBUF *queue)
+static int maxscaled_write(DCB* dcb, GWBUF* queue)
 {
     int rc;
     rc = dcb_write(dcb, queue);
@@ -325,7 +324,7 @@ static int maxscaled_write(DCB *dcb, GWBUF *queue)
  *
  * @param dcb   The descriptor control block
  */
-static int maxscaled_error(DCB *dcb)
+static int maxscaled_error(DCB* dcb)
 {
     return 0;
 }
@@ -335,7 +334,7 @@ static int maxscaled_error(DCB *dcb)
  *
  * @param dcb   The descriptor control block
  */
-static int maxscaled_hangup(DCB *dcb)
+static int maxscaled_hangup(DCB* dcb)
 {
     dcb_close(dcb);
     return 0;
@@ -348,16 +347,16 @@ static int maxscaled_hangup(DCB *dcb)
  * @param dcb   The descriptor control block
  * @return The number of new connections created
  */
-static int maxscaled_accept(DCB *listener)
+static int maxscaled_accept(DCB* listener)
 {
     int n_connect = 0;
-    DCB *client_dcb;
+    DCB* client_dcb;
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
     while ((client_dcb = dcb_accept(listener)) != NULL)
     {
-        MAXSCALED *maxscaled_protocol = (MAXSCALED *)calloc(1, sizeof(MAXSCALED));
+        MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
 
         if (!maxscaled_protocol)
         {
@@ -378,7 +377,7 @@ static int maxscaled_accept(DCB *listener)
         }
 
         spinlock_init(&maxscaled_protocol->lock);
-        client_dcb->protocol = (void *)maxscaled_protocol;
+        client_dcb->protocol = (void*)maxscaled_protocol;
 
         client_dcb->session = session_alloc(listener->session->service, client_dcb);
 
@@ -399,9 +398,9 @@ static int maxscaled_accept(DCB *listener)
  * @param dcb   The descriptor control block
  */
 
-static int maxscaled_close(DCB *dcb)
+static int maxscaled_close(DCB* dcb)
 {
-    MAXSCALED *maxscaled = static_cast<MAXSCALED*>(dcb->protocol);
+    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(dcb->protocol);
 
     if (!maxscaled)
     {
@@ -426,9 +425,9 @@ static int maxscaled_close(DCB *dcb)
  * @param       config          Configuration (ip:port)
  * @return      0 on failure, 1 on success
  */
-static int maxscaled_listen(DCB *listener, char *config)
+static int maxscaled_listen(DCB* listener, char* config)
 {
-    const char *socket_path = NULL;
+    const char* socket_path = NULL;
 
     /* check for default UNIX socket */
     if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)

@@ -45,15 +45,15 @@ const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
  */
 struct this_unit
 {
-    bool initialized;    // Whether the initialization has been performed.
+    bool initialized;   // Whether the initialization has been performed.
 } this_unit =
 {
-    false, // initialized
+    false,      // initialized
 };
 
 thread_local struct this_thread
 {
-    Worker* pCurrent_worker; // The current worker
+    Worker* pCurrent_worker;    // The current worker
 } this_thread =
 {
     nullptr
@@ -64,11 +64,10 @@ thread_local struct this_thread
  */
 typedef struct worker_message
 {
-    uint32_t id;   /*< Message id. */
-    intptr_t arg1; /*< Message specific first argument. */
-    intptr_t arg2; /*< Message specific second argument. */
+    uint32_t id;    /*< Message id. */
+    intptr_t arg1;  /*< Message specific first argument. */
+    intptr_t arg2;  /*< Message specific second argument. */
 } WORKER_MESSAGE;
-
 }
 
 static bool modules_thread_init();
@@ -107,14 +106,14 @@ WorkerLoad::Average::~Average()
 {
 }
 
-//static
+// static
 uint64_t WorkerLoad::get_time()
 {
     uint64_t now;
 
     timespec t;
 
-    MXB_AT_DEBUG(int rv = )clock_gettime(CLOCK_MONOTONIC, &t);
+    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &t);
     mxb_assert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
@@ -161,7 +160,8 @@ int create_timerfd()
             else
             {
                 MXB_ALERT("Could not create timer file descriptor even with no flags, system "
-                          "will not work: %s", mxb_strerror(errno));
+                          "will not work: %s",
+                          mxb_strerror(errno));
                 mxb_assert(!true);
             }
         }
@@ -175,7 +175,6 @@ int create_timerfd()
 
     return fd;
 }
-
 }
 
 WorkerTimer::WorkerTimer(Worker* pWorker)
@@ -256,7 +255,7 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
     return MXB_POLL_READ;
 }
 
-//static
+// static
 uint32_t WorkerTimer::handler(MXB_POLL_DATA* pThis, MXB_WORKER* pWorker, uint32_t events)
 {
     return static_cast<WorkerTimer*>(pThis)->handle(static_cast<Worker*>(pWorker), events);
@@ -280,10 +279,9 @@ int create_epoll_instance()
 
     return fd;
 }
-
 }
 
-//static
+// static
 uint32_t Worker::s_next_delayed_call_id = 1;
 
 Worker::Worker(int max_events)
@@ -494,7 +492,7 @@ bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_
     };
 
     bool rval = false;
-    CustomTask* task = new (std::nothrow) CustomTask(func);
+    CustomTask* task = new( std::nothrow) CustomTask(func);
 
     if (task)
     {
@@ -616,7 +614,7 @@ void Worker::shutdown()
  */
 void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& msg)
 {
-    switch  (msg.id())
+    switch (msg.id())
     {
     case MXB_WORKER_MSG_SHUTDOWN:
         {
@@ -627,7 +625,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXB_WORKER_MSG_CALL:
         {
-            void (*f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*))msg.arg1();
+            void (* f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*))msg.arg1();
 
             f(this, (void*)msg.arg2());
         }
@@ -635,7 +633,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXB_WORKER_MSG_TASK:
         {
-            Task *pTask = reinterpret_cast<Task*>(msg.arg1());
+            Task* pTask = reinterpret_cast<Task*>(msg.arg1());
             mxb::Semaphore* pSem = reinterpret_cast<mxb::Semaphore*>(msg.arg2());
 
             pTask->execute(*this);
@@ -649,7 +647,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXB_WORKER_MSG_DISPOSABLE_TASK:
         {
-            DisposableTask *pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
+            DisposableTask* pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
             pTask->execute(*this);
             pTask->dec_ref();
         }
@@ -665,7 +663,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
  *
  * @param arg A worker.
  */
-//static
+// static
 void Worker::thread_main(Worker* pThis, mxb::Semaphore* pSem)
 {
     pThis->run(pSem);
@@ -698,7 +696,8 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
         if (ENOSPC == errornum)
         {
             MXB_ERROR("The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
-                      "reached when trying to add file descriptor %d to an epoll instance.", fd);
+                      "reached when trying to add file descriptor %d to an epoll instance.",
+                      fd);
             return;
         }
     }
@@ -741,14 +740,13 @@ namespace
 
 long time_in_100ms_ticks()
 {
-    using TenthSecondDuration = std::chrono::duration<long, std::ratio<1,10>>;
+    using TenthSecondDuration = std::chrono::duration<long, std::ratio<1, 10>>;
 
     auto dur = std::chrono::steady_clock::now().time_since_epoch();
     auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
 
     return tenth.count();
 }
-
 }
 
 /**
@@ -844,7 +842,7 @@ void Worker::poll_waitevents()
 
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
-            MXB_POLL_DATA *data = (MXB_POLL_DATA*)events[i].data.ptr;
+            MXB_POLL_DATA* data = (MXB_POLL_DATA*)events[i].data.ptr;
 
             uint32_t actions = data->handler(data, this, events[i].events);
 
@@ -891,7 +889,7 @@ void Worker::poll_waitevents()
         epoll_tick();
 
         m_state = IDLE;
-    } /*< while(1) */
+    }   /*< while(1) */
 }
 
 namespace
@@ -905,7 +903,6 @@ int64_t get_current_time_ms()
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
-
 }
 
 void Worker::tick()
@@ -1051,7 +1048,6 @@ bool Worker::cancel_delayed_call(uint32_t id)
 
     return found;
 }
-
 }
 
 

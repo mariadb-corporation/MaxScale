@@ -27,15 +27,15 @@ using namespace std;
 namespace
 {
 
-char USAGE[] =
-    "test_trxcompare [-v] (-s stmt)|[file]"
-    "\n"
-    "-s    test single statement\n"
-    "-v 0, only return code\n"
-    "   1, failed cases (default)\n"
-    "   2, successful transactional cases\n"
-    "   4, successful cases\n"
-    "   7, all cases\n";
+char USAGE[]
+    = "test_trxcompare [-v] (-s stmt)|[file]"
+      "\n"
+      "-s    test single statement\n"
+      "-v 0, only return code\n"
+      "   1, failed cases (default)\n"
+      "   2, successful transactional cases\n"
+      "   4, successful cases\n"
+      "   7, all cases\n";
 
 enum verbosity_t
 {
@@ -86,8 +86,8 @@ public:
 
         if (type_mask_qc == type_mask_parser)
         {
-            if ((m_verbosity & VERBOSITY_SUCCESSFUL) ||
-                ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_qc != 0)))
+            if ((m_verbosity & VERBOSITY_SUCCESSFUL)
+                || ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_qc != 0)))
             {
                 char* zType_mask = qc_typemask_to_string(type_mask_qc);
 
@@ -138,12 +138,11 @@ public:
 
 private:
     Tester(const Tester&);
-    Tester& operator = (const Tester&);
+    Tester& operator=(const Tester&);
 
 private:
     uint32_t m_verbosity;
 };
-
 }
 
 

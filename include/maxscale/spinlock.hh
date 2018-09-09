@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/spinlock.h>
@@ -60,8 +60,8 @@ public:
     }
 
 private:
-    SpinLock(const SpinLock&) /* = delete */;
-    SpinLock& operator = (const SpinLock&) /* = delete */;
+    SpinLock(const SpinLock&)    /* = delete */;
+    SpinLock& operator=(const SpinLock&)    /* = delete */;
 
 private:
     mutable SPINLOCK m_lock;
@@ -112,10 +112,9 @@ public:
     }
 
 private:
-    SpinLockGuard(const SpinLockGuard&) /* = delete */;
-    SpinLockGuard& operator = (const SpinLockGuard&) /* = delete */;
+    SpinLockGuard(const SpinLockGuard&)    /* = delete */;
+    SpinLockGuard& operator=(const SpinLockGuard&)    /* = delete */;
 
     const SPINLOCK& m_lock;
 };
-
 }

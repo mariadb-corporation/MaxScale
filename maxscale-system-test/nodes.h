@@ -71,7 +71,7 @@ public:
      */
     char stop_vm_command[256][1024];
     /**
-
+     *
      * @brief start_vm_command Command to resume VM
      */
     char start_vm_command[256][1024];
@@ -104,7 +104,7 @@ public:
      * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
      */
-    void generate_ssh_cmd(char * cmd, int node, const char *ssh, bool sudo);
+    void generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo);
 
     /**
      * @brief executes shell command on the node using ssh
@@ -114,8 +114,12 @@ public:
      * @param pointer to variable to store process exit code
      * @return output of the command
      */
-    char *ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...) mxb_attribute((format(printf, 5, 6)));
-    char *ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code);
+    char* ssh_node_output_f(int node,
+                            bool sudo,
+                            int* exit_code,
+                            const char* format,
+                            ...) mxb_attribute((format(printf, 5, 6)));
+    char* ssh_node_output(int node, const char* ssh, bool sudo, int* exit_code);
 
     // Simplified C++ version
     std::pair<int, std::string> ssh_output(std::string ssh, int node = 0, bool sudo = true)
@@ -134,7 +138,7 @@ public:
      * @param sudo if true the command is executed with root privelegues
      * @return exit code of the coomand
      */
-    int ssh_node(int node, const char *ssh, bool sudo);
+    int ssh_node(int node, const char* ssh, bool sudo);
     int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
 
     /**
@@ -172,7 +176,6 @@ public:
 
 private:
     int check_node_ssh(int node);
-
 };
 
 #endif // NODES_H

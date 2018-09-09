@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file include/maxscale/config.h The configuration handling elements
@@ -44,11 +44,11 @@ MXS_BEGIN_DECLS
 #define DEFAULT_ADMIN_HTTP_PORT 8989
 #define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
-#define RELEASE_STR_LENGTH      256
-#define SYSNAME_LEN             256
-#define MAX_ADMIN_USER_LEN      1024
-#define MAX_ADMIN_PW_LEN        1024
-#define MAX_ADMIN_HOST_LEN      1024
+#define RELEASE_STR_LENGTH 256
+#define SYSNAME_LEN        256
+#define MAX_ADMIN_USER_LEN 1024
+#define MAX_ADMIN_PW_LEN   1024
+#define MAX_ADMIN_HOST_LEN 1024
 
 /** JSON Pointers to key parts of JSON objects */
 #define MXS_JSON_PTR_DATA       "/data"
@@ -220,9 +220,9 @@ extern const char CN_LOG_TO_SHM[];
  */
 typedef struct config_parameter
 {
-    char                    *name;          /**< The name of the parameter */
-    char                    *value;         /**< The value of the parameter */
-    struct config_parameter *next;          /**< Next pointer in the linked list */
+    char*                    name;          /**< The name of the parameter */
+    char*                    value;         /**< The value of the parameter */
+    struct config_parameter* next;          /**< Next pointer in the linked list */
 } MXS_CONFIG_PARAMETER;
 
 /**
@@ -231,10 +231,10 @@ typedef struct config_parameter
  */
 typedef struct config_context
 {
-    char                  *object;     /**< The name of the object being configured */
-    MXS_CONFIG_PARAMETER  *parameters; /**< The list of parameter values */
-    bool                   was_persisted; /**< True if this object was persisted */
-    struct config_context *next;       /**< Next pointer in the linked list */
+    char*                  object;          /**< The name of the object being configured */
+    MXS_CONFIG_PARAMETER*  parameters;      /**< The list of parameter values */
+    bool                   was_persisted;   /**< True if this object was persisted */
+    struct config_context* next;            /**< Next pointer in the linked list */
 } CONFIG_CONTEXT;
 
 /**
@@ -242,47 +242,53 @@ typedef struct config_context
  */
 typedef struct
 {
-    bool          config_check;                        /**< Only check config */
-    int           n_threads;                           /**< Number of polling threads */
-    size_t        thread_stack_size;                   /**< The stack size of each worker thread */
-    char          *version_string;                     /**< The version string of embedded db library */
-    char          release_string[RELEASE_STR_LENGTH]; /**< The release name string of the system */
-    char          sysname[SYSNAME_LEN];    /**< The OS name of the system */
-    uint8_t       mac_sha1[SHA_DIGEST_LENGTH];         /**< The SHA1 digest of an interface MAC address */
-    unsigned int  n_nbpoll;                            /**< Tune number of non-blocking polls */
-    unsigned int  pollsleep;                           /**< Wait time in blocking polls */
-    int           syslog;                              /**< Log to syslog */
-    int           maxlog;                              /**< Log to MaxScale's own logs */
-    unsigned int  auth_conn_timeout;                   /**< Connection timeout for the user authentication */
-    unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
-    unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
-    bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
-    int32_t       passive;                             /**< True if MaxScale is in passive mode */
-    int64_t       promoted_at;                         /**< Time when this Maxscale instance was
-                                                        * promoted from a passive to an active */
-    char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
-    char*         qc_args;                             /**< Arguments for the query classifier */
-    QC_CACHE_PROPERTIES qc_cache_properties;           /**< The query classifier cache properties. */
-    qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
-    char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
-    uint16_t      admin_port;                          /**< Admin interface port */
-    bool          admin_auth;                          /**< Admin interface authentication */
-    bool          admin_enabled;                       /**< Admin interface is enabled */
-    bool          admin_log_auth_failures;             /**< Log admin interface authentication failures */
-    char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
-    char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
-    char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
-    int           query_retries;                       /**< Number of times a interrupted query is retried */
-    time_t        query_retry_timeout;                 /**< Timeout for query retries */
-    bool          substitute_variables;                /**< Should environment variables be substituted */
-    char*         local_address;                       /**< Local address to use when connecting */
-    time_t        users_refresh_time;                  /**< How often the users can be refreshed */
-    uint64_t      writeq_high_water;                   /**< High water mark of dcb write queue */
-    uint64_t      writeq_low_water;                    /**< Low water mark of dcb write queue */
-    char          peer_hosts[MAX_ADMIN_HOST_LEN];      /**< The protocol, address and port for peers (currently only one) */
-    char          peer_user[MAX_ADMIN_HOST_LEN];       /**< Username for maxscale-to-maxscale traffic */
-    char          peer_password[MAX_ADMIN_HOST_LEN];   /**< Password for maxscale-to-maxscale traffic */
-    mxb_log_target_t log_target;                       /**< Log type */
+    bool         config_check;                              /**< Only check config */
+    int          n_threads;                                 /**< Number of polling threads */
+    size_t       thread_stack_size;                         /**< The stack size of each worker thread */
+    char*        version_string;                            /**< The version string of embedded db library */
+    char         release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
+    char         sysname[SYSNAME_LEN];                      /**< The OS name of the system */
+    uint8_t      mac_sha1[SHA_DIGEST_LENGTH];               /**< The SHA1 digest of an interface MAC address
+                                                             * */
+    unsigned int n_nbpoll;                                  /**< Tune number of non-blocking polls */
+    unsigned int pollsleep;                                 /**< Wait time in blocking polls */
+    int          syslog;                                    /**< Log to syslog */
+    int          maxlog;                                    /**< Log to MaxScale's own logs */
+    unsigned int auth_conn_timeout;                         /**< Connection timeout for the user
+                                                             * authentication */
+    unsigned int auth_read_timeout;                         /**< Read timeout for the user authentication */
+    unsigned int auth_write_timeout;                        /**< Write timeout for the user authentication */
+    bool         skip_permission_checks;                    /**< Skip service and monitor permission checks */
+    int32_t      passive;                                   /**< True if MaxScale is in passive mode */
+    int64_t      promoted_at;                               /**< Time when this Maxscale instance was
+                                                            * promoted from a passive to an active */
+    char                qc_name[PATH_MAX];                  /**< The name of the query classifier to load */
+    char*               qc_args;                            /**< Arguments for the query classifier */
+    QC_CACHE_PROPERTIES qc_cache_properties;                /**< The query classifier cache properties. */
+    qc_sql_mode_t       qc_sql_mode;                        /**< The query classifier sql mode */
+    char                admin_host[MAX_ADMIN_HOST_LEN];     /**< Admin interface host */
+    uint16_t            admin_port;                         /**< Admin interface port */
+    bool                admin_auth;                         /**< Admin interface authentication */
+    bool                admin_enabled;                      /**< Admin interface is enabled */
+    bool                admin_log_auth_failures;            /**< Log admin interface authentication failures
+                                                             * */
+    char                admin_ssl_key[PATH_MAX];            /**< Admin SSL key */
+    char                admin_ssl_cert[PATH_MAX];           /**< Admin SSL cert */
+    char                admin_ssl_ca_cert[PATH_MAX];        /**< Admin SSL CA cert */
+    int                 query_retries;                      /**< Number of times a interrupted query is
+                                                             * retried */
+    time_t              query_retry_timeout;                /**< Timeout for query retries */
+    bool                substitute_variables;               /**< Should environment variables be substituted
+                                                             * */
+    char*               local_address;                      /**< Local address to use when connecting */
+    time_t              users_refresh_time;                 /**< How often the users can be refreshed */
+    uint64_t            writeq_high_water;                  /**< High water mark of dcb write queue */
+    uint64_t            writeq_low_water;                   /**< Low water mark of dcb write queue */
+    char                peer_hosts[MAX_ADMIN_HOST_LEN];     /**< The protocol, address and port for peers
+                                                             * (currently only one) */
+    char                peer_user[MAX_ADMIN_HOST_LEN];      /**< Username for maxscale-to-maxscale traffic */
+    char                peer_password[MAX_ADMIN_HOST_LEN];  /**< Password for maxscale-to-maxscale traffic */
+    mxb_log_target_t    log_target;                         /**< Log type */
 } MXS_CONFIG;
 
 /**
@@ -307,7 +313,7 @@ MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char*
  * @param key Parameter name
  * @return True if the parameter is an SSL parameter
  */
-bool config_is_ssl_parameter(const char *key);
+bool config_is_ssl_parameter(const char* key);
 
 /**
  * @brief Check if a configuration parameter is valid
@@ -323,8 +329,10 @@ bool config_is_ssl_parameter(const char *key);
  *
  * @return True if the configuration parameter is valid
  */
-bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
-                           const char *value, const CONFIG_CONTEXT *context);
+bool config_param_is_valid(const MXS_MODULE_PARAM* params,
+                           const char* key,
+                           const char* value,
+                           const CONFIG_CONTEXT* context);
 
 /**
  * @brief Get a boolean value
@@ -338,7 +346,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
  *
  * @return The value as a boolean or false if none was found
  */
-bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key);
+bool config_get_bool(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get an integer value
@@ -350,7 +358,7 @@ bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key);
  *
  * @return The integer value of the parameter or 0 if no parameter was found
  */
-int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key);
+int config_get_integer(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a size in bytes
@@ -366,7 +374,7 @@ int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key);
  *
  * @return Number of bytes or 0 if no parameter was found
  */
-uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key);
+uint64_t config_get_size(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a string value
@@ -376,7 +384,7 @@ uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key);
  *
  * @return The raw string value or an empty string if no parameter was found
  */
-const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key);
+const char* config_get_string(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a enumeration value
@@ -391,8 +399,9 @@ const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *ke
  * detected. If -1 is used, config_get_param() should be used to detect whether
  * the parameter exists
  */
-int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key,
-                    const MXS_ENUM_VALUE *values);
+int config_get_enum(const MXS_CONFIG_PARAMETER* params,
+                    const char* key,
+                    const MXS_ENUM_VALUE* values);
 
 /**
  * @brief Get a service value
@@ -402,7 +411,7 @@ int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key,
  *
  * @return Pointer to configured service
  */
-struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const char *key);
+struct service* config_get_service(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get a server value
@@ -412,7 +421,7 @@ struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const cha
  *
  * @return Pointer to configured server
  */
-struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key);
+struct server* config_get_server(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Get an array of servers. The caller should free the produced array,
@@ -423,7 +432,8 @@ struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char 
  * @param output Where to save the output
  * @return How many servers were found, equal to output array size
  */
-int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
+int config_get_server_list(const MXS_CONFIG_PARAMETER* params,
+                           const char* key,
                            struct server*** output);
 
 /**
@@ -437,8 +447,9 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
  * nothing is written. If NULL, the parameter is ignored.
  * @return Compiled regex code on success, NULL otherwise
  */
-pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
-                                      const char *key, uint32_t options,
+pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER* params,
+                                      const char* key,
+                                      uint32_t options,
                                       uint32_t* output_ovec_size);
 
 /**
@@ -459,9 +470,11 @@ pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
  * @return True, if all patterns given by @c keys were successfully compiled.
  * False otherwise.
  */
-bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
-                                 const char* keys[], int keys_size,
-                                 uint32_t options, uint32_t* out_ovec_size,
+bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER* params,
+                                 const char* keys[],
+                                 int keys_size,
+                                 uint32_t options,
+                                 uint32_t* out_ovec_size,
                                  pcre2_code** out_codes[]);
 /**
  * Parse a list of server names and write the results in an array of strings
@@ -478,7 +491,7 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
  * @return How many servers were found and set into the array. 0 on error or if
  * none were found.
  */
-int config_parse_server_list(const char *servers, char ***output_array);
+int config_parse_server_list(const char* servers, char*** output_array);
 
 /**
  * @brief Get copy of parameter value if it is defined
@@ -494,7 +507,7 @@ int config_parse_server_list(const char *servers, char ***output_array);
  * @note The use of this function should be avoided after startup as the function
  * will abort the process if memory allocation fails.
  */
-char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key);
+char* config_copy_string(const MXS_CONFIG_PARAMETER* params, const char* key);
 
 /**
  * @brief Convert string truth value
@@ -507,7 +520,7 @@ char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key);
  * @return 1 if @c value is true, 0 if value is false and -1 if the value is not
  * a valid truth value
  */
-int config_truth_value(const char *value);
+int config_truth_value(const char* value);
 
 /**
  * @brief Get worker thread count

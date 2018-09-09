@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file readconnection.h - The read connection balancing query module heder file
@@ -35,16 +35,16 @@
 /**
  * The client session structure used within this router.
  */
-struct ROUTER_CLIENT_SES: MXS_ROUTER_SESSION
+struct ROUTER_CLIENT_SES : MXS_ROUTER_SESSION
 {
-    SPINLOCK rses_lock; /*< protects rses_deleted              */
-    int rses_versno; /*< even = no active update, else odd  */
-    bool rses_closed; /*< true when closeSession is called   */
-    SERVER_REF *backend; /*< Backend used by the client session */
-    DCB *backend_dcb; /*< DCB Connection to the backend      */
-    DCB *client_dcb; /**< Client DCB */
-    uint32_t bitmask; /*< Bitmask to apply to server->status */
-    uint32_t bitvalue; /*< Session specific required value of server->status */
+    SPINLOCK    rses_lock;  /*< protects rses_deleted              */
+    int         rses_versno;/*< even = no active update, else odd  */
+    bool        rses_closed;/*< true when closeSession is called   */
+    SERVER_REF* backend;    /*< Backend used by the client session */
+    DCB*        backend_dcb;/*< DCB Connection to the backend      */
+    DCB*        client_dcb; /**< Client DCB */
+    uint32_t    bitmask;    /*< Bitmask to apply to server->status */
+    uint32_t    bitvalue;   /*< Session specific required value of server->status */
 };
 
 /**
@@ -52,17 +52,17 @@ struct ROUTER_CLIENT_SES: MXS_ROUTER_SESSION
  */
 struct ROUTER_STATS
 {
-    int n_sessions; /*< Number sessions created     */
-    int n_queries;  /*< Number of queries forwarded */
+    int n_sessions;     /*< Number sessions created     */
+    int n_queries;      /*< Number of queries forwarded */
 };
 
 /**
  * The per instance data for the router.
  */
-struct ROUTER_INSTANCE: public MXS_ROUTER
+struct ROUTER_INSTANCE : public MXS_ROUTER
 {
-    SERVICE *service;   /*< Pointer to the service using this router */
-    SPINLOCK lock;      /*< Spinlock for the instance data           */
-    uint64_t bitmask_and_bitvalue; /*< Lower 32-bits for bitmask and upper for bitvalue */
-    ROUTER_STATS stats; /*< Statistics for this router               */
+    SERVICE*     service;               /*< Pointer to the service using this router */
+    SPINLOCK     lock;                  /*< Spinlock for the instance data           */
+    uint64_t     bitmask_and_bitvalue;  /*< Lower 32-bits for bitmask and upper for bitvalue */
+    ROUTER_STATS stats;                 /*< Statistics for this router               */
 };

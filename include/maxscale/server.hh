@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -19,6 +19,6 @@
 
 namespace maxscale
 {
-    bool server_set_status(SERVER *server, int bit, std::string* errmsg_out = NULL);
-    bool server_clear_status(SERVER *server, int bit, std::string* errmsg_out = NULL);
+bool server_set_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
+bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL);
 }

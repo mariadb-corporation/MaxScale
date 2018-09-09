@@ -13,9 +13,9 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     different_packet_size(Test, false);
 
@@ -25,4 +25,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

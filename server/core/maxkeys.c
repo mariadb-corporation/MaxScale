@@ -40,7 +40,7 @@ struct option options[] =
         NULL,
         'h'
     },
-    { NULL, 0, NULL, 0 }
+    {NULL, 0, NULL, 0}
 };
 #endif
 
@@ -61,10 +61,11 @@ void print_usage(const char* executable, const char* directory)
            "\n"
            "If a specific directory is not provided, the file is created in\n"
            "%s.\n",
-           executable, directory);
+           executable,
+           directory);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     const char* directory = get_datadir();
 

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 
@@ -24,11 +24,11 @@
 
 MXS_BEGIN_DECLS
 
-#if !defined(MXS_MODULE_NAME)
+#if !defined (MXS_MODULE_NAME)
 #define MXS_MODULE_NAME NULL
 #endif
 
-#if !defined(MXB_MODULE_NAME)
+#if !defined (MXB_MODULE_NAME)
 #define MXB_MODULE_NAME MXS_MODULE_NAME
 #endif
 
@@ -50,9 +50,9 @@ typedef MXB_LOG_THROTTLING MXS_LOG_THROTTLING;
  */
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
 
-#define mxs_log_finish                    mxb_log_finish
-#define mxs_log_message                   mxb_log_message
-#define mxs_log_rotate                    mxb_log_rotate
+#define mxs_log_finish  mxb_log_finish
+#define mxs_log_message mxb_log_message
+#define mxs_log_rotate  mxb_log_rotate
 
 #define mxs_log_get_throttling            mxb_log_get_throttling
 #define mxs_log_is_priority_enabled       mxb_log_is_priority_enabled

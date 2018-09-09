@@ -14,7 +14,7 @@ using std::endl;
 struct TestCase
 {
     const char* description;
-    void (*func)(TestConnections&, std::ostream&);
+    void        (* func)(TestConnections&, std::ostream&);
 };
 
 TestConnections* global_test;

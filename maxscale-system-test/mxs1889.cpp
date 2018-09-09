@@ -44,7 +44,6 @@ string get_server_id(TestConnections& test, MYSQL* pMysql)
 
     return id;
 }
-
 }
 
 int main(int argc, char** argv)

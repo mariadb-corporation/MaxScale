@@ -32,10 +32,10 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/secrets.h>
 
-static void detectStaleMaster(void *, int);
+static void detectStaleMaster(void*, int);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
-MMMonitor::MMMonitor(MXS_MONITOR *monitor)
+MMMonitor::MMMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstanceSimple(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
     , m_detectStaleMaster(false)
@@ -52,7 +52,7 @@ MMMonitor* MMMonitor::create(MXS_MONITOR* monitor)
     return new MMMonitor(monitor);
 }
 
-void MMMonitor::diagnostics(DCB *dcb) const
+void MMMonitor::diagnostics(DCB* dcb) const
 {
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (m_detectStaleMaster == 1) ? "enabled" : "disabled");
 }
@@ -79,11 +79,11 @@ bool MMMonitor::has_sufficient_permissions() const
 void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
-    MYSQL_RES *result;
+    MYSQL_RES* result;
     int isslave = 0;
     int ismaster = 0;
     unsigned long int server_version = 0;
-    char *server_string;
+    char* server_string;
 
 
     /* get server version from current server */
@@ -103,7 +103,8 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
-                      " MySQL Version: %s", server_string);
+                      " MySQL Version: %s",
+                      server_string);
             return;
         }
 
@@ -210,7 +211,9 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                         MXS_ERROR("\"SHOW SLAVE STATUS\" "
                                   " for versions less than 5.5 does not have master_server_id, "
                                   "replication tree cannot be resolved for server %s."
-                                  " MySQL Version: %s", monitored_server->server->name, server_string);
+                                  " MySQL Version: %s",
+                                  monitored_server->server->name,
+                                  server_string);
                         monitored_server->log_version_err = false;
                     }
                 }
@@ -218,7 +221,8 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
                 {
                     MXS_ERROR("\"SHOW SLAVE STATUS\" "
                               "returned less than the expected amount of columns. "
-                              "Expected 40 columns. MySQL Version: %s", server_string);
+                              "Expected 40 columns. MySQL Version: %s",
+                              server_string);
                 }
                 return;
             }
@@ -266,7 +270,8 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW GLOBAL VARIABLES LIKE 'read_only'\". "
-                      "Expected 2 columns. MySQL Version: %s", server_string);
+                      "Expected 2 columns. MySQL Version: %s",
+                      server_string);
             return;
         }
 
@@ -291,8 +296,10 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     /* Remove addition info */
     monitor_clear_pending_status(monitored_server, SERVER_WAS_MASTER);
 
-    /* Set the Slave Role */
-    /* Set the Master role */
+    /*
+     * Set the Slave Role
+     * Set the Master role
+     */
     if (ismaster)
     {
         monitor_clear_pending_status(monitored_server, SERVER_SLAVE);
@@ -315,24 +322,27 @@ void MMMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 void MMMonitor::post_tick()
 {
     /* Get Master server pointer */
-    MXS_MONITORED_SERVER *root_master = get_current_master();
+    MXS_MONITORED_SERVER* root_master = get_current_master();
 
     /* Update server status from monitor pending status on that server*/
 
-    for(MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
+    for (MXS_MONITORED_SERVER* ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (!server_is_in_maint(ptr->server))
         {
             /* If "detect_stale_master" option is On, let's use the previus master */
-            if (m_detectStaleMaster && root_master &&
-                (!strcmp(ptr->server->address, root_master->server->address) &&
-                 ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
-                !(ptr->pending_status & SERVER_MASTER))
+            if (m_detectStaleMaster && root_master
+                && (!strcmp(ptr->server->address, root_master->server->address)
+                    && ptr->server->port == root_master->server->port)
+                && (ptr->server->status & SERVER_MASTER)
+                && !(ptr->pending_status & SERVER_MASTER))
             {
                 /* in this case server->status will not be updated from pending_status */
                 MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
                            "use it again even if it could be a stale master, you have "
-                           "been warned!", ptr->server->address, ptr->server->port);
+                           "been warned!",
+                           ptr->server->address,
+                           ptr->server->port);
 
                 /* Reset the pending_status. */
                 ptr->pending_status = ptr->server->status;
@@ -356,10 +366,10 @@ void MMMonitor::post_tick()
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-MXS_MONITORED_SERVER *MMMonitor::get_current_master()
+MXS_MONITORED_SERVER* MMMonitor::get_current_master()
 {
     MXS_MONITOR* mon = m_monitor;
-    MXS_MONITORED_SERVER *ptr;
+    MXS_MONITORED_SERVER* ptr;
 
     ptr = mon->monitored_servers;
 
@@ -427,12 +437,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.1",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<MMMonitor>::s_api,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,                                   /* Process init. */
+        NULL,                                   /* Process finish. */
+        NULL,                                   /* Thread init. */
+        NULL,                                   /* Thread finish. */
         {
-            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_stale_master",             MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };

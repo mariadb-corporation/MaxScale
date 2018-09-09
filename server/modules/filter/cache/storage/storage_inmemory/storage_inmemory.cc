@@ -24,5 +24,4 @@ extern "C"
     {
         return &StorageModule<InMemoryStorage>::s_api;
     }
-
 }

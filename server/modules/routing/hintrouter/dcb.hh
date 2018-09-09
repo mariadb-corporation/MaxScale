@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "hintrouterdefs.hh"
 
@@ -27,9 +27,10 @@ public:
 
     Dcb(const Dcb& rhs)
         : m_sInner(rhs.m_sInner)
-    {};
+    {
+    }
 
-    Dcb& operator = (Dcb rhs)
+    Dcb& operator=(Dcb rhs)
     {
         m_sInner.swap(rhs.m_sInner);
         return *this;
@@ -55,4 +56,3 @@ private:
     static void deleter(DCB* dcb);
     SDCB m_sInner;
 };
-

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file limits.h
@@ -42,14 +42,14 @@ MXS_BEGIN_DECLS
  *
  * The value used when setting SO_RCVBUF of client sockets.
  */
-#define MXS_CLIENT_SO_RCVBUF  (128 * 1024)
+#define MXS_CLIENT_SO_RCVBUF (128 * 1024)
 
 /**
  * MXS_CLIENT_SO_SNDBUF
  *
  * The value used when setting SO_SNDBUF of client sockets.
  */
-#define MXS_CLIENT_SO_SNDBUF  (128 * 1024)
+#define MXS_CLIENT_SO_SNDBUF (128 * 1024)
 
 /**
  * MXS_MAX_NW_READ_BUFFER_SIZE

@@ -42,10 +42,10 @@ namespace schemarouter
  * @file schemarouter.c The entry points for the simple sharding router module.
  */
 
-SchemaRouter::SchemaRouter(SERVICE *service, SConfig config):
-    mxs::Router<SchemaRouter, SchemaRouterSession>(service),
-    m_config(config),
-    m_service(service)
+SchemaRouter::SchemaRouter(SERVICE* service, SConfig config)
+    : mxs::Router<SchemaRouter, SchemaRouterSession>(service)
+    , m_config(config)
+    , m_service(service)
 {
     spinlock_init(&m_lock);
 }
@@ -188,7 +188,7 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 {
     SSRBackendList backends;
 
-    for (SERVER_REF *ref = m_service->dbref; ref; ref = ref->next)
+    for (SERVER_REF* ref = m_service->dbref; ref; ref = ref->next)
     {
         if (ref->active)
         {
@@ -208,19 +208,23 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 
 void SchemaRouter::diagnostics(DCB* dcb)
 {
-    double sescmd_pct = m_stats.n_sescmd != 0 ?
-                        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-                        0.0;
+    double sescmd_pct = m_stats.n_sescmd != 0
+        ? 100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries)
+        : 0.0;
 
     /** Session command statistics */
     dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
-    dcb_printf(dcb, "Total number of queries: %d\n",
+    dcb_printf(dcb,
+               "Total number of queries: %d\n",
                m_stats.n_queries);
-    dcb_printf(dcb, "Percentage of session commands: %.2f\n",
+    dcb_printf(dcb,
+               "Percentage of session commands: %.2f\n",
                sescmd_pct);
-    dcb_printf(dcb, "Longest chain of stored session commands: %d\n",
+    dcb_printf(dcb,
+               "Longest chain of stored session commands: %d\n",
                m_stats.longest_sescmd);
-    dcb_printf(dcb, "Session command history limit exceeded: %d times\n",
+    dcb_printf(dcb,
+               "Session command history limit exceeded: %d times\n",
                m_stats.n_hist_exceeded);
 
     /** Session time statistics */
@@ -239,9 +243,9 @@ void SchemaRouter::diagnostics(DCB* dcb)
 
 json_t* SchemaRouter::diagnostics_json() const
 {
-    double sescmd_pct = m_stats.n_sescmd != 0 ?
-                        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-                        0.0;
+    double sescmd_pct = m_stats.n_sescmd != 0
+        ? 100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries)
+        : 0.0;
 
     json_t* rval = json_object();
     json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
@@ -267,7 +271,6 @@ uint64_t SchemaRouter::getCapabilities()
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG;
 }
-
 }
 
 /**
@@ -289,19 +292,19 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RUNTIME_CONFIG,
         &schemarouter::SchemaRouter::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,                                                   /* Process init. */
+        NULL,                                                   /* Process finish. */
+        NULL,                                                   /* Thread init. */
+        NULL,                                                   /* Thread finish. */
         {
-            {"ignore_databases", MXS_MODULE_PARAM_STRING},
-            {"ignore_databases_regex", MXS_MODULE_PARAM_STRING},
-            {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases", MXS_MODULE_PARAM_BOOL, "true"},
-            {"refresh_interval", MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
-            {"debug", MXS_MODULE_PARAM_BOOL, "false"},
-            {"preferred_server", MXS_MODULE_PARAM_SERVER},
+            {"ignore_databases",                              MXS_MODULE_PARAM_STRING  },
+            {"ignore_databases_regex",                        MXS_MODULE_PARAM_STRING  },
+            {"max_sescmd_history",                            MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history",                        MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases",                             MXS_MODULE_PARAM_BOOL, "true"},
+            {"refresh_interval",                              MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
+            {"debug",                                         MXS_MODULE_PARAM_BOOL, "false"},
+            {"preferred_server",                              MXS_MODULE_PARAM_SERVER  },
             {MXS_END_MODULE_PARAMS}
         }
     };

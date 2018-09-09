@@ -48,11 +48,11 @@
  * @param is_capable Indicates if the client can handle SSL
  * @return 0 if ok, >0 if a problem - see return codes defined in ssl.h
  */
-int ssl_authenticate_client(DCB *dcb, bool is_capable)
+int ssl_authenticate_client(DCB* dcb, bool is_capable)
 {
-    const char *user = dcb->user ? dcb->user : "";
-    const char *remote = dcb->remote ? dcb->remote : "";
-    const char *service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
+    const char* user = dcb->user ? dcb->user : "";
+    const char* remote = dcb->remote ? dcb->remote : "";
+    const char* service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
 
     if (NULL == dcb->listener || NULL == dcb->listener->ssl)
     {
@@ -64,7 +64,9 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
     {
         /* Should be SSL, but client is not SSL capable */
         MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-                 user, remote, service);
+                 user,
+                 remote,
+                 service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
     /* Now we know SSL is required and client is capable */
@@ -88,7 +90,9 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
         if (return_code < 0)
         {
             MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
-                     user, remote, service);
+                     user,
+                     remote,
+                     service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
         else if (mxs_log_is_priority_enabled(LOG_INFO))
@@ -96,12 +100,16 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
             if (1 == return_code)
             {
                 MXS_INFO("User %s@%s connected to service '%s' with SSL.",
-                         user, remote, service);
+                         user,
+                         remote,
+                         service);
             }
             else
             {
                 MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
-                         user, remote, service);
+                         user,
+                         remote,
+                         service);
             }
         }
     }
@@ -118,22 +126,20 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean to indicate whether connection is healthy
  */
-bool
-ssl_is_connection_healthy(DCB *dcb)
+bool ssl_is_connection_healthy(DCB* dcb)
 {
     /**
      * If SSL was never expected, or if the connection has state SSL_ESTABLISHED
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return (NULL == dcb->listener ||
-            NULL == dcb->listener->ssl ||
-            dcb->ssl_state == SSL_ESTABLISHED);
+    return NULL == dcb->listener
+           || NULL == dcb->listener->ssl
+           || dcb->ssl_state == SSL_ESTABLISHED;
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
-bool
-ssl_check_data_to_process(DCB *dcb)
+bool ssl_check_data_to_process(DCB* dcb)
 {
     /** SSL authentication is still going on, we need to call dcb_accept_SSL
      * until it return 1 for success or -1 for error */
@@ -163,8 +169,7 @@ ssl_check_data_to_process(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether SSL is required.
  */
-bool
-ssl_required_by_dcb(DCB *dcb)
+bool ssl_required_by_dcb(DCB* dcb)
 {
     return NULL != dcb->listener && NULL != dcb->listener->ssl;
 }
@@ -179,12 +184,11 @@ ssl_required_by_dcb(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether SSL is required and not negotiated.
  */
-bool
-ssl_required_but_not_negotiated(DCB *dcb)
+bool ssl_required_but_not_negotiated(DCB* dcb)
 {
-    return (NULL != dcb->listener &&
-            NULL != dcb->listener->ssl &&
-            SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state);
+    return NULL != dcb->listener
+           && NULL != dcb->listener->ssl
+           && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state;
 }
 
 /**
@@ -200,17 +204,21 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
 #ifndef OPENSSL_1_1
     case SERVICE_TLS10:
         return "TLSV10";
+
 #endif
 #ifdef OPENSSL_1_0
     case SERVICE_TLS11:
         return "TLSV11";
+
     case SERVICE_TLS12:
         return "TLSV12";
+
 #endif
     case SERVICE_SSL_MAX:
     case SERVICE_TLS_MAX:
     case SERVICE_SSL_TLS_MAX:
         return "MAX";
+
     default:
         return "Unknown";
     }
@@ -268,10 +276,11 @@ void write_ssl_config(int fd, SSL_LISTENER* ssl)
             dprintf(fd, "ssl_cert_verify_depth=%d\n", ssl->ssl_cert_verify_depth);
         }
 
-        dprintf(fd, "ssl_verify_peer_certificate=%s\n",
+        dprintf(fd,
+                "ssl_verify_peer_certificate=%s\n",
                 ssl->ssl_verify_peer_certificate ? "true" : "false");
 
-        const char *version = ssl_method_type_to_string(ssl->ssl_method_type);
+        const char* version = ssl_method_type_to_string(ssl->ssl_method_type);
         dprintf(fd, "ssl_version=%s\n", version);
     }
 }

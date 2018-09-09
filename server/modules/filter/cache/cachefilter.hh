@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
@@ -37,7 +37,7 @@ public:
 
     CacheFilterSession* newSession(MXS_SESSION* pSession);
 
-    void diagnostics(DCB* pDcb);
+    void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
 
     uint64_t getCapabilities();
@@ -46,9 +46,9 @@ private:
     CacheFilter();
 
     CacheFilter(const CacheFilter&);
-    CacheFilter& operator = (const CacheFilter&);
+    CacheFilter& operator=(const CacheFilter&);
 
-    static bool process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
+    static bool process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& config);
 
 private:
     CACHE_CONFIG         m_config;

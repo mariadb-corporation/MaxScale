@@ -36,7 +36,7 @@ static struct
 
 int get_pipe_max_size()
 {
-    int size = 65536; // Default value from pipe(7)
+    int size = 65536;   // Default value from pipe(7)
     std::ifstream file("/proc/sys/fs/pipe-max-size");
 
     if (file.good())
@@ -46,7 +46,6 @@ int get_pipe_max_size()
 
     return size;
 }
-
 }
 
 namespace maxbase
@@ -75,7 +74,7 @@ MessageQueue::~MessageQueue()
     close(m_write_fd);
 }
 
-//static
+// static
 bool MessageQueue::init()
 {
     mxb_assert(!this_unit.initialized);
@@ -86,14 +85,14 @@ bool MessageQueue::init()
     return this_unit.initialized;
 }
 
-//static
+// static
 void MessageQueue::finish()
 {
     mxb_assert(this_unit.initialized);
     this_unit.initialized = false;
 }
 
-//static
+// static
 MessageQueue* MessageQueue::create(Handler* pHandler)
 {
     mxb_assert(this_unit.initialized);
@@ -148,10 +147,12 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
         if (fcntl(fds[0], F_SETPIPE_SZ, this_unit.pipe_max_size) == -1)
         {
             MXB_WARNING("Failed to increase pipe buffer size to '%d': %d, %s",
-                        this_unit.pipe_max_size, errno, mxb_strerror(errno));
+                        this_unit.pipe_max_size,
+                        errno,
+                        mxb_strerror(errno));
         }
 #endif
-        pThis = new (std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
+        pThis = new( std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
 
         if (!pThis)
         {
@@ -303,7 +304,9 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
                 // mode we continue reading in order to empty the pipe as otherwise the
                 // thread may hang.
                 MXB_ERROR("MessageQueue could only read %ld bytes from pipe, although "
-                          "expected %lu bytes.", n, sizeof(message));
+                          "expected %lu bytes.",
+                          n,
+                          sizeof(message));
                 mxb_assert(!true);
             }
         }
@@ -315,12 +318,11 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
     return rc;
 }
 
-//static
+// static
 uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
 {
     MessageQueue* pThis = static_cast<MessageQueue*>(pData);
 
     return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
 }
-
 }

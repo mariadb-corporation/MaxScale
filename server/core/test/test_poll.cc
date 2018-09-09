@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -42,13 +42,12 @@
 /**
  * test1    Allocate a service and do lots of other things
  *
-  */
+ */
 
-static int
-test1()
+static int test1()
 {
-    DCB     *dcb;
-    int     result;
+    DCB* dcb;
+    int result;
     int eno = 0;
     SERV_LISTENER dummy;
 
@@ -74,8 +73,10 @@ test1()
     if (dcb->fd < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
-        fprintf(stderr, "\nError on function call: socket() returned %d: %s\n",
-                errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        fprintf(stderr,
+                "\nError on function call: socket() returned %d: %s\n",
+                errno,
+                strerror_r(errno, errbuf, sizeof(errbuf)));
         return 1;
     }
 
@@ -100,7 +101,7 @@ test1()
 
     fprintf(stderr, "\t..done\nStart wait for events.");
     sleep(10);
-    //TODO, fix this for workers: poll_shutdown();
+    // TODO, fix this for workers: poll_shutdown();
     fprintf(stderr, "\t..done\nTidy up.");
     SERVICE my_service = {};
     dcb->service = &my_service;
@@ -108,10 +109,9 @@ test1()
     fprintf(stderr, "\t..done\n");
 
     return 0;
-
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
 
@@ -119,4 +119,3 @@ int main(int argc, char **argv)
 
     exit(result);
 }
-

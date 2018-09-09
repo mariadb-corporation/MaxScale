@@ -18,18 +18,17 @@ int main(int argc, char** argv)
     // We need to do this since we don't have maxadmin enabled
     test.maxscales->restart();
 
-    auto maxctrl = [&](string cmd, bool print = true)
-    {
-        test.set_timeout(60);
-        auto rv = test.maxscales->ssh_output("maxctrl " + cmd);
+    auto maxctrl = [&](string cmd, bool print = true) {
+            test.set_timeout(60);
+            auto rv = test.maxscales->ssh_output("maxctrl " + cmd);
 
-        if (rv.first != 0 && print)
-        {
-            cout << "MaxCtrl: " << rv.second << endl;
-        }
+            if (rv.first != 0 && print)
+            {
+                cout << "MaxCtrl: " << rv.second << endl;
+            }
 
-        return rv.first == 0;
-    };
+            return rv.first == 0;
+        };
 
     Connection c1 = test.maxscales->rwsplit();
     string host1 = test.repl->IP[0];
@@ -57,7 +56,8 @@ int main(int argc, char** argv)
 
     test.assert(!maxctrl("destroy service svc1", false), "Destroying linked service should fail");
     maxctrl("unlink service svc1 server1 server2 server3");
-    test.assert(!maxctrl("destroy service svc1", false), "Destroying service with active listeners should fail");
+    test.assert(!maxctrl("destroy service svc1", false),
+                "Destroying service with active listeners should fail");
     maxctrl("destroy listener svc1 listener1");
     test.assert(maxctrl("destroy service svc1"), "Destroying valid service should work");
 
@@ -89,12 +89,12 @@ int main(int argc, char** argv)
     // listener is freed.
     mutex m;
     condition_variable cv;
-    thread t([&]()
-    {
-        cv.notify_one();
-        test.assert(!test.maxscales->rwsplit().connect(), "New connections to created service "
-                    "should fail with a timeout while the original connection is open");
-    });
+    thread t([&]() {
+                 cv.notify_one();
+                 test.assert(!test.maxscales->rwsplit().connect(),
+                             "New connections to created service "
+                             "should fail with a timeout while the original connection is open");
+             });
 
     // Wait until the thread starts
     unique_lock<mutex> ul(m);

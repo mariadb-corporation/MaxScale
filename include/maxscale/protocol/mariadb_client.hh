@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -22,7 +22,7 @@
 #include <maxscale/protocol/mysql.h>
 
 /** A DCB-like client abstraction which ignores responses */
-class LocalClient: public MXB_POLL_DATA
+class LocalClient : public MXB_POLL_DATA
 {
     LocalClient(const LocalClient&);
     LocalClient& operator=(const LocalClient&);
@@ -61,19 +61,19 @@ private:
     static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port);
     LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd);
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-    void   process(uint32_t events);
-    GWBUF* read_complete_packet();
-    void   drain_queue();
-    void   error();
-    void   close();
+    void            process(uint32_t events);
+    GWBUF*          read_complete_packet();
+    void            drain_queue();
+    void            error();
+    void            close();
 
     /** Client states */
     enum vc_state
     {
-        VC_WAITING_HANDSHAKE, // Initial state
-        VC_RESPONSE_SENT, // Handshake received and response sent
-        VC_OK, // Authentication is complete, ready for queries
-        VC_ERROR // Something went wrong
+        VC_WAITING_HANDSHAKE,   // Initial state
+        VC_RESPONSE_SENT,       // Handshake received and response sent
+        VC_OK,                  // Authentication is complete, ready for queries
+        VC_ERROR                // Something went wrong
     };
 
     vc_state                m_state;

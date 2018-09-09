@@ -40,11 +40,17 @@ bool INIReader::GetBoolean(string section, string name, bool default_value)
     // Convert to lower case to make string comparisons case-insensitive
     std::transform(valstr.begin(), valstr.end(), valstr.begin(), ::tolower);
     if (valstr == "true" || valstr == "yes" || valstr == "on" || valstr == "1")
+    {
         return true;
+    }
     else if (valstr == "false" || valstr == "no" || valstr == "off" || valstr == "0")
+    {
         return false;
+    }
     else
+    {
         return default_value;
+    }
 }
 
 string INIReader::MakeKey(string section, string name)
@@ -55,13 +61,17 @@ string INIReader::MakeKey(string section, string name)
     return key;
 }
 
-int INIReader::ValueHandler(void* user, const char* section, const char* name,
+int INIReader::ValueHandler(void* user,
+                            const char* section,
+                            const char* name,
                             const char* value)
 {
     INIReader* reader = (INIReader*)user;
     string key = MakeKey(section, name);
     if (reader->_values[key].size() > 0)
+    {
         reader->_values[key] += "\n";
+    }
     reader->_values[key] += value;
     return 1;
 }

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "schemarouter.hh"
 
@@ -46,10 +46,10 @@ enum showdb_response
     SHOWDB_FATAL_ERROR
 };
 
-#define SCHEMA_ERR_DUPLICATEDB 5000
+#define SCHEMA_ERR_DUPLICATEDB    5000
 #define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
-#define SCHEMA_ERR_DBNOTFOUND 1049
-#define SCHEMA_ERRSTR_DBNOTFOUND "42000"
+#define SCHEMA_ERR_DBNOTFOUND     1049
+#define SCHEMA_ERRSTR_DBNOTFOUND  "42000"
 
 /**
  * Route target types
@@ -73,7 +73,7 @@ class SchemaRouter;
 /**
  * The client session structure used within this router.
  */
-class SchemaRouterSession: public mxs::RouterSession
+class SchemaRouterSession : public mxs::RouterSession
 {
 public:
 
@@ -114,29 +114,31 @@ public:
      * @param action    The context.
      * @param pSuccess  On output, if false, the session will be terminated.
      */
-    void handleError(GWBUF*             pMessage,
-                     DCB*               pProblem,
+    void handleError(GWBUF* pMessage,
+                     DCB*   pProblem,
                      mxs_error_action_t action,
-                     bool*              pSuccess);
+                     bool* pSuccess);
 private:
     /**
      * Internal functions
      */
 
     /** Helper functions */
-    SERVER*  get_shard_target(GWBUF* buffer, uint32_t qtype);
+    SERVER*    get_shard_target(GWBUF* buffer, uint32_t qtype);
     SSRBackend get_bref_from_dcb(DCB* dcb);
-    bool     get_shard_dcb(DCB** dcb, char* name);
-    bool     have_servers();
-    bool     handle_default_db();
-    bool     ignore_duplicate_database(const char* data);
-    SERVER*  get_query_target(GWBUF* buffer);
-    SERVER*  get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
+    bool       get_shard_dcb(DCB** dcb, char* name);
+    bool       have_servers();
+    bool       handle_default_db();
+    bool       ignore_duplicate_database(const char* data);
+    SERVER*    get_query_target(GWBUF* buffer);
+    SERVER*    get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
 
     /** Routing functions */
     bool    route_session_write(GWBUF* querybuf, uint8_t command);
     void    process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket);
-    SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
+    SERVER* resolve_query_target(GWBUF* pPacket,
+                                 uint32_t type,
+                                 uint8_t  command,
                                  enum route_target& route_target);
 
     /** Shard mapping functions */
@@ -152,20 +154,20 @@ private:
     bool                 handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type);
 
     /** Member variables */
-    bool                   m_closed;         /**< True if session closed */
-    DCB*                   m_client;         /**< The client DCB */
-    MYSQL_session*         m_mysql_session;  /**< Session client data (username, password, SHA1). */
-    SSRBackendList         m_backends;       /**< Backend references */
-    SConfig                m_config;         /**< Session specific configuration */
-    SchemaRouter*          m_router;         /**< The router instance */
-    Shard                  m_shard;          /**< Database to server mapping */
-    std::string            m_connect_db;     /**< Database the user was trying to connect to */
-    std::string            m_current_db;     /**< Current active database */
-    int                    m_state;          /**< Initialization state bitmask */
-    std::list<mxs::Buffer> m_queue;          /**< Query that was received before the session was ready */
-    Stats                  m_stats;          /**< Statistics for this router */
-    uint64_t               m_sent_sescmd;    /**< The latest session command being executed */
-    uint64_t               m_replied_sescmd; /**< The last session command reply that was sent to the client */
-    SERVER*                m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
+    bool                   m_closed;        /**< True if session closed */
+    DCB*                   m_client;        /**< The client DCB */
+    MYSQL_session*         m_mysql_session; /**< Session client data (username, password, SHA1). */
+    SSRBackendList         m_backends;      /**< Backend references */
+    SConfig                m_config;        /**< Session specific configuration */
+    SchemaRouter*          m_router;        /**< The router instance */
+    Shard                  m_shard;         /**< Database to server mapping */
+    std::string            m_connect_db;    /**< Database the user was trying to connect to */
+    std::string            m_current_db;    /**< Current active database */
+    int                    m_state;         /**< Initialization state bitmask */
+    std::list<mxs::Buffer> m_queue;         /**< Query that was received before the session was ready */
+    Stats                  m_stats;         /**< Statistics for this router */
+    uint64_t               m_sent_sescmd;   /**< The latest session command being executed */
+    uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
+    SERVER*                m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
 };
 }

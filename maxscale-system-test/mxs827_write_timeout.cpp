@@ -1,5 +1,6 @@
 /**
- * @file mxs827_write_timeout "ReadWriteSplit only keeps used connection alive, query crashes after unused connection times out"
+ * @file mxs827_write_timeout "ReadWriteSplit only keeps used connection alive, query crashes after unused
+ *connection times out"
  * - SET wait_timeout=20
  * - do only SELECT during 30 seconds
  * - try INSERT
@@ -12,9 +13,9 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
     Test->maxscales->connect_maxscale(0);
 
@@ -38,4 +39,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

@@ -20,7 +20,5 @@ namespace maxscale
 
 namespace mock
 {
-
 }
-
 }

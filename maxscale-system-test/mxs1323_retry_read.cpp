@@ -7,7 +7,7 @@
 
 void* async_block(void* data)
 {
-    TestConnections *test = (TestConnections*)data;
+    TestConnections* test = (TestConnections*)data;
     sleep(5);
     test->tprintf("Blocking slave");
     test->repl->block_node(1);
@@ -27,7 +27,7 @@ std::string do_query(TestConnections& test)
     return std::string(output);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 

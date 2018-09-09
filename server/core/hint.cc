@@ -38,15 +38,14 @@
  *
  * Note : Optimize this to use version numbering instead of copying memory
  */
-HINT *
-hint_dup(const HINT *hint)
+HINT* hint_dup(const HINT* hint)
 {
-    const HINT *ptr1 = hint;
-    HINT *nlhead = NULL, *nltail = NULL, *ptr2;
+    const HINT* ptr1 = hint;
+    HINT* nlhead = NULL, * nltail = NULL, * ptr2;
 
     while (ptr1)
     {
-        if ((ptr2 = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
+        if ((ptr2 = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
         {
             return nlhead;
         }
@@ -91,12 +90,11 @@ hint_dup(const HINT *hint)
  * @param data  Data may be NULL or the name of a server to route to
  * @return The result hint list
  */
-HINT *
-hint_create_route(HINT *head, HINT_TYPE type, const char *data)
+HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
 {
-    HINT *hint;
+    HINT* hint;
 
-    if ((hint = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
@@ -123,8 +121,7 @@ hint_create_route(HINT *head, HINT_TYPE type, const char *data)
  * @param list  Hint list to prepend
  * @return Head of list
  */
-HINT *
-hint_splice(HINT *head, HINT *list)
+HINT* hint_splice(HINT* head, HINT* list)
 {
     mxb_assert(list);
     if (head)
@@ -148,12 +145,11 @@ hint_splice(HINT *head, HINT *list)
  * @param value The parameter value
  * @return The result hint list
  */
-HINT *
-hint_create_parameter(HINT *head, char *pname, const char *value)
+HINT* hint_create_parameter(HINT* head, char* pname, const char* value)
 {
-    HINT *hint;
+    HINT* hint;
 
-    if ((hint = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
@@ -169,8 +165,7 @@ hint_create_parameter(HINT *head, char *pname, const char *value)
  *
  * @param hint          The hint to free
  */
-void
-hint_free(HINT *hint)
+void hint_free(HINT* hint)
 {
     if (hint->data)
     {
@@ -183,7 +178,7 @@ hint_free(HINT *hint)
     MXS_FREE(hint);
 }
 
-bool hint_exists(HINT**    p_hint,
+bool hint_exists(HINT** p_hint,
                  HINT_TYPE type)
 {
     bool succp = false;

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <ostream>
@@ -65,7 +65,7 @@ public:
     /**
      * @return The value of the length encoded integer.
      */
-    operator uint64_t () const
+    operator uint64_t() const
     {
         return value();
     }
@@ -95,7 +95,7 @@ private:
  *
  * @return The stream provided as argument.
  */
-inline std::ostream& operator << (std::ostream& out, const LEncInt& i)
+inline std::ostream& operator<<(std::ostream& out, const LEncInt& i)
 {
     return i.print(out);
 }
@@ -115,16 +115,17 @@ public:
      *
      * A _random access iterator_ to a @c LEncString.
      */
-    class iterator : public std::iterator<std::random_access_iterator_tag,
-        char,
-        std::ptrdiff_t,
-        char*,
-        char&>
+    class iterator : public std::iterator<std::random_access_iterator_tag
+                                          , char
+                                          , std::ptrdiff_t
+                                          , char*
+                                          , char&>
     {
     public:
         iterator(char* pS)
             : m_pS(pS)
-        {}
+        {
+        }
 
         iterator& operator++()
         {
@@ -140,7 +141,7 @@ public:
             return rv;
         }
 
-        iterator operator + (ptrdiff_t n)
+        iterator operator+(ptrdiff_t n)
         {
             mxb_assert(m_pS);
             iterator rv = m_pS;
@@ -148,53 +149,53 @@ public:
             return rv;
         }
 
-        iterator& operator += (ptrdiff_t n)
+        iterator& operator+=(ptrdiff_t n)
         {
             mxb_assert(m_pS);
             m_pS += n;
             return *this;
         }
 
-        iterator& operator -= (ptrdiff_t n)
+        iterator& operator-=(ptrdiff_t n)
         {
             mxb_assert(m_pS);
             m_pS -= n;
             return *this;
         }
 
-        ptrdiff_t operator - (const iterator& rhs) const
+        ptrdiff_t operator-(const iterator& rhs) const
         {
             mxb_assert(m_pS);
             mxb_assert(rhs.m_pS);
             return m_pS - rhs.m_pS;
         }
 
-        bool operator == (const iterator& rhs) const
+        bool operator==(const iterator& rhs) const
         {
             return m_pS == rhs.m_pS;
         }
 
-        bool operator != (const iterator& rhs) const
+        bool operator!=(const iterator& rhs) const
         {
             return !(*this == rhs);
         }
 
-        bool operator < (const iterator& rhs) const
+        bool operator<(const iterator& rhs) const
         {
             return m_pS < rhs.m_pS;
         }
 
-        bool operator <= (const iterator& rhs) const
+        bool operator<=(const iterator& rhs) const
         {
             return m_pS < rhs.m_pS;
         }
 
-        bool operator > (const iterator& rhs) const
+        bool operator>(const iterator& rhs) const
         {
             return m_pS > rhs.m_pS;
         }
 
-        bool operator >= (const iterator& rhs) const
+        bool operator>=(const iterator& rhs) const
         {
             return m_pS > rhs.m_pS;
         }
@@ -371,8 +372,8 @@ public:
     }
 
 private:
-    char*  m_pString; /*<! Pointer to beginning of string, NOT zero-terminated. */
-    size_t m_length;  /*<! Length of string. */
+    char*  m_pString;   /*<! Pointer to beginning of string, NOT zero-terminated. */
+    size_t m_length;    /*<! Length of string. */
 };
 
 /**
@@ -383,7 +384,7 @@ private:
  *
  * @return True, if the strings are equal.
  */
-inline bool operator == (const LEncString& lhs, const LEncString& rhs)
+inline bool operator==(const LEncString& lhs, const LEncString& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -396,7 +397,7 @@ inline bool operator == (const LEncString& lhs, const LEncString& rhs)
  *
  * @return True, if the strings are equal.
  */
-inline bool operator == (const std::string& lhs, const LEncString& rhs)
+inline bool operator==(const std::string& lhs, const LEncString& rhs)
 {
     return rhs.eq(lhs);
 }
@@ -409,7 +410,7 @@ inline bool operator == (const std::string& lhs, const LEncString& rhs)
  *
  * @return True, if the strings are equal.
  */
-inline bool operator == (const LEncString& lhs, const std::string& rhs)
+inline bool operator==(const LEncString& lhs, const std::string& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -422,7 +423,7 @@ inline bool operator == (const LEncString& lhs, const std::string& rhs)
  *
  * @return True, if the strings are equal.
  */
-inline bool operator == (const LEncString& lhs, const char* zRhs)
+inline bool operator==(const LEncString& lhs, const char* zRhs)
 {
     return lhs.eq(zRhs);
 }
@@ -435,7 +436,7 @@ inline bool operator == (const LEncString& lhs, const char* zRhs)
  *
  * @return The @c ostream provided as argument.
  */
-inline std::ostream& operator << (std::ostream& out, const LEncString& s)
+inline std::ostream& operator<<(std::ostream& out, const LEncString& s)
 {
     return s.print(out);
 }
@@ -450,7 +451,7 @@ inline std::ostream& operator << (std::ostream& out, const LEncString& s)
  *         if @c n causes the iterator to conceptually move before the beginning
  *         of the string or beyond the end.
  */
-inline LEncString::iterator operator + (const LEncString::iterator& it, ptrdiff_t n)
+inline LEncString::iterator operator+(const LEncString::iterator& it, ptrdiff_t n)
 {
     LEncString::iterator rv(it);
     rv += n;
@@ -467,7 +468,7 @@ inline LEncString::iterator operator + (const LEncString::iterator& it, ptrdiff_
  *         if @c n causes the iterator to conceptually move before the beginning
  *         of the string or beyond the end.
  */
-inline LEncString::iterator operator + (ptrdiff_t n, const LEncString::iterator& it)
+inline LEncString::iterator operator+(ptrdiff_t n, const LEncString::iterator& it)
 {
     return it + n;
 }
@@ -482,7 +483,7 @@ inline LEncString::iterator operator + (ptrdiff_t n, const LEncString::iterator&
  *         if @c n causes the iterator to conceptually move before the beginning
  *         of the string or beyond the end.
  */
-inline LEncString::iterator operator - (const LEncString::iterator& it, ptrdiff_t n)
+inline LEncString::iterator operator-(const LEncString::iterator& it, ptrdiff_t n)
 {
     LEncString::iterator rv(it);
     rv -= n;
@@ -555,10 +556,10 @@ class ComResponse : public ComPacket
 public:
     enum
     {
-        OK_PACKET           = MYSQL_REPLY_OK,          // 0x00
-        EOF_PACKET          = MYSQL_REPLY_EOF,         // 0xfe
-        ERR_PACKET          = MYSQL_REPLY_ERR,         // 0xff
-        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE // 0xfb
+        OK_PACKET           = MYSQL_REPLY_OK,           // 0x00
+        EOF_PACKET          = MYSQL_REPLY_EOF,          // 0xfe
+        ERR_PACKET          = MYSQL_REPLY_ERR,          // 0xff
+        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE  // 0xfb
     };
 
     ComResponse(GWBUF* pPacket)
@@ -802,7 +803,7 @@ public:
     {
         return m_org_name;
     }
-    enum_field_types  type() const
+    enum_field_types type() const
     {
         return m_type;
     }
@@ -957,11 +958,11 @@ typedef CQRResultsetValue CQRBinaryResultsetValue;
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::TextResultset::iterator.
  */
-class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
-    CQRTextResultsetValue,
-    std::ptrdiff_t,
-    CQRTextResultsetValue*,
-    CQRTextResultsetValue>
+class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag
+                                                         , CQRTextResultsetValue
+                                                         , std::ptrdiff_t
+                                                         , CQRTextResultsetValue*
+                                                         , CQRTextResultsetValue>
 {
 public:
     typedef CQRTextResultsetValue Value;
@@ -969,11 +970,13 @@ public:
     CQRTextResultsetRowIterator(uint8_t* pData, const std::vector<enum_field_types>& types)
         : m_pData(pData)
         , m_iTypes(types.begin())
-    {}
+    {
+    }
 
     CQRTextResultsetRowIterator(uint8_t* pData)
         : m_pData(pData)
-    {}
+    {
+    }
 
     CQRTextResultsetRowIterator& operator++()
     {
@@ -990,12 +993,12 @@ public:
         return rv;
     }
 
-    bool operator == (const CQRTextResultsetRowIterator& rhs) const
+    bool operator==(const CQRTextResultsetRowIterator& rhs) const
     {
         return m_pData == rhs.m_pData;
     }
 
-    bool operator != (const CQRTextResultsetRowIterator& rhs) const
+    bool operator!=(const CQRTextResultsetRowIterator& rhs) const
     {
         return !(*this == rhs);
     }
@@ -1018,11 +1021,11 @@ private:
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::BinaryResultset::iterator.
  */
-class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
-    CQRBinaryResultsetValue,
-    std::ptrdiff_t,
-    CQRBinaryResultsetValue*,
-    CQRBinaryResultsetValue>
+class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag
+                                                           , CQRBinaryResultsetValue
+                                                           , std::ptrdiff_t
+                                                           , CQRBinaryResultsetValue*
+                                                           , CQRBinaryResultsetValue>
 {
 public:
     typedef CQRBinaryResultsetValue Value;
@@ -1038,7 +1041,7 @@ public:
     public:
         bit_iterator(uint8_t* pData = 0)
             : m_pData(pData)
-            , m_mask(1 << 2) // The two first bits are not used.
+            , m_mask(1 << 2)// The two first bits are not used.
         {
         }
 
@@ -1046,14 +1049,14 @@ public:
          * @return True, if the current bit is on. That is, if the corresponding
          *         column value is NULL.
          */
-        bool operator * () const
+        bool operator*() const
         {
             return (*m_pData & m_mask) ? true : false;
         }
 
-        bit_iterator& operator ++ ()
+        bit_iterator& operator++()
         {
-            m_mask <<= 1; // Move to the next bit.
+            m_mask <<= 1;   // Move to the next bit.
             if (m_mask == 0)
             {
                 // We moved past the byte, so advance to next byte and the first bit of that.
@@ -1064,7 +1067,7 @@ public:
             return *this;
         }
 
-        bit_iterator operator ++ (int)
+        bit_iterator operator++(int)
         {
             bit_iterator rv(*this);
             ++(*this);
@@ -1072,8 +1075,8 @@ public:
         }
 
     private:
-        uint8_t* m_pData; /*< Pointer to the NULL bitmap of a binary resultset row. */
-        uint8_t  m_mask;  /*< Mask representing the current bit of the current byte. */
+        uint8_t* m_pData;   /*< Pointer to the NULL bitmap of a binary resultset row. */
+        uint8_t  m_mask;    /*< Mask representing the current bit of the current byte. */
     };
 
     CQRBinaryResultsetRowIterator(uint8_t* pData, const std::vector<enum_field_types>& types)
@@ -1115,7 +1118,7 @@ public:
         case MYSQL_TYPE_VARCHAR:
         case MYSQL_TYPE_VAR_STRING:
             {
-                LEncString s(&m_pData); // Advance m_pData to the byte following the string.
+                LEncString s(&m_pData);     // Advance m_pData to the byte following the string.
             }
             break;
 
@@ -1189,12 +1192,12 @@ public:
         return rv;
     }
 
-    bool operator == (const CQRBinaryResultsetRowIterator& rhs) const
+    bool operator==(const CQRBinaryResultsetRowIterator& rhs) const
     {
         return m_pData == rhs.m_pData;
     }
 
-    bool operator != (const CQRBinaryResultsetRowIterator& rhs) const
+    bool operator!=(const CQRBinaryResultsetRowIterator& rhs) const
     {
         return !(*this == rhs);
     }
@@ -1264,7 +1267,7 @@ private:
  *
  * An instance of this class represents a textual resultset row.
  */
-typedef CQRResultsetRow<CQRTextResultsetRowIterator>   CQRTextResultsetRow;
+typedef CQRResultsetRow<CQRTextResultsetRowIterator> CQRTextResultsetRow;
 
 /**
  * @class CQRBinaryResultsetRow

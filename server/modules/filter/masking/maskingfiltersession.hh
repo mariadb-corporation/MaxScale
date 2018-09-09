@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -39,7 +39,7 @@ private:
     MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter);
 
     MaskingFilterSession(const MaskingFilterSession&);
-    MaskingFilterSession& operator = (const MaskingFilterSession&);
+    MaskingFilterSession& operator=(const MaskingFilterSession&);
 
     enum state_t
     {
@@ -75,7 +75,8 @@ private:
             , m_index(0)
             , m_multi_result(false)
             , m_some_rule_matches(false)
-        {}
+        {
+        }
 
         void reset(uint8_t command, const SMaskingRules& sRules)
         {

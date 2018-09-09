@@ -46,13 +46,13 @@ namespace
 
 typedef struct loaded_module
 {
-    char    *module;       /**< The name of the module */
-    char    *type;         /**< The module type */
-    char    *version;      /**< Module version */
-    void    *handle;       /**< The handle returned by dlopen */
-    void    *modobj;       /**< The module "object" this is the set of entry points */
-    MXS_MODULE *info;     /**< The module information */
-    struct  loaded_module *next; /**< Next module in the linked list */
+    char*                  module;  /**< The name of the module */
+    char*                  type;    /**< The module type */
+    char*                  version; /**< Module version */
+    void*                  handle;  /**< The handle returned by dlopen */
+    void*                  modobj;  /**< The module "object" this is the set of entry points */
+    MXS_MODULE*            info;    /**< The module information */
+    struct  loaded_module* next;    /**< Next module in the linked list */
 } LOADED_MODULE;
 
 struct NAME_MAPPING
@@ -62,78 +62,82 @@ struct NAME_MAPPING
     const char* to;     // What should be loaded instead.
     bool        warned; // Whether a warning has been logged.
 };
-
 }
 
 static NAME_MAPPING name_mappings[] =
 {
-    { MODULE_MONITOR,  "mysqlmon",     "mariadbmon",     false },
-    { MODULE_PROTOCOL, "mysqlclient",  "mariadbclient",  false },
-    { MODULE_PROTOCOL, "mysqlbackend", "mariadbbackend", false }
+    {MODULE_MONITOR,  "mysqlmon",     "mariadbmon",     false        },
+    {MODULE_PROTOCOL, "mysqlclient",  "mariadbclient",  false        },
+    {MODULE_PROTOCOL, "mysqlbackend", "mariadbbackend", false        }
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
-static LOADED_MODULE *registered = NULL;
+static LOADED_MODULE* registered = NULL;
 
-static LOADED_MODULE *find_module(const char *module);
-static LOADED_MODULE* register_module(const char *module,
-                                      const char *type,
-                                      void *dlhandle,
-                                      MXS_MODULE *mod_info);
-static void unregister_module(const char *module);
+static LOADED_MODULE* find_module(const char* module);
+static LOADED_MODULE* register_module(const char* module,
+                                      const char* type,
+                                      void* dlhandle,
+                                      MXS_MODULE* mod_info);
+static void unregister_module(const char* module);
 
-static bool api_version_mismatch(const MXS_MODULE *mod_info, const char* module)
+static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
 {
     bool rval = false;
     MXS_MODULE_VERSION api = {};
 
     switch (mod_info->modapi)
     {
-        case MXS_MODULE_API_PROTOCOL:
-            api = MXS_PROTOCOL_VERSION;
-            break;
+    case MXS_MODULE_API_PROTOCOL:
+        api = MXS_PROTOCOL_VERSION;
+        break;
 
-        case MXS_MODULE_API_AUTHENTICATOR:
-            api = MXS_AUTHENTICATOR_VERSION;
-            break;
+    case MXS_MODULE_API_AUTHENTICATOR:
+        api = MXS_AUTHENTICATOR_VERSION;
+        break;
 
-        case MXS_MODULE_API_ROUTER:
-            api = MXS_ROUTER_VERSION;
-            break;
+    case MXS_MODULE_API_ROUTER:
+        api = MXS_ROUTER_VERSION;
+        break;
 
-        case MXS_MODULE_API_MONITOR:
-            api = MXS_MONITOR_VERSION;
-            break;
+    case MXS_MODULE_API_MONITOR:
+        api = MXS_MONITOR_VERSION;
+        break;
 
-        case MXS_MODULE_API_FILTER:
-            api = MXS_FILTER_VERSION;
-            break;
+    case MXS_MODULE_API_FILTER:
+        api = MXS_FILTER_VERSION;
+        break;
 
-        case MXS_MODULE_API_QUERY_CLASSIFIER:
-            api = MXS_QUERY_CLASSIFIER_VERSION;
-            break;
+    case MXS_MODULE_API_QUERY_CLASSIFIER:
+        api = MXS_QUERY_CLASSIFIER_VERSION;
+        break;
 
-        default:
-            MXS_ERROR("Unknown module type: 0x%02hhx", mod_info->modapi);
-            mxb_assert(!true);
-            break;
+    default:
+        MXS_ERROR("Unknown module type: 0x%02hhx", mod_info->modapi);
+        mxb_assert(!true);
+        break;
     }
 
-    if (api.major != mod_info->api_version.major ||
-        api.minor != mod_info->api_version.minor ||
-        api.patch != mod_info->api_version.patch)
+    if (api.major != mod_info->api_version.major
+        || api.minor != mod_info->api_version.minor
+        || api.patch != mod_info->api_version.patch)
     {
         MXS_ERROR("API version mismatch for '%s': Need version %d.%d.%d, have %d.%d.%d",
-                  module, api.major, api.minor, api.patch, mod_info->api_version.major,
-                  mod_info->api_version.minor, mod_info->api_version.patch);
+                  module,
+                  api.major,
+                  api.minor,
+                  api.patch,
+                  mod_info->api_version.major,
+                  mod_info->api_version.minor,
+                  mod_info->api_version.patch);
         rval = true;
     }
 
     return rval;
 }
 
-static bool check_module(const MXS_MODULE *mod_info, const char *type, const char *module)
+static bool check_module(const MXS_MODULE* mod_info, const char* type, const char* module)
 {
     bool success = true;
 
@@ -194,10 +198,10 @@ static bool check_module(const MXS_MODULE *mod_info, const char *type, const cha
     return success;
 }
 
-void *load_module(const char *module, const char *type)
+void* load_module(const char* module, const char* type)
 {
     mxb_assert(module && type);
-    LOADED_MODULE *mod;
+    LOADED_MODULE* mod;
 
     module = mxs_module_get_effective_name(module);
 
@@ -216,37 +220,40 @@ void *load_module(const char *module, const char *type)
         {
             MXS_ERROR("Unable to find library for "
                       "module: %s. Module dir: %s",
-                      module, get_libdir());
+                      module,
+                      get_libdir());
             return NULL;
         }
 
-        void *dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL);
+        void* dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL);
 
         if (dlhandle == NULL)
         {
             MXS_ERROR("Unable to load library for module: "
                       "%s\n\n\t\t      %s."
                       "\n\n",
-                      module, dlerror());
+                      module,
+                      dlerror());
             return NULL;
         }
 
-        void *sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
+        void* sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
 
         if (sym == NULL)
         {
             MXS_ERROR("Expected entry point interface missing "
                       "from module: %s\n\t\t\t      %s.",
-                      module, dlerror());
+                      module,
+                      dlerror());
             dlclose(dlhandle);
             return NULL;
         }
 
-        void *(*entry_point)() = (void *(*)())sym;
-        MXS_MODULE *mod_info = (MXS_MODULE*)entry_point();
+        void* (* entry_point)() = (void*(*)())sym;
+        MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
 
-        if (!check_module(mod_info, type, module) ||
-            (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
+        if (!check_module(mod_info, type, module)
+            || (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
         {
             dlclose(dlhandle);
             return NULL;
@@ -258,15 +265,15 @@ void *load_module(const char *module, const char *type)
     return mod->modobj;
 }
 
-void unload_module(const char *module)
+void unload_module(const char* module)
 {
     module = mxs_module_get_effective_name(module);
 
-    LOADED_MODULE *mod = find_module(module);
+    LOADED_MODULE* mod = find_module(module);
 
     if (mod)
     {
-        void *handle = mod->handle;
+        void* handle = mod->handle;
         unregister_module(module);
         dlclose(handle);
     }
@@ -279,10 +286,9 @@ void unload_module(const char *module)
  * @param module        The name of the module
  * @return              The module handle or NULL if it was not found
  */
-static LOADED_MODULE *
-find_module(const char *module)
+static LOADED_MODULE* find_module(const char* module)
 {
-    LOADED_MODULE *mod = registered;
+    LOADED_MODULE* mod = registered;
 
     if (module)
     {
@@ -313,16 +319,16 @@ find_module(const char *module)
  * @param mod_info      The module information
  * @return The new registered module or NULL on memory allocation failure
  */
-static LOADED_MODULE* register_module(const char *module,
-                                      const char *type,
-                                      void *dlhandle,
-                                      MXS_MODULE *mod_info)
+static LOADED_MODULE* register_module(const char* module,
+                                      const char* type,
+                                      void* dlhandle,
+                                      MXS_MODULE* mod_info)
 {
     module = MXS_STRDUP(module);
     type = MXS_STRDUP(type);
-    char *version = MXS_STRDUP(mod_info->version);
+    char* version = MXS_STRDUP(mod_info->version);
 
-    LOADED_MODULE *mod = (LOADED_MODULE *)MXS_MALLOC(sizeof(LOADED_MODULE));
+    LOADED_MODULE* mod = (LOADED_MODULE*)MXS_MALLOC(sizeof(LOADED_MODULE));
 
     if (!module || !type || !version || !mod)
     {
@@ -349,11 +355,10 @@ static LOADED_MODULE* register_module(const char *module,
  *
  * @param module        The name of the module to remove
  */
-static void
-unregister_module(const char *module)
+static void unregister_module(const char* module)
 {
-    LOADED_MODULE *mod = find_module(module);
-    LOADED_MODULE *ptr;
+    LOADED_MODULE* mod = find_module(module);
+    LOADED_MODULE* ptr;
 
     if (!mod)
     {
@@ -401,7 +406,7 @@ void unload_all_modules()
 
 void printModules()
 {
-    LOADED_MODULE *ptr = registered;
+    LOADED_MODULE* ptr = registered;
 
     printf("%-15s | %-11s | Version\n", "Module Name", "Module Type");
     printf("-----------------------------------------------------\n");
@@ -412,9 +417,9 @@ void printModules()
     }
 }
 
-void dprintAllModules(DCB *dcb)
+void dprintAllModules(DCB* dcb)
 {
-    LOADED_MODULE *ptr = registered;
+    LOADED_MODULE* ptr = registered;
 
     dcb_printf(dcb, "Modules.\n");
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
@@ -424,7 +429,9 @@ void dprintAllModules(DCB *dcb)
     {
         dcb_printf(dcb, "%-15s | %-15s | %-7s ", ptr->module, ptr->type, ptr->version);
         if (ptr->info)
-            dcb_printf(dcb, "| %d.%d.%d | %s",
+        {
+            dcb_printf(dcb,
+                       "| %d.%d.%d | %s",
                        ptr->info->api_version.major,
                        ptr->info->api_version.minor,
                        ptr->info->api_version.patch,
@@ -438,6 +445,7 @@ void dprintAllModules(DCB *dcb)
                                 ? "GA"
                                 : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                    ? "Experimental" : "Unknown")))));
+        }
         dcb_printf(dcb, "\n");
         ptr = ptr->next;
     }
@@ -446,12 +454,12 @@ void dprintAllModules(DCB *dcb)
 
 struct cb_param
 {
-    json_t* commands;
+    json_t*     commands;
     const char* domain;
     const char* host;
 };
 
-bool modulecmd_cb(const MODULECMD *cmd, void *data)
+bool modulecmd_cb(const MODULECMD* cmd, void* data)
 {
     cb_param* d = static_cast<cb_param*>(data);
 
@@ -491,7 +499,7 @@ bool modulecmd_cb(const MODULECMD *cmd, void *data)
     return true;
 }
 
-static json_t* module_json_data(const LOADED_MODULE *mod, const char* host)
+static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 {
     json_t* obj = json_object();
 
@@ -516,15 +524,17 @@ static json_t* module_json_data(const LOADED_MODULE *mod, const char* host)
         json_t* p = json_object();
 
         json_object_set_new(p, CN_NAME, json_string(mod->info->parameters[i].name));
-        json_object_set_new(p, CN_TYPE, json_string(mxs_module_param_type_to_string(mod->info->parameters[i].type)));
+        json_object_set_new(p,
+                            CN_TYPE,
+                            json_string(mxs_module_param_type_to_string(mod->info->parameters[i].type)));
 
         if (mod->info->parameters[i].default_value)
         {
             json_object_set(p, "default_value", json_string(mod->info->parameters[i].default_value));
         }
 
-        if (mod->info->parameters[i].type == MXS_MODULE_PARAM_ENUM &&
-            mod->info->parameters[i].accepted_values)
+        if (mod->info->parameters[i].type == MXS_MODULE_PARAM_ENUM
+            && mod->info->parameters[i].accepted_values)
         {
             json_t* arr = json_array();
 
@@ -551,7 +561,7 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
 {
     json_t* data = NULL;
 
-    for (LOADED_MODULE *ptr = registered; ptr; ptr = ptr->next)
+    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
         if (ptr->info == module)
         {
@@ -570,7 +580,7 @@ json_t* module_list_to_json(const char* host)
 {
     json_t* arr = json_array();
 
-    for (LOADED_MODULE *ptr = registered; ptr; ptr = ptr->next)
+    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
         json_array_append_new(arr, module_json_data(ptr, host));
     }
@@ -582,21 +592,21 @@ static const char* module_status_to_string(LOADED_MODULE* ptr)
 {
     switch (ptr->info->status)
     {
-        case MXS_MODULE_IN_DEVELOPMENT:
-            return "In Development";
+    case MXS_MODULE_IN_DEVELOPMENT:
+        return "In Development";
 
-        case MXS_MODULE_ALPHA_RELEASE:
-            return "Alpha";
+    case MXS_MODULE_ALPHA_RELEASE:
+        return "Alpha";
 
-        case MXS_MODULE_BETA_RELEASE:
-            return "Beta";
+    case MXS_MODULE_BETA_RELEASE:
+        return "Beta";
 
-        case MXS_MODULE_GA:
-            return "GA";
+    case MXS_MODULE_GA:
+        return "GA";
 
-        case MXS_MODULE_EXPERIMENTAL:
-            return "Experimental";
-    };
+    case MXS_MODULE_EXPERIMENTAL:
+        return "Experimental";
+    }
 
     return "Unknown";
 }
@@ -614,7 +624,9 @@ static void moduleRowCallback(std::unique_ptr<ResultSet>& set)
     for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
         char buf[40];
-        snprintf(buf, sizeof(buf), "%d.%d.%d",
+        snprintf(buf,
+                 sizeof(buf),
+                 "%d.%d.%d",
                  ptr->info->api_version.major,
                  ptr->info->api_version.minor,
                  ptr->info->api_version.patch);
@@ -624,16 +636,17 @@ static void moduleRowCallback(std::unique_ptr<ResultSet>& set)
 
 std::unique_ptr<ResultSet> moduleGetList()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Module Name", "Module Type", "Version", "API Version", "Status"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Module Name", "Module Type", "Version",
+                                                        "API Version", "Status"});
     moduleRowCallback(set);
     return set;
 }
 
-const MXS_MODULE *get_module(const char *name, const char *type)
+const MXS_MODULE* get_module(const char* name, const char* type)
 {
     name = mxs_module_get_effective_name(name);
 
-    LOADED_MODULE *mod = find_module(name);
+    LOADED_MODULE* mod = find_module(name);
 
     if (mod == NULL && type && load_module(name, type))
     {
@@ -699,7 +712,9 @@ const char* mxs_module_get_effective_name(const char* name)
             if (!nm.warned)
             {
                 MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
-                            nm.type, nm.from, nm.to);
+                            nm.type,
+                            nm.from,
+                            nm.to);
                 nm.warned = true;
             }
             effective_name = nm.to;

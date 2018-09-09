@@ -27,14 +27,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "An example filter that does nothing",
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &ExampleFilter::s_object, // This is defined in the MaxScale filter template
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        &ExampleFilter::s_object,               // This is defined in the MaxScale filter template
+        NULL,                                   /* Process init. */
+        NULL,                                   /* Process finish. */
+        NULL,                                   /* Thread init. */
+        NULL,                                   /* Thread finish. */
         {
-            { "an_example_parameter", MXS_MODULE_PARAM_STRING, "a-default-value" },
-            { MXS_END_MODULE_PARAMS }
+            {"an_example_parameter",          MXS_MODULE_PARAM_STRING,"a-default-value"},
+            {MXS_END_MODULE_PARAMS}
         }
     };
 

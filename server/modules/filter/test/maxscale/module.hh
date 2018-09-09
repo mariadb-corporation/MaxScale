@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <memory>
@@ -31,7 +31,7 @@ public:
     class ConfigParameters : public MXS_CONFIG_PARAMETER
     {
         ConfigParameters(const ConfigParameters&);
-        ConfigParameters& operator = (const ConfigParameters&);
+        ConfigParameters& operator=(const ConfigParameters&);
 
     public:
         ~ConfigParameters();
@@ -61,11 +61,11 @@ public:
         ConfigParameters(const MXS_MODULE_PARAM* pParams);
 
         const MXS_CONFIG_PARAMETER* get_param(const char* zName) const;
-        MXS_CONFIG_PARAMETER* get_param(const char* zName);
+        MXS_CONFIG_PARAMETER*       get_param(const char* zName);
 
         MXS_CONFIG_PARAMETER* get_tail();
 
-        std::deque<std::string> m_values; /** Storage for modified parameters. */
+        std::deque<std::string> m_values;   /** Storage for modified parameters. */
     };
 
     /**
@@ -84,7 +84,7 @@ public:
      *
      * @return The module specific entry point structure or NULL.
      */
-    static void* load(const char *zFile_name, const char *zType_name);
+    static void* load(const char* zFile_name, const char* zType_name);
 
     /**
      * Get a module with a specific name, assumed to be of a specific type.
@@ -94,7 +94,7 @@ public:
      *
      * @return The loaded module, if the module could be loaded, otherwise NULL.
      */
-    static const MXS_MODULE* get(const char *zFile_name, const char *zType_name);
+    static const MXS_MODULE* get(const char* zFile_name, const char* zType_name);
 
     /**
      * Perform process initialization of all modules. Should be called only
@@ -171,5 +171,4 @@ protected:
 
     API* m_pApi;
 };
-
 }

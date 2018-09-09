@@ -23,7 +23,7 @@ using std::endl;
 namespace
 {
 
-#define TRIM_TCE(zFrom, zTo) { zFrom, zTo }
+#define TRIM_TCE(zFrom, zTo) {zFrom, zTo}
 
 struct TRIM_TEST_CASE
 {
@@ -33,14 +33,14 @@ struct TRIM_TEST_CASE
 
 TRIM_TEST_CASE trim_testcases[] =
 {
-    TRIM_TCE("", ""),
-    TRIM_TCE("a", "a"),
-    TRIM_TCE(" a", "a"),
-    TRIM_TCE("a ", "a"),
-    TRIM_TCE(" a ", "a"),
-    TRIM_TCE("  a", "a"),
-    TRIM_TCE("a  ", "a"),
-    TRIM_TCE("  a  ", "a"),
+    TRIM_TCE("",        ""),
+    TRIM_TCE("a",       "a"),
+    TRIM_TCE(" a",      "a"),
+    TRIM_TCE("a ",      "a"),
+    TRIM_TCE(" a ",     "a"),
+    TRIM_TCE("  a",     "a"),
+    TRIM_TCE("a  ",     "a"),
+    TRIM_TCE("  a  ",   "a"),
     TRIM_TCE("  a b  ", "a b"),
 };
 
@@ -48,14 +48,14 @@ const int n_trim_testcases = sizeof(trim_testcases) / sizeof(trim_testcases[0]);
 
 TRIM_TEST_CASE trim_leading_testcases[] =
 {
-    TRIM_TCE("", ""),
-    TRIM_TCE("a", "a"),
-    TRIM_TCE(" a", "a"),
-    TRIM_TCE("a ", "a "),
-    TRIM_TCE(" a ", "a "),
-    TRIM_TCE("  a", "a"),
-    TRIM_TCE("a  ", "a  "),
-    TRIM_TCE("  a  ", "a  "),
+    TRIM_TCE("",        ""),
+    TRIM_TCE("a",       "a"),
+    TRIM_TCE(" a",      "a"),
+    TRIM_TCE("a ",      "a "),
+    TRIM_TCE(" a ",     "a "),
+    TRIM_TCE("  a",     "a"),
+    TRIM_TCE("a  ",     "a  "),
+    TRIM_TCE("  a  ",   "a  "),
     TRIM_TCE("  a b  ", "a b  "),
 };
 
@@ -63,14 +63,14 @@ const int n_trim_leading_testcases = sizeof(trim_leading_testcases) / sizeof(tri
 
 TRIM_TEST_CASE trim_trailing_testcases[] =
 {
-    TRIM_TCE("", ""),
-    TRIM_TCE("a", "a"),
-    TRIM_TCE(" a", " a"),
-    TRIM_TCE("a ", "a"),
-    TRIM_TCE(" a ", " a"),
-    TRIM_TCE("  a", "  a"),
-    TRIM_TCE("a  ", "a"),
-    TRIM_TCE("  a  ", "  a"),
+    TRIM_TCE("",        ""),
+    TRIM_TCE("a",       "a"),
+    TRIM_TCE(" a",      " a"),
+    TRIM_TCE("a ",      "a"),
+    TRIM_TCE(" a ",     " a"),
+    TRIM_TCE("  a",     "  a"),
+    TRIM_TCE("a  ",     "a"),
+    TRIM_TCE("  a  ",   "  a"),
     TRIM_TCE("  a b  ", "  a b"),
 };
 
@@ -117,10 +117,9 @@ int test_trim_trailing()
     cout << "trim_trailing()" << endl;
     return test(trim_trailing_testcases, n_trim_trailing_testcases, trim_trailing);
 }
-
 }
 
-template <typename T>
+template<typename T>
 int test_checksums()
 {
     uint8_t data[] =
@@ -187,7 +186,7 @@ int main(int argc, char* argv[])
 {
     int rv = 0;
 
-    test_http(); // Just to see that it works
+    test_http();    // Just to see that it works
 
     rv += test_trim();
     rv += test_trim_leading();

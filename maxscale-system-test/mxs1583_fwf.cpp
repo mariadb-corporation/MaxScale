@@ -45,7 +45,8 @@ int main(int argc, char** argv)
 
     test.tprintf("Trying query that matches both 'user' rows, expecting failure\n");
     test.set_timeout(30);
-    test.add_result(!execute_query_silent(test.maxscales->conn_rwsplit[0], "select concat(a), concat(b) from t"),
+    test.add_result(!execute_query_silent(test.maxscales->conn_rwsplit[0],
+                                          "select concat(a), concat(b) from t"),
                     "Query that matches both 'user' rows should fail.\n");
 
     test.tprintf("Trying non-matching query to blacklisted RWSplit, expecting success\n");

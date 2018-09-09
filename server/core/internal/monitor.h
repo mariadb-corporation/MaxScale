@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file core/maxscale/monitor.h - The private monitor interface
@@ -23,12 +23,12 @@ MXS_BEGIN_DECLS
 
 #define MON_ARG_MAX 8192
 
-#define DEFAULT_CONNECT_TIMEOUT 3
-#define DEFAULT_READ_TIMEOUT 1
-#define DEFAULT_WRITE_TIMEOUT 2
+#define DEFAULT_CONNECT_TIMEOUT     3
+#define DEFAULT_READ_TIMEOUT        1
+#define DEFAULT_WRITE_TIMEOUT       2
 #define DEFAULT_CONNECTION_ATTEMPTS 1
 
-#define DEFAULT_MONITOR_INTERVAL 2000 // in milliseconds
+#define DEFAULT_MONITOR_INTERVAL 2000   // in milliseconds
 
 /** Default maximum journal age in seconds */
 #define DEFAULT_JOURNAL_MAX_AGE 28800
@@ -41,9 +41,9 @@ MXS_BEGIN_DECLS
  */
 typedef enum
 {
-    MONITOR_CONNECT_TIMEOUT = 0,
-    MONITOR_READ_TIMEOUT    = 1,
-    MONITOR_WRITE_TIMEOUT   = 2,
+    MONITOR_CONNECT_TIMEOUT  = 0,
+    MONITOR_READ_TIMEOUT     = 1,
+    MONITOR_WRITE_TIMEOUT    = 2,
     MONITOR_CONNECT_ATTEMPTS = 3
 } monitor_timeouts_t;
 
@@ -53,36 +53,36 @@ static const MXS_ENUM_VALUE mxs_monitor_event_default_enum = {"all", ~0ULL};
 static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
 {
     mxs_monitor_event_default_enum,
-    {"master_down", MASTER_DOWN_EVENT},
-    {"master_up", MASTER_UP_EVENT},
-    {"slave_down", SLAVE_DOWN_EVENT},
-    {"slave_up", SLAVE_UP_EVENT},
-    {"server_down", SERVER_DOWN_EVENT},
-    {"server_up", SERVER_UP_EVENT},
-    {"synced_down", SYNCED_DOWN_EVENT},
-    {"synced_up", SYNCED_UP_EVENT},
-    {"donor_down", DONOR_DOWN_EVENT},
-    {"donor_up", DONOR_UP_EVENT},
-    {"ndb_down", NDB_DOWN_EVENT},
-    {"ndb_up", NDB_UP_EVENT},
-    {"lost_master", LOST_MASTER_EVENT},
-    {"lost_slave", LOST_SLAVE_EVENT},
-    {"lost_synced", LOST_SYNCED_EVENT},
-    {"lost_donor", LOST_DONOR_EVENT},
-    {"lost_ndb", LOST_NDB_EVENT},
-    {"new_master", NEW_MASTER_EVENT},
-    {"new_slave", NEW_SLAVE_EVENT},
-    {"new_synced", NEW_SYNCED_EVENT},
-    {"new_donor", NEW_DONOR_EVENT},
-    {"new_ndb", NEW_NDB_EVENT},
+    {"master_down",                MASTER_DOWN_EVENT },
+    {"master_up",                  MASTER_UP_EVENT   },
+    {"slave_down",                 SLAVE_DOWN_EVENT  },
+    {"slave_up",                   SLAVE_UP_EVENT    },
+    {"server_down",                SERVER_DOWN_EVENT },
+    {"server_up",                  SERVER_UP_EVENT   },
+    {"synced_down",                SYNCED_DOWN_EVENT },
+    {"synced_up",                  SYNCED_UP_EVENT   },
+    {"donor_down",                 DONOR_DOWN_EVENT  },
+    {"donor_up",                   DONOR_UP_EVENT    },
+    {"ndb_down",                   NDB_DOWN_EVENT    },
+    {"ndb_up",                     NDB_UP_EVENT      },
+    {"lost_master",                LOST_MASTER_EVENT },
+    {"lost_slave",                 LOST_SLAVE_EVENT  },
+    {"lost_synced",                LOST_SYNCED_EVENT },
+    {"lost_donor",                 LOST_DONOR_EVENT  },
+    {"lost_ndb",                   LOST_NDB_EVENT    },
+    {"new_master",                 NEW_MASTER_EVENT  },
+    {"new_slave",                  NEW_SLAVE_EVENT   },
+    {"new_synced",                 NEW_SYNCED_EVENT  },
+    {"new_donor",                  NEW_DONOR_EVENT   },
+    {"new_ndb",                    NEW_NDB_EVENT     },
     {NULL}
 };
 
-MXS_MONITOR *monitor_create(const char *, const char *, MXS_CONFIG_PARAMETER* params);
-void monitor_destroy(MXS_MONITOR *);
+MXS_MONITOR* monitor_create(const char*, const char*, MXS_CONFIG_PARAMETER* params);
+void         monitor_destroy(MXS_MONITOR*);
 
-void monitor_start(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
-void monitor_stop(MXS_MONITOR *);
+void monitor_start(MXS_MONITOR*, const MXS_CONFIG_PARAMETER*);
+void monitor_stop(MXS_MONITOR*);
 
 /**
  * @brief Mark monitor as deactivated
@@ -105,25 +105,25 @@ void monitor_start_all();
  */
 void monitor_destroy_all();
 
-MXS_MONITOR *monitor_find(const char *);
+MXS_MONITOR* monitor_find(const char*);
 MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module);
 
-void monitor_show(DCB *, MXS_MONITOR *);
-void monitor_show_all(DCB *);
+void monitor_show(DCB*, MXS_MONITOR*);
+void monitor_show_all(DCB*);
 
-void monitor_list(DCB *);
+void monitor_list(DCB*);
 
-bool monitor_add_server(MXS_MONITOR *mon, SERVER *server);
-void monitor_remove_server(MXS_MONITOR *mon, SERVER *server);
-void monitor_add_user(MXS_MONITOR *, const char *, const char *);
-void monitor_add_parameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
-bool monitor_remove_parameter(MXS_MONITOR *monitor, const char *key);
-void monitor_set_parameter(MXS_MONITOR *monitor, const char* key, const char* value);
+bool monitor_add_server(MXS_MONITOR* mon, SERVER* server);
+void monitor_remove_server(MXS_MONITOR* mon, SERVER* server);
+void monitor_add_user(MXS_MONITOR*, const char*, const char*);
+void monitor_add_parameters(MXS_MONITOR* monitor, MXS_CONFIG_PARAMETER* params);
+bool monitor_remove_parameter(MXS_MONITOR* monitor, const char* key);
+void monitor_set_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
 
-void monitor_set_interval (MXS_MONITOR *, unsigned long);
-bool monitor_set_network_timeout(MXS_MONITOR *, int, int, const char*);
-void monitor_set_journal_max_age(MXS_MONITOR *mon, time_t value);
-void monitor_set_script_timeout(MXS_MONITOR *mon, uint32_t value);
+void monitor_set_interval(MXS_MONITOR*, unsigned long);
+bool monitor_set_network_timeout(MXS_MONITOR*, int, int, const char*);
+void monitor_set_journal_max_age(MXS_MONITOR* mon, time_t value);
+void monitor_set_script_timeout(MXS_MONITOR* mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file
@@ -133,14 +133,14 @@ void monitor_set_script_timeout(MXS_MONITOR *mon, uint32_t value);
  * @param monitor Monitor to serialize
  * @return True if serialization was successful
  */
-bool monitor_serialize(const MXS_MONITOR *monitor);
+bool monitor_serialize(const MXS_MONITOR* monitor);
 
 /**
  * Check if a server is being monitored and return the monitor.
  * @param server Server that is queried
  * @return The monitor watching this server, or NULL if not monitored
  */
-MXS_MONITOR* monitor_server_in_use(const SERVER *server);
+MXS_MONITOR* monitor_server_in_use(const SERVER* server);
 
 /**
  * Launch a script

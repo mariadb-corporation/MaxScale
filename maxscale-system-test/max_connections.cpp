@@ -10,14 +10,14 @@
 #include "testconnections.h"
 
 #define CONNECTIONS 21
-#define ITER 25
+#define ITER        25
 
 int main(int argc, char** argv)
 {
-    MYSQL *mysql[CONNECTIONS];
-    TestConnections * Test = new TestConnections(argc, argv);
+    MYSQL* mysql[CONNECTIONS];
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->stop_timeout();
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 20;");
+    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
     sleep(5);
     int limit = 0;
 
@@ -65,9 +65,8 @@ int main(int argc, char** argv)
     sleep(5);
     Test->stop_timeout();
     Test->check_maxscale_alive(0);
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
+    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 100;");
     int rval = Test->global_result;
     delete Test;
     return rval;
-
 }

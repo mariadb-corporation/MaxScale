@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -43,10 +43,9 @@
  * test1    Filter creation, finding and deletion
  *
  */
-static int
-test1()
+static int test1()
 {
-    SFilterDef  f1, f2;
+    SFilterDef f1, f2;
 
     if ((f1 = filter_alloc("test1", "qlafilter", NULL)) == NULL)
     {
@@ -76,10 +75,9 @@ test1()
  * is related hard crashes, such as SIGSEGV etc. as there are no good hooks
  * to check the creation of parameters and options currently.
  */
-static int
-test2()
+static int test2()
 {
-    SFilterDef  f1;
+    SFilterDef f1;
 
     if ((f1 = filter_alloc("test1", "qlafilter", NULL)) == NULL)
     {
@@ -96,12 +94,11 @@ test2()
  * test3    Filter creation, finding and deletion soak test
  *
  */
-static int
-test3()
+static int test3()
 {
-    SFilterDef  f1;
-    char        name[40];
-    int     i, n_filters = 1000;
+    SFilterDef f1;
+    char name[40];
+    int i, n_filters = 1000;
 
     for (i = 0; i < n_filters; i++)
     {
@@ -109,7 +106,8 @@ test3()
         if ((f1 = filter_alloc(name, "qlafilter", NULL)) == NULL)
         {
             fprintf(stderr,
-                    "filter_alloc: test 3 failed with %s.\n", name);
+                    "filter_alloc: test 3 failed with %s.\n",
+                    name);
             return 1;
         }
     }
@@ -142,8 +140,7 @@ test3()
     return 0;
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
     set_libdir(MXS_STRDUP_A("../../modules/filter/qlafilter/"));

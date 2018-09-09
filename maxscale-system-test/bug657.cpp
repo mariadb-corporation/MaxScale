@@ -3,37 +3,37 @@
  *
  * - Configure readconnrouter with tee filter and tee filter with a readwritesplit as a child service.
  * @verbatim
-[RW Split Router]
-type=service
-router= readwritesplit
-servers=server1,     server2,              server3,server4
-user=skysql
-passwd=skysql
-#filters=QLA
-
-[Read Connection Router Slave]
-type=service
-router=readconnroute
-router_options= slave
-servers=server1,server2,server3,server4
-user=skysql
-passwd=skysql
-filters=TEE
-
-[Read Connection Router Master]
-type=service
-router=readconnroute
-router_options=master
-servers=server1,server2,server3,server4
-user=skysql
-passwd=skysql
-filters=TEE
-
-[TEE]
-type=filter
-module=tee
-service=RW Split Router
-@endverbatim
+ *  [RW Split Router]
+ *  type=service
+ *  router= readwritesplit
+ *  servers=server1,     server2,              server3,server4
+ *  user=skysql
+ *  passwd=skysql
+ #filters=QLA
+ *
+ *  [Read Connection Router Slave]
+ *  type=service
+ *  router=readconnroute
+ *  router_options= slave
+ *  servers=server1,server2,server3,server4
+ *  user=skysql
+ *  passwd=skysql
+ *  filters=TEE
+ *
+ *  [Read Connection Router Master]
+ *  type=service
+ *  router=readconnroute
+ *  router_options=master
+ *  servers=server1,server2,server3,server4
+ *  user=skysql
+ *  passwd=skysql
+ *  filters=TEE
+ *
+ *  [TEE]
+ *  type=filter
+ *  module=tee
+ *  service=RW Split Router
+ *  @endverbatim
  * - Start MaxScale
  * - Connect readconnrouter
  * - Fail the master node
@@ -44,9 +44,9 @@ service=RW Split Router
 #include "testconnections.h"
 #include "sql_t1.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(200);
 
     Test->tprintf("Connecting to ReadConn Master %s\n", Test->maxscales->IP[0]);

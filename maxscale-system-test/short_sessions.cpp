@@ -1,5 +1,6 @@
 /**
- * @file short_sessions.cpp Executes a lof of short queries, use own short session for every query (some relations to bug#424)
+ * @file short_sessions.cpp Executes a lof of short queries, use own short session for every query (some
+ *relations to bug#424)
  *
  * - using RSplit create table
  * - close connection
@@ -15,7 +16,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int iterations = 100;
 
@@ -23,7 +24,7 @@ int main(int argc, char *argv[])
     test.set_timeout(20);
     test.repl->connect();
 
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
     execute_query(conn, "USE test;");
     create_t1(conn);
     mysql_close(conn);
@@ -46,17 +47,23 @@ int main(int argc, char *argv[])
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;",
-                    iterations), "t1 is wrong");
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0],
+                                                   (char*) "SELECT * FROM t1;",
+                                                   iterations),
+                    "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in master mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], (char *) "SELECT * FROM t1;",
-                    iterations), "t1 is wrong");
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0],
+                                                   (char*) "SELECT * FROM t1;",
+                                                   iterations),
+                    "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in slave mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0], (char *) "SELECT * FROM t1;", iterations),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0],
+                                                   (char*) "SELECT * FROM t1;",
+                                                   iterations),
                     "t1 is wrong");
 
     test.set_timeout(20);

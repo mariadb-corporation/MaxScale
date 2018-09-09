@@ -6,9 +6,9 @@
 
 #include "config_operations.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     Config config(test);
 
     config.create_all_listeners();

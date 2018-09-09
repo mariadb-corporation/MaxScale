@@ -128,7 +128,8 @@ int main(int argc, char** argv)
         return test.global_result;
     }
 
-    // Set current master to replicate from the old master. The old master should remain as the current master.
+    // Set current master to replicate from the old master. The old master should remain as the current
+    // master.
     cout << "Setting server " << master_id_new << " to replicate from server 1. Server " << master_id_new
          << " should remain as the master because server 1 doesn't have the latest event it has." << endl;
     const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "

@@ -41,15 +41,14 @@
 using maxbase::Worker;
 using maxscale::RoutingWorker;
 
-static int n_threads;                      /*< Number of threads */
+static int n_threads;                       /*< Number of threads */
 
 /**
  * Initialise the polling system we are using for the gateway.
  *
  * In this case we are using the Linux epoll mechanism
  */
-void
-poll_init()
+void poll_init()
 {
     n_threads = config_threadcount();
 }
@@ -63,8 +62,7 @@ poll_init()
  *
  * @param nbpolls       Number of non-block polls to perform before blocking
  */
-void
-poll_set_nonblocking_polls(unsigned int nbpolls)
+void poll_set_nonblocking_polls(unsigned int nbpolls)
 {
     RoutingWorker::set_nonblocking_polls(nbpolls);
 }
@@ -76,8 +74,7 @@ poll_set_nonblocking_polls(unsigned int nbpolls)
  *
  * @param maxwait       Maximum wait time in milliseconds
  */
-void
-poll_set_maxwait(unsigned int maxwait)
+void poll_set_maxwait(unsigned int maxwait)
 {
     RoutingWorker::set_maxwait(maxwait);
 }
@@ -89,10 +86,9 @@ poll_set_maxwait(unsigned int maxwait)
  * @param       desc    Description of the statistic
  * @param       value   The statistic value
  */
-static void
-spin_reporter(void *dcb, char *desc, int value)
+static void spin_reporter(void* dcb, char* desc, int value)
 {
-    dcb_printf((DCB *)dcb, "\t%-40s  %d\n", desc, value);
+    dcb_printf((DCB*)dcb, "\t%-40s  %d\n", desc, value);
 }
 
 /**
@@ -100,8 +96,7 @@ spin_reporter(void *dcb, char *desc, int value)
  *
  * @param dcb   DCB to print to
  */
-void
-dprintPollStats(DCB *dcb)
+void dprintPollStats(DCB* dcb)
 {
     int i;
 
@@ -127,9 +122,10 @@ dprintPollStats(DCB *dcb)
         dcb_printf(dcb, "\t%2d\t\t\t%" PRId64 "\n", i + 1, s.n_fds[i]);
     }
 
-    dcb_printf(dcb, "\t>= %d\t\t\t%" PRId64 "\n",
-               Worker::STATISTICS::MAXNFDS, s.n_fds[Worker::STATISTICS::MAXNFDS - 1]);
-
+    dcb_printf(dcb,
+               "\t>= %d\t\t\t%" PRId64 "\n",
+               Worker::STATISTICS::MAXNFDS,
+               s.n_fds[Worker::STATISTICS::MAXNFDS - 1]);
 }
 
 /**
@@ -137,34 +133,39 @@ dprintPollStats(DCB *dcb)
  *
  * @param dcb   The DCB to send the thread status data
  */
-void
-dShowThreads(DCB *dcb)
+void dShowThreads(DCB* dcb)
 {
     dcb_printf(dcb, "Polling Threads.\n\n");
 
-    dcb_printf(dcb, " ID | State      | #descriptors (curr) | #descriptors (tot)  | Load (1s) | Load (1m) | Load (1h) |\n");
-    dcb_printf(dcb, "----+------------+---------------------+---------------------+-----------+-----------+-----------+\n");
+    dcb_printf(dcb,
+               " ID | State      | #descriptors (curr) | #descriptors (tot)  | Load (1s) | Load (1m) | Load (1h) |\n");
+    dcb_printf(dcb,
+               "----+------------+---------------------+---------------------+-----------+-----------+-----------+\n");
     for (int i = 0; i < n_threads; i++)
     {
         Worker* worker = RoutingWorker::get(i);
         mxb_assert(worker);
 
-        const char *state = "Unknown";
+        const char* state = "Unknown";
 
         switch (worker->state())
         {
         case Worker::STOPPED:
             state = "Stopped";
             break;
+
         case Worker::IDLE:
             state = "Idle";
             break;
+
         case Worker::POLLING:
             state = "Polling";
             break;
+
         case Worker::PROCESSING:
             state = "Processing";
             break;
+
         case Worker::ZPROCESSING:
             state = "Collecting";
             break;
@@ -178,8 +179,12 @@ dShowThreads(DCB *dcb)
 
         worker->get_descriptor_counts(&nCurrent, &nTotal);
 
-        dcb_printf(dcb, " %2d | %10s | %19" PRIu32 " | %19" PRIu64 " | %9d | %9d | %9d |\n",
-                   i, state, nCurrent, nTotal,
+        dcb_printf(dcb,
+                   " %2d | %10s | %19" PRIu32 " | %19" PRIu64 " | %9d | %9d | %9d |\n",
+                   i,
+                   state,
+                   nCurrent,
+                   nTotal,
                    worker->load(Worker::Load::ONE_SECOND),
                    worker->load(Worker::Load::ONE_MINUTE),
                    worker->load(Worker::Load::ONE_HOUR));
@@ -191,8 +196,7 @@ dShowThreads(DCB *dcb)
  *
  * @param pdcb          The DCB to print the event queue to
  */
-void
-dShowEventStats(DCB *pdcb)
+void dShowEventStats(DCB* pdcb)
 {
     int i;
 
@@ -215,8 +219,11 @@ dShowEventStats(DCB *pdcb)
         dcb_printf(pdcb, " %2d00 - %2d00ms | %-10d | %-10d\n", i, i + 1, s.qtimes[i], s.exectimes[i]);
     }
 
-    dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", Worker::STATISTICS::N_QUEUE_TIMES,
-               s.qtimes[Worker::STATISTICS::N_QUEUE_TIMES], s.exectimes[Worker::STATISTICS::N_QUEUE_TIMES]);
+    dcb_printf(pdcb,
+               " > %2d00ms      | %-10d | %-10d\n",
+               Worker::STATISTICS::N_QUEUE_TIMES,
+               s.qtimes[Worker::STATISTICS::N_QUEUE_TIMES],
+               s.exectimes[Worker::STATISTICS::N_QUEUE_TIMES]);
 }
 
 /**
@@ -225,8 +232,7 @@ dShowEventStats(DCB *pdcb)
  * @param what  The required statistic
  * @return      The value of that statistic
  */
-int64_t
-poll_get_stat(POLL_STAT what)
+int64_t poll_get_stat(POLL_STAT what)
 {
     return RoutingWorker::get_one_statistic(what);
 }
@@ -238,7 +244,8 @@ poll_get_stat(POLL_STAT what)
  */
 std::unique_ptr<ResultSet> eventTimesGetList()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Duration", "No. Events Queued", "No. Events Executed"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Duration", "No. Events Queued",
+                                                        "No. Events Executed"});
     char buf[40];
     Worker::STATISTICS stats = RoutingWorker::get_statistics();
 

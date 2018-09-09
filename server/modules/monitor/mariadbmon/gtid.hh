@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 #include "mariadbmon_common.hh"
 #include <string>
 #include <vector>
@@ -63,11 +63,11 @@ public:
     }
 
     uint32_t m_domain;
-    int64_t m_server_id; // Valid values are 32bit unsigned. 0 is only used by server versions  <= 10.1
+    int64_t  m_server_id;   // Valid values are 32bit unsigned. 0 is only used by server versions  <= 10.1
     uint64_t m_sequence;
 };
 
-inline bool operator == (const Gtid& lhs, const Gtid& rhs)
+inline bool operator==(const Gtid& lhs, const Gtid& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -126,7 +126,7 @@ public:
      * @param rhs Other gtid
      * @return True if both gtid:s have identical triplets or both are empty
      */
-    bool operator == (const GtidList& rhs) const;
+    bool operator==(const GtidList& rhs) const;
 
     /**
      * Calculate the number of events this GtidList is ahead of the given GtidList. The

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <mysql.h>
@@ -95,9 +95,9 @@ public:
     {
     }
 
-    SizesAndName(int64_t            total,
-                 int64_t            used,
-                 int64_t            available,
+    SizesAndName(int64_t total,
+                 int64_t used,
+                 int64_t available,
                  const std::string& name)
         : Sizes(total, used, available)
         , m_name(name)
@@ -127,9 +127,9 @@ public:
     {
     }
 
-    SizesAndPaths(int64_t            total,
-                  int64_t            used,
-                  int64_t            available,
+    SizesAndPaths(int64_t total,
+                  int64_t used,
+                  int64_t available,
                   const std::string& path)
         : Sizes(total, used, available)
     {
@@ -190,8 +190,5 @@ int get_info_by_path(MYSQL* pMysql, std::map<std::string, disk::SizesAndName>* p
  *       version is too old or the plugin @c DISKS has not been installed.
  */
 int get_info_by_disk(MYSQL* pMysql, std::map<std::string, disk::SizesAndPaths>* pInfo);
-
 }
-
 }
-

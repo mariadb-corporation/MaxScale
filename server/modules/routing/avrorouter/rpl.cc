@@ -35,10 +35,10 @@ bool gtid_pos_t::parse(const char* str)
     bool rval = false;
     char buf[strlen(str) + 1];
     strcpy(buf, str);
-    char *saved, *dom = strtok_r(buf, ":-\n", &saved);
-    char *serv_id = strtok_r(NULL, ":-\n", &saved);
-    char *sequence = strtok_r(NULL, ":-\n", &saved);
-    char *subseq = strtok_r(NULL, ":-\n", &saved);
+    char* saved, * dom = strtok_r(buf, ":-\n", &saved);
+    char* serv_id = strtok_r(NULL, ":-\n", &saved);
+    char* sequence = strtok_r(NULL, ":-\n", &saved);
+    char* subseq = strtok_r(NULL, ":-\n", &saved);
 
     if (dom && serv_id && sequence)
     {
@@ -86,11 +86,12 @@ Column Column::from_json(json_t* json)
     json_t* type = json_object_get(json, "type");
     json_t* length = json_object_get(json, "length");
 
-    if (name && json_is_string(name) &&
-        type && json_is_string(type) &&
-        length && json_is_integer(length))
+    if (name && json_is_string(name)
+        && type && json_is_string(type)
+        && length && json_is_integer(length))
     {
-        return Column(json_string_value(name), json_string_value(type),
+        return Column(json_string_value(name),
+                      json_string_value(type),
                       json_integer_value(length));
     }
 
@@ -124,8 +125,8 @@ STableCreateEvent TableCreateEvent::from_json(json_t* obj)
     json_t* version = json_object_get(obj, "version");
     json_t* columns = json_object_get(obj, "columns");
 
-    if (json_is_string(table) && json_is_string(database) &&
-        json_is_integer(version) && json_is_array(columns))
+    if (json_is_string(table) && json_is_string(database)
+        && json_is_integer(version) && json_is_array(columns))
     {
         std::string tbl = json_string_value(table);
         std::string db = json_string_value(database);
@@ -139,10 +140,9 @@ STableCreateEvent TableCreateEvent::from_json(json_t* obj)
             cols.emplace_back(Column::from_json(val));
         }
 
-        auto is_empty = [](const Column & col)
-        {
-            return col.name.empty();
-        };
+        auto is_empty = [](const Column& col) {
+                return col.name.empty();
+            };
 
         if (std::none_of(cols.begin(), cols.end(), is_empty))
         {
@@ -160,11 +160,11 @@ STableCreateEvent TableCreateEvent::from_json(json_t* obj)
  * @return Pointer to the start of the definition of NULL if the query is
  * malformed.
  */
-static const char* get_table_definition(const char *sql, int len, int* size)
+static const char* get_table_definition(const char* sql, int len, int* size)
 {
-    const char *rval = NULL;
-    const char *ptr = sql;
-    const char *end = sql + len;
+    const char* rval = NULL;
+    const char* ptr = sql;
+    const char* end = sql + len;
     while (ptr < end && *ptr != '(')
     {
         ptr++;
@@ -175,7 +175,7 @@ static const char* get_table_definition(const char *sql, int len, int* size)
     {
         int depth = 0;
         ptr++;
-        const char *start = ptr; // Skip first parenthesis
+        const char* start = ptr;    // Skip first parenthesis
         while (ptr < end)
         {
             switch (*ptr)
@@ -350,7 +350,7 @@ const char* next_field_definition(const char* ptr)
     return ptr;
 }
 
-static const char *extract_field_name(const char* ptr, char* dest, size_t size)
+static const char* extract_field_name(const char* ptr, char* dest, size_t size)
 {
     bool bt = false;
 
@@ -365,17 +365,17 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
 
     if (!bt)
     {
-        if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
-            strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0 ||
-            strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0 ||
-            strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
+        if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0
+            || strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0
+            || strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0
+            || strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
         {
             // Found a keyword
             return NULL;
         }
     }
 
-    const char *start = ptr;
+    const char* start = ptr;
 
     if (!bt)
     {
@@ -411,7 +411,7 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     return ptr;
 }
 
-int extract_type_length(const char* ptr, char *dest)
+int extract_type_length(const char* ptr, char* dest)
 {
     /** Skip any leading whitespace */
     while (*ptr && (isspace(*ptr) || *ptr == '`'))
@@ -420,7 +420,7 @@ int extract_type_length(const char* ptr, char *dest)
     }
 
     /** The field type definition starts here */
-    const char *start = ptr;
+    const char* start = ptr;
 
     /** Skip characters until we either hit a whitespace character or the start
      * of the length definition. */
@@ -443,13 +443,13 @@ int extract_type_length(const char* ptr, char *dest)
         ptr++;
     }
 
-    int rval = -1; // No length defined
+    int rval = -1;      // No length defined
 
     /** Start of length definition */
     if (*ptr == '(')
     {
         ptr++;
-        char *end;
+        char* end;
         int val = strtol(ptr, &end, 10);
 
         if (*end == ')')
@@ -479,7 +479,7 @@ int count_columns(const char* ptr)
  * @param nameptr table definition
  * @return Number of processed columns or -1 on error
  */
-static void process_column_definition(const char *nameptr, std::vector<Column>& columns)
+static void process_column_definition(const char* nameptr, std::vector<Column>& columns)
 {
     char colname[512];
 
@@ -541,7 +541,7 @@ STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
     if (!columns.empty())
     {
         int version = resolve_table_version(database, table);
-        rval.reset(new (std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
+        rval.reset(new( std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
     }
     else
     {
@@ -560,7 +560,7 @@ STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
  * @param post_header_len Length of the event specific header, 8 or 6 bytes
  * @return New TABLE_MAP or NULL if memory allocation failed
  */
-TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* create)
+TableMapEvent* table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* create)
 {
     uint64_t table_id = 0;
     size_t id_size = hdr_len == 6 ? 4 : 6;
@@ -589,45 +589,60 @@ TableMapEvent *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TableCreateEvent* 
     ptr += mxs_leint_bytes(ptr);
 
     /** Column types */
-    uint8_t *column_types = ptr;
+    uint8_t* column_types = ptr;
     ptr += column_count;
 
     size_t metadata_size = 0;
     uint8_t* metadata = (uint8_t*)mxs_lestr_consume(&ptr, &metadata_size);
-    uint8_t *nullmap = ptr;
+    uint8_t* nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
 
     Bytes cols(column_types, column_types + column_count);
     Bytes nulls(nullmap, nullmap + nullmap_size);
     Bytes meta(metadata, metadata + metadata_size);
-    return new (std::nothrow)TableMapEvent(schema_name, table_name, table_id, create->version,
-                                           std::move(cols), std::move(nulls), std::move(meta));
+    return new( std::nothrow) TableMapEvent(schema_name,
+                                            table_name,
+                                            table_id,
+                                            create->version,
+                                            std::move(cols),
+                                            std::move(nulls),
+                                            std::move(meta));
 }
 
-Rpl::Rpl(SERVICE* service, SRowEventHandler handler, pcre2_code* match, pcre2_code* exclude,
-         gtid_pos_t gtid):
-    m_handler(handler),
-    m_service(service),
-    m_binlog_checksum(0),
-    m_event_types(0),
-    m_gtid(gtid),
-    m_match(match),
-    m_exclude(exclude),
-    m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr),
-    m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
+Rpl::Rpl(SERVICE* service,
+         SRowEventHandler handler,
+         pcre2_code* match,
+         pcre2_code* exclude,
+         gtid_pos_t  gtid)
+    : m_handler(handler)
+    , m_service(service)
+    , m_binlog_checksum(0)
+    , m_event_types(0)
+    , m_gtid(gtid)
+    , m_match(match)
+    , m_exclude(exclude)
+    , m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr)
+    , m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
 {
     /** For detection of CREATE/ALTER TABLE statements */
     static const char* create_table_regex = "(?i)create[a-z0-9[:space:]_]+table";
     static const char* alter_table_regex = "(?i)alter[[:space:]]+table";
     int pcreerr;
     size_t erroff;
-    m_create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex, PCRE2_ZERO_TERMINATED,
-                                      0, &pcreerr, &erroff, NULL);
-    m_alter_table_re = pcre2_compile((PCRE2_SPTR) alter_table_regex, PCRE2_ZERO_TERMINATED,
-                                     0, &pcreerr, &erroff, NULL);
+    m_create_table_re = pcre2_compile((PCRE2_SPTR) create_table_regex,
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      &pcreerr,
+                                      &erroff,
+                                      NULL);
+    m_alter_table_re = pcre2_compile((PCRE2_SPTR) alter_table_regex,
+                                     PCRE2_ZERO_TERMINATED,
+                                     0,
+                                     &pcreerr,
+                                     &erroff,
+                                     NULL);
     mxb_assert_message(m_create_table_re && m_alter_table_re,
-                    "CREATE TABLE and ALTER TABLE regex compilation should not fail");
-
+                       "CREATE TABLE and ALTER TABLE regex compilation should not fail");
 }
 
 void Rpl::flush()
@@ -849,7 +864,7 @@ STableCreateEvent Rpl::table_create_copy(const char* sql, size_t len, const char
 
         if (it != m_created_tables.end())
         {
-            rval.reset(new (std::nothrow) TableCreateEvent(*it->second));
+            rval.reset(new( std::nothrow) TableCreateEvent(*it->second));
             char* table = strchr(target, '.');
             table = table ? table + 1 : target;
             rval->table = table;
@@ -859,7 +874,10 @@ STableCreateEvent Rpl::table_create_copy(const char* sql, size_t len, const char
         else
         {
             MXS_ERROR("Could not find table '%s' that '%s' is being created from: %.*s",
-                      table_ident, target, (int)len, sql);
+                      table_ident,
+                      target,
+                      (int)len,
+                      sql);
         }
     }
 
@@ -891,7 +909,7 @@ static const char* get_next_def(const char* sql, const char* end)
 
 static const char* get_tok(const char* sql, int* toklen, const char* end)
 {
-    const char *start = sql;
+    const char* start = sql;
 
     while (isspace(*start))
     {
@@ -997,7 +1015,7 @@ static bool get_placement_specifier(const char* sql, const char* end, const char
     else
     {
         // Something else, possibly FIRST or un-backtick'd AFTER
-        const char* id_end = end + 1; // Points to either a trailing space or one-after-the-end
+        const char* id_end = end + 1;   // Points to either a trailing space or one-after-the-end
         rskip_token(sql, &end);
 
         // end points to the character _before_ the token
@@ -1032,7 +1050,7 @@ static bool get_placement_specifier(const char* sql, const char* end, const char
     return rval;
 }
 
-static bool tok_eq(const char *a, const char *b, size_t len)
+static bool tok_eq(const char* a, const char* b, size_t len)
 {
     size_t i = 0;
 
@@ -1111,7 +1129,7 @@ static bool token_is_keyword(const char* tok, int len)
     return false;
 }
 
-void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size)
+void read_table_identifier(const char* db, const char* sql, const char* end, char* dest, int size)
 {
     const char* start;
     int len = 0;
@@ -1119,7 +1137,7 @@ void read_table_identifier(const char* db, const char *sql, const char *end, cha
 
     while (is_keyword)
     {
-        skip_whitespace(&sql); // Leading whitespace
+        skip_whitespace(&sql);      // Leading whitespace
 
         if (*sql == '`')
         {
@@ -1140,7 +1158,7 @@ void read_table_identifier(const char* db, const char *sql, const char *end, cha
         }
     }
 
-    skip_whitespace(&sql); // Space after first identifier
+    skip_whitespace(&sql);      // Space after first identifier
 
     if (*sql != '.')
     {
@@ -1151,7 +1169,7 @@ void read_table_identifier(const char* db, const char *sql, const char *end, cha
     {
         // Explicit database, skip the period
         sql++;
-        skip_whitespace(&sql); // Space after first identifier
+        skip_whitespace(&sql);      // Space after first identifier
 
         const char* id_start;
         int id_len = 0;
@@ -1183,7 +1201,7 @@ void make_avro_token(char* dest, const char* src, int length)
         length--;
     }
 
-    const char *end = src;
+    const char* end = src;
 
     for (int i = 0; i < length; i++)
     {
@@ -1228,14 +1246,14 @@ static bool not_column_operation(const char* tok, int len)
     return false;
 }
 
-bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const char *end)
+bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const char* end)
 {
-    const char *tbl = strcasestr(sql, "table"), *def;
+    const char* tbl = strcasestr(sql, "table"), * def;
 
     if ((def = strchr(tbl, ' ')))
     {
         int len = 0;
-        const char *tok = get_tok(def, &len, end);
+        const char* tok = get_tok(def, &len, end);
 
         if (tok)
         {
@@ -1247,7 +1265,7 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const ch
 
         while (tok && (tok = get_tok(tok + len, &len, end)))
         {
-            const char *ptok = tok;
+            const char* ptok = tok;
             int plen = len;
             tok = get_tok(tok + len, &len, end);
 
@@ -1283,7 +1301,7 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const ch
 
                     if (is_new)
                     {
-                        char field_type[200] = ""; // Enough to hold all types
+                        char field_type[200] = "";      // Enough to hold all types
                         int field_length = extract_type_length(tok + len, field_type);
                         create->columns.emplace_back(std::string(avro_token),
                                                      std::string(field_type),
@@ -1319,16 +1337,14 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char *sql, const ch
                             {
                                 char avro_token[len + 1];
                                 make_avro_token(avro_token, tok, len);
-                                char field_type[200] = ""; // Enough to hold all types
+                                char field_type[200] = "";      // Enough to hold all types
                                 int field_length = extract_type_length(tok + len, field_type);
                                 it->name = avro_token;
                                 it->type = field_type;
                                 it->length = field_length;
                                 updates++;
                             }
-
                         }
-
                     }
 
                     tok = get_next_def(tok, end);
@@ -1366,11 +1382,21 @@ bool Rpl::table_matches(const std::string& ident)
 {
     bool rval = false;
 
-    if (!m_match || pcre2_match(m_match, (PCRE2_SPTR)ident.c_str(), PCRE2_ZERO_TERMINATED,
-                                0, 0, m_md_match, NULL) > 0)
+    if (!m_match || pcre2_match(m_match,
+                                (PCRE2_SPTR)ident.c_str(),
+                                PCRE2_ZERO_TERMINATED,
+                                0,
+                                0,
+                                m_md_match,
+                                NULL) > 0)
     {
-        if (!m_exclude || pcre2_match(m_exclude, (PCRE2_SPTR)ident.c_str(), PCRE2_ZERO_TERMINATED,
-                                      0, 0, m_md_exclude, NULL) == PCRE2_ERROR_NOMATCH)
+        if (!m_exclude || pcre2_match(m_exclude,
+                                      (PCRE2_SPTR)ident.c_str(),
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      0,
+                                      m_md_exclude,
+                                      NULL) == PCRE2_ERROR_NOMATCH)
         {
             rval = true;
         }

@@ -93,17 +93,21 @@ static void extract_file_and_line(const char* symbols, char* cmd, size_t size)
             snprintf(offset, sizeof(offset), "%.*s", (int)(symname_end - addr_offset), addr_offset);
 
             // Get the hexadecimal address of the symbol
-            get_command_output(cmd, size,
+            get_command_output(cmd,
+                               size,
                                "nm %s |grep ' %s$'|sed -e 's/ .*//' -e 's/^/0x/'",
-                               filename, symname);
+                               filename,
+                               symname);
             long long symaddr = strtoll(cmd, NULL, 16);
             long long offsetaddr = strtoll(offset, NULL, 16);
 
             // Calculate the file and line now that we have the raw offset into
             // the library
-            get_command_output(cmd, size,
+            get_command_output(cmd,
+                               size,
                                "addr2line -e %s 0x%x",
-                               filename, symaddr + offsetaddr);
+                               filename,
+                               symaddr + offsetaddr);
         }
         else
         {
@@ -114,7 +118,6 @@ static void extract_file_and_line(const char* symbols, char* cmd, size_t size)
         }
     }
 }
-
 }
 
 namespace maxbase
@@ -122,7 +125,7 @@ namespace maxbase
 
 void dump_stacktrace(std::function<void(const char*, const char*)> handler)
 {
-    void *addrs[128];
+    void* addrs[128];
     int count = backtrace(addrs, 128);
     char** symbols = backtrace_symbols(addrs, count);
 
@@ -138,11 +141,12 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
     }
 }
 
-void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
+void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
 {
-    dump_stacktrace([&](const char* symbol, const char* command){handler(symbol, command);});
+    dump_stacktrace([&](const char* symbol, const char* command) {
+                        handler(symbol, command);
+                    });
 }
-
 }
 
 #else
@@ -150,11 +154,10 @@ void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
 namespace maxbase
 {
 
-void dump_stacktrace(void (*handler)(const char*, const char*))
+void dump_stacktrace(void (* handler)(const char*, const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
-
 }
 
 #endif

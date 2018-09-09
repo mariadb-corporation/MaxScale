@@ -32,10 +32,11 @@ struct CONFIG
     bool stop_at_first_error;
 } config =
 {
-    true, // stop_at_first_error
+    true,   // stop_at_first_error
 };
 
-// See https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Filters/Cache.md#cache_inside_transactions
+// See
+// https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Filters/Cache.md#cache_inside_transactions
 struct TEST_CASE
 {
     cache_in_trxs_t         cit;        /*< How to cache in transactions. */
@@ -46,47 +47,47 @@ struct TEST_CASE
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_INACTIVE,
-        true  // should_use
+        true    // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_ACTIVE,
-        false // should_use
+        false   // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_READ_ONLY,
-        false // should_use
+        false   // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_INACTIVE,
-        true  // should_use
+        true    // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_ACTIVE,
-        false // should_use
+        false   // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_READ_ONLY,
-        true // should_use
+        true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_INACTIVE,
-        true  // should_use
+        true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_ACTIVE,
-        true // should_use
+        true    // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_READ_ONLY,
-        true // should_use
+        true    // should_use
     },
 };
 
@@ -111,18 +112,17 @@ const char* to_string(cache_in_trxs_t x)
     }
 }
 
-ostream& operator << (ostream& out, cache_in_trxs_t x)
+ostream& operator<<(ostream& out, cache_in_trxs_t x)
 {
     out << to_string(x);
     return out;
 }
 
-ostream& operator << (ostream& out, mxs_session_trx_state_t trx_state)
+ostream& operator<<(ostream& out, mxs_session_trx_state_t trx_state)
 {
     out << session_trx_state_to_string(trx_state);
     return out;
 }
-
 }
 
 namespace
@@ -139,7 +139,7 @@ string create_unique_select()
 
 int test(mock::Session& session,
          FilterModule::Session& filter_session,
-         mock::RouterSession& router_session,
+         mock::RouterSession&   router_session,
          const TEST_CASE& tc)
 {
     int rv = 0;
@@ -329,7 +329,6 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
 
     return rv;
 }
-
 }
 
 namespace
@@ -389,16 +388,15 @@ int run()
 
     return rv;
 }
-
 }
 
 namespace
 {
 
-char USAGE[] =
-    "usage: test_dbfwfilter [-d]\n"
-    "\n"
-    "-d    don't stop at first error\n";
+char USAGE[]
+    = "usage: test_dbfwfilter [-d]\n"
+      "\n"
+      "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])

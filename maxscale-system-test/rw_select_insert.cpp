@@ -1,5 +1,6 @@
 /**
- * @file rw_select_insert.cpp Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
+ * @file rw_select_insert.cpp Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit
+ *sends queries to master or to slave depending on if it is write or read only query
  * - connect to RWSplit, create table
  * - execute SELECT using RWSplit
  * - check COM_SELECT and COM_INSERT change on all nodes
@@ -16,7 +17,8 @@
 #include "maxadmin_operations.h"
 
 /**
- * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no COM_INSERT increase
+ * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no
+ *COM_INSERT increase
  * @param new_selects COM_SELECT after query
  * @param new_inserts COM_INSERT after query
  * @param selects COM_SELECT before query
@@ -24,8 +26,12 @@
  * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
  * @return 0 if COM_SELECT increased only on slave node and there is no COM_INSERT increase anywhere
  */
-int check_com_select(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts,
-                     Mariadb_nodes * Nodes, int expected)
+int check_com_select(long int* new_selects,
+                     long int* new_inserts,
+                     long int* selects,
+                     long int* inserts,
+                     Mariadb_nodes* Nodes,
+                     int expected)
 {
     int i;
     int result = 0;
@@ -76,8 +82,12 @@ int check_com_select(long int *new_selects, long int *new_inserts, long int *sel
  * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
  * @return 0 if COM_INSERT increases on all nodes and there is no COM_SELECT increate anywhere
  */
-int check_com_insert(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts,
-                     Mariadb_nodes * Nodes, int expected)
+int check_com_insert(long int* new_selects,
+                     long int* new_inserts,
+                     long int* selects,
+                     long int* inserts,
+                     Mariadb_nodes* Nodes,
+                     int expected)
 {
     int result = 0;
     int diff_ins = new_inserts[0] - inserts[0];
@@ -113,7 +123,7 @@ int check_com_insert(long int *new_selects, long int *new_inserts, long int *sel
 }
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     long int selects[256];
     long int inserts[256];
@@ -122,7 +132,7 @@ int main(int argc, char *argv[])
 
     int silent = 1;
     int i;
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(120);
     Test->repl->connect();
 
@@ -131,7 +141,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->maxscales->N; i++)
     {
-        Test->maxscales->execute_maxadmin_command(i, (char *) "shutdown monitor MySQL-Monitor");
+        Test->maxscales->execute_maxadmin_command(i, (char*) "shutdown monitor MySQL-Monitor");
     }
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
@@ -148,7 +158,12 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
+    Test->add_result(check_com_select(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
+                                      1),
                      "Wrong check_com_select result\n");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n");
@@ -156,7 +171,12 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
+    Test->add_result(check_com_insert(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
+                                      1),
                      "Wrong check_com_insert result\n");
 
     Test->stop_timeout();
@@ -167,7 +187,12 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     execute_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
+    Test->add_result(check_com_select(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
+                                      1),
                      "Wrong check_com_select result\n");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n");
@@ -175,7 +200,12 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     execute_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
+    Test->add_result(check_com_insert(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
+                                      1),
                      "Wrong check_com_insert result\n");
 
     Test->stop_timeout();
@@ -193,7 +223,11 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     Test->repl->sync_slaves();
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl,
+    Test->add_result(check_com_select(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
                                       100),
                      "Wrong check_com_select result\n");
 
@@ -212,7 +246,11 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     Test->repl->sync_slaves();
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl,
+    Test->add_result(check_com_insert(&new_selects[0],
+                                      &new_inserts[0],
+                                      &selects[0],
+                                      &inserts[0],
+                                      Test->repl,
                                       100),
                      "Wrong check_com_insert result\n");
 

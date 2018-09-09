@@ -40,11 +40,11 @@ enum gssapi_auth_state
 /** Common structure for both backend and client authenticators */
 typedef struct gssapi_auth
 {
-    enum gssapi_auth_state state; /**< Authentication state*/
-    uint8_t *principal_name;      /**< Principal name */
-    size_t principal_name_len;    /**< Length of the principal name */
-    uint8_t sequence;             /**< The next packet seqence number */
-    sqlite3 *handle;              /**< SQLite3 database handle */
+    enum gssapi_auth_state state;               /**< Authentication state*/
+    uint8_t*               principal_name;      /**< Principal name */
+    size_t                 principal_name_len;  /**< Length of the principal name */
+    uint8_t                sequence;            /**< The next packet seqence number */
+    sqlite3*               handle;              /**< SQLite3 database handle */
 } gssapi_auth_t;
 
 /** Report GSSAPI errors */

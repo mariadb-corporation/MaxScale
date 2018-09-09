@@ -32,7 +32,7 @@
 #include "../internal/statistics.h"
 
 
-void init_test_env(char *path)
+void init_test_env(char* path)
 {
     config_get_global_options()->n_threads = 1;
 

@@ -32,10 +32,13 @@ int main(int argc, char** argv)
 
     for (auto db : db_list)
     {
-        MYSQL* conn = open_conn_db(test.maxscales->port(), test.maxscales->ip(), db,
-                                   test.maxscales->user_name, test.maxscales->password);
-        if (execute_query_silent(conn, "SELECT 1") ||
-                execute_query_silent(conn, "SHOW DATABASES"))
+        MYSQL* conn = open_conn_db(test.maxscales->port(),
+                                   test.maxscales->ip(),
+                                   db,
+                                   test.maxscales->user_name,
+                                   test.maxscales->password);
+        if (execute_query_silent(conn, "SELECT 1")
+            || execute_query_silent(conn, "SHOW DATABASES"))
         {
             errors.insert(mysql_error(conn));
         }
@@ -43,11 +46,10 @@ int main(int argc, char** argv)
     }
     test.tprintf("Done!");
 
-    auto combiner = [](std::string& a, std::string b)
-    {
-        a += b + " ";
-        return a;
-    };
+    auto combiner = [](std::string& a, std::string b) {
+            a += b + " ";
+            return a;
+        };
 
     std::string errstr;
     std::accumulate(errors.begin(), errors.end(), errstr, combiner);

@@ -44,7 +44,8 @@ int main(int argc, char** argv)
     test.maxscales->close_maxscale_connections(0);
 
     // Reconfigure MaxScale
-    test.maxscales->ssh_node(0, "sed -i 's/strict_multi_stmt=true/strict_multi_stmt=false/' /etc/maxscale.cnf",
+    test.maxscales->ssh_node(0,
+                             "sed -i 's/strict_multi_stmt=true/strict_multi_stmt=false/' /etc/maxscale.cnf",
                              true);
     test.maxscales->restart_maxscale(0);
 

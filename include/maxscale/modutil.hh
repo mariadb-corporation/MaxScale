@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file modutil.hh C++ additions/alternatives for modutil.h functions
@@ -27,5 +27,4 @@ namespace maxscale
 std::string extract_sql(GWBUF* buffer, size_t len = -1);
 
 std::string get_canonical(GWBUF* querybuf);
-
 }

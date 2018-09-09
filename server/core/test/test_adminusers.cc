@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when building in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -35,8 +35,7 @@
  *
  * WARNING: The passwd file must be removed before this test is run
  */
-static int
-test1()
+static int test1()
 {
     if (admin_verify_inet_user("admin", "mariadb") == 0)
     {
@@ -59,10 +58,9 @@ test1()
  * Try to create a duplicate user - expects a failure
  * Remove that user - expected to succeed as no user need to remain.
  */
-static int
-test2()
+static int test2()
 {
-    const char *err;
+    const char* err;
 
     if ((err = admin_enable_linux_account("user0", USER_ACCOUNT_ADMIN)) != NULL)
     {
@@ -105,10 +103,9 @@ test2()
  * Remove the user
  * Search for the user that was removed
  */
-static int
-test3()
+static int test3()
 {
-    const char *err;
+    const char* err;
 
     if ((err = admin_enable_linux_account("user1", USER_ACCOUNT_ADMIN)) != NULL)
     {
@@ -158,10 +155,9 @@ test3()
  * Randomly verify each user
  * Remove each user
  */
-static int
-test4()
+static int test4()
 {
-    const char *err;
+    const char* err;
     char user[40], passwd[40];
     int i, n_users = 50;
 
@@ -207,10 +203,9 @@ test4()
  * Create a user so that user0 may be removed
  * Remove the first user created (user0)
  */
-static int
-test5()
+static int test5()
 {
-    const char *err;
+    const char* err;
 
     if ((err = admin_enable_linux_account("user", USER_ACCOUNT_ADMIN)) != NULL)
     {
@@ -229,11 +224,10 @@ test5()
     return 0;
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
-    char    *home, buf[1024];
+    char* home, buf[1024];
 
     /** Set datadir to /tmp */
     set_datadir(MXS_STRDUP_A("/tmp"));
@@ -256,4 +250,3 @@ main(int argc, char **argv)
 
     exit(result);
 }
-

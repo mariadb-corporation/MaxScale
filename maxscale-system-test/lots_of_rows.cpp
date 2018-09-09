@@ -9,9 +9,9 @@
 #include "testconnections.h"
 #include "sql_t1.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     char sql[10240];
 
     Test->maxscales->connect_maxscale(0);
@@ -33,11 +33,10 @@ int main(int argc, char *argv[])
     Test->repl->sync_slaves();
     Test->tprintf("Trying SELECT");
     Test->set_timeout(60);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1");
 
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-

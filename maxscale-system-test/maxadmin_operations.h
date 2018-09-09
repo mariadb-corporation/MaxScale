@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <getopt.h>
 
-//#include <version.h>
+// #include <version.h>
 
 
 /**
@@ -30,7 +30,7 @@
  * @param port      The port to use for the connection
  * @return      The connected socket or -1 on error
  */
-int connectMaxScale(char *hostname, char *port);
+int connectMaxScale(char* hostname, char* port);
 
 /**
  * @brief Set IP address in socket structure in_addr
@@ -39,7 +39,7 @@ int connectMaxScale(char *hostname, char *port);
  * @param p The hostname to lookup
  * @return  1 on success, 0 on failure
  */
-int setipaddress(struct in_addr *a, char *p);
+int setipaddress(struct in_addr* a, char* p);
 
 
 /**
@@ -50,7 +50,7 @@ int setipaddress(struct in_addr *a, char *p);
  * @param password  The password to authenticate with
  * @return      Non-zero of succesful authentication
  */
-int authMaxScale(int so, char *user, char *password);
+int authMaxScale(int so, char* user, char* password);
 
 /**
  * @brief Send a comamnd using the MaxScaled protocol, display the return data on standard output.
@@ -61,11 +61,12 @@ int authMaxScale(int so, char *user, char *password);
  * @param cmd   The command to send
  * @return  0 if the connection was closed
  */
-int sendCommand(int so, char *cmd, char *buf);
+int sendCommand(int so, char* cmd, char* buf);
 
 
 /**
- * @brief Send a comamnd using the MaxScaled protocol, search for certain numeric parameter in MaxScaled output.
+ * @brief Send a comamnd using the MaxScaled protocol, search for certain numeric parameter in MaxScaled
+ *output.
  *
  * Input terminates with a lien containing just the text OK
  *
@@ -76,8 +77,12 @@ int sendCommand(int so, char *cmd, char *buf);
  * @param result    Value of found parameter
  * @return  0 if parameter is found
  */
-int get_maxadmin_param_tcp(char *hostname, char *user, char *password, char *command, char *param,
-                           char *result);
+int get_maxadmin_param_tcp(char* hostname,
+                           char* user,
+                           char* password,
+                           char* command,
+                           char* param,
+                           char* result);
 
 /**
  * @brief Send a comamnd using the MaxScaled protocol
@@ -89,7 +94,7 @@ int get_maxadmin_param_tcp(char *hostname, char *user, char *password, char *com
  * @param cmd       The command to send
  * @return  0 if parameter is found
  */
-int execute_maxadmin_command_tcp(char * hostname, char *user, char *password, char * cmd);
+int execute_maxadmin_command_tcp(char* hostname, char* user, char* password, char* cmd);
 
 /**
  * @brief Send a comamnd using the MaxScaled protocol, print results of stdout
@@ -101,6 +106,6 @@ int execute_maxadmin_command_tcp(char * hostname, char *user, char *password, ch
  * @param cmd       The command to send
  * @return  0 if parameter is found
  */
-int execute_maxadmin_command_print_pcp(char * hostname, char *user, char *password, char * cmd);
+int execute_maxadmin_command_print_pcp(char* hostname, char* user, char* password, char* cmd);
 
 #endif // MAXADMIN_OPERATIONS_H

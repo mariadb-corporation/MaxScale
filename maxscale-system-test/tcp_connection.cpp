@@ -11,23 +11,23 @@
 namespace
 {
 
-static void set_port(struct sockaddr_storage *addr, uint16_t port)
+static void set_port(struct sockaddr_storage* addr, uint16_t port)
 {
     if (addr->ss_family == AF_INET)
     {
-        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        struct sockaddr_in* ip = (struct sockaddr_in*)addr;
         ip->sin_port = htons(port);
     }
     else if (addr->ss_family == AF_INET6)
     {
-        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
         ip->sin6_port = htons(port);
     }
 }
 
-int open_network_socket(struct sockaddr_storage *addr, const char *host, uint16_t port)
+int open_network_socket(struct sockaddr_storage* addr, const char* host, uint16_t port)
 {
-    struct addrinfo *ai = NULL, hint = {};
+    struct addrinfo* ai = NULL, hint = {};
     int so = -1;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
@@ -46,7 +46,6 @@ int open_network_socket(struct sockaddr_storage *addr, const char *host, uint16_
 
     return so;
 }
-
 }
 
 namespace tcp
@@ -85,5 +84,4 @@ int Connection::read(void* buf, size_t size)
 {
     return ::read(m_so, buf, size);
 }
-
 }

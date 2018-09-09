@@ -16,7 +16,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.maxscales->connect_maxscale(0);
@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
     test.tprintf("Create temporary table and insert one row");
     test.set_timeout(30);
 
-    execute_query(test.maxscales->conn_rwsplit[0], "create temporary table t1 as (SELECT * FROM t1 WHERE fl=3)");
+    execute_query(test.maxscales->conn_rwsplit[0],
+                  "create temporary table t1 as (SELECT * FROM t1 WHERE fl=3)");
     execute_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
 
     test.tprintf("Check that the temporary table has one row");

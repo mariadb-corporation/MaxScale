@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config.h>
@@ -36,14 +36,14 @@ public:
     static const MXS_ENUM_VALUE large_payload_values[];
     static const char*          large_payload_default;
 
-    static const char*          rules_name;
+    static const char* rules_name;
 
     static const char*          warn_type_mismatch_name;
     static const MXS_ENUM_VALUE warn_type_mismatch_values[];
     static const char*          warn_type_mismatch_default;
 
-    static const char*          prevent_function_usage_name;
-    static const char*          prevent_function_usage_default;
+    static const char* prevent_function_usage_name;
+    static const char* prevent_function_usage_default;
 
     MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
@@ -51,8 +51,11 @@ public:
         , m_rules(get_rules(pParams))
         , m_warn_type_mismatch(get_warn_type_mismatch(pParams))
         , m_prevent_function_usage(get_prevent_function_usage(pParams))
-    {}
-    ~MaskingFilterConfig() {}
+    {
+    }
+    ~MaskingFilterConfig()
+    {
+    }
 
     const std::string& name() const
     {
@@ -98,10 +101,10 @@ public:
         m_prevent_function_usage = b;
     }
 
-    static large_payload_t get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
-    static std::string get_rules(const MXS_CONFIG_PARAMETER* pParams);
+    static large_payload_t      get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
+    static std::string          get_rules(const MXS_CONFIG_PARAMETER* pParams);
     static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
-    static bool get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
+    static bool                 get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file buffer.h  Definitions relating the gateway buffer manipulation facilities.
@@ -43,34 +43,34 @@ struct server;
  */
 typedef struct buf_property
 {
-    char                    *name;
-    char                    *value;
-    struct buf_property     *next;
+    char*                name;
+    char*                value;
+    struct buf_property* next;
 } BUF_PROPERTY;
 
 typedef enum
 {
-    GWBUF_TYPE_UNDEFINED       = 0,
-    GWBUF_TYPE_HTTP            = (1 << 0),
-    GWBUF_TYPE_IGNORABLE       = (1 << 1),
-    GWBUF_TYPE_COLLECT_RESULT  = (1 << 2),
-    GWBUF_TYPE_RESULT          = (1 << 3),
-    GWBUF_TYPE_REPLY_OK        = (1 << 4),
+    GWBUF_TYPE_UNDEFINED      = 0,
+    GWBUF_TYPE_HTTP           = (1 << 0),
+    GWBUF_TYPE_IGNORABLE      = (1 << 1),
+    GWBUF_TYPE_COLLECT_RESULT = (1 << 2),
+    GWBUF_TYPE_RESULT         = (1 << 3),
+    GWBUF_TYPE_REPLY_OK       = (1 << 4),
 } gwbuf_type_t;
 
-#define GWBUF_IS_TYPE_UNDEFINED(b)       ((b)->gwbuf_type == 0)
-#define GWBUF_IS_IGNORABLE(b)            ((b)->gwbuf_type & GWBUF_TYPE_IGNORABLE)
-#define GWBUF_IS_COLLECTED_RESULT(b)     ((b)->gwbuf_type & GWBUF_TYPE_RESULT)
-#define GWBUF_SHOULD_COLLECT_RESULT(b)   ((b)->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
-#define GWBUF_IS_REPLY_OK(b)             ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
+#define GWBUF_IS_TYPE_UNDEFINED(b)     ((b)->gwbuf_type == 0)
+#define GWBUF_IS_IGNORABLE(b)          ((b)->gwbuf_type & GWBUF_TYPE_IGNORABLE)
+#define GWBUF_IS_COLLECTED_RESULT(b)   ((b)->gwbuf_type & GWBUF_TYPE_RESULT)
+#define GWBUF_SHOULD_COLLECT_RESULT(b) ((b)->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
+#define GWBUF_IS_REPLY_OK(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
 
 typedef enum
 {
-    GWBUF_INFO_NONE         = 0x0,
-    GWBUF_INFO_PARSED       = 0x1
+    GWBUF_INFO_NONE   = 0x0,
+    GWBUF_INFO_PARSED = 0x1
 } gwbuf_info_t;
 
-#define GWBUF_IS_PARSED(b)      (b->sbuf->info & GWBUF_INFO_PARSED)
+#define GWBUF_IS_PARSED(b) (b->sbuf->info & GWBUF_INFO_PARSED)
 
 /**
  * A structure for cleaning up memory allocations of structures which are
@@ -89,7 +89,7 @@ struct buffer_object_st
 {
     bufobj_id_t      bo_id;
     void*            bo_data;
-    void            (*bo_donefun_fp)(void *);
+    void             (* bo_donefun_fp)(void*);
     buffer_object_t* bo_next;
 };
 
@@ -100,10 +100,10 @@ struct buffer_object_st
  */
 typedef struct
 {
-    buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
-    int32_t          refcount; /*< Reference count on the buffer */
-    uint32_t         info;     /*< Info bits */
-    unsigned char    data[1];  /*< Actual memory that was allocated */
+    buffer_object_t* bufobj;    /*< List of objects referred to by GWBUF */
+    int32_t          refcount;  /*< Reference count on the buffer */
+    uint32_t         info;      /*< Info bits */
+    unsigned char    data[1];   /*< Actual memory that was allocated */
 } SHARED_BUF;
 
 /**
@@ -116,51 +116,55 @@ typedef struct
  */
 typedef struct gwbuf
 {
-    struct gwbuf    *next;  /*< Next buffer in a linked chain of buffers */
-    struct gwbuf    *tail;  /*< Last buffer in a linked chain of buffers */
-    void            *start; /*< Start of the valid data */
-    void            *end;   /*< First byte after the valid data */
-    SHARED_BUF      *sbuf;  /*< The shared buffer with the real data */
-    HINT            *hint;  /*< Hint data for this buffer */
-    BUF_PROPERTY    *properties; /*< Buffer properties */
-    struct server   *server; /*< The target server where the buffer is executed */
-    uint32_t         gwbuf_type; /*< buffer's data type information */
+    struct gwbuf*  next;        /*< Next buffer in a linked chain of buffers */
+    struct gwbuf*  tail;        /*< Last buffer in a linked chain of buffers */
+    void*          start;       /*< Start of the valid data */
+    void*          end;         /*< First byte after the valid data */
+    SHARED_BUF*    sbuf;        /*< The shared buffer with the real data */
+    HINT*          hint;        /*< Hint data for this buffer */
+    BUF_PROPERTY*  properties;  /*< Buffer properties */
+    struct server* server;      /*< The target server where the buffer is executed */
+    uint32_t       gwbuf_type;  /*< buffer's data type information */
 } GWBUF;
 
 /*<
  * Macros to access the data in the buffers
  */
 /*< First valid, unconsumed byte in the buffer */
-#define GWBUF_DATA(b)           ((uint8_t*)(b)->start)
+#define GWBUF_DATA(b) ((uint8_t*)(b)->start)
 
 /*< Number of bytes in the individual buffer */
-#define GWBUF_LENGTH(b)         ((size_t)((char *)(b)->end - (char *)(b)->start))
+#define GWBUF_LENGTH(b) ((size_t)((char*)(b)->end - (char*)(b)->start))
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
-#define GWBUF_DATA_CHAR(b, byte)    (GWBUF_LENGTH(b) < ((byte)+1) ? -1 : *(((char *)(b)->start)+4))
+#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : *(((char*)(b)->start) + 4))
 
 /*< Check that the data in a buffer has the SQL marker*/
-#define GWBUF_IS_SQL(b)         (0x03 == GWBUF_DATA_CHAR(b,4))
+#define GWBUF_IS_SQL(b) (0x03 == GWBUF_DATA_CHAR(b, 4))
 
 /*< Check whether the buffer is contiguous*/
 #define GWBUF_IS_CONTIGUOUS(b) (((b) == NULL) || ((b)->next == NULL))
 
 /*< True if all bytes in the buffer have been consumed */
-#define GWBUF_EMPTY(b)          ((char *)(b)->start >= (char *)(b)->end)
+#define GWBUF_EMPTY(b) ((char*)(b)->start >= (char*)(b)->end)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, bytes) ((b)->start = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->end : (void *)((char *)(b)->start + (bytes)));
+#define GWBUF_CONSUME(b, \
+                      bytes) ((b)->start = bytes \
+                                  > ((char*)(b)->end \
+                                     - (char*)(b)->start) ? (b)->end : (void*)((char*)(b)->start + (bytes)));
 
 /*< Check if a given pointer is within the buffer */
-#define GWBUF_POINTER_IN_BUFFER (ptr, b)\
-    ((char *)(ptr) >= (char *)(b)->start && (char *)(ptr) < (char *)(b)->end)
+#define GWBUF_POINTER_IN_BUFFER \
+    (ptr, b) \
+    ((char*)(ptr) >= (char*)(b)->start && (char*)(ptr) < (char*)(b)->end)
 
 /*< Consume a complete buffer */
-#define GWBUF_CONSUME_ALL(b)    gwbuf_consume((b), GWBUF_LENGTH((b)))
+#define GWBUF_CONSUME_ALL(b) gwbuf_consume((b), GWBUF_LENGTH((b)))
 
-#define GWBUF_RTRIM(b, bytes)\
-    ((b)->end = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->start : \
-     (void *)((char *)(b)->end - (bytes)));
+#define GWBUF_RTRIM(b, bytes) \
+    ((b)->end = bytes > ((char*)(b)->end - (char*)(b)->start) ? (b)->start   \
+                                                              : (void*)((char*)(b)->end - (bytes)));
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
@@ -175,7 +179,7 @@ typedef struct gwbuf
  * @return Pointer to the buffer structure or NULL if memory could not
  *         be allocated.
  */
-extern GWBUF *gwbuf_alloc(unsigned int size);
+extern GWBUF* gwbuf_alloc(unsigned int size);
 
 /**
  * Allocate a new gateway buffer structure of specified size and load with data.
@@ -186,14 +190,14 @@ extern GWBUF *gwbuf_alloc(unsigned int size);
  * @return Pointer to the buffer structure or NULL if memory could not
  *         be allocated.
  */
-extern GWBUF *gwbuf_alloc_and_load(unsigned int size, const void *data);
+extern GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data);
 
 /**
  * Free a chain of gateway buffers
  *
  * @param buf  The head of the list of buffers to free
  */
-extern void gwbuf_free(GWBUF *buf);
+extern void gwbuf_free(GWBUF* buf);
 
 /**
  * Clone a GWBUF. Note that if the GWBUF is actually a list of
@@ -205,7 +209,7 @@ extern void gwbuf_free(GWBUF *buf);
  * @return The cloned GWBUF, or NULL if @buf was NULL or if any part
  *         of @buf could not be cloned.
  */
-extern GWBUF *gwbuf_clone(GWBUF *buf);
+extern GWBUF* gwbuf_clone(GWBUF* buf);
 
 /**
  * @brief Deep clone a GWBUF
@@ -253,7 +257,7 @@ extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
  *
  * @return The new head of the linked list
  */
-extern GWBUF *gwbuf_append(GWBUF *head, GWBUF *tail);
+extern GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
 
 /**
  * @brief Consume data from buffer chain
@@ -268,7 +272,7 @@ extern GWBUF *gwbuf_append(GWBUF *head, GWBUF *tail);
  *
  * @return The head of the linked list or NULL if everything was consumed
  */
-extern GWBUF *gwbuf_consume(GWBUF *head, unsigned int length);
+extern GWBUF* gwbuf_consume(GWBUF* head, unsigned int length);
 
 /**
  * Trim bytes from the end of a GWBUF structure that may be the first
@@ -280,7 +284,7 @@ extern GWBUF *gwbuf_consume(GWBUF *head, unsigned int length);
  *
  * @return The buffer chain or NULL if buffer chain now empty
  */
-extern GWBUF *gwbuf_rtrim(GWBUF *head, unsigned int length);
+extern GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int length);
 
 /**
  * Return the number of bytes of data in the linked list.
@@ -289,7 +293,7 @@ extern GWBUF *gwbuf_rtrim(GWBUF *head, unsigned int length);
  *
  * @return The number of bytes of data in the linked list
  */
-extern unsigned int gwbuf_length(const GWBUF *head);
+extern unsigned int gwbuf_length(const GWBUF* head);
 
 /**
  * Return the number of individual buffers in the linked list.
@@ -300,7 +304,7 @@ extern unsigned int gwbuf_length(const GWBUF *head);
  *
  * @return The number of bytes of data in the linked list
  */
-extern int gwbuf_count(const GWBUF *head);
+extern int gwbuf_count(const GWBUF* head);
 
 /**
  * @brief Copy bytes from a buffer
@@ -315,7 +319,7 @@ extern int gwbuf_count(const GWBUF *head);
  *
  * @return Number of bytes copied.
  */
-extern size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest);
+extern size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest);
 
 /**
  * @brief Split a buffer in two
@@ -328,7 +332,7 @@ extern size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, 
  *
  * @return Head of the buffer chain.
  */
-extern GWBUF *gwbuf_split(GWBUF **buf, size_t length);
+extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
 
 /**
  * Set given type to all buffers on the list.
@@ -336,7 +340,7 @@ extern GWBUF *gwbuf_split(GWBUF **buf, size_t length);
  * @param buf   The shared buffer
  * @param type  Type to be added, mask of @c gwbuf_type_t values.
  */
-extern void gwbuf_set_type(GWBUF *head, uint32_t type);
+extern void gwbuf_set_type(GWBUF* head, uint32_t type);
 
 /**
  * Add a property to a buffer.
@@ -347,7 +351,7 @@ extern void gwbuf_set_type(GWBUF *head, uint32_t type);
  *
  * @return True on success, false otherwise.
  */
-extern bool gwbuf_add_property(GWBUF *buf, const char *name, const char *value);
+extern bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value);
 
 /**
  * Return the value of a buffer property
@@ -357,7 +361,7 @@ extern bool gwbuf_add_property(GWBUF *buf, const char *name, const char *value);
  *
  * @return The property value or NULL if the property was not found.
  */
-extern char *gwbuf_get_property(GWBUF *buf, const char *name);
+extern char* gwbuf_get_property(GWBUF* buf, const char* name);
 
 /**
  * Convert a chain of GWBUF structures into a single GWBUF structure
@@ -368,7 +372,7 @@ extern char *gwbuf_get_property(GWBUF *buf, const char *name);
  *
  * @attention Never returns NULL, memory allocation failures abort the process
  */
-extern GWBUF* gwbuf_make_contiguous(GWBUF *buf);
+extern GWBUF* gwbuf_make_contiguous(GWBUF* buf);
 
 /**
  * Add a buffer object to GWBUF buffer.
@@ -380,8 +384,8 @@ extern GWBUF* gwbuf_make_contiguous(GWBUF *buf);
  */
 void gwbuf_add_buffer_object(GWBUF* buf,
                              bufobj_id_t id,
-                             void*  data,
-                             void (*donefun_fp)(void *));
+                             void* data,
+                             void (* donefun_fp)(void*));
 
 /**
  * Search buffer object which matches with the id.
@@ -391,9 +395,9 @@ void gwbuf_add_buffer_object(GWBUF* buf,
  *
  * @return Searched buffer object or NULL if not found
  */
-void *gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
-#if defined(BUFFER_TRACE)
-extern void dprintAllBuffers(void *pdcb);
+void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
+#if defined (BUFFER_TRACE)
+extern void dprintAllBuffers(void* pdcb);
 #endif
 
 /**
@@ -414,6 +418,6 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level);
  * @return  if total buffer length is bigger than offset then return
  *      the offset byte pointer, otherwise return null
  */
-extern uint8_t *gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
+extern uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
 
 MXS_END_DECLS

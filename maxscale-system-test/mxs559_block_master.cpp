@@ -1,4 +1,3 @@
-
 /**
  * @file mxs559_block_master Playing with blocking and unblocking Master
  * It does not reproduce the bug in reliavle way, but it is a good
@@ -17,20 +16,22 @@
 
 typedef struct
 {
-    int port;
+    int         port;
     std::string ip;
     std::string user;
     std::string password;
-    bool ssl;
-    int exit_flag;
+    bool        ssl;
+    int         exit_flag;
 } openclose_thread_data;
 
-void *disconnect_thread(void *ptr);
+void* disconnect_thread(void* ptr);
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->ssh_node_f(0, true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.set_timeout(60);
@@ -123,9 +124,9 @@ int main(int argc, char *argv[])
 }
 
 
-void *disconnect_thread( void *ptr )
+void* disconnect_thread(void* ptr)
 {
-    openclose_thread_data *data = (openclose_thread_data*) ptr;
+    openclose_thread_data* data = (openclose_thread_data*) ptr;
     char sql[1000000];
 
     sleep(3);
@@ -133,9 +134,13 @@ void *disconnect_thread( void *ptr )
 
     while (data->exit_flag == 0)
     {
-        MYSQL *conn = open_conn_db_timeout(data->port, data->ip, "test",
-                                           data->user, data->password,
-                                           10, data->ssl);
+        MYSQL* conn = open_conn_db_timeout(data->port,
+                                           data->ip,
+                                           "test",
+                                           data->user,
+                                           data->password,
+                                           10,
+                                           data->ssl);
         execute_query_silent(conn, sql);
         mysql_close(conn);
     }

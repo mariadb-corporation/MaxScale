@@ -46,14 +46,14 @@
 struct hkstart_result
 {
     sem_t sem;
-    bool ok;
+    bool  ok;
 };
 
 
 static void hkthread(hkstart_result*);
 
 // TODO: Move these into a separate file
-static int64_t mxs_clock_ticks = 0; /*< One clock tick is 100 milliseconds */
+static int64_t mxs_clock_ticks = 0;     /*< One clock tick is 100 milliseconds */
 
 int64_t mxs_clock()
 {
@@ -66,19 +66,21 @@ namespace
 // A task to perform
 struct Task
 {
-    Task(std::string name, TASKFN func, void* data, int frequency):
-        name(name),
-        func(func),
-        data(data),
-        frequency(frequency),
-        nextdue(time(0) + frequency)
+    Task(std::string name, TASKFN func, void* data, int frequency)
+        : name(name)
+        , func(func)
+        , data(data)
+        , frequency(frequency)
+        , nextdue(time(0) + frequency)
     {
     }
 
     struct NameMatch
     {
-        NameMatch(std::string name):
-            m_name(name) {}
+        NameMatch(std::string name)
+            : m_name(name)
+        {
+        }
 
         bool operator()(const Task& task)
         {
@@ -89,11 +91,11 @@ struct Task
     };
 
 
-    std::string name;      /*< Task name */
-    TASKFN      func;      /*< The function to call */
-    void*       data;      /*< Data to pass to the function */
-    int         frequency; /*< How often to call the tasks, in seconds */
-    time_t      nextdue;   /*< When the task should be next run */
+    std::string name;       /*< Task name */
+    TASKFN      func;       /*< The function to call */
+    void*       data;       /*< Data to pass to the function */
+    int         frequency;  /*< How often to call the tasks, in seconds */
+    time_t      nextdue;    /*< When the task should be next run */
 };
 
 class Housekeeper
@@ -103,19 +105,19 @@ public:
 
     static bool init();
     static bool start();
-    void stop();
-    void run();
-    void add(const Task& task);
-    void remove(std::string name);
+    void        stop();
+    void        run();
+    void        add(const Task& task);
+    void        remove(std::string name);
 
-    void print_tasks(DCB* pDcb);
+    void    print_tasks(DCB* pDcb);
     json_t* tasks_json(const char* host);
 
 private:
-    std::thread       m_thread;
-    uint32_t          m_running;
-    std::list<Task>   m_tasks;
-    mxs::SpinLock     m_lock;
+    std::thread     m_thread;
+    uint32_t        m_running;
+    std::list<Task> m_tasks;
+    mxs::SpinLock   m_lock;
 
     bool is_running() const
     {
@@ -126,20 +128,20 @@ private:
 // The Housekeeper instance
 static Housekeeper* hk = NULL;
 
-Housekeeper::Housekeeper():
-    m_running(1)
+Housekeeper::Housekeeper()
+    : m_running(1)
 {
 }
 
 bool Housekeeper::init()
 {
-    hk = new (std::nothrow) Housekeeper;
+    hk = new( std::nothrow) Housekeeper;
     return hk != nullptr;
 }
 
 bool Housekeeper::start()
 {
-    mxb_assert(hk); // init() has been called.
+    mxb_assert(hk);                                         // init() has been called.
     mxb_assert(hk->m_thread.get_id() == std::thread::id()); // start has not been called.
 
     struct hkstart_result res;
@@ -194,7 +196,7 @@ void Housekeeper::run()
 
 void Housekeeper::stop()
 {
-    mxb_assert(hk); // init() has been called.
+    mxb_assert(hk);                                         // init() has been called.
     mxb_assert(hk->m_thread.get_id() != std::thread::id()); // start has been called.
 
     atomic_store_uint32(&m_running, 0);
@@ -260,17 +262,16 @@ json_t* Housekeeper::tasks_json(const char* host)
 
     return mxs_json_resource(host, MXS_JSON_API_TASKS, arr);
 }
-
 }
 
-void hktask_add(const char *name, TASKFN func, void *data, int frequency)
+void hktask_add(const char* name, TASKFN func, void* data, int frequency)
 {
     mxb_assert(hk);
     Task task(name, func, data, frequency);
     hk->add(task);
 }
 
-void hktask_remove(const char *name)
+void hktask_remove(const char* name)
 {
     mxb_assert(hk);
     hk->remove(name);
@@ -319,7 +320,7 @@ void hkfinish()
     }
 }
 
-void hkshow_tasks(DCB *pDcb)
+void hkshow_tasks(DCB* pDcb)
 {
     mxb_assert(hk);
     hk->print_tasks(pDcb);

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -28,10 +28,10 @@
 // The API version part of the URL
 #define MXS_REST_API_VERSION "v1"
 
-static int value_iterator(void *cls,
+static int value_iterator(void* cls,
                           enum MHD_ValueKind kind,
-                          const char *key,
-                          const char *value)
+                          const char* key,
+                          const char* value)
 {
     std::pair<std::string, std::string>* cmp = (std::pair<std::string, std::string>*)cls;
 
@@ -44,20 +44,20 @@ static int value_iterator(void *cls,
     return MHD_YES;
 }
 
-static int value_sum_iterator(void *cls,
+static int value_sum_iterator(void* cls,
                               enum MHD_ValueKind kind,
-                              const char *key,
-                              const char *value)
+                              const char* key,
+                              const char* value)
 {
     size_t& count = *(size_t*)cls;
     count++;
     return MHD_YES;
 }
 
-static int value_copy_iterator(void *cls,
+static int value_copy_iterator(void* cls,
                                enum MHD_ValueKind kind,
-                               const char *key,
-                               const char *value)
+                               const char* key,
+                               const char* value)
 {
     std::string k = key;
     if (value)
@@ -76,7 +76,7 @@ static int value_copy_iterator(void *cls,
 class HttpRequest
 {
     HttpRequest(const HttpRequest&);
-    HttpRequest& operator = (const HttpRequest);
+    HttpRequest& operator=(const HttpRequest);
 public:
     /**
      * @brief Parse a request
@@ -85,7 +85,7 @@ public:
      *
      * @return Parsed statement or NULL if request is not valid
      */
-    HttpRequest(struct MHD_Connection *connection, std::string url, std::string method, json_t* data);
+    HttpRequest(struct MHD_Connection* connection, std::string url, std::string method, json_t* data);
 
     ~HttpRequest();
 
@@ -111,8 +111,10 @@ public:
         std::pair<std::string, std::string> p;
         p.first = header;
 
-        MHD_get_connection_values(m_connection, MHD_HEADER_KIND,
-                                  value_iterator, &p);
+        MHD_get_connection_values(m_connection,
+                                  MHD_HEADER_KIND,
+                                  value_iterator,
+                                  &p);
 
         return p.second;
     }
@@ -129,8 +131,10 @@ public:
         std::pair<std::string, std::string> p;
         p.first = option;
 
-        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
-                                  value_iterator, &p);
+        MHD_get_connection_values(m_connection,
+                                  MHD_GET_ARGUMENT_KIND,
+                                  value_iterator,
+                                  &p);
 
         return p.second;
     }
@@ -143,8 +147,10 @@ public:
     size_t get_option_count() const
     {
         size_t rval = 0;
-        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
-                                  value_sum_iterator, &rval);
+        MHD_get_connection_values(m_connection,
+                                  MHD_GET_ARGUMENT_KIND,
+                                  value_sum_iterator,
+                                  &rval);
 
         return rval;
     }
@@ -159,8 +165,10 @@ public:
      */
     void copy_options(char** dest) const
     {
-        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
-                                  value_copy_iterator, &dest);
+        MHD_get_connection_values(m_connection,
+                                  MHD_GET_ARGUMENT_KIND,
+                                  value_copy_iterator,
+                                  &dest);
     }
 
     /**
@@ -250,7 +258,7 @@ public:
      */
     std::string last_uri_part() const
     {
-        return  m_resource_parts.size() > 0 ? m_resource_parts[m_resource_parts.size() - 1] : "";
+        return m_resource_parts.size() > 0 ? m_resource_parts[m_resource_parts.size() - 1] : "";
     }
 
     /**
@@ -285,12 +293,12 @@ private:
     static const std::string HTTP_PREFIX;
     static const std::string HTTPS_PREFIX;
 
-    std::map<std::string, std::string> m_options;        /**< Request options */
-    std::unique_ptr<json_t>            m_json;           /**< Request body */
-    std::string                        m_json_string;    /**< String version of @c m_json */
-    std::string                        m_resource;       /**< Requested resource */
-    std::deque<std::string>            m_resource_parts; /**< @c m_resource split into parts */
-    std::string                        m_verb;           /**< Request method */
-    std::string                        m_hostname;       /**< The value of the Host header */
+    std::map<std::string, std::string> m_options;       /**< Request options */
+    std::unique_ptr<json_t>            m_json;          /**< Request body */
+    std::string                        m_json_string;   /**< String version of @c m_json */
+    std::string                        m_resource;      /**< Requested resource */
+    std::deque<std::string>            m_resource_parts;/**< @c m_resource split into parts */
+    std::string                        m_verb;          /**< Request method */
+    std::string                        m_hostname;      /**< The value of the Host header */
     struct MHD_Connection*             m_connection;
 };

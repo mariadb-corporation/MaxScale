@@ -17,33 +17,35 @@ int main(int argc, char** argv)
     string master = "server1";
     string slave = "server2";
 
-    auto switchover = [&]()
-    {
-        test.maxscales->wait_for_monitor();
-        int rc = test.maxscales->ssh_node_f(0, true, "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
-                                            slave.c_str(), master.c_str());
-        test.assert(rc == 0, "Switchover should work");
-        master.swap(slave);
-        test.maxscales->wait_for_monitor();
-    };
+    auto switchover = [&]() {
+            test.maxscales->wait_for_monitor();
+            int rc = test.maxscales->ssh_node_f(0,
+                                                true,
+                                                "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
+                                                slave.c_str(),
+                                                master.c_str());
+            test.assert(rc == 0, "Switchover should work");
+            master.swap(slave);
+            test.maxscales->wait_for_monitor();
+        };
 
-    auto query = [&](string q)
-    {
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
-    };
+    auto query = [&](string q) {
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+        };
 
-    auto ok = [&](string q)
-    {
-        test.assert(query(q), "Query '%s' should work: %s", q.c_str(), mysql_error(test.maxscales->conn_rwsplit[0]));
-    };
+    auto ok = [&](string q) {
+            test.assert(query(q),
+                        "Query '%s' should work: %s",
+                        q.c_str(),
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        };
 
-    auto check = [&](string q)
-    {
-        ok("START TRANSACTION");
-        Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
-        ok("COMMIT");
-        test.assert(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
-    };
+    auto check = [&](string q) {
+            ok("START TRANSACTION");
+            Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
+            ok("COMMIT");
+            test.assert(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
+        };
 
     // Create a table, insert a value and make sure it's replicated to all slaves
     test.maxscales->connect();
@@ -76,7 +78,7 @@ int main(int argc, char** argv)
     cout << "Read-only transaction" << endl;
     test.maxscales->connect();
     ok("START TRANSACTION READ ONLY");
-    ok("SELECT @@server_id"); // This causes a checksum mismatch if the transaction is migrated
+    ok("SELECT @@server_id");   // This causes a checksum mismatch if the transaction is migrated
     switchover();
     ok("COMMIT");
     test.maxscales->disconnect();

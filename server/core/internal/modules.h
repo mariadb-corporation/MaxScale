@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file modules.h  Utilities for loading modules
@@ -25,12 +25,12 @@ MXS_BEGIN_DECLS
 /**
  * Module types
  */
-#define MODULE_PROTOCOL         "Protocol"        /**< A protocol module type */
-#define MODULE_AUTHENTICATOR    "Authenticator"   /**< An authenticator module type */
-#define MODULE_ROUTER           "Router"          /**< A router module type */
-#define MODULE_MONITOR          "Monitor"         /**< A database monitor module type */
-#define MODULE_FILTER           "Filter"          /**< A filter module type */
-#define MODULE_QUERY_CLASSIFIER "QueryClassifier" /**< A query classifier module type */
+#define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */
+#define MODULE_AUTHENTICATOR    "Authenticator"     /**< An authenticator module type */
+#define MODULE_ROUTER           "Router"            /**< A router module type */
+#define MODULE_MONITOR          "Monitor"           /**< A database monitor module type */
+#define MODULE_FILTER           "Filter"            /**< A filter module type */
+#define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
 
 
 /**
@@ -40,7 +40,7 @@ MXS_BEGIN_DECLS
  * @param type   Type of module, used purely for registration
  * @return       The module specific entry point structure or NULL
  */
-void *load_module(const char *module, const char *type);
+void* load_module(const char* module, const char* type);
 
 /**
  * @brief Get a module
@@ -49,7 +49,7 @@ void *load_module(const char *module, const char *type);
  * @param type The module type or NULL for any type
  * @return The loaded module or NULL if the module is not loaded
  */
-const MXS_MODULE *get_module(const char *name, const char *type);
+const MXS_MODULE* get_module(const char* name, const char* type);
 
 /**
  * @brief Unload a module.
@@ -59,7 +59,7 @@ const MXS_MODULE *get_module(const char *name, const char *type);
  *
  * @param module The name of the module
  */
-void unload_module(const char *module);
+void unload_module(const char* module);
 
 /**
  * @brief Unload all modules
@@ -81,12 +81,12 @@ void printModules();
  *
  * Diagnostic routine to display all the loaded modules
  */
-void dprintAllModules(DCB *);
+void dprintAllModules(DCB*);
 
 typedef struct mxs_module_iterator
 {
     const char* type;
-    void* position;
+    void*       position;
 } MXS_MODULE_ITERATOR;
 
 /**

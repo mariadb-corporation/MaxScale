@@ -2,7 +2,7 @@
 #include <sstream>
 #include <unordered_map>
 
-Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose)
+Maxscales::Maxscales(const char* pref, const char* test_cwd, bool verbose)
 {
     strcpy(prefix, pref);
     this->verbose = verbose;
@@ -12,7 +12,7 @@ Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose)
 
 int Maxscales::read_env()
 {
-    char * env;
+    char* env;
     char env_name[64];
 
     read_basic_env();
@@ -96,7 +96,6 @@ int Maxscales::read_env()
             ports[i][2] = readconn_slave_port[i];
 
             N_ports[0] = 3;
-
         }
     }
 
@@ -108,13 +107,19 @@ int Maxscales::connect_rwsplit(int m)
 {
     if (use_ipv6)
     {
-        conn_rwsplit[m] = open_conn(rwsplit_port[m], IP6[m], user_name,
-                                    password, ssl);
+        conn_rwsplit[m] = open_conn(rwsplit_port[m],
+                                    IP6[m],
+                                    user_name,
+                                    password,
+                                    ssl);
     }
     else
     {
-        conn_rwsplit[m] = open_conn(rwsplit_port[m], IP[m], user_name,
-                                    password, ssl);
+        conn_rwsplit[m] = open_conn(rwsplit_port[m],
+                                    IP[m],
+                                    user_name,
+                                    password,
+                                    ssl);
     }
     routers[m][0] = conn_rwsplit[m];
 
@@ -137,13 +142,19 @@ int Maxscales::connect_readconn_master(int m)
 {
     if (use_ipv6)
     {
-        conn_master[m] = open_conn(readconn_master_port[m], IP6[m],
-                                   user_name, password, ssl);
+        conn_master[m] = open_conn(readconn_master_port[m],
+                                   IP6[m],
+                                   user_name,
+                                   password,
+                                   ssl);
     }
     else
     {
-        conn_master[m] = open_conn(readconn_master_port[m], IP[m],
-                                   user_name, password, ssl);
+        conn_master[m] = open_conn(readconn_master_port[m],
+                                   IP[m],
+                                   user_name,
+                                   password,
+                                   ssl);
     }
     routers[m][1] = conn_master[m];
 
@@ -166,13 +177,19 @@ int Maxscales::connect_readconn_slave(int m)
 {
     if (use_ipv6)
     {
-        conn_slave[m] = open_conn(readconn_slave_port[m], IP6[m],
-                                  user_name, password, ssl);
+        conn_slave[m] = open_conn(readconn_slave_port[m],
+                                  IP6[m],
+                                  user_name,
+                                  password,
+                                  ssl);
     }
     else
     {
-        conn_slave[m] = open_conn(readconn_slave_port[m], IP[m],
-                                  user_name, password, ssl);
+        conn_slave[m] = open_conn(readconn_slave_port[m],
+                                  IP[m],
+                                  user_name,
+                                  password,
+                                  ssl);
     }
     routers[m][2] = conn_slave[m];
 
@@ -193,9 +210,9 @@ int Maxscales::connect_readconn_slave(int m)
 
 int Maxscales::connect_maxscale(int m)
 {
-    return connect_rwsplit(m) +
-           connect_readconn_master(m) +
-           connect_readconn_slave(m);
+    return connect_rwsplit(m)
+           + connect_readconn_master(m)
+           + connect_readconn_slave(m);
 }
 
 int Maxscales::close_maxscale_connections(int m)
@@ -228,32 +245,32 @@ int Maxscales::stop_maxscale(int m)
 }
 
 
-int Maxscales::execute_maxadmin_command(int m, const char * cmd)
+int Maxscales::execute_maxadmin_command(int m, const char* cmd)
 {
     return ssh_node_f(m, true, "maxadmin %s", cmd);
 }
-int Maxscales::execute_maxadmin_command_print(int m, const char * cmd)
+int Maxscales::execute_maxadmin_command_print(int m, const char* cmd)
 {
     int exit_code;
-    printf("%s\n", ssh_node_output_f(m, true, &exit_code,  "maxadmin %s", cmd));
+    printf("%s\n", ssh_node_output_f(m, true, &exit_code, "maxadmin %s", cmd));
     return exit_code;
 }
 
-int Maxscales::check_maxadmin_param(int m, const char *command, const char *param, const char *value)
+int Maxscales::check_maxadmin_param(int m, const char* command, const char* param, const char* value)
 {
     char result[1024];
     int rval = 1;
 
     if (get_maxadmin_param(m, (char*)command, (char*)param, (char*)result) == 0)
     {
-        char *end = strchr(result, '\0') - 1;
+        char* end = strchr(result, '\0') - 1;
 
         while (isspace(*end))
         {
             *end-- = '\0';
         }
 
-        char *start = result;
+        char* start = result;
 
         while (isspace(*start))
         {
@@ -273,16 +290,16 @@ int Maxscales::check_maxadmin_param(int m, const char *command, const char *para
     return rval;
 }
 
-int Maxscales::get_maxadmin_param(int m, const char *command, const char *param, char *result)
+int Maxscales::get_maxadmin_param(int m, const char* command, const char* param, char* result)
 {
-    char        * buf;
+    char* buf;
     int exit_code;
 
     buf = ssh_node_output_f(m, true, &exit_code, "maxadmin %s", command);
 
-    //printf("%s\n", buf);
+    // printf("%s\n", buf);
 
-    char *x = strstr(buf, param);
+    char* x = strstr(buf, param);
 
     if (x == NULL)
     {
@@ -303,7 +320,7 @@ int Maxscales::get_maxadmin_param(int m, const char *command, const char *param,
         x++;
     }
 
-    char *end = strchr(x, '\n');
+    char* end = strchr(x, '\n');
 
     // Trim trailing whitespace
     while (isspace(*end))
@@ -320,7 +337,7 @@ int Maxscales::get_maxadmin_param(int m, const char *command, const char *param,
 long unsigned Maxscales::get_maxscale_memsize(int m)
 {
     int exit_code;
-    char * ps_out = ssh_node_output(m, "ps -e -o pid,vsz,comm= | grep maxscale", false, &exit_code);
+    char* ps_out = ssh_node_output(m, "ps -e -o pid,vsz,comm= | grep maxscale", false, &exit_code);
     long unsigned mem = 0;
     pid_t pid;
     sscanf(ps_out, "%d %lu", &pid, &mem);
@@ -328,7 +345,7 @@ long unsigned Maxscales::get_maxscale_memsize(int m)
 }
 
 
-int Maxscales::find_master_maxadmin(Mariadb_nodes * nodes, int m)
+int Maxscales::find_master_maxadmin(Mariadb_nodes* nodes, int m)
 {
     bool found = false;
     int master = -1;
@@ -338,7 +355,7 @@ int Maxscales::find_master_maxadmin(Mariadb_nodes * nodes, int m)
         char show_server[256];
         char res[256];
         sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(m, show_server, (char *) "Status", res);
+        get_maxadmin_param(m, show_server, (char*) "Status", res);
 
         if (strstr(res, "Master"))
         {
@@ -357,7 +374,7 @@ int Maxscales::find_master_maxadmin(Mariadb_nodes * nodes, int m)
     return master;
 }
 
-int Maxscales::find_slave_maxadmin(Mariadb_nodes * nodes, int m)
+int Maxscales::find_slave_maxadmin(Mariadb_nodes* nodes, int m)
 {
     int slave = -1;
 
@@ -366,7 +383,7 @@ int Maxscales::find_slave_maxadmin(Mariadb_nodes * nodes, int m)
         char show_server[256];
         char res[256];
         sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(m, show_server, (char *) "Status", res);
+        get_maxadmin_param(m, show_server, (char*) "Status", res);
 
         if (strstr(res, "Slave"))
         {
@@ -392,7 +409,7 @@ StringSet Maxscales::get_server_status(const char* name, int m)
         while (tok)
         {
             char* p = tok;
-            char *end = strchr(tok, '\n');
+            char* end = strchr(tok, '\n');
             if (!end)
             {
                 end = strchr(tok, '\0');
@@ -426,8 +443,10 @@ int Maxscales::port(enum service type, int m) const
     {
     case RWSPLIT:
         return rwsplit_port[m];
+
     case READCONN_MASTER:
         return readconn_master_port[m];
+
     case READCONN_SLAVE:
         return readconn_slave_port[m];
     }
@@ -436,28 +455,31 @@ int Maxscales::port(enum service type, int m) const
 
 void Maxscales::wait_for_monitor(int intervals, int m)
 {
-    //Helper for getting number of monitor ticks
-    auto get_ticks = [&](std::string name)
-    {
-        int rc;
-        char* ticks = ssh_node_output_f(m, false, &rc,  "maxctrl api get monitors/%s data.attributes.ticks", name.c_str());
-        char* ptr;
-        int rval = strtol(ticks, &ptr, 10);
+    // Helper for getting number of monitor ticks
+    auto get_ticks = [&](std::string name) {
+            int rc;
+            char* ticks = ssh_node_output_f(m,
+                                            false,
+                                            &rc,
+                                            "maxctrl api get monitors/%s data.attributes.ticks",
+                                            name.c_str());
+            char* ptr;
+            int rval = strtol(ticks, &ptr, 10);
 
-        if (ptr == ticks || (*ptr != '\0' && !isspace(*ptr)))
-        {
-            printf("ERROR, invalid monitor tick value: %s\n", ticks);
-            rval = -1;
-        }
+            if (ptr == ticks || (*ptr != '\0' && !isspace(*ptr)))
+            {
+                printf("ERROR, invalid monitor tick value: %s\n", ticks);
+                rval = -1;
+            }
 
-        free(ticks);
-        return rval;
-    };
+            free(ticks);
+            return rval;
+        };
 
     int rc = 0;
 
     // Get a list of monitor names that are running
-    char* monitors = ssh_node_output_f(m, false, &rc,  "maxctrl --tsv list monitors|grep Running|cut -f 1");
+    char* monitors = ssh_node_output_f(m, false, &rc, "maxctrl --tsv list monitors|grep Running|cut -f 1");
     std::istringstream is;
     is.str(monitors);
     free(monitors);
@@ -470,7 +492,7 @@ void Maxscales::wait_for_monitor(int intervals, int m)
         ticks[name] = get_ticks(name);
     }
 
-    for (auto a: ticks)
+    for (auto a : ticks)
     {
         // Wait a maximum of 60 seconds for a single monitor interval
         for (int i = 0; i < 60; i++)

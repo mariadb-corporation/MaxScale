@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
@@ -28,7 +28,7 @@ private:
     NullFilterSession(MXS_SESSION* pSession, const NullFilter* pFilter);
 
     NullFilterSession(const NullFilterSession&);
-    NullFilterSession& operator = (const NullFilterSession&);
+    NullFilterSession& operator=(const NullFilterSession&);
 
 private:
     const NullFilter& m_filter;

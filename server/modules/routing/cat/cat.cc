@@ -16,8 +16,8 @@
 
 using namespace maxscale;
 
-Cat::Cat(SERVICE* pService):
-    Router<Cat, CatSession>(pService)
+Cat::Cat(SERVICE* pService)
+    : Router<Cat, CatSession>(pService)
 {
 }
 
@@ -81,10 +81,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         caps,
         &Cat::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }

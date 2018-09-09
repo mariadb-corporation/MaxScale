@@ -7,14 +7,14 @@
 #include <sstream>
 #include <iostream>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int exit_code;
     TestConnections::skip_maxscale_start(true);
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
     test.set_timeout(600);
-    test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
+    test.maxscales->ssh_node(0, (char*) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
     test.replicate_from_master();
@@ -68,7 +68,12 @@ int main(int argc, char *argv[])
 
         // The number of changes that are present in each version of the schema
         const int nchanges = 2;
-        test.add_result(nrows != nchanges, "Expected %d line in file number %d, got %d: %s", nchanges, i, nrows, rows);
+        test.add_result(nrows != nchanges,
+                        "Expected %d line in file number %d, got %d: %s",
+                        nchanges,
+                        i,
+                        nrows,
+                        rows);
         free(rows);
     }
 

@@ -10,24 +10,24 @@
  */
 
 /*
-ilho Raatikka 2014-12-22 22:38:42 UTC
-Reproduce:
-1. connect readconnroute with mysql client
-2. fail the backend server
-3. execute query by using mysql client
-
->> client hangs if write to backend socket doesn't return error (which doesn't happen in many cases)
-Comment 1 Markus Mäkelä 2014-12-23 09:19:17 UTC
-Added a check for server status before routing the query. Now if the server is down it returns an error.
-*/
+ *  ilho Raatikka 2014-12-22 22:38:42 UTC
+ *  Reproduce:
+ *  1. connect readconnroute with mysql client
+ *  2. fail the backend server
+ *  3. execute query by using mysql client
+ *
+ *  >> client hangs if write to backend socket doesn't return error (which doesn't happen in many cases)
+ *  Comment 1 Markus Mäkelä 2014-12-23 09:19:17 UTC
+ *  Added a check for server status before routing the query. Now if the server is down it returns an error.
+ */
 
 
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
     Test->tprintf("Connecting to Maxscale %s", Test->maxscales->IP[0]);
@@ -36,7 +36,8 @@ int main(int argc, char *argv[])
     printf("Setup firewall to block mysql on master");
     Test->repl->block_node(0);
 
-    Test->tprintf("Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
+    Test->tprintf(
+        "Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
     execute_query(Test->maxscales->conn_rwsplit[0], "show processlist;");
     execute_query(Test->maxscales->conn_master[0], "show processlist;");
     execute_query(Test->maxscales->conn_slave[0], "show processlist;");

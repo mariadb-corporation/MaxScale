@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
@@ -28,8 +28,8 @@ typedef enum cache_result_bits
     CACHE_RESULT_ERROR            = 0x03,
     CACHE_RESULT_OUT_OF_RESOURCES = 0x04,
 
-    CACHE_RESULT_STALE            = 0x10000, /*< Possibly combined with OK and NOT_FOUND. */
-    CACHE_RESULT_DISCARDED        = 0x20000, /*< Possibly combined with NOT_FOUND. */
+    CACHE_RESULT_STALE     = 0x10000,   /*< Possibly combined with OK and NOT_FOUND. */
+    CACHE_RESULT_DISCARDED = 0x20000,   /*< Possibly combined with NOT_FOUND. */
 } cache_result_bits_t;
 
 typedef uint32_t cache_result_t;
@@ -151,7 +151,7 @@ typedef struct cache_storage_api
      *
      * @return True if the initialization succeeded, false otherwise.
      */
-    bool (*initialize)(uint32_t* capabilities);
+    bool (* initialize)(uint32_t* capabilities);
 
     /**
      * Creates an instance of cache storage. This function should, if necessary,
@@ -168,7 +168,7 @@ typedef struct cache_storage_api
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    CACHE_STORAGE* (*createInstance)(const char *name,
+    CACHE_STORAGE* (*createInstance)(const char* name,
                                      const CACHE_STORAGE_CONFIG* config,
                                      int argc, char* argv[]);
 
@@ -177,7 +177,7 @@ typedef struct cache_storage_api
      *
      * @param instance The CACHE_STORAGE instance to be freed.
      */
-    void (*freeInstance)(CACHE_STORAGE* instance);
+    void (* freeInstance)(CACHE_STORAGE* instance);
 
     /**
      * Returns the configuration the storage was created with.
@@ -185,8 +185,8 @@ typedef struct cache_storage_api
      * @param storage  Pointer to a CACHE_STORAGE
      * @param config   Pointer to variable that will be updated with the config.
      */
-    void (*getConfig)(CACHE_STORAGE* storage,
-                      CACHE_STORAGE_CONFIG* config);
+    void (* getConfig)(CACHE_STORAGE* storage,
+                       CACHE_STORAGE_CONFIG* config);
 
     /**
      * Returns information about the storage.
@@ -199,9 +199,9 @@ typedef struct cache_storage_api
      *
      * @return CACHE_RESULT_OK if a json object could be created.
      */
-    cache_result_t (*getInfo)(CACHE_STORAGE* storage,
-                              uint32_t what,
-                              json_t** info);
+    cache_result_t (* getInfo)(CACHE_STORAGE* storage,
+                               uint32_t what,
+                               json_t** info);
     /**
      * Get a value from the cache.
      *
@@ -223,12 +223,12 @@ typedef struct cache_storage_api
      *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
      *         if the item existed but the hard TTL had passed.
      */
-    cache_result_t (*getValue)(CACHE_STORAGE* storage,
-                               const CACHE_KEY* key,
-                               uint32_t flags,
-                               uint32_t soft_ttl,
-                               uint32_t hard_ttl,
-                               GWBUF** result);
+    cache_result_t (* getValue)(CACHE_STORAGE* storage,
+                                const CACHE_KEY* key,
+                                uint32_t flags,
+                                uint32_t soft_ttl,
+                                uint32_t hard_ttl,
+                                GWBUF**  result);
 
     /**
      * Put a value to the cache.
@@ -242,9 +242,9 @@ typedef struct cache_storage_api
      *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
      *         some resource having become exhausted, or some other error code.
      */
-    cache_result_t (*putValue)(CACHE_STORAGE* storage,
-                               const CACHE_KEY* key,
-                               const GWBUF* value);
+    cache_result_t (* putValue)(CACHE_STORAGE* storage,
+                                const CACHE_KEY* key,
+                                const GWBUF* value);
 
     /**
      * Delete a value from the cache.
@@ -255,8 +255,8 @@ typedef struct cache_storage_api
      * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
      *         CACHE_RESULT_OK may be returned also if the entry was not present.
      */
-    cache_result_t (*delValue)(CACHE_STORAGE* storage,
-                               const CACHE_KEY* key);
+    cache_result_t (* delValue)(CACHE_STORAGE* storage,
+                                const CACHE_KEY* key);
 
     /**
      * Get the head item from the storage. This is only intended for testing and
@@ -276,9 +276,9 @@ typedef struct cache_storage_api
      *         returning the head, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    cache_result_t (*getHead)(CACHE_STORAGE* storage,
-                              CACHE_KEY* key,
-                              GWBUF** head);
+    cache_result_t (* getHead)(CACHE_STORAGE* storage,
+                               CACHE_KEY* key,
+                               GWBUF** head);
 
     /**
      * Get the tail item from the cache. This is only intended for testing and
@@ -298,9 +298,9 @@ typedef struct cache_storage_api
      *         returning the tail, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    cache_result_t (*getTail)(CACHE_STORAGE* storage,
-                              CACHE_KEY* key,
-                              GWBUF** tail);
+    cache_result_t (* getTail)(CACHE_STORAGE* storage,
+                               CACHE_KEY* key,
+                               GWBUF** tail);
 
     /**
      * Get the current size of the storage. This is only intended for testing and
@@ -317,8 +317,8 @@ typedef struct cache_storage_api
      *         is incapable of returning the size, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    cache_result_t (*getSize)(CACHE_STORAGE* storage,
-                              uint64_t* size);
+    cache_result_t (* getSize)(CACHE_STORAGE* storage,
+                               uint64_t* size);
 
     /**
      * Get the current number of items in the storage. This is only intended for
@@ -335,8 +335,8 @@ typedef struct cache_storage_api
      *         is incapable of returning the size, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    cache_result_t (*getItems)(CACHE_STORAGE* storage,
-                               uint64_t* items);
+    cache_result_t (* getItems)(CACHE_STORAGE* storage,
+                                uint64_t* items);
 } CACHE_STORAGE_API;
 
 #if defined __cplusplus
@@ -346,6 +346,6 @@ const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
 #endif
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
-typedef CACHE_STORAGE_API* (*CacheGetStorageAPIFN)();
+typedef CACHE_STORAGE_API* (* CacheGetStorageAPIFN)();
 
 MXS_END_DECLS

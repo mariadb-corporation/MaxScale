@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file include/maxscale/poll.h - The public poll interface
@@ -55,7 +55,7 @@ int64_t poll_get_stat(POLL_STAT stat);
  *
  * @param dcb   DCB to emulate an EPOLLOUT event for
  */
-void poll_fake_hangup_event(DCB *dcb);
+void poll_fake_hangup_event(DCB* dcb);
 
 /*
  * Insert a fake write completion event for a DCB into the polling
@@ -70,7 +70,7 @@ void poll_fake_hangup_event(DCB *dcb);
  *
  * @param dcb   DCB to emulate an EPOLLOUT event for
  */
-void poll_fake_write_event(DCB *dcb);
+void poll_fake_write_event(DCB* dcb);
 
 /*
  * Insert a fake read completion event for a DCB into the polling
@@ -85,7 +85,7 @@ void poll_fake_write_event(DCB *dcb);
  *
  * @param dcb   DCB to emulate an EPOLLIN event for
  */
-void poll_fake_read_event(DCB *dcb);
+void poll_fake_read_event(DCB* dcb);
 
 /**
  * Add a DCB to the set of descriptors within the polling
@@ -94,7 +94,7 @@ void poll_fake_read_event(DCB *dcb);
  * @param dcb   The descriptor to add to the poll
  * @return      -1 on error or 0 on success
  */
-int poll_add_dcb(DCB *);
+int poll_add_dcb(DCB*);
 
 /**
  * Remove a descriptor from the set of descriptors within the
@@ -103,7 +103,7 @@ int poll_add_dcb(DCB *);
  * @param dcb   The descriptor to remove
  * @return      -1 on error or 0 on success; actually always 0
  */
-int poll_remove_dcb(DCB *);
+int poll_remove_dcb(DCB*);
 
 /**
  * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.

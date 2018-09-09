@@ -46,7 +46,5 @@ Client& Session::client() const
 {
     return m_client;
 }
-
 }
-
 }

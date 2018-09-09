@@ -41,14 +41,14 @@ enum mba_state
 /** Structure representing the authentication state */
 typedef struct mysql_backend_auth
 {
-    enum mba_state state; /**< Authentication state */
+    enum mba_state state;   /**< Authentication state */
 } mysql_backend_auth_t;
 
 /**
  * @brief Allocate a new mysql_backend_auth object
  * @return Allocated object or NULL if memory allocation failed
  */
-void* auth_backend_create(void *instance)
+void* auth_backend_create(void* instance)
 {
     mysql_backend_auth_t* mba = static_cast<mysql_backend_auth_t*>(MXS_MALLOC(sizeof(*mba)));
 
@@ -64,7 +64,7 @@ void* auth_backend_create(void *instance)
  * @brief Free allocated mysql_backend_auth object
  * @param data Allocated mysql_backend_auth object
  */
-void auth_backend_destroy(void *data)
+void auth_backend_destroy(void* data)
 {
     if (data)
     {
@@ -79,10 +79,10 @@ void auth_backend_destroy(void *data)
  * @return True on success, false on error
  * @see authenticator.h
  */
-static bool auth_backend_extract(DCB *dcb, GWBUF *buf)
+static bool auth_backend_extract(DCB* dcb, GWBUF* buf)
 {
     bool rval = false;
-    mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
+    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
     switch (mba->state)
     {
@@ -114,10 +114,10 @@ static bool auth_backend_extract(DCB *dcb, GWBUF *buf)
  * @return Authentication status
  * @see authenticator.h
  */
-static int auth_backend_authenticate(DCB *dcb)
+static int auth_backend_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
+    mysql_backend_auth_t* mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
     if (mba->state == MBA_AUTH_OK)
     {
@@ -138,7 +138,7 @@ static int auth_backend_authenticate(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-static bool auth_backend_ssl(DCB *dcb)
+static bool auth_backend_ssl(DCB* dcb)
 {
     return dcb->server->server_ssl != NULL;
 }
@@ -153,42 +153,42 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                      /* No initialize entry point */
-        auth_backend_create,       /* Create authenticator */
-        auth_backend_extract,      /* Extract data into structure   */
-        auth_backend_ssl,          /* Check if client supports SSL  */
-        auth_backend_authenticate, /* Authenticate user credentials */
-        NULL,                      /* The shared data is freed by the client DCB */
-        auth_backend_destroy,      /* Destroy authenticator */
-        NULL,                      /* We don't need to load users */
-        NULL,                      /* No diagnostic */
-        NULL,
-        NULL                       /* No user reauthentication */
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The MySQL MaxScale to backend server authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_AUTHENTICATOR MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            NULL,                       /* No initialize entry point */
+            auth_backend_create,        /* Create authenticator */
+            auth_backend_extract,       /* Extract data into structure   */
+            auth_backend_ssl,           /* Check if client supports SSL  */
+            auth_backend_authenticate,  /* Authenticate user credentials */
+            NULL,                       /* The shared data is freed by the client DCB */
+            auth_backend_destroy,       /* Destroy authenticator */
+            NULL,                       /* We don't need to load users */
+            NULL,                       /* No diagnostic */
+            NULL,
+            NULL                    /* No user reauthentication */
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The MySQL MaxScale to backend server authenticator",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 /*lint +e14 */
 }

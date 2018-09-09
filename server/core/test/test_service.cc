@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -43,15 +43,14 @@
 /**
  * test1    Allocate a service and do lots of other things
  *
-  */
-static int
-test1()
+ */
+static int test1()
 {
-    Service     *service;
-    MXS_SESSION *session;
-    DCB         *dcb;
-    int         result;
-    int         argc = 3;
+    Service* service;
+    MXS_SESSION* session;
+    DCB* dcb;
+    int result;
+    int argc = 3;
 
     init_test_env(NULL);
 
@@ -75,17 +74,22 @@ test1()
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");
     mxb_assert_message(0 == strcmp("MyService", service->name), "Service must have given name");
     fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
-    mxb_assert_message(serviceCreateListener(service, "TestProtocol", "mariadbclient",
-                                          "localhost", 9876, "MySQLAuth", NULL, NULL),
-                    "Add Protocol should succeed");
+    mxb_assert_message(serviceCreateListener(service,
+                                             "TestProtocol",
+                                             "mariadbclient",
+                                             "localhost",
+                                             9876,
+                                             "MySQLAuth",
+                                             NULL,
+                                             NULL),
+                       "Add Protocol should succeed");
     mxb_assert_message(0 != serviceHasListener(service, "TestProtocol", "mariadbclient", "localhost", 9876),
-                    "Service should have new protocol as requested");
+                       "Service should have new protocol as requested");
 
     return 0;
-
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
 

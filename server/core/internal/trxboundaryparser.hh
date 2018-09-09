@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <ctype.h>
@@ -40,7 +40,7 @@ namespace maxscale
 class TrxBoundaryParser : public maxscale::CustomParser
 {
     TrxBoundaryParser(const TrxBoundaryParser&);
-    TrxBoundaryParser& operator = (const TrxBoundaryParser&);
+    TrxBoundaryParser& operator=(const TrxBoundaryParser&);
 
 public:
     enum token_t
@@ -154,7 +154,10 @@ private:
     {
 #ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
-                   (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
+                   (int)m_len,
+                   m_pSql,
+                   (int)(m_pEnd - m_pI),
+                   m_pI);
 #endif
     }
 
@@ -564,7 +567,8 @@ private:
 
         if (zWord == pEnd)
         {
-            if ((pI == m_pEnd) || (!isalpha(*pI))) // Handwritten isalpha not faster than library version.
+            if ((pI == m_pEnd) || (!isalpha(*pI)))      // Handwritten isalpha not faster than library
+                                                        // version.
             {
                 m_pI = pI;
             }
@@ -608,7 +612,8 @@ private:
             if (m_pI != m_pEnd)
             {
                 MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI), m_pI);
+                         (int)(m_pEnd - m_pI),
+                         m_pI);
             }
 
             token = PARSER_EXHAUSTED;
@@ -802,5 +807,4 @@ private:
         return token;
     }
 };
-
 }

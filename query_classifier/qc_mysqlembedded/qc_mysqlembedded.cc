@@ -26,7 +26,7 @@
 #define MYSQL_YACC
 #define MYSQL_LEX012
 #define MYSQL_SERVER
-#if defined(MYSQL_CLIENT)
+#if defined (MYSQL_CLIENT)
 #undef MYSQL_CLIENT
 #endif
 #include <my_config.h>
@@ -77,7 +77,7 @@
 #define WF_SUPPORTED
 #endif
 
-#if defined(CTE_SUPPORTED)
+#if defined (CTE_SUPPORTED)
 // We need to be able to access private data of With_element that has no
 // public access methods. So, we use this very questionable method of
 // making the private parts public. Ok, as qc_myselembedded is only
@@ -98,14 +98,14 @@ typedef struct name_mapping
 
 static NAME_MAPPING function_name_mappings_default[] =
 {
-    { NULL, NULL }
+    {NULL, NULL}
 };
 
 static NAME_MAPPING function_name_mappings_oracle[] =
 {
-    { "concat_operator_oracle", "concat" },
-    { "case", "decode" },
-    { NULL, NULL }
+    {"concat_operator_oracle", "concat"},
+    {"case",                   "decode"},
+    {NULL,                     NULL    }
 };
 
 static const char* map_function_name(NAME_MAPPING* function_name_mappings, const char* from)
@@ -128,43 +128,43 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
     return to ? to : from;
 }
 
-#define MYSQL_COM_QUERY_HEADER_SIZE 5 /*< 3 bytes size, 1 sequence, 1 command */
-#define MAX_QUERYBUF_SIZE 2048
+#define MYSQL_COM_QUERY_HEADER_SIZE 5   /*< 3 bytes size, 1 sequence, 1 command */
+#define MAX_QUERYBUF_SIZE           2048
 typedef struct parsing_info_st : public QC_STMT_INFO
 {
-    void* pi_handle; /*< parsing info object pointer */
-    char* pi_query_plain_str; /*< query as plain string */
-    void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
-    QC_FIELD_INFO* field_infos;
-    size_t field_infos_len;
-    size_t field_infos_capacity;
+    void* pi_handle;            /*< parsing info object pointer */
+    char* pi_query_plain_str;   /*< query as plain string */
+    void (* pi_done_fp)(void*); /*< clean-up function for parsing info */
+    QC_FIELD_INFO*    field_infos;
+    size_t            field_infos_len;
+    size_t            field_infos_capacity;
     QC_FUNCTION_INFO* function_infos;
-    size_t function_infos_len;
-    size_t function_infos_capacity;
-    GWBUF* preparable_stmt;
+    size_t            function_infos_len;
+    size_t            function_infos_capacity;
+    GWBUF*            preparable_stmt;
     qc_parse_result_t result;
-    int32_t type_mask;
-    NAME_MAPPING* function_name_mappings;
+    int32_t           type_mask;
+    NAME_MAPPING*     function_name_mappings;
 } parsing_info_t;
 
-#define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
+#define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
 
-static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
+static THD*          get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
-static bool create_parse_tree(THD* thd);
-static uint32_t resolve_query_type(parsing_info_t*, THD* thd);
-static bool skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
+static bool          create_parse_tree(THD* thd);
+static uint32_t      resolve_query_type(parsing_info_t*, THD* thd);
+static bool          skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
-static int is_autocommit_stmt(LEX* lex);
-static parsing_info_t* parsing_info_init(void (*donefun)(void *));
-static void parsing_info_set_plain_str(void* ptr, char* str);
+static int             is_autocommit_stmt(LEX* lex);
+static parsing_info_t* parsing_info_init(void (* donefun)(void*));
+static void            parsing_info_set_plain_str(void* ptr, char* str);
 /** Free THD context and close MYSQL */
-static void parsing_info_done(void* ptr);
+static void        parsing_info_done(void* ptr);
 static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
-static bool ensure_query_is_parsed(GWBUF* query);
-static bool parse_query(GWBUF* querybuf);
-static bool query_is_parsed(GWBUF* buf);
-int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+static bool        ensure_query_is_parsed(GWBUF* query);
+static bool        parse_query(GWBUF* querybuf);
+static bool        query_is_parsed(GWBUF* buf);
+int32_t            qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos);
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
 inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
@@ -234,7 +234,7 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         MXB_AT_DEBUG(int rv);
 
-        MXB_AT_DEBUG(rv = )pthread_mutex_lock(&this_unit.sql_mode_mutex);
+        MXB_AT_DEBUG(rv = ) pthread_mutex_lock(&this_unit.sql_mode_mutex);
         mxb_assert(rv == 0);
 
         if (this_thread.sql_mode == QC_SQL_MODE_ORACLE)
@@ -248,7 +248,7 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         parsed = parse_query(query);
 
-        MXB_AT_DEBUG(rv = )pthread_mutex_unlock(&this_unit.sql_mode_mutex);
+        MXB_AT_DEBUG(rv = ) pthread_mutex_unlock(&this_unit.sql_mode_mutex);
         mxb_assert(rv == 0);
 
         if (!parsed)
@@ -314,12 +314,12 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 
         if (pi != NULL)
         {
-            mysql = (MYSQL *) pi->pi_handle;
+            mysql = (MYSQL*) pi->pi_handle;
 
             /** Find out the query type */
             if (mysql != NULL)
             {
-                *type_mask = resolve_query_type(pi, (THD *) mysql->thd);
+                *type_mask = resolve_query_type(pi, (THD*) mysql->thd);
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
                 // If in 10.3 mode we need to ensure that sequence related functions
                 // are taken into account. That we can ensure by querying for the fields.
@@ -379,14 +379,16 @@ static bool parse_query(GWBUF* querybuf)
 
     /** Extract query and copy it to different buffer */
     data = (uint8_t*) GWBUF_DATA(querybuf);
-    len = MYSQL_GET_PAYLOAD_LEN(data) - 1; /*< distract 1 for packet type byte */
+    len = MYSQL_GET_PAYLOAD_LEN(data) - 1;      /*< distract 1 for packet type byte */
 
 
-    if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char *) malloc(len + 1)) == NULL)
+    if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char*) malloc(len + 1)) == NULL)
     {
         /** Free parsing info data */
         MXS_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
-                  len, query_str, GWBUF_LENGTH(querybuf));
+                  len,
+                  query_str,
+                  GWBUF_LENGTH(querybuf));
         parsing_info_done(pi);
         succp = false;
         goto retblock;
@@ -397,7 +399,7 @@ static bool parse_query(GWBUF* querybuf)
     parsing_info_set_plain_str(pi, query_str);
 
     /** Get one or create new THD object to be use in parsing */
-    thd = get_or_create_thd_for_parsing((MYSQL *) pi->pi_handle, query_str);
+    thd = get_or_create_thd_for_parsing((MYSQL*) pi->pi_handle, query_str);
 
     if (thd == NULL)
     {
@@ -420,7 +422,7 @@ static bool parse_query(GWBUF* querybuf)
     /** Add complete parsing info struct to the query buffer */
     gwbuf_add_buffer_object(querybuf,
                             GWBUF_PARSING_INFO,
-                            (void *) pi,
+                            (void*) pi,
                             parsing_info_done);
 
     succp = true;
@@ -438,7 +440,7 @@ retblock:
  */
 static bool query_is_parsed(GWBUF* buf)
 {
-    return (buf != NULL && GWBUF_IS_PARSED(buf));
+    return buf != NULL && GWBUF_IS_PARSED(buf);
 }
 
 /**
@@ -471,7 +473,7 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
      * NOTE: Instead of creating new every time, THD instance could
      * be get from a pool of them.
      */
-    thd = (THD *) create_embedded_thd(client_flags);
+    thd = (THD*) create_embedded_thd(client_flags);
 
     if (thd == NULL)
     {
@@ -639,7 +641,7 @@ bool is_set_specific(const char* s)
         ++s;
     }
 
-    if (s - token == 3) // Might be "set"
+    if (s - token == 3)     // Might be "set"
     {
         if (strncasecmp(token, "set", 3) == 0)
         {
@@ -656,7 +658,7 @@ bool is_set_specific(const char* s)
                 ++s;
             }
 
-            if (s - token == 4) // Might be "role"
+            if (s - token == 4)     // Might be "role"
             {
                 if (strncasecmp(token, "role", 4) == 0)
                 {
@@ -664,7 +666,7 @@ bool is_set_specific(const char* s)
                     rv = true;
                 }
             }
-            else if (s - token == 5) // Might be "names"
+            else if (s - token == 5)    // Might be "names"
             {
                 if (strncasecmp(token, "names", 5) == 0)
                 {
@@ -672,7 +674,7 @@ bool is_set_specific(const char* s)
                     rv = true;
                 }
             }
-            else if (s - token == 8) // Might be "password
+            else if (s - token == 8)    // Might be "password
             {
                 if (strncasecmp(token, "password", 8) == 0)
                 {
@@ -680,7 +682,7 @@ bool is_set_specific(const char* s)
                     rv = true;
                 }
             }
-            else if (s - token == 9) // Might be "character"
+            else if (s - token == 9)    // Might be "character"
             {
                 if (strncasecmp(token, "character", 9) == 0)
                 {
@@ -709,11 +711,11 @@ bool is_set_specific(const char* s)
  * the resulting type may be different.
  *
  */
-static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
+static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 {
     qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     uint32_t type = QUERY_TYPE_UNKNOWN;
-    int set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
+    int set_autocommit_stmt = -1;   /*< -1 no, 0 disable, 1 enable */
     LEX* lex;
     Item* item;
     /**
@@ -723,7 +725,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
      * When force_data_modify_op_replication is TRUE, gateway distributes
      * all write operations to all nodes.
      */
-#if defined(NOT_IN_USE)
+#if defined (NOT_IN_USE)
     bool force_data_modify_op_replication;
     force_data_modify_op_replication = FALSE;
 #endif /* NOT_IN_USE */
@@ -748,13 +750,13 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
     {
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {
-            if (sql_command_flags[lex->sql_command] &
-                CF_IMPLICT_COMMIT_BEGIN)
+            if (sql_command_flags[lex->sql_command]
+                & CF_IMPLICT_COMMIT_BEGIN)
             {
                 MXS_INFO("Implicit COMMIT before executing the next command.");
             }
-            else if (sql_command_flags[lex->sql_command] &
-                     CF_IMPLICIT_COMMIT_END)
+            else if (sql_command_flags[lex->sql_command]
+                     & CF_IMPLICIT_COMMIT_END)
             {
                 MXS_INFO("Implicit COMMIT after executing the next command.");
             }
@@ -840,7 +842,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                 List_iterator<set_var_base> ilist(lex->var_list);
                 size_t n = 0;
 
-                while (set_var_base *var = ilist++)
+                while (set_var_base* var = ilist++)
                 {
                     if (var->is_system())
                     {
@@ -876,13 +878,13 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
      *   GRANT, REVOKE, OPTIMIZE, CREATE|ALTER|DROP FUNCTION|PROCEDURE,
      *   CREATE SPFUNCTION, INSTALL|UNINSTALL PLUGIN
      */
-    if (is_log_table_write_query(lex->sql_command) ||
-        is_update_query(lex->sql_command))
+    if (is_log_table_write_query(lex->sql_command)
+        || is_update_query(lex->sql_command))
     {
-#if defined(NOT_IN_USE)
+#if defined (NOT_IN_USE)
 
-        if (thd->variables.sql_log_bin == 0 &&
-            force_data_modify_op_replication)
+        if (thd->variables.sql_log_bin == 0
+            && force_data_modify_op_replication)
         {
             /** Not replicated */
             type |= QUERY_TYPE_SESSION_WRITE;
@@ -891,12 +893,12 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
 #endif /* NOT_IN_USE */
         {
             /** Written to binlog, that is, replicated except tmp tables */
-            type |= QUERY_TYPE_WRITE; /*< to master */
+            type |= QUERY_TYPE_WRITE;   /*< to master */
 
-            if (lex->sql_command == SQLCOM_CREATE_TABLE &&
-                (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE))
+            if (lex->sql_command == SQLCOM_CREATE_TABLE
+                && (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE))
             {
-                type |= QUERY_TYPE_CREATE_TMP_TABLE; /*< remember in router */
+                type |= QUERY_TYPE_CREATE_TMP_TABLE;    /*< remember in router */
             }
         }
     }
@@ -986,224 +988,224 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         break;
     }
 
-#if defined(UPDATE_VAR_SUPPORT)
+#if defined (UPDATE_VAR_SUPPORT)
 
     if (QTYPE_LESS_RESTRICTIVE_THAN_WRITE(type))
 #endif
-        // TODO: This test is meaningless, since at this point
-        // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
-        if (qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN) ||
-            qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
-            qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-            qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-            qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-            qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    // TODO: This test is meaningless, since at this point
+    // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
+    if (qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)
+        || qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ)
+        || qc_query_is_type(qtype, QUERY_TYPE_READ)
+        || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ)
+        || qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ)
+        || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
+    {
+        /**
+         * These values won't change qtype more restrictive than write.
+         * UDFs and procedures could possibly cause session-wide write,
+         * but unless their content is replicated this is a limitation
+         * of this implementation.
+         * In other words : UDFs and procedures are not allowed to
+         * perform writes which are not replicated but need to repeat
+         * in every node.
+         * It is not sure if such statements exist. vraa 25.10.13
+         */
+
+        /**
+         * Search for system functions, UDFs and stored procedures.
+         */
+        for (item = thd->free_list; item != NULL; item = item->next)
         {
-            /**
-             * These values won't change qtype more restrictive than write.
-             * UDFs and procedures could possibly cause session-wide write,
-             * but unless their content is replicated this is a limitation
-             * of this implementation.
-             * In other words : UDFs and procedures are not allowed to
-             * perform writes which are not replicated but need to repeat
-             * in every node.
-             * It is not sure if such statements exist. vraa 25.10.13
-             */
+            Item::Type itype;
 
-            /**
-             * Search for system functions, UDFs and stored procedures.
-             */
-            for (item = thd->free_list; item != NULL; item = item->next)
+            itype = item->type();
+
+            if (itype == Item::SUBSELECT_ITEM)
             {
-                Item::Type itype;
+                continue;
+            }
+            else if (itype == Item::FUNC_ITEM)
+            {
+                int func_qtype = QUERY_TYPE_UNKNOWN;
+                /**
+                 * Item types:
+                 * FIELD_ITEM = 0, FUNC_ITEM,
+                 * SUM_FUNC_ITEM,  STRING_ITEM,    INT_ITEM,
+                 * REAL_ITEM,      NULL_ITEM,      VARBIN_ITEM,
+                 * COPY_STR_ITEM,  FIELD_AVG_ITEM,
+                 * DEFAULT_VALUE_ITEM,             PROC_ITEM,
+                 * COND_ITEM,      REF_ITEM,       FIELD_STD_ITEM,
+                 * FIELD_VARIANCE_ITEM,
+                 * INSERT_VALUE_ITEM,
+                 * SUBSELECT_ITEM, ROW_ITEM,       CACHE_ITEM,
+                 * TYPE_HOLDER,    PARAM_ITEM,
+                 * TRIGGER_FIELD_ITEM,             DECIMAL_ITEM,
+                 * XPATH_NODESET,  XPATH_NODESET_CMP,
+                 * VIEW_FIXER_ITEM,
+                 * EXPR_CACHE_ITEM == 27
+                 **/
 
-                itype = item->type();
+                Item_func::Functype ftype;
+                ftype = ((Item_func*) item)->functype();
 
-                if (itype == Item::SUBSELECT_ITEM)
+                /**
+                 * Item_func types:
+                 *
+                 * UNKNOWN_FUNC = 0,EQ_FUNC,      EQUAL_FUNC,
+                 * NE_FUNC,         LT_FUNC,      LE_FUNC,
+                 * GE_FUNC,         GT_FUNC,      FT_FUNC,
+                 * LIKE_FUNC == 10, ISNULL_FUNC,  ISNOTNULL_FUNC,
+                 * COND_AND_FUNC,   COND_OR_FUNC, XOR_FUNC,
+                 * BETWEEN,         IN_FUNC,
+                 * MULT_EQUAL_FUNC, INTERVAL_FUNC,
+                 * ISNOTNULLTEST_FUNC == 20,
+                 * SP_EQUALS_FUNC,  SP_DISJOINT_FUNC,
+                 * SP_INTERSECTS_FUNC,
+                 * SP_TOUCHES_FUNC, SP_CROSSES_FUNC,
+                 * SP_WITHIN_FUNC,  SP_CONTAINS_FUNC,
+                 * SP_OVERLAPS_FUNC,
+                 * SP_STARTPOINT,   SP_ENDPOINT == 30,
+                 * SP_EXTERIORRING, SP_POINTN,    SP_GEOMETRYN,
+                 * SP_INTERIORRINGN,NOT_FUNC,     NOT_ALL_FUNC,
+                 * NOW_FUNC,        TRIG_COND_FUNC,
+                 * SUSERVAR_FUNC,   GUSERVAR_FUNC == 40,
+                 * COLLATE_FUNC,    EXTRACT_FUNC,
+                 * CHAR_TYPECAST_FUNC,
+                 * FUNC_SP,         UDF_FUNC,     NEG_FUNC,
+                 * GSYSVAR_FUNC == 47
+                 **/
+                switch (ftype)
                 {
-                    continue;
-                }
-                else if (itype == Item::FUNC_ITEM)
-                {
-                    int func_qtype = QUERY_TYPE_UNKNOWN;
+                case Item_func::FUNC_SP:
                     /**
-                     * Item types:
-                     * FIELD_ITEM = 0, FUNC_ITEM,
-                     * SUM_FUNC_ITEM,  STRING_ITEM,    INT_ITEM,
-                     * REAL_ITEM,      NULL_ITEM,      VARBIN_ITEM,
-                     * COPY_STR_ITEM,  FIELD_AVG_ITEM,
-                     * DEFAULT_VALUE_ITEM,             PROC_ITEM,
-                     * COND_ITEM,      REF_ITEM,       FIELD_STD_ITEM,
-                     * FIELD_VARIANCE_ITEM,
-                     * INSERT_VALUE_ITEM,
-                     * SUBSELECT_ITEM, ROW_ITEM,       CACHE_ITEM,
-                     * TYPE_HOLDER,    PARAM_ITEM,
-                     * TRIGGER_FIELD_ITEM,             DECIMAL_ITEM,
-                     * XPATH_NODESET,  XPATH_NODESET_CMP,
-                     * VIEW_FIXER_ITEM,
-                     * EXPR_CACHE_ITEM == 27
-                     **/
+                     * An unknown (for maxscale) function / sp
+                     * belongs to this category.
+                     */
+                    func_qtype |= QUERY_TYPE_WRITE;
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "functype FUNC_SP, stored proc "
+                              "or unknown function.",
+                              pthread_self());
+                    break;
 
-                    Item_func::Functype ftype;
-                    ftype = ((Item_func*) item)->functype();
+                case Item_func::UDF_FUNC:
+                    func_qtype |= QUERY_TYPE_WRITE;
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "functype UDF_FUNC, user-defined "
+                              "function.",
+                              pthread_self());
+                    break;
 
-                    /**
-                     * Item_func types:
-                     *
-                     * UNKNOWN_FUNC = 0,EQ_FUNC,      EQUAL_FUNC,
-                     * NE_FUNC,         LT_FUNC,      LE_FUNC,
-                     * GE_FUNC,         GT_FUNC,      FT_FUNC,
-                     * LIKE_FUNC == 10, ISNULL_FUNC,  ISNOTNULL_FUNC,
-                     * COND_AND_FUNC,   COND_OR_FUNC, XOR_FUNC,
-                     * BETWEEN,         IN_FUNC,
-                     * MULT_EQUAL_FUNC, INTERVAL_FUNC,
-                     * ISNOTNULLTEST_FUNC == 20,
-                     * SP_EQUALS_FUNC,  SP_DISJOINT_FUNC,
-                     * SP_INTERSECTS_FUNC,
-                     * SP_TOUCHES_FUNC, SP_CROSSES_FUNC,
-                     * SP_WITHIN_FUNC,  SP_CONTAINS_FUNC,
-                     * SP_OVERLAPS_FUNC,
-                     * SP_STARTPOINT,   SP_ENDPOINT == 30,
-                     * SP_EXTERIORRING, SP_POINTN,    SP_GEOMETRYN,
-                     * SP_INTERIORRINGN,NOT_FUNC,     NOT_ALL_FUNC,
-                     * NOW_FUNC,        TRIG_COND_FUNC,
-                     * SUSERVAR_FUNC,   GUSERVAR_FUNC == 40,
-                     * COLLATE_FUNC,    EXTRACT_FUNC,
-                     * CHAR_TYPECAST_FUNC,
-                     * FUNC_SP,         UDF_FUNC,     NEG_FUNC,
-                     * GSYSVAR_FUNC == 47
-                     **/
-                    switch (ftype)
+                case Item_func::NOW_FUNC:
+                    // If this is part of a CREATE TABLE, then local read is not
+                    // applicable.
+                    if (lex->sql_command != SQLCOM_CREATE_TABLE)
                     {
-                    case Item_func::FUNC_SP:
-                        /**
-                         * An unknown (for maxscale) function / sp
-                         * belongs to this category.
-                         */
-                        func_qtype |= QUERY_TYPE_WRITE;
+                        func_qtype |= QUERY_TYPE_LOCAL_READ;
                         MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype FUNC_SP, stored proc "
-                                  "or unknown function.",
+                                  "functype NOW_FUNC, could be "
+                                  "executed in MaxScale.",
                                   pthread_self());
-                        break;
+                    }
+                    break;
 
-                    case Item_func::UDF_FUNC:
-                        func_qtype |= QUERY_TYPE_WRITE;
-                        MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype UDF_FUNC, user-defined "
-                                  "function.",
-                                  pthread_self());
-                        break;
+                /** System session variable */
+                case Item_func::GSYSVAR_FUNC:
+                    {
+                        const char* name;
+                        size_t length;
+                        get_string_and_length(item->name, &name, &length);
 
-                    case Item_func::NOW_FUNC:
-                        // If this is part of a CREATE TABLE, then local read is not
-                        // applicable.
-                        if (lex->sql_command != SQLCOM_CREATE_TABLE)
-                        {
-                            func_qtype |= QUERY_TYPE_LOCAL_READ;
-                            MXS_DEBUG("%lu [resolve_query_type] "
-                                      "functype NOW_FUNC, could be "
-                                      "executed in MaxScale.",
-                                      pthread_self());
-                        }
-                        break;
+                        const char last_insert_id[] = "@@last_insert_id";
+                        const char identity[] = "@@identity";
 
-                    /** System session variable */
-                    case Item_func::GSYSVAR_FUNC:
-                        {
-                            const char* name;
-                            size_t length;
-                            get_string_and_length(item->name, &name, &length);
-
-                            const char last_insert_id[] = "@@last_insert_id";
-                            const char identity[] = "@@identity";
-
-                            if (name &&
-                                (((length == sizeof(last_insert_id) - 1) &&
-                                  (strcasecmp(name, last_insert_id) == 0)) ||
-                                 ((length == sizeof(identity) - 1) &&
-                                  (strcasecmp(name, identity) == 0))))
-                            {
-                                func_qtype |= QUERY_TYPE_MASTER_READ;
-                            }
-                            else
-                            {
-                                func_qtype |= QUERY_TYPE_SYSVAR_READ;
-                            }
-                            MXS_DEBUG("%lu [resolve_query_type] "
-                                      "functype GSYSVAR_FUNC, system "
-                                      "variable read.",
-                                      pthread_self());
-                        }
-                        break;
-
-                    /** User-defined variable read */
-                    case Item_func::GUSERVAR_FUNC:
-                        func_qtype |= QUERY_TYPE_USERVAR_READ;
-                        MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype GUSERVAR_FUNC, user "
-                                  "variable read.",
-                                  pthread_self());
-                        break;
-
-                    /** User-defined variable modification */
-                    case Item_func::SUSERVAR_FUNC:
-                        func_qtype |= QUERY_TYPE_USERVAR_WRITE;
-                        MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype SUSERVAR_FUNC, user "
-                                  "variable write.",
-                                  pthread_self());
-                        break;
-
-                    case Item_func::UNKNOWN_FUNC:
-
-                        if (((Item_func*) item)->func_name() != NULL &&
-                            strcmp((char*) ((Item_func*) item)->func_name(), "last_insert_id") == 0)
+                        if (name
+                            && (((length == sizeof(last_insert_id) - 1)
+                                 && (strcasecmp(name, last_insert_id) == 0))
+                                || ((length == sizeof(identity) - 1)
+                                    && (strcasecmp(name, identity) == 0))))
                         {
                             func_qtype |= QUERY_TYPE_MASTER_READ;
                         }
                         else
                         {
-                            func_qtype |= QUERY_TYPE_READ;
+                            func_qtype |= QUERY_TYPE_SYSVAR_READ;
                         }
-
-                        /**
-                         * Many built-in functions are of this
-                         * type, for example, rand(), soundex(),
-                         * repeat() .
-                         */
                         MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype UNKNOWN_FUNC, "
-                                  "typically some system function.",
+                                  "functype GSYSVAR_FUNC, system "
+                                  "variable read.",
                                   pthread_self());
-                        break;
-
-                    default:
-                        MXS_DEBUG("%lu [resolve_query_type] "
-                                  "Functype %d.",
-                                  pthread_self(),
-                                  ftype);
-                        break;
-                    } /**< switch */
-
-                    /**< Set new query type */
-                    type |= func_qtype;
-                }
-
-#if defined(UPDATE_VAR_SUPPORT)
-
-                /**
-                 * Write is as restrictive as it gets due functions,
-                 * so break.
-                 */
-                if ((type & QUERY_TYPE_WRITE) == QUERY_TYPE_WRITE)
-                {
+                    }
                     break;
-                }
+
+                /** User-defined variable read */
+                case Item_func::GUSERVAR_FUNC:
+                    func_qtype |= QUERY_TYPE_USERVAR_READ;
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "functype GUSERVAR_FUNC, user "
+                              "variable read.",
+                              pthread_self());
+                    break;
+
+                /** User-defined variable modification */
+                case Item_func::SUSERVAR_FUNC:
+                    func_qtype |= QUERY_TYPE_USERVAR_WRITE;
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "functype SUSERVAR_FUNC, user "
+                              "variable write.",
+                              pthread_self());
+                    break;
+
+                case Item_func::UNKNOWN_FUNC:
+
+                    if (((Item_func*) item)->func_name() != NULL
+                        && strcmp((char*) ((Item_func*) item)->func_name(), "last_insert_id") == 0)
+                    {
+                        func_qtype |= QUERY_TYPE_MASTER_READ;
+                    }
+                    else
+                    {
+                        func_qtype |= QUERY_TYPE_READ;
+                    }
+
+                    /**
+                     * Many built-in functions are of this
+                     * type, for example, rand(), soundex(),
+                     * repeat() .
+                     */
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "functype UNKNOWN_FUNC, "
+                              "typically some system function.",
+                              pthread_self());
+                    break;
+
+                default:
+                    MXS_DEBUG("%lu [resolve_query_type] "
+                              "Functype %d.",
+                              pthread_self(),
+                              ftype);
+                    break;
+                }       /**< switch */
+
+                /**< Set new query type */
+                type |= func_qtype;
+            }
+
+#if defined (UPDATE_VAR_SUPPORT)
+
+            /**
+             * Write is as restrictive as it gets due functions,
+             * so break.
+             */
+            if ((type & QUERY_TYPE_WRITE) == QUERY_TYPE_WRITE)
+            {
+                break;
+            }
 
 #endif
-            } /**< for */
-        } /**< if */
+        }   /**< for */
+    }       /**< if */
 
 return_qtype:
     qtype = (qc_query_type_t) type;
@@ -1277,7 +1279,7 @@ static int is_autocommit_stmt(LEX* lex)
     struct list_node* node;
     set_var* setvar;
     int rc = -1;
-    static char target[8]; /*< for converted string */
+    static char target[8];      /*< for converted string */
     Item* item = NULL;
 
     node = lex->var_list.first_node();
@@ -1288,7 +1290,7 @@ static int is_autocommit_stmt(LEX* lex)
         goto return_rc;
     }
 
-    do /*< Search for the last occurrence of 'autocommit' */
+    do      /*< Search for the last occurrence of 'autocommit' */
     {
         if ((sys_var*) setvar->var == Sys_autocommit_ptr)
         {
@@ -1299,9 +1301,9 @@ static int is_autocommit_stmt(LEX* lex)
     }
     while ((setvar = (set_var*) node->info) != NULL);
 
-    if (item != NULL) /*< found autocommit command */
+    if (item != NULL)   /*< found autocommit command */
     {
-        if (item->type() == Item::INT_ITEM) /*< '0' or '1' */
+        if (item->type() == Item::INT_ITEM)     /*< '0' or '1' */
         {
             rc = item->val_int();
 
@@ -1310,9 +1312,9 @@ static int is_autocommit_stmt(LEX* lex)
                 rc = -1;
             }
         }
-        else if (item->type() == Item::STRING_ITEM) /*< 'on' or 'off' */
+        else if (item->type() == Item::STRING_ITEM)     /*< 'on' or 'off' */
         {
-            String str(target, sizeof (target), system_charset_info);
+            String str(target, sizeof(target), system_charset_info);
             String* res = item->val_str(&str);
 
             if ((rc = find_type(&bool_typelib, res->ptr(), res->length(), false)))
@@ -1332,24 +1334,27 @@ return_rc:
     return rc;
 }
 
-#if defined(NOT_USED)
+#if defined (NOT_USED)
 
 char* qc_get_stmtname(GWBUF* buf)
 {
     MYSQL* mysql;
 
-    if (buf == NULL ||
-        buf->gwbuf_bufobj == NULL ||
-        buf->gwbuf_bufobj->bo_data == NULL ||
-        (mysql = (MYSQL *) ((parsing_info_t *) buf->gwbuf_bufobj->bo_data)->pi_handle) == NULL ||
-        mysql->thd == NULL ||
-        (THD *) (mysql->thd))->lex == NULL ||
-        (THD *) (mysql->thd))->lex->prepared_stmt_name == NULL)
+    if (buf == NULL
+        || buf->gwbuf_bufobj == NULL
+        || buf->gwbuf_bufobj->bo_data == NULL
+        || (mysql = (MYSQL*) ((parsing_info_t*) buf->gwbuf_bufobj->bo_data)->pi_handle) == NULL
+        || mysql->thd == NULL
+        || (THD*) (mysql->thd))
     {
-        return NULL;
-    }
+        ->lex == NULL
+        || (THD*) (mysql->thd))->lex->prepared_stmt_name == NULL)
+        {
+            return NULL;
+        }
 
-    return ((THD *) (mysql->thd))->lex->prepared_stmt_name.str;
+        return ((THD*) (mysql->thd))->lex->prepared_stmt_name.str;
+    }
 }
 #endif
 
@@ -1362,11 +1367,11 @@ char* qc_get_stmtname(GWBUF* buf)
  */
 parsing_info_t* get_pinfo(GWBUF* querybuf)
 {
-    parsing_info_t *pi = NULL;
+    parsing_info_t* pi = NULL;
 
     if ((querybuf != NULL) && GWBUF_IS_PARSED(querybuf))
     {
-        pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
+        pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
     }
 
     return pi;
@@ -1374,9 +1379,9 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 
 LEX* get_lex(parsing_info_t* pi)
 {
-    MYSQL* mysql = (MYSQL *) pi->pi_handle;
+    MYSQL* mysql = (MYSQL*) pi->pi_handle;
     mxb_assert(mysql);
-    THD* thd = (THD *) mysql->thd;
+    THD* thd = (THD*) mysql->thd;
     mxb_assert(thd);
 
     return thd->lex;
@@ -1396,9 +1401,9 @@ LEX* get_lex(GWBUF* querybuf)
 
     if (pi)
     {
-        MYSQL* mysql = (MYSQL *) pi->pi_handle;
+        MYSQL* mysql = (MYSQL*) pi->pi_handle;
         mxb_assert(mysql);
-        THD* thd = (THD *) mysql->thd;
+        THD* thd = (THD*) mysql->thd;
         mxb_assert(thd);
         lex = thd->lex;
     }
@@ -1421,10 +1426,10 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr)
         return NULL;
     }
 
-    TABLE_LIST *tbl = lex->current_select->table_list.first;
+    TABLE_LIST* tbl = lex->current_select->table_list.first;
 
-    if (tbl && tbl->schema_select_lex && tbl->schema_select_lex->table_list.elements &&
-        lex->sql_command != SQLCOM_SHOW_KEYS)
+    if (tbl && tbl->schema_select_lex && tbl->schema_select_lex->table_list.elements
+        && lex->sql_command != SQLCOM_SHOW_KEYS)
     {
         /**
          * Some statements e.g. EXPLAIN or SHOW COLUMNS give `information_schema`
@@ -1472,7 +1477,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
     LEX* lex;
     TABLE_LIST* tbl;
     int i = 0, currtblsz = 0;
-    char **tables = NULL, **tmp = NULL;
+    char** tables = NULL, ** tmp = NULL;
 
     if (querybuf == NULL || tblsize == NULL)
     {
@@ -1504,7 +1509,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
         {
             if (i >= currtblsz)
             {
-                tmp = (char**) malloc(sizeof (char*) * (currtblsz * 2 + 1));
+                tmp = (char**) malloc(sizeof(char*) * (currtblsz * 2 + 1));
 
                 if (tmp)
                 {
@@ -1525,18 +1530,18 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
 
             if (tmp != NULL)
             {
-                char *catnm = NULL;
+                char* catnm = NULL;
 
                 if (fullnames)
                 {
-                    if (tbl->db &&
-                        (strcmp(tbl->db, "skygw_virtual") != 0) &&
-                        (strcmp(tbl->table_name, "*") != 0))
+                    if (tbl->db
+                        && (strcmp(tbl->db, "skygw_virtual") != 0)
+                        && (strcmp(tbl->table_name, "*") != 0))
                     {
-                        catnm = (char*) calloc(strlen(tbl->db) +
-                                               strlen(tbl->table_name) +
-                                               2,
-                                               sizeof (char));
+                        catnm = (char*) calloc(strlen(tbl->db)
+                                               + strlen(tbl->table_name)
+                                               + 2,
+                                               sizeof(char));
                         strcpy(catnm, tbl->db);
                         strcat(catnm, ".");
                         strcat(catnm, tbl->table_name);
@@ -1561,7 +1566,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
                         ++j;
                     }
 
-                    if (j == i) // Not found
+                    if (j == i)     // Not found
                     {
                         tables[i++] = catnm;
                     }
@@ -1573,10 +1578,10 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
 
                 tbl = tbl->next_local;
             }
-        } /*< while (tbl) */
+        }   /*< while (tbl) */
 
         lex->current_select = lex->current_select->next_select_in_list();
-    } /*< while(lex->current_select) */
+    }   /*< while(lex->current_select) */
 
 retblock:
     *tblsize = i;
@@ -1603,8 +1608,8 @@ int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, char** table_name)
 
     if (lex && (lex->sql_command == SQLCOM_CREATE_TABLE))
     {
-        if (lex->create_last_non_select_table &&
-            lex->create_last_non_select_table->table_name)
+        if (lex->create_last_non_select_table
+            && lex->create_last_non_select_table->table_name)
         {
             *table_name = strdup(lex->create_last_non_select_table->table_name);
         }
@@ -1671,7 +1676,7 @@ int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
  *
  * @return pointer to parsing information
  */
-static parsing_info_t* parsing_info_init(void (*donefun)(void *))
+static parsing_info_t* parsing_info_init(void (* donefun)(void*))
 {
     parsing_info_t* pi = NULL;
     MYSQL* mysql;
@@ -1700,7 +1705,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
     mysql->db = my_strdup(db, MYF(0));
     mysql->passwd = NULL;
 
-    pi = (parsing_info_t*) calloc(1, sizeof (parsing_info_t));
+    pi = (parsing_info_t*) calloc(1, sizeof(parsing_info_t));
 
     if (pi == NULL)
     {
@@ -1735,11 +1740,11 @@ static void parsing_info_done(void* ptr)
 
     if (ptr)
     {
-        pi = (parsing_info_t *) ptr;
+        pi = (parsing_info_t*) ptr;
 
         if (pi->pi_handle != NULL)
         {
-            MYSQL* mysql = (MYSQL *) pi->pi_handle;
+            MYSQL* mysql = (MYSQL*) pi->pi_handle;
 
             if (mysql->thd != NULL)
             {
@@ -1800,7 +1805,7 @@ static void parsing_info_done(void* ptr)
  */
 static void parsing_info_set_plain_str(void* ptr, char* str)
 {
-    parsing_info_t* pi = (parsing_info_t *) ptr;
+    parsing_info_t* pi = (parsing_info_t*) ptr;
 
     pi->pi_query_plain_str = str;
 }
@@ -1809,7 +1814,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 {
     LEX* lex;
     TABLE_LIST* tbl;
-    char **databases = NULL, **tmp = NULL;
+    char** databases = NULL, ** tmp = NULL;
     int currsz = 0, i = 0;
 
     if (!querybuf)
@@ -1856,7 +1861,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
                 if (i >= currsz)
                 {
                     tmp = (char**) realloc(databases,
-                                           sizeof (char*) * (currsz * 2 + 1));
+                                           sizeof(char*) * (currsz * 2 + 1));
 
                     if (tmp == NULL)
                     {
@@ -1874,7 +1879,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
                     ++j;
                 }
 
-                if (j == i) // Not found
+                if (j == i)     // Not found
                 {
                     databases[i++] = strdup(tbl->db);
                 }
@@ -2051,9 +2056,9 @@ int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
 
             if (!lex->describe)
             {
-                if ((lex->sql_command == SQLCOM_PREPARE) ||
-                    (lex->sql_command == SQLCOM_EXECUTE) ||
-                    (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
+                if ((lex->sql_command == SQLCOM_PREPARE)
+                    || (lex->sql_command == SQLCOM_EXECUTE)
+                    || (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
                 {
                     name = (char*)malloc(lex->prepared_stmt_name.length + 1);
                     if (name)
@@ -2110,7 +2115,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                         // Payload, starts with command.
                         *((unsigned char*)GWBUF_DATA(preperable_packet) + 4) = COM_QUERY;
                         // Is followed by the statement.
-                        char *s = (char*)GWBUF_DATA(preperable_packet) + 5;
+                        char* s = (char*)GWBUF_DATA(preperable_packet) + 5;
 
                         // We copy the statment, blindly replacing all '?':s with '0':s as
                         // otherwise the parsing of the preparable statement as a regular
@@ -2155,9 +2160,9 @@ static bool should_exclude(const char* name, List<Item>* excludep)
         size_t length;
         get_string_and_length(exclude_item->name, &exclude_name, &length);
 
-        if (exclude_name &&
-            (strlen(name) == length) &&
-            (strcasecmp(name, exclude_name) == 0))
+        if (exclude_name
+            && (strlen(name) == length)
+            && (strcasecmp(name, exclude_name) == 0))
         {
             exclude = true;
         }
@@ -2168,7 +2173,7 @@ static bool should_exclude(const char* name, List<Item>* excludep)
 
             if (exclude_name)
             {
-                ++exclude_name; // Char after the '.'
+                ++exclude_name;     // Char after the '.'
 
                 if (strcasecmp(name, exclude_name) == 0)
                 {
@@ -2200,9 +2205,9 @@ static void unalias_names(st_select_lex* select,
 
             while ((*to_table == from_table) && tbl)
             {
-                if (tbl->alias &&
-                    (strcasecmp(tbl->alias, from_table) == 0) &&
-                    (strcasecmp(tbl->table_name, "*") != 0))
+                if (tbl->alias
+                    && (strcasecmp(tbl->alias, from_table) == 0)
+                    && (strcasecmp(tbl->table_name, "*") != 0))
                 {
                     // The dummy default database "skygw_virtual" is not included.
                     if (tbl->db && *tbl->db && (strcmp(tbl->db, "skygw_virtual") != 0))
@@ -2221,7 +2226,7 @@ static void unalias_names(st_select_lex* select,
 }
 
 static void add_field_info(parsing_info_t* info,
-                           st_select_lex* select,
+                           st_select_lex*  select,
                            const char* database,
                            const char* table,
                            const char* column,
@@ -2231,7 +2236,7 @@ static void add_field_info(parsing_info_t* info,
 
     unalias_names(select, database, table, &database, &table);
 
-    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column };
+    QC_FIELD_INFO item = {(char*)database, (char*)table, (char*)column};
 
     size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
@@ -2251,9 +2256,9 @@ static void add_field_info(parsing_info_t* info,
                 {
                     break;
                 }
-                else if (item.database &&
-                         field_info->database &&
-                         (strcmp(item.database, field_info->database) == 0))
+                else if (item.database
+                         && field_info->database
+                         && (strcmp(item.database, field_info->database) == 0))
                 {
                     break;
                 }
@@ -2263,7 +2268,7 @@ static void add_field_info(parsing_info_t* info,
 
     QC_FIELD_INFO* field_infos = NULL;
 
-    if (i == info->field_infos_len) // If true, the field was not present already.
+    if (i == info->field_infos_len)     // If true, the field was not present already.
     {
         // If only a column is specified, but not a table or database and we
         // have a list of expressions that should be excluded, we check if the column
@@ -2431,7 +2436,7 @@ static void add_function_field_usage(st_select_lex* select,
             break;
 
         default:
-            //mxb_assert(!true);
+            // mxb_assert(!true);
             ;
         }
     }
@@ -2443,7 +2448,7 @@ static void add_function_field_usage(st_select_lex* select,
 {
     List_iterator<Item> ilist(sub_select->item_list);
 
-    while (Item *item = ilist++)
+    while (Item* item = ilist++)
     {
         if (item->type() == Item::FIELD_ITEM)
         {
@@ -2474,9 +2479,9 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
         if (info->function_infos_len == info->function_infos_capacity)
         {
             size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
-            QC_FUNCTION_INFO* function_infos =
-                (QC_FUNCTION_INFO*)realloc(info->function_infos,
-                                           capacity * sizeof(QC_FUNCTION_INFO));
+            QC_FUNCTION_INFO* function_infos
+                = (QC_FUNCTION_INFO*)realloc(info->function_infos,
+                                             capacity * sizeof(QC_FUNCTION_INFO));
             assert(function_infos);
 
             info->function_infos = function_infos;
@@ -2494,7 +2499,7 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
 }
 
 static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
-                                           st_select_lex* select,
+                                           st_select_lex*  select,
                                            const char* name,
                                            Item** items,
                                            int n_items)
@@ -2505,7 +2510,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 
     name = map_function_name(info->function_name_mappings, name);
 
-    QC_FUNCTION_INFO item = { (char*)name };
+    QC_FUNCTION_INFO item = {(char*)name};
 
     size_t i;
     for (i = 0; i < info->function_infos_len; ++i)
@@ -2549,7 +2554,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 }
 
 static void add_field_info(parsing_info_t* pi,
-                           st_select_lex* select,
+                           st_select_lex*  select,
                            Item_field* item,
                            List<Item>* excludep)
 {
@@ -2646,7 +2651,7 @@ static void add_field_info(parsing_info_t* pi,
 }
 
 static void add_field_info(parsing_info_t* pi,
-                           st_select_lex* select,
+                           st_select_lex*  select,
                            Item* item,
                            List<Item>* excludep)
 {
@@ -2698,18 +2703,18 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
 
     // We want to ignore functions that do not really appear as such in an
     // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
-    if ((strcasecmp(func_name, "decimal_typecast") == 0) ||
-        (strcasecmp(func_name, "cast_as_char") == 0) ||
-        (strcasecmp(func_name, "cast_as_date") == 0) ||
-        (strcasecmp(func_name, "cast_as_datetime") == 0) ||
-        (strcasecmp(func_name, "cast_as_time") == 0) ||
-        (strcasecmp(func_name, "cast_as_signed") == 0) ||
-        (strcasecmp(func_name, "cast_as_unsigned") == 0) ||
-        (strcasecmp(func_name, "get_user_var") == 0) ||
-        (strcasecmp(func_name, "get_system_var") == 0) ||
-        (strcasecmp(func_name, "not") == 0) ||
-        (strcasecmp(func_name, "set_user_var") == 0) ||
-        (strcasecmp(func_name, "set_system_var") == 0))
+    if ((strcasecmp(func_name, "decimal_typecast") == 0)
+        || (strcasecmp(func_name, "cast_as_char") == 0)
+        || (strcasecmp(func_name, "cast_as_date") == 0)
+        || (strcasecmp(func_name, "cast_as_datetime") == 0)
+        || (strcasecmp(func_name, "cast_as_time") == 0)
+        || (strcasecmp(func_name, "cast_as_signed") == 0)
+        || (strcasecmp(func_name, "cast_as_unsigned") == 0)
+        || (strcasecmp(func_name, "get_user_var") == 0)
+        || (strcasecmp(func_name, "get_system_var") == 0)
+        || (strcasecmp(func_name, "not") == 0)
+        || (strcasecmp(func_name, "set_user_var") == 0)
+        || (strcasecmp(func_name, "set_system_var") == 0))
     {
         rv = true;
     }
@@ -2718,8 +2723,8 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
     if (!rv)
     {
-        if ((strcasecmp(func_name, "lastval") == 0) ||
-            (strcasecmp(func_name, "nextval") == 0))
+        if ((strcasecmp(func_name, "lastval") == 0)
+            || (strcasecmp(func_name, "nextval") == 0))
         {
             pi->type_mask |= QUERY_TYPE_WRITE;
             rv = true;
@@ -2741,7 +2746,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
 }
 
 static void update_field_infos(parsing_info_t* pi,
-                               st_select_lex* select,
+                               st_select_lex*  select,
                                collect_source_t source,
                                Item* item,
                                List<Item>* excludep)
@@ -2753,7 +2758,7 @@ static void update_field_infos(parsing_info_t* pi,
             Item_cond* cond_item = static_cast<Item_cond*>(item);
             List_iterator<Item> ilist(*cond_item->argument_list());
 
-            while (Item *i = ilist++)
+            while (Item* i = ilist++)
             {
                 update_field_infos(pi, select, source, i, excludep);
             }
@@ -2812,28 +2817,28 @@ static void update_field_infos(parsing_info_t* pi,
             // From comment in Item_func_or_sum(server/sql/item.h) abount the
             // func_name() member function:
             /*
-              This method is used for debug purposes to print the name of an
-              item to the debug log. The second use of this method is as
-              a helper function of print() and error messages, where it is
-              applicable. To suit both goals it should return a meaningful,
-              distinguishable and sintactically correct string. This method
-              should not be used for runtime type identification, use enum
-              {Sum}Functype and Item_func::functype()/Item_sum::sum_func()
-              instead.
-              Added here, to the parent class of both Item_func and Item_sum.
-
-              NOTE: for Items inherited from Item_sum, func_name() return part of
-              function name till first argument (including '(') to make difference in
-              names for functions with 'distinct' clause and without 'distinct' and
-              also to make printing of items inherited from Item_sum uniform.
-            */
+             *  This method is used for debug purposes to print the name of an
+             *  item to the debug log. The second use of this method is as
+             *  a helper function of print() and error messages, where it is
+             *  applicable. To suit both goals it should return a meaningful,
+             *  distinguishable and sintactically correct string. This method
+             *  should not be used for runtime type identification, use enum
+             *  {Sum}Functype and Item_func::functype()/Item_sum::sum_func()
+             *  instead.
+             *  Added here, to the parent class of both Item_func and Item_sum.
+             *
+             *  NOTE: for Items inherited from Item_sum, func_name() return part of
+             *  function name till first argument (including '(') to make difference in
+             *  names for functions with 'distinct' clause and without 'distinct' and
+             *  also to make printing of items inherited from Item_sum uniform.
+             */
             // However, we have no option but to use it.
 
             const char* f = func_item->func_name();
 
-            char func_name[strlen(f) + 3 + 1]; // strlen(substring) - strlen(substr) from below.
+            char func_name[strlen(f) + 3 + 1];      // strlen(substring) - strlen(substr) from below.
             strcpy(func_name, f);
-            trim(func_name); // Sometimes the embedded parser leaves leading and trailing whitespace.
+            trim(func_name);    // Sometimes the embedded parser leaves leading and trailing whitespace.
 
             // Non native functions are surrounded by back-ticks, let's remove them.
             remove_surrounding_back_ticks(func_name);
@@ -2918,22 +2923,26 @@ static void update_field_infos(parsing_info_t* pi,
             {
             case Item_subselect::IN_SUBS:
                 fi = add_function_info(pi, select, "in", 0, 0);
+
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
                     Item_in_subselect* in_subselect_item = static_cast<Item_in_subselect*>(item);
 
-#if (((MYSQL_VERSION_MAJOR == 5) &&\
-      ((MYSQL_VERSION_MINOR > 5) ||\
-       ((MYSQL_VERSION_MINOR == 5) && (MYSQL_VERSION_PATCH >= 48))\
-      )\
-     ) ||\
-     (MYSQL_VERSION_MAJOR >= 10)\
-    )
+#if (((MYSQL_VERSION_MAJOR == 5)   \
+                    && ((MYSQL_VERSION_MINOR > 5)   \
+                    || ((MYSQL_VERSION_MINOR == 5) && (MYSQL_VERSION_PATCH >= 48)) \
+                                                       ) \
+                                                       )   \
+                    || (MYSQL_VERSION_MAJOR >= 10) \
+                        )
                     if (in_subselect_item->left_expr_orig)
                     {
-                        update_field_infos(pi, select, source, // TODO: Might be wrong select.
-                                           in_subselect_item->left_expr_orig, excludep);
+                        update_field_infos(pi,
+                                           select,
+                                           source,              // TODO: Might be wrong select.
+                                           in_subselect_item->left_expr_orig,
+                                           excludep);
 
                         if (subselect_item->substype() == Item_subselect::IN_SUBS)
                         {
@@ -2968,8 +2977,8 @@ static void update_field_infos(parsing_info_t* pi,
 
             case Item_subselect::EXISTS_SUBS:
                 {
-                    Item_exists_subselect* exists_subselect_item =
-                        static_cast<Item_exists_subselect*>(item);
+                    Item_exists_subselect* exists_subselect_item
+                        = static_cast<Item_exists_subselect*>(item);
 
                     st_select_lex* ssl = exists_subselect_item->get_select_lex();
                     if (ssl)
@@ -2985,7 +2994,7 @@ static void update_field_infos(parsing_info_t* pi,
             case Item_subselect::SINGLEROW_SUBS:
                 {
                     Item_singlerow_subselect* ss_item = static_cast<Item_singlerow_subselect*>(item);
-                    st_select_lex *ssl = ss_item->get_select_lex();
+                    st_select_lex* ssl = ss_item->get_select_lex();
 
                     update_field_infos(pi, get_lex(pi), ssl, excludep);
                 }
@@ -3026,7 +3035,7 @@ static void update_field_infos(parsing_info_t* pi,
 {
     List_iterator<Item> ilist(select->item_list);
 
-    while (Item *item = ilist++)
+    while (Item* item = ilist++)
     {
         update_field_infos(pi, select, COLLECT_SELECT, item, NULL);
     }
@@ -3046,17 +3055,20 @@ static void update_field_infos(parsing_info_t* pi,
 
     if (select->where)
     {
-        update_field_infos(pi, select, COLLECT_WHERE,
+        update_field_infos(pi,
+                           select,
+                           COLLECT_WHERE,
                            select->where,
                            &select->item_list);
     }
 
-#if defined(COLLECT_HAVING_AS_WELL)
+#if defined (COLLECT_HAVING_AS_WELL)
     // A HAVING clause can only refer to fields that already have been
     // mentioned. Consequently, they need not be collected.
     if (select->having)
     {
-        update_field_infos(pi, COLLECT_HAVING,
+        update_field_infos(pi,
+                           COLLECT_HAVING,
                            select->having,
                            0,
                            &select->item_list);
@@ -3067,7 +3079,7 @@ static void update_field_infos(parsing_info_t* pi,
 
     if (table_list)
     {
-        st_select_lex *sl = table_list->get_single_select();
+        st_select_lex* sl = table_list->get_single_select();
 
         if (sl)
         {
@@ -3121,7 +3133,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         if ((lex->sql_command == SQLCOM_UPDATE) || (lex->sql_command == SQLCOM_UPDATE_MULTI))
         {
             List_iterator<Item> ilist(lex->current_select->item_list);
-            Item *item = ilist++;
+            Item* item = ilist++;
 
             fi = get_function_info(pi, "=");
 
@@ -3179,10 +3191,10 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             }
         }
 
-        if ((lex->sql_command == SQLCOM_INSERT) ||
-            (lex->sql_command == SQLCOM_INSERT_SELECT) ||
-            (lex->sql_command == SQLCOM_REPLACE) ||
-            (lex->sql_command == SQLCOM_REPLACE_SELECT))
+        if ((lex->sql_command == SQLCOM_INSERT)
+            || (lex->sql_command == SQLCOM_INSERT_SELECT)
+            || (lex->sql_command == SQLCOM_REPLACE)
+            || (lex->sql_command == SQLCOM_REPLACE_SELECT))
         {
             List_iterator<Item> ilist(lex->field_list);
             Item* item = ilist++;
@@ -3208,7 +3220,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             if (lex->insert_list)
             {
                 List_iterator<Item> ilist(*lex->insert_list);
-                while (Item *item = ilist++)
+                while (Item* item = ilist++)
                 {
                     update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
                 }
@@ -3225,7 +3237,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         {
             if (lex->sql_command == SQLCOM_SET_OPTION)
             {
-#if defined(WAY_TO_DOWNCAST_SET_VAR_BASE_EXISTS)
+#if defined (WAY_TO_DOWNCAST_SET_VAR_BASE_EXISTS)
                 // The list of set_var_base contains the value of variables.
                 // However, the actual type is a derived type of set_var_base
                 // and there is no information using which we could do the
@@ -3247,7 +3259,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
             while (select)
             {
-                if (select->nest_level != 0) // Not the top-level select.
+                if (select->nest_level != 0)    // Not the top-level select.
                 {
                     update_field_infos(pi, lex, select, NULL);
                 }
@@ -3336,8 +3348,8 @@ const char* server_groups[] =
     NULL
 };
 
-const int OPTIONS_DATADIR_SIZE = 10 + PATH_MAX; // strlen("--datadir=");
-const int OPTIONS_LANGUAGE_SIZE = 11 + PATH_MAX; // strlen("--language=");
+const int OPTIONS_DATADIR_SIZE = 10 + PATH_MAX;     // strlen("--datadir=");
+const int OPTIONS_LANGUAGE_SIZE = 11 + PATH_MAX;    // strlen("--language=");
 
 char datadir_arg[OPTIONS_DATADIR_SIZE];
 char language_arg[OPTIONS_LANGUAGE_SIZE];
@@ -3348,18 +3360,17 @@ void configure_options(const char* datadir, const char* langdir)
     int rv;
 
     rv = snprintf(datadir_arg, OPTIONS_DATADIR_SIZE, "--datadir=%s", datadir);
-    mxb_assert(rv < OPTIONS_DATADIR_SIZE); // Ensured by create_datadir().
+    mxb_assert(rv < OPTIONS_DATADIR_SIZE);      // Ensured by create_datadir().
     server_options[IDX_DATADIR] = datadir_arg;
 
     rv = sprintf(language_arg, "--language=%s", langdir);
-    mxb_assert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_process_init().
+    mxb_assert(rv < OPTIONS_LANGUAGE_SIZE);     // Ensured by qc_process_init().
     server_options[IDX_LANGUAGE] = language_arg;
 
     // To prevent warning of unused variable when built in release mode,
     // when mxb_assert() turns into empty statement.
     (void)rv;
 }
-
 }
 
 int32_t qc_mysql_setup(qc_sql_mode_t sql_mode, const char* zArgs)
@@ -3374,7 +3385,8 @@ int32_t qc_mysql_setup(qc_sql_mode_t sql_mode, const char* zArgs)
     if (zArgs)
     {
         MXS_WARNING("'%s' provided as arguments, "
-                    "even though no arguments are supported.", zArgs);
+                    "even though no arguments are supported.",
+                    zArgs);
     }
 
     return QC_RESULT_OK;
@@ -3507,8 +3519,8 @@ extern "C"
             qc_mysql_get_server_version,
             qc_mysql_get_sql_mode,
             qc_mysql_set_sql_mode,
-            nullptr, // qc_info_dup not supported.
-            nullptr, // qc_info_close not supported.
+            nullptr,    // qc_info_dup not supported.
+            nullptr,    // qc_info_close not supported.
         };
 
         static MXS_MODULE info =
@@ -3531,5 +3543,4 @@ extern "C"
 
         return &info;
     }
-
 }

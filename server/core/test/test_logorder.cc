@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     int succp, err = 0;
     char cwd[1024];
     char tmp[2048];
-    char *message;
+    char* message;
     long msg_index = 1;
     struct timespec ts1;
     ts1.tv_sec = 0;
@@ -55,13 +55,14 @@ int main(int argc, char** argv)
     block_size = atoi(argv[3]);
     if (block_size < 1 || block_size > 1024)
     {
-        fprintf(stderr, "Message size too small or large, must be at least 1 byte long and "
+        fprintf(stderr,
+                "Message size too small or large, must be at least 1 byte long and "
                 "must not exceed 1024 bytes.");
         return 1;
     }
 
-    if (getcwd(cwd, sizeof(cwd)) == NULL ||
-        (message = (char*)MXS_MALLOC(sizeof(char) * block_size)) == NULL)
+    if (getcwd(cwd, sizeof(cwd)) == NULL
+        || (message = (char*)MXS_MALLOC(sizeof(char) * block_size)) == NULL)
     {
         fprintf(stderr, "Fatal Error, exiting...");
         return 1;

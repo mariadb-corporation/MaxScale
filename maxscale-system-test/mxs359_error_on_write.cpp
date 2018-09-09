@@ -31,18 +31,18 @@ struct Query
 
 typedef std::vector<Query> Queries;
 
-typedef std::function<void()> Func;
+typedef std::function<void ()> Func;
 
 struct Step
 {
     const char* description;
-    Func func;
-    Queries queries;
+    Func        func;
+    Queries     queries;
 };
 
 struct TestCase
 {
-    const char* description;
+    const char*       description;
     std::vector<Step> steps;
 };
 
@@ -54,32 +54,29 @@ int main(int argc, char** argv)
     Queries rw_ok({{"INSERT INTO test.t1 VALUES (1)", true}, {"SELECT * FROM test.t1", true}});
     Queries rw_err({{"INSERT INTO test.t1 VALUES (1)", false}, {"SELECT * FROM test.t1", true}});
 
-    Func block_master = [&test]()
-    {
-        test.repl->block_node(0);
-        sleep(10);
-    };
+    Func block_master = [&test]() {
+            test.repl->block_node(0);
+            sleep(10);
+        };
 
-    Func unblock_master = [&test]()
-    {
-        test.repl->unblock_node(0);
-        sleep(10);
-    };
+    Func unblock_master = [&test]() {
+            test.repl->unblock_node(0);
+            sleep(10);
+        };
 
-    Func master_change = [&test]()
-    {
-        change_master(1, 0);
-        sleep(10);
-    };
+    Func master_change = [&test]() {
+            change_master(1, 0);
+            sleep(10);
+        };
 
-    Func reset = [&test]()
-    {
-        test.repl->unblock_node(0);
-        change_master(0, 1);
-        sleep(10);
-    };
+    Func reset = [&test]() {
+            test.repl->unblock_node(0);
+            change_master(0, 1);
+            sleep(10);
+        };
 
-    Func noop = []() {};
+    Func noop = []() {
+        };
 
     std::vector<TestCase> tests(
     {
@@ -121,8 +118,11 @@ int main(int argc, char** argv)
             for (auto q : t.queries)
             {
                 int rc = execute_query_silent(test.maxscales->conn_rwsplit[0], q.query);
-                test.assert(q.should_work == (rc == 0), "Step '%s': Query '%s' should %s: %s",
-                            i.description, q.query, q.should_work ? "work" : "fail",
+                test.assert(q.should_work == (rc == 0),
+                            "Step '%s': Query '%s' should %s: %s",
+                            i.description,
+                            q.query,
+                            q.should_work ? "work" : "fail",
                             mysql_error(test.maxscales->conn_rwsplit[0]));
             }
         }

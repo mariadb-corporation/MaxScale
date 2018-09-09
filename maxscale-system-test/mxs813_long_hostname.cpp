@@ -16,15 +16,17 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     Test->start_binlog(0);
 
-    MYSQL * binlog = open_conn_no_db(Test->maxscales->binlog_port[0], Test->maxscales->IP[0],
-                                     Test->repl->user_name,
-                                     Test->repl->password, Test->ssl);
+    MYSQL* binlog = open_conn_no_db(Test->maxscales->binlog_port[0],
+                                    Test->maxscales->IP[0],
+                                    Test->repl->user_name,
+                                    Test->repl->password,
+                                    Test->ssl);
 
     Test->tprintf("stop slave\n");
     Test->try_query(binlog, "stop slave");

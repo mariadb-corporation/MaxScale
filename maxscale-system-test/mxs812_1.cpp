@@ -19,14 +19,16 @@ void run_test(TestConnections& test, size_t size, int chunks)
     MYSQL_STMT* stmt = mysql_stmt_init(conn);
 
     test.add_result(mysql_stmt_prepare(stmt, insert_stmt, strlen(insert_stmt)),
-                    "Error preparing stmt: %s", mysql_stmt_error(stmt));
+                    "Error preparing stmt: %s",
+                    mysql_stmt_error(stmt));
 
     MYSQL_BIND param;
     param.buffer_type = MYSQL_TYPE_STRING;
     param.is_null = 0;
 
     test.add_result(mysql_stmt_bind_param(stmt, &param),
-                    "Binding parameter failed: %s", mysql_stmt_error(stmt));
+                    "Binding parameter failed: %s",
+                    mysql_stmt_error(stmt));
 
     std::string data(size, '.');
     test.tprintf("Sending %d x %d bytes of data", size, chunks);
@@ -34,7 +36,9 @@ void run_test(TestConnections& test, size_t size, int chunks)
     for (int i = 0; i < chunks; i++)
     {
         test.add_result(mysql_stmt_send_long_data(stmt, 0, data.c_str(), data.size()),
-                        "Error inserting data, iteration %d, error %s", i, mysql_stmt_error(stmt));
+                        "Error inserting data, iteration %d, error %s",
+                        i,
+                        mysql_stmt_error(stmt));
     }
 
     test.set_timeout(600);
@@ -46,7 +50,7 @@ void run_test(TestConnections& test, size_t size, int chunks)
     test.add_result(mysql_stmt_close(stmt), "Closing statement failed: %s", mysql_stmt_error(stmt));
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.repl->execute_query_all_nodes("set global max_allowed_packet=10000000");

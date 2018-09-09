@@ -10,13 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/dcb.h>
 
 MXS_BEGIN_DECLS
 
-void dcb_free_all_memory(DCB *dcb);
-void dcb_final_close(DCB *dcb);
+void dcb_free_all_memory(DCB* dcb);
+void dcb_final_close(DCB* dcb);
 
 MXS_END_DECLS

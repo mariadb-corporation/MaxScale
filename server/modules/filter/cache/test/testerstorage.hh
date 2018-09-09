@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "tester.hh"
@@ -23,9 +23,9 @@ class TesterStorage : public Tester
 public:
     enum storage_action_t
     {
-        STORAGE_PUT, /*< Put an item to the storage. */
-        STORAGE_GET, /*< Get an item from the storage. */
-        STORAGE_DEL  /*< Delete an item from the storage. */
+        STORAGE_PUT,    /*< Put an item to the storage. */
+        STORAGE_GET,    /*< Get an item from the storage. */
+        STORAGE_DEL     /*< Delete an item from the storage. */
     };
 
     /**
@@ -57,15 +57,15 @@ public:
 
     private:
         HitTask(const HitTask&);
-        HitTask& operator = (const HitTask&);
+        HitTask& operator=(const HitTask&);
 
     private:
-        Storage& m_storage;               /*< The storage that is hit. */
-        const CacheItems& m_cache_items;  /*< The cache items that are used. */
-        size_t m_puts;                    /*< How many puts. */
-        size_t m_gets;                    /*< How many gets. */
-        size_t m_dels;                    /*< How many deletes. */
-        size_t m_misses;                  /*< How many misses. */
+        Storage&          m_storage;        /*< The storage that is hit. */
+        const CacheItems& m_cache_items;    /*< The cache items that are used. */
+        size_t            m_puts;           /*< How many puts. */
+        size_t            m_gets;           /*< How many gets. */
+        size_t            m_dels;           /*< How many deletes. */
+        size_t            m_misses;         /*< How many misses. */
     };
 
     /**
@@ -179,9 +179,9 @@ protected:
     TesterStorage(std::ostream* pOut, StorageFactory* pFactory);
 
 protected:
-    StorageFactory& m_factory;  /*< The storage factory that is used. */
+    StorageFactory& m_factory;      /*< The storage factory that is used. */
 
 private:
     TesterStorage(const TesterStorage&);
-    TesterStorage& operator = (const TesterStorage&);
+    TesterStorage& operator=(const TesterStorage&);
 };

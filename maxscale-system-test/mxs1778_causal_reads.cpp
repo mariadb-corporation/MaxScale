@@ -31,7 +31,9 @@ int main(int argc, char** argv)
         test.try_query(test.maxscales->conn_rwsplit[0], "%s", insert.c_str());
         Row row = get_row(test.maxscales->conn_rwsplit[0], select);
         test.assert(!row.empty() && row [0] != master && row[1] == "1",
-                    "At %d: Row is %s", i, row.empty() ? "empty" : (row[0] + " " + row[1]).c_str());
+                    "At %d: Row is %s",
+                    i,
+                    row.empty() ? "empty" : (row[0] + " " + row[1]).c_str());
     }
 
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");

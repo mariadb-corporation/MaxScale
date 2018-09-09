@@ -8,12 +8,12 @@
 #include "testconnections.h"
 #include "get_my_ip.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     char my_ip[1024];
     char my_ip_db[1024];
-    char * first_dot;
-    TestConnections * Test = new TestConnections(argc, argv);
+    char* first_dot;
+    TestConnections* Test = new TestConnections(argc, argv);
 
     Test->set_timeout(20);
     Test->repl->connect();
@@ -38,14 +38,17 @@ int main(int argc, char *argv[])
     Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER user1@'%s';", my_ip),
                      "Failed to create user");
     Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0],
-                                   "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip),
+                                   "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;",
+                                   my_ip),
                      "Failed to grant privileges.");
 
     Test->tprintf("Trying to open connection using user1\n");
 
-    MYSQL * conn = open_conn(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "user1",
-                             (char *) "pass1",
-                             Test->ssl);
+    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port[0],
+                            Test->maxscales->IP[0],
+                            (char*) "user1",
+                            (char*) "pass1",
+                            Test->ssl);
     if (mysql_errno(conn) != 0)
     {
         Test->add_result(1, "TEST_FAILED! Authentification failed! error: %s\n", mysql_error(conn));
@@ -59,7 +62,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER user1@'%s';  FLUSH PRIVILEGES;",
+    Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0],
+                                   "DROP USER user1@'%s';  FLUSH PRIVILEGES;",
                                    my_ip),
                      "Query Failed\n");
 

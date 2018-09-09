@@ -79,7 +79,7 @@ int main(int argc, char** argv)
                     *it++ = 3;
                     std::copy(line.begin(), line.end(), it);
                     char* tok = qc_get_canonical(buf.get());
-                    outfile <<  tok << endl;
+                    outfile << tok << endl;
                     free(tok);
                 }
             }

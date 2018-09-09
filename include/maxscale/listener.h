@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file listener.h
@@ -34,21 +34,22 @@ struct service;
  */
 typedef struct servlistener
 {
-    char *name;                 /**< Name of the listener */
-    char *protocol;             /**< Protocol module to load */
-    unsigned short port;        /**< Port to listen on */
-    char *address;              /**< Address to listen with */
-    char *authenticator;        /**< Name of authenticator */
-    char *auth_options;         /**< Authenticator options */
-    void *auth_instance;        /**< Authenticator instance created in MXS_AUTHENTICATOR::initialize() */
-    SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
-    struct dcb *listener;       /**< The DCB for the listener */
-    struct users *users;        /**< The user data for this listener */
-    struct service* service;    /**< The service which used by this listener */
-    SPINLOCK lock;
-    int active;                /**< True if the port has not been deleted */
-    struct  servlistener *next; /**< Next service protocol */
-} SERV_LISTENER; // TODO: Rename to LISTENER
+    char*                 name;         /**< Name of the listener */
+    char*                 protocol;     /**< Protocol module to load */
+    unsigned short        port;         /**< Port to listen on */
+    char*                 address;      /**< Address to listen with */
+    char*                 authenticator;/**< Name of authenticator */
+    char*                 auth_options; /**< Authenticator options */
+    void*                 auth_instance;/**< Authenticator instance created in MXS_AUTHENTICATOR::initialize()
+                                         * */
+    SSL_LISTENER*         ssl;          /**< Structure of SSL data or NULL */
+    struct dcb*           listener;     /**< The DCB for the listener */
+    struct users*         users;        /**< The user data for this listener */
+    struct service*       service;      /**< The service which used by this listener */
+    SPINLOCK              lock;
+    int                   active;   /**< True if the port has not been deleted */
+    struct  servlistener* next;     /**< Next service protocol */
+} SERV_LISTENER;                    // TODO: Rename to LISTENER
 
 typedef struct listener_iterator
 {
@@ -65,7 +66,7 @@ typedef struct listener_iterator
  * @param listener Listener to serialize
  * @return True if the serialization of the listener was successful, false if it fails
  */
-bool listener_serialize(const SERV_LISTENER *listener);
+bool listener_serialize(const SERV_LISTENER* listener);
 
 /**
  * @brief Convert listener to JSON
@@ -76,12 +77,17 @@ bool listener_serialize(const SERV_LISTENER *listener);
  */
 json_t* listener_to_json(const SERV_LISTENER* listener);
 
-SERV_LISTENER* listener_alloc(struct service* service, const char* name, const char *protocol,
-                              const char *address, unsigned short port, const char *authenticator,
-                              const char* auth_options, SSL_LISTENER *ssl);
+SERV_LISTENER* listener_alloc(struct service* service,
+                              const char* name,
+                              const char* protocol,
+                              const char* address,
+                              unsigned short port,
+                              const char* authenticator,
+                              const char* auth_options,
+                              SSL_LISTENER* ssl);
 void listener_free(SERV_LISTENER* listener);
-int listener_set_ssl_version(SSL_LISTENER *ssl_listener, const char* version);
-void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
+int  listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version);
+void listener_set_certificates(SSL_LISTENER* ssl_listener, char* cert, char* key, char* ca_cert);
 
 
 /**

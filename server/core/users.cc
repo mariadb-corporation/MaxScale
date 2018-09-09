@@ -32,14 +32,14 @@ static const char STR_ADMIN[] = "admin";
 
 struct UserInfo
 {
-    UserInfo():
-        permissions(USER_ACCOUNT_BASIC)
+    UserInfo()
+        : permissions(USER_ACCOUNT_BASIC)
     {
     }
 
-    UserInfo(std::string pw, user_account_type perm):
-        password(pw),
-        permissions(perm)
+    UserInfo(std::string pw, user_account_type perm)
+        : password(pw)
+        , permissions(perm)
     {
     }
 
@@ -159,7 +159,7 @@ public:
         mxs::SpinLockGuard guard(m_lock);
         if (m_data.size())
         {
-            const char *sep = "";
+            const char* sep = "";
 
             for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
             {
@@ -218,12 +218,13 @@ private:
             json_t* type = json_object_get(value, CN_ACCOUNT);
             json_t* password = json_object_get(value, CN_PASSWORD);
 
-            if (name && json_is_string(name) &&
-                type && json_is_string(type) &&
-                password && json_is_string(password) &&
-                json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
+            if (name && json_is_string(name)
+                && type && json_is_string(type)
+                && password && json_is_string(password)
+                && json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
             {
-                add(json_string_value(name), json_string_value(password),
+                add(json_string_value(name),
+                    json_string_value(password),
                     json_to_account_type(type));
             }
             else
@@ -236,35 +237,34 @@ private:
     mxs::SpinLock m_lock;
     UserMap       m_data;
 };
-
 }
 
-USERS *users_alloc()
+USERS* users_alloc()
 {
-    Users* rval = new (std::nothrow) Users();
+    Users* rval = new( std::nothrow) Users();
     MXS_OOM_IFNULL(rval);
     return reinterpret_cast<USERS*>(rval);
 }
 
-void users_free(USERS *users)
+void users_free(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
     delete u;
 }
 
-bool users_add(USERS *users, const char *user, const char *password, enum user_account_type type)
+bool users_add(USERS* users, const char* user, const char* password, enum user_account_type type)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->add(user, password, type);
 }
 
-bool users_delete(USERS *users, const char *user)
+bool users_delete(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->remove(user);
 }
 
-json_t* users_to_json(USERS *users)
+json_t* users_to_json(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->to_json();
@@ -327,12 +327,12 @@ void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
     }
 }
 
-json_t* users_default_diagnostic_json(const SERV_LISTENER *port)
+json_t* users_default_diagnostic_json(const SERV_LISTENER* port)
 {
     return port->users ? users_diagnostic_json(port->users) : json_array();
 }
 
-int users_default_loadusers(SERV_LISTENER *port)
+int users_default_loadusers(SERV_LISTENER* port)
 {
     users_free(port->users);
     port->users = users_alloc();

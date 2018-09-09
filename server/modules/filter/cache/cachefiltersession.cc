@@ -32,14 +32,13 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 {
     return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
 }
-
 }
 
 namespace
 {
 
 const char SV_MAXSCALE_CACHE_POPULATE[] = "@maxscale.cache.populate";
-const char SV_MAXSCALE_CACHE_USE[]      = "@maxscale.cache.use";
+const char SV_MAXSCALE_CACHE_USE[] = "@maxscale.cache.use";
 const char SV_MAXSCALE_CACHE_SOFT_TTL[] = "@maxscale.cache.soft_ttl";
 const char SV_MAXSCALE_CACHE_HARD_TTL[] = "@maxscale.cache.hard_ttl";
 
@@ -138,7 +137,6 @@ bool uses_non_cacheable_variable(GWBUF* pPacket)
 
     return rv;
 }
-
 }
 
 namespace
@@ -179,7 +177,6 @@ bool is_select_statement(GWBUF* pStmt)
 
     return is_select;
 }
-
 }
 
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
@@ -199,8 +196,10 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
 
     reset_response_state();
 
-    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_POPULATE,
-                              &CacheFilterSession::set_cache_populate, this))
+    if (!session_add_variable(pSession,
+                              SV_MAXSCALE_CACHE_POPULATE,
+                              &CacheFilterSession::set_cache_populate,
+                              this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -208,8 +207,10 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
                   SV_MAXSCALE_CACHE_POPULATE);
     }
 
-    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_USE,
-                              &CacheFilterSession::set_cache_use, this))
+    if (!session_add_variable(pSession,
+                              SV_MAXSCALE_CACHE_USE,
+                              &CacheFilterSession::set_cache_use,
+                              this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -217,8 +218,10 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
                   SV_MAXSCALE_CACHE_USE);
     }
 
-    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_SOFT_TTL,
-                              &CacheFilterSession::set_cache_soft_ttl, this))
+    if (!session_add_variable(pSession,
+                              SV_MAXSCALE_CACHE_SOFT_TTL,
+                              &CacheFilterSession::set_cache_soft_ttl,
+                              this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -226,8 +229,10 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
                   SV_MAXSCALE_CACHE_SOFT_TTL);
     }
 
-    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_HARD_TTL,
-                              &CacheFilterSession::set_cache_hard_ttl, this))
+    if (!session_add_variable(pSession,
+                              SV_MAXSCALE_CACHE_HARD_TTL,
+                              &CacheFilterSession::set_cache_hard_ttl,
+                              this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -242,7 +247,7 @@ CacheFilterSession::~CacheFilterSession()
     MXS_FREE(m_zDefaultDb);
 }
 
-//static
+// static
 CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
@@ -260,7 +265,7 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
 
     if ((zDb[0] == 0) || zDefaultDb)
     {
-        pCacheFilterSession = new (std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
+        pCacheFilterSession = new( std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
 
         if (!pCacheFilterSession)
         {
@@ -296,7 +301,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_INIT_DB:
         {
             mxb_assert(!m_zUseDb);
-            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1; // Remove the command byte.
+            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;      // Remove the command byte.
             m_zUseDb = (char*)MXS_MALLOC(len + 1);
 
             if (m_zUseDb)
@@ -356,7 +361,7 @@ int CacheFilterSession::clientReply(GWBUF* pData)
         gwbuf_append(m_res.pData, pData);
         m_res.pData_last = pData;
         m_res.offset_last = m_res.length;
-        m_res.length += gwbuf_length(pData); // pData may be a chain, so not GWBUF_LENGTH().
+        m_res.length += gwbuf_length(pData);    // pData may be a chain, so not GWBUF_LENGTH().
     }
     else
     {
@@ -466,13 +471,13 @@ int CacheFilterSession::handle_expecting_fields()
 
             switch (command)
             {
-            case MYSQL_REPLY_EOF: // The EOF after the fields.
+            case MYSQL_REPLY_EOF:   // The EOF after the fields.
                 m_res.offset += packetlen;
                 m_state = CACHE_EXPECTING_ROWS;
                 rv = handle_expecting_rows();
                 break;
 
-            default: // Field information.
+            default:    // Field information.
                 m_res.offset += packetlen;
                 ++m_res.nFields;
                 mxb_assert(m_res.nFields <= m_res.nTotalFields);
@@ -535,7 +540,7 @@ int CacheFilterSession::handle_expecting_response()
     size_t buflen = m_res.length;
     mxb_assert(m_res.length == gwbuf_length(m_res.pData));
 
-    if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
+    if (buflen >= MYSQL_HEADER_LEN + 1)     // We need the command byte.
     {
         // Reserve enough space to accomodate for the largest length encoded integer,
         // which is type field + 8 bytes.
@@ -546,12 +551,13 @@ int CacheFilterSession::handle_expecting_response()
         {
         case MYSQL_REPLY_OK:
             store_result();
+
         case MYSQL_REPLY_ERR:
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
 
-        case MYSQL_REPLY_LOCAL_INFILE: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+        case MYSQL_REPLY_LOCAL_INFILE:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
@@ -641,7 +647,7 @@ int CacheFilterSession::handle_expecting_rows()
                         MXS_NOTICE("Max rows %lu reached, not caching result.", m_res.nRows);
                     }
                     rv = send_upstream();
-                    m_res.offset = buflen; // To abort the loop.
+                    m_res.offset = buflen;      // To abort the loop.
                     m_state = CACHE_IGNORING_RESPONSE;
                 }
             }
@@ -669,7 +675,7 @@ int CacheFilterSession::handle_expecting_use_response()
     size_t buflen = m_res.length;
     mxb_assert(m_res.length == gwbuf_length(m_res.pData));
 
-    if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
+    if (buflen >= MYSQL_HEADER_LEN + 1)     // We need the command byte.
     {
         uint8_t command;
         copy_data(MYSQL_HEADER_LEN, 1, &command);
@@ -692,7 +698,8 @@ int CacheFilterSession::handle_expecting_use_response()
 
         default:
             MXS_ERROR("\"USE %s\" received unexpected server response %d.",
-                      m_zUseDb ? m_zUseDb : "<db>", command);
+                      m_zUseDb ? m_zUseDb : "<db>",
+                      command);
             MXS_FREE(m_zDefaultDb);
             MXS_FREE(m_zUseDb);
             m_zDefaultDb = NULL;
@@ -756,7 +763,7 @@ void CacheFilterSession::store_result()
 {
     mxb_assert(m_res.pData);
 
-    GWBUF *pData = gwbuf_make_contiguous(m_res.pData);
+    GWBUF* pData = gwbuf_make_contiguous(m_res.pData);
 
     if (pData)
     {
@@ -797,7 +804,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
     if (m_use || m_populate)
     {
-        uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
+        uint32_t type_mask = qc_get_trx_type_mask(pPacket);     // Note, only trx-related type mask
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
@@ -857,14 +864,14 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                mxb_assert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER) ||
-                           (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
+                mxb_assert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER)
+                           || (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
 
                 if (log_decisions())
                 {
-                    zPrimary_reason =
-                        "populating but not using cache inside transaction that is not "
-                        "explicitly read-only, but that has used only SELECTs sofar";
+                    zPrimary_reason
+                        = "populating but not using cache inside transaction that is not "
+                          "explicitly read-only, but that has used only SELECTs sofar";
                 }
                 action = CACHE_POPULATE;
             }
@@ -970,7 +977,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             else
             {
                 zFormat = "%s, \"%.*s...\", %s%s.";
-                length = max_length - 3; // strlen("...");
+                length = max_length - 3;    // strlen("...");
             }
 
             const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
@@ -1001,7 +1008,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
  */
 CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
 {
-    MXB_AT_DEBUG(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
+    MXB_AT_DEBUG(uint8_t * pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
     mxb_assert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
 
     routing_action_t routing_action = ROUTING_CONTINUE;
@@ -1183,14 +1190,14 @@ bool get_truth_value(const char* begin, const char* end, bool* pValue)
 
     size_t len = (end - begin);
 
-    if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0)) ||
-        ((len == 1) && (*begin == '1')))
+    if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0))
+        || ((len == 1) && (*begin == '1')))
     {
         *pValue = true;
         rv = true;
     }
-    else if (((len == nFalse) && (strncasecmp(begin, ZFALSE, nFalse) == 0)) ||
-             ((len == 1) && (*begin == '0')))
+    else if (((len == nFalse) && (strncasecmp(begin, ZFALSE, nFalse) == 0))
+             || ((len == 1) && (*begin == '0')))
     {
 
         *pValue = false;
@@ -1240,7 +1247,9 @@ char* create_bool_error_message(const char* zName, const char* pValue_begin, con
 
     int len = pValue_end - pValue_begin;
     MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                zName, len, pValue_begin);
+                zName,
+                len,
+                pValue_begin);
 
     return zMessage;
 }
@@ -1259,11 +1268,12 @@ char* create_uint32_error_message(const char* zName, const char* pValue_begin, c
 
     int len = pValue_end - pValue_begin;
     MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                zName, len, pValue_begin);
+                zName,
+                len,
+                pValue_begin);
 
     return zMessage;
 }
-
 }
 
 char* CacheFilterSession::set_cache_populate(const char* zName,
@@ -1354,7 +1364,7 @@ char* CacheFilterSession::set_cache_hard_ttl(const char* zName,
     return zMessage;
 }
 
-//static
+// static
 char* CacheFilterSession::set_cache_populate(void* pContext,
                                              const char* zName,
                                              const char* pValue_begin,
@@ -1365,7 +1375,7 @@ char* CacheFilterSession::set_cache_populate(void* pContext,
     return pThis->set_cache_populate(zName, pValue_begin, pValue_end);
 }
 
-//static
+// static
 char* CacheFilterSession::set_cache_use(void* pContext,
                                         const char* zName,
                                         const char* pValue_begin,
@@ -1376,7 +1386,7 @@ char* CacheFilterSession::set_cache_use(void* pContext,
     return pThis->set_cache_use(zName, pValue_begin, pValue_end);
 }
 
-//static
+// static
 char* CacheFilterSession::set_cache_soft_ttl(void* pContext,
                                              const char* zName,
                                              const char* pValue_begin,
@@ -1387,7 +1397,7 @@ char* CacheFilterSession::set_cache_soft_ttl(void* pContext,
     return pThis->set_cache_soft_ttl(zName, pValue_begin, pValue_end);
 }
 
-//static
+// static
 char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
                                              const char* zName,
                                              const char* pValue_begin,
@@ -1403,7 +1413,9 @@ void CacheFilterSession::copy_data(size_t offset, size_t nBytes, uint8_t* pTo) c
     if (offset >= m_res.offset_last)
     {
         gwbuf_copy_data(m_res.pData_last,
-                        offset - m_res.offset_last, nBytes, pTo);
+                        offset - m_res.offset_last,
+                        nBytes,
+                        pTo);
     }
     else
     {

@@ -61,7 +61,7 @@
  * The function attributes are compiler specific.
  */
 #ifdef __GNUC__
-#define mxb_attribute(a) __attribute__(a)
+#define mxb_attribute(a) __attribute__ (a)
 #else
 #define mxb_attribute(a)
 #endif
@@ -76,11 +76,11 @@
 /**
  * thread_local
  */
-#if !defined(__cplusplus)
+#if !defined (__cplusplus)
 
 #if __STDC_VERSION__ >= 201112
 
-#if defined(__STDC_NO_THREADS__)
+#if defined (__STDC_NO_THREADS__)
 #define thread_local _Thread_local
 #else
 #include <threads.h>
@@ -88,7 +88,7 @@
 
 #else // __STDC_VERSION >= 201112
 
-#if defined(__GNUC__)
+#if defined (__GNUC__)
 #define thread_local __thread
 #else
 #error Do not know how to define thread_local on this compiler/OS platform.
@@ -101,7 +101,7 @@
 // GCC 4.8 added support for native thread_local.
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
 
-#if defined(__GNUC__)
+#if defined (__GNUC__)
 #define thread_local __thread
 #else
 #error Do not know how to define thread_local on this compiler/OS platform.

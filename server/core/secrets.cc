@@ -32,14 +32,12 @@
  *
  * @return A random printable character
  */
-static unsigned char
-secrets_randomchar()
+static unsigned char secrets_randomchar()
 {
     return (char) ((mxs_random() % ('~' - ' ')) + ' ');
 }
 
-static int
-secrets_random_str(unsigned char *output, int len)
+static int secrets_random_str(unsigned char* output, int len)
 {
     for (int i = 0; i < len; ++i)
     {
@@ -55,12 +53,11 @@ secrets_random_str(unsigned char *output, int len)
  * containing the .secrets file. Otherwise the default location is used.
  * @return  The keys structure or NULL on error
  */
-static MAXKEYS *
-secrets_readKeys(const char* path)
+static MAXKEYS* secrets_readKeys(const char* path)
 {
     static const char NAME[] = ".secrets";
-    char secret_file[PATH_MAX + 1 + sizeof(NAME)]; // Worst case: maximum path + "/" + name.
-    MAXKEYS *keys;
+    char secret_file[PATH_MAX + 1 + sizeof(NAME)];      // Worst case: maximum path + "/" + name.
+    MAXKEYS* keys;
     struct stat secret_stats;
     static int reported = 0;
 
@@ -83,7 +80,7 @@ secrets_readKeys(const char* path)
             {
                 // If the provided path does not refer to a directory, then the
                 // file name *must* be ".secrets".
-                char *file;
+                char* file;
                 if ((file = strrchr(secret_file, '.')) == NULL || strcmp(file, NAME) != 0)
                 {
                     MXS_ERROR("The name of the secrets file must be \"%s\".", NAME);
@@ -94,7 +91,10 @@ secrets_readKeys(const char* path)
         else
         {
             MXS_ERROR("The provided path \"%s\" does not exist or cannot be accessed. "
-                      "Error: %d, %s.", path, errno, mxs_strerror(errno));
+                      "Error: %d, %s.",
+                      path,
+                      errno,
+                      mxs_strerror(errno));
             return NULL;
         }
 
@@ -144,7 +144,6 @@ secrets_readKeys(const char* path)
                   eno,
                   mxs_strerror(eno));
         return NULL;
-
     }
 
     /* accessing file details */
@@ -182,7 +181,7 @@ secrets_readKeys(const char* path)
         return NULL;
     }
 
-    if ((keys = (MAXKEYS *) MXS_MALLOC(sizeof(MAXKEYS))) == NULL)
+    if ((keys = (MAXKEYS*) MXS_MALLOC(sizeof(MAXKEYS))) == NULL)
     {
         close(fd);
         return NULL;
@@ -244,7 +243,7 @@ secrets_readKeys(const char* path)
  * @param dir The directory where the ".secrets" file should be created.
  * @return 0 on success and 1 on failure
  */
-int secrets_write_keys(const char *dir)
+int secrets_write_keys(const char* dir)
 {
     int fd, randfd;
     unsigned int randval;
@@ -338,13 +337,12 @@ int secrets_write_keys(const char *dir)
  * @param crypt The encrypted password
  * @return  The decrypted password or NULL if allocation failure.
  */
-char *
-decrypt_password(const char *crypt)
+char* decrypt_password(const char* crypt)
 {
-    MAXKEYS *keys;
+    MAXKEYS* keys;
     AES_KEY aeskey;
-    unsigned char *plain;
-    const char *ptr;
+    unsigned char* plain;
+    const char* ptr;
     unsigned char encrypted[80];
     int enlen;
 
@@ -369,7 +367,7 @@ decrypt_password(const char *crypt)
     enlen = strlen(crypt) / 2;
     gw_hex2bin(encrypted, crypt, strlen(crypt));
 
-    if ((plain = (unsigned char *) MXS_MALLOC(enlen + 1)) == NULL)
+    if ((plain = (unsigned char*) MXS_MALLOC(enlen + 1)) == NULL)
     {
         MXS_FREE(keys);
         return NULL;
@@ -381,7 +379,7 @@ decrypt_password(const char *crypt)
     plain[enlen] = '\0';
     MXS_FREE(keys);
 
-    return (char *) plain;
+    return (char*) plain;
 }
 
 /**
@@ -392,13 +390,12 @@ decrypt_password(const char *crypt)
  * @param password  The password to encrypt
  * @return  The encrypted password
  */
-char *
-encrypt_password(const char* path, const char *password)
+char* encrypt_password(const char* path, const char* password)
 {
-    MAXKEYS *keys;
+    MAXKEYS* keys;
     AES_KEY aeskey;
     int padded_len;
-    char *hex_output;
+    char* hex_output;
     unsigned char padded_passwd[MXS_PASSWORD_MAXLEN + 1];
     unsigned char encrypted[MXS_PASSWORD_MAXLEN + 1];
 
@@ -408,13 +405,13 @@ encrypt_password(const char* path, const char *password)
     }
 
     memset(padded_passwd, 0, MXS_PASSWORD_MAXLEN + 1);
-    strncpy((char *) padded_passwd, password, MXS_PASSWORD_MAXLEN);
+    strncpy((char*) padded_passwd, password, MXS_PASSWORD_MAXLEN);
     padded_len = ((strlen((char*)padded_passwd) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
-    hex_output = (char *) MXS_MALLOC(padded_len * 2 + 1);
+    hex_output = (char*) MXS_MALLOC(padded_len * 2 + 1);
     if (hex_output)
     {
         gw_bin2hex(hex_output, encrypted, padded_len);

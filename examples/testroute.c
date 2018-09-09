@@ -15,21 +15,21 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 
-static MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
-static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
-static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
-static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue, DCB*);
-static void diagnostic(MXS_ROUTER *instance, DCB *dcb);
-static json_t* diagnostic_json(const MXS_ROUTER *instance);
-static uint64_t getCapabilities(MXS_ROUTER* instance);
-static void handleError(MXS_ROUTER *instance,
-                        MXS_ROUTER_SESSION *router_session,
-                        GWBUF *errbuf,
-                        DCB *backend_dcb,
-                        mxs_error_action_t action,
-                        bool *succp);
+static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static int                 routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue);
+static void                clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue, DCB*);
+static void                diagnostic(MXS_ROUTER* instance, DCB* dcb);
+static json_t*             diagnostic_json(const MXS_ROUTER* instance);
+static uint64_t            getCapabilities(MXS_ROUTER* instance);
+static void                handleError(MXS_ROUTER* instance,
+                                       MXS_ROUTER_SESSION* router_session,
+                                       GWBUF* errbuf,
+                                       DCB*   backend_dcb,
+                                       mxs_error_action_t action,
+                                       bool* succp);
 
 typedef struct
 {
@@ -73,10 +73,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -94,7 +94,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     return (MXS_ROUTER*)MXS_MALLOC(sizeof(TESTROUTER));
 }
@@ -106,8 +106,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION *
-newSession(MXS_ROUTER *instance, MXS_SESSION *session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
     return (MXS_ROUTER_SESSION*)MXS_MALLOC(sizeof(TESTSESSION));
 }
@@ -119,8 +118,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param instance  The router instance data
  * @param session   The session being closed
  */
-static  void
-closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
 {
 }
 
@@ -130,8 +128,7 @@ static void freeSession(MXS_ROUTER* router_instance,
     MXS_FREE(router_client_session);
 }
 
-static  int
-routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue)
+static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue)
 {
     return 0;
 }
@@ -146,8 +143,7 @@ void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static  void
-diagnostic(MXS_ROUTER *instance, DCB *dcb)
+static void diagnostic(MXS_ROUTER* instance, DCB* dcb)
 {
 }
 
@@ -157,7 +153,7 @@ diagnostic(MXS_ROUTER *instance, DCB *dcb)
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostic_json(const MXS_ROUTER *instance)
+static json_t* diagnostic_json(const MXS_ROUTER* instance)
 {
     return NULL;
 }
@@ -168,11 +164,11 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
 }
 
 
-static void handleError(MXS_ROUTER *instance,
-                        MXS_ROUTER_SESSION *router_session,
-                        GWBUF *errbuf,
-                        DCB *backend_dcb,
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errbuf,
+                        DCB*   backend_dcb,
                         mxs_error_action_t action,
-                        bool *succp)
+                        bool* succp)
 {
 }

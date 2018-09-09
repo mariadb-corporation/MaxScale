@@ -12,17 +12,17 @@
 #include "execute_cmd.h"
 #include "rds_vpc.h"
 
-int set_endspoints(RDS * cluster)
+int set_endspoints(RDS* cluster)
 {
 
-    json_t *endpoint;
+    json_t* endpoint;
     long long int port;
-    const char * IP;
+    const char* IP;
     char p[64];
     size_t i;
     char cmd[1024];
 
-    json_t * endpoints = cluster->get_endpoints();
+    json_t* endpoints = cluster->get_endpoints();
     if (endpoints == NULL)
     {
         return -1;
@@ -49,9 +49,9 @@ int set_endspoints(RDS * cluster)
 }
 
 
-void compare_masters(TestConnections* Test, RDS * cluster)
+void compare_masters(TestConnections* Test, RDS* cluster)
 {
-    const char * aurora_master;
+    const char* aurora_master;
     cluster->get_writer(&aurora_master);
     Test->tprintf("Aurora writer node: %s\n", aurora_master);
     char maxadmin_status[1024];
@@ -60,7 +60,7 @@ void compare_masters(TestConnections* Test, RDS * cluster)
     for (i = 0; i < Test->repl->N; i++)
     {
         sprintf(cmd, "show server server%d", i + 1);
-        Test->maxscales->get_maxadmin_param(0, cmd, (char *) "Status:", &maxadmin_status[0]);
+        Test->maxscales->get_maxadmin_param(0, cmd, (char*) "Status:", &maxadmin_status[0]);
         Test->tprintf("Server%d status %s\n", i + 1, maxadmin_status);
         sprintf(cmd, "node%03d", i);
         if (strcmp(aurora_master, cmd) == 0)
@@ -71,7 +71,10 @@ void compare_masters(TestConnections* Test, RDS * cluster)
             }
             else
             {
-                Test->add_result(1, "Server node%03d status is not 'Master, Running'', it is '%s'", i, maxadmin_status);
+                Test->add_result(1,
+                                 "Server node%03d status is not 'Master, Running'', it is '%s'",
+                                 i,
+                                 maxadmin_status);
             }
         }
         else
@@ -82,16 +85,18 @@ void compare_masters(TestConnections* Test, RDS * cluster)
             }
             else
             {
-                Test->add_result(1, "Server node%03d status is not 'Slave, Running'', it is '%s'", i, maxadmin_status);
+                Test->add_result(1,
+                                 "Server node%03d status is not 'Slave, Running'', it is '%s'",
+                                 i,
+                                 maxadmin_status);
             }
         }
-
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    RDS * cluster = new RDS((char *) "auroratest");
+    RDS* cluster = new RDS((char*) "auroratest");
 
     if (cluster->create_rds_db(4) != 0)
     {
@@ -108,7 +113,7 @@ int main(int argc, char *argv[])
     }
 
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
     compare_masters(Test, cluster);
@@ -131,7 +136,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Failover done\n");
 
     // Do the failover here and wait until it is over
-    //sleep(10);
+    // sleep(10);
 
     Test->set_timeout(30);
     Test->tprintf("Executing a query through readwritesplit after failover");
@@ -145,7 +150,7 @@ int main(int argc, char *argv[])
     compare_masters(Test, cluster);
 
 
-    //Test->check_maxscale_alive(0);
+    // Test->check_maxscale_alive(0);
 
 
     Test->stop_timeout();

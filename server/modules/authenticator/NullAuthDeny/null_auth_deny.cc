@@ -35,10 +35,10 @@
 #include <maxscale/buffer.h>
 #include <maxscale/users.h>
 
-static bool null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-static bool null_auth_is_client_ssl_capable(DCB *dcb);
-static int null_auth_authenticate(DCB *dcb);
-static void null_auth_free_client_data(DCB *dcb);
+static bool null_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
+static bool null_auth_is_client_ssl_capable(DCB* dcb);
+static int  null_auth_authenticate(DCB* dcb);
+static void null_auth_free_client_data(DCB* dcb);
 
 extern "C"
 {
@@ -50,43 +50,43 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                            /* No initialize entry point */
-        NULL,                            /* No create entry point */
-        null_auth_set_protocol_data,     /* Extract data into structure   */
-        null_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-        null_auth_authenticate,          /* Authenticate user credentials */
-        null_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                            /* No destroy entry point */
-        users_default_loadusers,         /* Load generic users */
-        NULL,                            /* No diagnostic */
-        NULL,
-        NULL                             /* No user reauthentication */
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The Null client authenticator implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_AUTHENTICATOR MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            NULL,                           /* No initialize entry point */
+            NULL,                           /* No create entry point */
+            null_auth_set_protocol_data,    /* Extract data into structure   */
+            null_auth_is_client_ssl_capable,/* Check if client supports SSL  */
+            null_auth_authenticate,         /* Authenticate user credentials */
+            null_auth_free_client_data,     /* Free the client data held in DCB */
+            NULL,                           /* No destroy entry point */
+            users_default_loadusers,        /* Load generic users */
+            NULL,                           /* No diagnostic */
+            NULL,
+            NULL                        /* No user reauthentication */
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The Null client authenticator implementation",
+            "V1.1.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 /*lint +e14 */
 }
 
@@ -98,8 +98,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status - always 1 to denote failure
  */
-static int
-null_auth_authenticate(DCB *dcb)
+static int null_auth_authenticate(DCB* dcb)
 {
     return 1;
 }
@@ -113,8 +112,7 @@ null_auth_authenticate(DCB *dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return Always true
  */
-static bool
-null_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
+static bool null_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
 {
     return true;
 }
@@ -128,8 +126,7 @@ null_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable - always true
  */
-static bool
-null_auth_is_client_ssl_capable(DCB *dcb)
+static bool null_auth_is_client_ssl_capable(DCB* dcb)
 {
     return true;
 }
@@ -141,5 +138,6 @@ null_auth_is_client_ssl_capable(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void
-null_auth_free_client_data(DCB *dcb) {}
+static void null_auth_free_client_data(DCB* dcb)
+{
+}

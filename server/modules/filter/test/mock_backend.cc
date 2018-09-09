@@ -38,12 +38,12 @@ Backend::~Backend()
 {
 }
 
-//static
+// static
 GWBUF* Backend::create_ok_response()
 {
     /* Note: sequence id is always 01 (4th byte) */
     const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] =
-        { 07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00 };
+    {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
 
     GWBUF* pResponse = gwbuf_alloc_and_load(sizeof(ok), &ok);
     mxb_assert(pResponse);
@@ -208,7 +208,6 @@ private:
 
     std::vector<char> m_response;
 };
-
 }
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
@@ -230,7 +229,5 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
         enqueue_response(pSession, create_ok_response());
     }
 }
-
-} // mock
-
-} // maxscale
+}   // mock
+}   // maxscale

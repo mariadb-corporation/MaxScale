@@ -17,8 +17,8 @@
 
 #include <maxscale/alloc.h>
 
-Shard::Shard():
-    m_last_updated(time(NULL))
+Shard::Shard()
+    : m_last_updated(time(NULL))
 {
 }
 
@@ -83,7 +83,10 @@ SERVER* Shard::get_location(std::string table)
                 if ((rval && rval != it->second))
                 {
                     MXS_DEBUG("There are 2 databases with same name on a different servers: '%s' and '%s'. Connecting to '%s'"
-                                , rval->name,it->second->name, rval->name);
+                              ,
+                              rval->name,
+                              it->second->name,
+                              rval->name);
                     break;
                 }
                 else
@@ -114,7 +117,7 @@ SERVER* Shard::get_statement(std::string stmt)
 {
     SERVER* rval = NULL;
     ServerMap::iterator iter = stmt_map.find(stmt);
-    if(iter != stmt_map.end())
+    if (iter != stmt_map.end())
     {
         rval = iter->second;
     }
@@ -125,7 +128,7 @@ SERVER* Shard::get_statement(uint32_t id)
 {
     SERVER* rval = NULL;
     BinaryPSMap::iterator iter = m_binary_map.find(id);
-    if(iter != m_binary_map.end())
+    if (iter != m_binary_map.end())
     {
         rval = iter->second;
     }

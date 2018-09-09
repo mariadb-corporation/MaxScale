@@ -22,7 +22,6 @@ namespace
 {
 
 const char CN_INJECT[] = "inject";
-
 }
 
 // This declares a module in MaxScale
@@ -36,14 +35,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A comment filter that can inject comments in sql queries",
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &CommentFilter::s_object, // This is defined in the MaxScale filter template
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        &CommentFilter::s_object,                                   // This is defined in the MaxScale filter
+                                                                    // template
+        NULL,                                                       /* Process init. */
+        NULL,                                                       /* Process finish. */
+        NULL,                                                       /* Thread init. */
+        NULL,                                                       /* Thread finish. */
         {
-            { CN_INJECT, MXS_MODULE_PARAM_QUOTEDSTRING, NULL, MXS_MODULE_OPT_REQUIRED },
-            { MXS_END_MODULE_PARAMS }
+            {CN_INJECT,                                            MXS_MODULE_PARAM_QUOTEDSTRING,NULL, MXS_MODULE_OPT_REQUIRED},
+            {MXS_END_MODULE_PARAMS}
         }
     };
 

@@ -12,13 +12,13 @@ void checkpoint(TestConnections& test)
     const int v = 5;
     test.maxscales->wait_for_monitor(v);
 
-    for (auto&& s: {
-                "server1", "server2", "server3"
-            })
+    for (auto&& s : {
+        "server1", "server2", "server3"
+    })
     {
         auto status = test.get_server_status(s);
         cout << s << " { ";
-        for (auto a: status)
+        for (auto a : status)
         {
             cout << a << ", ";
         }
@@ -26,51 +26,47 @@ void checkpoint(TestConnections& test)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
 
-    auto status = [&](const char* server)
-    {
-        return test.get_server_status(server);
-    };
+    auto status = [&](const char* server) {
+            return test.get_server_status(server);
+        };
 
-    auto comment = [&](const char* comment)
-    {
-        cout << comment << endl;
-        test.maxscales->ssh_node_f(0, true, "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
-    };
+    auto comment = [&](const char* comment) {
+            cout << comment << endl;
+            test.maxscales->ssh_node_f(0,
+                                       true,
+                                       "echo '----- %s -----' >> /var/log/maxscale/maxscale.log",
+                                       comment);
+        };
 
-    auto slave = [&](const char* name)
-    {
-        static StringSet slave{"Slave", "Running"};
-        test.assert(status(name) == slave, "'%s' should be a slave", name);
-    };
+    auto slave = [&](const char* name) {
+            static StringSet slave {"Slave", "Running"};
+            test.assert(status(name) == slave, "'%s' should be a slave", name);
+        };
 
-    auto master = [&](const char* name)
-    {
-        static StringSet master{"Master", "Running"};
-        test.assert(status(name) == master, "'%s' should be the master", name);
-    };
+    auto master = [&](const char* name) {
+            static StringSet master {"Master", "Running"};
+            test.assert(status(name) == master, "'%s' should be the master", name);
+        };
 
-    auto down = [&](const char* name)
-    {
-        static StringSet down{"Down"};
-        test.assert(status(name) == down, "'%s' should be down", name);
-    };
+    auto down = [&](const char* name) {
+            static StringSet down {"Down"};
+            test.assert(status(name) == down, "'%s' should be down", name);
+        };
 
-    auto block = [&](int node)
-    {
-        test.repl->block_node(node);
-        checkpoint(test);
-    };
+    auto block = [&](int node) {
+            test.repl->block_node(node);
+            checkpoint(test);
+        };
 
-    auto unblock = [&](int node)
-    {
-        test.repl->unblock_node(node);
-        checkpoint(test);
-    };
+    auto unblock = [&](int node) {
+            test.repl->unblock_node(node);
+            checkpoint(test);
+        };
 
     test.maxscales->wait_for_monitor(1);
 

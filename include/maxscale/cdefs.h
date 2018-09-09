@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file cdefs.h
@@ -48,7 +48,7 @@
  *
  * @note This a macro, so the arguments will be evaluated more than once.
  */
-#define MXS_MIN(a,b) ((a)<(b) ? (a) : (b))
+#define MXS_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /**
  * Returns the larger of two items.
@@ -60,7 +60,7 @@
  *
  * @note This a macro, so the arguments will be evaluated more than once.
  */
-#define MXS_MAX(a,b) ((a)>(b) ? (a) : (b))
+#define MXS_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /**
  * Define function attributes

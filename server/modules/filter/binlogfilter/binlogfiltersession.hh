@@ -10,37 +10,37 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 #include "binlogfilter.hh"
 
-//TODO: add in a separate .h file in common to BinlogRouter code
-#define LOG_EVENT_IGNORABLE_F                   0x0080
-#define LOG_EVENT_SKIP_REPLICATION_F            0x8000
-#define RAND_EVENT                              0x000D
-#define TABLE_MAP_EVENT                         0x0013
-#define XID_EVENT                               0x0010
-#define QUERY_EVENT                             0x0002
-#define MARIADB10_GTID_EVENT                    0x00a2
-#define MARIADB_ANNOTATE_ROWS_EVENT             0x00a0
-#define HEARTBEAT_EVENT                         0x001B
-#define BINLOG_EVENT_HDR_LEN                        19
+// TODO: add in a separate .h file in common to BinlogRouter code
+#define LOG_EVENT_IGNORABLE_F        0x0080
+#define LOG_EVENT_SKIP_REPLICATION_F 0x8000
+#define RAND_EVENT                   0x000D
+#define TABLE_MAP_EVENT              0x0013
+#define XID_EVENT                    0x0010
+#define QUERY_EVENT                  0x0002
+#define MARIADB10_GTID_EVENT         0x00a2
+#define MARIADB_ANNOTATE_ROWS_EVENT  0x00a0
+#define HEARTBEAT_EVENT              0x001B
+#define BINLOG_EVENT_HDR_LEN         19
 
 class BinlogConfig;
 
 typedef struct rep_header_t
 {
-    int             payload_len;    /*< Payload length (24 bits) */
-    uint8_t         seqno;          /*< Response sequence number */
-    uint8_t         ok;             /*< OK Byte from packet */
-    uint32_t        timestamp;      /*< Timestamp - start of binlog record */
-    uint8_t         event_type;     /*< Binlog event type */
-    uint32_t        serverid;       /*< Server id of master */
-    uint32_t        event_size;     /*< Size of header, post-header and body */
-    uint32_t        next_pos;       /*< Position of next event */
-    uint16_t        flags;          /*< Event flags */
+    int      payload_len;   /*< Payload length (24 bits) */
+    uint8_t  seqno;         /*< Response sequence number */
+    uint8_t  ok;            /*< OK Byte from packet */
+    uint32_t timestamp;     /*< Timestamp - start of binlog record */
+    uint8_t  event_type;    /*< Binlog event type */
+    uint32_t serverid;      /*< Server id of master */
+    uint32_t event_size;    /*< Size of header, post-header and body */
+    uint32_t next_pos;      /*< Position of next event */
+    uint16_t flags;         /*< Event flags */
 } REP_HEADER;
 // End TODO
 //
@@ -50,7 +50,7 @@ class BinlogFilterSession : public maxscale::FilterSession
 {
     // Prevent copy-constructor and assignment operator usage
     BinlogFilterSession(const BinlogFilterSession&);
-    BinlogFilterSession& operator = (const BinlogFilterSession&);
+    BinlogFilterSession& operator=(const BinlogFilterSession&);
 
 public:
     ~BinlogFilterSession();
@@ -115,19 +115,19 @@ private:
     // Internal states for filter operations
     enum state_t
     {
-        ERRORED,         // A blocking error occurred
-        INACTIVE,        // Fitering is not active
-        COMMAND_MODE,    // Connected client in SQL mode: no filtering
-        BINLOG_MODE      // Connected client in BINLOG_MODE: filter events
+        ERRORED,        // A blocking error occurred
+        INACTIVE,       // Fitering is not active
+        COMMAND_MODE,   // Connected client in SQL mode: no filtering
+        BINLOG_MODE     // Connected client in BINLOG_MODE: filter events
     };
 
 private:
     // Event filtering member vars
-    uint32_t  m_serverid;           // server-id of connected slave
-    state_t   m_state;              // Internal state
-    bool      m_skip;               // Mark event skipping
-    bool      m_crc;                // CRC32 for events. Not implemented
-    uint32_t  m_large_left;         // Remaining bytes of a large event
-    bool      m_is_large;           // Large Event indicator
-    GWBUF*    m_sql_query;          // SQL query buffer
+    uint32_t m_serverid;            // server-id of connected slave
+    state_t  m_state;               // Internal state
+    bool     m_skip;                // Mark event skipping
+    bool     m_crc;                 // CRC32 for events. Not implemented
+    uint32_t m_large_left;          // Remaining bytes of a large event
+    bool     m_is_large;            // Large Event indicator
+    GWBUF*   m_sql_query;           // SQL query buffer
 };

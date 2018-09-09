@@ -6,9 +6,9 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char** sql = NULL;
 static size_t sql_size = 0;
 
-int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long long int rows)
+int execute_select_query_and_check(MYSQL* conn, const char* sql, unsigned long long int rows)
 {
-    MYSQL_RES *res;
+    MYSQL_RES* res;
     MYSQL_ROW row;
     unsigned long long int i;
     unsigned long long int num_fields;
@@ -80,7 +80,9 @@ int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long l
                         sscanf(row[i], "%llu", &int_res);
                         if ((i == 0 ) && (int_res != row_i))
                         {
-                            printf("SELECT returned wrong result! %llu instead of expected %llu\n", int_res, row_i);
+                            printf("SELECT returned wrong result! %llu instead of expected %llu\n",
+                                   int_res,
+                                   row_i);
                             test_result = 1;
                             printf("sql was %s\n", sql);
                         }
@@ -102,7 +104,7 @@ int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long l
 
     return test_result;
 }
-int create_t1(MYSQL * conn)
+int create_t1(MYSQL* conn)
 {
     int result = 0;
     result += execute_query(conn, "DROP TABLE IF EXISTS t1;");
@@ -111,7 +113,7 @@ int create_t1(MYSQL * conn)
     return result;
 }
 
-int create_t2(MYSQL * conn)
+int create_t2(MYSQL* conn)
 {
     int result = 0;
     result += execute_query(conn, "DROP TABLE IF EXISTS t2;");
@@ -124,7 +126,7 @@ static const char ins1[] = "INSERT INTO t1 (x1, fl) VALUES ";
 
 int create_insert_string(char* sql, int N, int fl)
 {
-    char *wptr = sql;
+    char* wptr = sql;
 
     strcpy(wptr, ins1);
     for (int i = 0; i < N; i++)
@@ -169,7 +171,7 @@ char* allocate_insert_string(int fl, int N)
     return rval;
 }
 
-int insert_into_t1(MYSQL *conn, int N)
+int insert_into_t1(MYSQL* conn, int N)
 {
 
     int x = 16;
@@ -179,7 +181,7 @@ int insert_into_t1(MYSQL *conn, int N)
     for (int i = 0; i < N; i++)
     {
         printf("sql %d, rows=%d\n", i, x);
-        char *sqlstr = allocate_insert_string(i, x);
+        char* sqlstr = allocate_insert_string(i, x);
         printf("INSERT: rwsplitter\n");
         printf("Trying INSERT, len=%d\n", x);
         fflush(stdout);
@@ -190,7 +192,7 @@ int insert_into_t1(MYSQL *conn, int N)
     return result;
 }
 
-int select_from_t1(MYSQL *conn, int N)
+int select_from_t1(MYSQL* conn, int N)
 {
     int x = 16;
     int result = 0;
@@ -208,9 +210,9 @@ int select_from_t1(MYSQL *conn, int N)
 
 // 0 - if it does not exist
 // -1 - in case of error
-int check_if_t1_exists(MYSQL *conn)
+int check_if_t1_exists(MYSQL* conn)
 {
-    MYSQL_RES *res;
+    MYSQL_RES* res;
     MYSQL_ROW row;
 
     int t1 = 0;
@@ -227,7 +229,7 @@ int check_if_t1_exists(MYSQL *conn)
             if (res == NULL)
             {
                 printf("Error: can't get the result description\n");
-                t1 = - 1;
+                t1 = -1;
             }
             else
             {
@@ -236,7 +238,7 @@ int check_if_t1_exists(MYSQL *conn)
                 {
                     while ((row = mysql_fetch_row(res)) != NULL)
                     {
-                        if ( (row[0] != NULL ) && (strcmp(row[0], "t1") == 0 ) )
+                        if ((row[0] != NULL ) && (strcmp(row[0], "t1") == 0 ))
                         {
                             t1 = 1;
                         }
@@ -253,5 +255,3 @@ int check_if_t1_exists(MYSQL *conn)
     }
     return t1;
 }
-
-

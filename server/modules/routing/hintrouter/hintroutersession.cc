@@ -31,7 +31,8 @@ class Writer : std::unary_function<HintRouterSession::MapElement, bool>
 public:
     Writer(GWBUF* pPacket)
         : m_pPacket(pPacket)
-    {}
+    {
+    }
 
     bool operator()(HintRouterSession::MapElement& elem)
     {
@@ -53,8 +54,8 @@ private:
 };
 }
 
-HintRouterSession::HintRouterSession(MXS_SESSION*    pSession,
-                                     HintRouter*     pRouter,
+HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
+                                     HintRouter*  pRouter,
                                      const BackendMap& backends)
     : maxscale::RouterSession(pSession)
     , m_router(pRouter)
@@ -150,10 +151,10 @@ void HintRouterSession::clientReply(GWBUF* pPacket, DCB* pBackend)
     }
 }
 
-void HintRouterSession::handleError(GWBUF*             pMessage,
-                                    DCB*               pProblem,
+void HintRouterSession::handleError(GWBUF* pMessage,
+                                    DCB*   pProblem,
                                     mxs_error_action_t action,
-                                    bool*              pSuccess)
+                                    bool* pSuccess)
 {
     HR_ENTRY();
 
@@ -271,8 +272,8 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
     case HINT_ROUTE_TO_ALL:
         {
             HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
-            BackendMap::size_type n_writes =
-                std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
+            BackendMap::size_type n_writes
+                = std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
             if (n_writes != 0)
             {
                 m_surplus_replies = n_writes - 1;
@@ -290,7 +291,8 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
                 if (print_errors)
                 {
                     MXS_ERROR("Write failed for '%lu' out of '%lu' backends.",
-                              (size - n_writes), size);
+                              (size - n_writes),
+                              size);
                 }
             }
         }

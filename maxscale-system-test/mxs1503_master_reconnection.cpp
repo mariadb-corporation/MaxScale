@@ -15,28 +15,24 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&test](std::string q)
-    {
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str());
-    };
+    auto query = [&test](std::string q) {
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str());
+        };
 
-    auto error_matches = [&test](std::string q)
-    {
-        std::string err = mysql_error(test.maxscales->conn_rwsplit[0]);
-        return err.find(q) != std::string::npos;
-    };
+    auto error_matches = [&test](std::string q) {
+            std::string err = mysql_error(test.maxscales->conn_rwsplit[0]);
+            return err.find(q) != std::string::npos;
+        };
 
-    auto block_master = [&test]()
-    {
-        test.repl->block_node(0);
-        sleep(10);
-    };
+    auto block_master = [&test]() {
+            test.repl->block_node(0);
+            sleep(10);
+        };
 
-    auto unblock_master = [&test]()
-    {
-        test.repl->unblock_node(0);
-        sleep(10);
-    };
+    auto unblock_master = [&test]() {
+            test.repl->unblock_node(0);
+            sleep(10);
+        };
 
     test.maxscales->connect();
     test.assert(query("DROP TABLE IF EXISTS test.t1") == 0,

@@ -43,7 +43,7 @@ int check_conf(TestConnections* Test, int blocked_node)
 
     for (int i = 0; i < 2; i++)
     {
-        if ( i != blocked_node)
+        if (i != blocked_node)
         {
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             Test->set_timeout(100);
@@ -63,28 +63,28 @@ int check_conf(TestConnections* Test, int blocked_node)
     return global_result;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(120);
     char maxadmin_result[1024];
 
     Test->repl->set_repl_user();
 
-    Test->start_mm(0); // first node - slave, second - master
+    Test->start_mm(0);      // first node - slave, second - master
 
     Test->set_timeout(120);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Slave, Running")  == NULL )
+    if (strstr(maxadmin_result, "Slave, Running") == NULL)
     {
         Test->add_result(1, "Node0 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(120);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
     Test->tprintf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Master, Running") == NULL )
+    if (strstr(maxadmin_result, "Master, Running") == NULL)
     {
         Test->add_result(1, "Node1 is not master, status is %s\n", maxadmin_result);
     }
@@ -97,9 +97,9 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(15);
     Test->set_timeout(120);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Down")  == NULL )
+    if (strstr(maxadmin_result, "Down") == NULL)
     {
         Test->add_result(1, "Node0 is not down, status is %s\n", maxadmin_result);
     }
@@ -116,9 +116,9 @@ int main(int argc, char *argv[])
     Test->tprintf("Block master\n");
     Test->repl->block_node(1);
     sleep(15);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Down")  == NULL )
+    if (strstr(maxadmin_result, "Down") == NULL)
     {
         Test->add_result(1, "Node1 is not down, status is %s\n", maxadmin_result);
     }
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(120);
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
+    execute_query(Test->repl->nodes[0], (char*) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
 
     sleep(15);
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(120);
     printf("Make node 2 slave\n");
     Test->repl->connect();
-    execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
+    execute_query(Test->repl->nodes[1], (char*) "SET GLOBAL READ_ONLY=ON");
     Test->repl->close_connections();
     sleep(15);
 
@@ -150,16 +150,16 @@ int main(int argc, char *argv[])
     Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 
     Test->set_timeout(60);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Slave, Running")  == NULL )
+    if (strstr(maxadmin_result, "Slave, Running") == NULL)
     {
         Test->add_result(1, "Node1 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(60);
-    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Master, Running")  == NULL )
+    if (strstr(maxadmin_result, "Master, Running") == NULL)
     {
         Test->add_result(1, "Node0 is not master, status is %s\n", maxadmin_result);
     }

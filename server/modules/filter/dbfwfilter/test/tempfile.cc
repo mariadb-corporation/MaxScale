@@ -20,7 +20,6 @@ namespace
 {
 
 static char NAME_TEMPLATE[] = "/tmp/XXXXXX";
-
 }
 
 TempFile::TempFile()

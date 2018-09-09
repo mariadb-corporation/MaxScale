@@ -49,7 +49,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
 
-//#define DEBUG_RRROUTER
+// #define DEBUG_RRROUTER
 #undef DEBUG_RROUTER
 
 #ifdef DEBUG_RRROUTER
@@ -60,22 +60,22 @@
 
 /* This router handles different query types in a different manner. Some queries
  * require that a "write_backend" is set. */
-const uint32_t q_route_to_rr = (QUERY_TYPE_LOCAL_READ | QUERY_TYPE_READ |
-                                QUERY_TYPE_MASTER_READ | QUERY_TYPE_USERVAR_READ |
-                                QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ |
-                                QUERY_TYPE_SHOW_DATABASES | QUERY_TYPE_SHOW_TABLES);
+const uint32_t q_route_to_rr = (QUERY_TYPE_LOCAL_READ | QUERY_TYPE_READ
+                                | QUERY_TYPE_MASTER_READ | QUERY_TYPE_USERVAR_READ
+                                | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ
+                                | QUERY_TYPE_SHOW_DATABASES | QUERY_TYPE_SHOW_TABLES);
 
-const uint32_t q_route_to_all = (QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_USERVAR_WRITE |
-                                 QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_ENABLE_AUTOCOMMIT |
-                                 QUERY_TYPE_DISABLE_AUTOCOMMIT);
+const uint32_t q_route_to_all = (QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_USERVAR_WRITE
+                                 | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_ENABLE_AUTOCOMMIT
+                                 | QUERY_TYPE_DISABLE_AUTOCOMMIT);
 
 const uint32_t q_trx_begin = QUERY_TYPE_BEGIN_TRX;
 
 const uint32_t q_trx_end = (QUERY_TYPE_ROLLBACK | QUERY_TYPE_COMMIT);
 
-const uint32_t q_route_to_write = (QUERY_TYPE_WRITE | QUERY_TYPE_PREPARE_NAMED_STMT |
-                                   QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_EXEC_STMT |
-                                   QUERY_TYPE_CREATE_TMP_TABLE | QUERY_TYPE_READ_TMP_TABLE);
+const uint32_t q_route_to_write = (QUERY_TYPE_WRITE | QUERY_TYPE_PREPARE_NAMED_STMT
+                                   | QUERY_TYPE_PREPARE_STMT | QUERY_TYPE_EXEC_STMT
+                                   | QUERY_TYPE_CREATE_TMP_TABLE | QUERY_TYPE_READ_TMP_TABLE);
 
 const char MAX_BACKENDS[] = "max_backends";
 const char WRITE_BACKEND[] = "write_backend";
@@ -85,18 +85,18 @@ const char DUMMY[] = "dummy_setting";
 /* Enum setting definition example */
 static const MXS_ENUM_VALUE enum_example[] =
 {
-    {"two", 2},
+    {"two",  2},
     {"zero", 0},
-    {NULL} /* Last must be NULL */
+    {NULL}      /* Last must be NULL */
 };
 
 static modulecmd_arg_type_t custom_cmd_args[] =
 {
-    {MODULECMD_ARG_STRING, "Example string"},
+    {MODULECMD_ARG_STRING,                             "Example string"                    },
     {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
 };
 
-bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output);
+bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output);
 
 using std::string;
 using std::cout;
@@ -110,41 +110,44 @@ class RRRouterSession;
 class RRRouter : public MXS_ROUTER
 {
 private:
-    SERVICE* m_service;            /* Service this router is part of */
+    SERVICE* m_service;             /* Service this router is part of */
     /* Router settings */
-    unsigned int m_max_backends;   /* How many backend servers to use */
-    SERVER* m_write_server;        /* Where to send write etc. "unsafe" queries */
-    bool m_print_on_routing;       /* Print a message on every packet routed? */
-    uint64_t m_example_enum;       /* Not used */
+    unsigned int m_max_backends;    /* How many backend servers to use */
+    SERVER*      m_write_server;    /* Where to send write etc. "unsafe" queries */
+    bool         m_print_on_routing;/* Print a message on every packet routed? */
+    uint64_t     m_example_enum;    /* Not used */
 
     void decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& target, bool& route_to_all);
 public:
     /* Statistics, written to by multiple threads */
-    volatile unsigned long int m_routing_s;    /* Routing success */
-    volatile unsigned long int m_routing_f;    /* Routing fail */
-    volatile unsigned long int m_routing_c;    /* Client packets routed */
+    volatile unsigned long int m_routing_s;     /* Routing success */
+    volatile unsigned long int m_routing_f;     /* Routing fail */
+    volatile unsigned long int m_routing_c;     /* Client packets routed */
 
     /* Methods */
     RRRouter(SERVICE* service);
     ~RRRouter();
     RRRouterSession* create_session(MXS_SESSION* session);
-    int route_query(RRRouterSession* rses, GWBUF* querybuf);
-    void client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb);
-    void handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_dcb,
-                     mxs_error_action_t action, bool* succp);
+    int              route_query(RRRouterSession* rses, GWBUF* querybuf);
+    void             client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb);
+    void             handle_error(RRRouterSession* rses,
+                                  GWBUF* message,
+                                  DCB*   problem_dcb,
+                                  mxs_error_action_t action,
+                                  bool* succp);
 };
 
 /* Every client connection has a corresponding session. */
 class RRRouterSession : public MXS_ROUTER_SESSION
 {
 public:
-    bool m_closed;              /* true when closeSession is called */
-    DCB_VEC m_backend_dcbs;     /* backends */
-    DCB* m_write_dcb;           /* write backend */
-    DCB* m_client_dcb;          /* client */
-    unsigned int m_route_count; /* how many packets have been routed */
-    bool m_on_transaction;      /* Is the session in transaction mode? */
-    unsigned int m_replies_to_ignore; /* Counts how many replies should be ignored. */
+    bool         m_closed;              /* true when closeSession is called */
+    DCB_VEC      m_backend_dcbs;        /* backends */
+    DCB*         m_write_dcb;           /* write backend */
+    DCB*         m_client_dcb;          /* client */
+    unsigned int m_route_count;         /* how many packets have been routed */
+    bool         m_on_transaction;      /* Is the session in transaction mode? */
+    unsigned int m_replies_to_ignore;   /* Counts how many replies should be ignored. */
 
     RRRouterSession(DCB_VEC&, DCB*, DCB*);
     ~RRRouterSession();
@@ -193,7 +196,8 @@ RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
             if (SERVER_REF_IS_ACTIVE(sref) && (backends.size() < m_max_backends))
             {
                 /* Connect to server */
-                DCB* conn = dcb_connect(sref->server, session,
+                DCB* conn = dcb_connect(sref->server,
+                                        session,
                                         sref->server->protocol);
                 if (conn)
                 {
@@ -201,7 +205,7 @@ RRRouterSession* RRRouter::create_session(MXS_SESSION* session)
                     atomic_add(&sref->connections, 1);
                     conn->service = session->service;
                     backends.push_back(conn);
-                } /* Any error by dcb_connect is reported by the function itself */
+                }   /* Any error by dcb_connect is reported by the function itself */
             }
         }
         if (m_write_server)
@@ -264,7 +268,8 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
         if (print)
         {
             MXS_NOTICE("Routing statement of length %du  to backend '%s'.",
-                       gwbuf_length(querybuf), target->server->name);
+                       gwbuf_length(querybuf),
+                       target->server->name);
         }
         /* Do not use dcb_write() to output to a dcb. dcb_write() is used only
          * for raw write in the procol modules. */
@@ -278,7 +283,8 @@ int RRRouter::route_query(RRRouterSession* rses, GWBUF* querybuf)
         if (print)
         {
             MXS_NOTICE("Routing statement of length %du to %d backends.",
-                       gwbuf_length(querybuf), n_targets);
+                       gwbuf_length(querybuf),
+                       n_targets);
         }
         int route_success = 0;
         for (unsigned int i = 0; i < rses->m_backend_dcbs.size(); i++)
@@ -344,8 +350,11 @@ void RRRouter::client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb)
         MXS_NOTICE("Replied to client.\n");
     }
 }
-void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_dcb,
-                            mxs_error_action_t action, bool* succp)
+void RRRouter::handle_error(RRRouterSession* rses,
+                            GWBUF* message,
+                            DCB*   problem_dcb,
+                            mxs_error_action_t action,
+                            bool* succp)
 {
     /* Don't handle same error twice on same DCB */
     if (problem_dcb->dcb_errhandle_called)
@@ -390,6 +399,7 @@ void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_
                 *succp = false;
             }
             break;
+
         case ERRACT_NEW_CONNECTION:
             {
                 /* React to a failed backend */
@@ -422,6 +432,7 @@ void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_
                 }
             }
             break;
+
         default:
             mxb_assert(!true);
             *succp = false;
@@ -509,21 +520,27 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
 #endif
         }
         break;
+
     case MXS_COM_INIT_DB:
         query_types = q_route_to_all;
         RR_DEBUG("MYSQL_COM_INIT_DB");
         break;
+
     case MXS_COM_QUIT:
         query_types = q_route_to_all;
         RR_DEBUG("MYSQL_COM_QUIT");
         break;
+
     case MXS_COM_FIELD_LIST:
         query_types = q_route_to_rr;
         RR_DEBUG("MYSQL_COM_FIELD_LIST");
         break;
+
     default:
-        /* TODO: Add support for other commands if needed. */
-        /* This error message will only print the number of the cmd. */
+        /*
+         * TODO: Add support for other commands if needed.
+         * This error message will only print the number of the cmd.
+         */
         MXS_ERROR("Received unexpected sql command type: '%d'.", cmd_type);
         break;
     }
@@ -567,22 +584,27 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
  * The functions implementing the router module API. These do not need to be
  * "extern C", but they do need to be callable from  C code.
  */
-static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
-static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
-static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
-static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* querybuf);
-static void diagnostics(MXS_ROUTER* instance, DCB* dcb);
-static json_t* diagnostics_json(const MXS_ROUTER* instance);
-static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
-                        GWBUF* resultbuf, DCB* backend_dcb);
-static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
-                        GWBUF* errmsgbuf, DCB* backend_dcb, mxs_error_action_t action,
+static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static int                 routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* querybuf);
+static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*             diagnostics_json(const MXS_ROUTER* instance);
+static void                clientReply(MXS_ROUTER* instance,
+                                       MXS_ROUTER_SESSION* router_session,
+                                       GWBUF* resultbuf,
+                                       DCB*   backend_dcb);
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errmsgbuf,
+                        DCB*   backend_dcb,
+                        mxs_error_action_t action,
                         bool* succp);
-static uint64_t getCapabilities(MXS_ROUTER *instance);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 static void     destroyInstance(MXS_ROUTER* instance);
 /* The next two entry points are usually optional. */
-static int process_init();
+static int  process_init();
 static void process_finish();
 
 /*
@@ -610,17 +632,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static MXS_MODULE moduleObject =
     {
-        MXS_MODULE_API_ROUTER,   /* Module type */
-        MXS_MODULE_BETA_RELEASE, /* Release status */
-        MXS_ROUTER_VERSION,      /* Implemented module API version */
-        "A simple round robin router", /* Description */
-        "V1.1.0", /* Module version */
+        MXS_MODULE_API_ROUTER,                                  /* Module type */
+        MXS_MODULE_BETA_RELEASE,                                /* Release status */
+        MXS_ROUTER_VERSION,                                     /* Implemented module API version */
+        "A simple round robin router",                          /* Description */
+        "V1.1.0",                                               /* Module version */
         RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
-        &entryPoints, /* Defined above */
-        process_init, /* Process init, can be null */
-        process_finish, /* Process finish, can be null */
-        NULL, /* Thread init */
-        NULL, /* Thread finish */
+        &entryPoints,                                           /* Defined above */
+        process_init,                                           /* Process init, can be null */
+        process_finish,                                         /* Process finish, can be null */
+        NULL,                                                   /* Thread init */
+        NULL,                                                   /* Thread finish */
         {
             /* Next is an array of MODULE_PARAM structs, max 64 items. These define all
              * the possible parameters that this module accepts. This is required
@@ -630,15 +652,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
              * Note that many common parameters, such as backend servers, are
              * already set to the upper level "service"-object.
              */
-            {   /* For simple types, only 3 of the 5 struct fields need to be
-                 * defined. */
-                MAX_BACKENDS,     /* Setting identifier in maxscale.cnf */
+            {                           /* For simple types, only 3 of the 5 struct fields need to be
+                                         * defined. */
+                MAX_BACKENDS,           /* Setting identifier in maxscale.cnf */
                 MXS_MODULE_PARAM_INT,   /* Setting type */
                 "0"                     /* Default value */
             },
-            {PRINT_ON_ROUTING,  MXS_MODULE_PARAM_BOOL, "false"},
-            {WRITE_BACKEND, MXS_MODULE_PARAM_SERVER, NULL},
-            { /* Enum types require an array with allowed values. */
+            {PRINT_ON_ROUTING,                                  MXS_MODULE_PARAM_BOOL,    "false"},
+            {WRITE_BACKEND,                                     MXS_MODULE_PARAM_SERVER,  NULL   },
+            {   /* Enum types require an array with allowed values. */
                 DUMMY,
                 MXS_MODULE_PARAM_ENUM,
                 "the_answer",
@@ -673,9 +695,12 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
      * the pointer. */
 
     /* Register a custom command */
-    if (!modulecmd_register_command("rrrouter", "test_command",
-                                    MODULECMD_TYPE_ACTIVE, custom_cmd_example,
-                                    2, custom_cmd_args,
+    if (!modulecmd_register_command("rrrouter",
+                                    "test_command",
+                                    MODULECMD_TYPE_ACTIVE,
+                                    custom_cmd_example,
+                                    2,
+                                    custom_cmd_args,
                                     "This is the command description"))
     {
         MXS_ERROR("Module command registration failed.");
@@ -804,8 +829,10 @@ static json_t* diagnostics_json(const MXS_ROUTER* instance)
  * @param   backend_dcb The backend DCB (data source)
  * @param   queue       The GWBUF with reply data
  */
-static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue,
-                        DCB* backend_dcb)
+static void clientReply(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* session,
+                        GWBUF* queue,
+                        DCB*   backend_dcb)
 {
     RRRouter* router = static_cast<RRRouter*>(instance);
     RRRouterSession* rses = static_cast<RRRouterSession*>(session);
@@ -826,9 +853,12 @@ static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF
  * @param       action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
  * @param       succp           Output result of action, true if router can continue
  */
-static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session,
-                        GWBUF* message, DCB* problem_dcb,
-                        mxs_error_action_t action, bool* succp)
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* session,
+                        GWBUF* message,
+                        DCB*   problem_dcb,
+                        mxs_error_action_t action,
+                        bool* succp)
 {
     RRRouter* router = static_cast<RRRouter*>(instance);
     RRRouterSession* rses = static_cast<RRRouterSession*>(session);
@@ -845,7 +875,7 @@ static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session,
  * @param instance The router instance
  * @return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_STMT_OUTPUT
  */
-static uint64_t getCapabilities(MXS_ROUTER *instance)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     /* This router needs to parse client queries, so it should set RCAP_TYPE_CONTIGUOUS_INPUT.
      * For output, parsing is not required but counting SQL replies is. RCAP_TYPE_RESULTSET_OUTPUT
@@ -891,7 +921,7 @@ static void process_finish()
  * A function executed as a custom module command through MaxAdmin
  * @param argv The arguments
  */
-bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output)
+bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
 {
     cout << MXS_MODULE_NAME << " wishes the Admin a good day.\n";
     int n_args = argv->argc;
@@ -909,12 +939,14 @@ bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output)
                 val_str.assign(node.value.string);
             }
             break;
+
         case MODULECMD_ARG_BOOLEAN:
             {
                 type_str = "boolean";
                 val_str.assign((node.value.boolean) ? "true" : "false");
             }
             break;
+
         default:
             {
                 type_str = "other";
@@ -922,8 +954,8 @@ bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output)
             }
             break;
         }
-        cout << "Argument " << i << ": type '" << type_str << "' value '" << val_str <<
-             "'\n";
+        cout << "Argument " << i << ": type '" << type_str << "' value '" << val_str
+             << "'\n";
     }
     return true;
 }

@@ -38,7 +38,7 @@ Duration StopWatch::restart()
     m_start = now;
     return lap;
 }
-} // base
+}   // base
 
 /********** OUTPUT ***********/
 namespace
@@ -46,21 +46,20 @@ namespace
 using namespace base;
 struct TimeConvert
 {
-    double div;         // divide the value of the previous unit by this
-    std::string suffix; // milliseconds, hours etc.
-    double max_visual;  // threashold to switch to the next unit
+    double      div;        // divide the value of the previous unit by this
+    std::string suffix;     // milliseconds, hours etc.
+    double      max_visual; // threashold to switch to the next unit
 };
 // Will never get to centuries because the duration is a long carrying nanoseconds
 TimeConvert convert[]
 {
-    {1, "ns", 1000}, {1000, "us", 1000},  {1000, "ms", 1000},
+    {1, "ns", 1000}, {1000, "us", 1000}, {1000, "ms", 1000},
     {1000, "s", 60}, {60, "min", 60}, {60, "hours", 24},
     {24, "days", 365.25}, {365.25, "years", 10000},
     {100, "centuries", std::numeric_limits<double>::max()}
 };
 
 int convert_size = sizeof(convert) / sizeof(convert[0]);
-
 }
 
 namespace base
@@ -87,7 +86,7 @@ std::pair<double, std::string> dur_to_human_readable(Duration dur)
         }
     }
 
-    abort(); // should never get here
+    abort();    // should never get here
 }
 
 std::ostream& operator<<(std::ostream& os, Duration dur)
@@ -101,12 +100,12 @@ std::ostream& operator<<(std::ostream& os, Duration dur)
 // TODO: this will require some thought. time_point_to_string() for a system_clock is
 // obvious, but not so for a steady_clock. Maybe TimePoint belongs to a system clock
 // and sould be called something else here, and live in a time_measuring namespace.
-std::string time_point_to_string(TimePoint tp, const std::string &fmt)
+std::string time_point_to_string(TimePoint tp, const std::string& fmt)
 {
     using namespace std::chrono;
     std::time_t timet = system_clock::to_time_t(system_clock::now()
                                                 + (tp - Clock::now()));
-    struct tm * ptm;
+    struct tm* ptm;
     ptm = gmtime(&timet);
     const int sz = 1024;
     char buf[sz];
@@ -114,30 +113,30 @@ std::string time_point_to_string(TimePoint tp, const std::string &fmt)
     return buf;
 }
 
-std::ostream & operator<<(std::ostream & os, TimePoint tp)
+std::ostream& operator<<(std::ostream& os, TimePoint tp)
 {
     os << time_point_to_string(tp);
     return os;
 }
 
-void test_stopwatch_output(std::ostream & os)
+void test_stopwatch_output(std::ostream& os)
 {
     long long dur[] =
     {
-        400,    // 400ns
-        5 * 1000, // 5us
-        500 * 1000, // 500us
-        1 * 1000000, // 1ms
-        700 * 1000000LL, // 700ms
-        5 * 1000000000LL, // 5s
-        200 * 1000000000LL, // 200s
-        5 * 60 * 1000000000LL, // 5m
-        45 * 60 * 1000000000LL, // 45m
-        130 * 60 * 1000000000LL, // 130m
-        24 * 60 * 60 * 1000000000LL, // 24 hours
-        3 * 24 * 60 * 60 * 1000000000LL, // 72 hours
-        180 * 24 * 60 * 60 * 1000000000LL, // 180 days
-        1000 * 24 * 60 * 60 * 1000000000LL // 1000 days
+        400,                                // 400ns
+        5 * 1000,                           // 5us
+        500 * 1000,                         // 500us
+        1 * 1000000,                        // 1ms
+        700 * 1000000LL,                    // 700ms
+        5 * 1000000000LL,                   // 5s
+        200 * 1000000000LL,                 // 200s
+        5 * 60 * 1000000000LL,              // 5m
+        45 * 60 * 1000000000LL,             // 45m
+        130 * 60 * 1000000000LL,            // 130m
+        24 * 60 * 60 * 1000000000LL,        // 24 hours
+        3 * 24 * 60 * 60 * 1000000000LL,    // 72 hours
+        180 * 24 * 60 * 60 * 1000000000LL,  // 180 days
+        1000 * 24 * 60 * 60 * 1000000000LL  // 1000 days
     };
 
     for (unsigned i = 0; i < sizeof(dur) / sizeof(dur[0]); ++i)
@@ -145,4 +144,4 @@ void test_stopwatch_output(std::ostream & os)
         os << Duration(dur[i]) << std::endl;
     }
 }
-} // base
+}   // base

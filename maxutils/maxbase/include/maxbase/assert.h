@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/cdefs.h>
 #include <signal.h>
@@ -21,19 +21,31 @@
 MXB_BEGIN_DECLS
 
 // TODO: Provide an MXB_DEBUG with the same meaning.
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
 
-#define mxb_assert(exp) do { if(!(exp)){\
-            const char *debug_expr = #exp;  /** The MXB_ERROR marco doesn't seem to like stringification */ \
+#define mxb_assert(exp) \
+    do {if (!(exp)) { \
+            const char* debug_expr = #exp;      /** The MXB_ERROR marco doesn't seem to like stringification
+                                                 * */ \
             MXB_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
             fprintf(stderr, "debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-            raise(SIGABRT);} } while (false)
+            raise(SIGABRT);}} while (false)
 
-#define mxb_assert_message(exp,message) do { if(!(exp)){     \
-            const char *debug_expr = #exp; \
-            MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, message, debug_expr); \
-            fprintf(stderr, "debug assert at %s:%d failed: %s (%s)\n", (char*)__FILE__, __LINE__, message, debug_expr); \
-            raise(SIGABRT);} } while (false)
+#define mxb_assert_message(exp, message) \
+    do {if (!(exp)) {     \
+            const char* debug_expr = #exp; \
+            MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", \
+                      (char*)__FILE__, \
+                      __LINE__, \
+                      message, \
+                      debug_expr); \
+            fprintf(stderr, \
+                    "debug assert at %s:%d failed: %s (%s)\n", \
+                    (char*)__FILE__, \
+                    __LINE__, \
+                    message, \
+                    debug_expr); \
+            raise(SIGABRT);}} while (false)
 
 #define MXB_AT_DEBUG(exp) exp
 

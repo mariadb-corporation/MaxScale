@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
@@ -22,7 +22,7 @@ class CommentFilterSession : public maxscale::FilterSession
 {
     // Prevent copy-constructor and assignment operator usage
     CommentFilterSession(const CommentFilterSession&);
-    CommentFilterSession& operator = (const CommentFilterSession&);
+    CommentFilterSession& operator=(const CommentFilterSession&);
 
 public:
     ~CommentFilterSession();

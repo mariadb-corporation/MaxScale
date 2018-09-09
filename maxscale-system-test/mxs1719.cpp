@@ -39,7 +39,13 @@ void run(TestConnections& test)
     const char* zPassword = test.maxscales->password;
     int port = test.maxscales->rwsplit_port[0];
 
-    if (mysql_real_connect(pMysql, test.maxscales->IP[0], zUser, zPassword, "test", port, NULL,
+    if (mysql_real_connect(pMysql,
+                           test.maxscales->IP[0],
+                           zUser,
+                           zPassword,
+                           "test",
+                           port,
+                           NULL,
                            CLIENT_MULTI_STATEMENTS))
     {
         const char* q = "UPDATE MXS_1719 SET a=1; UPDATE MXS_1719 SET a=1;";
@@ -63,7 +69,6 @@ void run(TestConnections& test)
         test.assert(false, "Could not connect to MaxScale.");
     }
 }
-
 }
 
 int main(int argc, char* argv[])

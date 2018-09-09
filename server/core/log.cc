@@ -32,7 +32,7 @@ const char* LOGFILE_NAME = "maxscale.log";
 
 size_t mxs_get_context(char* buffer, size_t len)
 {
-    mxb_assert(len >= 20); // Needed for "9223372036854775807"
+    mxb_assert(len >= 20);      // Needed for "9223372036854775807"
 
     uint64_t session_id = session_get_current_id();
 
@@ -47,7 +47,6 @@ size_t mxs_get_context(char* buffer, size_t len)
 
     return len;
 }
-
 }
 
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
@@ -96,7 +95,6 @@ json_t* get_log_priorities()
 
     return arr;
 }
-
 }
 
 json_t* mxs_logs_to_json(const char* host)

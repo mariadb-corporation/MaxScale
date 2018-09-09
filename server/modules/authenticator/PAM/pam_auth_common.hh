@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * Common declarations for both PAMAuth and PAMBackendAuth
@@ -33,10 +33,9 @@ enum pam_auth_state
 };
 
 /* Magic numbers from server source
-   https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */
+ *  https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */
 enum dialog_plugin_msg_types
 {
-    DIALOG_ECHO_ENABLED = 2,
+    DIALOG_ECHO_ENABLED  = 2,
     DIALOG_ECHO_DISABLED = 4
 };
-

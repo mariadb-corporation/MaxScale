@@ -43,7 +43,8 @@
 /** MySQL 5.7 password column name */
 #define MYSQL57_PASSWORD "authentication_string"
 
-#define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
+#define NEW_LOAD_DBUSERS_QUERY \
+    "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.db AS d \
     ON (u.user = d.user AND u.host = d.host) WHERE u.plugin IN ('', 'mysql_native_password') %s \
     UNION \
@@ -51,83 +52,83 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
 
- // Query used with MariaDB 10.1 and newer, supports roles
-const char* mariadb_users_query =
-    // First, select all users
-    "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
-    "( "
-    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-    "    ON (u.user = d.user AND u.host = d.host) "
-    "    UNION "
-    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-    "    ON (u.user = t.user AND u.host = t.host) "
-    ") AS t "
-    // Discard any users that are roles
-    "WHERE t.is_role <> 'Y' %s "
-    "UNION "
-    // Then select all users again
-    "SELECT r.user, r.host, u.db, u.select_priv, t.password FROM "
-    "( "
-    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.default_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-    "    ON (u.user = d.user AND u.host = d.host) "
-    "    UNION "
-    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.default_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-    "    ON (u.user = t.user AND u.host = t.host) "
-    ") AS t "
-    // Join it to the roles_mapping table to only have users with roles
-    "JOIN mysql.roles_mapping AS r "
-    "ON (r.user = t.user AND r.host = t.host) "
-    // Then join it into itself to get the privileges of the role with the name of the user
-    "JOIN "
-    "( "
-    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-    "    ON (u.user = d.user AND u.host = d.host) "
-    "    UNION "
-    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
-    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-    "    ON (u.user = t.user AND u.host = t.host) "
-    ") AS u "
-    "ON (u.user = r.role AND u.is_role = 'Y') "
-    // We only care about users that have a default role assigned
-    "WHERE t.default_role = u.user %s;";
+// Query used with MariaDB 10.1 and newer, supports roles
+const char* mariadb_users_query
+    =   // First, select all users
+        "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
+        "( "
+        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+        "    ON (u.user = d.user AND u.host = d.host) "
+        "    UNION "
+        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+        "    ON (u.user = t.user AND u.host = t.host) "
+        ") AS t "
+        // Discard any users that are roles
+        "WHERE t.is_role <> 'Y' %s "
+        "UNION "
+        // Then select all users again
+        "SELECT r.user, r.host, u.db, u.select_priv, t.password FROM "
+        "( "
+        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.default_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+        "    ON (u.user = d.user AND u.host = d.host) "
+        "    UNION "
+        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.default_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+        "    ON (u.user = t.user AND u.host = t.host) "
+        ") AS t "
+        // Join it to the roles_mapping table to only have users with roles
+        "JOIN mysql.roles_mapping AS r "
+        "ON (r.user = t.user AND r.host = t.host) "
+        // Then join it into itself to get the privileges of the role with the name of the user
+        "JOIN "
+        "( "
+        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+        "    ON (u.user = d.user AND u.host = d.host) "
+        "    UNION "
+        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+        "    ON (u.user = t.user AND u.host = t.host) "
+        ") AS u "
+        "ON (u.user = r.role AND u.is_role = 'Y') "
+        // We only care about users that have a default role assigned
+        "WHERE t.default_role = u.user %s;";
 
-static int get_users(SERV_LISTENER *listener, bool skip_local);
-static MYSQL *gw_mysql_init(void);
-static int gw_mysql_set_timeouts(MYSQL* handle);
-static char *mysql_format_user_entry(void *data);
-static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
+static int    get_users(SERV_LISTENER* listener, bool skip_local);
+static MYSQL* gw_mysql_init(void);
+static int    gw_mysql_set_timeouts(MYSQL* handle);
+static char*  mysql_format_user_entry(void* data);
+static bool   get_hostname(DCB* dcb, char* client_hostname, size_t size);
 
 static char* get_mariadb_users_query(bool include_root)
 {
-    const char *root = include_root ? "" : " AND t.user NOT IN ('root')";
+    const char* root = include_root ? "" : " AND t.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, mariadb_users_query, root, root);
-    char *rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
     MXS_ABORT_IF_NULL(rval);
     snprintf(rval, n_bytes + 1, mariadb_users_query, root, root);
 
     return rval;
 }
 
-static char* get_users_query(const char *server_version, bool include_root, bool is_mariadb)
+static char* get_users_query(const char* server_version, bool include_root, bool is_mariadb)
 {
-    if (is_mariadb) // 10.1.1 or newer, supports default roles
+    if (is_mariadb)     // 10.1.1 or newer, supports default roles
     {
         return get_mariadb_users_query(include_root);
     }
 
     // Either an older MariaDB version or a MySQL variant, use the legacy query
     const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.")
-                           ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    const char *with_root = include_root ? "" : " AND u.user NOT IN ('root')";
+        ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
-    char *rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    char* rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
 
     if (rval)
     {
@@ -137,14 +138,18 @@ static char* get_users_query(const char *server_version, bool include_root, bool
     return rval;
 }
 
-int replace_mysql_users(SERV_LISTENER *listener, bool skip_local)
+int replace_mysql_users(SERV_LISTENER* listener, bool skip_local)
 {
     int i = get_users(listener, skip_local);
     return i;
 }
 
-static bool check_password(const char *output, uint8_t *token, size_t token_len,
-                           uint8_t *scramble, size_t scramble_len, uint8_t *phase2_scramble)
+static bool check_password(const char* output,
+                           uint8_t* token,
+                           size_t   token_len,
+                           uint8_t* scramble,
+                           size_t   scramble_len,
+                           uint8_t* phase2_scramble)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
     size_t stored_token_len = sizeof(stored_token);
@@ -192,14 +197,14 @@ static bool check_password(const char *output, uint8_t *token, size_t token_len,
 }
 
 /** Callback for check_database() */
-static int database_cb(void *data, int columns, char** rows, char** row_names)
+static int database_cb(void* data, int columns, char** rows, char** row_names)
 {
-    bool *rval = (bool*)data;
+    bool* rval = (bool*)data;
     *rval = true;
     return 0;
 }
 
-static bool check_database(sqlite3 *handle, const char *database)
+static bool check_database(sqlite3* handle, const char* database)
 {
     bool rval = true;
 
@@ -211,7 +216,7 @@ static bool check_database(sqlite3 *handle, const char *database)
 
         sprintf(sql, mysqlauth_validate_database_query, database);
 
-        char *err;
+        char* err;
 
         if (sqlite3_exec(handle, sql, database_cb, &rval, &err) != SQLITE_OK)
         {
@@ -224,7 +229,7 @@ static bool check_database(sqlite3 *handle, const char *database)
     return rval;
 }
 
-static bool no_password_required(const char *result, size_t tok_len)
+static bool no_password_required(const char* result, size_t tok_len)
 {
     return *result == '\0' && tok_len == 0;
 }
@@ -237,26 +242,29 @@ struct user_query_result
 };
 
 /** @brief Callback for sqlite3_exec() */
-static int auth_cb(void *data, int columns, char** rows, char** row_names)
+static int auth_cb(void* data, int columns, char** rows, char** row_names)
 {
-    struct user_query_result *res = (struct user_query_result*)data;
+    struct user_query_result* res = (struct user_query_result*)data;
     strcpy(res->output, rows[0] ? rows[0] : "");
     res->ok = true;
     return 0;
 }
 
-int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
-                        uint8_t *scramble, size_t scramble_len)
+int validate_mysql_user(MYSQL_AUTH* instance,
+                        DCB* dcb,
+                        MYSQL_session* session,
+                        uint8_t* scramble,
+                        size_t   scramble_len)
 {
-    sqlite3 *handle = get_handle(instance);
-    const char* validate_query = instance->lower_case_table_names ?
-        mysqlauth_validate_user_query_lower :
-        mysqlauth_validate_user_query;
-    size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2 +
-                 strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
+    sqlite3* handle = get_handle(instance);
+    const char* validate_query = instance->lower_case_table_names
+        ? mysqlauth_validate_user_query_lower
+        : mysqlauth_validate_user_query;
+    size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2
+        + strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
-    char *err;
+    char* err;
 
     if (instance->skip_auth)
     {
@@ -264,8 +272,13 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
     }
     else
     {
-        sprintf(sql, validate_query, session->user, dcb->remote,
-                dcb->remote, session->db, session->db);
+        sprintf(sql,
+                validate_query,
+                session->user,
+                dcb->remote,
+                dcb->remote,
+                session->db,
+                session->db);
     }
 
     struct user_query_result res = {};
@@ -279,9 +292,14 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
     /** Check for IPv6 mapped IPv4 address */
     if (!res.ok && strchr(dcb->remote, ':') && strchr(dcb->remote, '.'))
     {
-        const char *ipv4 = strrchr(dcb->remote, ':') + 1;
-        sprintf(sql, validate_query, session->user, ipv4, ipv4,
-                session->db, session->db);
+        const char* ipv4 = strrchr(dcb->remote, ':') + 1;
+        sprintf(sql,
+                validate_query,
+                session->user,
+                ipv4,
+                ipv4,
+                session->db,
+                session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
@@ -299,8 +317,13 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
         char client_hostname[MYSQL_HOST_MAXLEN] = "";
         get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
 
-        sprintf(sql, validate_query, session->user, client_hostname,
-                client_hostname, session->db, session->db);
+        sprintf(sql,
+                validate_query,
+                session->user,
+                client_hostname,
+                client_hostname,
+                session->db,
+                session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
@@ -313,9 +336,13 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
     {
         /** Found a matching row */
 
-        if (no_password_required(res.output, session->auth_token_len) ||
-            check_password(res.output, session->auth_token, session->auth_token_len,
-                           scramble, scramble_len, session->client_sha1))
+        if (no_password_required(res.output, session->auth_token_len)
+            || check_password(res.output,
+                              session->auth_token,
+                              session->auth_token_len,
+                              scramble,
+                              scramble_len,
+                              session->client_sha1))
         {
             /** Password is OK, check that the database exists */
             if (check_database(handle, session->db))
@@ -337,13 +364,13 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
  *
  * @param handle SQLite handle
  */
-static bool delete_mysql_users(sqlite3 *handle)
+static bool delete_mysql_users(sqlite3* handle)
 {
     bool rval = true;
-    char *err;
+    char* err;
 
-    if (sqlite3_exec(handle, delete_users_query, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(handle, delete_databases_query, NULL, NULL, &err) != SQLITE_OK)
+    if (sqlite3_exec(handle, delete_users_query, NULL, NULL, &err) != SQLITE_OK
+        || sqlite3_exec(handle, delete_databases_query, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to delete old users: %s", err);
         sqlite3_free(err);
@@ -363,20 +390,20 @@ static bool delete_mysql_users(sqlite3 *handle)
  * @param host  The hostname, which is modified in-place. If merging is unsuccessful,
  *              it may end up garbled.
  */
-static void merge_netmask(char *host)
+static void merge_netmask(char* host)
 {
-    char *delimiter_loc = strchr(host, '/');
+    char* delimiter_loc = strchr(host, '/');
     if (delimiter_loc == NULL)
     {
-        return; // Nothing to do
+        return;     // Nothing to do
     }
     /* If anything goes wrong, we put the '/' back in to ensure the hostname
      * cannot be used.
      */
     *delimiter_loc = '\0';
 
-    char *ip_token_loc = host;
-    char *mask_token_loc = delimiter_loc + 1; // This is at minimum a \0
+    char* ip_token_loc = host;
+    char* mask_token_loc = delimiter_loc + 1;   // This is at minimum a \0
 
     while (ip_token_loc && mask_token_loc)
     {
@@ -396,7 +423,8 @@ static void merge_netmask(char *host)
              */
             *delimiter_loc = '/';
             MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
-                      "Merge incomplete: %s", host);
+                      "Merge incomplete: %s",
+                      host);
             return;
         }
 
@@ -412,14 +440,19 @@ static void merge_netmask(char *host)
     {
         *delimiter_loc = '/';
         MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
-                  "Merge incomplete: %s", host);
+                  "Merge incomplete: %s",
+                  host);
     }
 }
 
-void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
-                    const char *db, bool anydb, const char *pw)
+void add_mysql_user(sqlite3* handle,
+                    const char* user,
+                    const char* host,
+                    const char* db,
+                    bool anydb,
+                    const char* pw)
 {
-    size_t dblen = db && *db ? strlen(db) + 2 : sizeof(null_token); /** +2 for single quotes */
+    size_t dblen = db && *db ? strlen(db) + 2 : sizeof(null_token);     /** +2 for single quotes */
     char dbstr[dblen + 1];
 
     if (db && *db)
@@ -431,7 +464,7 @@ void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
         strcpy(dbstr, null_token);
     }
 
-    size_t pwlen = pw && *pw ? strlen(pw) + 2 : sizeof(null_token); /** +2 for single quotes */
+    size_t pwlen = pw && *pw ? strlen(pw) + 2 : sizeof(null_token);     /** +2 for single quotes */
     char pwstr[pwlen + 1];
 
     if (pw && *pw)
@@ -442,7 +475,9 @@ void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
                       "backend database. MaxScale does not support these "
                       "old passwords. This user will not be able to connect "
                       "via MaxScale. Update the users password to correct "
-                      "this.", user, host);
+                      "this.",
+                      user,
+                      host);
             return;
         }
         else if (*pw == '*')
@@ -461,7 +496,7 @@ void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
     char insert_sql[len + 1];
     sprintf(insert_sql, insert_user_query, user, host, dbstr, anydb ? "1" : "0", pwstr);
 
-    char *err;
+    char* err;
     if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to insert user: %s", err);
@@ -471,14 +506,14 @@ void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
     MXS_INFO("Added user: %s", insert_sql);
 }
 
-static void add_database(sqlite3 *handle, const char *db)
+static void add_database(sqlite3* handle, const char* db)
 {
     size_t len = sizeof(insert_database_query) + strlen(db) + 1;
     char insert_sql[len + 1];
 
     sprintf(insert_sql, insert_database_query, db);
 
-    char *err;
+    char* err;
     if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to insert database: %s", err);
@@ -491,7 +526,7 @@ static void add_database(sqlite3 *handle, const char *db)
  *
  * @return An object or NULL if something fails.
  */
-MYSQL *gw_mysql_init()
+MYSQL* gw_mysql_init()
 {
     MYSQL* con = mysql_init(NULL);
 
@@ -528,22 +563,25 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 
     MXS_CONFIG* cnf = config_get_global_options();
 
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT,
-                             (void *) &cnf->auth_read_timeout)))
+    if ((rc = mysql_optionsv(handle,
+                             MYSQL_OPT_READ_TIMEOUT,
+                             (void*) &cnf->auth_read_timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT,
-                             (void *) &cnf->auth_conn_timeout)))
+    if ((rc = mysql_optionsv(handle,
+                             MYSQL_OPT_CONNECT_TIMEOUT,
+                             (void*) &cnf->auth_conn_timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT,
-                             (void *) &cnf->auth_write_timeout)))
+    if ((rc = mysql_optionsv(handle,
+                             MYSQL_OPT_WRITE_TIMEOUT,
+                             (void*) &cnf->auth_write_timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
         goto retblock;
@@ -562,10 +600,12 @@ retblock:
  * @return True if the service permissions are OK, false if one or more permissions
  * are missing.
  */
-static bool check_server_permissions(SERVICE *service, SERVER* server,
-                                     const char* user, const char* password)
+static bool check_server_permissions(SERVICE* service,
+                                     SERVER*  server,
+                                     const char* user,
+                                     const char* password)
 {
-    MYSQL *mysql = gw_mysql_init();
+    MYSQL* mysql = gw_mysql_init();
 
     if (mysql == NULL)
     {
@@ -584,8 +624,12 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
         MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
-                  service->name, server->name, server->address, server->port,
-                  my_errno, mysql_error(mysql));
+                  service->name,
+                  server->name,
+                  server->address,
+                  server->port,
+                  my_errno,
+                  mysql_error(mysql));
 
         mysql_close(mysql);
         return my_errno != ER_ACCESS_DENIED_ERROR;
@@ -602,8 +646,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     }
 
     const char* format = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
-    const char* query_pw = strstr(server->version_string, "5.7.") ?
-                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* query_pw = strstr(server->version_string, "5.7.")
+        ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(format) + strlen(query_pw) + 1];
     bool rval = true;
     sprintf(query, format, query_pw);
@@ -614,13 +658,17 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         {
             MXS_ERROR("[%s] User '%s' is missing SELECT privileges"
                       " on mysql.user table. MySQL error message: %s",
-                      service->name, user, mysql_error(mysql));
+                      service->name,
+                      user,
+                      mysql_error(mysql));
             rval = false;
         }
         else
         {
             MXS_ERROR("[%s] Failed to query from mysql.user table."
-                      " MySQL error message: %s", service->name, mysql_error(mysql));
+                      " MySQL error message: %s",
+                      service->name,
+                      mysql_error(mysql));
         }
     }
     else
@@ -630,7 +678,9 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         if (res == NULL)
         {
             MXS_ERROR("[%s] Result retrieval failed when checking for permissions to "
-                      "the mysql.user table: %s", service->name, mysql_error(mysql));
+                      "the mysql.user table: %s",
+                      service->name,
+                      mysql_error(mysql));
         }
         else
         {
@@ -644,12 +694,16 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         {
             MXS_WARNING("[%s] User '%s' is missing SELECT privileges on mysql.db table. "
                         "Database name will be ignored in authentication. "
-                        "MySQL error message: %s", service->name, user, mysql_error(mysql));
+                        "MySQL error message: %s",
+                        service->name,
+                        user,
+                        mysql_error(mysql));
         }
         else
         {
             MXS_ERROR("[%s] Failed to query from mysql.db table. MySQL error message: %s",
-                      service->name, mysql_error(mysql));
+                      service->name,
+                      mysql_error(mysql));
         }
     }
     else
@@ -658,7 +712,9 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         if (res == NULL)
         {
             MXS_ERROR("[%s] Result retrieval failed when checking for permissions "
-                      "to the mysql.db table: %s", service->name, mysql_error(mysql));
+                      "to the mysql.db table: %s",
+                      service->name,
+                      mysql_error(mysql));
         }
         else
         {
@@ -672,12 +728,17 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         {
             MXS_WARNING("[%s] User '%s' is missing SELECT privileges on mysql.tables_priv table. "
                         "Database name will be ignored in authentication. "
-                        "MySQL error message: %s", service->name, user, mysql_error(mysql));
+                        "MySQL error message: %s",
+                        service->name,
+                        user,
+                        mysql_error(mysql));
         }
         else
         {
             MXS_ERROR("[%s] Failed to query from mysql.tables_priv table. "
-                      "MySQL error message: %s", service->name, mysql_error(mysql));
+                      "MySQL error message: %s",
+                      service->name,
+                      mysql_error(mysql));
         }
     }
     else
@@ -686,7 +747,9 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         if (res == NULL)
         {
             MXS_ERROR("[%s] Result retrieval failed when checking for permissions "
-                      "to the mysql.tables_priv table: %s", service->name, mysql_error(mysql));
+                      "to the mysql.tables_priv table: %s",
+                      service->name,
+                      mysql_error(mysql));
         }
         else
         {
@@ -695,7 +758,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     }
 
     // Check whether the current user has the SHOW DATABASES privilege
-    if (mxs_mysql_query(mysql, "SELECT show_db_priv FROM mysql.user "
+    if (mxs_mysql_query(mysql,
+                        "SELECT show_db_priv FROM mysql.user "
                         "WHERE CONCAT(user, '@', host) = CURRENT_USER()") == 0)
     {
         MYSQL_RES* res = mysql_use_result(mysql);
@@ -707,7 +771,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
             {
                 MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege. "
                             "This means that MaxScale cannot see all databases and authentication can fail.",
-                            service->name, user);
+                            service->name,
+                            user);
             }
 
             mysql_free_result(res);
@@ -721,9 +786,9 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
 bool check_service_permissions(SERVICE* service)
 {
-    if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH) ||
-        config_get_global_options()->skip_permission_checks ||
-        service->dbref == NULL) // No servers to check
+    if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH)
+        || config_get_global_options()->skip_permission_checks
+        || service->dbref == NULL)  // No servers to check
     {
         return true;
     }
@@ -733,13 +798,13 @@ bool check_service_permissions(SERVICE* service)
 
     serviceGetUser(service, &user, &password);
 
-    char *dpasswd = decrypt_password(password);
+    char* dpasswd = decrypt_password(password);
     bool rval = false;
 
-    for (SERVER_REF *server = service->dbref; server; server = server->next)
+    for (SERVER_REF* server = service->dbref; server; server = server->next)
     {
-        if (server_is_mxs_service(server->server) ||
-            check_server_permissions(service, server->server, user, dpasswd))
+        if (server_is_mxs_service(server->server)
+            || check_server_permissions(service, server->server, user, dpasswd))
         {
             rval = true;
         }
@@ -760,32 +825,37 @@ bool check_service_permissions(SERVICE* service)
  *
  * @return True if the hostname query was successful
  */
-static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
+static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
 {
-    struct addrinfo *ai = NULL, hint = {};
+    struct addrinfo* ai = NULL, hint = {};
     hint.ai_flags = AI_ALL;
     int rc;
 
     if ((rc = getaddrinfo(dcb->remote, NULL, &hint, &ai)) != 0)
     {
         MXS_ERROR("Failed to obtain address for host %s, %s",
-                  dcb->remote, gai_strerror(rc));
+                  dcb->remote,
+                  gai_strerror(rc));
         return false;
     }
 
     /* Try to lookup the domain name of the given IP-address. This is a slow
      * i/o-operation, which will stall the entire thread. TODO: cache results
      * if this feature is used often. */
-    int lookup_result = getnameinfo(ai->ai_addr, ai->ai_addrlen,
-                                    client_hostname, size,
-                                    NULL, 0, // No need for the port
-                                    NI_NAMEREQD); // Text address only
+    int lookup_result = getnameinfo(ai->ai_addr,
+                                    ai->ai_addrlen,
+                                    client_hostname,
+                                    size,
+                                    NULL,
+                                    0,              // No need for the port
+                                    NI_NAMEREQD);   // Text address only
     freeaddrinfo(ai);
 
     if (lookup_result != 0 && lookup_result != EAI_NONAME)
     {
         MXS_WARNING("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
-                    dcb->remote, gai_strerror(lookup_result));
+                    dcb->remote,
+                    gai_strerror(lookup_result));
     }
 
     return lookup_result == 0;
@@ -799,8 +869,9 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     {
         static bool log_missing_privs = true;
 
-        if (mxs_mysql_query(conn, "SET @roles_are_available=(SELECT 1 FROM mysql.roles_mapping LIMIT 1)") == 0 &&
-            mxs_mysql_query(conn, "SET @roles_are_available=(SELECT default_role FROM mysql.user LIMIT 1)") == 0)
+        if (mxs_mysql_query(conn, "SET @roles_are_available=(SELECT 1 FROM mysql.roles_mapping LIMIT 1)") == 0
+            && mxs_mysql_query(conn,
+                               "SET @roles_are_available=(SELECT default_role FROM mysql.user LIMIT 1)") == 0)
         {
             rval = true;
         }
@@ -810,24 +881,26 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
             MXS_WARNING("The user for service '%s' might be missing the SELECT grant on "
                         "`mysql.roles_mapping` or `mysql.user`. Use of default roles is disabled "
                         "until the missing privileges are added. Error was: %s",
-                        service->name, mysql_error(conn));
+                        service->name,
+                        mysql_error(conn));
         }
     }
 
     return rval;
 }
 
-int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, SERV_LISTENER *listener)
+int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, SERV_LISTENER* listener)
 {
     if (server_ref->server->version_string[0] == 0)
     {
         mxs_mysql_set_server_version(con, server_ref->server);
     }
 
-    char *query = get_users_query(server_ref->server->version_string, service->enable_root,
+    char* query = get_users_query(server_ref->server->version_string,
+                                  service->enable_root,
                                   roles_are_available(con, service, server_ref->server));
 
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance;
     sqlite3* handle = get_handle(instance);
     int users = 0;
 
@@ -835,7 +908,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
     {
         if (mxs_mysql_query(con, query) == 0)
         {
-            MYSQL_RES *result = mysql_store_result(con);
+            MYSQL_RES* result = mysql_store_result(con);
 
             if (result)
             {
@@ -853,8 +926,12 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
                         merge_netmask(row[1]);
                     }
 
-                    add_mysql_user(handle, row[0], row[1], row[2],
-                                   row[3] && strcmp(row[3], "Y") == 0, row[4]);
+                    add_mysql_user(handle,
+                                   row[0],
+                                   row[1],
+                                   row[2],
+                                   row[3] && strcmp(row[3], "Y") == 0,
+                                   row[4]);
                     users++;
                 }
 
@@ -872,7 +949,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
     /** Load the list of databases */
     if (mxs_mysql_query(con, "SHOW DATABASES") == 0)
     {
-        MYSQL_RES *result = mysql_store_result(con);
+        MYSQL_RES* result = mysql_store_result(con);
         if (result)
         {
             MYSQL_ROW row;
@@ -900,15 +977,15 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(SERV_LISTENER *listener, bool skip_local)
+static int get_users(SERV_LISTENER* listener, bool skip_local)
 {
-    const char *service_user = NULL;
-    const char *service_passwd = NULL;
-    SERVICE *service = listener->service;
+    const char* service_user = NULL;
+    const char* service_passwd = NULL;
+    SERVICE* service = listener->service;
 
     serviceGetUser(service, &service_user, &service_passwd);
 
-    char *dpwd = decrypt_password(service_passwd);
+    char* dpwd = decrypt_password(service_passwd);
 
     if (dpwd == NULL)
     {
@@ -916,33 +993,36 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
     }
 
     /** Delete the old users */
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    MYSQL_AUTH* instance = (MYSQL_AUTH*)listener->auth_instance;
     sqlite3* handle = get_handle(instance);
     delete_mysql_users(handle);
 
-    SERVER_REF *server = service->dbref;
+    SERVER_REF* server = service->dbref;
     int total_users = -1;
     bool no_active_servers = true;
 
     for (server = service->dbref; !maxscale_is_shutting_down() && server; server = server->next)
     {
-        if (!SERVER_REF_IS_ACTIVE(server) || !server_is_active(server->server) ||
-            (skip_local && server_is_mxs_service(server->server)))
+        if (!SERVER_REF_IS_ACTIVE(server) || !server_is_active(server->server)
+            || (skip_local && server_is_mxs_service(server->server)))
         {
             continue;
         }
 
         no_active_servers = false;
 
-        MYSQL *con = gw_mysql_init();
+        MYSQL* con = gw_mysql_init();
         if (con)
         {
             if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
             {
                 MXS_ERROR("Failure loading users data from backend "
                           "[%s:%i] for service [%s]. MySQL error %i, %s",
-                          server->server->address, server->server->port,
-                          service->name, mysql_errno(con), mysql_error(con));
+                          server->server->address,
+                          server->server->port,
+                          service->name,
+                          mysql_errno(con),
+                          mysql_error(con));
                 mysql_close(con);
             }
             else
@@ -975,7 +1055,8 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
     else if (server == NULL && total_users == -1)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
-                  " Failed to connect to any of the backend databases.", service->name);
+                  " Failed to connect to any of the backend databases.",
+                  service->name);
     }
 
     return total_users;

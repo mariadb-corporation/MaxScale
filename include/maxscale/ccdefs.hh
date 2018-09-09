@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file ccdefs.hh
@@ -18,7 +18,7 @@
  * This file is to be included first by all C++ headers.
  */
 
-#if !defined(__cplusplus)
+#if !defined (__cplusplus)
 #error This file is only to be included by C++ code.
 #endif
 
@@ -57,8 +57,8 @@ namespace mxs = maxscale;
  *   }
  * @endcode
  */
-#define MXS_EXCEPTION_GUARD(statement)\
-    do { try { statement; }\
-    catch (const std::bad_alloc&) { MXS_OOM(); }\
-    catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\
-    catch (...) { MXS_ERROR("Caught unknown exception."); } } while (false)
+#define MXS_EXCEPTION_GUARD(statement) \
+    do {try {statement;} \
+        catch (const std::bad_alloc&) {MXS_OOM();} \
+        catch (const std::exception& x) {MXS_ERROR("Caught standard exception: %s", x.what());} \
+        catch (...) {MXS_ERROR("Caught unknown exception.");}} while (false)

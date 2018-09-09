@@ -42,32 +42,36 @@
  * @endverbatim
  */
 
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *params);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_DOWNSTREAM* downstream);
+static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
-static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
-                           const char *replace);
+static char* regex_replace(const char* sql,
+                           pcre2_code* re,
+                           pcre2_match_data* study,
+                           const char* replace);
 
 /**
  * Instance structure
  */
 typedef struct
 {
-    char *source; /*< Source address to restrict matches */
-    char *user; /*< User name to restrict matches */
-    char *match; /*< Regular expression to match */
-    char *replace; /*< Replacement text */
-    pcre2_code *re; /*< Compiled regex text */
-    pcre2_match_data *match_data; /*< Matching data used by the compiled regex */
-    FILE* logfile; /*< Log file */
-    bool log_trace; /*< Whether messages should be printed to tracelog */
+    char*             source;       /*< Source address to restrict matches */
+    char*             user;         /*< User name to restrict matches */
+    char*             match;        /*< Regular expression to match */
+    char*             replace;      /*< Replacement text */
+    pcre2_code*       re;           /*< Compiled regex text */
+    pcre2_match_data* match_data;   /*< Matching data used by the compiled regex */
+    FILE*             logfile;      /*< Log file */
+    bool              log_trace;    /*< Whether messages should be printed to tracelog */
 } REGEX_INSTANCE;
 
 /**
@@ -75,11 +79,11 @@ typedef struct
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down; /* The downstream filter */
-    SPINLOCK lock;
-    int no_change; /* No. of unchanged requests */
-    int replacements; /* No. of changed requests */
-    int active; /* Is filter active */
+    MXS_DOWNSTREAM down;    /* The downstream filter */
+    SPINLOCK       lock;
+    int            no_change;   /* No. of unchanged requests */
+    int            replacements;/* No. of changed requests */
+    int            active;      /* Is filter active */
 } REGEX_SESSION;
 
 void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* newsql);
@@ -87,8 +91,8 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0},
+    {"ignorecase", PCRE2_CASELESS                              },
+    {"case",       0                                           },
     {NULL}
 };
 
@@ -103,59 +107,68 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        NULL, // No Upstream requirement
-        routeQuery,
-        NULL, // No clientReply
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        NULL, // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
-        MXS_FILTER_VERSION,
-        "A query rewrite filter that uses regular expressions to rewrite queries",
-        "V1.1.0",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_FILTER_OBJECT MyObject =
         {
-            {"match", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"replace", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"source", MXS_MODULE_PARAM_STRING},
-            {"user", MXS_MODULE_PARAM_STRING},
-            {"log_trace", MXS_MODULE_PARAM_BOOL, "false"},
-            {"log_file", MXS_MODULE_PARAM_STRING},
-            {"options", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            createInstance,
+            newSession,
+            closeSession,
+            freeSession,
+            setDownstream,
+            NULL,   // No Upstream requirement
+            routeQuery,
+            NULL,   // No clientReply
+            diagnostic,
+            diagnostic_json,
+            getCapabilities,
+            NULL,   // No destroyInstance
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_FILTER,
+            MXS_MODULE_GA,
+            MXS_FILTER_VERSION,
+            "A query rewrite filter that uses regular expressions to rewrite queries",
+            "V1.1.0",
+            RCAP_TYPE_CONTIGUOUS_INPUT,
+            &MyObject,
+            NULL,                                                                       /* Process init. */
+            NULL,                                                                       /* Process finish. */
+            NULL,                                                                       /* Thread init. */
+            NULL,                                                                       /* Thread finish. */
+            {
+                {"match",                                                             MXS_MODULE_PARAM_STRING,
+                 NULL,
+                 MXS_MODULE_OPT_REQUIRED        },
+                {"replace",                                                           MXS_MODULE_PARAM_STRING,
+                 NULL,
+                 MXS_MODULE_OPT_REQUIRED                   },
+                {"source",
+                 MXS_MODULE_PARAM_STRING},
+                {"user",
+                 MXS_MODULE_PARAM_STRING},
+                {"log_trace",                                                         MXS_MODULE_PARAM_BOOL,
+                 "false"               },
+                {"log_file",
+                 MXS_MODULE_PARAM_STRING},
+                {"options",                                                           MXS_MODULE_PARAM_ENUM,
+                 "ignorecase",                                                     MXS_MODULE_OPT_NONE,
+                 option_values},
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /**
  * Free a regexfilter instance.
  * @param instance instance to free
  */
-void free_instance(REGEX_INSTANCE *instance)
+void free_instance(REGEX_INSTANCE* instance)
 {
     if (instance)
     {
@@ -187,10 +200,9 @@ void free_instance(REGEX_INSTANCE *instance)
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *
-createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    REGEX_INSTANCE *my_instance = static_cast<REGEX_INSTANCE*>(MXS_CALLOC(1, sizeof(REGEX_INSTANCE)));
+    REGEX_INSTANCE* my_instance = static_cast<REGEX_INSTANCE*>(MXS_CALLOC(1, sizeof(REGEX_INSTANCE)));
 
     if (my_instance)
     {
@@ -200,7 +212,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         my_instance->user = config_copy_string(params, "user");
         my_instance->log_trace = config_get_bool(params, "log_trace");
 
-        const char *logfile = config_get_string(params, "log_file");
+        const char* logfile = config_get_string(params, "log_file");
 
         if (*logfile)
         {
@@ -227,15 +239,17 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
                                              NULL)) == NULL)
         {
             char errbuffer[1024];
-            pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
+            pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) &errbuffer, sizeof(errbuffer));
             MXS_ERROR("Compiling regular expression '%s' failed at %lu: %s",
-                      my_instance->match, erroffset, errbuffer);
+                      my_instance->match,
+                      erroffset,
+                      errbuffer);
             free_instance(my_instance);
             return NULL;
         }
 
-        if ((my_instance->match_data =
-                 pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
+        if ((my_instance->match_data
+                 = pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
         {
             MXS_ERROR("Failure to create PCRE2 matching data. "
                       "This is most likely caused by a lack of available memory.");
@@ -244,7 +258,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         }
     }
 
-    return (MXS_FILTER *) my_instance;
+    return (MXS_FILTER*) my_instance;
 }
 
 /**
@@ -254,12 +268,11 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
-    REGEX_SESSION *my_session;
-    const char *remote, *user;
+    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
+    REGEX_SESSION* my_session;
+    const char* remote, * user;
 
     if ((my_session = static_cast<REGEX_SESSION*>(MXS_CALLOC(1, sizeof(REGEX_SESSION)))) != NULL)
     {
@@ -292,8 +305,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
 }
 
@@ -303,8 +315,7 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param instance  The filter instance data
  * @param session   The session being closed
  */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
     MXS_FREE(session);
     return;
@@ -317,10 +328,9 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param session   The session being closed
  * @param downstream    The downstream filter or router
  */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    REGEX_SESSION *my_session = (REGEX_SESSION *) session;
+    REGEX_SESSION* my_session = (REGEX_SESSION*) session;
     my_session->down = *downstream;
 }
 
@@ -334,12 +344,11 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
  * @param session   The filter session
  * @param queue     The query data
  */
-static int
-routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
+static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
-    REGEX_SESSION *my_session = (REGEX_SESSION *) session;
-    char *sql, *newsql;
+    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
+    REGEX_SESSION* my_session = (REGEX_SESSION*) session;
+    char* sql, * newsql;
 
     if (my_session->active && modutil_is_SQL(queue))
     {
@@ -368,10 +377,10 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             }
             MXS_FREE(sql);
         }
-
     }
     return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session, queue);
+                                       my_session->down.session,
+                                       queue);
 }
 
 /**
@@ -385,19 +394,22 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
-    REGEX_SESSION *my_session = (REGEX_SESSION *) fsession;
+    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*) instance;
+    REGEX_SESSION* my_session = (REGEX_SESSION*) fsession;
 
-    dcb_printf(dcb, "\t\tSearch and replace:            s/%s/%s/\n",
-               my_instance->match, my_instance->replace);
+    dcb_printf(dcb,
+               "\t\tSearch and replace:            s/%s/%s/\n",
+               my_instance->match,
+               my_instance->replace);
     if (my_session)
     {
-        dcb_printf(dcb, "\t\tNo. of queries unaltered by filter:    %d\n",
+        dcb_printf(dcb,
+                   "\t\tNo. of queries unaltered by filter:    %d\n",
                    my_session->no_change);
-        dcb_printf(dcb, "\t\tNo. of queries altered by filter:      %d\n",
+        dcb_printf(dcb,
+                   "\t\tNo. of queries altered by filter:      %d\n",
                    my_session->replacements);
     }
     if (my_instance->source)
@@ -424,10 +436,10 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE*)instance;
-    REGEX_SESSION *my_session = (REGEX_SESSION*)fsession;
+    REGEX_INSTANCE* my_instance = (REGEX_INSTANCE*)instance;
+    REGEX_SESSION* my_session = (REGEX_SESSION*)fsession;
 
     json_t* rval = json_object();
 
@@ -462,10 +474,9 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
  * @param   replace The replacement text
  * @return  The replaced text or NULL if no replacement was done.
  */
-static char *
-regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, const char *replace)
+static char* regex_replace(const char* sql, pcre2_code* re, pcre2_match_data* match_data, const char* replace)
 {
-    char *result = NULL;
+    char* result = NULL;
     size_t result_size;
 
     /** This should never fail with rc == 0 because we used pcre2_match_data_create_from_pattern() */
@@ -475,14 +486,21 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
         result = static_cast<char*>(MXS_MALLOC(result_size));
 
         size_t result_size_tmp = result_size;
-        while (result &&
-               pcre2_substitute(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0,
-                                PCRE2_SUBSTITUTE_GLOBAL, match_data, NULL,
-                                (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                (PCRE2_UCHAR*) result, (PCRE2_SIZE*) & result_size_tmp) == PCRE2_ERROR_NOMEMORY)
+        while (result
+               && pcre2_substitute(re,
+                                   (PCRE2_SPTR) sql,
+                                   PCRE2_ZERO_TERMINATED,
+                                   0,
+                                   PCRE2_SUBSTITUTE_GLOBAL,
+                                   match_data,
+                                   NULL,
+                                   (PCRE2_SPTR) replace,
+                                   PCRE2_ZERO_TERMINATED,
+                                   (PCRE2_UCHAR*) result,
+                                   (PCRE2_SIZE*) &result_size_tmp) == PCRE2_ERROR_NOMEMORY)
         {
             result_size_tmp = 1.5 * result_size;
-            char *tmp;
+            char* tmp;
             if ((tmp = static_cast<char*>(MXS_REALLOC(result, result_size_tmp))) == NULL)
             {
                 MXS_FREE(result);

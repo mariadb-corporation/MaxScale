@@ -14,7 +14,7 @@
 
 using namespace std;
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     vector<string> ids;
@@ -25,27 +25,25 @@ int main(int argc, char **argv)
         ids.push_back(test.repl->get_server_id_str(i));
     }
 
-    auto get_id = [&]()
-    {
-        Connection c = test.maxscales->readconn_slave();
-        test.assert(c.connect(), "Connection should be OK: %s", c.error());
-        string res = c.field("SELECT @@server_id");
-        test.assert(!res.empty(), "Field should not be empty: %s", c.error());
-        return res;
-    };
+    auto get_id = [&]() {
+            Connection c = test.maxscales->readconn_slave();
+            test.assert(c.connect(), "Connection should be OK: %s", c.error());
+            string res = c.field("SELECT @@server_id");
+            test.assert(!res.empty(), "Field should not be empty: %s", c.error());
+            return res;
+        };
 
-    auto in_use = [&](string id)
-    {
-        for (int i = 0; i < 2 * test.repl->N; i++)
-        {
-            if (get_id() == id)
+    auto in_use = [&](string id) {
+            for (int i = 0; i < 2 * test.repl->N; i++)
             {
-                return true;
+                if (get_id() == id)
+                {
+                    return true;
+                }
             }
-        }
 
-        return false;
-    };
+            return false;
+        };
 
     test.tprintf("Blocking the master and doing a read query");
     test.repl->block_node(0);

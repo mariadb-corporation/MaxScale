@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <algorithm>
@@ -32,7 +32,6 @@ struct default_delete<GWBUF>
         gwbuf_free(pBuffer);
     }
 };
-
 }
 
 namespace maxscale
@@ -57,12 +56,12 @@ public:
     // pointer_type  : The type of a pointer to an element, either "uint8_t*" or "const uint8_t*".
     // reference_type: The type of a reference to an element, either "uint8_t&" or "const uint8_t&".
     template<class buf_type, class pointer_type, class reference_type>
-    class iterator_base : public std::iterator <
-        std::forward_iterator_tag, // The type of the iterator
-        uint8_t,                   // The type of the elems
-        std::ptrdiff_t,            // Difference between two its
-        pointer_type,              // The type of pointer to an elem
-        reference_type >           // The reference type of an elem
+    class iterator_base : public std::iterator<
+                            std::forward_iterator_tag   // The type of the iterator
+                            , uint8_t                   // The type of the elems
+                            , std::ptrdiff_t            // Difference between two its
+                            , pointer_type              // The type of pointer to an elem
+                            , reference_type>           // The reference type of an elem
     {
     public:
         /**
@@ -84,7 +83,8 @@ public:
             : m_pBuffer(pBuffer)
             , m_i(m_pBuffer ? GWBUF_DATA(m_pBuffer) : NULL)
             , m_end(m_pBuffer ? (m_i + GWBUF_LENGTH(m_pBuffer)) : NULL)
-        {}
+        {
+        }
 
         void advance()
         {
@@ -140,7 +140,8 @@ public:
     public:
         explicit iterator(GWBUF* pBuffer = NULL)
             : iterator_base_typedef(pBuffer)
-        {}
+        {
+        }
 
         iterator& operator++()
         {
@@ -155,12 +156,12 @@ public:
             return rv;
         }
 
-        bool operator == (const iterator& rhs) const
+        bool operator==(const iterator& rhs) const
         {
             return eq(rhs);
         }
 
-        bool operator != (const iterator& rhs) const
+        bool operator!=(const iterator& rhs) const
         {
             return neq(rhs);
         }
@@ -183,11 +184,13 @@ public:
     public:
         explicit const_iterator(const GWBUF* pBuffer = NULL)
             : const_iterator_base_typedef(pBuffer)
-        {}
+        {
+        }
 
         const_iterator(const Buffer::iterator& rhs)
             : const_iterator_base_typedef(rhs.m_pBuffer)
-        {}
+        {
+        }
 
         const_iterator& operator++()
         {
@@ -202,12 +205,12 @@ public:
             return rv;
         }
 
-        bool operator == (const const_iterator& rhs) const
+        bool operator==(const const_iterator& rhs) const
         {
             return eq(rhs);
         }
 
-        bool operator != (const const_iterator& rhs) const
+        bool operator!=(const const_iterator& rhs) const
         {
             return neq(rhs);
         }
@@ -224,7 +227,8 @@ public:
      */
     Buffer()
         : m_pBuffer(NULL)
-    {}
+    {
+    }
 
     /**
      * Copy constructor.
@@ -275,7 +279,8 @@ public:
      */
     Buffer(GWBUF* pBuffer)
         : m_pBuffer(pBuffer)
-    {}
+    {
+    }
 
     /**
      * Creates a buffer of specified size.
@@ -353,7 +358,7 @@ public:
      *
      * @see Buffer::copy_from
      */
-    Buffer& operator = (const Buffer& rhs)
+    Buffer& operator=(const Buffer& rhs)
     {
         Buffer temp(rhs);
         swap(temp);
@@ -366,7 +371,7 @@ public:
      *
      * @param rhs  The @c Buffer to be moves.
      */
-    Buffer& operator = (Buffer&& rhs)
+    Buffer& operator=(Buffer&& rhs)
     {
         reset();
         swap(rhs);
@@ -626,7 +631,7 @@ public:
      *
      * @attention Invalidates all iterators.
      */
-    GWBUF** operator & ()
+    GWBUF** operator&()
     {
         reset();
         return &m_pBuffer;
@@ -689,10 +694,10 @@ public:
 
 private:
     // To prevent @c Buffer from being created on the heap.
-    void* operator new(size_t);          // standard new
-    void* operator new(size_t, void*);   // placement new
-    void* operator new[](size_t);        // array new
-    void* operator new[](size_t, void*); // placement array new
+    void* operator new(size_t);         // standard new
+    void* operator new(size_t, void*);  // placement new
+    void* operator new[](size_t);       // array new
+    void* operator new[](size_t, void*);// placement array new
 
 private:
     GWBUF* m_pBuffer;
@@ -703,7 +708,7 @@ private:
  *
  * @return True if equal, false otherwise.
  */
-inline bool operator == (const Buffer& lhs, const Buffer& rhs)
+inline bool operator==(const Buffer& lhs, const Buffer& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -713,7 +718,7 @@ inline bool operator == (const Buffer& lhs, const Buffer& rhs)
  *
  * @return True if equal, false otherwise.
  */
-inline bool operator == (const Buffer& lhs, const GWBUF& rhs)
+inline bool operator==(const Buffer& lhs, const GWBUF& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -723,7 +728,7 @@ inline bool operator == (const Buffer& lhs, const GWBUF& rhs)
  *
  * @return True if un-equal, false otherwise.
  */
-inline bool operator != (const Buffer& lhs, const Buffer& rhs)
+inline bool operator!=(const Buffer& lhs, const Buffer& rhs)
 {
     return !lhs.eq(rhs);
 }
@@ -733,9 +738,8 @@ inline bool operator != (const Buffer& lhs, const Buffer& rhs)
  *
  * @return True if un-equal, false otherwise.
  */
-inline bool operator != (const Buffer& lhs, const GWBUF& rhs)
+inline bool operator!=(const Buffer& lhs, const GWBUF& rhs)
 {
     return !lhs.eq(rhs);
 }
-
 }

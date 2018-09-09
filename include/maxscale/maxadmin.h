@@ -10,26 +10,26 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 #include <maxscale/paths.h>
 
 MXS_BEGIN_DECLS
 
-#define MAXADMIN_DEFAULT_SOCKET                MXS_DEFAULT_MAXADMIN_SOCKET
+#define MAXADMIN_DEFAULT_SOCKET MXS_DEFAULT_MAXADMIN_SOCKET
 
 #define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN 7
 #define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG     "default"
 
-#define MAXADMIN_AUTH_REPLY_LEN                6
-#define MAXADMIN_AUTH_FAILED_REPLY             "FAILED"
-#define MAXADMIN_AUTH_SUCCESS_REPLY            "OK----"
+#define MAXADMIN_AUTH_REPLY_LEN     6
+#define MAXADMIN_AUTH_FAILED_REPLY  "FAILED"
+#define MAXADMIN_AUTH_SUCCESS_REPLY "OK----"
 
-#define MAXADMIN_AUTH_USER_PROMPT              "USER"
-#define MAXADMIN_AUTH_USER_PROMPT_LEN          4
+#define MAXADMIN_AUTH_USER_PROMPT     "USER"
+#define MAXADMIN_AUTH_USER_PROMPT_LEN 4
 
-#define MAXADMIN_AUTH_PASSWORD_PROMPT          "PASSWORD"
-#define MAXADMIN_AUTH_PASSWORD_PROMPT_LEN      8
+#define MAXADMIN_AUTH_PASSWORD_PROMPT     "PASSWORD"
+#define MAXADMIN_AUTH_PASSWORD_PROMPT_LEN 8
 
 MXS_END_DECLS

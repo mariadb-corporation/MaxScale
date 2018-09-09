@@ -75,7 +75,7 @@ int32_t RouterSession::clientReply(GWBUF* pResponse)
     return m_pUpstream_filter_session->clientReply(pResponse);
 }
 
-//static
+// static
 int32_t RouterSession::routeQuery(MXS_FILTER* pInstance,
                                   MXS_FILTER_SESSION* pRouter_session,
                                   GWBUF* pStatement)
@@ -84,7 +84,5 @@ int32_t RouterSession::routeQuery(MXS_FILTER* pInstance,
 
     return pThis->routeQuery(reinterpret_cast<MXS_ROUTER*>(pInstance), pStatement);
 }
-
 }
-
 }

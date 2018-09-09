@@ -26,14 +26,17 @@
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AvroTable* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
+AvroTable* avro_table_alloc(const char* filepath,
+                            const char* json_schema,
+                            const char* codec,
                             size_t block_size)
 {
     avro_file_writer_t avro_file;
     avro_value_iface_t* avro_writer_iface;
     avro_schema_t avro_schema;
 
-    if (avro_schema_from_json_length(json_schema, strlen(json_schema),
+    if (avro_schema_from_json_length(json_schema,
+                                     strlen(json_schema),
                                      &avro_schema))
     {
         MXS_ERROR("Avro error: %s", avro_strerror());
@@ -49,8 +52,11 @@ AvroTable* avro_table_alloc(const char* filepath, const char* json_schema, const
     }
     else
     {
-        rc = avro_file_writer_create_with_codec(filepath, avro_schema,
-                                                &avro_file, codec, block_size);
+        rc = avro_file_writer_create_with_codec(filepath,
+                                                avro_schema,
+                                                &avro_file,
+                                                codec,
+                                                block_size);
     }
 
     if (rc)
@@ -68,7 +74,7 @@ AvroTable* avro_table_alloc(const char* filepath, const char* json_schema, const
         return NULL;
     }
 
-    AvroTable* table = new (std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
+    AvroTable* table = new( std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
 
     if (!table)
     {
@@ -138,48 +144,103 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
     if (map->version != create->version)
     {
         MXS_ERROR("Version mismatch for table %s.%s. Table map version is %d and "
-                  "the table definition version is %d.", map->database.c_str(),
-                  map->table.c_str(), map->version, create->version);
-        mxb_assert(!true); // Should not happen
+                  "the table definition version is %d.",
+                  map->database.c_str(),
+                  map->table.c_str(),
+                  map->version,
+                  create->version);
+        mxb_assert(!true);      // Should not happen
         return NULL;
     }
 
     json_error_t err;
     memset(&err, 0, sizeof(err));
-    json_t *schema = json_object();
+    json_t* schema = json_object();
     json_object_set_new(schema, "namespace", json_string("MaxScaleChangeDataSchema.avro"));
     json_object_set_new(schema, "type", json_string("record"));
     json_object_set_new(schema, "name", json_string("ChangeRecord"));
 
-    json_t *array = json_array();
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              avro_domain, "type", "int"));
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              avro_server_id, "type", "int"));
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              avro_sequence, "type", "int"));
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              avro_event_number, "type", "int"));
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              avro_timestamp, "type", "int"));
+    json_t* array = json_array();
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_domain,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_server_id,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_sequence,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_event_number,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_timestamp,
+                                       "type",
+                                       "int"));
 
     /** Enums and other complex types are defined with complete JSON objects
      * instead of string values */
-    json_t *event_types = json_pack_ex(&err, 0, "{s:s, s:s, s:[s,s,s,s]}", "type", "enum",
-                                       "name", "EVENT_TYPES", "symbols", "insert",
-                                       "update_before", "update_after", "delete");
+    json_t* event_types = json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s, s:[s,s,s,s]}",
+                                       "type",
+                                       "enum",
+                                       "name",
+                                       "EVENT_TYPES",
+                                       "symbols",
+                                       "insert",
+                                       "update_before",
+                                       "update_after",
+                                       "delete");
 
     // Ownership of `event_types` is stolen when using the `o` format
-    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
-                                              "type", event_types));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:o}",
+                                       "name",
+                                       avro_event_type,
+                                       "type",
+                                       event_types));
 
     for (uint64_t i = 0; i < map->columns() && i < create->columns.size(); i++)
     {
-        json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
-                                                  "name", create->columns[i].name.c_str(),
-                                                  "type", column_type_to_avro_type(map->column_types[i]),
-                                                  "real_type", create->columns[i].type.c_str(),
-                                                  "length", create->columns[i].length));
+        json_array_append_new(array,
+                              json_pack_ex(&err,
+                                           0,
+                                           "{s:s, s:s, s:s, s:i}",
+                                           "name",
+                                           create->columns[i].name.c_str(),
+                                           "type",
+                                           column_type_to_avro_type(map->column_types[i]),
+                                           "real_type",
+                                           create->columns[i].type.c_str(),
+                                           "length",
+                                           create->columns[i].length));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
@@ -194,18 +255,25 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
  * @param schema Schema in JSON format
  * @param map Table map that @p schema represents
  */
-void save_avro_schema(const char *path, const char* schema, const STableMapEvent& map,
+void save_avro_schema(const char* path,
+                      const char* schema,
+                      const STableMapEvent& map,
                       const STableCreateEvent& create)
 {
     char filepath[PATH_MAX];
-    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path,
-             map->database.c_str(), map->table.c_str(), map->version);
+    snprintf(filepath,
+             sizeof(filepath),
+             "%s/%s.%s.%06d.avsc",
+             path,
+             map->database.c_str(),
+             map->table.c_str(),
+             map->version);
 
     if (access(filepath, F_OK) != 0)
     {
         if (!create->was_used)
         {
-            FILE *file = fopen(filepath, "wb");
+            FILE* file = fopen(filepath, "wb");
             if (file)
             {
                 fprintf(file, "%s\n", schema);
@@ -221,20 +289,23 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
     {
     case MXS_AVRO_CODEC_NULL:
         return "null";
+
     case MXS_AVRO_CODEC_DEFLATE:
         return "deflate";
+
     case MXS_AVRO_CODEC_SNAPPY:
         return "snappy";
+
     default:
         mxb_assert(false);
         return "null";
     }
 }
 
-AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec):
-    m_avrodir(avrodir),
-    m_block_size(block_size),
-    m_codec(codec)
+AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec)
+    : m_avrodir(avrodir)
+    , m_block_size(block_size)
+    , m_codec(codec)
 {
 }
 
@@ -246,10 +317,16 @@ bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEven
     if (json_schema)
     {
         char filepath[PATH_MAX + 1];
-        snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avro", m_avrodir.c_str(),
-                 map->database.c_str(), map->table.c_str(), map->version);
+        snprintf(filepath,
+                 sizeof(filepath),
+                 "%s/%s.%s.%06d.avro",
+                 m_avrodir.c_str(),
+                 map->database.c_str(),
+                 map->table.c_str(),
+                 map->version);
 
-        SAvroTable avro_table(avro_table_alloc(filepath, json_schema,
+        SAvroTable avro_table(avro_table_alloc(filepath,
+                                               json_schema,
                                                codec_to_string(m_codec),
                                                m_block_size));
 
@@ -386,7 +463,9 @@ void AvroConverter::column(int i)
 
 void AvroConverter::set_active(int i)
 {
-    MXB_AT_DEBUG(int rc =)avro_value_get_by_name(&m_record, m_create->columns[i].name.c_str(),
-                                             &m_field, NULL);
+    MXB_AT_DEBUG(int rc = ) avro_value_get_by_name(&m_record,
+                                                   m_create->columns[i].name.c_str(),
+                                                   &m_field,
+                                                   NULL);
     mxb_assert(rc == 0);
 }

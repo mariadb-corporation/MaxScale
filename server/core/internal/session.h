@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file core/maxscale/session.h - The private session interface
@@ -20,16 +20,17 @@
 
 MXS_BEGIN_DECLS
 
-#define SESSION_STATS_INIT {0}
+#define SESSION_STATS_INIT  {0}
 #define MXS_DOWNSTREAM_INIT {0}
-#define MXS_UPSTREAM_INIT {0}
+#define MXS_UPSTREAM_INIT   {0}
 #define SESSION_FILTER_INIT {0}
 
-#define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, \
-    .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
-    .state = SESSION_STATE_ALLOC, .client_protocol_data = 0, .ses_chk_tail = CHK_NUM_SESSION}
+#define SESSION_INIT \
+    {.ses_chk_top = CHK_NUM_SESSION, \
+     .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
+     .state = SESSION_STATE_ALLOC, .client_protocol_data = 0, .ses_chk_tail = CHK_NUM_SESSION}
 
-#define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client_dcb, type)
+#define SESSION_PROTOCOL(x, type) DCB_PROTOCOL((x)->client_dcb, type)
 
 /**
  * Filter type for the sessionGetList call
@@ -40,8 +41,8 @@ typedef enum
     SESSION_LIST_CONNECTION
 } SESSIONLISTFILTER;
 
-int session_isvalid(MXS_SESSION *);
-const char *session_state(mxs_session_state_t);
+int session_isvalid(MXS_SESSION*);
+const char* session_state(mxs_session_state_t);
 
 /**
  * Link a session to a backend DCB.
@@ -49,7 +50,7 @@ const char *session_state(mxs_session_state_t);
  * @param session  The session to link with the dcb
  * @param dcb      The backend DCB to be linked
  */
-void session_link_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
+void session_link_backend_dcb(MXS_SESSION* session, struct dcb* dcb);
 
 /**
  * Unlink a session to a backend DCB.
@@ -57,15 +58,15 @@ void session_link_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
  * @param session  The session to unlink with the dcb
  * @param dcb      The backend DCB to be unlinked
  */
-void session_unlink_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
+void session_unlink_backend_dcb(MXS_SESSION* session, struct dcb* dcb);
 
 void printAllSessions();
-void printSession(MXS_SESSION *);
+void printSession(MXS_SESSION*);
 
-void dprintSessionList(DCB *pdcb);
-void dprintAllSessions(struct dcb *);
-void dprintSession(struct dcb *, MXS_SESSION *);
-void dListSessions(struct dcb *);
+void dprintSessionList(DCB* pdcb);
+void dprintAllSessions(struct dcb*);
+void dprintSession(struct dcb*, MXS_SESSION*);
+void dListSessions(struct dcb*);
 
 /**
  * @brief Get a session reference
@@ -78,6 +79,6 @@ void dListSessions(struct dcb *);
  *
  * @note The caller must free the session reference by calling session_put_ref
  */
-MXS_SESSION* session_get_ref(MXS_SESSION *sessoin);
+MXS_SESSION* session_get_ref(MXS_SESSION* sessoin);
 
 MXS_END_DECLS

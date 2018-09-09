@@ -22,7 +22,7 @@
 #include <maxscale/mysql_utils.h>
 
 
-NDBCMonitor::NDBCMonitor(MXS_MONITOR *monitor)
+NDBCMonitor::NDBCMonitor(MXS_MONITOR* monitor)
     : maxscale::MonitorInstanceSimple(monitor)
     , m_id(MXS_MONITOR_DEFAULT_ID)
 {
@@ -46,9 +46,9 @@ bool NDBCMonitor::has_sufficient_permissions() const
 void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 {
     MYSQL_ROW row;
-    MYSQL_RES *result;
+    MYSQL_RES* result;
     int isjoined = 0;
-    char *server_string;
+    char* server_string;
 
     /* get server version string */
     mxs_mysql_set_server_version(monitored_server->con, monitored_server->server);
@@ -63,7 +63,8 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE "
                       "'Ndb_number_of_ready_data_nodes'\". Expected 2 columns."
-                      " MySQL Version: %s", server_string);
+                      " MySQL Version: %s",
+                      server_string);
             return;
         }
 
@@ -90,7 +91,8 @@ void NDBCMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\". "
                       "Expected 2 columns."
-                      " MySQL Version: %s", server_string);
+                      " MySQL Version: %s",
+                      server_string);
             return;
         }
 
@@ -143,12 +145,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<NDBCMonitor>::s_api,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
-            {MXS_END_MODULE_PARAMS} // No parameters
+            {MXS_END_MODULE_PARAMS}     // No parameters
         }
     };
 

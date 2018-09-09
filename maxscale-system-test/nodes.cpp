@@ -11,7 +11,7 @@ int Nodes::check_node_ssh(int node)
 {
     int res = 0;
 
-    if (ssh_node(node, (char *) "ls > /dev/null", false) != 0)
+    if (ssh_node(node, (char*) "ls > /dev/null", false) != 0)
     {
         printf("Node %d is not available\n", node);
         fflush(stdout);
@@ -39,20 +39,22 @@ int Nodes::check_nodes()
     return 0;
 }
 
-void Nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)
+void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
 {
     if (strcmp(IP[node], "127.0.0.1") == 0)
     {
         if (sudo)
         {
-            sprintf(cmd, "%s %s",
-                    access_sudo[node], ssh);
+            sprintf(cmd,
+                    "%s %s",
+                    access_sudo[node],
+                    ssh);
         }
         else
         {
-            sprintf(cmd, "%s",
+            sprintf(cmd,
+                    "%s",
                     ssh);
-
         }
     }
     else
@@ -62,19 +64,26 @@ void Nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)
         {
             sprintf(cmd,
                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s %s\'",
-                    sshkey[node], access_user[node], IP[node], access_sudo[node], ssh);
+                    sshkey[node],
+                    access_user[node],
+                    IP[node],
+                    access_sudo[node],
+                    ssh);
         }
         else
         {
             sprintf(cmd,
                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s'",
-                    sshkey[node], access_user[node], IP[node], ssh);
+                    sshkey[node],
+                    access_user[node],
+                    IP[node],
+                    ssh);
         }
     }
 }
 
 
-char* Nodes::ssh_node_output_f(int node, bool sudo, int * exit_code, const char* format, ...)
+char* Nodes::ssh_node_output_f(int node, bool sudo, int* exit_code, const char* format, ...)
 {
     va_list valist;
 
@@ -87,26 +96,26 @@ char* Nodes::ssh_node_output_f(int node, bool sudo, int * exit_code, const char*
         return NULL;
     }
 
-    char *sys = (char*)malloc(message_len + 1);
+    char* sys = (char*)malloc(message_len + 1);
 
     va_start(valist, format);
     vsnprintf(sys, message_len + 1, format, valist);
     va_end(valist);
 
-    char * result = ssh_node_output(node, sys, sudo, exit_code);
+    char* result = ssh_node_output(node, sys, sudo, exit_code);
     free(sys);
 
     return result;
 }
 
 
-char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code)
+char* Nodes::ssh_node_output(int node, const char* ssh, bool sudo, int* exit_code)
 {
-    char *cmd = (char*)malloc(strlen(ssh) + 1024);
+    char* cmd = (char*)malloc(strlen(ssh) + 1024);
 
     generate_ssh_cmd(cmd, node, ssh, sudo);
-//tprintf("############ssh smd %s\n:", cmd);
-    FILE *output = popen(cmd, "r");
+// tprintf("############ssh smd %s\n:", cmd);
+    FILE* output = popen(cmd, "r");
     if (output == NULL)
     {
         printf("Error opening ssh %s\n", strerror(errno));
@@ -137,9 +146,9 @@ char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_co
 }
 
 
-int Nodes::ssh_node(int node, const char *ssh, bool sudo)
+int Nodes::ssh_node(int node, const char* ssh, bool sudo)
 {
-    char *cmd = (char*)malloc(strlen(ssh) + 1024);
+    char* cmd = (char*)malloc(strlen(ssh) + 1024);
 
     if (strcmp(IP[node], "127.0.0.1") == 0)
     {
@@ -150,10 +159,13 @@ int Nodes::ssh_node(int node, const char *ssh, bool sudo)
     {
         sprintf(cmd,
                 "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
-                sshkey[node], access_user[node], IP[node], verbose ? "" :  " > /dev/null");
+                sshkey[node],
+                access_user[node],
+                IP[node],
+                verbose ? "" :  " > /dev/null");
     }
     int rc = 1;
-    FILE *in = popen(cmd, "w");
+    FILE* in = popen(cmd, "w");
 
     if (in)
     {
@@ -180,7 +192,7 @@ int Nodes::ssh_node(int node, const char *ssh, bool sudo)
     }
 }
 
-int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
+int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 {
     va_list valist;
 
@@ -193,16 +205,14 @@ int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
         return -1;
     }
 
-    char *sys = (char*)malloc(message_len + 1);
+    char* sys = (char*)malloc(message_len + 1);
 
     va_start(valist, format);
     vsnprintf(sys, message_len + 1, format, valist);
     va_end(valist);
     int result = ssh_node(node, sys, sudo);
     free(sys);
-    return (result);
-
-
+    return result;
 }
 
 int Nodes::copy_to_node(int i, const char* src, const char* dest)
@@ -215,14 +225,21 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
 
     if (strcmp(IP[i], "127.0.0.1") == 0)
     {
-        sprintf(sys, "cp %s %s",
-                src, dest);
+        sprintf(sys,
+                "cp %s %s",
+                src,
+                dest);
     }
     else
     {
-        sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
+        sprintf(sys,
+                "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
                 "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
-                sshkey[i], src, access_user[i], IP[i], dest);
+                sshkey[i],
+                src,
+                access_user[i],
+                IP[i],
+                dest);
     }
     if (verbose)
     {
@@ -239,7 +256,7 @@ int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
     return copy_to_node(i, src, dest);
 }
 
-int Nodes::copy_from_node(int i,  const char* src, const char* dest)
+int Nodes::copy_from_node(int i, const char* src, const char* dest)
 {
     if (i >= N)
     {
@@ -248,14 +265,21 @@ int Nodes::copy_from_node(int i,  const char* src, const char* dest)
     char sys[strlen(src) + strlen(dest) + 1024];
     if (strcmp(IP[i], "127.0.0.1") == 0)
     {
-        sprintf(sys, "cp %s %s",
-                src, dest);
+        sprintf(sys,
+                "cp %s %s",
+                src,
+                dest);
     }
     else
     {
-        sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
+        sprintf(sys,
+                "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
                 "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
-                sshkey[i], access_user[i], IP[i], src, dest);
+                sshkey[i],
+                access_user[i],
+                IP[i],
+                src,
+                dest);
     }
     if (verbose)
     {
@@ -272,7 +296,7 @@ int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
 
 int Nodes::read_basic_env()
 {
-    char * env;
+    char* env;
     char env_name[64];
     sprintf(env_name, "%s_N", prefix);
     env = getenv(env_name);
@@ -310,21 +334,20 @@ int Nodes::read_basic_env()
     {
         for (int i = 0; i < N; i++)
         {
-            //reading IPs
+            // reading IPs
             sprintf(env_name, "%s_%03d_network", prefix, i);
             env = getenv(env_name);
             if (env == NULL)
             {
                 sprintf(env_name, "%s_network", prefix);
                 env = getenv(env_name);
-
             }
             if (env != NULL)
             {
                 sprintf(IP[i], "%s", env);
             }
 
-            //reading private IPs
+            // reading private IPs
             sprintf(env_name, "%s_%03d_private_ip", prefix, i);
             env = getenv(env_name);
             if (env == NULL)
@@ -341,7 +364,7 @@ int Nodes::read_basic_env()
                 sprintf(IP_private[i], "%s", IP[i]);
             }
 
-            //reading IPv6
+            // reading IPv6
             sprintf(env_name, "%s_%03d_network6", prefix, i);
             env = getenv(env_name);
             if (env == NULL)
@@ -357,7 +380,7 @@ int Nodes::read_basic_env()
             {
                 sprintf(IP6[i], "%s", IP[i]);
             }
-            //reading sshkey
+            // reading sshkey
             sprintf(env_name, "%s_%03d_keyfile", prefix, i);
             env = getenv(env_name);
             if (env == NULL)

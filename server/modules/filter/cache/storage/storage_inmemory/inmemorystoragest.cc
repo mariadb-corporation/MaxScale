@@ -28,7 +28,8 @@ InMemoryStorageST::~InMemoryStorageST()
 
 auto_ptr<InMemoryStorageST> InMemoryStorageST::Create(const std::string& name,
                                                       const CACHE_STORAGE_CONFIG& config,
-                                                      int argc, char* argv[])
+                                                      int argc,
+                                                      char* argv[])
 {
     return auto_ptr<InMemoryStorageST>(new InMemoryStorageST(name, config));
 }
@@ -39,8 +40,10 @@ cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppInfo) const
 }
 
 cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key,
-                                            uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
-                                            GWBUF** ppResult)
+                                            uint32_t flags,
+                                            uint32_t soft_ttl,
+                                            uint32_t hard_ttl,
+                                            GWBUF**  ppResult)
 {
     return do_get_value(key, flags, soft_ttl, hard_ttl, ppResult);
 }

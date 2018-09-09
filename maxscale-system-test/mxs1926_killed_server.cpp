@@ -15,7 +15,7 @@ using namespace std::chrono;
 
 typedef high_resolution_clock Clock;
 
-std::atomic<int> ROWCOUNT{10000};
+std::atomic<int> ROWCOUNT {10000};
 
 std::string create_tmpfile()
 {
@@ -34,7 +34,7 @@ std::string create_tmpfile()
 
 void tune_rowcount(TestConnections& test)
 {
-    milliseconds dur{1};
+    milliseconds dur {1};
     test.tprintf("Tuning data size so that an insert takes 10 seconds");
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "SET sql_log_bin=0");
@@ -44,7 +44,8 @@ void tune_rowcount(TestConnections& test)
         std::string filename = create_tmpfile();
 
         auto start = Clock::now();
-        test.try_query(test.maxscales->conn_rwsplit[0], "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
+        test.try_query(test.maxscales->conn_rwsplit[0],
+                       "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
                        filename.c_str());
         auto end = Clock::now();
         dur = duration_cast<milliseconds>(end - start);
@@ -55,7 +56,9 @@ void tune_rowcount(TestConnections& test)
         int orig = ROWCOUNT;
         ROWCOUNT = orig / dur.count() * 10000;
         test.tprintf("Loading %d rows took %d ms, setting row count to %d",
-                     orig, dur.count(), ROWCOUNT.load());
+                     orig,
+                     dur.count(),
+                     ROWCOUNT.load());
     }
 
     test.maxscales->disconnect();
@@ -83,13 +86,13 @@ int main(int argc, char** argv)
     test.try_query(test.maxscales->conn_rwsplit[0], "SET sql_log_bin=0");
 
     test.tprintf("Loading %d rows of data while stopping a slave", ROWCOUNT.load());
-    std::thread thr([&]()
-    {
-        std::this_thread::sleep_for(milliseconds(10));
-        test.repl->stop_node(3);
-        test.repl->start_node(3);
-    });
-    test.try_query(test.maxscales->conn_rwsplit[0], "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
+    std::thread thr([&]() {
+                        std::this_thread::sleep_for(milliseconds(10));
+                        test.repl->stop_node(3);
+                        test.repl->start_node(3);
+                    });
+    test.try_query(test.maxscales->conn_rwsplit[0],
+                   "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
                    filename.c_str());
     test.tprintf("Load complete");
     thr.join();

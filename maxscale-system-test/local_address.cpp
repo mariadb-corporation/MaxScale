@@ -46,15 +46,19 @@ void to_collection(string s, const string& delimiter, T* pT)
 
 string& ltrim(std::string& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-                                    std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(),
+            std::find_if(s.begin(),
+                         s.end(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))));
     return s;
 }
 
 string& rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(),
+                         s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
     return s;
 }
 
@@ -66,8 +70,8 @@ string& trim(std::string& s)
 string extract_ip(string s)
 {
     // 's' looks something like: "    inet 127.0.0.1/...";
-    s = s.substr(9); // => "127.0.0.1/...";
-    s = s.substr(0, s.find_first_of('/')); // => "127.0.0.1"
+    s = s.substr(9);                        // => "127.0.0.1/...";
+    s = s.substr(0, s.find_first_of('/'));  // => "127.0.0.1"
     return s;
 }
 
@@ -88,7 +92,6 @@ void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
         pIps->erase(i);
     }
 }
-
 }
 
 namespace
@@ -137,7 +140,9 @@ void grant_access(TestConnections& test, const string& user, const string& host)
 }
 
 void create_user_and_grants(TestConnections& test,
-                            const string& user, const string& password, const string& host)
+                            const string& user,
+                            const string& password,
+                            const string& host)
 {
     test.tprintf("Creating user: %s@%s", user.c_str(), host.c_str());
 
@@ -195,12 +200,12 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
             }
             else
             {
-                cout << "Could not 'SELECT USER()' as '" << zUser << "': " <<  mysql_error(pMysql) << endl;
+                cout << "Could not 'SELECT USER()' as '" << zUser << "': " << mysql_error(pMysql) << endl;
             }
         }
         else
         {
-            cout << "Could not connect as '" << zUser << "': " <<  mysql_error(pMysql) << endl;
+            cout << "Could not connect as '" << zUser << "': " << mysql_error(pMysql) << endl;
         }
 
         mysql_close(pMysql);
@@ -212,7 +217,10 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
 string get_local_ip(TestConnections& test)
 {
     int exit_code;
-    string output(test.maxscales->ssh_node_output(0, "nslookup maxscale|fgrep Server:|sed s/Server://", false, &exit_code));
+    string output(test.maxscales->ssh_node_output(0,
+                                                  "nslookup maxscale|fgrep Server:|sed s/Server://",
+                                                  false,
+                                                  &exit_code));
     return trim(output);
 }
 
@@ -233,10 +241,15 @@ void start_maxscale_with_local_address(TestConnections& test,
 }
 
 void test_connecting(TestConnections& test,
-                     const char* zUser, const char* zPassword, const char* zHost,
+                     const char* zUser,
+                     const char* zPassword,
+                     const char* zHost,
                      bool should_be_able_to)
 {
-    bool could_connect = can_connect_to_maxscale(test.maxscales->IP[0], test.maxscales->rwsplit_port[0], zUser, zPassword);
+    bool could_connect = can_connect_to_maxscale(test.maxscales->IP[0],
+                                                 test.maxscales->rwsplit_port[0],
+                                                 zUser,
+                                                 zPassword);
 
     if (!could_connect && should_be_able_to)
     {
@@ -322,7 +335,8 @@ void run_test(TestConnections& test, const vector<string>& ips)
 #else
         test.tprintf("\n");
         test.tprintf("WARNING: Other IP-address (%s) not tested, as IP-address currently "
-                     "not usable on VM.", ip2.c_str());
+                     "not usable on VM.",
+                     ip2.c_str());
 #endif
     }
     else
@@ -332,7 +346,6 @@ void run_test(TestConnections& test, const vector<string>& ips)
                      "not properly tested.");
     }
 }
-
 }
 
 int main(int argc, char** argv)

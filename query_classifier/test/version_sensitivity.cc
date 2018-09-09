@@ -40,7 +40,6 @@ GWBUF* create_gwbuf(const string& s)
 
     return gwbuf;
 }
-
 }
 
 namespace
@@ -113,7 +112,6 @@ int test()
 
     return rc;
 }
-
 }
 
 int main(int argc, char* argv[])

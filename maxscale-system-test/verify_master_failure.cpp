@@ -6,7 +6,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);

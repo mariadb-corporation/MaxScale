@@ -91,22 +91,28 @@
 #include <maxscale/utils.hh>
 
 /* The router entry points */
-static MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
-static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static json_t* diagnostics_json(const MXS_ROUTER *instance);
-static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
-                        DCB *backend_dcb);
-static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, mxs_error_action_t action, bool *succp);
-static uint64_t getCapabilities(MXS_ROUTER* instance);
-static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
-static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
-static SERVER_REF *get_root_master(SERVER_REF *servers);
+static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static int                 routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*             diagnostics_json(const MXS_ROUTER* instance);
+static void                clientReply(MXS_ROUTER* instance,
+                                       MXS_ROUTER_SESSION* router_session,
+                                       GWBUF* queue,
+                                       DCB*   backend_dcb);
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errbuf,
+                        DCB*   problem_dcb,
+                        mxs_error_action_t action,
+                        bool* succp);
+static uint64_t    getCapabilities(MXS_ROUTER* instance);
+static bool        configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
+static bool        rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
+static void        rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
+static SERVER_REF* get_root_master(SERVER_REF* servers);
 
 /**
  * The module entry point routine. It is this routine that
@@ -145,10 +151,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V2.0.0",
         RCAP_TYPE_RUNTIME_CONFIG,
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -157,7 +163,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-static inline void free_readconn_instance(ROUTER_INSTANCE *router)
+static inline void free_readconn_instance(ROUTER_INSTANCE* router)
 {
     if (router)
     {
@@ -172,7 +178,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
     uint64_t bitvalue = 0;
     bool ok = true;
 
-    for (const auto& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
         if (!strcasecmp(opt.c_str(), "master"))
         {
@@ -202,7 +208,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
         else
         {
             MXS_ERROR("Unsupported router option \'%s\' for readconnroute. "
-                "Expected router options are [slave|master|synced|ndb|running]",
+                      "Expected router options are [slave|master|synced|ndb|running]",
                       opt.c_str());
             ok = false;
         }
@@ -234,7 +240,7 @@ static bool configureInstance(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
     ROUTER_INSTANCE* inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
 
@@ -262,13 +268,12 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION *
-newSession(MXS_ROUTER *instance, MXS_SESSION *session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
-    ROUTER_CLIENT_SES *client_rses;
-    SERVER_REF *candidate = NULL;
-    SERVER_REF *master_host = NULL;
+    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
+    ROUTER_CLIENT_SES* client_rses;
+    SERVER_REF* candidate = NULL;
+    SERVER_REF* master_host = NULL;
 
     MXS_DEBUG("%lu [newSession] new router session with session "
               "%p, and inst %p.",
@@ -276,7 +281,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
               session,
               inst);
 
-    client_rses = (ROUTER_CLIENT_SES *) MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (ROUTER_CLIENT_SES*) MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
     if (client_rses == NULL)
     {
@@ -312,7 +317,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
      * become the new candidate. This has the effect of spreading the
      * connections over different servers during periods of very low load.
      */
-    for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
+    for (SERVER_REF* ref = inst->service->dbref; ref; ref = ref->next)
     {
         if (!SERVER_REF_IS_ACTIVE(ref) || server_is_in_maint(ref->server))
         {
@@ -320,12 +325,13 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
         }
 
         /* Check server status bits against bitvalue from router_options */
-        if (ref && server_is_usable(ref->server) &&
-            (ref->server->status & client_rses->bitmask & client_rses->bitvalue))
+        if (ref && server_is_usable(ref->server)
+            && (ref->server->status & client_rses->bitmask & client_rses->bitvalue))
         {
             if (master_host)
             {
-                if (ref == master_host && (client_rses->bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
+                if (ref == master_host
+                    && (client_rses->bitvalue & (SERVER_SLAVE | SERVER_MASTER)) == SERVER_SLAVE)
                 {
                     /* Skip root master here, as it could also be slave of an external server that
                      * is not in the configuration.  Intermediate masters (Relay Servers) are also
@@ -366,22 +372,22 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
             {
                 candidate = ref;
             }
-            else if (ref->inv_weight * ref->connections  <
-                     candidate->inv_weight * candidate->connections)
+            else if (ref->inv_weight * ref->connections
+                     < candidate->inv_weight * candidate->connections)
             {
                 /* ref has a better score. */
                 candidate = ref;
             }
             else if (almost_equal_server_scores(ref->inv_weight * ref->connections,
-                                                candidate->inv_weight * candidate->connections) &&
-                     ref->server->stats.n_connections < candidate->server->stats.n_connections)
+                                                candidate->inv_weight * candidate->connections)
+                     && ref->server->stats.n_connections < candidate->server->stats.n_connections)
             {
                 /* The servers are about equally good, but ref has had fewer connections over time.
                  * TODO: On second thought, if the servers are currently about equally good,
                  *       should selection not favor the one that has had more connections over time,
                  *       since load balancing has previously found it to be better? Or perhaps
                  *       this check has very little effect anyway.
-                */
+                 */
                 candidate = ref;
             }
         }
@@ -423,7 +429,8 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     client_rses->backend = candidate;
 
     /** Open the backend connection */
-    client_rses->backend_dcb = dcb_connect(candidate->server, session,
+    client_rses->backend_dcb = dcb_connect(candidate->server,
+                                           session,
                                            candidate->server->protocol);
 
     if (client_rses->backend_dcb == NULL)
@@ -438,7 +445,8 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     inst->stats.n_sessions++;
 
     MXS_INFO("New session for server %s. Connections : %d",
-             candidate->server->name, candidate->connections);
+             candidate->server->name,
+             candidate->connections);
 
     return reinterpret_cast<MXS_ROUTER_SESSION*>(client_rses);
 }
@@ -462,8 +470,8 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  */
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
-    ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
+    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*) router_instance;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_client_ses;
 
     MXB_AT_DEBUG(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
     mxb_assert(prev_val > 0);
@@ -478,10 +486,9 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  * @param instance      The router instance data
  * @param router_session    The session being closed
  */
-static void
-closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
     DCB* backend_dcb;
 
     /**
@@ -508,10 +515,12 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 }
 
 /** Log routing failure due to closed session */
-static void log_closed_session(mxs_mysql_cmd_t mysql_command, bool is_closed,
-                               SERVER_REF *ref, bool valid)
+static void log_closed_session(mxs_mysql_cmd_t mysql_command,
+                               bool is_closed,
+                               SERVER_REF* ref,
+                               bool valid)
 {
-    char msg[MAX_SERVER_ADDRESS_LEN + 200] = ""; // Extra space for message
+    char msg[MAX_SERVER_ADDRESS_LEN + 200] = "";    // Extra space for message
 
     if (is_closed)
     {
@@ -527,12 +536,14 @@ static void log_closed_session(mxs_mysql_cmd_t mysql_command, bool is_closed,
     }
     else if (!valid)
     {
-        sprintf(msg, "Server '%s' no longer qualifies as a target server.",
+        sprintf(msg,
+                "Server '%s' no longer qualifies as a target server.",
                 ref->server->name);
     }
 
     MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
-              mysql_command, msg);
+              mysql_command,
+              msg);
 }
 
 /**
@@ -551,8 +562,8 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     // 'router_options=slave' in the configuration file and there was only
     // the sole master available at session creation time.
 
-    if (server_is_usable(router_cli_ses->backend->server) &&
-        (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
+    if (server_is_usable(router_cli_ses->backend->server)
+        && (router_cli_ses->backend->server->status & router_cli_ses->bitmask & router_cli_ses->bitvalue))
     {
         // Note the use of '==' and not '|'. We must use the former to exclude a
         // 'router_options=slave' that uses the master due to no slave having been
@@ -588,14 +599,13 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
  * @param queue         The queue of data buffers to route
  * @return if succeed 1, otherwise 0
  */
-static int
-routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
+static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
 {
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
+    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
     int rc = 0;
     DCB* backend_dcb;
-    MySQLProtocol *proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
     mxs_mysql_cmd_t mysql_command = proto->current_command;
     bool rses_is_closed;
 
@@ -627,26 +637,29 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
     bool valid;
     char* trc = NULL;
 
-    if (rses_is_closed || backend_dcb == NULL ||
-        (valid = !connection_is_valid(inst, router_cli_ses)))
+    if (rses_is_closed || backend_dcb == NULL
+        || (valid = !connection_is_valid(inst, router_cli_ses)))
     {
         log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend, valid);
         gwbuf_free(queue);
         goto return_rc;
-
     }
 
     switch (mysql_command)
     {
     case MXS_COM_CHANGE_USER:
-        rc = backend_dcb->func.auth(backend_dcb, NULL, backend_dcb->session,
+        rc = backend_dcb->func.auth(backend_dcb,
+                                    NULL,
+                                    backend_dcb->session,
                                     queue);
         break;
+
     case MXS_COM_QUERY:
         if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             trc = modutil_get_SQL(queue);
         }
+
     default:
         rc = backend_dcb->func.write(backend_dcb, queue);
         break;
@@ -670,30 +683,34 @@ return_rc:
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static void
-diagnostics(MXS_ROUTER *router, DCB *dcb)
+static void diagnostics(MXS_ROUTER* router, DCB* dcb)
 {
-    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
-    const char *weightby = serviceGetWeightingParameter(router_inst->service);
+    ROUTER_INSTANCE* router_inst = (ROUTER_INSTANCE*) router;
+    const char* weightby = serviceGetWeightingParameter(router_inst->service);
 
-    dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
+    dcb_printf(dcb,
+               "\tNumber of router sessions:    %d\n",
                router_inst->stats.n_sessions);
-    dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n",
+    dcb_printf(dcb,
+               "\tCurrent no. of router sessions:	%d\n",
                router_inst->service->stats.n_current);
-    dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
+    dcb_printf(dcb,
+               "\tNumber of queries forwarded:      %d\n",
                router_inst->stats.n_queries);
     if (*weightby)
     {
-        dcb_printf(dcb, "\tConnection distribution based on %s "
+        dcb_printf(dcb,
+                   "\tConnection distribution based on %s "
                    "server parameter.\n",
                    weightby);
         dcb_printf(dcb,
                    "\t\tServer               Target %% Connections\n");
-        for (SERVER_REF *ref = router_inst->service->dbref; ref; ref = ref->next)
+        for (SERVER_REF* ref = router_inst->service->dbref; ref; ref = ref->next)
         {
-            dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
+            dcb_printf(dcb,
+                       "\t\t%-20s %3.1f%%     %d\n",
                        ref->server->name,
-                       (1.0-ref->inv_weight) * 100,
+                       (1.0 - ref->inv_weight) * 100,
                        ref->connections);
         }
     }
@@ -705,16 +722,16 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static json_t* diagnostics_json(const MXS_ROUTER *router)
+static json_t* diagnostics_json(const MXS_ROUTER* router)
 {
-    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    ROUTER_INSTANCE* router_inst = (ROUTER_INSTANCE*)router;
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
     json_object_set_new(rval, "current_connections", json_integer(router_inst->service->stats.n_current));
     json_object_set_new(rval, "queries", json_integer(router_inst->stats.n_queries));
 
-    const char *weightby = serviceGetWeightingParameter(router_inst->service);
+    const char* weightby = serviceGetWeightingParameter(router_inst->service);
 
     if (*weightby)
     {
@@ -734,8 +751,10 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
  * @param       backend_dcb     The backend DCB
  * @param       queue           The GWBUF with reply data
  */
-static void
-clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
+static void clientReply(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* queue,
+                        DCB*   backend_dcb)
 {
     mxb_assert(backend_dcb->session->client_dcb != NULL);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
@@ -754,15 +773,19 @@ clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *que
  * @param   succp       Result of action: true if router can continue
  *
  */
-static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, mxs_error_action_t action, bool *succp)
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errbuf,
+                        DCB*   problem_dcb,
+                        mxs_error_action_t action,
+                        bool* succp)
 
 {
     mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    DCB *client_dcb;
-    MXS_SESSION *session = problem_dcb->session;
+    DCB* client_dcb;
+    MXS_SESSION* session = problem_dcb->session;
     mxs_session_state_t sesstate;
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_session;
 
     sesstate = session->state;
     client_dcb = session->client_dcb;
@@ -854,10 +877,10 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  *
  */
 
-static SERVER_REF *get_root_master(SERVER_REF *servers)
+static SERVER_REF* get_root_master(SERVER_REF* servers)
 {
-    SERVER_REF *master_host = NULL;
-    for (SERVER_REF *ref = servers; ref; ref = ref->next)
+    SERVER_REF* master_host = NULL;
+    for (SERVER_REF* ref = servers; ref; ref = ref->next)
     {
         if (ref->active && server_is_master(ref->server))
         {

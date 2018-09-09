@@ -18,7 +18,11 @@ void run_test(TestConnections* Test, const char* database)
     Test->set_timeout(20);
     Test->tprintf("Trying to connect using 'table_privilege'@'%%' to database '%s'", database);
 
-    MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], database, "table_privilege", "pass",
+    MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+                               Test->maxscales->IP[0],
+                               database,
+                               "table_privilege",
+                               "pass",
                                Test->ssl);
 
     if (conn && mysql_errno(conn) == 0)
@@ -35,7 +39,7 @@ void run_test(TestConnections* Test, const char* database)
     mysql_close(conn);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
 
@@ -58,7 +62,8 @@ int main(int argc, char *argv[])
     execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db2.t1  VALUES (1)");
     execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db3.t1  VALUES (1)");
     execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db4.t1  VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
+    execute_query(Test->maxscales->conn_rwsplit[0],
+                  "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
     execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db1.* TO 'table_privilege'@'%%'");
     execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db2.* TO 'table_privilege'@'%%'");
     execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db3.t1 TO 'table_privilege'@'%%'");

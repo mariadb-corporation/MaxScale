@@ -42,5 +42,4 @@ public:
 private:
     bool m_is_defined;
 };
-
-} // base
+}   // base

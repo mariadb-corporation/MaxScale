@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     get_input();
 
     cout << "Stopping master and waiting for failover. Check that another server is promoted." << endl;
-    const int old_master_id = get_master_server_id(test); // Read master id now before shutdown.
+    const int old_master_id = get_master_server_id(test);   // Read master id now before shutdown.
     const int master_index = test.repl->master;
     test.repl->stop_node(master_index);
 
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
         get_output(test);
         test.tprintf("and manually rejoining it to cluster.");
         const char REJOIN_CMD[] = "maxadmin call command mariadbmon rejoin MySQL-Monitor server1";
-        test.maxscales->ssh_node_output(0, REJOIN_CMD , true, &ec);
+        test.maxscales->ssh_node_output(0, REJOIN_CMD, true, &ec);
         test.maxscales->wait_for_monitor();
         get_output(test);
 
@@ -82,12 +82,18 @@ int main(int argc, char** argv)
         cout << LINE << "\n";
         print_gtids(test);
         cout << LINE << "\n";
-        test.assert(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster (%s != %s).", gtid_final.c_str(), gtid_old_master.c_str());
+        test.assert(gtid_final == gtid_old_master,
+                    "Old master did not successfully rejoin the cluster (%s != %s).",
+                    gtid_final.c_str(),
+                    gtid_old_master.c_str());
         // Switch master back to server1 so last check is faster
         int ec;
-        test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
-                                        "MySQL-Monitor server1 server2" , true, &ec);
-        test.maxscales->wait_for_monitor(); // Wait for monitor to update status
+        test.maxscales->ssh_node_output(0,
+                                        "maxadmin call command mysqlmon switchover "
+                                        "MySQL-Monitor server1 server2",
+                                        true,
+                                        &ec);
+        test.maxscales->wait_for_monitor();     // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
         test.assert(master_id == old_master_id, "Switchover back to server1 failed.");

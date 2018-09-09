@@ -42,13 +42,15 @@
 #include <maxscale/poll.h>
 #include <maxscale/log.h>
 
-static MAXINFO_TREE *make_tree_node(MAXINFO_OPERATOR, char *, MAXINFO_TREE *, MAXINFO_TREE *);
-void maxinfo_free_tree(MAXINFO_TREE *); // This function is needed by maxinfo.c
-static char *fetch_token(char *, int *, char **);
-static MAXINFO_TREE *parse_column_list(char **sql);
-static MAXINFO_TREE *parse_table_name(char **sql);
-MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr,
-                                     PARSE_ERROR *parse_error);
+static MAXINFO_TREE* make_tree_node(MAXINFO_OPERATOR, char*, MAXINFO_TREE*, MAXINFO_TREE*);
+void                 maxinfo_free_tree(MAXINFO_TREE*);  // This function is needed by maxinfo.c
+static char*         fetch_token(char*, int*, char**);
+static MAXINFO_TREE* parse_column_list(char** sql);
+static MAXINFO_TREE* parse_table_name(char** sql);
+MAXINFO_TREE*        maxinfo_parse_literals(MAXINFO_TREE* tree,
+                                            int min_args,
+                                            char* ptr,
+                                            PARSE_ERROR* parse_error);
 
 /**
  * Parse a SQL subset for the maxinfo plugin and return a parse tree
@@ -56,13 +58,12 @@ MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr
  * @param sql       The SQL query
  * @return  Parse tree or NULL on error
  */
-MAXINFO_TREE *
-maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
+MAXINFO_TREE* maxinfo_parse(char* sql, PARSE_ERROR* parse_error)
 {
     int token;
-    char *ptr, *text;
-    MAXINFO_TREE *tree = NULL;
-    MAXINFO_TREE *col, *table;
+    char* ptr, * text;
+    MAXINFO_TREE* tree = NULL;
+    MAXINFO_TREE* col, * table;
 
     *parse_error = PARSE_NOERROR;
     while ((ptr = fetch_token(sql, &token, &text)) != NULL)
@@ -70,7 +71,7 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
         switch (token)
         {
         case LT_SHOW:
-            MXS_FREE(text); // not needed
+            MXS_FREE(text);     // not needed
             ptr = fetch_token(ptr, &token, &text);
             if (ptr == NULL || token != LT_STRING)
             {
@@ -88,7 +89,9 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
                 if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
                 {
                     tree->right = make_tree_node(MAXOP_LIKE,
-                                                 text, NULL, NULL);
+                                                 text,
+                                                 NULL,
+                                                 NULL);
                     return tree;
                 }
                 else
@@ -104,15 +107,17 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
             maxinfo_free_tree(tree);
             *parse_error = PARSE_MALFORMED_SHOW;
             return NULL;
+
 #if 0
         case LT_SELECT:
-            MXS_FREE(text); // not needed
+            MXS_FREE(text);     // not needed
             col = parse_column_list(&ptr);
             table = parse_table_name(&ptr);
             return make_tree_node(MAXOP_SELECT, NULL, col, table);
+
 #endif
         case LT_FLUSH:
-            MXS_FREE(text); // not needed
+            MXS_FREE(text);     // not needed
             ptr = fetch_token(ptr, &token, &text);
             return make_tree_node(MAXOP_FLUSH, text, NULL, NULL);
 
@@ -162,17 +167,18 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
             return tree;
 
         case LT_SET:
-            MXS_FREE(text); // not needed
+            MXS_FREE(text);     // not needed
             ptr = fetch_token(ptr, &token, &text);
             tree = make_tree_node(MAXOP_SET, text, NULL, NULL);
             return maxinfo_parse_literals(tree, 2, ptr, parse_error);
 
         case LT_CLEAR:
-            MXS_FREE(text); // not needed
+            MXS_FREE(text);     // not needed
             ptr = fetch_token(ptr, &token, &text);
             tree = make_tree_node(MAXOP_CLEAR, text, NULL, NULL);
             return maxinfo_parse_literals(tree, 2, ptr, parse_error);
             break;
+
         default:
             *parse_error = PARSE_SYNTAX_ERROR;
             return NULL;
@@ -189,13 +195,12 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
  * @param sql   Pointer to pointer to column list updated to point to the table name
  * @return  A tree of column names
  */
-static MAXINFO_TREE *
-parse_column_list(char **ptr)
+static MAXINFO_TREE* parse_column_list(char** ptr)
 {
     int token, lookahead;
-    char *text, *text2;
-    MAXINFO_TREE *tree = NULL;
-    MAXINFO_TREE *rval = NULL;
+    char* text, * text2;
+    MAXINFO_TREE* tree = NULL;
+    MAXINFO_TREE* rval = NULL;
     *ptr = fetch_token(*ptr, &token, &text);
     *ptr = fetch_token(*ptr, &lookahead, &text2);
     switch (token)
@@ -204,22 +209,34 @@ parse_column_list(char **ptr)
         switch (lookahead)
         {
         case LT_COMMA:
-            rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
+            rval = make_tree_node(MAXOP_COLUMNS,
+                                  text,
+                                  NULL,
                                   parse_column_list(ptr));
             break;
+
         case LT_FROM:
-            rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
+            rval = make_tree_node(MAXOP_COLUMNS,
+                                  text,
+                                  NULL,
                                   NULL);
             break;
+
         default:
             break;
         }
         break;
+
     case LT_STAR:
         if (lookahead != LT_FROM)
-            rval = make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
+        {
+            rval = make_tree_node(MAXOP_ALL_COLUMNS,
+                                  NULL,
+                                  NULL,
                                   NULL);
+        }
         break;
+
     default:
         break;
     }
@@ -235,15 +252,14 @@ parse_column_list(char **ptr)
  * @param sql   Pointer to pointer to column list updated to point to the table name
  * @return  A tree of table names
  */
-static MAXINFO_TREE *
-parse_table_name(char **ptr)
+static MAXINFO_TREE* parse_table_name(char** ptr)
 {
     int token;
-    char *text;
-    MAXINFO_TREE *tree = NULL;
+    char* text;
+    MAXINFO_TREE* tree = NULL;
 
     *ptr = fetch_token(*ptr, &token, &text);
-    if  (token == LT_STRING)
+    if (token == LT_STRING)
     {
         return make_tree_node(MAXOP_TABLE, text, NULL, NULL);
     }
@@ -260,12 +276,11 @@ parse_table_name(char **ptr)
  * @param right The right branch of the parse tree
  * @return The new parse tree node
  */
-static MAXINFO_TREE *
-make_tree_node(MAXINFO_OPERATOR op, char *value, MAXINFO_TREE *left, MAXINFO_TREE *right)
+static MAXINFO_TREE* make_tree_node(MAXINFO_OPERATOR op, char* value, MAXINFO_TREE* left, MAXINFO_TREE* right)
 {
-    MAXINFO_TREE *node;
+    MAXINFO_TREE* node;
 
-    if ((node = (MAXINFO_TREE *)MXS_MALLOC(sizeof(MAXINFO_TREE))) == NULL)
+    if ((node = (MAXINFO_TREE*)MXS_MALLOC(sizeof(MAXINFO_TREE))) == NULL)
     {
         return NULL;
     }
@@ -282,8 +297,7 @@ make_tree_node(MAXINFO_OPERATOR op, char *value, MAXINFO_TREE *left, MAXINFO_TRE
  *
  * @param tree  The parse tree to free
  */
-void
-maxinfo_free_tree(MAXINFO_TREE *tree)
+void maxinfo_free_tree(MAXINFO_TREE* tree)
 {
     if (tree->left)
     {
@@ -305,23 +319,23 @@ maxinfo_free_tree(MAXINFO_TREE *tree)
  */
 static struct
 {
-    const char *text;
-    int token;
+    const char* text;
+    int         token;
 } keywords[] =
 {
-    { "show",       LT_SHOW},
-    { "select",     LT_SELECT},
-    { "from",       LT_FROM},
-    { "like",       LT_LIKE},
-    { "=",          LT_EQUAL},
-    { ",",          LT_COMMA},
-    { "*",          LT_STAR},
-    { "flush",      LT_FLUSH},
-    { "set",        LT_SET},
-    { "clear",      LT_CLEAR},
-    { "shutdown",   LT_SHUTDOWN},
-    { "restart",    LT_RESTART},
-    { NULL, 0}
+    {"show",     LT_SHOW    },
+    {"select",   LT_SELECT  },
+    {"from",     LT_FROM    },
+    {"like",     LT_LIKE    },
+    {"=",        LT_EQUAL   },
+    {",",        LT_COMMA   },
+    {"*",        LT_STAR    },
+    {"flush",    LT_FLUSH   },
+    {"set",      LT_SET     },
+    {"clear",    LT_CLEAR   },
+    {"shutdown", LT_SHUTDOWN},
+    {"restart",  LT_RESTART },
+    {NULL,       0          }
 };
 
 /**
@@ -333,10 +347,9 @@ static struct
  * @param text  The matching text
  * @return  The next position to tokenise from
  */
-static char *
-fetch_token(char *sql, int *token, char **text)
+static char* fetch_token(char* sql, int* token, char** text)
 {
-    char *s1, *s2, quote = '\0';
+    char* s1, * s2, quote = '\0';
     int i;
 
     s1 = sql;
@@ -419,16 +432,18 @@ fetch_token(char *sql, int *token, char **text)
  * @param parse_error Pointer to parsing error to fill
  * @return Parsed tree or NULL if parsing failed
  */
-MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr,
-                                     PARSE_ERROR *parse_error)
+MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE* tree,
+                                     int min_args,
+                                     char* ptr,
+                                     PARSE_ERROR* parse_error)
 {
     int token;
     MAXINFO_TREE* node = tree;
-    char *text;
+    char* text;
     for (int i = 0; i < min_args; i++)
     {
-        if ((ptr = fetch_token(ptr, &token, &text)) == NULL ||
-            (node->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL)) == NULL)
+        if ((ptr = fetch_token(ptr, &token, &text)) == NULL
+            || (node->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL)) == NULL)
         {
             *parse_error = PARSE_SYNTAX_ERROR;
             maxinfo_free_tree(tree);

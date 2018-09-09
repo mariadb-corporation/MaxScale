@@ -174,7 +174,6 @@ void run(TestConnections& test)
     expect(test, "server3", "Slave", "Running");
     expect(test, "server4", "Slave", "Running");
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -186,4 +185,3 @@ int main(int argc, char* argv[])
 
     return test.global_result;
 }
-

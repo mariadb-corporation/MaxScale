@@ -151,19 +151,19 @@ auto_ptr<Module::ConfigParameters> Module::create_default_parameters() const
 // Module
 //
 
-//static
+// static
 void* Module::load(const char* zName, const char* zType)
 {
     return load_module(zName, zType);
 }
 
-//static
+// static
 const MXS_MODULE* Module::get(const char* zName, const char* zType)
 {
     return get_module(zName, zType);
 }
 
-//static
+// static
 bool Module::process_init()
 {
     bool initialized = false;
@@ -208,7 +208,7 @@ bool Module::process_init()
     return initialized;
 }
 
-//static
+// static
 void Module::process_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
@@ -223,7 +223,7 @@ void Module::process_finish()
     }
 }
 
-//static
+// static
 bool Module::thread_init()
 {
     bool initialized = false;
@@ -268,7 +268,7 @@ bool Module::thread_init()
     return initialized;
 }
 
-//static
+// static
 void Module::thread_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
@@ -282,5 +282,4 @@ void Module::thread_finish()
         }
     }
 }
-
 }

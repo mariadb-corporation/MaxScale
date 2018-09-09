@@ -11,12 +11,12 @@
 
 #include "big_load.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     Test->set_timeout(20);
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 20;");
+    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
 
     long int i1, i2;
     long int selects[256];
@@ -35,16 +35,19 @@ int main(int argc, char *argv[])
     for (int i = 0; i < Test->repl->N; i++)
     {
         Test->tprintf("Trying to flush node %d\n", i);
-        Test->add_result(execute_query(Test->repl->nodes[i], (char *) "flush hosts;"), "node %i flush failed\n", i);
+        Test->add_result(execute_query(Test->repl->nodes[i], (char*) "flush hosts;"),
+                         "node %i flush failed\n",
+                         i);
         Test->tprintf("Trying to set max_connections for node %d\n", i);
-        Test->add_result(execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;"),
-                         "set max_connections failed for node %d\n", i);
+        Test->add_result(execute_query(Test->repl->nodes[i], (char*) "set global max_connections = 151;"),
+                         "set max_connections failed for node %d\n",
+                         i);
     }
 
     Test->repl->close_connections();
     Test->stop_timeout();
 
-    Test->check_log_err(0, (char *) "Refresh rate limit exceeded", false);
+    Test->check_log_err(0, (char*) "Refresh rate limit exceeded", false);
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;

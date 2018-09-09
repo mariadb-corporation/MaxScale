@@ -33,7 +33,7 @@ static std::string extract_error(GWBUF* buffer)
 {
     std::string rval;
 
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(buffer))))
+    if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
     {
         size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
         char replybuf[replylen];
@@ -55,8 +55,10 @@ static std::string extract_error(GWBUF* buffer)
  * @param master_cmd Master's reply
  * @param slave_cmd  Slave's reply
  */
-static void discard_if_response_differs(SRWBackend backend, uint8_t master_response,
-                                        uint8_t slave_response, SSessionCommand sescmd)
+static void discard_if_response_differs(SRWBackend backend,
+                                        uint8_t master_response,
+                                        uint8_t slave_response,
+                                        SSessionCommand sescmd)
 {
     if (master_response != slave_response)
     {
@@ -65,7 +67,10 @@ static void discard_if_response_differs(SRWBackend backend, uint8_t master_respo
         MXS_WARNING("Slave server '%s': response (0x%02hhx) differs "
                     "from master's response (0x%02hhx) to %s: `%s`. "
                     "Closing slave connection due to inconsistent session state.",
-                    backend->name(), slave_response, master_response, STRPACKETTYPE(cmd),
+                    backend->name(),
+                    slave_response,
+                    master_response,
+                    STRPACKETTYPE(cmd),
                     query.empty() ? "<no query>" : query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
     }
@@ -87,15 +92,15 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
         if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
         {
             // This should never fail or the backend protocol is broken
-            MXB_AT_DEBUG(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
+            MXB_AT_DEBUG(bool b = ) mxs_mysql_extract_ps_response(*ppPacket, &resp);
             mxb_assert(b);
             backend->add_ps_handle(id, resp.id);
         }
 
         if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
         {
-            if (!m_current_master || !m_current_master->in_use() || // Session doesn't have a master
-                m_current_master == backend) // This is the master's response
+            if (!m_current_master || !m_current_master->in_use()// Session doesn't have a master
+                || m_current_master == backend)                 // This is the master's response
             {
                 /** First reply to this session command, route it to the client */
                 ++m_recv_sescmd;
@@ -108,7 +113,8 @@ void RWSplitSession::process_sescmd_response(SRWBackend& backend, GWBUF** ppPack
                 if (cmd == MYSQL_REPLY_ERR)
                 {
                     MXS_INFO("Session command no. %lu failed: %s",
-                             id, extract_error(*ppPacket).c_str());
+                             id,
+                             extract_error(*ppPacket).c_str());
                 }
                 else if (command == MXS_COM_STMT_PREPARE)
                 {

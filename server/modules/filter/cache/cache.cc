@@ -27,10 +27,10 @@
 
 using namespace std;
 
-Cache::Cache(const std::string&              name,
-             const CACHE_CONFIG*             pConfig,
+Cache::Cache(const std::string& name,
+             const CACHE_CONFIG* pConfig,
              const std::vector<SCacheRules>& rules,
-             SStorageFactory                 sFactory)
+             SStorageFactory sFactory)
     : m_name(name)
     , m_config(*pConfig)
     , m_rules(rules)
@@ -42,10 +42,10 @@ Cache::~Cache()
 {
 }
 
-//static
-bool Cache::Create(const CACHE_CONFIG&       config,
+// static
+bool Cache::Create(const CACHE_CONFIG& config,
                    std::vector<SCacheRules>* pRules,
-                   StorageFactory**          ppFactory)
+                   StorageFactory** ppFactory)
 {
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
@@ -124,20 +124,20 @@ json_t* Cache::show_json() const
 
 cache_result_t Cache::get_key(const char* zDefault_db,
                               const GWBUF* pQuery,
-                              CACHE_KEY* pKey) const
+                              CACHE_KEY*   pKey) const
 {
     // TODO: Take config into account.
     return get_default_key(zDefault_db, pQuery, pKey);
 }
 
-//static
+// static
 cache_result_t Cache::get_default_key(const char* zDefault_db,
                                       const GWBUF* pQuery,
-                                      CACHE_KEY* pKey)
+                                      CACHE_KEY*   pKey)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));
 
-    char *pSql;
+    char* pSql;
     int length;
 
     modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
@@ -198,7 +198,8 @@ json_t* Cache::do_get_info(uint32_t what) const
                 for (auto i = m_rules.begin(); i < m_rules.end(); ++i)
                 {
                     json_t* pRules = const_cast<json_t*>((*i)->json());
-                    json_array_append(pArray, pRules); // Increases ref-count of pRules, we ignore failure.
+                    json_array_append(pArray, pRules);      // Increases ref-count of pRules, we ignore
+                                                            // failure.
                 }
 
                 json_object_set(pInfo, "rules", pArray);

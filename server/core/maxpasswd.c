@@ -46,7 +46,7 @@ struct option options[] =
         NULL,
         'h'
     },
-    { NULL, 0, NULL, 0 }
+    {NULL, 0, NULL, 0}
 };
 #endif
 
@@ -65,7 +65,8 @@ void print_usage(const char* executable, const char* directory)
            "\n"
            "If a path is not provided, the .secrets file is looked for in the\n"
            "directory %s.\n",
-           executable, directory);
+           executable,
+           directory);
 }
 
 bool path_is_ok(const char* path)
@@ -106,7 +107,7 @@ bool path_is_ok(const char* path)
     return rv;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     const char* path = get_datadir();
 
@@ -169,7 +170,9 @@ int main(int argc, char **argv)
     {
         fprintf(stderr,
                 "warning: The provided password is %lu characters long. "
-                "Only the first %d will be used.\n", len, MXS_PASSWORD_MAXLEN);
+                "Only the first %d will be used.\n",
+                len,
+                MXS_PASSWORD_MAXLEN);
     }
 
     char used_password[MXS_PASSWORD_MAXLEN + 1];

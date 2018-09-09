@@ -33,37 +33,39 @@
  */
 static struct
 {
-    const char *keyword;
+    const char* keyword;
     TOKEN_VALUE token;
 } keywords[] =
 {
-    { "maxscale", TOK_MAXSCALE},
-    { "prepare", TOK_PREPARE},
-    { "start", TOK_START},
-    { "begin", TOK_START},
-    { "stop", TOK_STOP},
-    { "end", TOK_STOP},
-    { "=", TOK_EQUAL},
-    { "route", TOK_ROUTE},
-    { "to", TOK_TO},
-    { "master", TOK_MASTER},
-    { "slave", TOK_SLAVE},
-    { "server", TOK_SERVER},
-    { "last" , TOK_LAST},
-    { NULL, static_cast<TOKEN_VALUE>(0)}
+    {"maxscale", TOK_MAXSCALE               },
+    {"prepare",  TOK_PREPARE                },
+    {"start",    TOK_START                  },
+    {"begin",    TOK_START                  },
+    {"stop",     TOK_STOP                   },
+    {"end",      TOK_STOP                   },
+    {"=",        TOK_EQUAL                  },
+    {"route",    TOK_ROUTE                  },
+    {"to",       TOK_TO                     },
+    {"master",   TOK_MASTER                 },
+    {"slave",    TOK_SLAVE                  },
+    {"server",   TOK_SERVER                 },
+    {"last",     TOK_LAST                   },
+    {NULL,       static_cast<TOKEN_VALUE>(0)}
 };
 
-static HINT_TOKEN *hint_next_token(GWBUF **buf, char **ptr);
-static void hint_pop(HINT_SESSION *);
-static HINT *lookup_named_hint(HINT_SESSION *, char *);
-static void create_named_hint(HINT_SESSION *, char *, HINT *);
-static void hint_push(HINT_SESSION *, HINT *);
+static HINT_TOKEN* hint_next_token(GWBUF** buf, char** ptr);
+static void        hint_pop(HINT_SESSION*);
+static HINT*       lookup_named_hint(HINT_SESSION*, char*);
+static void        create_named_hint(HINT_SESSION*, char*, HINT*);
+static void        hint_push(HINT_SESSION*, HINT*);
 static const char* token_get_keyword(HINT_TOKEN* token);
-static void token_free(HINT_TOKEN* token);
+static void        token_free(HINT_TOKEN* token);
 
 typedef enum
 {
-    HM_EXECUTE, HM_START, HM_PREPARE
+    HM_EXECUTE,
+    HM_START,
+    HM_PREPARE
 } HINT_MODE;
 
 void token_free(HINT_TOKEN* token)
@@ -75,8 +77,7 @@ void token_free(HINT_TOKEN* token)
     MXS_FREE(token);
 }
 
-static const char* token_get_keyword(
-    HINT_TOKEN* token)
+static const char* token_get_keyword(HINT_TOKEN* token)
 {
     switch (token->token)
     {
@@ -124,16 +125,15 @@ static const char* token_get_keyword(
  * @return      The hints parsed in this statement or active on the
  *          stack
  */
-HINT *
-hint_parser(HINT_SESSION *session, GWBUF *request)
+HINT* hint_parser(HINT_SESSION* session, GWBUF* request)
 {
-    char *ptr, lastch = ' ';
+    char* ptr, lastch = ' ';
     int len, residual, state;
     int found, escape, quoted, squoted;
-    HINT *rval = NULL;
-    char *pname, *lvalue, *hintname = NULL;
-    GWBUF *buf;
-    HINT_TOKEN *tok;
+    HINT* rval = NULL;
+    char* pname, * lvalue, * hintname = NULL;
+    GWBUF* buf;
+    HINT_TOKEN* tok;
     HINT_MODE mode = HM_EXECUTE;
     bool multiline_comment = false;
     /* First look for any comment in the SQL */
@@ -169,7 +169,6 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             }
             else if (quoted || squoted)
             {
-                ;
             }
             else if (escape)
             {
@@ -219,7 +218,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
     }
     while (buf);
 
-    if (!found) /* No comment so we need do no more */
+    if (!found)     /* No comment so we need do no more */
     {
         goto retblock;
     }
@@ -232,7 +231,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
      * Move to the next character in the SQL.
      */
     ptr++;
-    if (ptr > (char *)(buf->end))
+    if (ptr > (char*)(buf->end))
     {
         buf = buf->next;
         if (buf)
@@ -262,8 +261,8 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
 
     state = HS_INIT;
 
-    while (((tok = hint_next_token(&buf, &ptr)) != NULL) &&
-           (tok->token != TOK_END))
+    while (((tok = hint_next_token(&buf, &ptr)) != NULL)
+           && (tok->token != TOK_END))
     {
         if (tok->token == TOK_LINEBRK)
         {
@@ -288,20 +287,24 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             case TOK_ROUTE:
                 state = HS_ROUTE;
                 break;
+
             case TOK_STRING:
                 state = HS_NAME;
                 lvalue = MXS_STRDUP_A(tok->value);
                 break;
+
             case TOK_STOP:
                 /* Action: pop active hint */
                 hint_pop(session);
                 state = HS_INIT;
                 break;
+
             case TOK_START:
                 hintname = NULL;
                 mode = HM_START;
                 state = HS_INIT;
                 break;
+
             default:
                 /* Error: expected hint, name or STOP */
                 MXS_ERROR("Syntax error in hint. Expected "
@@ -312,10 +315,11 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 goto retblock;
             }
             break;
+
         case HS_ROUTE:
             if (tok->token != TOK_TO)
             {
-                /* Error, expect TO */;
+                /* Error, expect TO */
                 MXS_ERROR("Syntax error in hint. Expected "
                           "'to' instead of '%s'. Hint ignored.",
                           token_get_keyword(tok));
@@ -324,26 +328,32 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             }
             state = HS_ROUTE1;
             break;
+
         case HS_ROUTE1:
             switch (tok->token)
             {
             case TOK_MASTER:
                 rval = hint_create_route(rval,
-                                         HINT_ROUTE_TO_MASTER, NULL);
+                                         HINT_ROUTE_TO_MASTER,
+                                         NULL);
                 break;
+
             case TOK_SLAVE:
                 rval = hint_create_route(rval,
-                                         HINT_ROUTE_TO_SLAVE, NULL);
+                                         HINT_ROUTE_TO_SLAVE,
+                                         NULL);
                 break;
 
             case TOK_LAST:
                 rval = hint_create_route(rval,
-                                         HINT_ROUTE_TO_LAST_USED, NULL);
+                                         HINT_ROUTE_TO_LAST_USED,
+                                         NULL);
                 break;
 
             case TOK_SERVER:
                 state = HS_ROUTE_SERVER;
                 break;
+
             default:
                 /* Error expected MASTER, SLAVE or SERVER */
                 MXS_ERROR("Syntax error in hint. Expected "
@@ -355,11 +365,13 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 goto retblock;
             }
             break;
+
         case HS_ROUTE_SERVER:
             if (tok->token == TOK_STRING)
             {
                 rval = hint_create_route(rval,
-                                         HINT_ROUTE_TO_NAMED_SERVER, tok->value);
+                                         HINT_ROUTE_TO_NAMED_SERVER,
+                                         tok->value);
             }
             else
             {
@@ -372,6 +384,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 goto retblock;
             }
             break;
+
         case HS_NAME:
             switch (tok->token)
             {
@@ -380,16 +393,19 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 lvalue = NULL;
                 state = HS_PVALUE;
                 break;
+
             case TOK_PREPARE:
                 pname = lvalue;
                 state = HS_PREPARE;
                 break;
+
             case TOK_START:
                 /* Action start(lvalue) */
                 hintname = lvalue;
                 mode = HM_START;
                 state = HS_INIT;
                 break;
+
             default:
                 /* Error, token tok->value not expected */
                 MXS_ERROR("Syntax error in hint. Expected "
@@ -400,6 +416,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 goto retblock;
             }
             break;
+
         case HS_PVALUE:
             /* Action: pname = tok->value */
             rval = hint_create_parameter(rval, pname, tok->value);
@@ -407,6 +424,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             pname = NULL;
             state = HS_INIT;
             break;
+
         case HS_PREPARE:
             mode = HM_PREPARE;
             hintname = lvalue;
@@ -415,10 +433,12 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             case TOK_ROUTE:
                 state = HS_ROUTE;
                 break;
+
             case TOK_STRING:
                 state = HS_NAME;
                 lvalue = tok->value;
                 break;
+
             default:
                 /* Error, token tok->value not expected */
                 MXS_ERROR("Syntax error in hint. Expected "
@@ -431,7 +451,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             break;
         }
         token_free(tok);
-    } /*< while */
+    }   /*< while */
 
     if (tok && tok->token == TOK_END)
     {
@@ -478,6 +498,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             /* Error case */
         }
         break;
+
     case HM_PREPARE:
         /*
          * We are preparing a named set of hints. Note this does
@@ -496,6 +517,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
          */
         rval = NULL;
         break;
+
     case HM_EXECUTE:
         /*
          * We have a one-off hint for the statement we are
@@ -526,27 +548,26 @@ retblock:
  * @param ptr   The pointer within the buffer we are processing
  * @return A HINT token
  */
-static HINT_TOKEN *
-hint_next_token(GWBUF **buf, char **ptr)
+static HINT_TOKEN* hint_next_token(GWBUF** buf, char** ptr)
 {
-    char word[100], *dest;
+    char word[100], * dest;
     int inword = 0;
     int endtag = 0;
     char inquote = '\0';
     int i, found;
-    HINT_TOKEN *tok;
+    HINT_TOKEN* tok;
 
-    if ((tok = (HINT_TOKEN *)MXS_MALLOC(sizeof(HINT_TOKEN))) == NULL)
+    if ((tok = (HINT_TOKEN*)MXS_MALLOC(sizeof(HINT_TOKEN))) == NULL)
     {
         return NULL;
     }
     tok->value = NULL;
     dest = word;
-    while (*ptr < (char *)((*buf)->end) || (*buf)->next)
+    while (*ptr < (char*)((*buf)->end) || (*buf)->next)
     {
         /** word ends, don't move ptr but return with read word */
-        if (inword && inquote == '\0' &&
-            (isspace(**ptr) || **ptr == '='))
+        if (inword && inquote == '\0'
+            && (isspace(**ptr) || **ptr == '='))
         {
             inword = 0;
             break;
@@ -587,7 +608,7 @@ hint_next_token(GWBUF **buf, char **ptr)
         }
         (*ptr)++;
 
-        if (*ptr > (char *)((*buf)->end) && (*buf)->next)
+        if (*ptr > (char*)((*buf)->end) && (*buf)->next)
         {
             *buf = (*buf)->next;
             *ptr = static_cast<char*>((*buf)->start);
@@ -597,7 +618,7 @@ hint_next_token(GWBUF **buf, char **ptr)
         {
             break;
         }
-    } /*< while */
+    }   /*< while */
     *dest = 0;
 
     /* We now have a word in the local word, check to see if it is a
@@ -637,11 +658,10 @@ hint_next_token(GWBUF **buf, char **ptr)
  *
  * @param   session The filter session.
  */
-void
-hint_pop(HINT_SESSION *session)
+void hint_pop(HINT_SESSION* session)
 {
-    HINTSTACK *ptr;
-    HINT *hint;
+    HINTSTACK* ptr;
+    HINT* hint;
 
     if ((ptr = session->stack) != NULL)
     {
@@ -663,12 +683,11 @@ hint_pop(HINT_SESSION *session)
  * @param hint      The hint to push, the hint ownership is retained
  *          by the stack and should not be freed by the caller
  */
-static void
-hint_push(HINT_SESSION *session, HINT *hint)
+static void hint_push(HINT_SESSION* session, HINT* hint)
 {
-    HINTSTACK *item;
+    HINTSTACK* item;
 
-    if ((item = (HINTSTACK *)MXS_MALLOC(sizeof(HINTSTACK))) == NULL)
+    if ((item = (HINTSTACK*)MXS_MALLOC(sizeof(HINTSTACK))) == NULL)
     {
         return;
     }
@@ -684,10 +703,9 @@ hint_push(HINT_SESSION *session, HINT *hint)
  * @param name      The name to lookup
  * @return the HINT or NULL if the name was not found.
  */
-static HINT *
-lookup_named_hint(HINT_SESSION *session, char *name)
+static HINT* lookup_named_hint(HINT_SESSION* session, char* name)
 {
-    NAMEDHINTS *ptr = session->named_hints;
+    NAMEDHINTS* ptr = session->named_hints;
 
     while (ptr)
     {
@@ -707,12 +725,11 @@ lookup_named_hint(HINT_SESSION *session, char *name)
  * @param name      The name of the block to ceate
  * @param hint      The hints themselves
  */
-static void
-create_named_hint(HINT_SESSION *session, char *name, HINT *hint)
+static void create_named_hint(HINT_SESSION* session, char* name, HINT* hint)
 {
-    NAMEDHINTS *block;
+    NAMEDHINTS* block;
 
-    if ((block = (NAMEDHINTS *)MXS_MALLOC(sizeof(NAMEDHINTS))) == NULL)
+    if ((block = (NAMEDHINTS*)MXS_MALLOC(sizeof(NAMEDHINTS))) == NULL)
     {
         return;
     }
@@ -730,8 +747,7 @@ create_named_hint(HINT_SESSION *session, char *name, HINT *hint)
  *
  * @return pointer to next NAMEDHINTS struct.
  */
-NAMEDHINTS* free_named_hint(
-    NAMEDHINTS* named_hint)
+NAMEDHINTS* free_named_hint(NAMEDHINTS* named_hint)
 {
     NAMEDHINTS* next;
 
@@ -764,8 +780,7 @@ NAMEDHINTS* free_named_hint(
  *
  * @return pointer to next HINTSTACK struct.
  */
-HINTSTACK* free_hint_stack(
-    HINTSTACK* hint_stack)
+HINTSTACK* free_hint_stack(HINTSTACK* hint_stack)
 {
     HINTSTACK* next;
 

@@ -14,18 +14,20 @@
 
 using namespace std;
 
-//const int N = 9;
-//const char * resources[N] = {"variables",  "status", "services",  "listeners", "modules", "sessions", "clients", "servers", "eventTimes"};
+// const int N = 9;
+// const char * resources[N] = {"variables",  "status", "services",  "listeners", "modules", "sessions",
+// "clients", "servers", "eventTimes"};
 const int N = 8;
-const char * resources[N] = {"variables",  "status", "services",  "listeners", "modules", "sessions", "clients", "servers"};
+const char* resources[N]
+    = {"variables", "status", "services", "listeners", "modules", "sessions", "clients", "servers"};
 
 bool exit_flag = false;
 
-void *maxinfo_thread( void *ptr );
+void* maxinfo_thread(void* ptr);
 int threads_num = 25;
-TestConnections * Test;
+TestConnections* Test;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     Test = new TestConnections(argc, argv);
     int sleep_time = Test->smoke ? 30 : 1000;
@@ -33,7 +35,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(sleep_time + 100);
 
     pthread_t thread1[threads_num];
-    int  iret1[threads_num];
+    int iret1[threads_num];
 
     int i;
     for (i = 0; i < threads_num; i++)
@@ -57,12 +59,12 @@ int main(int argc, char *argv[])
     return rval;
 }
 
-void *maxinfo_thread( void *ptr )
+void* maxinfo_thread(void* ptr)
 {
-    char * result;
+    char* result;
     int ind;
 
-    while (! exit_flag)
+    while (!exit_flag)
     {
         ind = rand() % N;
         result = get_maxinfo(resources[ind], Test);
@@ -76,5 +78,4 @@ void *maxinfo_thread( void *ptr )
             Test->add_result(1, "Can't get result from maxinfo, query %s\n", resources[ind]);
         }
     }
-
 }

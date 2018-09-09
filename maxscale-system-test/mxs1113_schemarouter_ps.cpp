@@ -43,7 +43,7 @@ void test_binary_protocol(TestConnections& test, MYSQL* conn)
     mysql_stmt_close(stmt);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.set_timeout(30);
@@ -54,8 +54,12 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < test.repl->N; i++)
     {
-        conn = open_conn_db(test.repl->port[i], test.repl->IP[i], "shard_db",
-                            test.repl->user_name, test.repl->password, test.ssl);
+        conn = open_conn_db(test.repl->port[i],
+                            test.repl->IP[i],
+                            "shard_db",
+                            test.repl->user_name,
+                            test.repl->password,
+                            test.ssl);
         execute_query(conn, "CREATE TABLE table%d (x1 int, fl int)", i);
         execute_query(conn, "INSERT INTO table%d VALUES(%d, %d)", i, i, i);
         mysql_close(conn);

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file include/maxscale/session.h - The public session interface
@@ -50,38 +50,71 @@ typedef enum
     SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } mxs_session_state_t;
 
-#define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
-                            ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
-                             ((s) == SESSION_STATE_ROUTER_READY ? "SESSION_STATE_ROUTER_READY" : \
-                              ((s) == SESSION_STATE_STOPPING ? "SESSION_STATE_STOPPING": \
-                               ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
-                                ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
-                                 ((s) == SESSION_STATE_TO_BE_FREED ? "SESSION_STATE_TO_BE_FREED" : \
-                                  ((s) == SESSION_STATE_FREE ? "SESSION_STATE_TO_BE_FREE" : \
-                                   ((s) == SESSION_STATE_DUMMY ? "SESSION_STATE_DUMMY" : \
-                                    "SESSION_STATE_UNKNOWN")))))))))
+#define STRSESSIONSTATE(s) \
+    ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC"   \
+                                : ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY"   \
+                                                              : ((s) \
+                                                                 == SESSION_STATE_ROUTER_READY ? \
+                                                                 "SESSION_STATE_ROUTER_READY"   \
+                                                                                               : ((s) \
+                                                                                                  == \
+                                                                                                  SESSION_STATE_STOPPING \
+                                                                                                  ? \
+                                                                                                  "SESSION_STATE_STOPPING"  \
+                                                                                                  : (( \
+                                                                                                         s) \
+                                                                                                     == \
+                                                                                                     SESSION_STATE_LISTENER \
+                                                                                                     ? \
+                                                                                                     "SESSION_STATE_LISTENER"   \
+                                                                                                     : (( \
+                                                                                                            s) \
+                                                                                                        == \
+                                                                                                        SESSION_STATE_LISTENER_STOPPED \
+                                                                                                        ? \
+                                                                                                        "SESSION_STATE_LISTENER_STOPPED"   \
+                                                                                                        : (( \
+                                                                                                               s) \
+                                                                                                           == \
+                                                                                                           SESSION_STATE_TO_BE_FREED \
+                                                                                                           ? \
+                                                                                                           "SESSION_STATE_TO_BE_FREED"   \
+                                                                                                           : (( \
+                                                                                                                  s) \
+                                                                                                              == \
+                                                                                                              SESSION_STATE_FREE \
+                                                                                                              ? \
+                                                                                                              "SESSION_STATE_TO_BE_FREE"   \
+                                                                                                              : (( \
+                                                                                                                     s) \
+                                                                                                                 == \
+                                                                                                                 SESSION_STATE_DUMMY \
+                                                                                                                 ? \
+                                                                                                                 "SESSION_STATE_DUMMY"   \
+                                                                                                                 : \
+                                                                                                                 "SESSION_STATE_UNKNOWN")))))))))
 
 typedef enum
 {
-    SESSION_TRX_INACTIVE_BIT   = 0x01, /* 0b00001 */
-    SESSION_TRX_ACTIVE_BIT     = 0x02, /* 0b00010 */
-    SESSION_TRX_READ_ONLY_BIT  = 0x04, /* 0b00100 */
-    SESSION_TRX_READ_WRITE_BIT = 0x08, /* 0b01000 */
-    SESSION_TRX_ENDING_BIT     = 0x10, /* 0b10000*/
+    SESSION_TRX_INACTIVE_BIT   = 0x01,  /* 0b00001 */
+    SESSION_TRX_ACTIVE_BIT     = 0x02,  /* 0b00010 */
+    SESSION_TRX_READ_ONLY_BIT  = 0x04,  /* 0b00100 */
+    SESSION_TRX_READ_WRITE_BIT = 0x08,  /* 0b01000 */
+    SESSION_TRX_ENDING_BIT     = 0x10,  /* 0b10000*/
 } session_trx_state_bit_t;
 
 typedef enum
 {
     /*< There is no on-going transaction. */
-    SESSION_TRX_INACTIVE          = SESSION_TRX_INACTIVE_BIT,
+    SESSION_TRX_INACTIVE = SESSION_TRX_INACTIVE_BIT,
     /*< A transaction is active. */
-    SESSION_TRX_ACTIVE            = SESSION_TRX_ACTIVE_BIT,
+    SESSION_TRX_ACTIVE = SESSION_TRX_ACTIVE_BIT,
     /*< An explicit READ ONLY transaction is active. */
-    SESSION_TRX_READ_ONLY         = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
+    SESSION_TRX_READ_ONLY = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
     /*< An explicit READ WRITE transaction is active. */
-    SESSION_TRX_READ_WRITE        = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT),
+    SESSION_TRX_READ_WRITE = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT),
     /*< An explicit READ ONLY transaction is ending. */
-    SESSION_TRX_READ_ONLY_ENDING  = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_ONLY),
+    SESSION_TRX_READ_ONLY_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_ONLY),
     /*< An explicit READ WRITE transaction is ending. */
     SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE),
 } mxs_session_trx_state_t;
@@ -98,7 +131,7 @@ typedef enum
  */
 typedef struct
 {
-    time_t          connect;        /**< Time when the session was started */
+    time_t connect;         /**< Time when the session was started */
 } MXS_SESSION_STATS;
 
 /**
@@ -109,14 +142,18 @@ struct mxs_filter;
 struct mxs_filter_session;
 
 // These are more convenient types
-typedef int32_t (*DOWNSTREAMFUNC)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
-typedef int32_t (*UPSTREAMFUNC)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
+typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
+                                   struct mxs_filter_session* session,
+                                   GWBUF* response);
+typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
+                                 struct mxs_filter_session* session,
+                                 GWBUF* response);
 
 typedef struct mxs_downstream
 {
-    struct mxs_filter *instance;
-    struct mxs_filter_session *session;
-    DOWNSTREAMFUNC routeQuery;
+    struct mxs_filter*         instance;
+    struct mxs_filter_session* session;
+    DOWNSTREAMFUNC             routeQuery;
 } MXS_DOWNSTREAM;
 
 /**
@@ -125,9 +162,9 @@ typedef struct mxs_downstream
  */
 typedef struct mxs_upstream
 {
-    struct mxs_filter *instance;
-    struct mxs_filter_session *session;
-    UPSTREAMFUNC clientReply;
+    struct mxs_filter*         instance;
+    struct mxs_filter_session* session;
+    UPSTREAMFUNC               clientReply;
 } MXS_UPSTREAM;
 
 /* Specific reasons why a session was closed */
@@ -159,10 +196,10 @@ typedef enum
  * @return  NULL if successful, otherwise a dynamically allocated string
  *          containing an end-user friendly error message.
  */
-typedef char* (*session_variable_handler_t)(void* context,
-                                            const char* name,
-                                            const char* value_begin,
-                                            const char* value_end);
+typedef char* (* session_variable_handler_t)(void* context,
+                                             const char* name,
+                                             const char* value_begin,
+                                             const char* value_end);
 
 /**
  * The session status block
@@ -176,27 +213,28 @@ typedef char* (*session_variable_handler_t)(void* context,
  */
 typedef struct session
 {
-    mxs_session_state_t     state;            /*< Current descriptor state */
-    uint64_t                ses_id;           /*< Unique session identifier */
-    struct dcb              *client_dcb;      /*< The client connection */
+    mxs_session_state_t state;              /*< Current descriptor state */
+    uint64_t            ses_id;             /*< Unique session identifier */
+    struct dcb*         client_dcb;         /*< The client connection */
 
-    struct mxs_router_session *router_session;  /*< The router instance data */
-    MXS_SESSION_STATS       stats;            /*< Session statistics */
-    struct service          *service;         /*< The service this session is using */
-    MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
-    MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
-    int                     refcount;         /*< Reference count on the session */
-    mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
-    bool                    autocommit;       /*< Whether autocommit is on. */
-    intptr_t                client_protocol_data; /*< Owned and managed by the client protocol. */
-    bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
+    struct mxs_router_session* router_session;          /*< The router instance data */
+    MXS_SESSION_STATS          stats;                   /*< Session statistics */
+    struct service*            service;                 /*< The service this session is using */
+    MXS_DOWNSTREAM             head;                    /*< Head of the filter chain */
+    MXS_UPSTREAM               tail;                    /*< The tail of the filter chain */
+    int                        refcount;                /*< Reference count on the session */
+    mxs_session_trx_state_t    trx_state;               /*< The current transaction state. */
+    bool                       autocommit;              /*< Whether autocommit is on. */
+    intptr_t                   client_protocol_data;    /*< Owned and managed by the client protocol. */
+    bool                       qualifies_for_pooling;   /**< Whether this session qualifies for the connection
+                                                         * pool */
     struct
     {
-        MXS_UPSTREAM up; /*< Upward component to receive buffer. */
-        GWBUF* buffer;   /*< Buffer to deliver to up. */
-    } response;                               /*< Shortcircuited response */
-    session_close_t        close_reason;      /*< Reason why the session was closed */
-    bool                   load_active;       /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
+        MXS_UPSTREAM up;            /*< Upward component to receive buffer. */
+        GWBUF*       buffer;        /*< Buffer to deliver to up. */
+    }               response;       /*< Shortcircuited response */
+    session_close_t close_reason;   /*< Reason why the session was closed */
+    bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
 } MXS_SESSION;
 
 /**
@@ -209,7 +247,7 @@ typedef struct session
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *buffer);
+void session_set_response(MXS_SESSION* session, const MXS_UPSTREAM* up, GWBUF* buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data
@@ -220,7 +258,7 @@ void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *b
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_query(MXS_SESSION *session, GWBUF *buffer);
+bool session_route_query(MXS_SESSION* session, GWBUF* buffer);
 
 /**
  * Function to be used by the router module to route the replies to
@@ -231,7 +269,7 @@ bool session_route_query(MXS_SESSION *session, GWBUF *buffer);
  *
  * @return True, if the routing should continue, false otherwise.
  */
-bool session_route_reply(MXS_SESSION *session, GWBUF *buffer);
+bool session_route_reply(MXS_SESSION* session, GWBUF* buffer);
 
 /**
  * A convenience macro that can be used by the protocol modules to route
@@ -258,7 +296,7 @@ bool session_route_reply(MXS_SESSION *session, GWBUF *buffer);
  * @param client_dcb    The client side DCB
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION *session_alloc(struct service *, struct dcb *);
+MXS_SESSION* session_alloc(struct service*, struct dcb*);
 
 /**
  * A version of session_alloc() which takes the session id number as parameter.
@@ -269,17 +307,17 @@ MXS_SESSION *session_alloc(struct service *, struct dcb *);
  * @param id            Id for the new session.
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION *session_alloc_with_id(struct service *, struct dcb *, uint64_t);
+MXS_SESSION* session_alloc_with_id(struct service*, struct dcb*, uint64_t);
 
-MXS_SESSION *session_set_dummy(struct dcb *);
+MXS_SESSION* session_set_dummy(struct dcb*);
 
 static inline bool session_is_dummy(MXS_SESSION* session)
 {
     return session->state == SESSION_STATE_DUMMY;
 }
 
-const char *session_get_remote(const MXS_SESSION *);
-const char *session_get_user(const MXS_SESSION *);
+const char* session_get_remote(const MXS_SESSION*);
+const char* session_get_user(const MXS_SESSION*);
 
 /**
  * Convert transaction state to string representation.
@@ -450,7 +488,7 @@ uint64_t session_get_next_id();
  *
  * @param session The session to close
  */
-void session_close(MXS_SESSION *session);
+void session_close(MXS_SESSION* session);
 
 /**
  * @brief Release a session reference
@@ -459,7 +497,7 @@ void session_close(MXS_SESSION *session);
  *
  * @param session Session reference to release
  */
-void session_put_ref(MXS_SESSION *session);
+void session_put_ref(MXS_SESSION* session);
 
 /**
  * @brief Convert a session to JSON
@@ -469,7 +507,7 @@ void session_put_ref(MXS_SESSION *session);
  *
  * @return New JSON object or NULL on error
  */
-json_t* session_to_json(const MXS_SESSION *session, const char* host);
+json_t* session_to_json(const MXS_SESSION* session, const char* host);
 
 /**
  * @brief Convert all sessions to JSON
@@ -531,10 +569,10 @@ uint64_t session_get_current_id();
  *
  * @return True, if the variable could be added, false otherwise.
  */
-bool session_add_variable(MXS_SESSION*               session,
-                          const char*                name,
+bool session_add_variable(MXS_SESSION* session,
+                          const char*  name,
                           session_variable_handler_t handler,
-                          void*                      context);
+                          void* context);
 
 /**
  * @brief Remove MaxScale specific user variable from the session.
@@ -553,7 +591,7 @@ bool session_add_variable(MXS_SESSION*               session,
  */
 bool session_remove_variable(MXS_SESSION* session,
                              const char*  name,
-                             void**       context);
+                             void** context);
 /**
  * @brief Set value of maxscale session variable.
  *
@@ -570,10 +608,10 @@ bool session_remove_variable(MXS_SESSION* session,
  *       incoming statements.
  */
 char* session_set_variable_value(MXS_SESSION* session,
-                                 const char* name_begin,
-                                 const char* name_end,
-                                 const char* value_begin,
-                                 const char* value_end);
+                                 const char*  name_begin,
+                                 const char*  name_end,
+                                 const char*  value_begin,
+                                 const char*  value_end);
 
 /**
  * @brief Specify how many statements each session should retain for

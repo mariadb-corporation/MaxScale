@@ -47,24 +47,24 @@ using std::stringstream;
 namespace
 {
 
-char USAGE[] =
-    "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
-        "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
-    "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
-    "-d    don't stop after first failed query\n"
-    "-1    the first classifier, default 'qc_mysqlembedded'\n"
-    "-2    the second classifier, default 'qc_sqlite'\n"
-    "-A    arguments for the first classifier\n"
-    "-B    arguments for the second classifier\n"
-    "-C    arguments for both classifiers\n"
-    "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
-    "-s    compare single statement\n"
-    "-S    strict, also require that the parse result is identical\n"
-    "-R    strict reporting, report if parse result is different\n"
-    "-v 0, only return code\n"
-    "   1, query and result for failed cases\n"
-    "   2, all queries, and result for failed cases\n"
-    "   3, all queries and all results\n";
+char USAGE[]
+    = "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
+      "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
+      "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
+      "-d    don't stop after first failed query\n"
+      "-1    the first classifier, default 'qc_mysqlembedded'\n"
+      "-2    the second classifier, default 'qc_sqlite'\n"
+      "-A    arguments for the first classifier\n"
+      "-B    arguments for the second classifier\n"
+      "-C    arguments for both classifiers\n"
+      "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
+      "-s    compare single statement\n"
+      "-S    strict, also require that the parse result is identical\n"
+      "-R    strict reporting, report if parse result is different\n"
+      "-v 0, only return code\n"
+      "   1, query and result for failed cases\n"
+      "   2, all queries, and result for failed cases\n"
+      "   3, all queries and all results\n";
 
 
 enum verbosity_t
@@ -77,35 +77,35 @@ enum verbosity_t
 
 struct State
 {
-    bool query_printed;
-    string query;
-    verbosity_t verbosity;
-    bool result_printed;
-    bool stop_at_error;
-    bool strict;
-    bool strict_reporting;
-    size_t line;
-    size_t n_statements;
-    size_t n_errors;
+    bool            query_printed;
+    string          query;
+    verbosity_t     verbosity;
+    bool            result_printed;
+    bool            stop_at_error;
+    bool            strict;
+    bool            strict_reporting;
+    size_t          line;
+    size_t          n_statements;
+    size_t          n_errors;
     struct timespec time1;
     struct timespec time2;
-    string indent;
-} global = { false,            // query_printed
-             "",               // query
-             VERBOSITY_NORMAL, // verbosity
-             false,            // result_printed
-             true,             // stop_at_error
-             false,            // strict
-             false,            // strict reporting
-             0,                // line
-             0,                // n_statements
-             0,                // n_errors
-             { 0, 0 },         // time1
-             { 0,  0},         // time2
-             ""                // indent
+    string          indent;
+} global = {false,              // query_printed
+            "",                 // query
+            VERBOSITY_NORMAL,   // verbosity
+            false,              // result_printed
+            true,               // stop_at_error
+            false,              // strict
+            false,              // strict reporting
+            0,                  // line
+            0,                  // n_statements
+            0,                  // n_errors
+            {0, 0},             // time1
+            {0, 0},             // time2
+            ""                  // indent
 };
 
-ostream& operator << (ostream& out, qc_parse_result_t x)
+ostream& operator<<(ostream& out, qc_parse_result_t x)
 {
     switch (x)
     {
@@ -160,7 +160,7 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 
     set_libdir(strdup(libdir));
 
-    QUERY_CLASSIFIER *pClassifier = qc_load(name);
+    QUERY_CLASSIFIER* pClassifier = qc_load(name);
 
     if (!pClassifier)
     {
@@ -176,9 +176,9 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, cons
 
     if (pClassifier)
     {
-        if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK ||
-            pClassifier->qc_process_init() != QC_RESULT_OK ||
-            pClassifier->qc_thread_init() != QC_RESULT_OK)
+        if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK
+            || pClassifier->qc_process_init() != QC_RESULT_OK
+            || pClassifier->qc_thread_init() != QC_RESULT_OK)
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
             qc_unload(pClassifier);
@@ -199,8 +199,12 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 }
 
 bool get_classifiers(qc_sql_mode_t sql_mode,
-                     const char* zName1, const char* zArgs1, QUERY_CLASSIFIER** ppClassifier1,
-                     const char* zName2, const char* zArgs2, QUERY_CLASSIFIER** ppClassifier2)
+                     const char*   zName1,
+                     const char*   zArgs1,
+                     QUERY_CLASSIFIER** ppClassifier1,
+                     const char* zName2,
+                     const char* zArgs2,
+                     QUERY_CLASSIFIER** ppClassifier2)
 {
     bool rc = false;
 
@@ -275,10 +279,10 @@ void report(bool success, const string& s)
 
 static timespec timespec_subtract(const timespec& later, const timespec& earlier)
 {
-    timespec result = { 0, 0 };
+    timespec result = {0, 0};
 
-    mxb_assert((later.tv_sec > earlier.tv_sec) ||
-               ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
+    mxb_assert((later.tv_sec > earlier.tv_sec)
+               || ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
 
     if (later.tv_nsec >= earlier.tv_nsec)
     {
@@ -313,8 +317,10 @@ static void update_time(timespec* pResult, timespec& start, timespec& finish)
     pResult->tv_sec += difference.tv_sec;
 }
 
-bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                   QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_parse(QUERY_CLASSIFIER* pClassifier1,
+                   GWBUF* pCopy1,
+                   QUERY_CLASSIFIER* pClassifier2,
+                   GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_parse                 : ";
@@ -365,8 +371,10 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                      QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
+                      GWBUF* pCopy1,
+                      QUERY_CLASSIFIER* pClassifier2,
+                      GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_type_mask         : ";
@@ -433,8 +441,10 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                           QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1,
+                           GWBUF* pCopy1,
+                           QUERY_CLASSIFIER* pClassifier2,
+                           GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
@@ -465,8 +475,10 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                    QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1,
+                                    GWBUF* pCopy1,
+                                    QUERY_CLASSIFIER* pClassifier2,
+                                    GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
@@ -497,8 +509,10 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy
     return success;
 }
 
-bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                 QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
+                                 GWBUF* pCopy1,
+                                 QUERY_CLASSIFIER* pClassifier2,
+                                 GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_is_drop_table_query   : ";
@@ -574,9 +588,11 @@ void print_names(ostream& out, const char* const* strings, int n)
     }
 }
 
-bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                             QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2,
-                             bool full)
+bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
+                             GWBUF* pCopy1,
+                             QUERY_CLASSIFIER* pClassifier2,
+                             GWBUF* pCopy2,
+                             bool   full)
 {
     bool success = false;
     const char* HEADING;
@@ -648,8 +664,10 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_query_has_clause(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                              QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_query_has_clause(QUERY_CLASSIFIER* pClassifier1,
+                              GWBUF* pCopy1,
+                              QUERY_CLASSIFIER* pClassifier2,
+                              GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_query_has_clause      : ";
@@ -710,7 +728,7 @@ void add_fields(std::set<string>& m, const char* fields)
     }
 }
 
-ostream& operator << (ostream& o, const std::set<string>& s)
+ostream& operator<<(ostream& o, const std::set<string>& s)
 {
     std::set<string>::iterator i = s.begin();
 
@@ -728,8 +746,10 @@ ostream& operator << (ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
+                                GWBUF* pCopy1,
+                                QUERY_CLASSIFIER* pClassifier2,
+                                GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
@@ -767,8 +787,10 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                              QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1,
+                              GWBUF* pCopy1,
+                              QUERY_CLASSIFIER* pClassifier2,
+                              GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
@@ -799,7 +821,7 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool operator == (const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
+bool operator==(const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
 {
     bool rv = false;
     if (lhs.column && rhs.column && (strcasecmp(lhs.column, rhs.column) == 0))
@@ -824,7 +846,7 @@ bool operator == (const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
     return rv;
 }
 
-ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
+ostream& operator<<(ostream& out, const QC_FIELD_INFO& x)
 {
     if (x.database)
     {
@@ -852,14 +874,14 @@ public:
         : m_database(info.database ? info.database : "")
         , m_table(info.table ? info.table : "")
         , m_column(info.column ? info.column : "")
-    {}
+    {
+    }
 
     bool eq(const QcFieldInfo& rhs) const
     {
-        return
-            m_database == rhs.m_database &&
-            m_table == rhs.m_table &&
-            m_column == rhs.m_column;
+        return m_database == rhs.m_database
+               && m_table == rhs.m_table
+               && m_column == rhs.m_column;
     }
 
     bool lt(const QcFieldInfo& rhs) const
@@ -895,10 +917,9 @@ public:
 
     bool has_same_name(const QcFieldInfo& o) const
     {
-        return
-            m_database == o.m_database &&
-            m_table == o.m_table &&
-            m_column == o.m_column;
+        return m_database == o.m_database
+               && m_table == o.m_table
+               && m_column == o.m_column;
     }
 
     void print(ostream& out) const
@@ -924,13 +945,13 @@ private:
     std::string m_column;
 };
 
-ostream& operator << (ostream& out, const QcFieldInfo& x)
+ostream& operator<<(ostream& out, const QcFieldInfo& x)
 {
     x.print(out);
     return out;
 }
 
-ostream& operator << (ostream& out, std::set<QcFieldInfo>& x)
+ostream& operator<<(ostream& out, std::set<QcFieldInfo>& x)
 {
     std::set<QcFieldInfo>::iterator i = x.begin();
     std::set<QcFieldInfo>::iterator end = x.end();
@@ -947,18 +968,20 @@ ostream& operator << (ostream& out, std::set<QcFieldInfo>& x)
     return out;
 }
 
-bool operator < (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+bool operator<(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
 {
     return lhs.lt(rhs);
 }
 
-bool operator == (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+bool operator==(const QcFieldInfo& lhs, const QcFieldInfo& rhs)
 {
     return lhs.eq(rhs);
 }
 
-bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                            QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1,
+                            GWBUF* pCopy1,
+                            QUERY_CLASSIFIER* pClassifier2,
+                            GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_field_info        : ";
@@ -1013,9 +1036,8 @@ public:
 
     bool eq(const QcFunctionInfo& rhs) const
     {
-        return
-            m_name == rhs.m_name &&
-            have_same_fields(*this, rhs);
+        return m_name == rhs.m_name
+               && have_same_fields(*this, rhs);
     }
 
     bool lt(const QcFunctionInfo& rhs) const
@@ -1138,13 +1160,13 @@ private:
     uint32_t             m_nFields;
 };
 
-ostream& operator << (ostream& out, const QcFunctionInfo& x)
+ostream& operator<<(ostream& out, const QcFunctionInfo& x)
 {
     x.print(out);
     return out;
 }
 
-ostream& operator << (ostream& out, std::set<QcFunctionInfo>& x)
+ostream& operator<<(ostream& out, std::set<QcFunctionInfo>& x)
 {
     std::set<QcFunctionInfo>::iterator i = x.begin();
     std::set<QcFunctionInfo>::iterator end = x.end();
@@ -1161,12 +1183,12 @@ ostream& operator << (ostream& out, std::set<QcFunctionInfo>& x)
     return out;
 }
 
-bool operator < (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+bool operator<(const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
 {
     return lhs.lt(rhs);
 }
 
-bool operator == (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+bool operator==(const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
 {
     return lhs.eq(rhs);
 }
@@ -1184,8 +1206,10 @@ void collect_missing_function_names(const std::set<QcFunctionInfo>& one,
     }
 }
 
-bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                               QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
+                               GWBUF* pCopy1,
+                               QUERY_CLASSIFIER* pClassifier2,
+                               GWBUF* pCopy2)
 {
     bool success = false;
     const char HEADING[] = "qc_get_function_info     : ";
@@ -1229,16 +1253,16 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
         // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
         // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
         // use of date_add_interval() functions.
-        for  (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
+        for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
         {
             if (*i == "date_add_interval")
             {
-                if ((names2.count("date_add") == 0) &&
-                    (names2.count("adddate") == 0) &&
-                    (names2.count("date_sub") == 0) &&
-                    (names2.count("subdate") == 0) &&
-                    (names2.count("+") == 0) &&
-                    (names2.count("-") == 0))
+                if ((names2.count("date_add") == 0)
+                    && (names2.count("adddate") == 0)
+                    && (names2.count("date_sub") == 0)
+                    && (names2.count("subdate") == 0)
+                    && (names2.count("+") == 0)
+                    && (names2.count("-") == 0))
                 {
                     real_error = true;
                 }
@@ -1266,8 +1290,10 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 }
 
 
-bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
-             QUERY_CLASSIFIER* pClassifier2, GWBUF* pBuf2)
+bool compare(QUERY_CLASSIFIER* pClassifier1,
+             GWBUF* pBuf1,
+             QUERY_CLASSIFIER* pClassifier2,
+             GWBUF* pBuf2)
 {
     int errors = 0;
 
@@ -1297,8 +1323,8 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
     uint32_t type_mask2;
     pClassifier2->qc_get_type_mask(pBuf2, &type_mask2);
 
-    if ((type_mask1 == type_mask2) &&
-        ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
+    if ((type_mask1 == type_mask2)
+        && ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
     {
         GWBUF* pPreparable1;
         pClassifier1->qc_get_preparable_stmt(pBuf1, &pPreparable1);
@@ -1311,8 +1337,10 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
             string indent = global.indent;
             global.indent += string(4, ' ');
 
-            success = compare(pClassifier1, pPreparable1,
-                              pClassifier2, pPreparable2);
+            success = compare(pClassifier1,
+                              pPreparable1,
+                              pClassifier2,
+                              pPreparable2);
 
             global.indent = indent;
         }
@@ -1349,9 +1377,10 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
 
             default:
                 mxb_assert(!true);
+
             case SetSqlModeParser::SOMETHING:
                 break;
-            };
+            }
         }
     }
 
@@ -1361,18 +1390,20 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     return success;
 }
 
-inline void ltrim(std::string &s)
+inline void ltrim(std::string& s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 }
 
-inline void rtrim(std::string &s)
+inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(),
+                         s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
 }
 
-static void trim(std::string &s)
+static void trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
@@ -1380,7 +1411,7 @@ static void trim(std::string &s)
 
 int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream& in)
 {
-    bool stop = false; // Whether we should exit.
+    bool stop = false;      // Whether we should exit.
 
     maxscale::TestReader reader(in);
 
@@ -1444,7 +1475,6 @@ void append_arg(string& args, const string& arg)
     }
     args += arg;
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -1455,7 +1485,7 @@ int main(int argc, char* argv[])
     const char* zClassifier2 = "qc_sqlite";
     string classifier1Args;
     uint64_t version;
-#if defined(USING_MARIADB_103)
+#if defined (USING_MARIADB_103)
     string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
     version = 10 * 1000 * 3 * 100;
 #else
@@ -1536,7 +1566,7 @@ int main(int argc, char* argv[])
         default:
             rc = EXIT_FAILURE;
             break;
-        };
+        }
     }
 
     if ((rc == EXIT_SUCCESS) && (v >= VERBOSITY_MIN && v <= VERBOSITY_MAX))
@@ -1561,8 +1591,12 @@ int main(int argc, char* argv[])
                 QUERY_CLASSIFIER* pClassifier2;
 
                 if (get_classifiers(sql_mode,
-                                    zClassifier1, zClassifier1Args, &pClassifier1,
-                                    zClassifier2, zClassifier2Args, &pClassifier2))
+                                    zClassifier1,
+                                    zClassifier1Args,
+                                    &pClassifier1,
+                                    zClassifier2,
+                                    zClassifier2Args,
+                                    &pClassifier2))
                 {
                     size_t round = 0;
                     bool terminate = false;

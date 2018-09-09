@@ -47,7 +47,6 @@
  *
  * @param   router      The router instance
  */
-void
-blr_init_cache(ROUTER_INSTANCE *router)
+void blr_init_cache(ROUTER_INSTANCE* router)
 {
 }

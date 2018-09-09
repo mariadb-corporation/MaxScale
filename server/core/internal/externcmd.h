@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 
@@ -22,11 +22,11 @@ MXS_BEGIN_DECLS
 
 typedef struct extern_cmd_t
 {
-    char** argv;      /**< Argument vector for the command, first being the
-                       * actual command being executed */
-    int n_exec;       /**< Number of times executed */
-    pid_t child;      /**< PID of the child process */
-    uint32_t timeout; /**< Command timeout in seconds */
+    char** argv;        /**< Argument vector for the command, first being the
+                         * actual command being executed */
+    int      n_exec;    /**< Number of times executed */
+    pid_t    child;     /**< PID of the child process */
+    uint32_t timeout;   /**< Command timeout in seconds */
 } EXTERNCMD;
 
 char* externcmd_extract_command(const char* argstr);

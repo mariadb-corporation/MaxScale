@@ -34,11 +34,11 @@
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-bool authenticator_init(void** dest, const char *authenticator, const char *options)
+bool authenticator_init(void** dest, const char* authenticator, const char* options)
 {
     bool rval = true;
-    void *instance = NULL;
-    MXS_AUTHENTICATOR *func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
+    void* instance = NULL;
+    MXS_AUTHENTICATOR* func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
     if (func == NULL)
     {
@@ -46,7 +46,7 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
     }
     else if (func->initialize)
     {
-        char *optarray[AUTHENTICATOR_MAX_OPTIONS + 1];
+        char* optarray[AUTHENTICATOR_MAX_OPTIONS + 1];
         size_t optlen = options ? strlen(options) : 0;
         char optcopy[optlen + 1];
         int optcount = 0;
@@ -54,11 +54,11 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
         if (options)
         {
             strcpy(optcopy, options);
-            char *opt = optcopy;
+            char* opt = optcopy;
 
             while (opt && optcount < AUTHENTICATOR_MAX_OPTIONS)
             {
-                char *end = strnchr_esc(opt, ',', sizeof(optcopy) - (opt - optcopy));
+                char* end = strnchr_esc(opt, ',', sizeof(optcopy) - (opt - optcopy));
 
                 if (end)
                 {
@@ -89,10 +89,10 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
  * @return The default authenticator for the protocol or NULL if the protocol
  * does not provide one
  */
-const char* get_default_authenticator(const char *protocol)
+const char* get_default_authenticator(const char* protocol)
 {
-    char *rval = NULL;
-    MXS_PROTOCOL *protofuncs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
+    char* rval = NULL;
+    MXS_PROTOCOL* protofuncs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
     if (protofuncs && protofuncs->auth_default)
     {

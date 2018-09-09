@@ -95,5 +95,4 @@ FilterModule::Session::~Session()
 {
     m_instance.freeSession(m_pFilter_session);
 }
-
 }

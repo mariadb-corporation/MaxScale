@@ -11,7 +11,8 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.verbose = true;
-    test.maxscales->ssh_node_f(0, true,
+    test.maxscales->ssh_node_f(0,
+                               true,
                                "maxadmin create monitor cluster-monitor mysqlmon;"
                                "maxadmin alter monitor cluster-monitor user=maxskysql password=skysql monitor_interval=1000;"
                                "maxadmin restart monitor cluster-monitor;"
@@ -26,7 +27,10 @@ int main(int argc, char** argv)
                                "maxadmin add server prod_mysql02 cluster-monitor rwsplit-service;"
                                "maxadmin add server prod_mysql01 cluster-monitor rwsplit-service;"
                                "maxadmin add server prod_mysql03 cluster-monitor rwsplit-service;"
-                               "maxadmin list servers;", test.repl->IP[0], test.repl->IP[1], test.repl->IP[2]);
+                               "maxadmin list servers;",
+                               test.repl->IP[0],
+                               test.repl->IP[1],
+                               test.repl->IP[2]);
     test.verbose = false;
 
     test.tprintf("Restarting MaxScale");

@@ -8,8 +8,10 @@
 using std::cout;
 using std::endl;
 
-TestInput::TestInput(const std::string& value, const std::string& type, const std::string& name) :
-    m_value(value), m_type(type), m_name(name)
+TestInput::TestInput(const std::string& value, const std::string& type, const std::string& name)
+    : m_value(value)
+    , m_type(type)
+    , m_name(name)
 {
     if (m_value[0] == '"' || m_value[0] == '\'')
     {
@@ -21,11 +23,11 @@ TestInput::TestInput(const std::string& value, const std::string& type, const st
 TestOutput::TestOutput(const std::string& input, const std::string& name)
 {
     json_error_t err;
-    json_t *js = json_loads(input.c_str(), JSON_ALLOW_NUL, &err);
+    json_t* js = json_loads(input.c_str(), JSON_ALLOW_NUL, &err);
 
     if (js)
     {
-        json_t *value = json_object_get(js, name.c_str());
+        json_t* value = json_object_get(js, name.c_str());
 
         if (value)
         {

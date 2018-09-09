@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Stopping master and waiting for failover. Check that another server is promoted.");
     test.tprintf(LINE);
-    const int old_master_id = get_master_server_id(test); // Read master id now before shutdown.
+    const int old_master_id = get_master_server_id(test);   // Read master id now before shutdown.
     const int master_index = test.repl->master;
     test.repl->stop_node(master_index);
     test.maxscales->wait_for_monitor();
@@ -79,9 +79,12 @@ int main(int argc, char** argv)
         test.assert(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster.");
         // Switch master back to server1 so last check is faster
         int ec;
-        test.maxscales->ssh_node_output(0, "maxadmin call command mysqlmon switchover "
-                                        "MySQL-Monitor server1 server2" , true, &ec);
-        test.maxscales->wait_for_monitor(); // Wait for monitor to update status
+        test.maxscales->ssh_node_output(0,
+                                        "maxadmin call command mysqlmon switchover "
+                                        "MySQL-Monitor server1 server2",
+                                        true,
+                                        &ec);
+        test.maxscales->wait_for_monitor();     // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
         test.assert(master_id == old_master_id, "Switchover back to server1 failed.");

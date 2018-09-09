@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file atomic.h Atomic operations on integers.
@@ -43,10 +43,10 @@ MXB_BEGIN_DECLS
  * @param value         Value to be added
  * @return              The value of variable before the add occurred
  */
-int      atomic_add(int *variable, int value);
-uint32_t atomic_add_uint32(uint32_t *variable, int32_t value);
-int64_t  atomic_add_int64(int64_t *variable, int64_t value);
-uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
+int      atomic_add(int* variable, int value);
+uint32_t atomic_add_uint32(uint32_t* variable, int32_t value);
+int64_t  atomic_add_int64(int64_t* variable, int64_t value);
+uint64_t atomic_add_uint64(uint64_t* variable, int64_t value);
 
 /**
  * Implementation of an atomic load operation for the GCC environment.
@@ -57,12 +57,12 @@ uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
  * @param variable      Pointer the the variable to load from
  * @return The stored value
  */
-int atomic_load_int(const int *variable);
-int32_t atomic_load_int32(const int32_t *variable);
-int64_t atomic_load_int64(const int64_t *variable);
-uint32_t atomic_load_uint32(const uint32_t *variable);
-uint64_t atomic_load_uint64(const uint64_t *variable);
-void* atomic_load_ptr(void * const *variable);
+int      atomic_load_int(const int* variable);
+int32_t  atomic_load_int32(const int32_t* variable);
+int64_t  atomic_load_int64(const int64_t* variable);
+uint32_t atomic_load_uint32(const uint32_t* variable);
+uint64_t atomic_load_uint64(const uint64_t* variable);
+void*    atomic_load_ptr(void* const* variable);
 
 /**
  * Implementation of an atomic store operation for the GCC environment.
@@ -73,12 +73,12 @@ void* atomic_load_ptr(void * const *variable);
  * @param variable      Pointer the the variable to store to
  * @param value         Value to be stored
  */
-void atomic_store_int(int *variable, int value);
-void atomic_store_int32(int32_t *variable, int32_t value);
-void atomic_store_int64(int64_t *variable, int64_t value);
-void atomic_store_uint32(uint32_t *variable, uint32_t value);
-void atomic_store_uint64(uint64_t *variable, uint64_t value);
-void atomic_store_ptr(void **variable, void *value);
+void atomic_store_int(int* variable, int value);
+void atomic_store_int32(int32_t* variable, int32_t value);
+void atomic_store_int64(int64_t* variable, int64_t value);
+void atomic_store_uint32(uint32_t* variable, uint32_t value);
+void atomic_store_uint64(uint64_t* variable, uint64_t value);
+void atomic_store_ptr(void** variable, void* value);
 
 /**
  * @brief Impose a full memory barrier
@@ -98,7 +98,7 @@ static inline void atomic_synchronize()
 #ifdef MXB_USE_ATOMIC_BUILTINS
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
 #else
-    __sync_synchronize(); /* Memory barrier. */
+    __sync_synchronize();   /* Memory barrier. */
 #endif
 
 #else
@@ -119,7 +119,7 @@ static inline void atomic_synchronize()
  * written to @c old_value if the two are not equal. Do not rely on this behavior
  * and always do a separate read before attempting a compare-and-swap.
  */
-bool atomic_cas_ptr(void **variable, void** old_value, void *new_value);
+bool atomic_cas_ptr(void** variable, void** old_value, void* new_value);
 
 /**
  * Atomic read-and-write. Writes new value into the given memory address and returns the old value.
@@ -128,6 +128,6 @@ bool atomic_cas_ptr(void **variable, void** old_value, void *new_value);
  * @param new_value The value to write
  * @return The value before writing
  */
-int atomic_exchange_int(int *variable, int new_value);
+int atomic_exchange_int(int* variable, int new_value);
 
 MXB_END_DECLS

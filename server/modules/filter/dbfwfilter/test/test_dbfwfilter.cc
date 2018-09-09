@@ -36,7 +36,7 @@ struct CONFIG
     bool stop_at_first_error;
 } config =
 {
-    true, // stop_at_first_error
+    true,   // stop_at_first_error
 };
 
 enum fw_action_t
@@ -60,9 +60,9 @@ const size_t N_MAX_CASES = 20;
 
 struct FW_TEST
 {
-    const char*  zRules;             /* The firewall rules. */
-    fw_action_t  action;             /* The firewall action. */
-    FW_TEST_CASE cases[N_MAX_CASES]; /* The test cases to execute using the above settings. */
+    const char*  zRules;            /* The firewall rules. */
+    fw_action_t  action;            /* The firewall action. */
+    FW_TEST_CASE cases[N_MAX_CASES];/* The test cases to execute using the above settings. */
 };
 
 FW_TEST FIREWALL_TESTS[] =
@@ -672,7 +672,6 @@ FW_TEST ON_QUERIES_TEST =
         },
     }
 };
-
 }
 
 namespace
@@ -708,7 +707,7 @@ void log_error(const FW_TEST_CASE& c)
 
 int test(mock::Client& client,
          FilterModule::Session& filter_session,
-         mock::RouterSession& router_session,
+         mock::RouterSession&   router_session,
          const FW_TEST_CASE& c)
 {
     int rv = 0;
@@ -722,7 +721,7 @@ int test(mock::Client& client,
 
     if (c.result == FW_ACTION_ALLOW)
     {
-        if (!router_session.idle()) // Statement reached backend
+        if (!router_session.idle())     // Statement reached backend
         {
             router_session.discard_one_response();
             log_success(c);
@@ -870,7 +869,7 @@ int test_on_queries(FilterModule& filter_module, fw_action_t action)
     fw_action_t result_match = action;
     fw_action_t result_not_match = (action == FW_ACTION_BLOCK) ? FW_ACTION_ALLOW : FW_ACTION_BLOCK;
 
-    char rules[strlen(t.zRules) + 32]; // Enough
+    char rules[strlen(t.zRules) + 32];      // Enough
     const char* zFormat = t.zRules;
 
     for (size_t i = 0; i < N_OPERATIONS; ++i)
@@ -961,16 +960,15 @@ int run()
 
     return rv;
 }
-
 }
 
 namespace
 {
 
-char USAGE[] =
-    "usage: test_dbfwfilter [-d]\n"
-    "\n"
-    "-d    don't stop at first error\n";
+char USAGE[]
+    = "usage: test_dbfwfilter [-d]\n"
+      "\n"
+      "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])

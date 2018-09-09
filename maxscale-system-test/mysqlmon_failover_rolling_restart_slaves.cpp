@@ -40,7 +40,6 @@ void sleep(int s)
 
     cout << endl;
 }
-
 }
 
 namespace
@@ -195,7 +194,6 @@ void run(TestConnections& test)
         check_server_status(test, N);
     }
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -207,4 +205,3 @@ int main(int argc, char* argv[])
 
     return test.global_result;
 }
-

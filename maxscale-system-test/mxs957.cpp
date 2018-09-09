@@ -40,9 +40,9 @@ const char* queries[] =
     NULL
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->maxscales->connect_maxscale(0);
 
     for (int i = 0; queries[i]; i++)

@@ -65,8 +65,8 @@ public:
     }
 
 private:
-    typedef bool (*init_function_t)();
-    typedef void (*finish_function_t)();
+    typedef bool (* init_function_t)();
+    typedef void (* finish_function_t)();
 
     struct component_t
     {
@@ -78,7 +78,7 @@ private:
     static int         s_nComponents;
 };
 
-#define MAXBASE_COMPONENT(X) { &X::init, &X::finish }
+#define MAXBASE_COMPONENT(X) {&X::init, &X::finish}
 
 Initer::component_t Initer::s_components[] =
 {
@@ -103,9 +103,9 @@ MaxBase::MaxBase(const char* zIdent,
 
         if (!m_log_inited)
         {
-            zMessage =
-                "The initialization of the MaxScale base library succeeded, but the "
-                "initialization of the MaxScale log failed.";
+            zMessage
+                = "The initialization of the MaxScale base library succeeded, but the "
+                  "initialization of the MaxScale log failed.";
         }
     }
     else
@@ -160,7 +160,6 @@ void finish()
 {
     Initer::finish();
 }
-
 }
 
 bool maxbase_init()

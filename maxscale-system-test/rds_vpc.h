@@ -15,9 +15,9 @@ public:
      * @brief RDS Constructor
      * @param cluster Name of cluster to create/destroy
      */
-    RDS(char * cluster);
+    RDS(char* cluster);
 
-    const char * get_instance_name(json_t * instance);
+    const char* get_instance_name(json_t* instance);
 
     /**
      * @brief get_cluster Executes 'rds describe-bd-clusters' and creates json object with info on cluster
@@ -25,7 +25,7 @@ public:
      * Does not set any internal variables
      * @return JSON describption of cluster
      */
-    json_t * get_cluster();
+    json_t* get_cluster();
 
     /**
      * @brief get_cluster_descr Creates JSON cluster describtion from string representation
@@ -33,7 +33,7 @@ public:
      * Does not set any internal variables
      * @return JSON describption of cluster
      */
-    json_t * get_cluster_descr(char * json);
+    json_t* get_cluster_descr(char* json);
 
     /**
      * @brief get_subnets_group_descr
@@ -41,7 +41,7 @@ public:
      * Does not set any internal variables
      * @return JSON description of subnets group
      */
-    json_t * get_subnets_group_descr(char * json);
+    json_t* get_subnets_group_descr(char* json);
 
     /**
      * @brief get_cluster_nodes Extract list of nodes names from cluster JSON description
@@ -49,7 +49,7 @@ public:
      * Does not set any internal variables
      * @return JSON array of node names strings
      */
-    json_t * get_cluster_nodes();
+    json_t* get_cluster_nodes();
 
 
     /**
@@ -58,14 +58,14 @@ public:
      * @param cluster JSON cluster description
      * @return JSON array of nodes names strings
      */
-    json_t * get_cluster_nodes(json_t * cluster);
+    json_t* get_cluster_nodes(json_t* cluster);
 
     /**
      * @brief get_endpoints Gets list of endpoint (URLs) of cluster nodes
      * Sets 'cluster_intern'
      * @return JSON array of nodes endpoints (objects contaning Address and Port)
      */
-    json_t * get_endpoints();
+    json_t* get_endpoints();
 
     /**
      * @brief get_subnets Extracts subnets IDs from subnets group
@@ -73,7 +73,7 @@ public:
      * Sets 'vpc_id_intern' and 'subnets_intern'
      * @return JSON array of node names strings
      */
-    json_t * get_subnets();
+    json_t* get_subnets();
 
     /**
      * @brief get_subnetgroup_name Extracts subnets grop ID from cluster description
@@ -82,14 +82,14 @@ public:
      * If 'cluster_intern' is NULL function returns 'subnets_group_name_intern' value
      * @return name of subnets group
      */
-    const char * get_subnetgroup_name();
+    const char* get_subnetgroup_name();
 
     /**
      * @brief destroy_nodes Destroys nodes
      * @param node_names JSON array with nodes names
      * @return 0 in case of success
      */
-    int destroy_nodes(json_t * node_names);
+    int destroy_nodes(json_t* node_names);
 
     /**
      * @brief destroy_subnets Destoys subnets
@@ -122,7 +122,7 @@ public:
      *   - get_subnets()
      * @return  0 in case of success
      */
-    int destroy_route_tables(); // is needed?
+    int destroy_route_tables();     // is needed?
 
     /**
      * @brief destroy_vpc Destroys VPC
@@ -159,7 +159,7 @@ public:
      * @param vpc_id Pointer to variable to place VpcID
      * @return 0 in case of success
      */
-    int create_vpc(const char **vpc_id);
+    int create_vpc(const char** vpc_id);
 
     /**
      * @brief create_subnet Creates subnet inside VPC
@@ -169,7 +169,7 @@ public:
      * @param subnet_id Pointer to variable to place SubnetID
      * @return 0 in case of success
      */
-    int create_subnet(const char *az, const char *cidr, const char **subnet_id);
+    int create_subnet(const char* az, const char* cidr, const char** subnet_id);
 
     /**
      * @brief create_subnet_group Creates subnets group for RDS
@@ -186,7 +186,7 @@ public:
      * @param gw_id Pointer to variable to place gateway ID
      * @return 0 in case of success
      */
-    int create_gw(const char **gw_id);
+    int create_gw(const char** gw_id);
 
     /**
      * @brief configure_route_table Adds route to route tabele attched to VPC
@@ -195,7 +195,7 @@ public:
      * @param rt Pointer to variable to place route table ID which was found ond modified
      * @return 0 in case of success
      */
-    int configure_route_table(const char **rt);
+    int configure_route_table(const char** rt);
 
     /**
      * @brief create_cluster Creates RDS cluster and instances
@@ -214,10 +214,11 @@ public:
      * @param writer_name Pointer to variable to place name of writer node
      * @return 0 in case of success
      */
-    int get_writer(const char **writer_name);
+    int get_writer(const char** writer_name);
 
     /**
-     * @brief create_rds_db Creates RDS DB cluster and all needed stuff (vpc, subnets, gateway, route table, ...)
+     * @brief create_rds_db Creates RDS DB cluster and all needed stuff (vpc, subnets, gateway, route table,
+     *...)
      * If case of error tries to destry all created stuff
      * @param cluster_name Name of DB cluster
      * @param N Number of nodes
@@ -248,16 +249,15 @@ public:
      */
     int do_failover();
 
-    const char * cluster_name_intern;
-    size_t N_intern;
-    json_t * cluster_intern;
-    const char * vpc_id_intern;
-    json_t * subnets_intern;
-    const char * subnets_group_name_intern;
-    const char * rt_intern;
-    const char * gw_intern;
-    const char * sg_intern;
-
+    const char* cluster_name_intern;
+    size_t      N_intern;
+    json_t*     cluster_intern;
+    const char* vpc_id_intern;
+    json_t*     subnets_intern;
+    const char* subnets_group_name_intern;
+    const char* rt_intern;
+    const char* gw_intern;
+    const char* sg_intern;
 };
 
 #endif // RDS_VPC_H

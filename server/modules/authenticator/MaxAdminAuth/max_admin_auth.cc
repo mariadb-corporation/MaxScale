@@ -36,10 +36,10 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 
-static bool max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-static bool max_admin_auth_is_client_ssl_capable(DCB *dcb);
-static int max_admin_auth_authenticate(DCB *dcb);
-static void max_admin_auth_free_client_data(DCB *dcb);
+static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
+static bool max_admin_auth_is_client_ssl_capable(DCB* dcb);
+static int  max_admin_auth_authenticate(DCB* dcb);
+static void max_admin_auth_free_client_data(DCB* dcb);
 
 extern "C"
 {
@@ -51,41 +51,41 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                                 /* No initialize entry point */
-        NULL,                                 /* No create entry point */
-        max_admin_auth_set_protocol_data,     /* Extract data into structure   */
-        max_admin_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-        max_admin_auth_authenticate,          /* Authenticate user credentials */
-        max_admin_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                                 /* No destroy entry point */
-        users_default_loadusers,              /* Load generic users */
-        users_default_diagnostic,             /* Default user diagnostic */
-        users_default_diagnostic_json,        /* Default user diagnostic */
-        NULL                                  /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            NULL,                                   /* No initialize entry point */
+            NULL,                                   /* No create entry point */
+            max_admin_auth_set_protocol_data,       /* Extract data into structure   */
+            max_admin_auth_is_client_ssl_capable,   /* Check if client supports SSL  */
+            max_admin_auth_authenticate,            /* Authenticate user credentials */
+            max_admin_auth_free_client_data,        /* Free the client data held in DCB */
+            NULL,                                   /* No destroy entry point */
+            users_default_loadusers,                /* Load generic users */
+            users_default_diagnostic,               /* Default user diagnostic */
+            users_default_diagnostic_json,          /* Default user diagnostic */
+            NULL                                    /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The MaxScale Admin client authenticator implementation",
-        "V2.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The MaxScale Admin client authenticator implementation",
+            "V2.1.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
+        return &info;
+    }
 /*lint +e14 */
 }
 
@@ -97,10 +97,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status - always 0 to denote success
  */
-static int
-max_admin_auth_authenticate(DCB *dcb)
+static int max_admin_auth_authenticate(DCB* dcb)
 {
-    return (dcb->data != NULL && ((ADMIN_session *)dcb->data)->validated) ? 0 : 1;
+    return (dcb->data != NULL && ((ADMIN_session*)dcb->data)->validated) ? 0 : 1;
 }
 
 /**
@@ -113,19 +112,18 @@ max_admin_auth_authenticate(DCB *dcb)
  * @param buffer Pointer to pointer to buffers containing data from client
  * @return Authentication status - true for success, false for failure
  */
-static bool
-max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
+static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
 {
-    ADMIN_session *session_data;
+    ADMIN_session* session_data;
 
     max_admin_auth_free_client_data(dcb);
 
-    if ((session_data = (ADMIN_session *)MXS_CALLOC(1, sizeof(ADMIN_session))) != NULL)
+    if ((session_data = (ADMIN_session*)MXS_CALLOC(1, sizeof(ADMIN_session))) != NULL)
     {
         int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
         memcpy(session_data->user, GWBUF_DATA(buf), user_len);
         session_data->validated = false;
-        dcb->data = (void *)session_data;
+        dcb->data = (void*)session_data;
 
         /* Check for existance of the user */
         if (admin_linux_account_enabled(session_data->user))
@@ -146,8 +144,7 @@ max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable - false
  */
-static bool
-max_admin_auth_is_client_ssl_capable(DCB *dcb)
+static bool max_admin_auth_is_client_ssl_capable(DCB* dcb)
 {
     return false;
 }
@@ -160,8 +157,7 @@ max_admin_auth_is_client_ssl_capable(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void
-max_admin_auth_free_client_data(DCB *dcb)
+static void max_admin_auth_free_client_data(DCB* dcb)
 {
     MXS_FREE(dcb->data);
 }

@@ -50,27 +50,31 @@
 
 #define MAX_PASSWORD_LEN 80
 
-static int connectUsingUnixSocket(const char *socket);
-static int connectUsingInetSocket(const char *hostname, const char *port,
-                                  const char *user, const char* password);
-static int setipaddress(struct in_addr *a, const char *p);
+static int connectUsingUnixSocket(const char* socket);
+static int connectUsingInetSocket(const char* hostname,
+                                  const char* port,
+                                  const char* user,
+                                  const char* password);
+static int  setipaddress(struct in_addr* a, const char* p);
 static bool authUnixSocket(int so);
-static bool authInetSocket(int so, const char *user, const char *password);
-static int sendCommand(int so, char *cmd);
-static void DoSource(int so, char *cmd);
+static bool authInetSocket(int so, const char* user, const char* password);
+static int  sendCommand(int so, char* cmd);
+static void DoSource(int so, char* cmd);
 static void DoUsage(const char*);
-static int isquit(char *buf);
-static void PrintVersion(const char *progname);
-static void read_inifile(char **socket,
-                         char **hostname, char **port, char **user, char **passwd,
-                         int *editor);
-static bool getPassword(char *password, size_t length);
-static void rtrim(char *str);
+static int  isquit(char* buf);
+static void PrintVersion(const char* progname);
+static void read_inifile(char** socket,
+                         char** hostname,
+                         char** port,
+                         char** user,
+                         char** passwd,
+                         int*   editor);
+static bool getPassword(char* password, size_t length);
+static void rtrim(char* str);
 
 #ifdef HISTORY
 
-static char *
-prompt(EditLine *el __attribute__((__unused__)))
+static char* prompt(EditLine* el __attribute__ ((__unused__)))
 {
     static char prompt[] = "MaxScale> ";
 
@@ -80,22 +84,22 @@ prompt(EditLine *el __attribute__((__unused__)))
 #endif
 static struct option long_options[] =
 {
-    {"host", required_argument, 0, 'h'},
-    {"user", required_argument, 0, 'u'},
+    {"host",     required_argument, 0, 'h'},
+    {"user",     required_argument, 0, 'u'},
     {"password", optional_argument, 0, 'p'},
-    {"port", required_argument, 0, 'P'},
-    {"socket", required_argument, 0, 'S'},
-    {"version", no_argument, 0, 'v'},
-    {"help", no_argument, 0, '?'},
-    {"emacs", no_argument, 0, 'e'},
-    {"vim", no_argument, 0, 'i'},
-    {0, 0, 0, 0}
+    {"port",     required_argument, 0, 'P'},
+    {"socket",   required_argument, 0, 'S'},
+    {"version",  no_argument,       0, 'v'},
+    {"help",     no_argument,       0, '?'},
+    {"emacs",    no_argument,       0, 'e'},
+    {"vim",      no_argument,       0, 'i'},
+    {0,          0,                 0, 0  }
 };
 
 #define MAXADMIN_DEFAULT_HOST "localhost"
 #define MAXADMIN_DEFAULT_PORT "6603"
 #define MAXADMIN_DEFAULT_USER "admin"
-#define MAXADMIN_BUFFER_SIZE 2048
+#define MAXADMIN_BUFFER_SIZE  2048
 
 static bool term_error = false;
 
@@ -109,7 +113,7 @@ bool process_command(int so, char* buf)
     }
     else if (!strncasecmp(buf, "source", 6))
     {
-        char *ptr;
+        char* ptr;
 
         /* Find the filename */
         ptr = &buf[strlen("source")];
@@ -134,13 +138,13 @@ bool process_command(int so, char* buf)
 void cmd_with_history(int so, char** argv, bool use_emacs)
 {
 #ifdef HISTORY
-    char *buf;
-    EditLine *el = NULL;
-    Tokenizer *tok;
-    History *hist;
+    char* buf;
+    EditLine* el = NULL;
+    Tokenizer* tok;
+    History* hist;
     HistEvent ev;
 
-    hist = history_init(); /* Init the builtin history  */
+    hist = history_init();      /* Init the builtin history  */
 
     /* Remember 100 events      */
     history(hist, &ev, H_SETSIZE, 100);
@@ -148,21 +152,21 @@ void cmd_with_history(int so, char** argv, bool use_emacs)
     /* Don't enter duplicate commands to history  */
     history(hist, &ev, H_SETUNIQUE, 1);
 
-    tok = tok_init(NULL); /* Initialize the tokenizer   */
+    tok = tok_init(NULL);   /* Initialize the tokenizer   */
 
     /* Initialize editline      */
     el = el_init(*argv, stdin, stdout, stderr);
 
     if (use_emacs)
     {
-        el_set(el, EL_EDITOR, "emacs"); /** Editor is emacs */
+        el_set(el, EL_EDITOR, "emacs");     /** Editor is emacs */
     }
     else
     {
-        el_set(el, EL_EDITOR, "vi"); /* Default editor is vi      */
+        el_set(el, EL_EDITOR, "vi");    /* Default editor is vi      */
     }
-    el_set(el, EL_SIGNAL, 1); /* Handle signals gracefully  */
-    el_set(el, EL_PROMPT, prompt); /* Set the prompt function */
+    el_set(el, EL_SIGNAL, 1);       /* Handle signals gracefully  */
+    el_set(el, EL_PROMPT, prompt);  /* Set the prompt function */
 
     /* Tell editline to use this history interface  */
     el_set(el, EL_HIST, history, hist);
@@ -181,7 +185,7 @@ void cmd_with_history(int so, char** argv, bool use_emacs)
 
     int num = 0;
 
-    while ((buf = (char *) el_gets(el, &num)))
+    while ((buf = (char*) el_gets(el, &num)))
     {
         rtrim(buf);
         history(hist, &ev, H_ENTER, buf);
@@ -228,14 +232,13 @@ void cmd_no_history(int so)
  * @param argc  Number of arguments
  * @param argv  The command line arguments
  */
-int
-main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    char *hostname = NULL;
-    char *port = NULL;
-    char *user = NULL;
-    char *passwd = NULL;
-    char *socket_path = NULL;
+    char* hostname = NULL;
+    char* port = NULL;
+    char* user = NULL;
+    char* passwd = NULL;
+    char* socket_path = NULL;
     int use_emacs = 1;
 
     read_inifile(&socket_path, &hostname, &port, &user, &passwd, &use_emacs);
@@ -245,8 +248,11 @@ main(int argc, char **argv)
 
     int option_index = 0;
     int c;
-    while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?ei",
-                            long_options, &option_index)) >= 0)
+    while ((c = getopt_long(argc,
+                            argv,
+                            "h:p::P:u:S:v?ei",
+                            long_options,
+                            &option_index)) >= 0)
     {
         switch (c)
         {
@@ -380,14 +386,14 @@ main(int argc, char **argv)
     if (optind < argc)
     {
         int i, len = 0;
-        char *cmd;
+        char* cmd;
 
         for (i = optind; i < argc; i++)
         {
             len += strlen(argv[i]) + 1;
         }
 
-        cmd = malloc(len + (2 * argc)); // Allow for quotes
+        cmd = malloc(len + (2 * argc));     // Allow for quotes
         strncpy(cmd, argv[optind], len + (2 * argc));
         for (i = optind + 1; i < argc; i++)
         {
@@ -433,8 +439,7 @@ main(int argc, char **argv)
  * @param socket_path The UNIX socket to connect to
  * @return       The connected socket or -1 on error
  */
-static int
-connectUsingUnixSocket(const char *socket_path)
+static int connectUsingUnixSocket(const char* socket_path)
 {
     int so = -1;
 
@@ -446,7 +451,7 @@ connectUsingUnixSocket(const char *socket_path)
         local_addr.sun_family = AF_UNIX;
         strncpy(local_addr.sun_path, socket_path, sizeof(local_addr.sun_path) - 1);
 
-        if (connect(so, (struct sockaddr *) &local_addr, sizeof(local_addr)) == 0)
+        if (connect(so, (struct sockaddr*) &local_addr, sizeof(local_addr)) == 0)
         {
             int keepalive = 1;
             if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
@@ -473,8 +478,10 @@ connectUsingUnixSocket(const char *socket_path)
         }
         else
         {
-            fprintf(stderr, "Unable to connect to MaxScale at %s: %s\n",
-                    socket_path, strerror(errno));
+            fprintf(stderr,
+                    "Unable to connect to MaxScale at %s: %s\n",
+                    socket_path,
+                    strerror(errno));
             close(so);
             so = -1;
         }
@@ -494,9 +501,10 @@ connectUsingUnixSocket(const char *socket_path)
  * @param port      The port to use for the connection
  * @return      The connected socket or -1 on error
  */
-static int
-connectUsingInetSocket(const char *hostname, const char *port,
-                       const char *user, const char *passwd)
+static int connectUsingInetSocket(const char* hostname,
+                                  const char* port,
+                                  const char* user,
+                                  const char* passwd)
 {
     int so;
 
@@ -509,7 +517,7 @@ connectUsingInetSocket(const char *hostname, const char *port,
         setipaddress(&addr.sin_addr, hostname);
         addr.sin_port = htons(atoi(port));
 
-        if (connect(so, (struct sockaddr *) &addr, sizeof(addr)) == 0)
+        if (connect(so, (struct sockaddr*) &addr, sizeof(addr)) == 0)
         {
             int keepalive = 1;
             if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
@@ -525,8 +533,11 @@ connectUsingInetSocket(const char *hostname, const char *port,
         }
         else
         {
-            fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
-                    hostname, port, strerror(errno));
+            fprintf(stderr,
+                    "Unable to connect to MaxScale at %s, %s: %s\n",
+                    hostname,
+                    port,
+                    strerror(errno));
             close(so);
             so = -1;
         }
@@ -546,13 +557,12 @@ connectUsingInetSocket(const char *hostname, const char *port,
  * @param p The hostname to lookup
  * @return  1 on success, 0 on failure
  */
-static int
-setipaddress(struct in_addr *a, const char *p)
+static int setipaddress(struct in_addr* a, const char* p)
 {
 
-    struct addrinfo *ai = NULL, hint;
+    struct addrinfo* ai = NULL, hint;
     int rc;
-    struct sockaddr_in * res_addr;
+    struct sockaddr_in* res_addr;
     memset(&hint, 0, sizeof(hint));
 
     hint.ai_socktype = SOCK_STREAM;
@@ -567,7 +577,7 @@ setipaddress(struct in_addr *a, const char *p)
     /* take the first one */
     if (ai != NULL)
     {
-        res_addr = (struct sockaddr_in *) (ai->ai_addr);
+        res_addr = (struct sockaddr_in*) (ai->ai_addr);
         memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
 
         freeaddrinfo(ai);
@@ -583,8 +593,7 @@ setipaddress(struct in_addr *a, const char *p)
  * @param so    The socket connected to MaxScale
  * @return      Non-zero of succesful authentication
  */
-static bool
-authUnixSocket(int so)
+static bool authUnixSocket(int so)
 {
     char buf[MAXADMIN_AUTH_REPLY_LEN];
 
@@ -600,11 +609,13 @@ authUnixSocket(int so)
     {
         uid_t id = geteuid();
         struct passwd* pw = getpwuid(id);
-        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n"
+        fprintf(stderr,
+                "Could connect to MaxScale, but was not authorized.\n"
                 "Check that the current user is added to the list of allowed users.\n"
                 "To add this user to the list, execute:\n\n"
                 "\tsudo maxadmin enable account %s\n\n"
-                "This assumes that the root user account is enabled in MaxScale.\n", pw->pw_name);
+                "This assumes that the root user account is enabled in MaxScale.\n",
+                pw->pw_name);
     }
 
     return authenticated;
@@ -618,8 +629,7 @@ authUnixSocket(int so)
  * @param password  The password to authenticate with
  * @return          Non-zero of succesful authentication
  */
-static bool
-authInetSocket(int so, const char *user, const char *password)
+static bool authInetSocket(int so, const char* user, const char* password)
 {
     char buf[20];
     size_t len;
@@ -679,8 +689,7 @@ authInetSocket(int so, const char *user, const char *password)
  * @param cmd   The command to send
  * @return  0 if the connection was closed
  */
-static int
-sendCommand(int so, char *cmd)
+static int sendCommand(int so, char* cmd)
 {
     char buf[80];
     int i, j, newline = 1;
@@ -703,8 +712,8 @@ sendCommand(int so, char *cmd)
             {
                 newline = 2;
             }
-            else if ((newline == 2 && buf[j] == 'K' && j == i - 1) ||
-                     (j == i - 2 && buf[j] == 'O' && buf[j + 1] == 'K'))
+            else if ((newline == 2 && buf[j] == 'K' && j == i - 1)
+                     || (j == i - 2 && buf[j] == 'O' && buf[j + 1] == 'K'))
             {
                 return 1;
             }
@@ -735,16 +744,16 @@ sendCommand(int so, char *cmd)
  * @param so        The socket connected to MaxScale
  * @param file      The filename
  */
-static void
-DoSource(int so, char *file)
+static void DoSource(int so, char* file)
 {
-    char *ptr, *pe;
+    char* ptr, * pe;
     char line[132];
-    FILE *fp;
+    FILE* fp;
 
     if ((fp = fopen(file, "r")) == NULL)
     {
-        fprintf(stderr, "Unable to open command file '%s'.\n",
+        fprintf(stderr,
+                "Unable to open command file '%s'.\n",
                 file);
         return;
     }
@@ -759,7 +768,7 @@ DoSource(int so, char *file)
             pe--;
         }
 
-        if (*ptr != '#' && *ptr != '\0') /* Comment or empty */
+        if (*ptr != '#' && *ptr != '\0')    /* Comment or empty */
         {
             if (!sendCommand(so, ptr))
             {
@@ -774,8 +783,7 @@ DoSource(int so, char *file)
 /**
  * Print version information
  */
-static void
-PrintVersion(const char *progname)
+static void PrintVersion(const char* progname)
 {
     printf("%s Version %s\n", progname, MAXSCALE_VERSION);
 }
@@ -783,8 +791,7 @@ PrintVersion(const char *progname)
 /**
  * Display the --help text.
  */
-static void
-DoUsage(const char *progname)
+static void DoUsage(const char* progname)
 {
     PrintVersion(progname);
     printf("The MaxScale administrative and monitor client.\n\n");
@@ -817,10 +824,9 @@ DoUsage(const char *progname)
  * @param buf   The command buffer
  * @return  Non-zero if the command should cause maxadmin to quit
  */
-static int
-isquit(char *buf)
+static int isquit(char* buf)
 {
-    char *ptr = buf;
+    char* ptr = buf;
 
     if (!buf)
     {
@@ -845,14 +851,13 @@ isquit(char *buf)
  *
  * @param str   String to trim
  */
-static void
-rtrim(char *str)
+static void rtrim(char* str)
 {
-    char *ptr = str + strlen(str);
+    char* ptr = str + strlen(str);
 
-    if (ptr > str) // step back from the terminating null
+    if (ptr > str)      // step back from the terminating null
     {
-        ptr--; // If the string has more characters
+        ptr--;      // If the string has more characters
     }
 
     while (ptr >= str && isspace(*ptr))
@@ -871,15 +876,17 @@ rtrim(char *str)
  * @param user      Pointer to the user to be updated
  * @param passwd    Pointer to the password to be updated
  */
-static void
-read_inifile(char **socket,
-             char **hostname, char** port, char **user, char **passwd,
-             int* editor)
+static void read_inifile(char** socket,
+                         char** hostname,
+                         char** port,
+                         char** user,
+                         char** passwd,
+                         int*   editor)
 {
     char pathname[400];
-    char *home, *brkt;
-    char *name, *value;
-    FILE *fp;
+    char* home, * brkt;
+    char* name, * value;
+    FILE* fp;
     char line[400];
 
     if ((home = getenv("HOME")) == NULL)
@@ -938,21 +945,28 @@ read_inifile(char **socket,
                 }
                 else
                 {
-                    fprintf(stderr, "WARNING: Unrecognised "
-                            "parameter '%s=%s' in .maxadmin file\n", name, value);
+                    fprintf(stderr,
+                            "WARNING: Unrecognised "
+                            "parameter '%s=%s' in .maxadmin file\n",
+                            name,
+                            value);
                 }
             }
             else
             {
-                fprintf(stderr, "WARNING: Unrecognised "
-                        "parameter '%s' in .maxadmin file\n", name);
+                fprintf(stderr,
+                        "WARNING: Unrecognised "
+                        "parameter '%s' in .maxadmin file\n",
+                        name);
             }
         }
         else
         {
-            fprintf(stderr, "WARNING: Expected name=value "
+            fprintf(stderr,
+                    "WARNING: Expected name=value "
                     "parameters in .maxadmin file but found "
-                    "'%s'.\n", line);
+                    "'%s'.\n",
+                    line);
         }
     }
     fclose(fp);
@@ -966,7 +980,7 @@ read_inifile(char **socket,
  *
  * @return Whether the password was obtained.
  */
-bool getPassword(char *passwd, size_t len)
+bool getPassword(char* passwd, size_t len)
 {
     bool err = false;
     struct termios tty_attr;

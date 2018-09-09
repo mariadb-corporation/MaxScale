@@ -25,37 +25,37 @@
 
 #include "../internal/monitor.h"
 
-#define TEST(a, b) do{if (!(a)){printf("%s:%d " b "\n", __FILE__, __LINE__);return 1;}}while(false)
+#define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
 
 static bool ok = false;
 
-bool test_fn(const MODULECMD_ARG *arg, json_t** output)
+bool test_fn(const MODULECMD_ARG* arg, json_t** output)
 {
 
-    ok = (arg->argc == 2 && strcmp(arg->argv[0].value.string, "Hello") == 0 &&
-          arg->argv[1].value.boolean);
+    ok = (arg->argc == 2 && strcmp(arg->argv[0].value.string, "Hello") == 0
+          && arg->argv[1].value.boolean);
 
     return true;
 }
 
 int test_arguments()
 {
-    const void *params1[] = {"Hello", "true"};
-    const void *params2[] = {"Hello", "1"};
+    const void* params1[] = {"Hello", "true"};
+    const void* params2[] = {"Hello", "1"};
 
-    const void *wrong_params1[] = {"Hi", "true"};
-    const void *wrong_params2[] = {"Hello", "false"};
+    const void* wrong_params1[] = {"Hi", "true"};
+    const void* wrong_params2[] = {"Hello", "false"};
 
-    const void *bad_params1[] = {"Hello", "World!"};
-    const void *bad_params2[] = {"Hello", NULL};
-    const void *bad_params3[] = {NULL, NULL};
-    const void *bad_params4[] = {NULL, "World!"};
+    const void* bad_params1[] = {"Hello", "World!"};
+    const void* bad_params2[] = {"Hello", NULL};
+    const void* bad_params3[] = {NULL, NULL};
+    const void* bad_params4[] = {NULL, "World!"};
 
-    const char *ns = "test_arguments";
-    const char *id = "test_arguments";
+    const char* ns = "test_arguments";
+    const char* id = "test_arguments";
     modulecmd_arg_type_t args1[] =
     {
-        {MODULECMD_ARG_STRING, ""},
+        {MODULECMD_ARG_STRING,  ""},
         {MODULECMD_ARG_BOOLEAN, ""}
     };
 
@@ -75,7 +75,7 @@ int test_arguments()
          "Registering the command a second time should fail");
     TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
 
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     /**
@@ -144,33 +144,33 @@ int test_arguments()
     return 0;
 }
 
-bool test_fn2(const MODULECMD_ARG *arg, json_t** output)
+bool test_fn2(const MODULECMD_ARG* arg, json_t** output)
 {
     return true;
 }
 
 int test_optional_arguments()
 {
-    const void *params1[] = {"Hello", "true"};
-    const void *params2[] = {NULL, "true"};
-    const void *params3[] = {"Hello", NULL};
-    const void *params4[] = {NULL, NULL};
+    const void* params1[] = {"Hello", "true"};
+    const void* params2[] = {NULL, "true"};
+    const void* params3[] = {"Hello", NULL};
+    const void* params4[] = {NULL, NULL};
 
-    const char *ns = "test_optional_arguments";
-    const char *id = "test_optional_arguments";
+    const char* ns = "test_optional_arguments";
+    const char* id = "test_optional_arguments";
     modulecmd_arg_type_t args1[] =
     {
-        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, ""},
+        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,  ""},
         {MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL, ""}
     };
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn2, 2, args1, ""),
          "Registering a command should succeed");
 
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
-    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 2, params1);
+    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 2, params1);
     TEST(arg, "Parsing arguments should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
@@ -227,7 +227,7 @@ int test_optional_arguments()
     return 0;
 }
 
-bool test_fn3(const MODULECMD_ARG *arg, json_t** output)
+bool test_fn3(const MODULECMD_ARG* arg, json_t** output)
 {
     modulecmd_set_error("Something went wrong!");
     return false;
@@ -235,13 +235,13 @@ bool test_fn3(const MODULECMD_ARG *arg, json_t** output)
 
 int test_module_errors()
 {
-    const char *ns = "test_module_errors";
-    const char *id = "test_module_errors";
+    const char* ns = "test_module_errors";
+    const char* id = "test_module_errors";
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn3, 0, NULL, ""),
          "Registering a command should succeed");
 
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     TEST(!modulecmd_call_command(cmd, NULL, NULL), "Module call should fail");
@@ -250,16 +250,16 @@ int test_module_errors()
     return 0;
 }
 
-bool test_fn_map(const MODULECMD_ARG *arg, json_t** output)
+bool test_fn_map(const MODULECMD_ARG* arg, json_t** output)
 {
     return true;
 }
 
-const char *map_dom = "test_map";
+const char* map_dom = "test_map";
 
-bool mapfn(const MODULECMD *cmd, void *data)
+bool mapfn(const MODULECMD* cmd, void* data)
 {
-    int *i = (int*)data;
+    int* i = (int*)data;
     (*i)++;
     return true;
 }
@@ -314,7 +314,7 @@ int test_map()
 
 static DCB my_dcb;
 
-bool ptrfn(const MODULECMD_ARG *argv, json_t** output)
+bool ptrfn(const MODULECMD_ARG* argv, json_t** output)
 {
     bool rval = false;
 
@@ -328,8 +328,8 @@ bool ptrfn(const MODULECMD_ARG *argv, json_t** output)
 
 int test_pointers()
 {
-    const char *ns = "test_pointers";
-    const char *id = "test_pointers";
+    const char* ns = "test_pointers";
+    const char* id = "test_pointers";
 
     modulecmd_arg_type_t args[] =
     {
@@ -340,12 +340,12 @@ int test_pointers()
          "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     const void* params[] = {&my_dcb};
 
-    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 1, params);
+    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
     TEST(arg, "Parsing arguments should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
@@ -356,7 +356,7 @@ int test_pointers()
     return 0;
 }
 
-bool monfn(const MODULECMD_ARG *arg, json_t** output)
+bool monfn(const MODULECMD_ARG* arg, json_t** output)
 {
     return true;
 }
@@ -365,7 +365,7 @@ int call_module(const MODULECMD* cmd, const char* ns)
 {
     const void* params[] = {ns};
 
-    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 1, params);
+    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
 
     TEST(arg, "Parsing arguments should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
@@ -405,11 +405,11 @@ int test_domain_matching(const char* actual_module,
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
     /** Create a monitor */
-    char *libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
+    char* libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
     set_libdir(libdir);
     monitor_create(name, actual_module, NULL);
 
-    const MODULECMD *cmd;
+    const MODULECMD* cmd;
 
     // First invoke using the actual module name.
     cmd = modulecmd_find_command(actual_module, id);
@@ -426,7 +426,7 @@ int test_domain_matching(const char* actual_module,
     return 0;
 }
 
-bool outputfn(const MODULECMD_ARG *arg, json_t** output)
+bool outputfn(const MODULECMD_ARG* arg, json_t** output)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, "hello", json_string("world"));
@@ -436,14 +436,14 @@ bool outputfn(const MODULECMD_ARG *arg, json_t** output)
 
 int test_output()
 {
-    const char *ns = "test_output";
-    const char *id = "test_output";
+    const char* ns = "test_output";
+    const char* id = "test_output";
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, outputfn, 0, NULL, ""),
          "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     json_t* output = NULL;
@@ -461,7 +461,7 @@ int test_output()
     return 0;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int rc = 0;
 
@@ -474,7 +474,7 @@ int main(int argc, char **argv)
     rc += test_map();
     rc += test_pointers();
     rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
-    rc += test_domain_matching("mariadbmon", "mysqlmon",   "test_domain_matching2");
+    rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
     rc += test_output();
 
     maxbase::finish();

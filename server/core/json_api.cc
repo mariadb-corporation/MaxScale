@@ -25,7 +25,6 @@ namespace
 
 const char DETAIL[] = "detail";
 const char ERRORS[] = "errors";
-
 }
 
 static json_t* self_link(const char* host, const char* endpoint)

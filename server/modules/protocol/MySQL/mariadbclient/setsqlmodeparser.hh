@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/customparser.hh>
@@ -22,16 +22,16 @@ class SetSqlModeParser : public maxscale::CustomParser
 public:
     enum sql_mode_t
     {
-        DEFAULT,   // "set sql_mode=DEFAULT"
-        ORACLE,    // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
-        SOMETHING  // "set sql_mode=PIPES_AS_CONCAT"
+        DEFAULT,    // "set sql_mode=DEFAULT"
+        ORACLE,     // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
+        SOMETHING   // "set sql_mode=PIPES_AS_CONCAT"
     };
 
     enum result_t
     {
-        ERROR,           // Some fatal error occurred; mem alloc failed, parsing failed, etc.
-        IS_SET_SQL_MODE, // The COM_QUERY is "set sql_mode=..."
-        NOT_SET_SQL_MODE // The COM_QUERY is NOT "set sql_mode=..."
+        ERROR,          // Some fatal error occurred; mem alloc failed, parsing failed, etc.
+        IS_SET_SQL_MODE,// The COM_QUERY is "set sql_mode=..."
+        NOT_SET_SQL_MODE// The COM_QUERY is NOT "set sql_mode=..."
     };
 
     enum
@@ -95,7 +95,8 @@ public:
             payload_len = MYSQL_GET_PAYLOAD_LEN(header);
         }
 
-        if (payload_len >= 20) // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum needed.
+        if (payload_len >= 20)      // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum
+                                    // needed.
         {
             // We need 4 bytes from the payload to deduce whether more investigations are needed.
             uint8_t payload[4];
@@ -157,7 +158,7 @@ public:
                         bypass_whitespace();
 
                         // Check that there's enough characters to contain a SET keyword
-                        bool long_enough = m_pEnd - m_pI > 3 ;
+                        bool long_enough = m_pEnd - m_pI > 3;
 
                         if (long_enough && is_set(m_pI))
                         {
@@ -230,10 +231,9 @@ public:
 private:
     static bool is_set(const char* pStmt)
     {
-        return
-            (pStmt[0] == 's' || pStmt[0] == 'S') &&
-            (pStmt[1] == 'e' || pStmt[1] == 'E') &&
-            (pStmt[2] == 't' || pStmt[2] == 'T');
+        return (pStmt[0] == 's' || pStmt[0] == 'S')
+               && (pStmt[1] == 'e' || pStmt[1] == 'E')
+               && (pStmt[2] == 't' || pStmt[2] == 'T');
     }
 
     static bool is_set(const uint8_t* pStmt)
@@ -243,7 +243,7 @@ private:
 
     static bool is_error(result_t rv)
     {
-        return (rv == ERROR);
+        return rv == ERROR;
     }
 
     result_t initialize(GWBUF* pBuffer)
@@ -566,7 +566,8 @@ private:
             if (m_pI != m_pEnd)
             {
                 MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI), m_pI);
+                         (int)(m_pEnd - m_pI),
+                         m_pI);
             }
 
             token = PARSER_EXHAUSTED;

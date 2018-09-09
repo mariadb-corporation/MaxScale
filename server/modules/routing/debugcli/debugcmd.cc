@@ -69,80 +69,148 @@
 
 #define MAXARGS 14
 
-#define ARG_TYPE_NONE           0
-#define ARG_TYPE_ADDRESS        1
-#define ARG_TYPE_STRING         2
-#define ARG_TYPE_SERVICE        3
-#define ARG_TYPE_SERVER         4
-#define ARG_TYPE_DBUSERS        5
-#define ARG_TYPE_SESSION        6
-#define ARG_TYPE_DCB            7
-#define ARG_TYPE_MONITOR        8
-#define ARG_TYPE_FILTER         9
-#define ARG_TYPE_NUMERIC        10
-#define ARG_TYPE_OBJECT_NAME    11 // A string where whitespace is replaced with hyphens
+#define ARG_TYPE_NONE        0
+#define ARG_TYPE_ADDRESS     1
+#define ARG_TYPE_STRING      2
+#define ARG_TYPE_SERVICE     3
+#define ARG_TYPE_SERVER      4
+#define ARG_TYPE_DBUSERS     5
+#define ARG_TYPE_SESSION     6
+#define ARG_TYPE_DCB         7
+#define ARG_TYPE_MONITOR     8
+#define ARG_TYPE_FILTER      9
+#define ARG_TYPE_NUMERIC     10
+#define ARG_TYPE_OBJECT_NAME 11     // A string where whitespace is replaced with hyphens
 
 /**
  * The subcommand structure
  *
  * These are the options that may be passed to a command
  */
-typedef void (*FN  )(DCB*);
-typedef void (*FN1 )(DCB*, unsigned long);
-typedef void (*FN2 )(DCB*, unsigned long, unsigned long);
-typedef void (*FN3 )(DCB*, unsigned long, unsigned long, unsigned long);
-typedef void (*FN4 )(DCB*, unsigned long, unsigned long, unsigned long, unsigned long);
-typedef void (*FN5 )(DCB*, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
-typedef void (*FN6 )(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+typedef void (* FN)(DCB*);
+typedef void (* FN1)(DCB*, unsigned long);
+typedef void (* FN2)(DCB*, unsigned long, unsigned long);
+typedef void (* FN3)(DCB*, unsigned long, unsigned long, unsigned long);
+typedef void (* FN4)(DCB*, unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (* FN5)(DCB*, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (* FN6)(DCB*,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
                      unsigned long);
-typedef void (*FN7 )(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long);
-typedef void (*FN8 )(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long);
-typedef void (*FN9 )(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long);
-typedef void (*FN10)(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long);
-typedef void (*FN11)(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
+typedef void (* FN7)(DCB*,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
                      unsigned long);
-typedef void (*FN12)(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long);
-typedef void (*FN13)(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long);
-typedef void (*FN14)(DCB*,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long, unsigned long,
-                     unsigned long, unsigned long, unsigned long, unsigned long);
+typedef void (* FN8)(DCB*,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long);
+typedef void (* FN9)(DCB*,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long,
+                     unsigned long);
+typedef void (* FN10)(DCB*,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long);
+typedef void (* FN11)(DCB*,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long);
+typedef void (* FN12)(DCB*,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long);
+typedef void (* FN13)(DCB*,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long);
+typedef void (* FN14)(DCB*,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long,
+                      unsigned long);
 
 struct subcommand
 {
-    const char *arg1;
+    const char* arg1;
     int         argc_min;
     int         argc_max;
-    void      (*fn)(DCB*);
-    const char *help;
-    const char *devhelp;
+    void        (* fn)(DCB*);
+    const char* help;
+    const char* devhelp;
     int         arg_types[MAXARGS];
 };
 
 #define EMPTY_OPTION
 
-static void telnetdShowUsers(DCB *);
-static void show_log_throttling(DCB *);
+static void telnetdShowUsers(DCB*);
+static void show_log_throttling(DCB*);
 static void show_qc_all(DCB*);
 
-static void showVersion(DCB *dcb)
+static void showVersion(DCB* dcb)
 {
     dcb_printf(dcb, "%s\n", MAXSCALE_VERSION);
 }
@@ -152,19 +220,19 @@ static void showVersion(DCB *dcb)
  */
 struct subcommand showoptions[] =
 {
-#if defined(BUFFER_TRACE)
+#if defined (BUFFER_TRACE)
     {
-        "buffers",    0, (FN)dprintAllBuffers,
+        "buffers", 0, (FN)dprintAllBuffers,
         "Show all buffers with backtrace",
         "Show all buffers with backtrace",
-        {0}
+        {0               }
     },
 #endif
     {
         "dcbs", 0, 0, (FN)dprintAllDCBs,
         "Show all DCBs",
         "Usage: show dcbs",
-        {0}
+        {0               }
     },
     {
         "dbusers", 1, 1, (FN)service_print_users,
@@ -187,13 +255,13 @@ struct subcommand showoptions[] =
         "epoll", 0, 0, (FN)dprintPollStats,
         "Show the polling system statistics",
         "Usage: show epoll",
-        {0}
+        {0               }
     },
     {
         "eventstats", 0, 0, (FN)dShowEventStats,
         "Show event queue statistics",
         "Usage: show eventstats",
-        {0}
+        {0               }
     },
     {
         "filter", 1, 1, (FN)dprintFilter,
@@ -204,25 +272,25 @@ struct subcommand showoptions[] =
         "FILTER Filter to show\n"
         "\n"
         "Example: show filter my-filter",
-        {ARG_TYPE_FILTER}
+        {ARG_TYPE_FILTER }
     },
     {
         "filters", 0, 0, (FN)dprintAllFilters,
         "Show all filters",
         "Usage: show filters",
-        {0}
+        {0               }
     },
     {
         "log_throttling", 0, 0, (FN)show_log_throttling,
         "Show the current log throttling setting (count, window (ms), suppression (ms))",
         "Usage: show log_throttling",
-        {0}
+        {0               }
     },
     {
         "modules", 0, 0, (FN)dprintAllModules,
         "Show all currently loaded modules",
         "Usage: show modules",
-        {0}
+        {0               }
     },
     {
         "monitor", 1, 1, (FN)monitor_show,
@@ -239,7 +307,7 @@ struct subcommand showoptions[] =
         "monitors", 0, 0, (FN)monitor_show_all,
         "Show all monitors",
         "Usage: show monitors",
-        {0}
+        {0               }
     },
     {
         "persistent", 1, 1, (FN)dprintPersistentDCBs,
@@ -250,13 +318,13 @@ struct subcommand showoptions[] =
         "SERVER Server to show\n"
         "\n"
         "Example: show persistent db-server-1",
-        {ARG_TYPE_SERVER}
+        {ARG_TYPE_SERVER }
     },
     {
         "qcs", 0, 0, (FN)show_qc_all,
         "Show query classifier statistics",
         "Usage: show qcs",
-        {0}
+        {0               }
     },
     {
         "server", 1, 1, (FN)dprintServer,
@@ -267,25 +335,25 @@ struct subcommand showoptions[] =
         "SERVER Server to show\n"
         "\n"
         "Example: show server db-server-1",
-        {ARG_TYPE_SERVER}
+        {ARG_TYPE_SERVER }
     },
     {
         "servers", 0, 0, (FN)dprintAllServers,
         "Show all servers",
         "Usage: show servers",
-        {0}
+        {0               }
     },
     {
         "serversjson", 0, 0, (FN)dprintAllServersJson,
         "Show all servers in JSON",
         "Usage: show serversjson",
-        {0}
+        {0               }
     },
     {
         "services", 0, 0, (FN)dprintAllServices,
         "Show all configured services in MaxScale",
         "Usage: show services",
-        {0}
+        {0               }
     },
     {
         "service", 1, 1, (FN)dprintService,
@@ -313,38 +381,38 @@ struct subcommand showoptions[] =
         "sessions", 0, 0, (FN)dprintAllSessions,
         "Show all active sessions in MaxScale",
         "Usage: show sessions",
-        {0}
+        {0               }
     },
     {
         "tasks", 0, 0, (FN)hkshow_tasks,
         "Show all active housekeeper tasks in MaxScale",
         "Usage: show tasks",
-        {0}
+        {0               }
     },
     {
         "threads", 0, 0, (FN)dShowThreads,
         "Show the status of the worker threads in MaxScale",
         "Usage: show threads",
-        {0}
+        {0               }
     },
     {
         "users", 0, 0, (FN)telnetdShowUsers,
         "Show enabled Linux accounts",
         "Usage: show users",
-        {0}
+        {0               }
     },
     {
         "version", 0, 0, (FN)showVersion,
         "Show the MaxScale version number",
         "Usage: show version",
-        {0}
+        {0               }
     },
-    { EMPTY_OPTION}
+    {EMPTY_OPTION    }
 };
 
-bool listfuncs_cb(const MODULECMD *cmd, void *data)
+bool listfuncs_cb(const MODULECMD* cmd, void* data)
 {
-    DCB *dcb = (DCB*)data;
+    DCB* dcb = (DCB*)data;
 
     dcb_printf(dcb, "Command:\t%s %s\n", cmd->domain, cmd->identifier);
     dcb_printf(dcb, "Description:\t%s\n", cmd->description);
@@ -352,8 +420,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
-        modulecmd_arg_type_t *type = &cmd->arg_types[i];
-        dcb_printf(dcb, "%s%s",
+        modulecmd_arg_type_t* type = &cmd->arg_types[i];
+        dcb_printf(dcb,
+                   "%s%s",
                    modulecmd_argtype_to_str(&cmd->arg_types[i]),
                    i < cmd->arg_count_max - 1 ? " " : "");
     }
@@ -362,8 +431,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
-        modulecmd_arg_type_t *type = &cmd->arg_types[i];
-        dcb_printf(dcb, "    %s - %s\n",
+        modulecmd_arg_type_t* type = &cmd->arg_types[i];
+        dcb_printf(dcb,
+                   "    %s - %s\n",
                    modulecmd_argtype_to_str(&cmd->arg_types[i]),
                    cmd->arg_types[i].description);
     }
@@ -373,7 +443,7 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
     return true;
 }
 
-void dListCommands(DCB *dcb, const char *domain, const char *ident)
+void dListCommands(DCB* dcb, const char* domain, const char* ident)
 {
     modulecmd_foreach(domain, ident, listfuncs_cb, dcb);
 }
@@ -387,61 +457,61 @@ struct subcommand listoptions[] =
         "clients", 0, 0, (FN)dListClients,
         "List all the client connections to MaxScale",
         "Usage: list clients",
-        {0}
+        {0                    }
     },
     {
         "dcbs", 0, 0, (FN)dListDCBs,
         "List all active connections within MaxScale",
         "Usage: list dcbs",
-        {0}
+        {0                    }
     },
     {
         "filters", 0, 0, (FN)dListFilters,
         "List all filters",
         "Usage: list filters",
-        {0}
+        {0                    }
     },
     {
         "listeners", 0, 0, (FN)dListListeners,
         "List all listeners",
         "Usage: list listeners",
-        {0}
+        {0                    }
     },
     {
         "modules", 0, 0, (FN)dprintAllModules,
         "List all currently loaded modules",
         "Usage: list modules",
-        {0}
+        {0                    }
     },
     {
         "monitors", 0, 0, (FN)monitor_list,
         "List all monitors",
         "Usage: list monitors",
-        {0}
+        {0                    }
     },
     {
         "services", 0, 0, (FN)dListServices,
         "List all services",
         "Usage: list services",
-        {0}
+        {0                    }
     },
     {
         "servers", 0, 0, (FN)dListServers,
         "List all servers",
         "Usage: list servers",
-        {0}
+        {0                    }
     },
     {
         "sessions", 0, 0, (FN)dListSessions,
         "List all the active sessions within MaxScale",
         "Usage: list sessions",
-        {0}
+        {0                    }
     },
     {
         "threads", 0, 0, (FN)dShowThreads,
         "List the status of the polling threads in MaxScale",
         "Usage: list threads",
-        {0}
+        {0                    }
     },
     {
         "commands", 0, 2, (FN)dListCommands,
@@ -455,7 +525,7 @@ struct subcommand listoptions[] =
         "Example: list commands my-module my-command",
         {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
     },
-    { EMPTY_OPTION}
+    {EMPTY_OPTION         }
 };
 
 static void shutdown_server()
@@ -463,11 +533,10 @@ static void shutdown_server()
     maxscale_shutdown();
 }
 
-static void shutdown_service(DCB *dcb, SERVICE *service);
-static void shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor);
+static void shutdown_service(DCB* dcb, SERVICE* service);
+static void shutdown_monitor(DCB* dcb, MXS_MONITOR* monitor);
 
-static void
-shutdown_listener(DCB *dcb, SERVICE *service, const char *name)
+static void shutdown_listener(DCB* dcb, SERVICE* service, const char* name)
 {
     if (serviceStopListener(service, name))
     {
@@ -490,7 +559,7 @@ struct subcommand shutdownoptions[] =
         (FN)shutdown_server,
         "Initiate a controlled shutdown of MaxScale",
         "Usage: shutdown maxscale",
-        {0}
+        {0                    }
     },
     {
         "monitor",
@@ -503,7 +572,7 @@ struct subcommand shutdownoptions[] =
         "MONITOR Monitor to stop\n"
         "\n"
         "Example: shutdown monitor db-cluster-monitor",
-        {ARG_TYPE_MONITOR}
+        {ARG_TYPE_MONITOR     }
     },
     {
         "service",
@@ -516,7 +585,7 @@ struct subcommand shutdownoptions[] =
         "SERVICE Service to stop\n"
         "\n"
         "Example: shutdown service \"Sales Database\"",
-        {ARG_TYPE_SERVICE}
+        {ARG_TYPE_SERVICE     }
     },
     {
         "listener",
@@ -537,7 +606,7 @@ struct subcommand shutdownoptions[] =
     }
 };
 
-static void sync_logs(DCB *dcb)
+static void sync_logs(DCB* dcb)
 {
     dcb_printf(dcb, "This command is deprecated: it does nothing.\n");
 }
@@ -557,11 +626,10 @@ struct subcommand syncoptions[] =
     }
 };
 
-static void restart_service(DCB *dcb, SERVICE *service);
-static void restart_monitor(DCB *dcb, MXS_MONITOR *monitor);
+static void restart_service(DCB* dcb, SERVICE* service);
+static void restart_monitor(DCB* dcb, MXS_MONITOR* monitor);
 
-static void
-restart_listener(DCB *dcb, SERVICE *service, const char *name)
+static void restart_listener(DCB* dcb, SERVICE* service, const char* name)
 {
     if (serviceStartListener(service, name))
     {
@@ -587,7 +655,7 @@ struct subcommand restartoptions[] =
         "NAME Monitor to restart\n"
         "\n"
         "Example: restart monitor db-cluster-monitor",
-        {ARG_TYPE_MONITOR}
+        {ARG_TYPE_MONITOR     }
     },
     {
         "service", 1, 1, (FN)restart_service,
@@ -598,7 +666,7 @@ struct subcommand restartoptions[] =
         "NAME Service to restart\n"
         "\n"
         "Example: restart service \"Sales Database\"",
-        {ARG_TYPE_SERVICE}
+        {ARG_TYPE_SERVICE     }
     },
     {
         "listener", 2, 2, (FN)restart_listener,
@@ -611,13 +679,13 @@ struct subcommand restartoptions[] =
         "Example: restart listener \"RW Service\" \"RW Listener\"",
         {ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME}
     },
-    { EMPTY_OPTION }
+    {EMPTY_OPTION         }
 };
 
-static void set_server(DCB *dcb, SERVER *server, char *bit);
-static void set_pollsleep(DCB *dcb, int);
-static void set_nbpoll(DCB *dcb, int);
-static void set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms);
+static void set_server(DCB* dcb, SERVER* server, char* bit);
+static void set_pollsleep(DCB* dcb, int);
+static void set_nbpoll(DCB* dcb, int);
+static void set_log_throttling(DCB* dcb, int count, int window_ms, int suppress_ms);
 /**
  * The subcommands of the set command
  */
@@ -633,7 +701,7 @@ struct subcommand setoptions[] =
         "STATUS The status to set\n"
         "\n"
         "Example: set server dbnode4 master",
-        {ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_SERVER,  ARG_TYPE_OBJECT_NAME }
     },
     {
         "pollsleep", 1, 1, (FN)set_pollsleep,
@@ -660,10 +728,10 @@ struct subcommand setoptions[] =
         "Example: set log_throttling 5 1000 25000",
         {ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC}
     },
-    { EMPTY_OPTION }
+    {EMPTY_OPTION}
 };
 
-static void clear_server(DCB *dcb, SERVER *server, char *bit);
+static void clear_server(DCB* dcb, SERVER* server, char* bit);
 /**
  * The subcommands of the clear command
  */
@@ -681,10 +749,10 @@ struct subcommand clearoptions[] =
         "Example: clear server dbnode2 master",
         {ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME}
     },
-    { EMPTY_OPTION }
+    {EMPTY_OPTION}
 };
 
-static void reload_dbusers(DCB *dcb, SERVICE *service);
+static void reload_dbusers(DCB* dcb, SERVICE* service);
 
 /**
  * The subcommands of the reload command
@@ -702,22 +770,22 @@ struct subcommand reloadoptions[] =
         "Example: reload dbusers \"splitter service\"",
         {ARG_TYPE_SERVICE}
     },
-    { EMPTY_OPTION }
+    {EMPTY_OPTION    }
 };
 
-static void enable_log_priority(DCB *, char *);
-static void disable_log_priority(DCB *, char *);
-static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
-static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
-static void enable_service_root(DCB *dcb, SERVICE *service);
-static void disable_service_root(DCB *dcb, SERVICE *service);
+static void enable_log_priority(DCB*, char*);
+static void disable_log_priority(DCB*, char*);
+static void enable_sess_log_priority(DCB* dcb, char* arg1, char* arg2);
+static void disable_sess_log_priority(DCB* dcb, char* arg1, char* arg2);
+static void enable_service_root(DCB* dcb, SERVICE* service);
+static void disable_service_root(DCB* dcb, SERVICE* service);
 static void enable_syslog();
 static void disable_syslog();
 static void enable_maxlog();
 static void disable_maxlog();
-static void enable_account(DCB *, char *user);
-static void enable_admin_account(DCB *, char *user);
-static void disable_account(DCB *, char *user);
+static void enable_account(DCB*, char* user);
+static void enable_admin_account(DCB*, char* user);
+static void disable_account(DCB*, char* user);
 
 /**
  *  * The subcommands of the enable command
@@ -735,7 +803,7 @@ struct subcommand enableoptions[] =
         "PRIORITY One of 'err', 'warning', 'notice','info' or 'debug'\n"
         "\n"
         "Example: enable log-priority info",
-        {ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_OBJECT_NAME }
     },
     {
         "sessionlog-priority",
@@ -756,7 +824,7 @@ struct subcommand enableoptions[] =
         "SERVICE Service where root user is enabled\n"
         "\n"
         "Example: enable root my-service",
-        {ARG_TYPE_SERVICE}
+        {ARG_TYPE_SERVICE     }
     },
     {
         "syslog",
@@ -764,7 +832,7 @@ struct subcommand enableoptions[] =
         (FN)enable_syslog,
         "Enable syslog logging",
         "Usage: enable syslog",
-        {0}
+        {0                    }
     },
     {
         "maxlog",
@@ -772,7 +840,7 @@ struct subcommand enableoptions[] =
         (FN)enable_maxlog,
         "Enable MaxScale logging",
         "Usage: enable maxlog",
-        {0}
+        {0                    }
     },
     {
         "account",
@@ -785,7 +853,7 @@ struct subcommand enableoptions[] =
         "USER The user account to enable\n"
         "\n"
         "Example: enable account alice",
-        {ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_OBJECT_NAME }
     },
     {
         "readonly-account",
@@ -798,7 +866,7 @@ struct subcommand enableoptions[] =
         "USER The user account to enable\n"
         "\n"
         "Example: enable account alice",
-        {ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_OBJECT_NAME }
     },
     {
         EMPTY_OPTION
@@ -823,7 +891,7 @@ struct subcommand disableoptions[] =
         "PRIORITY One of 'err', 'warning', 'notice','info' or 'debug'\n"
         "\n"
         "Example: disable log-priority info",
-        {ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_OBJECT_NAME }
     },
     {
         "sessionlog-priority",
@@ -844,7 +912,7 @@ struct subcommand disableoptions[] =
         "SERVICE Service where root user is disabled\n"
         "\n"
         "Example: disable root my-service",
-        {ARG_TYPE_SERVICE}
+        {ARG_TYPE_SERVICE     }
     },
     {
         "syslog",
@@ -852,7 +920,7 @@ struct subcommand disableoptions[] =
         (FN)disable_syslog,
         "Disable syslog logging",
         "Usage: disable syslog",
-        {0}
+        {0                    }
     },
     {
         "maxlog",
@@ -860,7 +928,7 @@ struct subcommand disableoptions[] =
         (FN)disable_maxlog,
         "Disable MaxScale logging",
         "Usage: disable maxlog",
-        {0}
+        {0                    }
     },
     {
         "account",
@@ -873,21 +941,31 @@ struct subcommand disableoptions[] =
         "USER The user account to disable\n"
         "\n"
         "Example: disable account alice",
-        {ARG_TYPE_OBJECT_NAME}
+        {ARG_TYPE_OBJECT_NAME }
     },
     {
         EMPTY_OPTION
     }
 };
 
-static void inet_add_user(DCB *, char *user, char *password);
-static void inet_add_admin_user(DCB *, char *user, char *password);
+static void inet_add_user(DCB*, char* user, char* password);
+static void inet_add_admin_user(DCB*, char* user, char* password);
 
-static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
-                          char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                          char *v10, char *v11)
+static void cmd_AddServer(DCB* dcb,
+                          SERVER* server,
+                          char*   v1,
+                          char*   v2,
+                          char*   v3,
+                          char*   v4,
+                          char*   v5,
+                          char*   v6,
+                          char*   v7,
+                          char*   v8,
+                          char*   v9,
+                          char*   v10,
+                          char*   v11)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
     for (int i = 0; i < items && values[i]; i++)
@@ -898,8 +976,10 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
         }
         else
         {
-            dcb_printf(dcb, "Could not add server '%s' to object '%s'. See error log for more details.\n",
-                       server->name, values[i]);
+            dcb_printf(dcb,
+                       "Could not add server '%s' to object '%s'. See error log for more details.\n",
+                       server->name,
+                       values[i]);
         }
     }
 }
@@ -914,7 +994,6 @@ void ping(MXB_WORKER* worker, void* arg)
 {
     MXS_NOTICE("Worker[%p]: Alive and kicking.", worker);
 }
-
 }
 
 void ping_workers(DCB* dcb)
@@ -934,7 +1013,7 @@ struct subcommand pingoptions[] =
         "Ping Workers",
         {ARG_TYPE_NONE}
     },
-    { EMPTY_OPTION }
+    {EMPTY_OPTION }
 };
 
 /**
@@ -984,17 +1063,27 @@ struct subcommand addoptions[] =
             ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
         }
     },
-    { EMPTY_OPTION}
+    {EMPTY_OPTION}
 };
 
 
-static void telnetdRemoveUser(DCB *, char *user);
+static void telnetdRemoveUser(DCB*, char* user);
 
-static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
-                             char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                             char *v10, char *v11)
+static void cmd_RemoveServer(DCB* dcb,
+                             SERVER* server,
+                             char*   v1,
+                             char*   v2,
+                             char*   v3,
+                             char*   v4,
+                             char*   v5,
+                             char*   v6,
+                             char*   v7,
+                             char*   v8,
+                             char*   v9,
+                             char*   v10,
+                             char*   v11)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
     for (int i = 0; i < items && values[i]; i++)
@@ -1057,8 +1146,7 @@ struct subcommand removeoptions[] =
  * @param pdcb          The stream to write output to
  * @param logname       The name of the log
  */
-static void
-flushlog(DCB *pdcb, char *logname)
+static void flushlog(DCB* pdcb, char* logname)
 {
     bool unrecognized = false;
     bool deprecated = false;
@@ -1081,7 +1169,7 @@ flushlog(DCB *pdcb, char *logname)
     }
     else if (!strcasecmp(logname, "maxscale"))
     {
-        ; // nop
+        // nop
     }
     else
     {
@@ -1100,7 +1188,8 @@ flushlog(DCB *pdcb, char *logname)
         {
             dcb_printf(pdcb,
                        "'%s' is deprecated, currently there is only one log 'maxscale', "
-                       "which was rotated.\n", logname);
+                       "which was rotated.\n",
+                       logname);
         }
     }
 }
@@ -1110,8 +1199,7 @@ flushlog(DCB *pdcb, char *logname)
  *
  * @param pdcb          The stream to write output to
  */
-static void
-flushlogs(DCB *pdcb)
+static void flushlogs(DCB* pdcb)
 {
     mxs_log_rotate();
 }
@@ -1136,7 +1224,7 @@ struct subcommand flushoptions[] =
         (FN)flushlogs,
         "Flush the content of a log file and reopen it",
         "Usage: flush logs",
-        {0}
+        {0              }
     },
     {
         EMPTY_OPTION
@@ -1156,8 +1244,12 @@ static SPINLOCK server_mod_lock = SPINLOCK_INIT;
  * @param protocol Protocol, NULL for default (MySQLBackend)
  * @param authenticator Authenticator module, NULL for default (MySQLBackendAuth)
  */
-static void createServer(DCB *dcb, char *name, char *address, char *port,
-                         char *protocol, char *authenticator)
+static void createServer(DCB* dcb,
+                         char* name,
+                         char* address,
+                         char* port,
+                         char* protocol,
+                         char* authenticator)
 {
     spinlock_acquire(&server_mod_lock);
 
@@ -1180,14 +1272,34 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
     spinlock_release(&server_mod_lock);
 }
 
-static void createListener(DCB *dcb, SERVICE *service, char *name, char *address,
-                           char *port, char *protocol, char *authenticator,
-                           char *authenticator_options, char *key, char *cert,
-                           char *ca, char *version, char *depth, char *verify)
+static void createListener(DCB* dcb,
+                           SERVICE* service,
+                           char* name,
+                           char* address,
+                           char* port,
+                           char* protocol,
+                           char* authenticator,
+                           char* authenticator_options,
+                           char* key,
+                           char* cert,
+                           char* ca,
+                           char* version,
+                           char* depth,
+                           char* verify)
 {
-    if (runtime_create_listener((Service*)service, name, address, port, protocol,
-                                authenticator, authenticator_options,
-                                key, cert, ca, version, depth, verify))
+    if (runtime_create_listener((Service*)service,
+                                name,
+                                address,
+                                port,
+                                protocol,
+                                authenticator,
+                                authenticator_options,
+                                key,
+                                cert,
+                                ca,
+                                version,
+                                depth,
+                                verify))
     {
         dcb_printf(dcb, "Listener '%s' created\n", name);
     }
@@ -1197,7 +1309,7 @@ static void createListener(DCB *dcb, SERVICE *service, char *name, char *address
     }
 }
 
-static void createMonitor(DCB *dcb, const char *name, const char *module)
+static void createMonitor(DCB* dcb, const char* name, const char* module)
 {
     if (monitor_find(name))
     {
@@ -1265,7 +1377,7 @@ struct subcommand createoptions[] =
         {
             ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
             ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
-            ARG_TYPE_STRING, // Rest of the arguments are paths which can contain spaces
+            ARG_TYPE_STRING,    // Rest of the arguments are paths which can contain spaces
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING,
         }
@@ -1289,7 +1401,7 @@ struct subcommand createoptions[] =
     }
 };
 
-static void destroyServer(DCB *dcb, SERVER *server)
+static void destroyServer(DCB* dcb, SERVER* server)
 {
     /** Do this so that we don't directly access the server. Currently, the
      * destruction of a server does not free any memory and the server stays
@@ -1307,7 +1419,7 @@ static void destroyServer(DCB *dcb, SERVER *server)
     }
 }
 
-static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
+static void destroyListener(DCB* dcb, SERVICE* service, const char* name)
 {
     if (runtime_destroy_listener((Service*)service, name))
     {
@@ -1320,7 +1432,7 @@ static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
 }
 
 
-static void destroyMonitor(DCB *dcb, MXS_MONITOR *monitor)
+static void destroyMonitor(DCB* dcb, MXS_MONITOR* monitor)
 {
     char name[strlen(monitor->name) + 1];
     strcpy(name, monitor->name);
@@ -1346,7 +1458,7 @@ struct subcommand destroyoptions[] =
         "NAME Server to destroy\n"
         "\n"
         "Example: destroy server my-db-1",
-        {ARG_TYPE_SERVER}
+        {ARG_TYPE_SERVER      }
     },
     {
         "listener", 2, 2, (FN)destroyListener,
@@ -1372,7 +1484,7 @@ struct subcommand destroyoptions[] =
         "The monitor is stopped and it will be removed on the next restart of MaxScale\n"
         "\n"
         "Example: destroy monitor my-monitor",
-        {ARG_TYPE_MONITOR}
+        {ARG_TYPE_MONITOR     }
     },
     {
         EMPTY_OPTION
@@ -1386,25 +1498,37 @@ struct subcommand destroyoptions[] =
  * with one function. This could be handled with a variadic function but the
  * required complexity would probably negate any benefits.
  */
-static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
-                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                        char *v10, char *v11, char *v12, char *v13)
+static void alterServer(DCB* dcb,
+                        SERVER* server,
+                        char*   v1,
+                        char*   v2,
+                        char*   v3,
+                        char*   v4,
+                        char*   v5,
+                        char*   v6,
+                        char*   v7,
+                        char*   v8,
+                        char*   v9,
+                        char*   v10,
+                        char*   v11,
+                        char*   v12,
+                        char*   v13)
 {
-    char *values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
+    char* values[] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13};
     const int items = sizeof(values) / sizeof(values[0]);
-    CONFIG_CONTEXT *obj = NULL;
-    char *ssl_key = NULL;
-    char *ssl_cert = NULL;
-    char *ssl_ca = NULL;
-    char *ssl_version = NULL;
-    char *ssl_depth = NULL;
-    char *ssl_verify = NULL;
+    CONFIG_CONTEXT* obj = NULL;
+    char* ssl_key = NULL;
+    char* ssl_cert = NULL;
+    char* ssl_ca = NULL;
+    char* ssl_version = NULL;
+    char* ssl_depth = NULL;
+    char* ssl_verify = NULL;
     bool enable = false;
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        char *key = values[i];
-        char *value = strchr(key, '=');
+        char* key = values[i];
+        char* value = strchr(key, '=');
 
         if (value)
         {
@@ -1458,32 +1582,50 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         if (enable && ssl_ca)
         {
             /** We have SSL parameters, try to process them */
-            if (!runtime_enable_server_ssl(server, ssl_key, ssl_cert, ssl_ca,
-                                           ssl_version, ssl_depth, ssl_verify))
+            if (!runtime_enable_server_ssl(server,
+                                           ssl_key,
+                                           ssl_cert,
+                                           ssl_ca,
+                                           ssl_version,
+                                           ssl_depth,
+                                           ssl_verify))
             {
-                dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
-                           "for more details.\n", server->name);
+                dcb_printf(dcb,
+                           "Enabling SSL for server '%s' failed, see log "
+                           "for more details.\n",
+                           server->name);
             }
         }
         else
         {
-            dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
+            dcb_printf(dcb,
+                       "Error: SSL configuration requires the following parameters:\n"
                        "ssl=required ssl_ca_cert=PATH\n");
         }
     }
 }
 
-static void alterMonitor(DCB *dcb, MXS_MONITOR *monitor, char *v1, char *v2, char *v3,
-                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                         char *v10, char *v11)
+static void alterMonitor(DCB* dcb,
+                         MXS_MONITOR* monitor,
+                         char* v1,
+                         char* v2,
+                         char* v3,
+                         char* v4,
+                         char* v5,
+                         char* v6,
+                         char* v7,
+                         char* v8,
+                         char* v9,
+                         char* v10,
+                         char* v11)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        char *key = values[i];
-        char *value = strchr(key, '=');
+        char* key = values[i];
+        char* value = strchr(key, '=');
 
         if (value)
         {
@@ -1499,20 +1641,29 @@ static void alterMonitor(DCB *dcb, MXS_MONITOR *monitor, char *v1, char *v2, cha
             dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
         }
     }
-
 }
 
-static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v3,
-                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                         char *v10, char *v11)
+static void alterService(DCB* dcb,
+                         SERVICE* service,
+                         char* v1,
+                         char* v2,
+                         char* v3,
+                         char* v4,
+                         char* v5,
+                         char* v6,
+                         char* v7,
+                         char* v8,
+                         char* v9,
+                         char* v10,
+                         char* v11)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        char *key = values[i];
-        char *value = strchr(key, '=');
+        char* key = values[i];
+        char* value = strchr(key, '=');
 
         if (value)
         {
@@ -1530,17 +1681,26 @@ static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v
     }
 }
 
-static void alterMaxScale(DCB *dcb, char *v1, char *v2, char *v3,
-                          char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                          char *v10, char *v11)
+static void alterMaxScale(DCB* dcb,
+                          char* v1,
+                          char* v2,
+                          char* v3,
+                          char* v4,
+                          char* v5,
+                          char* v6,
+                          char* v7,
+                          char* v8,
+                          char* v9,
+                          char* v10,
+                          char* v11)
 {
-    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    char* values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        char *key = values[i];
-        char *value = strchr(key, '=');
+        char* key = values[i];
+        char* value = strchr(key, '=');
 
         if (value)
         {
@@ -1684,11 +1844,21 @@ struct subcommand alteroptions[] =
     }
 };
 
-static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
-                              char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                              char *v10, char *v11, char *v12)
+static void callModuleCommand(DCB* dcb,
+                              char* domain,
+                              char* id,
+                              char* v3,
+                              char* v4,
+                              char* v5,
+                              char* v6,
+                              char* v7,
+                              char* v8,
+                              char* v9,
+                              char* v10,
+                              char* v11,
+                              char* v12)
 {
-    const void *values[11] = {v3, v4, v5, v6, v7, v8, v9, v10, v11, v12};
+    const void* values[11] = {v3, v4, v5, v6, v7, v8, v9, v10, v11, v12};
     const int valuelen = sizeof(values) / sizeof(values[0]);
     int numargs = 0;
 
@@ -1697,11 +1867,11 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
         numargs++;
     }
 
-    const MODULECMD *cmd = modulecmd_find_command(domain, id);
+    const MODULECMD* cmd = modulecmd_find_command(domain, id);
 
     if (cmd)
     {
-        MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, numargs, values);
+        MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, numargs, values);
 
         if (arg)
         {
@@ -1717,7 +1887,8 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
                 if (*s == 0)
                 {
                     // No error had been set, so we add a default one.
-                    modulecmd_set_error("%s", "Call to module command failed, see log file for more details.");
+                    modulecmd_set_error("%s",
+                                        "Call to module command failed, see log file for more details.");
                 }
 
                 output = modulecmd_get_json_error();
@@ -1775,29 +1946,29 @@ struct subcommand calloptions[] =
  */
 static struct
 {
-    const char         *cmd;
-    struct  subcommand *options;
+    const char*         cmd;
+    struct  subcommand* options;
 } cmds[] =
 {
-    { "add",        addoptions },
-    { "remove",     removeoptions },
-    { "create",     createoptions },
-    { "destroy",    destroyoptions },
-    { "alter",      alteroptions },
-    { "set",        setoptions },
-    { "clear",      clearoptions },
-    { "disable",    disableoptions },
-    { "enable",     enableoptions },
-    { "flush",      flushoptions },
-    { "list",       listoptions },
-    { "reload",     reloadoptions },
-    { "restart",    restartoptions },
-    { "shutdown",   shutdownoptions },
-    { "show",       showoptions },
-    { "sync",       syncoptions },
-    { "call",       calloptions },
-    { "ping",       pingoptions },
-    { NULL,         NULL    }
+    {"add",      addoptions           },
+    {"remove",   removeoptions        },
+    {"create",   createoptions        },
+    {"destroy",  destroyoptions       },
+    {"alter",    alteroptions         },
+    {"set",      setoptions           },
+    {"clear",    clearoptions         },
+    {"disable",  disableoptions       },
+    {"enable",   enableoptions        },
+    {"flush",    flushoptions         },
+    {"list",     listoptions          },
+    {"reload",   reloadoptions        },
+    {"restart",  restartoptions       },
+    {"shutdown", shutdownoptions      },
+    {"show",     showoptions          },
+    {"sync",     syncoptions          },
+    {"call",     calloptions          },
+    {"ping",     pingoptions          },
+    {NULL,       NULL                 }
 };
 
 static bool command_requires_admin_privileges(const char* cmd)
@@ -1814,8 +1985,7 @@ static bool command_requires_admin_privileges(const char* cmd)
  * @param arg_type      The target type for the argument
  * @return The argument as a long integer
  */
-static unsigned long
-convert_arg(char *arg, int arg_type)
+static unsigned long convert_arg(char* arg, int arg_type)
 {
     unsigned long rval = 0;
 
@@ -1854,13 +2024,13 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_FILTER:
-    {
-        fix_object_name(arg);
-        auto f = filter_find(arg);
-        // This will cause problems in the long run
-        rval = (unsigned long) (f ? f.get() : NULL);
-        break;
-    }
+        {
+            fix_object_name(arg);
+            auto f = filter_find(arg);
+            // This will cause problems in the long run
+            rval = (unsigned long) (f ? f.get() : NULL);
+            break;
+        }
 
     case ARG_TYPE_NUMERIC:
 
@@ -1877,7 +2047,7 @@ convert_arg(char *arg, int arg_type)
     return rval;
 }
 
-static void free_arg(int arg_type, void *value)
+static void free_arg(int arg_type, void* value)
 {
     switch (arg_type)
     {
@@ -1914,8 +2084,8 @@ static bool user_is_authorized(DCB* dcb)
 
 static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
 
-static const char item_separator[] =
-    "----------------------------------------------------------------------------\n";
+static const char item_separator[]
+    = "----------------------------------------------------------------------------\n";
 
 /**
  * We have a complete line from the user, lookup the commands and execute them
@@ -1931,16 +2101,15 @@ static const char item_separator[] =
  * @param cli           The CLI_SESSION
  * @return      Returns 0 if the interpreter should exit
  */
-int
-execute_cmd(CLI_SESSION *cli)
+int execute_cmd(CLI_SESSION* cli)
 {
-    DCB           *dcb = cli->session->client_dcb;
-    int            argc, i, j, found = 0;
-    char          *args[MAXARGS + 4];
-    int            in_quotes = 0, escape_next = 0;
-    char          *ptr, *lptr;
-    bool           in_space = false;
-    int            nskip = 0;
+    DCB* dcb = cli->session->client_dcb;
+    int argc, i, j, found = 0;
+    char* args[MAXARGS + 4];
+    int in_quotes = 0, escape_next = 0;
+    char* ptr, * lptr;
+    bool in_space = false;
+    int nskip = 0;
 
     args[0] = trim_leading(cli->cmdbuf);
     ptr = args[0];
@@ -2022,8 +2191,11 @@ execute_cmd(CLI_SESSION *cli)
 
                 for (j = 0; cmds[i].options[j].arg1; j++)
                 {
-                    dcb_printf(dcb, "    %s %s - %s\n", cmds[i].cmd,
-                               cmds[i].options[j].arg1, cmds[i].options[j].help);
+                    dcb_printf(dcb,
+                               "    %s %s - %s\n",
+                               cmds[i].cmd,
+                               cmds[i].options[j].arg1,
+                               cmds[i].options[j].help);
                 }
                 dcb_printf(dcb, "\n");
             }
@@ -2047,9 +2219,12 @@ execute_cmd(CLI_SESSION *cli)
                             dcb_printf(dcb, item_separator);
                         }
 
-                        dcb_printf(dcb, "\n%s %s - %s\n\n%s\n\n", cmds[i].cmd, cmds[i].options[j].arg1,
-                                   cmds[i].options[j].help, cmds[i].options[j].devhelp);
-
+                        dcb_printf(dcb,
+                                   "\n%s %s - %s\n\n%s\n\n",
+                                   cmds[i].cmd,
+                                   cmds[i].options[j].arg1,
+                                   cmds[i].options[j].help,
+                                   cmds[i].options[j].devhelp);
                     }
                 }
             }
@@ -2070,35 +2245,41 @@ execute_cmd(CLI_SESSION *cli)
                 {
                     if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
                     {
-                        found = 1; /**< command and sub-command match */
+                        found = 1;      /**< command and sub-command match */
 
-                        if (command_requires_admin_privileges(cmds[i].cmd) &&
-                            !user_is_authorized(dcb))
+                        if (command_requires_admin_privileges(cmds[i].cmd)
+                            && !user_is_authorized(dcb))
                         {
                             dcb_printf(dcb, "Access denied, administrative privileges required.\n");
                             break;
                         }
 
-                        if (cmds[i].options[j].argc_min == cmds[i].options[j].argc_max &&
-                            argc != cmds[i].options[j].argc_min)
+                        if (cmds[i].options[j].argc_min == cmds[i].options[j].argc_max
+                            && argc != cmds[i].options[j].argc_min)
                         {
                             /** Wrong number of arguments */
-                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects %d arguments\n",
-                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                            dcb_printf(dcb,
+                                       "Incorrect number of arguments: %s %s expects %d arguments\n",
+                                       cmds[i].cmd,
+                                       cmds[i].options[j].arg1,
                                        cmds[i].options[j].argc_min);
                         }
                         else if (argc < cmds[i].options[j].argc_min)
                         {
                             /** Not enough arguments */
-                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at least %d arguments\n",
-                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                            dcb_printf(dcb,
+                                       "Incorrect number of arguments: %s %s expects at least %d arguments\n",
+                                       cmds[i].cmd,
+                                       cmds[i].options[j].arg1,
                                        cmds[i].options[j].argc_min);
                         }
                         else if (argc > cmds[i].options[j].argc_max)
                         {
                             /** Too many arguments */
-                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at most %d arguments\n",
-                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                            dcb_printf(dcb,
+                                       "Incorrect number of arguments: %s %s expects at most %d arguments\n",
+                                       cmds[i].cmd,
+                                       cmds[i].options[j].arg1,
                                        cmds[i].options[j].argc_max);
                         }
                         else
@@ -2123,74 +2304,162 @@ execute_cmd(CLI_SESSION *cli)
                                 case 0:
                                     cmds[i].options[j].fn(dcb);
                                     break;
+
                                 case 1:
                                     ((FN1)cmds[i].options[j].fn)(dcb, arg_list[0]);
                                     break;
+
                                 case 2:
                                     ((FN2)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1]);
                                     break;
+
                                 case 3:
                                     ((FN3)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2]);
                                     break;
+
                                 case 4:
-                                    ((FN4)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                    ((FN4)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
                                                                  arg_list[3]);
                                     break;
+
                                 case 5:
-                                    ((FN5)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                 arg_list[3], arg_list[4]);
-                                     break;
+                                    ((FN5)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
+                                                                 arg_list[3],
+                                                                 arg_list[4]);
+                                    break;
+
                                 case 6:
-                                     ((FN6)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5]);
-                                     break;
+                                    ((FN6)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
+                                                                 arg_list[3],
+                                                                 arg_list[4],
+                                                                 arg_list[5]);
+                                    break;
+
                                 case 7:
-                                     ((FN7)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5],
-                                                                  arg_list[6]);
+                                    ((FN7)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
+                                                                 arg_list[3],
+                                                                 arg_list[4],
+                                                                 arg_list[5],
+                                                                 arg_list[6]);
                                     break;
+
                                 case 8:
-                                     ((FN8)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5],
-                                                                  arg_list[6], arg_list[7]);
+                                    ((FN8)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
+                                                                 arg_list[3],
+                                                                 arg_list[4],
+                                                                 arg_list[5],
+                                                                 arg_list[6],
+                                                                 arg_list[7]);
                                     break;
+
                                 case 9:
-                                     ((FN9)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5],
-                                                                  arg_list[6], arg_list[7], arg_list[8]);
+                                    ((FN9)cmds[i].options[j].fn)(dcb,
+                                                                 arg_list[0],
+                                                                 arg_list[1],
+                                                                 arg_list[2],
+                                                                 arg_list[3],
+                                                                 arg_list[4],
+                                                                 arg_list[5],
+                                                                 arg_list[6],
+                                                                 arg_list[7],
+                                                                 arg_list[8]);
                                     break;
+
                                 case 10:
-                                     ((FN10)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                   arg_list[3], arg_list[4], arg_list[5],
-                                                                   arg_list[6], arg_list[7], arg_list[8],
-                                                                   arg_list[9]);
+                                    ((FN10)cmds[i].options[j].fn)(dcb,
+                                                                  arg_list[0],
+                                                                  arg_list[1],
+                                                                  arg_list[2],
+                                                                  arg_list[3],
+                                                                  arg_list[4],
+                                                                  arg_list[5],
+                                                                  arg_list[6],
+                                                                  arg_list[7],
+                                                                  arg_list[8],
+                                                                  arg_list[9]);
                                     break;
+
                                 case 11:
-                                     ((FN11)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                   arg_list[3], arg_list[4], arg_list[5],
-                                                                   arg_list[6], arg_list[7], arg_list[8],
-                                                                   arg_list[9], arg_list[10]);
+                                    ((FN11)cmds[i].options[j].fn)(dcb,
+                                                                  arg_list[0],
+                                                                  arg_list[1],
+                                                                  arg_list[2],
+                                                                  arg_list[3],
+                                                                  arg_list[4],
+                                                                  arg_list[5],
+                                                                  arg_list[6],
+                                                                  arg_list[7],
+                                                                  arg_list[8],
+                                                                  arg_list[9],
+                                                                  arg_list[10]);
                                     break;
+
                                 case 12:
-                                     ((FN12)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                   arg_list[3], arg_list[4], arg_list[5],
-                                                                   arg_list[6], arg_list[7], arg_list[8],
-                                                                   arg_list[9], arg_list[10], arg_list[11]);
+                                    ((FN12)cmds[i].options[j].fn)(dcb,
+                                                                  arg_list[0],
+                                                                  arg_list[1],
+                                                                  arg_list[2],
+                                                                  arg_list[3],
+                                                                  arg_list[4],
+                                                                  arg_list[5],
+                                                                  arg_list[6],
+                                                                  arg_list[7],
+                                                                  arg_list[8],
+                                                                  arg_list[9],
+                                                                  arg_list[10],
+                                                                  arg_list[11]);
                                     break;
+
                                 case 13:
-                                    ((FN13)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5],
-                                                                  arg_list[6], arg_list[7], arg_list[8],
-                                                                  arg_list[9], arg_list[10], arg_list[11],
+                                    ((FN13)cmds[i].options[j].fn)(dcb,
+                                                                  arg_list[0],
+                                                                  arg_list[1],
+                                                                  arg_list[2],
+                                                                  arg_list[3],
+                                                                  arg_list[4],
+                                                                  arg_list[5],
+                                                                  arg_list[6],
+                                                                  arg_list[7],
+                                                                  arg_list[8],
+                                                                  arg_list[9],
+                                                                  arg_list[10],
+                                                                  arg_list[11],
                                                                   arg_list[12]);
                                     break;
+
                                 case 14:
-                                    ((FN14)cmds[i].options[j].fn)(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                                  arg_list[3], arg_list[4], arg_list[5],
-                                                                  arg_list[6], arg_list[7], arg_list[8],
-                                                                  arg_list[9], arg_list[10], arg_list[11],
-                                                                  arg_list[12], arg_list[13]);
+                                    ((FN14)cmds[i].options[j].fn)(dcb,
+                                                                  arg_list[0],
+                                                                  arg_list[1],
+                                                                  arg_list[2],
+                                                                  arg_list[3],
+                                                                  arg_list[4],
+                                                                  arg_list[5],
+                                                                  arg_list[6],
+                                                                  arg_list[7],
+                                                                  arg_list[8],
+                                                                  arg_list[9],
+                                                                  arg_list[10],
+                                                                  arg_list[11],
+                                                                  arg_list[12],
+                                                                  arg_list[13]);
                                     break;
+
                                 default:
                                     dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
                                     mxb_assert_message(!true, "Command has too many arguments");
@@ -2212,7 +2481,9 @@ execute_cmd(CLI_SESSION *cli)
                                cmds[i].cmd);
                     for (j = 0; cmds[i].options[j].arg1; j++)
                     {
-                        dcb_printf(dcb, "    %-10s %s\n", cmds[i].options[j].arg1,
+                        dcb_printf(dcb,
+                                   "    %-10s %s\n",
+                                   cmds[i].options[j].arg1,
                                    cmds[i].options[j].help);
                     }
                     found = 1;
@@ -2229,7 +2500,8 @@ execute_cmd(CLI_SESSION *cli)
     if (!found)
     {
         dcb_printf(dcb,
-                   "Command '%s' not known, type help for a list of available commands\n", args[0]);
+                   "Command '%s' not known, type help for a list of available commands\n",
+                   args[0]);
     }
 
     spinlock_release(&debugcmd_lock);
@@ -2245,8 +2517,7 @@ execute_cmd(CLI_SESSION *cli)
  * @param dcb           The DCB to print any output to
  * @param service       The service to shutdown
  */
-static void
-shutdown_service(DCB *dcb, SERVICE *service)
+static void shutdown_service(DCB* dcb, SERVICE* service)
 {
     serviceStop(service);
 }
@@ -2257,8 +2528,7 @@ shutdown_service(DCB *dcb, SERVICE *service)
  * @param dcb           The DCB to print any output to
  * @param service       The service to restart
  */
-static void
-restart_service(DCB *dcb, SERVICE *service)
+static void restart_service(DCB* dcb, SERVICE* service)
 {
     serviceStart(service);
 }
@@ -2270,8 +2540,7 @@ restart_service(DCB *dcb, SERVICE *service)
  * @param server        The server to set the status of
  * @param bit           String representation of the status bit
  */
-static void
-set_server(DCB *dcb, SERVER *server, char *bit)
+static void set_server(DCB* dcb, SERVER* server, char* bit)
 {
     unsigned int bitvalue;
 
@@ -2297,8 +2566,7 @@ set_server(DCB *dcb, SERVER *server, char *bit)
  * @param server        The server to set the status of
  * @param bit           String representation of the status bit
  */
-static void
-clear_server(DCB *dcb, SERVER *server, char *bit)
+static void clear_server(DCB* dcb, SERVER* server, char* bit)
 {
     unsigned int bitvalue;
 
@@ -2322,8 +2590,7 @@ clear_server(DCB *dcb, SERVER *server, char *bit)
  * @param dcb           DCB to send output
  * @param service       The service to update
  */
-static void
-reload_dbusers(DCB *dcb, SERVICE *service)
+static void reload_dbusers(DCB* dcb, SERVICE* service)
 {
     if (service_refresh_users(service) == 0)
     {
@@ -2342,9 +2609,9 @@ reload_dbusers(DCB *dcb, SERVICE *service)
  * @param user The user name
  * @param user The user password
  */
-static void do_inet_add_user(DCB *dcb, char *user, char *password, enum user_account_type type)
+static void do_inet_add_user(DCB* dcb, char* user, char* password, enum user_account_type type)
 {
-    const char *err;
+    const char* err;
 
     if (admin_inet_user_exists(user))
     {
@@ -2362,7 +2629,7 @@ static void do_inet_add_user(DCB *dcb, char *user, char *password, enum user_acc
     }
 }
 
-static void inet_add_user(DCB *dcb, char *user, char *password)
+static void inet_add_user(DCB* dcb, char* user, char* password)
 {
     if (admin_have_admin())
     {
@@ -2370,12 +2637,13 @@ static void inet_add_user(DCB *dcb, char *user, char *password)
     }
     else
     {
-        dcb_printf(dcb, "No admin user created, create an admin account first\n"
+        dcb_printf(dcb,
+                   "No admin user created, create an admin account first\n"
                    "by executing `add admin USER PASSWORD`\n");
     }
 }
 
-static void inet_add_admin_user(DCB *dcb, char *user, char *password)
+static void inet_add_admin_user(DCB* dcb, char* user, char* password)
 {
     do_inet_add_user(dcb, user, password, USER_ACCOUNT_ADMIN);
 }
@@ -2387,7 +2655,7 @@ static void inet_add_admin_user(DCB *dcb, char *user, char *password)
  * @param user The user name
  * @param user The user password
  */
-static void telnetdRemoveUser(DCB *dcb, char *user)
+static void telnetdRemoveUser(DCB* dcb, char* user)
 {
     const char* err;
 
@@ -2415,8 +2683,7 @@ static void telnetdRemoveUser(DCB *dcb, char *user)
  *
  * @param dcb   The DCB to print the user data to
  */
-static void
-telnetdShowUsers(DCB *dcb)
+static void telnetdShowUsers(DCB* dcb)
 {
     dcb_PrintAdminUsers(dcb);
 }
@@ -2426,8 +2693,7 @@ telnetdShowUsers(DCB *dcb)
  *
  * @param dcb The DCB to print the state to.
  */
-static void
-show_log_throttling(DCB *dcb)
+static void show_log_throttling(DCB* dcb)
 {
     MXS_LOG_THROTTLING t;
     mxs_log_get_throttling(&t);
@@ -2435,8 +2701,7 @@ show_log_throttling(DCB *dcb)
     dcb_printf(dcb, "%lu %lu %lu\n", t.count, t.window_ms, t.suppress_ms);
 }
 
-static void
-show_qc_all(DCB* dcb)
+static void show_qc_all(DCB* dcb)
 {
     std::vector<QC_CACHE_STATS> all_stats;
 
@@ -2451,11 +2716,16 @@ show_qc_all(DCB* dcb)
         dcb_printf(dcb,
                    "%3d |"
                    " %10" PRIi64 " |"
-                   " %10" PRIi64 " |"
-                   " %10" PRIi64 " |"
-                   " %10" PRIi64 " |"
-                   " %10" PRIi64 " |\n",
-                   id, stats.size, stats.inserts, stats.hits, stats.misses, stats.evictions);
+                                 " %10" PRIi64 " |"
+                                               " %10" PRIi64 " |"
+                                                             " %10" PRIi64 " |"
+                                                                           " %10" PRIi64 " |\n",
+                   id,
+                   stats.size,
+                   stats.inserts,
+                   stats.hits,
+                   stats.misses,
+                   stats.evictions);
     }
 
     dcb_printf(dcb, "\n");
@@ -2467,8 +2737,7 @@ show_qc_all(DCB* dcb)
  * @param dcb   The DCB to use to print messages
  * @param monitor       The monitor to shutdown
  */
-static void
-shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor)
+static void shutdown_monitor(DCB* dcb, MXS_MONITOR* monitor)
 {
     monitor_stop(monitor);
 }
@@ -2479,8 +2748,7 @@ shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor)
  * @param dcb   The DCB to use to print messages
  * @param monitor       The monitor to restart
  */
-static void
-restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
+static void restart_monitor(DCB* dcb, MXS_MONITOR* monitor)
 {
     monitor_start(monitor, monitor->parameters);
 }
@@ -2491,8 +2759,7 @@ restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
  * @param dcb           Connection to user interface
  * @param service       The service
  */
-static void
-enable_service_root(DCB *dcb, SERVICE *service)
+static void enable_service_root(DCB* dcb, SERVICE* service)
 {
     service_enable_root((Service*)service, 1);
 }
@@ -2503,8 +2770,7 @@ enable_service_root(DCB *dcb, SERVICE *service)
  * @param dcb           Connection to user interface
  * @param service       The service
  */
-static void
-disable_service_root(DCB *dcb, SERVICE *service)
+static void disable_service_root(DCB* dcb, SERVICE* service)
 {
     service_enable_root((Service*)service, 0);
 }
@@ -2512,14 +2778,14 @@ disable_service_root(DCB *dcb, SERVICE *service)
 struct log_action_entry
 {
     const char* name;
-    int priority;
+    int         priority;
     const char* replacement;
 };
 
 struct log_priority_entry
 {
     const char* name;
-    int priority;
+    int         priority;
 };
 
 static int compare_log_priority_entries(const void* l, const void* r)
@@ -2535,20 +2801,20 @@ static int string_to_priority(const char* name)
     static const struct log_priority_entry LOG_PRIORITY_ENTRIES[] =
     {
         // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
-        { "debug",   LOG_DEBUG },
-        { "info",    LOG_INFO },
-        { "notice",  LOG_NOTICE },
-        { "warning", LOG_WARNING },
+        {"debug",   LOG_DEBUG     },
+        {"info",    LOG_INFO      },
+        {"notice",  LOG_NOTICE    },
+        {"warning", LOG_WARNING   },
     };
 
     const size_t N_LOG_PRIORITY_ENTRIES = sizeof(LOG_PRIORITY_ENTRIES) / sizeof(LOG_PRIORITY_ENTRIES[0]);
 
     struct log_priority_entry key = { name, -1 };
     void* value = bsearch(&key,
-                                 LOG_PRIORITY_ENTRIES,
-                                 N_LOG_PRIORITY_ENTRIES,
-                                 sizeof(struct log_priority_entry),
-                                 compare_log_priority_entries);
+                          LOG_PRIORITY_ENTRIES,
+                          N_LOG_PRIORITY_ENTRIES,
+                          sizeof(struct log_priority_entry),
+                          compare_log_priority_entries);
 
     struct log_priority_entry* result = static_cast<struct log_priority_entry*>(value);
 
@@ -2561,7 +2827,7 @@ static int string_to_priority(const char* name)
  * @param dcb Client DCB
  * @param type Which log to enable
  */
-static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
+static void enable_sess_log_priority(DCB* dcb, char* arg1, char* arg2)
 {
     MXS_WARNING("'enable sessionlog-priority' is deprecated.");
 }
@@ -2572,7 +2838,7 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
  * @param dcb Client DCB
  * @param type Which log to enable
  */
-static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
+static void disable_sess_log_priority(DCB* dcb, char* arg1, char* arg2)
 {
     MXS_WARNING("'disable sessionlog-priority' is deprecated.");
 }
@@ -2581,7 +2847,7 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
  * The log-priority enable action
  */
 
-static void enable_log_priority(DCB *dcb, char *arg1)
+static void enable_log_priority(DCB* dcb, char* arg1)
 {
     int priority = string_to_priority(arg1);
 
@@ -2589,11 +2855,12 @@ static void enable_log_priority(DCB *dcb, char *arg1)
     {
         mxs_log_set_priority_enabled(priority, true);
 
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
         if (priority == LOG_DEBUG)
         {
             dcb_printf(dcb,
-                       "Enabling '%s' has no effect, as MaxScale has been built in release mode.\n", arg1);
+                       "Enabling '%s' has no effect, as MaxScale has been built in release mode.\n",
+                       arg1);
         }
 #endif
     }
@@ -2607,7 +2874,7 @@ static void enable_log_priority(DCB *dcb, char *arg1)
  * The log-priority disable action
  */
 
-static void disable_log_priority(DCB *dcb, char *arg1)
+static void disable_log_priority(DCB* dcb, char* arg1)
 {
     int priority = string_to_priority(arg1);
 
@@ -2627,8 +2894,7 @@ static void disable_log_priority(DCB *dcb, char *arg1)
  * @param       dcb             DCB for output
  * @param       sleeptime       Sleep time in milliseconds
  */
-static void
-set_pollsleep(DCB *dcb, int sleeptime)
+static void set_pollsleep(DCB* dcb, int sleeptime)
 {
     // DEPRECATED in 2.3, remove in 2.4.
     dcb_printf(dcb, "The configuration parameter 'pollsleep' has been deprecated in 2.3.");
@@ -2641,22 +2907,20 @@ set_pollsleep(DCB *dcb, int sleeptime)
  * @param       dcb             DCB for output
  * @param       nb              Number of spins
  */
-static void
-set_nbpoll(DCB *dcb, int nb)
+static void set_nbpoll(DCB* dcb, int nb)
 {
     // DEPRECATED in 2.3, remove in 2.4.
     dcb_printf(dcb, "The configuration parameter 'nbpoll' has been deprecated in 2.3.");
     poll_set_nonblocking_polls(nb);
 }
 
-static void
-set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms)
+static void set_log_throttling(DCB* dcb, int count, int window_ms, int suppress_ms)
 {
     if ((count >= 0) || (window_ms >= 0) || (suppress_ms >= 0))
     {
-        MXS_LOG_THROTTLING t = { static_cast<size_t>(count),
-                                 static_cast<size_t>(window_ms),
-                                 static_cast<size_t>(suppress_ms) };
+        MXS_LOG_THROTTLING t = {static_cast<size_t>(count),
+                                static_cast<size_t>(window_ms),
+                                static_cast<size_t>(suppress_ms)};
 
         mxs_log_set_throttling(&t);
     }
@@ -2672,8 +2936,7 @@ set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms)
 /**
  * Enable syslog logging.
  */
-static void
-enable_syslog()
+static void enable_syslog()
 {
     mxs_log_set_syslog_enabled(true);
 }
@@ -2681,8 +2944,7 @@ enable_syslog()
 /**
  * Disable syslog logging.
  */
-static void
-disable_syslog()
+static void disable_syslog()
 {
     mxs_log_set_syslog_enabled(false);
 }
@@ -2690,8 +2952,7 @@ disable_syslog()
 /**
  * Enable maxlog logging.
  */
-static void
-enable_maxlog()
+static void enable_maxlog()
 {
     mxs_log_set_maxlog_enabled(true);
 }
@@ -2699,8 +2960,7 @@ enable_maxlog()
 /**
  * Disable maxlog logging.
  */
-static void
-disable_maxlog()
+static void disable_maxlog()
 {
     mxs_log_set_maxlog_enabled(false);
 }
@@ -2711,9 +2971,9 @@ disable_maxlog()
  * @param dcb  The DCB for messages
  * @param user The Linux user name
  */
-static void do_enable_account(DCB *dcb, char *user, enum user_account_type type)
+static void do_enable_account(DCB* dcb, char* user, enum user_account_type type)
 {
-    const char *err;
+    const char* err;
 
     if (admin_linux_account_enabled(user))
     {
@@ -2731,7 +2991,7 @@ static void do_enable_account(DCB *dcb, char *user, enum user_account_type type)
     }
 }
 
-static void enable_account(DCB *dcb, char *user)
+static void enable_account(DCB* dcb, char* user)
 {
     if (admin_have_admin())
     {
@@ -2739,7 +2999,8 @@ static void enable_account(DCB *dcb, char *user)
     }
     else
     {
-        dcb_printf(dcb, "No admin user created, create an admin account first\n"
+        dcb_printf(dcb,
+                   "No admin user created, create an admin account first\n"
                    "by executing `enable admin-account USER PASSWORD`\n");
     }
 }
@@ -2750,7 +3011,7 @@ static void enable_account(DCB *dcb, char *user)
  * @param dcb  The DCB for messages
  * @param user The Linux user name
  */
-static void enable_admin_account(DCB *dcb, char *user)
+static void enable_admin_account(DCB* dcb, char* user)
 {
     do_enable_account(dcb, user, USER_ACCOUNT_ADMIN);
 }
@@ -2761,8 +3022,7 @@ static void enable_admin_account(DCB *dcb, char *user)
  * @param dcb   The DCB for messages
  * @param user  The Linux user name
  */
-static void
-disable_account(DCB *dcb, char *user)
+static void disable_account(DCB* dcb, char* user)
 {
     const char* err;
 

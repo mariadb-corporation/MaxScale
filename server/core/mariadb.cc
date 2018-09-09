@@ -19,12 +19,12 @@ namespace
 
 using namespace maxscale;
 
-typedef void (*Callback)(void*       pCollection,
-                         const char* zDisk,
-                         const char* zPath,
-                         int64_t     total,
-                         int64_t     used,
-                         int64_t     available);
+typedef void (* Callback)(void* pCollection,
+                          const char* zDisk,
+                          const char* zPath,
+                          int64_t total,
+                          int64_t used,
+                          int64_t available);
 
 int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
 {
@@ -65,12 +65,12 @@ int get_info(MYSQL* pMysql, Callback pCallback, void* pCollection)
 
 template<class Collection>
 inline int get_info(MYSQL* pMysql,
-                    void (*pCallback)(Collection* pCollection,
-                                      const char* zDisk,
-                                      const char* zPath,
-                                      int64_t     total,
-                                      int64_t     used,
-                                      int64_t     available),
+                    void (* pCallback)(Collection* pCollection,
+                                       const char* zDisk,
+                                       const char* zPath,
+                                       int64_t total,
+                                       int64_t used,
+                                       int64_t available),
                     Collection* pCollection)
 {
     pCollection->clear();
@@ -81,9 +81,9 @@ inline int get_info(MYSQL* pMysql,
 void add_info_by_path(std::map<std::string, disk::SizesAndName>* pSizes,
                       const char* zDisk,
                       const char* zPath,
-                      int64_t     total,
-                      int64_t     used,
-                      int64_t     available)
+                      int64_t total,
+                      int64_t used,
+                      int64_t available)
 {
     pSizes->insert(std::make_pair(zPath, disk::SizesAndName(total, used, available, zDisk)));
 }
@@ -91,9 +91,9 @@ void add_info_by_path(std::map<std::string, disk::SizesAndName>* pSizes,
 void add_info_by_disk(std::map<std::string, disk::SizesAndPaths>* pSizes,
                       const char* zDisk,
                       const char* zPath,
-                      int64_t     total,
-                      int64_t     used,
-                      int64_t     available)
+                      int64_t total,
+                      int64_t used,
+                      int64_t available)
 {
     auto i = pSizes->find(zDisk);
 
@@ -114,7 +114,6 @@ void add_info_by_disk(std::map<std::string, disk::SizesAndPaths>* pSizes,
         pSizes->insert(std::make_pair(zDisk, item));
     }
 }
-
 }
 
 
@@ -133,7 +132,5 @@ int get_info_by_disk(MYSQL* pMysql, std::map<std::string, disk::SizesAndPaths>* 
 {
     return get_info(pMysql, add_info_by_disk, pInfo);
 }
-
 }
-
 }

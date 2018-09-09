@@ -1,5 +1,6 @@
 /**
- * @file mxs812_2.cpp - Execute binary protocol prepared statements while master is blocked, checks "Current no. of conns" after the test
+ * @file mxs812_2.cpp - Execute binary protocol prepared statements while master is blocked, checks "Current
+ *no. of conns" after the test
  * - start threads which prepares and executes simple statement in the loop
  * - every 5 seconds block and after another 5 seconds unblock Master
  * - checks "Current no. of conns" after the test, expect 0
@@ -7,10 +8,10 @@
 
 #include "testconnections.h"
 
-int test_ps(TestConnections* Test, MYSQL * conn)
+int test_ps(TestConnections* Test, MYSQL* conn)
 {
     const char select_stmt[] = "SELECT ?, ?, ?, ?";
-    MYSQL_STMT *stmt = mysql_stmt_init(conn);
+    MYSQL_STMT* stmt = mysql_stmt_init(conn);
 
     mysql_stmt_prepare(stmt, select_stmt, sizeof(select_stmt) - 1);
 
@@ -39,13 +40,13 @@ int test_ps(TestConnections* Test, MYSQL * conn)
 
 static bool running = true;
 
-void* test_thr(void *data)
+void* test_thr(void* data)
 {
-    TestConnections *Test = (TestConnections*)data;
+    TestConnections* Test = (TestConnections*)data;
 
     while (running)
     {
-        MYSQL *mysql = Test->maxscales->open_rwsplit_connection(0);
+        MYSQL* mysql = Test->maxscales->open_rwsplit_connection(0);
 
         for (int i = 0; i < 3; i++)
         {
@@ -60,9 +61,9 @@ void* test_thr(void *data)
 
 #define THREADS 5
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     pthread_t thr[THREADS];
     int iter = 5;
 

@@ -18,18 +18,18 @@
 #include <stdbool.h>
 #include <errno.h>
 
-const char *testfile = "test.db";
-const char *testschema = "";
+const char* testfile = "test.db";
+const char* testschema = "";
 
 void write_file()
 {
-    FILE *file = fopen(testfile, "wb");
+    FILE* file = fopen(testfile, "wb");
     fclose(file);
 }
 
 int main(int argc, char** argv)
 {
-    MAXAVRO_FILE *file = maxavro_file_open(testfile);
+    MAXAVRO_FILE* file = maxavro_file_open(testfile);
 
     if (!file)
     {

@@ -2,23 +2,23 @@
  * @file sharding.cpp - Schema router test and regression test for MXS-78, MXS-79
  *
  * @verbatim
-[MySQL Monitor]
-type=monitor
-module=mysqlmon
-servers= server1, server2,server3  ,server4
-user=skysql
-passwd= skysql
-
-[Sharding router]
-type=service
-router=schemarouter
-servers=server1,     server2,              server3,server4
-user=skysql
-passwd=skysql
-auth_all_servers=1
-filters=QLA
-
- @endverbatim
+ *  [MySQL Monitor]
+ *  type=monitor
+ *  module=mysqlmon
+ *  servers= server1, server2,server3  ,server4
+ *  user=skysql
+ *  passwd= skysql
+ *
+ *  [Sharding router]
+ *  type=service
+ *  router=schemarouter
+ *  servers=server1,     server2,              server3,server4
+ *  user=skysql
+ *  passwd=skysql
+ *  auth_all_servers=1
+ *  filters=QLA
+ *
+ *  @endverbatim
  * - stop all slaves in Master/Slave setup
  * - restrt Maxscale
  * - using direct connection to backend nodes
@@ -36,10 +36,10 @@ filters=QLA
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
     int i, j;
     char str[256];
@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes("STOP SLAVE");
     Test->repl->connect();
 
-    for (i = 0; i < Test->repl->N; i++)   //nodes
+    for (i = 0; i < Test->repl->N; i++)     // nodes
     {
-        for (j = 0; j < Test->repl->N; j++)   //users
+        for (j = 0; j < Test->repl->N; j++)     // users
         {
             Test->set_timeout(30);
             execute_query(Test->repl->nodes[i], "DROP USER 'user%d'@'%%';", j);
@@ -65,30 +65,37 @@ int main(int argc, char *argv[])
     }
     Test->stop_timeout();
 
-    for (i = 0; i < Test->repl->N; i++)   //nodes
+    for (i = 0; i < Test->repl->N; i++)     // nodes
     {
         Test->set_timeout(30);
         Test->tprintf("Node %d\t", i);
         Test->tprintf("Creating shard_db\t");
         execute_query(Test->repl->nodes[i], "CREATE DATABASE shard_db");
         Test->add_result(execute_query(Test->repl->nodes[i],
-                                       "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'", i), "Query should succeed.");
+                                       "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'",
+                                       i),
+                         "Query should succeed.");
     }
 
     Test->repl->close_connections();
     Test->stop_timeout();
     sleep(10);
 
-    MYSQL *conn;
+    MYSQL* conn;
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(30);
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "shard_db", user_str, pass_str,
+        conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+                            Test->maxscales->IP[0],
+                            (char*) "shard_db",
+                            user_str,
+                            pass_str,
                             Test->ssl);
-        Test->add_result(execute_query(conn, "CREATE TABLE table%d (x1 int, fl int);", i), "Query should succeed.");
+        Test->add_result(execute_query(conn, "CREATE TABLE table%d (x1 int, fl int);", i),
+                         "Query should succeed.");
     }
 
     for (i = 0; i < Test->repl->N; i++)
@@ -97,7 +104,11 @@ int main(int argc, char *argv[])
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0],  (char *) "shard_db", user_str, pass_str,
+        conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+                            Test->maxscales->IP[0],
+                            (char*) "shard_db",
+                            user_str,
+                            pass_str,
                             Test->ssl);
 
         sprintf(str, "SHOW TABLES;");
@@ -116,19 +127,25 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "USE shard_db%d", i), "Query should succeed.");
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "USE shard_db%d", i),
+                         "Query should succeed.");
     }
 
     mysql_close(Test->maxscales->conn_rwsplit[0]);
 
     Test->tprintf("Trying to connect with empty database name\n");
-    conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "", user_str, pass_str, Test->ssl);
+    conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+                        Test->maxscales->IP[0],
+                        (char*) "",
+                        user_str,
+                        pass_str,
+                        Test->ssl);
     mysql_close(conn);
 
     Test->stop_timeout();
-    Test->check_log_err(0, (char *) "Length (0) is 0", false);
-    Test->check_log_err(0, (char *) "Unable to parse query", false);
-    Test->check_log_err(0, (char *) "query string allocation failed", false);
+    Test->check_log_err(0, (char*) "Length (0) is 0", false);
+    Test->check_log_err(0, (char*) "Unable to parse query", false);
+    Test->check_log_err(0, (char*) "query string allocation failed", false);
 
     Test->repl->connect();
     /** Cleanup */

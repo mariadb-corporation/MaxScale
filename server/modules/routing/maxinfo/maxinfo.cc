@@ -58,31 +58,31 @@
 #include "../../../core/internal/session.hh"
 #include "../../../core/internal/poll.hh"
 
-extern char *create_hex_sha1_sha1_passwd(char *passwd);
+extern char* create_hex_sha1_sha1_passwd(char* passwd);
 
-static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
-static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
-static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
-static int maxinfo_send_ok(DCB *dcb);
+static int maxinfo_statistics(INFO_INSTANCE*, INFO_SESSION*, GWBUF*);
+static int maxinfo_ping(INFO_INSTANCE*, INFO_SESSION*, GWBUF*);
+static int maxinfo_execute_query(INFO_INSTANCE*, INFO_SESSION*, char*);
+static int maxinfo_send_ok(DCB* dcb);
 
 /* The router entry points */
-static  MXS_ROUTER *createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params);
-static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static  json_t* diagnostics_json(const MXS_ROUTER *instance);
-static  uint64_t getCapabilities(MXS_ROUTER* instance);
-static  void handleError(MXS_ROUTER     *instance,
-                         MXS_ROUTER_SESSION  *router_session,
-                         GWBUF          *errbuf,
-                         DCB            *backend_dcb,
-                         mxs_error_action_t action,
-                         bool           *succp);
+static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static void                freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+static int                 execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+static void                diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t*             diagnostics_json(const MXS_ROUTER* instance);
+static uint64_t            getCapabilities(MXS_ROUTER* instance);
+static void                handleError(MXS_ROUTER* instance,
+                                       MXS_ROUTER_SESSION* router_session,
+                                       GWBUF* errbuf,
+                                       DCB*   backend_dcb,
+                                       mxs_error_action_t action,
+                                       bool* succp);
 
-static SPINLOCK     instlock;
-static INFO_INSTANCE    *instances;
+static SPINLOCK instlock;
+static INFO_INSTANCE* instances;
 
 /**
  * The module entry point routine. It is this routine that
@@ -122,10 +122,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         RCAP_TYPE_NO_AUTH,
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -143,9 +143,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params)
+static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    INFO_INSTANCE *inst;
+    INFO_INSTANCE* inst;
     int i;
 
     if ((inst = static_cast<INFO_INSTANCE*>(MXS_MALLOC(sizeof(INFO_INSTANCE)))) == NULL)
@@ -167,7 +167,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
     instances = inst;
     spinlock_release(&instlock);
 
-    return (MXS_ROUTER *)inst;
+    return (MXS_ROUTER*)inst;
 }
 
 /**
@@ -177,13 +177,12 @@ static MXS_ROUTER* createInstance(SERVICE *service, MXS_CONFIG_PARAMETER* params
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION *
-newSession(MXS_ROUTER *instance, MXS_SESSION *session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    INFO_INSTANCE *inst = (INFO_INSTANCE *)instance;
-    INFO_SESSION *client;
+    INFO_INSTANCE* inst = (INFO_INSTANCE*)instance;
+    INFO_SESSION* client;
 
-    if ((client = (INFO_SESSION *)MXS_MALLOC(sizeof(INFO_SESSION))) == NULL)
+    if ((client = (INFO_SESSION*)MXS_MALLOC(sizeof(INFO_SESSION))) == NULL)
     {
         return NULL;
     }
@@ -208,11 +207,10 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param instance      The router instance data
  * @param router_session    The session being closed
  */
-static  void
-closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    INFO_INSTANCE *inst = (INFO_INSTANCE *)instance;
-    INFO_SESSION *session = (INFO_SESSION *)router_session;
+    INFO_INSTANCE* inst = (INFO_INSTANCE*)instance;
+    INFO_SESSION* session = (INFO_SESSION*)router_session;
 
 
     spinlock_acquire(&inst->lock);
@@ -222,7 +220,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
     }
     else
     {
-        INFO_SESSION *ptr = inst->sessions;
+        INFO_SESSION* ptr = inst->sessions;
         while (ptr && ptr->next != session)
         {
             ptr = ptr->next;
@@ -265,17 +263,17 @@ static void freeSession(MXS_ROUTER* router_instance,
  * @param succp           Result of action: true iff router can continue
  *
  */
-static void handleError(MXS_ROUTER         *instance,
-                        MXS_ROUTER_SESSION *router_session,
-                        GWBUF              *errbuf,
-                        DCB                *backend_dcb,
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errbuf,
+                        DCB*   backend_dcb,
                         mxs_error_action_t action,
-                        bool               *succp)
+                        bool* succp)
 
 {
     mxb_assert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    DCB *client_dcb;
-    MXS_SESSION *session = backend_dcb->session;
+    DCB* client_dcb;
+    MXS_SESSION* session = backend_dcb->session;
 
     client_dcb = session->client_dcb;
 
@@ -298,14 +296,13 @@ static void handleError(MXS_ROUTER         *instance,
  * @param queue          The queue of data buffers to route
  * @return The number of bytes sent
  */
-static int
-execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
+static int execute(MXS_ROUTER* rinstance, MXS_ROUTER_SESSION* router_session, GWBUF* queue)
 {
-    INFO_INSTANCE *instance = (INFO_INSTANCE *)rinstance;
-    INFO_SESSION *session = (INFO_SESSION *)router_session;
-    uint8_t *data;
+    INFO_INSTANCE* instance = (INFO_INSTANCE*)rinstance;
+    INFO_SESSION* session = (INFO_SESSION*)router_session;
+    uint8_t* data;
     int length, len, residual;
-    char *sql;
+    char* sql;
 
     if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
     {
@@ -318,7 +315,7 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
         session->queue = NULL;
         queue = gwbuf_make_contiguous(queue);
     }
-    data = (uint8_t *)GWBUF_DATA(queue);
+    data = (uint8_t*)GWBUF_DATA(queue);
     length = data[0] + (data[1] << 8) + (data[2] << 16);
     if (length + 4 > static_cast<int>(GWBUF_LENGTH(queue)))
     {
@@ -342,11 +339,14 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
         case MXS_COM_PING:
             rc = maxinfo_send_ok(session->dcb);
             break;
+
         case MXS_COM_STATISTICS:
             rc = maxinfo_statistics(instance, session, queue);
             break;
+
         case MXS_COM_QUIT:
             break;
+
         default:
             MXS_ERROR("Unexpected MySQL command 0x%x",
                       MYSQL_COMMAND(queue));
@@ -364,10 +364,9 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static  void
-diagnostics(MXS_ROUTER *instance, DCB *dcb)
+static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
 {
-    return; /* Nothing to do currently */
+    return;     /* Nothing to do currently */
 }
 
 /**
@@ -376,8 +375,7 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static  json_t*
-diagnostics_json(const MXS_ROUTER *instance)
+static json_t* diagnostics_json(const MXS_ROUTER* instance)
 {
     return NULL;
 }
@@ -387,8 +385,7 @@ diagnostics_json(const MXS_ROUTER *instance)
  *
  * Not used for the maxinfo router
  */
-static uint64_t
-getCapabilities(MXS_ROUTER* instance)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_NONE;
 }
@@ -405,15 +402,15 @@ getCapabilities(MXS_ROUTER* instance)
  *
  * @return non-zero on sucessful send
  */
-static int
-maxinfo_statistics(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
+static int maxinfo_statistics(INFO_INSTANCE* router, INFO_SESSION* session, GWBUF* queue)
 {
     char result[1000];
-    uint8_t *ptr;
-    GWBUF *ret;
+    uint8_t* ptr;
+    GWBUF* ret;
     int len;
 
-    snprintf(result, 1000,
+    snprintf(result,
+             1000,
              "Uptime: %u  Threads: %u  Sessions: %u ",
              maxscale_uptime(),
              config_threadcount(),
@@ -440,11 +437,10 @@ maxinfo_statistics(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
  * @param session   The connection that requested the ping
  * @param queue     The ping request
  */
-static int
-maxinfo_ping(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
+static int maxinfo_ping(INFO_INSTANCE* router, INFO_SESSION* session, GWBUF* queue)
 {
-    uint8_t *ptr;
-    GWBUF *ret;
+    uint8_t* ptr;
+    GWBUF* ret;
     int len;
 
     if ((ret = gwbuf_alloc(5)) == NULL)
@@ -466,8 +462,7 @@ maxinfo_ping(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
  *
  * @param dcb   The DCB of the client
  */
-static void
-respond_vercom(DCB *dcb)
+static void respond_vercom(DCB* dcb)
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"@@version_comment"});
     set->add_row({MAXSCALE_VERSION});
@@ -479,8 +474,7 @@ respond_vercom(DCB *dcb)
  *
  * @param dcb   The DCB of the client
  */
-static void
-respond_starttime(DCB *dcb)
+static void respond_starttime(DCB* dcb)
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"starttime"});
     set->add_row({std::to_string(maxscale_started())});
@@ -493,22 +487,21 @@ respond_starttime(DCB *dcb)
  * @param dcb   The DCB to send the OK packet to
  * @return result of a write call, non-zero if write was successful
  */
-static int
-maxinfo_send_ok(DCB *dcb)
+static int maxinfo_send_ok(DCB* dcb)
 {
-    GWBUF *buf;
-    uint8_t *ptr;
+    GWBUF* buf;
+    uint8_t* ptr;
 
     if ((buf = gwbuf_alloc(11)) == NULL)
     {
         return 0;
     }
     ptr = GWBUF_DATA(buf);
-    *ptr++ = 7; // Payload length
+    *ptr++ = 7;     // Payload length
     *ptr++ = 0;
     *ptr++ = 0;
-    *ptr++ = 1; // Seqno
-    *ptr++ = 0; // ok
+    *ptr++ = 1;     // Seqno
+    *ptr++ = 0;     // ok
     *ptr++ = 0;
     *ptr++ = 0;
     *ptr++ = 2;
@@ -525,14 +518,14 @@ maxinfo_send_ok(DCB *dcb)
  * @param session   The session pointer
  * @param sql       The SQL to execute
  */
-static int
-maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
+static int maxinfo_execute_query(INFO_INSTANCE* instance, INFO_SESSION* session, char* sql)
 {
-    MAXINFO_TREE    *tree;
+    MAXINFO_TREE* tree;
     PARSE_ERROR err;
 
     MXS_INFO("SQL statement: '%s' for 0x%p.",
-             sql, session->dcb);
+             sql,
+             session->dcb);
     if (strcmp(sql, "select @@version_comment limit 1") == 0)
     {
         respond_vercom(session->dcb);
@@ -542,7 +535,8 @@ maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
      *  select unix_timestamp... as starttime
      * just return the starttime of MaxScale
      */
-    if (strncasecmp(sql, "select UNIX_TIMESTAMP",
+    if (strncasecmp(sql,
+                    "select UNIX_TIMESTAMP",
                     strlen("select UNIX_TIMESTAMP")) == 0
         && (strstr(sql, "as starttime") != NULL || strstr(sql, "AS starttime") != NULL))
     {

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #define MXS_MODULE_NAME "dbfwfilter"
 #include <maxscale/ccdefs.hh>
@@ -100,7 +100,7 @@ static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
 
     default:
         return FW_OP_UNDEFINED;
-    };
+    }
 }
 
 /**
@@ -116,12 +116,12 @@ enum fw_actions
 /**
  * Logging options for matched queries
  */
-#define FW_LOG_NONE         0x00
-#define FW_LOG_MATCH        0x01
-#define FW_LOG_NO_MATCH     0x02
+#define FW_LOG_NONE     0x00
+#define FW_LOG_MATCH    0x01
+#define FW_LOG_NO_MATCH 0x02
 
 /** Maximum length of the match/nomatch messages */
-#define FW_MAX_SQL_LEN      400
+#define FW_MAX_SQL_LEN 400
 
 /**
  * A structure defining a range of time
@@ -138,18 +138,18 @@ typedef struct timerange_t
  */
 struct QuerySpeed
 {
-    QuerySpeed():
-        first_query(0),
-        triggered(0),
-        count(0),
-        active(false)
+    QuerySpeed()
+        : first_query(0)
+        , triggered(0)
+        , count(0)
+        , active(false)
     {
     }
 
-    time_t               first_query; /*< Time when the first query occurred */
-    time_t               triggered; /*< Time when the limit was exceeded */
-    int                  count; /*< Number of queries done */
-    bool                 active; /*< If the rule has been triggered */
+    time_t first_query; /*< Time when the first query occurred */
+    time_t triggered;   /*< Time when the limit was exceeded */
+    int    count;       /*< Number of queries done */
+    bool   active;      /*< If the rule has been triggered */
 };
 
 class Dbfw;
@@ -159,7 +159,7 @@ typedef std::shared_ptr<User> SUser;
 /**
  * The session structure for Firewall filter.
  */
-class DbfwSession: public mxs::FilterSession
+class DbfwSession : public mxs::FilterSession
 {
     DbfwSession(const DbfwSession&);
     DbfwSession& operator=(const DbfwSession&);
@@ -168,29 +168,29 @@ public:
     DbfwSession(Dbfw* instance, MXS_SESSION* session);
     ~DbfwSession();
 
-    void set_error(const char* error);
+    void        set_error(const char* error);
     std::string get_error() const;
-    void clear_error();
-    int send_error();
+    void        clear_error();
+    int         send_error();
 
     std::string user() const;
     std::string remote() const;
 
-    int routeQuery(GWBUF* query);
-    QuerySpeed* query_speed(); // TODO: Remove this, it exposes internals to a Rule
-    fw_actions get_action() const;
+    int         routeQuery(GWBUF* query);
+    QuerySpeed* query_speed();      // TODO: Remove this, it exposes internals to a Rule
+    fw_actions  get_action() const;
 
 private:
-    Dbfw          *m_instance; /*< Router instance */
-    MXS_SESSION   *m_session;  /*< Client session structure */
-    std::string    m_error;    /*< Rule specific error message */
-    QuerySpeed     m_qs;       /*< How fast the user has executed queries */
+    Dbfw*        m_instance;    /*< Router instance */
+    MXS_SESSION* m_session;     /*< Client session structure */
+    std::string  m_error;       /*< Rule specific error message */
+    QuerySpeed   m_qs;          /*< How fast the user has executed queries */
 };
 
 /**
  * The Firewall filter instance.
  */
-class Dbfw: public mxs::Filter<Dbfw, DbfwSession>
+class Dbfw : public mxs::Filter<Dbfw, DbfwSession>
 {
     Dbfw(const Dbfw&);
     Dbfw& operator=(const Dbfw&);
@@ -255,7 +255,7 @@ public:
     bool reload_rules(std::string filename);
 
     /** Diagnostic routines */
-    void diagnostics(DCB *dcb) const;
+    void    diagnostics(DCB* dcb) const;
     json_t* diagnostics_json() const;
 
     uint64_t getCapabilities() const
@@ -264,11 +264,11 @@ public:
     }
 
 private:
-    fw_actions  m_action;    /*< Default operation mode, defaults to deny */
-    int         m_log_match; /*< Log matching and/or non-matching queries */
-    SPINLOCK    m_lock;      /*< Instance spinlock */
-    std::string m_filename;  /*< Path to the rule file */
-    int         m_version;   /*< Latest rule file version, incremented on reload */
+    fw_actions  m_action;   /*< Default operation mode, defaults to deny */
+    int         m_log_match;/*< Log matching and/or non-matching queries */
+    SPINLOCK    m_lock;     /*< Instance spinlock */
+    std::string m_filename; /*< Path to the rule file */
+    int         m_version;  /*< Latest rule file version, incremented on reload */
 
     Dbfw(MXS_CONFIG_PARAMETER* param);
     bool do_reload_rules(std::string filename);
@@ -287,6 +287,9 @@ char* create_error(const char* format, ...);
 /**
  * Check if a rule matches
  */
-bool rule_matches(Dbfw* my_instance, DbfwSession* my_session,
-                  GWBUF *queue, SRule rule, char* query);
+bool rule_matches(Dbfw* my_instance,
+                  DbfwSession* my_session,
+                  GWBUF* queue,
+                  SRule  rule,
+                  char*  query);
 bool rule_is_active(SRule rule);

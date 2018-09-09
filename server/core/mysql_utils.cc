@@ -36,14 +36,13 @@ namespace
 
 struct THIS_UNIT
 {
-    bool log_statements; // Should all statements sent to server be logged?
+    bool log_statements;    // Should all statements sent to server be logged?
 };
 
 static THIS_UNIT this_unit =
 {
     false
 };
-
 }
 
 /**
@@ -104,7 +103,8 @@ uint64_t mxs_leint_value(const uint8_t* c)
     {
         mxb_assert(*c == 0xff);
         MXS_ERROR("Unexpected length encoding '%x' encountered when reading "
-                  "length-encoded integer.", *c);
+                  "length-encoded integer.",
+                  *c);
     }
 
     return sz;
@@ -116,7 +116,7 @@ uint64_t mxs_leint_value(const uint8_t* c)
  *
  * @param c Pointer to the first byte of a length-encoded integer
  */
-uint64_t mxs_leint_consume(uint8_t ** c)
+uint64_t mxs_leint_consume(uint8_t** c)
 {
     uint64_t rval = mxs_leint_value(*c);
     *c += mxs_leint_bytes(*c);
@@ -135,7 +135,7 @@ uint64_t mxs_leint_consume(uint8_t ** c)
 char* mxs_lestr_consume_dup(uint8_t** c)
 {
     uint64_t slen = mxs_leint_consume(c);
-    char *str = (char*)MXS_MALLOC((slen + 1) * sizeof(char));
+    char* str = (char*)MXS_MALLOC((slen + 1) * sizeof(char));
 
     if (str)
     {
@@ -156,7 +156,7 @@ char* mxs_lestr_consume_dup(uint8_t** c)
  * @param size Pointer to a variable where the size of the string is stored
  * @return Pointer to the start of the string
  */
-char* mxs_lestr_consume(uint8_t** c, size_t *size)
+char* mxs_lestr_consume(uint8_t** c, size_t* size)
 {
     uint64_t slen = mxs_leint_consume(c);
     *size = slen;
@@ -165,9 +165,9 @@ char* mxs_lestr_consume(uint8_t** c, size_t *size)
     return start;
 }
 
-MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, const char *passwd)
+MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
 {
-    SSL_LISTENER *listener = server->server_ssl;
+    SSL_LISTENER* listener = server->server_ssl;
 
     if (listener)
     {
@@ -220,17 +220,17 @@ bool mxs_mysql_is_net_error(int errcode)
 {
     switch (errcode)
     {
-        case CR_SOCKET_CREATE_ERROR:
-        case CR_CONNECTION_ERROR:
-        case CR_CONN_HOST_ERROR:
-        case CR_IPSOCK_ERROR:
-        case CR_SERVER_GONE_ERROR:
-        case CR_TCP_CONNECTION:
-        case CR_SERVER_LOST:
-            return true;
+    case CR_SOCKET_CREATE_ERROR:
+    case CR_CONNECTION_ERROR:
+    case CR_CONN_HOST_ERROR:
+    case CR_IPSOCK_ERROR:
+    case CR_SERVER_GONE_ERROR:
+    case CR_TCP_CONNECTION:
+    case CR_SERVER_LOST:
+        return true;
 
-        default:
-            return false;
+    default:
+        return false;
     }
 }
 
@@ -240,9 +240,9 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
     time_t start = time(NULL);
     int rc = mysql_query(conn, query);
 
-    for (int n = 0; rc != 0 && n < cnf->query_retries &&
-         mxs_mysql_is_net_error(mysql_errno(conn)) &&
-         time(NULL) - start < cnf->query_retry_timeout; n++)
+    for (int n = 0; rc != 0 && n < cnf->query_retries
+         && mxs_mysql_is_net_error(mysql_errno(conn))
+         && time(NULL) - start < cnf->query_retry_timeout; n++)
     {
         rc = mysql_query(conn, query);
     }
@@ -251,8 +251,8 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
     {
         const char* host = "0.0.0.0";
         unsigned int port = 0;
-        MXB_AT_DEBUG(int rc1 =) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
-        MXB_AT_DEBUG(int rc2 =) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
+        MXB_AT_DEBUG(int rc1 = ) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
+        MXB_AT_DEBUG(int rc2 = ) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
         mxb_assert(!rc1 && !rc2);
         MXS_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query);
     }
@@ -276,12 +276,12 @@ const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* ke
     return NULL;
 }
 
-bool mxs_mysql_trim_quotes(char *s)
+bool mxs_mysql_trim_quotes(char* s)
 {
     bool dequoted = true;
 
-    char *i = s;
-    char *end = s + strlen(s);
+    char* i = s;
+    char* end = s + strlen(s);
 
     // Remove space from the beginning
     while (*i && isspace(*i))
@@ -344,8 +344,8 @@ bool mxs_mysql_trim_quotes(char *s)
 }
 
 
-mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
-                                             const char *mysql,
+mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
+                                             const char* mysql,
                                              mxs_pcre_quote_approach_t approach)
 {
     mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
@@ -379,6 +379,7 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
         case '{':
         case '}':
             *pcre++ = '\\';
+
         // Flowthrough
         default:
             *pcre = *mysql;

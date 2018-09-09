@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -22,12 +22,12 @@
 namespace maxscale
 {
 
-class MonitorInstance : public  MXS_MONITOR_INSTANCE
+class MonitorInstance : public MXS_MONITOR_INSTANCE
                       , protected maxbase::Worker
 {
 public:
     MonitorInstance(const MonitorInstance&) = delete;
-    MonitorInstance& operator = (const MonitorInstance&) = delete;
+    MonitorInstance& operator=(const MonitorInstance&) = delete;
 
     virtual ~MonitorInstance();
 
@@ -204,8 +204,8 @@ protected:
      */
     virtual void process_state_changes();
 
-    MXS_MONITOR*          m_monitor;  /**< The generic monitor structure. */
-    MXS_MONITORED_SERVER* m_master;   /**< Master server */
+    MXS_MONITOR*          m_monitor;    /**< The generic monitor structure. */
+    MXS_MONITORED_SERVER* m_master;     /**< Master server */
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
@@ -225,7 +225,7 @@ class MonitorInstanceSimple : public MonitorInstance
 {
 public:
     MonitorInstanceSimple(const MonitorInstanceSimple&) = delete;
-    MonitorInstanceSimple& operator = (const MonitorInstanceSimple&) = delete;
+    MonitorInstanceSimple& operator=(const MonitorInstanceSimple&) = delete;
 
 protected:
     MonitorInstanceSimple(MXS_MONITOR* pMonitor)
@@ -271,7 +271,7 @@ private:
      *     @c update_server_status() will *not* be called.
      *   - After the call, update the error count of the server if it is down.
      */
-    void tick(); // final
+    void tick();    // final
 };
 
 /**
@@ -285,7 +285,7 @@ class MonitorApi
 public:
     MonitorApi() = delete;
     MonitorApi(const MonitorApi&) = delete;
-    MonitorApi& operator = (const MonitorApi&) = delete;
+    MonitorApi& operator=(const MonitorApi&) = delete;
 
     static MXS_MONITOR_INSTANCE* createInstance(MXS_MONITOR* pMonitor)
     {
@@ -349,5 +349,4 @@ MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
  * @return The host and port of the monitor or an empty string and 0 if an error occurred
  */
 std::pair<std::string, int> mon_get_external_master(const std::string& name);
-
 }

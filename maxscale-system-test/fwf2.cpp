@@ -4,10 +4,12 @@
  * - execute queries for fw/passXX file, expect OK
  * - execute queries from fw/denyXX, expect Access Denied error (mysql_error 1141)
  * - repeat for all XX
- * - setup Firewall filter to block queries next 2 minutes using 'at_time' statement (see template fw/rules_at_time)
+ * - setup Firewall filter to block queries next 2 minutes using 'at_time' statement (see template
+ *fw/rules_at_time)
  * - start sending queries, expect Access Denied now and OK after two mintes
  * - setup Firewall filter to limit a number of queries during certain time
- * - start sending queries as fast as possible, expect OK for N first quries and Access Denied for next queries
+ * - start sending queries as fast as possible, expect OK for N first quries and Access Denied for next
+ *queries
  * - wait, start sending queries again, but only one query per second, expect OK
  * - try to load rules with syntax error, expect failure for all sessions and queries
  */
@@ -20,9 +22,9 @@
 #include "sql_t1.h"
 #include "fw_copy_rules.h"
 
-int read_and_execute_queries(TestConnections *Test, const char* filename, int expected)
+int read_and_execute_queries(TestConnections* Test, const char* filename, int expected)
 {
-    FILE *file = fopen(filename, "r");
+    FILE* file = fopen(filename, "r");
     int local_result = 0;
     if (file != NULL)
     {
@@ -33,13 +35,14 @@ int read_and_execute_queries(TestConnections *Test, const char* filename, int ex
             if (strlen(sql) > 1)
             {
                 Test->tprintf("%s", sql);
-                if (execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != expected &&
-                    (expected == 1 || mysql_errno(Test->maxscales->conn_rwsplit[0]) == 1141))
+                if (execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != expected
+                    && (expected == 1 || mysql_errno(Test->maxscales->conn_rwsplit[0]) == 1141))
                 {
                     Test->tprintf("Query %s, but %s expected, MySQL error: %d, %s\n",
                                   expected ? "succeeded" : "failed",
                                   expected ? "failure" : "success",
-                                  mysql_errno(Test->maxscales->conn_rwsplit[0]), mysql_error(Test->maxscales->conn_rwsplit[0]));
+                                  mysql_errno(Test->maxscales->conn_rwsplit[0]),
+                                  mysql_error(Test->maxscales->conn_rwsplit[0]));
                     local_result++;
                 }
             }
@@ -53,10 +56,10 @@ int read_and_execute_queries(TestConnections *Test, const char* filename, int ex
     return local_result;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     int local_result;
     char str[4096];
     char pass_file[4096];

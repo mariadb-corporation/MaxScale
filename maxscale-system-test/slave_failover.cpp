@@ -1,5 +1,6 @@
 /**
- * @file slave_failover.cpp  Check how Maxscale works in case of one slave failure, only one slave is configured
+ * @file slave_failover.cpp  Check how Maxscale works in case of one slave failure, only one slave is
+ *configured
  *
  * - Connect to RWSplit
  * - find which backend slave is used for connection
@@ -14,7 +15,7 @@
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     printf("Connecting to RWSplit");

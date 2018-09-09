@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 #include <maxbase/worker.h>
@@ -81,7 +81,7 @@ size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t ar
  * @return The number of messages posted; if less that ne number of workers
  *         then some postings failed.
  */
-size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data);
+size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data);
 
 /**
  * Add a session to the current routing worker's session container. Currently
@@ -133,7 +133,7 @@ uint64_t mxs_rworker_create_key();
  *                 required. This function is called by mxs_rworker_delete_data
  *                 when the data is deleted.
  */
-void mxs_rworker_set_data(uint64_t key, void* data, void (*callback)(void*));
+void mxs_rworker_set_data(uint64_t key, void* data, void (* callback)(void*));
 
 /**
  * Get local data from current worker

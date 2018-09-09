@@ -40,7 +40,6 @@ GWBUF* gwbuf_create_com_query(const char* zStmt)
 
     return pBuf;
 }
-
 }
 
 namespace
@@ -67,7 +66,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -78,7 +77,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -89,7 +88,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -100,8 +99,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
@@ -112,8 +110,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
@@ -124,8 +121,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "DEFAULT"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
@@ -136,20 +132,18 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
-        "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
+        "SET SQL_MODE=BLAH",                // So short that it cannot be DEFAULT|ORACLE
         P::IS_SET_SQL_MODE,
         {
             {
                 "SQL_MODE",
                 "BLAH"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
@@ -160,8 +154,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "'BLAH'"
             },
-            { NULL, NULL }
-
+            {NULL, NULL}
         }
     },
     {
@@ -172,7 +165,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "BLAHBLAH"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -183,7 +176,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "'ORACLE'"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -194,7 +187,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "'BLAH, A, B, ORACLE'"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -205,7 +198,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "'BLAH, A, B, XYZ_123'"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -216,7 +209,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "'A,B, ORACLE'"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -227,7 +220,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -238,7 +231,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -249,7 +242,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -260,7 +253,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -271,7 +264,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -282,7 +275,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -293,7 +286,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -304,7 +297,7 @@ struct TEST_CASE
                 "SQL_MODE",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -315,21 +308,21 @@ struct TEST_CASE
                 "sql_mode",
                 "ORACLE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
         "SET MAXSCALE=",
         P::NOT_RELEVANT,
         {
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
         "SET MAXSCALE.CACHE.ENABLED=TRUE",
         P::NOT_RELEVANT,
         {
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -340,7 +333,7 @@ struct TEST_CASE
                 "@MAXSCALE.CACHE.ENABLED",
                 "TRUE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -351,7 +344,7 @@ struct TEST_CASE
                 "@MAXSCALE.CACHE.ENABLED",
                 "TRUE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
     {
@@ -366,7 +359,7 @@ struct TEST_CASE
                 "@maxscale.cache.enabled",
                 "FALSE"
             },
-            { NULL, NULL }
+            {NULL, NULL}
         }
     },
 };
@@ -404,13 +397,13 @@ int test(GWBUF** ppStmt, SetParser::status_t expected_status, const TEST_CASE::E
                 {
                     size_t l1 = variable.second - variable.first;
 
-                    if ((l1 == strlen(expectation.zVariable)) &&
-                        (memcmp(variable.first, expectation.zVariable, l1) == 0))
+                    if ((l1 == strlen(expectation.zVariable))
+                        && (memcmp(variable.first, expectation.zVariable, l1) == 0))
                     {
                         size_t l2 = value.second - value.first;
 
-                        if ((l2 == strlen(expectation.zValue)) &&
-                            (memcmp(value.first, expectation.zValue, l2) == 0))
+                        if ((l2 == strlen(expectation.zValue))
+                            && (memcmp(value.first, expectation.zValue, l2) == 0))
                         {
                             cout << "OK";
                         }
@@ -530,7 +523,7 @@ int test_non_contiguous()
 
         while (pTail)
         {
-            size_t n = MYSQL_HEADER_LEN + rand() % 10; // Between 4 and 13 bytes long chunks.
+            size_t n = MYSQL_HEADER_LEN + rand() % 10;      // Between 4 and 13 bytes long chunks.
 
             GWBUF* pHead = gwbuf_split(&pTail, n);
 
@@ -584,7 +577,6 @@ int test()
 
     return rv;
 }
-
 }
 
 

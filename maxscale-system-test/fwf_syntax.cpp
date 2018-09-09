@@ -13,15 +13,15 @@
 #include "testconnections.h"
 #include "fw_copy_rules.h"
 
-const char *temp_rules = "rules_tmp.txt";
+const char* temp_rules = "rules_tmp.txt";
 
-const char *users_ok[] =
+const char* users_ok[] =
 {
     "users %@% match any rules testrule",
     NULL
 };
 
-const char *rules_failure[] =
+const char* rules_failure[] =
 {
     "rule testrule deny nothing",
     "rule testrule deny regex",
@@ -47,9 +47,9 @@ void truncate_maxscale_logs(TestConnections& test)
     test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/*", true);
 }
 
-void create_rule(const char *rule, const char* user)
+void create_rule(const char* rule, const char* user)
 {
-    FILE *file = fopen(temp_rules, "a");
+    FILE* file = fopen(temp_rules, "a");
     fprintf(file, "%s\n", rule);
     fprintf(file, "%s\n", user);
     fclose(file);

@@ -37,8 +37,8 @@ const char* TIMEOUT = "Request timed out";
 class Row;
 typedef std::tr1::shared_ptr<Row> SRow;
 
-typedef std::vector<std::string> ValueVector;
-typedef std::tr1::shared_ptr<ValueVector> SValueVector;
+typedef std::vector<std::string>           ValueVector;
+typedef std::tr1::shared_ptr<ValueVector>  SValueVector;
 typedef std::map<std::string, std::string> ValueMap;
 
 // A class that represents a CDC connection
@@ -128,19 +128,19 @@ public:
     }
 
 private:
-    int m_fd;
-    uint16_t m_port;
-    std::string m_address;
-    std::string m_user;
-    std::string m_password;
-    std::string m_error;
-    std::string m_schema;
-    SValueVector m_keys;
-    SValueVector m_types;
-    int m_timeout;
+    int              m_fd;
+    uint16_t         m_port;
+    std::string      m_address;
+    std::string      m_user;
+    std::string      m_password;
+    std::string      m_error;
+    std::string      m_schema;
+    SValueVector     m_keys;
+    SValueVector     m_types;
+    int              m_timeout;
     std::deque<char> m_buffer;
-    SRow m_first_row;
-    bool m_connected;
+    SRow             m_first_row;
+    bool             m_connected;
 
     bool do_auth();
     bool do_registration();
@@ -152,8 +152,8 @@ private:
 
     // Lower-level functions
     int wait_for_event(short events);
-    int nointr_read(void *dest, size_t size);
-    int nointr_write(const void *src, size_t size);
+    int nointr_read(void* dest, size_t size);
+    int nointr_write(const void* src, size_t size);
 };
 
 // Internal representation of a row, used via the Row type
@@ -210,7 +210,7 @@ public:
         s += value("domain");
         s += "-";
         s += value("server_id");
-        s +=  "-";
+        s += "-";
         s += value("sequence");
         return s;
     }
@@ -242,20 +242,18 @@ public:
 private:
     SValueVector m_keys;
     SValueVector m_types;
-    ValueVector m_values;
+    ValueVector  m_values;
 
     // Only a Connection should construct an InternalRow
     friend class Connection;
 
     Row(SValueVector& keys,
         SValueVector& types,
-        ValueVector& values):
-        m_keys(keys),
-        m_types(types)
+        ValueVector&  values)
+        : m_keys(keys)
+        , m_types(types)
     {
         m_values.swap(values);
     }
-
 };
-
 }

@@ -20,8 +20,8 @@ void* query_thr(void* data)
 
         while (running)
         {
-            if (mysql_query(mysql, "INSERT INTO test.mxs1585 VALUES (1)") ||
-                    mysql_query(mysql, "DELETE FROM test.mxs1585 LIMIT 100"))
+            if (mysql_query(mysql, "INSERT INTO test.mxs1585 VALUES (1)")
+                || mysql_query(mysql, "DELETE FROM test.mxs1585 LIMIT 100"))
             {
                 break;
             }
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     std::vector<pthread_t> threads;
     threads.resize(100);
 
-    for (auto& a: threads)
+    for (auto& a : threads)
     {
         pthread_create(&a, NULL, query_thr, &test);
     }
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     running = false;
     test.set_timeout(120);
 
-    for (auto& a: threads)
+    for (auto& a : threads)
     {
         test.set_timeout(60);
         pthread_join(a, NULL);

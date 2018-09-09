@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "cache_storage_api.h"
@@ -64,7 +64,8 @@ public:
      */
     Storage* createStorage(const char* zName,
                            const CACHE_STORAGE_CONFIG& config,
-                           int argc = 0, char* argv[] = NULL);
+                           int argc = 0,
+                           char* argv[] = NULL);
 
     /**
      * Create raw storage instance.
@@ -83,17 +84,18 @@ public:
      */
     Storage* createRawStorage(const char* zName,
                               const CACHE_STORAGE_CONFIG& config,
-                              int argc = 0, char* argv[] = NULL);
+                              int argc = 0,
+                              char* argv[] = NULL);
 
 private:
     StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);
 
     StorageFactory(const StorageFactory&);
-    StorageFactory& operator = (const StorageFactory&);
+    StorageFactory& operator=(const StorageFactory&);
 
 private:
-    void*              m_handle;       /*< dl handle of storage. */
-    CACHE_STORAGE_API* m_pApi;         /*< API of storage. */
-    uint32_t           m_storage_caps; /*< Capabilities of underlying storage. */
-    uint32_t           m_caps;         /*< Capabilities of storages of this factory. */
+    void*              m_handle;        /*< dl handle of storage. */
+    CACHE_STORAGE_API* m_pApi;          /*< API of storage. */
+    uint32_t           m_storage_caps;  /*< Capabilities of underlying storage. */
+    uint32_t           m_caps;          /*< Capabilities of storages of this factory. */
 };

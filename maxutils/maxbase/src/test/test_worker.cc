@@ -26,7 +26,7 @@ namespace
 int64_t get_monotonic_time_ms()
 {
     struct timespec ts;
-    MXB_AT_DEBUG(int rv =) clock_gettime(CLOCK_MONOTONIC, &ts);
+    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC, &ts);
     mxb_assert(rv == 0);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
@@ -118,7 +118,6 @@ int run()
 
     return EXIT_SUCCESS;
 }
-
 }
 
 int main()

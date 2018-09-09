@@ -43,19 +43,19 @@
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int cdc_read_event(DCB* dcb);
-static int cdc_write_event(DCB *dcb);
-static int cdc_write(DCB *dcb, GWBUF *queue);
-static int cdc_error(DCB *dcb);
-static int cdc_hangup(DCB *dcb);
-static int cdc_accept(DCB *dcb);
-static int cdc_close(DCB *dcb);
-static int cdc_listen(DCB *dcb, char *config);
-static CDC_protocol *cdc_protocol_init(DCB* dcb);
-static void cdc_protocol_done(DCB* dcb);
-static int do_auth(DCB *dcb, GWBUF *buffer, void *data);
-static void write_auth_ack(DCB *dcb);
-static void write_auth_err(DCB *dcb);
+static int           cdc_read_event(DCB* dcb);
+static int           cdc_write_event(DCB* dcb);
+static int           cdc_write(DCB* dcb, GWBUF* queue);
+static int           cdc_error(DCB* dcb);
+static int           cdc_hangup(DCB* dcb);
+static int           cdc_accept(DCB* dcb);
+static int           cdc_close(DCB* dcb);
+static int           cdc_listen(DCB* dcb, char* config);
+static CDC_protocol* cdc_protocol_init(DCB* dcb);
+static void          cdc_protocol_done(DCB* dcb);
+static int           do_auth(DCB* dcb, GWBUF* buffer, void* data);
+static void          write_auth_ack(DCB* dcb);
+static void          write_auth_err(DCB* dcb);
 
 static char* cdc_default_auth()
 {
@@ -72,47 +72,46 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_PROTOCOL MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        cdc_read_event, /* Read - EPOLLIN handler        */
-        cdc_write, /* Write - data from gateway     */
-        cdc_write_event, /* WriteReady - EPOLLOUT handler */
-        cdc_error, /* Error - EPOLLERR handler      */
-        cdc_hangup, /* HangUp - EPOLLHUP handler     */
-        cdc_accept, /* Accept                        */
-        NULL, /* Connect                       */
-        cdc_close, /* Close                         */
-        cdc_listen, /* Create a listener             */
-        NULL, /* Authentication                */
-        cdc_default_auth, /* default authentication */
-        NULL,
-        NULL,
-        NULL,
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_IN_DEVELOPMENT,
-        MXS_PROTOCOL_VERSION,
-        "A Change Data Capture Listener implementation for use in binlog events retrieval",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_PROTOCOL MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            cdc_read_event,     /* Read - EPOLLIN handler        */
+            cdc_write,          /* Write - data from gateway     */
+            cdc_write_event,    /* WriteReady - EPOLLOUT handler */
+            cdc_error,          /* Error - EPOLLERR handler      */
+            cdc_hangup,         /* HangUp - EPOLLHUP handler     */
+            cdc_accept,         /* Accept                        */
+            NULL,               /* Connect                       */
+            cdc_close,          /* Close                         */
+            cdc_listen,         /* Create a listener             */
+            NULL,               /* Authentication                */
+            cdc_default_auth,   /* default authentication */
+            NULL,
+            NULL,
+            NULL,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_PROTOCOL,
+            MXS_MODULE_IN_DEVELOPMENT,
+            MXS_PROTOCOL_VERSION,
+            "A Change Data Capture Listener implementation for use in binlog events retrieval",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /**
@@ -121,17 +120,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb    The descriptor control block
  * @return
  */
-static int
-cdc_read_event(DCB* dcb)
+static int cdc_read_event(DCB* dcb)
 {
-    MXS_SESSION *session = dcb->session;
-    CDC_protocol *protocol = (CDC_protocol *) dcb->protocol;
+    MXS_SESSION* session = dcb->session;
+    CDC_protocol* protocol = (CDC_protocol*) dcb->protocol;
     int n, rc = 0;
-    GWBUF *head = NULL;
+    GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
-    CDC_session *client_data = (CDC_session *) dcb->data;
+    CDC_session* client_data = (CDC_session*) dcb->data;
 
-    if ((n = dcb_read(dcb, &head, 0))  > 0)
+    if ((n = dcb_read(dcb, &head, 0)) > 0)
     {
         switch (protocol->state)
         {
@@ -158,7 +156,8 @@ cdc_read_event(DCB* dcb)
                     write_auth_ack(dcb);
 
                     MXS_INFO("%s: Client [%s] authenticated with user [%s]",
-                             dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
+                             dcb->service->name,
+                             dcb->remote != NULL ? dcb->remote : "",
                              client_data->user);
                 }
                 else
@@ -173,25 +172,27 @@ cdc_read_event(DCB* dcb)
 
                 write_auth_err(dcb);
                 MXS_ERROR("%s: authentication failure from [%s], user [%s]",
-                          dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
+                          dcb->service->name,
+                          dcb->remote != NULL ? dcb->remote : "",
                           client_data->user);
 
                 /* force the client connection close */
                 dcb_close(dcb);
-
             }
             break;
 
         case CDC_STATE_HANDLE_REQUEST:
-            // handle CLOSE command, it shoudl be routed as well and client connection closed after last transmission
+            // handle CLOSE command, it shoudl be routed as well and client connection closed after last
+            // transmission
             if (strncmp((char*)GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
             {
                 MXS_INFO("%s: Client [%s] has requested CLOSE action",
-                         dcb->service->name, dcb->remote != NULL ? dcb->remote : "");
+                         dcb->service->name,
+                         dcb->remote != NULL ? dcb->remote : "");
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
                 // the router will close the client connection
-                //rc = MXS_SESSION_ROUTE_QUERY(session, head);
+                // rc = MXS_SESSION_ROUTE_QUERY(session, head);
 
                 // buffer not handled by router right now, consume it
                 gwbuf_free(head);
@@ -202,8 +203,10 @@ cdc_read_event(DCB* dcb)
             else
             {
                 MXS_INFO("%s: Client [%s] requested [%.*s] action",
-                         dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
-                         (int)GWBUF_LENGTH(head), (char*)GWBUF_DATA(head));
+                         dcb->service->name,
+                         dcb->remote != NULL ? dcb->remote : "",
+                         (int)GWBUF_LENGTH(head),
+                         (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
                 rc = MXS_SESSION_ROUTE_QUERY(session, head);
@@ -211,8 +214,10 @@ cdc_read_event(DCB* dcb)
             break;
 
         default:
-            MXS_INFO("%s: Client [%s] in unknown state %d", dcb->service->name,
-                     dcb->remote != NULL ? dcb->remote : "", protocol->state);
+            MXS_INFO("%s: Client [%s] in unknown state %d",
+                     dcb->service->name,
+                     dcb->remote != NULL ? dcb->remote : "",
+                     protocol->state);
             gwbuf_free(head);
 
             break;
@@ -228,8 +233,7 @@ cdc_read_event(DCB* dcb)
  * @param dcb    The descriptor control block
  * @return
  */
-static int
-cdc_write_event(DCB *dcb)
+static int cdc_write_event(DCB* dcb)
 {
     return dcb_drain_writeq(dcb);
 }
@@ -243,8 +247,7 @@ cdc_write_event(DCB *dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int
-cdc_write(DCB *dcb, GWBUF *queue)
+static int cdc_write(DCB* dcb, GWBUF* queue)
 {
     int rc;
     rc = dcb_write(dcb, queue);
@@ -256,8 +259,7 @@ cdc_write(DCB *dcb, GWBUF *queue)
  *
  * @param dcb    The descriptor control block
  */
-static int
-cdc_error(DCB *dcb)
+static int cdc_error(DCB* dcb)
 {
     dcb_close(dcb);
     return 0;
@@ -268,8 +270,7 @@ cdc_error(DCB *dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int
-cdc_hangup(DCB *dcb)
+static int cdc_hangup(DCB* dcb)
 {
     dcb_close(dcb);
     return 0;
@@ -281,16 +282,15 @@ cdc_hangup(DCB *dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int
-cdc_accept(DCB *listener)
+static int cdc_accept(DCB* listener)
 {
     int n_connect = 0;
-    DCB *client_dcb;
+    DCB* client_dcb;
 
     while ((client_dcb = dcb_accept(listener)) != NULL)
     {
-        CDC_session *client_data = NULL;
-        CDC_protocol *protocol = NULL;
+        CDC_session* client_data = NULL;
+        CDC_protocol* protocol = NULL;
 
         /* allocating CDC protocol */
         protocol = cdc_protocol_init(client_dcb);
@@ -301,7 +301,7 @@ cdc_accept(DCB *listener)
             continue;
         }
 
-        client_dcb->protocol = (CDC_protocol *) protocol;
+        client_dcb->protocol = (CDC_protocol*) protocol;
 
         /* Dummy session */
         client_dcb->session = session_set_dummy(client_dcb);
@@ -312,9 +312,11 @@ cdc_accept(DCB *listener)
             continue;
         }
 
-        /* create the session data for CDC */
-        /* this coud be done in anothe routine, let's keep it here for now */
-        client_data = (CDC_session *) MXS_CALLOC(1, sizeof(CDC_session));
+        /*
+         * create the session data for CDC
+         * this coud be done in anothe routine, let's keep it here for now
+         */
+        client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
         if (client_data == NULL)
         {
             dcb_close(client_dcb);
@@ -326,7 +328,8 @@ cdc_accept(DCB *listener)
         /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
         protocol->state = CDC_STATE_WAIT_FOR_AUTH;
 
-        MXS_NOTICE("%s: new connection from [%s]", client_dcb->service->name,
+        MXS_NOTICE("%s: new connection from [%s]",
+                   client_dcb->service->name,
                    client_dcb->remote != NULL ? client_dcb->remote : "");
 
         n_connect++;
@@ -341,10 +344,9 @@ cdc_accept(DCB *listener)
  *
  * @param dcb   The descriptor control block
  */
-static int
-cdc_close(DCB *dcb)
+static int cdc_close(DCB* dcb)
 {
-    CDC_protocol *p = (CDC_protocol *) dcb->protocol;
+    CDC_protocol* p = (CDC_protocol*) dcb->protocol;
 
     if (!p)
     {
@@ -363,8 +365,7 @@ cdc_close(DCB *dcb)
  * @param   listener    The Listener DCB
  * @param   config      Configuration (ip:port)
  */
-static int
-cdc_listen(DCB *listener, char *config)
+static int cdc_listen(DCB* listener, char* config)
 {
     return (dcb_listen(listener, config, "CDC") < 0) ? 0 : 1;
 }
@@ -376,12 +377,11 @@ cdc_listen(DCB *listener, char *config)
  * @return        New allocated protocol or NULL on errors
  *
  */
-static CDC_protocol *
-cdc_protocol_init(DCB* dcb)
+static CDC_protocol* cdc_protocol_init(DCB* dcb)
 {
     CDC_protocol* p;
 
-    p = (CDC_protocol *) MXS_CALLOC(1, sizeof(CDC_protocol));
+    p = (CDC_protocol*) MXS_CALLOC(1, sizeof(CDC_protocol));
 
     if (p == NULL)
     {
@@ -404,17 +404,16 @@ cdc_protocol_init(DCB* dcb)
  * @param dcb    DCB with allocateid protocol
  *
  */
-static void
-cdc_protocol_done(DCB* dcb)
+static void cdc_protocol_done(DCB* dcb)
 {
-    CDC_protocol* p = (CDC_protocol *) dcb->protocol;
+    CDC_protocol* p = (CDC_protocol*) dcb->protocol;
 
     if (!p)
     {
         return;
     }
 
-    p = (CDC_protocol *) dcb->protocol;
+    p = (CDC_protocol*) dcb->protocol;
 
     spinlock_acquire(&p->lock);
 
@@ -431,8 +430,7 @@ cdc_protocol_done(DCB* dcb)
  * @param dcb    Current client DCB
  *
  */
-static void
-write_auth_ack(DCB *dcb)
+static void write_auth_ack(DCB* dcb)
 {
     dcb_printf(dcb, "OK\n");
 }
@@ -443,9 +441,7 @@ write_auth_ack(DCB *dcb)
  * @param dcb    Current client DCB
  *
  */
-static void
-write_auth_err(DCB *dcb)
+static void write_auth_err(DCB* dcb)
 {
     dcb_printf(dcb, "ERROR: Authentication failed\n");
 }
-

@@ -15,7 +15,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
     test->stop_timeout();
@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
     test->maxscales->ssh_node_f(0, true, "cp /etc/maxscale.cnf.backup /etc/maxscale.cnf");
 
     /** Set router_options to a bad value */
-    test->maxscales->ssh_node_f(0, true,
+    test->maxscales->ssh_node_f(0,
+                                true,
                                 "sed -i -e 's/router_options.*/router_options=bad_option=true/' /etc/maxscale.cnf");
     test->add_result(baseline == test->maxscales->ssh_node_f(0, true, "maxscale -c --user=maxscale"),
                      "Bad router_options should be detected.\n");

@@ -22,15 +22,20 @@ namespace maxbase
 
 using Clock = std::chrono::steady_clock;
 
-struct Duration : public Clock::duration // for ADL
+struct Duration : public Clock::duration    // for ADL
 {
     using Clock::duration::duration;
     Duration() = default;
-    Duration(Clock::duration d) : Clock::duration(d) {}
-    Duration(long long l) : Clock::duration(l) {} // FIXME. Get rid of this.
+    Duration(Clock::duration d) : Clock::duration(d)
+    {
+    }
+    Duration(long long l) : Clock::duration(l)
+    {
+    }                                               // FIXME. Get rid of this.
 
     explicit Duration(double secs) : Duration{rep(secs * period::den / period::num)}
-    {}
+    {
+    }
 
     double secs()
     {
@@ -60,7 +65,6 @@ std::pair<double, std::string> dur_to_human_readable(Duration dur);
 std::ostream& operator<<(std::ostream&, Duration dur);
 
 // TimePoint
-std::string time_point_to_string(TimePoint tp, const std::string& fmt = "%F %T");
+std::string   time_point_to_string(TimePoint tp, const std::string& fmt = "%F %T");
 std::ostream& operator<<(std::ostream&, TimePoint tp);
-
-} // maxbase
+}   // maxbase

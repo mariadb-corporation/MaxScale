@@ -25,24 +25,23 @@ namespace
 
 const char CAPABILITIES_PARAM[] = "capabilities";
 
-const char*    DEFAULT_RCAP_TYPE_NAME  = "RCAP_TYPE_NONE";
+const char* DEFAULT_RCAP_TYPE_NAME = "RCAP_TYPE_NONE";
 const uint64_t DEFAULT_RCAP_TYPE_VALUE = 0;
 
 const MXS_ENUM_VALUE capability_values[] =
 {
-    { DEFAULT_RCAP_TYPE_NAME,           DEFAULT_RCAP_TYPE_VALUE },
-    { "RCAP_TYPE_STMT_INPUT",           RCAP_TYPE_STMT_INPUT },
-    { "RCAP_TYPE_CONTIGUOUS_INPUT",     RCAP_TYPE_CONTIGUOUS_INPUT },
-    { "RCAP_TYPE_TRANSACTION_TRACKING", RCAP_TYPE_TRANSACTION_TRACKING },
-    { "RCAP_TYPE_STMT_OUTPUT",          RCAP_TYPE_STMT_OUTPUT },
-    { "RCAP_TYPE_CONTIGUOUS_OUTPUT",    RCAP_TYPE_CONTIGUOUS_OUTPUT },
-    { "RCAP_TYPE_RESULTSET_OUTPUT",     RCAP_TYPE_RESULTSET_OUTPUT },
-    { NULL, 0 }
+    {DEFAULT_RCAP_TYPE_NAME,           DEFAULT_RCAP_TYPE_VALUE       },
+    {"RCAP_TYPE_STMT_INPUT",           RCAP_TYPE_STMT_INPUT          },
+    {"RCAP_TYPE_CONTIGUOUS_INPUT",     RCAP_TYPE_CONTIGUOUS_INPUT    },
+    {"RCAP_TYPE_TRANSACTION_TRACKING", RCAP_TYPE_TRANSACTION_TRACKING},
+    {"RCAP_TYPE_STMT_OUTPUT",          RCAP_TYPE_STMT_OUTPUT         },
+    {"RCAP_TYPE_CONTIGUOUS_OUTPUT",    RCAP_TYPE_CONTIGUOUS_OUTPUT   },
+    {"RCAP_TYPE_RESULTSET_OUTPUT",     RCAP_TYPE_RESULTSET_OUTPUT    },
+    {NULL,                             0                             }
 };
 
-size_t RCAP_TYPE_NAME_MAXLEN = 30; // strlen(RCAP_TYPE_TRANSACTION_TRACKING)
+size_t RCAP_TYPE_NAME_MAXLEN = 30;      // strlen(RCAP_TYPE_TRANSACTION_TRACKING)
 size_t RCAP_TYPE_COUNT = sizeof(capability_values) / sizeof(capability_values[0]);
-
 }
 
 //
@@ -62,10 +61,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         VERSION_STRING,
         MXS_NO_MODULE_CAPABILITIES,
         &NullFilter::s_object,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,   /* Process init. */
+        NULL,   /* Process finish. */
+        NULL,   /* Thread init. */
+        NULL,   /* Thread finish. */
         {
             {
                 CAPABILITIES_PARAM,
@@ -74,7 +73,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 capability_values
             },
-            { MXS_END_MODULE_PARAMS }
+            {MXS_END_MODULE_PARAMS}
         }
     };
 

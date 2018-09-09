@@ -74,7 +74,7 @@ int test(StorageFactory& factory, istream& in)
                         {
                             ++n_collisions;
                             cerr << "error: Same key generated for '" << i->second << "' and '"
-                                 << statement <<  "'." << endl;
+                                 << statement << "'." << endl;
                         }
                     }
                     else
@@ -118,7 +118,6 @@ int test(StorageFactory& factory, istream& in)
 
     return rv;
 }
-
 }
 
 int main(int argc, char* argv[])

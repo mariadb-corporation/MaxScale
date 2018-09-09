@@ -6,7 +6,7 @@
 #include "testconnections.h"
 #include "config_operations.h"
 
-int check_server_id(TestConnections *test, int idx)
+int check_server_id(TestConnections* test, int idx)
 {
     test->maxscales->close_maxscale_connections(0);
     test->maxscales->connect_maxscale(0);
@@ -23,9 +23,9 @@ int check_server_id(TestConnections *test, int idx)
     return a - b;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     Config config(test);
 
     config.create_all_listeners();

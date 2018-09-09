@@ -51,12 +51,11 @@ void ensure(bool ok)
     }
 }
 
-ostream& operator << (ostream& out, const MXS_LOG_THROTTLING& t)
+ostream& operator<<(ostream& out, const MXS_LOG_THROTTLING& t)
 {
     out << "{" << t.count << ", " << t.window_ms << ", " << t.suppress_ms << "}";
     return out;
 }
-
 }
 
 bool check_messages(istream& in, size_t n_expected)
@@ -88,13 +87,13 @@ void log_messages(uint32_t id, size_t n_generate, int priority)
 struct THREAD_ARG
 {
     uint32_t id;
-    size_t n_generate;
-    int priority;
+    size_t   n_generate;
+    int      priority;
 };
 
 void* thread_main(void* pv)
 {
-    THREAD_ARG *parg = static_cast<THREAD_ARG*>(pv);
+    THREAD_ARG* parg = static_cast<THREAD_ARG*>(pv);
 
     sem_wait(&u_semstart);
 
@@ -108,7 +107,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
 {
     cout << "Logging " << n_generate << " messages with throttling as " << throttling << "," << endl;
 
-    mxs_log_set_throttling(&throttling); // Causes message to be logged.
+    mxs_log_set_throttling(&throttling);    // Causes message to be logged.
 
     ifstream in(logfile.c_str());
     in.seekg(0, ios_base::end);

@@ -1,4 +1,3 @@
-
 #include "testconnections.h"
 
 int main(int argc, char** argv)
@@ -12,7 +11,11 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[0], "GRANT INSERT ON insert_db.t1 TO 'insert_only'@'%%'");
     test.repl->sync_slaves();
 
-    MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "insert_only", "insert_only", false);
+    MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0],
+                            test.maxscales->IP[0],
+                            "insert_only",
+                            "insert_only",
+                            false);
     test.assert(mysql_errno(conn) == 0, "User without SELECT privileges should be allowed to connect");
     mysql_close(conn);
 

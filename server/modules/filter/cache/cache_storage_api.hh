@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <functional>
@@ -39,17 +39,16 @@ struct hash<CACHE_KEY>
         return cache_key_hash(&key);
     }
 };
-
 }
 
 std::string cache_key_to_string(const CACHE_KEY& key);
 
-inline bool operator == (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+inline bool operator==(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
 {
     return lhs.data == rhs.data;
 }
 
-inline bool operator != (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+inline bool operator!=(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
 {
     return !(lhs == rhs);
 }

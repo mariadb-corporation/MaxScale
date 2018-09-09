@@ -13,59 +13,56 @@ using namespace std;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    Connection conn{test.maxscales->rwsplit()};
+    Connection conn {test.maxscales->rwsplit()};
 
-    auto query = [&](bool should_work, string q)
-    {
-        test.assert(conn.query(q) == should_work, "Query '%s' should %s: %s",
-                    q.c_str(), should_work ? "work" : "fail", conn.error());
-    };
+    auto query = [&](bool should_work, string q) {
+            test.assert(conn.query(q) == should_work,
+                        "Query '%s' should %s: %s",
+                        q.c_str(),
+                        should_work ? "work" : "fail",
+                        conn.error());
+        };
 
-    auto compare = [&](bool equal, string q, string res)
-    {
-        Row row = conn.row(q);
-        test.assert(!row.empty() && (row[0] == res) == equal, "Values are %s: `%s` `%s`",
-                    equal ? "not equal" : "equal", row.empty() ? "<empty>" : row[0].c_str(),
-                    res.c_str());
-    };
+    auto compare = [&](bool equal, string q, string res) {
+            Row row = conn.row(q);
+            test.assert(!row.empty() && (row[0] == res) == equal,
+                        "Values are %s: `%s` `%s`",
+                        equal ? "not equal" : "equal",
+                        row.empty() ? "<empty>" : row[0].c_str(),
+                        res.c_str());
+        };
 
-    auto block = [&](int node)
-    {
-        return bind([&](int i)
-                    {
-                        test.repl->block_node(i);
-                        test.maxscales->wait_for_monitor();
-                    }, node);
-    };
+    auto block = [&](int node) {
+            return bind([&](int i) {
+                            test.repl->block_node(i);
+                            test.maxscales->wait_for_monitor();
+                        },
+                        node);
+        };
 
-    auto unblock = [&](int node)
-    {
-        return bind([&](int i)
-                    {
-                        test.repl->unblock_node(i);
-                        test.maxscales->wait_for_monitor();
-                    }, node);
-    };
+    auto unblock = [&](int node) {
+            return bind([&](int i) {
+                            test.repl->unblock_node(i);
+                            test.maxscales->wait_for_monitor();
+                        },
+                        node);
+        };
 
-    auto ok = [&](string q)
-    {
-        return bind(query, true, q);
-    };
+    auto ok = [&](string q) {
+            return bind(query, true, q);
+        };
 
-    auto err = [&](string q)
-    {
-        return bind(query, false, q);
-    };
+    auto err = [&](string q) {
+            return bind(query, false, q);
+        };
 
-    auto equal = [&](string q, string res)
-    {
-        return bind(compare, true, q, res);
-    };
+    auto equal = [&](string q, string res) {
+            return bind(compare, true, q, res);
+        };
 
-    auto not_equal = [&](string q, string res)
-    {
-        return bind(compare, false, q, res);
-    };
+    auto not_equal = [&](string q, string res) {
+            return bind(compare, false, q, res);
+        };
 
     conn.connect();
     conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
@@ -78,7 +75,7 @@ int main(int argc, char** argv)
 
     struct
     {
-        const char* description;
+        const char*               description;
         vector<function<void ()>> steps;
     } test_cases[]
     {
@@ -203,7 +200,7 @@ int main(int argc, char** argv)
     };
 
 
-    for (auto& a: test_cases)
+    for (auto& a : test_cases)
     {
         test.tprintf("%s", a.description);
         conn.connect();
@@ -211,7 +208,7 @@ int main(int argc, char** argv)
         // Helps debugging to have a distict query in the log
         conn.query(string("SELECT '") + a.description + "'");
 
-        for (auto s: a.steps)
+        for (auto s : a.steps)
         {
             s();
         }

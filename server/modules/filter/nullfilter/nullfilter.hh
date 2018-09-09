@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
@@ -24,7 +24,7 @@ public:
 
     NullFilterSession* newSession(MXS_SESSION* pSession);
 
-    void diagnostics(DCB* pDcb);
+    void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
 
     uint64_t getCapabilities();
@@ -33,7 +33,7 @@ private:
     NullFilter(const char* zName, uint64_t m_capabilities);
 
     NullFilter(const NullFilter&);
-    NullFilter& operator = (const NullFilter&);
+    NullFilter& operator=(const NullFilter&);
 
 private:
     uint64_t m_capabilities;

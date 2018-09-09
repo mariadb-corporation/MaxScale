@@ -18,7 +18,7 @@
 #include <maxscale/log.h>
 #include <zlib.h>
 
-static bool maxavro_read_sync(FILE *file, uint8_t* sync)
+static bool maxavro_read_sync(FILE* file, uint8_t* sync)
 {
     bool rval = true;
 
@@ -28,7 +28,8 @@ static bool maxavro_read_sync(FILE *file, uint8_t* sync)
 
         if (ferror(file))
         {
-            MXS_ERROR("Failed to read file sync marker: %d, %s", errno,
+            MXS_ERROR("Failed to read file sync marker: %d, %s",
+                      errno,
                       mxs_strerror(errno));
         }
         else if (feof(file))
@@ -44,7 +45,7 @@ static bool maxavro_read_sync(FILE *file, uint8_t* sync)
     return rval;
 }
 
-bool maxavro_verify_block(MAXAVRO_FILE *file)
+bool maxavro_verify_block(MAXAVRO_FILE* file)
 {
     char sync[SYNC_MARKER_SIZE];
     int rc = fread(sync, 1, SYNC_MARKER_SIZE, file->file);
@@ -57,7 +58,8 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
         else if (rc > 0 || !feof(file->file))
         {
             MXS_ERROR("Short read when reading sync marker. Read %d bytes instead of %d",
-                      rc, SYNC_MARKER_SIZE);
+                      rc,
+                      SYNC_MARKER_SIZE);
         }
         return false;
     }
@@ -69,7 +71,9 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
         if (pos != expected)
         {
             MXS_ERROR("Sync marker mismatch due to wrong file offset. file is at %ld "
-                      "when it should be at %ld.", pos, expected);
+                      "when it should be at %ld.",
+                      pos,
+                      expected);
         }
         else
         {
@@ -86,8 +90,8 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
 
 static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
 {
-    uint8_t *temp_buffer = MXS_MALLOC(deflate_size);
-    uint8_t *buffer = NULL;
+    uint8_t* temp_buffer = MXS_MALLOC(deflate_size);
+    uint8_t* buffer = NULL;
 
     if (temp_buffer && fread(temp_buffer, 1, deflate_size, file->file) == deflate_size)
     {
@@ -117,10 +121,10 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
 
                 int rc;
 
-                while((rc = inflate(&stream, Z_FINISH)) == Z_BUF_ERROR)
+                while ((rc = inflate(&stream, Z_FINISH)) == Z_BUF_ERROR)
                 {
                     int increment = inflate_size;
-                    uint8_t *temp = MXS_REALLOC(buffer, inflate_size + increment);
+                    uint8_t* temp = MXS_REALLOC(buffer, inflate_size + increment);
 
                     if (temp)
                     {
@@ -170,8 +174,8 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
     file->block_start_pos = ftell(file->file);
     file->metadata_read = false;
     uint64_t records, bytes;
-    bool rval = maxavro_read_integer_from_file(file, &records) &&
-                maxavro_read_integer_from_file(file, &bytes);
+    bool rval = maxavro_read_integer_from_file(file, &records)
+        && maxavro_read_integer_from_file(file, &bytes);
 
     if (rval)
     {
@@ -180,7 +184,8 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
 
         if (pos == -1)
         {
-            MXS_ERROR("Failed to read datablock start: %d, %s", errno,
+            MXS_ERROR("Failed to read datablock start: %d, %s",
+                      errno,
                       mxs_strerror(errno));
         }
         else
@@ -218,7 +223,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
  * actual data. */
 static char* read_schema(MAXAVRO_FILE* file)
 {
-    char *rval = NULL;
+    char* rval = NULL;
     MAXAVRO_MAP* head = maxavro_read_map_from_file(file);
     MAXAVRO_MAP* map = head;
 
@@ -270,7 +275,7 @@ static char* read_schema(MAXAVRO_FILE* file)
  */
 MAXAVRO_FILE* maxavro_file_open(const char* filename)
 {
-    FILE *file = fopen(filename, "rb");
+    FILE* file = fopen(filename, "rb");
     if (!file)
     {
         MXS_ERROR("Failed to open file '%s': %d, %s", filename, errno, strerror(errno));
@@ -296,7 +301,7 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
     bool error = false;
 
     MAXAVRO_FILE* avrofile = calloc(1, sizeof(MAXAVRO_FILE));
-    char *my_filename = strdup(filename);
+    char* my_filename = strdup(filename);
 
     if (avrofile && my_filename)
     {
@@ -304,15 +309,15 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
         avrofile->filename = my_filename;
         avrofile->last_error = MAXAVRO_ERR_NONE;
 
-        char *schema = read_schema(avrofile);
+        char* schema = read_schema(avrofile);
 
         if (schema)
         {
             avrofile->schema = maxavro_schema_alloc(schema);
 
-            if (avrofile->schema &&
-                maxavro_read_sync(file, avrofile->sync) &&
-                maxavro_read_datablock_start(avrofile))
+            if (avrofile->schema
+                && maxavro_read_sync(file, avrofile->sync)
+                && maxavro_read_datablock_start(avrofile))
             {
                 avrofile->header_end_pos = avrofile->block_start_pos;
             }
@@ -349,7 +354,7 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
  * @param file File to check
  * @return The last error or MAXAVRO_ERR_NONE if no errors have occurred
  */
-enum maxavro_error maxavro_get_error(MAXAVRO_FILE *file)
+enum maxavro_error maxavro_get_error(MAXAVRO_FILE* file)
 {
     return file->last_error;
 }
@@ -359,7 +364,7 @@ enum maxavro_error maxavro_get_error(MAXAVRO_FILE *file)
  * @param file File to check
  * @return Error in string form
  */
-const char* maxavro_get_error_string(MAXAVRO_FILE *file)
+const char* maxavro_get_error_string(MAXAVRO_FILE* file)
 {
     switch (file->last_error)
     {
@@ -384,7 +389,7 @@ const char* maxavro_get_error_string(MAXAVRO_FILE *file)
  * @brief Close an avro file
  * @param file File to close
  */
-void maxavro_file_close(MAXAVRO_FILE *file)
+void maxavro_file_close(MAXAVRO_FILE* file)
 {
     if (file)
     {
@@ -405,10 +410,10 @@ void maxavro_file_close(MAXAVRO_FILE *file)
  * @param file File to read from
  * @return Binary header or NULL if an error occurred
  */
-GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
+GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
 {
     long pos = file->header_end_pos;
-    GWBUF *rval = NULL;
+    GWBUF* rval = NULL;
 
     if (fseek(file->file, 0, SEEK_SET) == 0)
     {
@@ -418,7 +423,8 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
             {
                 if (ferror(file->file))
                 {
-                    MXS_ERROR("Failed to read binary header: %d, %s", errno,
+                    MXS_ERROR("Failed to read binary header: %d, %s",
+                              errno,
                               mxs_strerror(errno));
                 }
                 else if (feof(file->file))
@@ -440,7 +446,8 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
     }
     else
     {
-        MXS_ERROR("Failed to read binary header: %d, %s", errno,
+        MXS_ERROR("Failed to read binary header: %d, %s",
+                  errno,
                   mxs_strerror(errno));
     }
 

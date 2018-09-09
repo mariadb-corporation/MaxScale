@@ -33,15 +33,15 @@
  */
 
 /** Query that gets all users that authenticate via the gssapi plugin */
-const char *gssapi_users_query =
-    "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-    "mysql.user AS u LEFT JOIN mysql.db AS d "
-    "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
-    "UNION "
-    "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-    "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-    "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
-    "ORDER BY user";
+const char* gssapi_users_query
+    = "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
+      "mysql.user AS u LEFT JOIN mysql.db AS d "
+      "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
+      "UNION "
+      "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
+      "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+      "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
+      "ORDER BY user";
 
 #define GSSAPI_USERS_QUERY_NUM_FIELDS 5
 
@@ -53,18 +53,18 @@ const char *gssapi_users_query =
 #define GSSAPI_DATABASE_NAME "file:gssapi.db?mode=memory&cache=shared"
 
 /** The table name where we store the users */
-#define GSSAPI_TABLE_NAME    "gssapi_users"
+#define GSSAPI_TABLE_NAME "gssapi_users"
 
 /** CREATE TABLE statement for the in-memory table */
-const char create_sql[] =
-    "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
-    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
+const char create_sql[]
+    = "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
+        "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
 
 /** The query that is executed when a user is authenticated */
-static const char gssapi_auth_query[] =
-    "SELECT * FROM " GSSAPI_TABLE_NAME
-    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
-    " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
+static const char gssapi_auth_query[]
+    = "SELECT * FROM " GSSAPI_TABLE_NAME
+        " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+        " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
@@ -75,24 +75,24 @@ static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
  * Note that the last two values are strings that can be NULL and thus they have
  * no quoted around them. The quotes for strings are added in add_gssapi_user().
  */
-static const char insert_sql_pattern[] =
-    "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+static const char insert_sql_pattern[]
+    = "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
 
 /** Flags for sqlite3_open_v2() */
-static int db_flags = SQLITE_OPEN_READWRITE |
-                      SQLITE_OPEN_CREATE |
-                      SQLITE_OPEN_URI |
-                      SQLITE_OPEN_SHAREDCACHE;
+static int db_flags = SQLITE_OPEN_READWRITE
+    | SQLITE_OPEN_CREATE
+    | SQLITE_OPEN_URI
+    | SQLITE_OPEN_SHAREDCACHE;
 
 /** The instance structure for the client side GSSAPI authenticator, created in
  *  gssapi_auth_init() */
 typedef struct gssapi_instance
 {
-    char    *principal_name; /**< Service principal name given to the client */
-    sqlite3 *handle;         /**< SQLite3 database handle */
+    char*    principal_name;/**< Service principal name given to the client */
+    sqlite3* handle;        /**< SQLite3 database handle */
 } GSSAPI_INSTANCE;
 
 /**
@@ -104,9 +104,9 @@ typedef struct gssapi_instance
  * @param options Listener options
  * @return Authenticator instance
  */
-void* gssapi_auth_init(char **options)
+void* gssapi_auth_init(char** options)
 {
-    GSSAPI_INSTANCE *instance = static_cast<GSSAPI_INSTANCE*>(MXS_MALLOC(sizeof(GSSAPI_INSTANCE)));
+    GSSAPI_INSTANCE* instance = static_cast<GSSAPI_INSTANCE*>(MXS_MALLOC(sizeof(GSSAPI_INSTANCE)));
 
     if (instance)
     {
@@ -119,7 +119,7 @@ void* gssapi_auth_init(char **options)
             return NULL;
         }
 
-        char *err;
+        char* err;
 
         if (sqlite3_exec(instance->handle, create_sql, NULL, NULL, &err) != SQLITE_OK)
         {
@@ -134,7 +134,7 @@ void* gssapi_auth_init(char **options)
         {
             if (strstr(options[i], "principal_name"))
             {
-                char *ptr = strchr(options[i], '=');
+                char* ptr = strchr(options[i], '=');
                 if (ptr)
                 {
                     ptr++;
@@ -160,7 +160,7 @@ void* gssapi_auth_init(char **options)
     return instance;
 }
 
-void* gssapi_auth_alloc(void *instance)
+void* gssapi_auth_alloc(void* instance)
 {
     gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
 
@@ -186,11 +186,11 @@ void* gssapi_auth_alloc(void *instance)
     return rval;
 }
 
-void gssapi_auth_free(void *data)
+void gssapi_auth_free(void* data)
 {
     if (data)
     {
-        gssapi_auth_t *auth = (gssapi_auth_t*)data;
+        gssapi_auth_t* auth = (gssapi_auth_t*)data;
         sqlite3_close_v2(auth->handle);
         MXS_FREE(auth->principal_name);
         MXS_FREE(auth);
@@ -206,25 +206,26 @@ void gssapi_auth_free(void *data)
  * GSSAPI server in order for the client to be able to request a token.
  *
  * @return Allocated packet or NULL if memory allocation failed
- * @see https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
+ * @see
+ *https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE *instance, gssapi_auth_t *auth)
+static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE* instance, gssapi_auth_t* auth)
 {
     size_t principal_name_len = strlen(instance->principal_name);
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
-    GWBUF *buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
+    GWBUF* buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
 
     if (buffer)
     {
-        uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
+        uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
         gw_mysql_set_byte3(data, plen);
         data += 3;
-        *data++ = ++auth->sequence; // Second packet
-        *data++ = 0xfe; // AuthSwitchRequest command
-        memcpy(data, auth_plugin_name, sizeof(auth_plugin_name)); // Plugin name
+        *data++ = ++auth->sequence;                                 // Second packet
+        *data++ = 0xfe;                                             // AuthSwitchRequest command
+        memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, instance->principal_name, principal_name_len); // Plugin data
+        memcpy(data, instance->principal_name, principal_name_len);     // Plugin data
     }
 
     return buffer;
@@ -240,7 +241,7 @@ static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE *instance, gssapi_auth_t
  * @param buffer Buffer containing the key
  * @return True on success, false if memory allocation failed
  */
-bool store_client_token(DCB *dcb, GWBUF *buffer)
+bool store_client_token(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     uint8_t hdr[MYSQL_HEADER_LEN];
@@ -248,7 +249,7 @@ bool store_client_token(DCB *dcb, GWBUF *buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(hdr);
-        MYSQL_session *ses = (MYSQL_session*)dcb->data;
+        MYSQL_session* ses = (MYSQL_session*)dcb->data;
 
         if ((ses->auth_token = static_cast<uint8_t*>(MXS_MALLOC(plen))))
         {
@@ -266,9 +267,9 @@ bool store_client_token(DCB *dcb, GWBUF *buffer)
  * @param dcb Client DCB
  * @param buffer Buffer containing the first authentication response
  */
-static void copy_client_information(DCB *dcb, GWBUF *buffer)
+static void copy_client_information(DCB* dcb, GWBUF* buffer)
 {
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
 }
 
@@ -279,10 +280,10 @@ static void copy_client_information(DCB *dcb, GWBUF *buffer)
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-static bool gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
+static bool gssapi_auth_extract(DCB* dcb, GWBUF* read_buffer)
 {
     int rval = false;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     switch (auth->state)
     {
@@ -311,9 +312,9 @@ static bool gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
  * @param dcb Client DCB
  * @return True if client supports SSL
  */
-bool gssapi_auth_connectssl(DCB *dcb)
+bool gssapi_auth_connectssl(DCB* dcb)
 {
-    MySQLProtocol *protocol = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* protocol = (MySQLProtocol*)dcb->protocol;
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
@@ -327,7 +328,7 @@ static gss_name_t server_name = GSS_C_NO_NAME;
  * @param output Pointer where the client principal name is stored
  * @return True if client token is valid
  */
-static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, char **output)
+static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, char** output)
 {
     OM_uint32 major = 0, minor = 0;
     gss_buffer_desc server_buf = {0, 0};
@@ -344,9 +345,14 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
         return false;
     }
 
-    major = gss_acquire_cred(&minor, server_name, GSS_C_INDEFINITE,
-                             GSS_C_NO_OID_SET, GSS_C_ACCEPT,
-                             &credentials, NULL, NULL);
+    major = gss_acquire_cred(&minor,
+                             server_name,
+                             GSS_C_INDEFINITE,
+                             GSS_C_NO_OID_SET,
+                             GSS_C_ACCEPT,
+                             &credentials,
+                             NULL,
+                             NULL);
     if (GSS_ERROR(major))
     {
         report_error(major, minor);
@@ -360,16 +366,23 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
         gss_buffer_desc in = {0, 0};
         gss_buffer_desc out = {0, 0};
         gss_buffer_desc client_name = {0, 0};
-        gss_OID_desc *oid;
+        gss_OID_desc* oid;
         gss_name_t client;
 
         in.value = token;
         in.length = len;
 
-        major = gss_accept_sec_context(&minor, &handle, GSS_C_NO_CREDENTIAL,
-                                       &in, GSS_C_NO_CHANNEL_BINDINGS,
-                                       &client, &oid, &out,
-                                       0, 0, NULL);
+        major = gss_accept_sec_context(&minor,
+                                       &handle,
+                                       GSS_C_NO_CREDENTIAL,
+                                       &in,
+                                       GSS_C_NO_CHANNEL_BINDINGS,
+                                       &client,
+                                       &oid,
+                                       &out,
+                                       0,
+                                       0,
+                                       NULL);
         if (GSS_ERROR(major))
         {
             report_error(major, minor);
@@ -384,7 +397,7 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
             return false;
         }
 
-        char *princ_name = static_cast<char*>(MXS_MALLOC(client_name.length + 1));
+        char* princ_name = static_cast<char*>(MXS_MALLOC(client_name.length + 1));
 
         if (!princ_name)
         {
@@ -401,9 +414,9 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
 }
 
 /** @brief Callback for sqlite3_exec() */
-static int auth_cb(void *data, int columns, char** rows, char** row_names)
+static int auth_cb(void* data, int columns, char** rows, char** row_names)
 {
-    bool *rv = (bool*)data;
+    bool* rv = (bool*)data;
     *rv = true;
     return 0;
 }
@@ -417,25 +430,32 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
  * @param princ Client principal name
  * @return True if the user has access to the database
  */
-static bool validate_user(gssapi_auth_t *auth, DCB *dcb, MYSQL_session *session, const char *princ)
+static bool validate_user(gssapi_auth_t* auth, DCB* dcb, MYSQL_session* session, const char* princ)
 {
     mxb_assert(princ);
-    size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2 +
-                 strlen(session->db) * 2 + strlen(dcb->remote) + strlen(princ) * 2;
+    size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2
+        + strlen(session->db) * 2 + strlen(dcb->remote) + strlen(princ) * 2;
     char sql[len + 1];
     bool rval = false;
-    char *err;
+    char* err;
 
     char princ_user[strlen(princ) + 1];
     strcpy(princ_user, princ);
-    char *at = strchr(princ_user, '@');
+    char* at = strchr(princ_user, '@');
     if (at)
     {
         *at = '\0';
     }
 
-    sprintf(sql, gssapi_auth_query, session->user, dcb->remote, session->db,
-            session->db, princ_user, session->user, princ);
+    sprintf(sql,
+            gssapi_auth_query,
+            session->user,
+            dcb->remote,
+            session->db,
+            session->db,
+            princ_user,
+            session->user,
+            princ);
 
     /**
      * Try authentication twice; first time with the current users, second
@@ -467,18 +487,18 @@ static bool validate_user(gssapi_auth_t *auth, DCB *dcb, MYSQL_session *session,
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-int gssapi_auth_authenticate(DCB *dcb)
+int gssapi_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
-    GSSAPI_INSTANCE *instance = (GSSAPI_INSTANCE*)dcb->listener->auth_instance;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
+    GSSAPI_INSTANCE* instance = (GSSAPI_INSTANCE*)dcb->listener->auth_instance;
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {
         /** We need to send the authentication switch packet to change the
          * authentication to something other than the 'mysql_native_password'
          * method */
-        GWBUF *buffer = create_auth_change_packet(instance, auth);
+        GWBUF* buffer = create_auth_change_packet(instance, auth);
 
         if (buffer && dcb->func.write(dcb, buffer))
         {
@@ -491,11 +511,11 @@ int gssapi_auth_authenticate(DCB *dcb)
         /** We sent the principal name and the client responded with the GSSAPI
          * token that we must validate */
 
-        MYSQL_session *ses = (MYSQL_session*)dcb->data;
-        char *princ = NULL;
+        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        char* princ = NULL;
 
-        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len, &princ) &&
-            validate_user(auth, dcb, ses, princ))
+        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len, &princ)
+            && validate_user(auth, dcb, ses, princ))
         {
             rval = MXS_AUTH_SUCCEEDED;
         }
@@ -511,11 +531,11 @@ int gssapi_auth_authenticate(DCB *dcb)
  *
  * @param dcb DCB to free
  */
-void gssapi_auth_free_data(DCB *dcb)
+void gssapi_auth_free_data(DCB* dcb)
 {
     if (dcb->data)
     {
-        MYSQL_session *ses = static_cast<MYSQL_session*>(dcb->data);
+        MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->data);
         MXS_FREE(ses->auth_token);
         MXS_FREE(ses);
         dcb->data = NULL;
@@ -526,9 +546,9 @@ void gssapi_auth_free_data(DCB *dcb)
  * @brief Delete old users from the database
  * @param handle Database handle
  */
-static void delete_old_users(sqlite3 *handle)
+static void delete_old_users(sqlite3* handle)
 {
-    char *err;
+    char* err;
 
     if (sqlite3_exec(handle, delete_query, NULL, NULL, &err) != SQLITE_OK)
     {
@@ -546,10 +566,14 @@ static void delete_old_users(sqlite3 *handle)
  * @param db     Database
  * @param anydb  Global access to databases
  */
-static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
-                            const char *db, bool anydb, const char *princ)
+static void add_gssapi_user(sqlite3* handle,
+                            const char* user,
+                            const char* host,
+                            const char* db,
+                            bool anydb,
+                            const char* princ)
 {
-    size_t dblen = db ? strlen(db) + 2 : sizeof(null_token); /** +2 for single quotes */
+    size_t dblen = db ? strlen(db) + 2 : sizeof(null_token);    /** +2 for single quotes */
     char dbstr[dblen + 1];
 
     if (db)
@@ -561,7 +585,8 @@ static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
         strcpy(dbstr, null_token);
     }
 
-    size_t princlen = princ && *princ ? strlen(princ) + 2 : sizeof(null_token); /** +2 for single quotes */
+    size_t princlen = princ && *princ ? strlen(princ) + 2 : sizeof(null_token);     /** +2 for single quotes
+                                                                                     * */
     char princstr[princlen + 1];
 
     if (princ && *princ)
@@ -578,7 +603,7 @@ static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
     char insert_sql[len + 1];
     sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0", princstr);
 
-    char *err;
+    char* err;
     if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to insert user: %s", err);
@@ -597,12 +622,12 @@ static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
  * @param listener Listener definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int gssapi_auth_load_users(SERV_LISTENER *listener)
+int gssapi_auth_load_users(SERV_LISTENER* listener)
 {
     const char* user;
     const char* password;
     int rval = MXS_AUTH_LOADUSERS_ERROR;
-    GSSAPI_INSTANCE *inst = (GSSAPI_INSTANCE*)listener->auth_instance;
+    GSSAPI_INSTANCE* inst = (GSSAPI_INSTANCE*)listener->auth_instance;
     serviceGetUser(listener->service, &user, &password);
     char* pw;
 
@@ -610,7 +635,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
     {
         bool no_active_servers = true;
 
-        for (SERVER_REF *servers = listener->service->dbref; servers; servers = servers->next)
+        for (SERVER_REF* servers = listener->service->dbref; servers; servers = servers->next)
         {
             if (!SERVER_REF_IS_ACTIVE(servers) || !server_is_active(servers->server))
             {
@@ -618,18 +643,19 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
             }
 
             no_active_servers = false;
-            MYSQL *mysql = mysql_init(NULL);
+            MYSQL* mysql = mysql_init(NULL);
 
             if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
             {
                 if (mxs_mysql_query(mysql, gssapi_users_query))
                 {
                     MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
-                              servers->server->name, mysql_error(mysql));
+                              servers->server->name,
+                              mysql_error(mysql));
                 }
                 else
                 {
-                    MYSQL_RES *res = mysql_store_result(mysql);
+                    MYSQL_RES* res = mysql_store_result(mysql);
 
                     delete_old_users(inst->handle);
 
@@ -640,7 +666,10 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 
                         while ((row = mysql_fetch_row(res)))
                         {
-                            add_gssapi_user(inst->handle, row[0], row[1], row[2],
+                            add_gssapi_user(inst->handle,
+                                            row[0],
+                                            row[1],
+                                            row[2],
                                             row[3] && strcasecmp(row[3], "Y") == 0,
                                             row[4]);
                         }
@@ -675,40 +704,39 @@ extern "C"
 /**
  * Module handle entry point
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        gssapi_auth_init,                /* Initialize authenticator */
-        gssapi_auth_alloc,               /* Allocate authenticator data */
-        gssapi_auth_extract,             /* Extract data into structure   */
-        gssapi_auth_connectssl,          /* Check if client supports SSL  */
-        gssapi_auth_authenticate,        /* Authenticate user credentials */
-        gssapi_auth_free_data,           /* Free the client data held in DCB */
-        gssapi_auth_free,                /* Free authenticator data */
-        gssapi_auth_load_users,          /* Load database users */
-        users_default_diagnostic,        /* Default user diagnostic */
-        users_default_diagnostic_json,   /* Default user diagnostic */
-        NULL                             /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            gssapi_auth_init,               /* Initialize authenticator */
+            gssapi_auth_alloc,              /* Allocate authenticator data */
+            gssapi_auth_extract,            /* Extract data into structure   */
+            gssapi_auth_connectssl,         /* Check if client supports SSL  */
+            gssapi_auth_authenticate,       /* Authenticate user credentials */
+            gssapi_auth_free_data,          /* Free the client data held in DCB */
+            gssapi_auth_free,               /* Free authenticator data */
+            gssapi_auth_load_users,         /* Load database users */
+            users_default_diagnostic,       /* Default user diagnostic */
+            users_default_diagnostic_json,  /* Default user diagnostic */
+            NULL                            /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "GSSAPI authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "GSSAPI authenticator",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
-
+        return &info;
+    }
 }

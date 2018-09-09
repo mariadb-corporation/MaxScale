@@ -12,7 +12,7 @@
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.set_timeout(30);
@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
 
     test.maxscales->connect_maxscale(0);
     test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
-                     "Query should fail when duplicate table is found.");
+                    "Query should fail when duplicate table is found.");
     test.stop_timeout();
     sleep(10);
-    test.check_log_err(0, (char *) "Duplicate tables found", true);
+    test.check_log_err(0, (char*) "Duplicate tables found", true);
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS duplicate");
     test.repl->execute_query_all_nodes("START SLAVE");
     return test.global_result;

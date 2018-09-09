@@ -30,9 +30,9 @@ class TestReader
 public:
     enum result_t
     {
-        RESULT_ERROR, /*< The input is probably not a test file. */
-        RESULT_EOF,   /*< End of file was reached. */
-        RESULT_STMT,  /*< A statement was returned. */
+        RESULT_ERROR,   /*< The input is probably not a test file. */
+        RESULT_EOF,     /*< End of file was reached. */
+        RESULT_STMT,    /*< A statement was returned. */
     };
 
     /**
@@ -50,12 +50,15 @@ public:
      * @param line  Optionally specify the initial line number.
      */
     TestReader(std::istream& in,
-               size_t        line = 0);
+               size_t line = 0);
 
     /**
      * @return The current line number.
      */
-    size_t line() const { return m_line; }
+    size_t line() const
+    {
+        return m_line;
+    }
 
     /**
      * Get next full SQL statement.
@@ -71,12 +74,11 @@ private:
 
 private:
     TestReader(const TestReader&);
-    TestReader& operator = (const TestReader&);
+    TestReader& operator=(const TestReader&);
 
 private:
-    std::istream& m_in;        /*< The stream we are using. */
-    size_t        m_line;      /*< The current line. */
-    std::string   m_delimiter; /*< The current delimiter. */
+    std::istream& m_in;         /*< The stream we are using. */
+    size_t        m_line;       /*< The current line. */
+    std::string   m_delimiter;  /*< The current delimiter. */
 };
-
-};
+}

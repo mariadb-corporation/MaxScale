@@ -29,7 +29,8 @@ void test1(TestConnections& test)
 
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
     unsigned long rows = 0;
-    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type), "Failed to set attributes");
+    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type),
+                    "Failed to set attributes");
     test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
 
     cout << "Execute" << endl;
@@ -44,15 +45,19 @@ void test1(TestConnections& test)
     cout << "Close statement" << endl;
     mysql_stmt_close(stmt);
     test.maxscales->close_maxscale_connections(0);
-
 }
 
 void test2(TestConnections& test)
 {
     test.set_timeout(20);
 
-    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port[0], test.maxscales->ip(0), "test",
-                                       test.maxscales->user_name, test.maxscales->password, 1, false);
+    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port[0],
+                                       test.maxscales->ip(0),
+                                       "test",
+                                       test.maxscales->user_name,
+                                       test.maxscales->password,
+                                       1,
+                                       false);
 
     MYSQL_STMT* stmt1 = mysql_stmt_init(conn);
     MYSQL_STMT* stmt2 = mysql_stmt_init(conn);
@@ -85,7 +90,8 @@ void test2(TestConnections& test)
 
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
     unsigned long rows = 0;
-    test.add_result(mysql_stmt_attr_set(stmt1, STMT_ATTR_CURSOR_TYPE, &cursor_type), "Failed to set attributes");
+    test.add_result(mysql_stmt_attr_set(stmt1, STMT_ATTR_CURSOR_TYPE, &cursor_type),
+                    "Failed to set attributes");
     test.add_result(mysql_stmt_attr_set(stmt1, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
 
     test.add_result(mysql_stmt_execute(stmt1), "Failed to execute");
@@ -97,7 +103,8 @@ void test2(TestConnections& test)
 
     cout << "Second prepare, should go to master" << endl;
     test.add_result(mysql_stmt_prepare(stmt2, query2, strlen(query2)), "Failed to prepare");
-    test.add_result(mysql_stmt_attr_set(stmt2, STMT_ATTR_CURSOR_TYPE, &cursor_type), "Failed to set attributes");
+    test.add_result(mysql_stmt_attr_set(stmt2, STMT_ATTR_CURSOR_TYPE, &cursor_type),
+                    "Failed to set attributes");
     test.add_result(mysql_stmt_attr_set(stmt2, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
 
     test.add_result(mysql_stmt_execute(stmt2), "Failed to execute");
@@ -115,7 +122,8 @@ void test2(TestConnections& test)
     test.add_result(strcmp(buffer1, buffer2) == 0, "Expected results to differ");
     test.add_result(strcmp(buffer2, server_id) != 0,
                     "Expected prepare 2 to go to the master (%s) but it's %s",
-                    server_id[0], buffer2);
+                    server_id[0],
+                    buffer2);
 }
 
 void test3(TestConnections& test)
@@ -145,7 +153,8 @@ void test3(TestConnections& test)
 
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
     unsigned long rows = 0;
-    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type), "Failed to set attributes");
+    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type),
+                    "Failed to set attributes");
     test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
 
     cout << "Execute" << endl;
@@ -168,7 +177,8 @@ void test3(TestConnections& test)
     sprintf(server_id, "%d", test.repl->get_server_id(0));
     test.add_result(strcmp(buffer, server_id) != 0,
                     "Expected the execute inside a transaction to go to the master (%s) but it's %s",
-                    server_id[0], buffer);
+                    server_id[0],
+                    buffer);
 }
 
 int main(int argc, char** argv)

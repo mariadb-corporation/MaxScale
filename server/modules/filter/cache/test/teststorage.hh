@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -34,9 +34,9 @@ public:
 
 protected:
     TestStorage(std::ostream* pOut,
-                size_t threads  = DEFAULT_THREADS,
-                size_t seconds  = DEFAULT_SECONDS,
-                size_t items    = DEFAULT_ITEMS,
+                size_t threads = DEFAULT_THREADS,
+                size_t seconds = DEFAULT_SECONDS,
+                size_t items = DEFAULT_ITEMS,
                 size_t min_size = DEFAULT_MIN_SIZE,
                 size_t max_size = DEFAULT_MAX_SIZE);
 
@@ -56,13 +56,13 @@ protected:
 
 private:
     TestStorage(const TestStorage&);
-    TestStorage& operator = (const TestStorage&);
+    TestStorage& operator=(const TestStorage&);
 
 private:
     std::ostream& m_out;
-    size_t m_threads;
-    size_t m_seconds;
-    size_t m_items;
-    size_t m_min_size;
-    size_t m_max_size;
+    size_t        m_threads;
+    size_t        m_seconds;
+    size_t        m_items;
+    size_t        m_min_size;
+    size_t        m_max_size;
 };

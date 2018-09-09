@@ -40,7 +40,6 @@ void sleep(int s)
 
     cout << endl;
 }
-
 }
 
 namespace
@@ -205,9 +204,7 @@ void run(TestConnections& test)
     expect(test, "server2", "Master", "Running");
     expect(test, "server3", "Slave", "Running");
     expect(test, "server4", "Running");
-
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -219,4 +216,3 @@ int main(int argc, char* argv[])
 
     return test.global_result;
 }
-

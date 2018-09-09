@@ -14,20 +14,20 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&](string q)
-    {
-        return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
-    };
+    auto query = [&](string q) {
+            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+        };
 
-    auto ok = [&](string q)
-    {
-        test.assert(query(q), "Query '%s' should work: %s", q.c_str(), mysql_error(test.maxscales->conn_rwsplit[0]));
-    };
+    auto ok = [&](string q) {
+            test.assert(query(q),
+                        "Query '%s' should work: %s",
+                        q.c_str(),
+                        mysql_error(test.maxscales->conn_rwsplit[0]));
+        };
 
-    auto err = [&](string q)
-    {
-        test.assert(!query(q), "Query should not work: %s", q.c_str());
-    };
+    auto err = [&](string q) {
+            test.assert(!query(q), "Query should not work: %s", q.c_str());
+        };
 
     // Create a table and insert one value
     test.maxscales->connect();

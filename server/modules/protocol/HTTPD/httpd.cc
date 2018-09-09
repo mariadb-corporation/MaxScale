@@ -45,17 +45,17 @@
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int httpd_read_event(DCB* dcb);
-static int httpd_write_event(DCB *dcb);
-static int httpd_write(DCB *dcb, GWBUF *queue);
-static int httpd_error(DCB *dcb);
-static int httpd_hangup(DCB *dcb);
-static int httpd_accept(DCB *dcb);
-static int httpd_close(DCB *dcb);
-static int httpd_listen(DCB *dcb, char *config);
-static int httpd_get_line(int sock, char *buf, int size);
-static void httpd_send_headers(DCB *dcb, int final, bool auth_ok);
-static char *httpd_default_auth();
+static int   httpd_read_event(DCB* dcb);
+static int   httpd_write_event(DCB* dcb);
+static int   httpd_write(DCB* dcb, GWBUF* queue);
+static int   httpd_error(DCB* dcb);
+static int   httpd_hangup(DCB* dcb);
+static int   httpd_accept(DCB* dcb);
+static int   httpd_close(DCB* dcb);
+static int   httpd_listen(DCB* dcb, char* config);
+static int   httpd_get_line(int sock, char* buf, int size);
+static void  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
+static char* httpd_default_auth();
 
 extern "C"
 {
@@ -67,47 +67,46 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_PROTOCOL MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        httpd_read_event,   /**< Read - EPOLLIN handler        */
-        httpd_write,        /**< Write - data from gateway     */
-        httpd_write_event,  /**< WriteReady - EPOLLOUT handler */
-        httpd_error,        /**< Error - EPOLLERR handler      */
-        httpd_hangup,       /**< HangUp - EPOLLHUP handler     */
-        httpd_accept,       /**< Accept                        */
-        NULL,               /**< Connect                       */
-        httpd_close,        /**< Close                         */
-        httpd_listen,       /**< Create a listener             */
-        NULL,               /**< Authentication                */
-        httpd_default_auth, /**< Default authenticator         */
-        NULL,               /**< Connection limit reached      */
-        NULL,
-        NULL,
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_IN_DEVELOPMENT,
-        MXS_PROTOCOL_VERSION,
-        "An experimental HTTPD implementation for use in administration",
-        "V1.2.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_PROTOCOL MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            httpd_read_event,   /**< Read - EPOLLIN handler        */
+            httpd_write,        /**< Write - data from gateway     */
+            httpd_write_event,  /**< WriteReady - EPOLLOUT handler */
+            httpd_error,        /**< Error - EPOLLERR handler      */
+            httpd_hangup,       /**< HangUp - EPOLLHUP handler     */
+            httpd_accept,       /**< Accept                        */
+            NULL,               /**< Connect                       */
+            httpd_close,        /**< Close                         */
+            httpd_listen,       /**< Create a listener             */
+            NULL,               /**< Authentication                */
+            httpd_default_auth, /**< Default authenticator         */
+            NULL,               /**< Connection limit reached      */
+            NULL,
+            NULL,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_PROTOCOL,
+            MXS_MODULE_IN_DEVELOPMENT,
+            MXS_PROTOCOL_VERSION,
+            "An experimental HTTPD implementation for use in administration",
+            "V1.2.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 /*lint +e14 */
 
@@ -118,7 +117,7 @@ static const char* default_auth = "NullAuthAllow";
  *
  * @return name of authenticator
  */
-static char *httpd_default_auth()
+static char* httpd_default_auth()
 {
     return (char*)default_auth;
 }
@@ -131,17 +130,17 @@ static char *httpd_default_auth()
  */
 static int httpd_read_event(DCB* dcb)
 {
-    MXS_SESSION *session = dcb->session;
+    MXS_SESSION* session = dcb->session;
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
-    char *query_string = NULL;
+    char* query_string = NULL;
     char method[HTTPD_METHOD_MAXLEN - 1] = "";
     char url[HTTPD_SMALL_BUFFER] = "";
     size_t i, j;
     int headers_read = 0;
-    HTTPD_session *client_data = NULL;
-    GWBUF *uri;
+    HTTPD_session* client_data = NULL;
+    GWBUF* uri;
 
     client_data = static_cast<HTTPD_session*>(dcb->data);
 
@@ -167,13 +166,13 @@ static int httpd_read_event(DCB* dcb)
     /* check allowed http methods */
     if (strcasecmp(method, "GET") && strcasecmp(method, "POST"))
     {
-        //httpd_unimplemented(dcb->fd);
+        // httpd_unimplemented(dcb->fd);
         return 0;
     }
 
     i = 0;
 
-    while ( (j < sizeof(buf)) && ISspace(buf[j]))
+    while ((j < sizeof(buf)) && ISspace(buf[j]))
     {
         j++;
     }
@@ -215,8 +214,8 @@ static int httpd_read_event(DCB* dcb)
 
     while ((numchars > 0) && strcmp("\n", buf))
     {
-        char *value = NULL;
-        char *end = NULL;
+        char* value = NULL;
+        char* end = NULL;
         numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
         if ((value = strchr(buf, ':')))
         {
@@ -236,7 +235,7 @@ static int httpd_read_event(DCB* dcb)
 
             if (strcmp(buf, "Authorization") == 0)
             {
-                GWBUF *auth_data = gwbuf_alloc_and_load(strlen(value), value);
+                GWBUF* auth_data = gwbuf_alloc_and_load(strlen(value), value);
                 MXS_OOM_IFNULL(auth_data);
 
                 if (auth_data)
@@ -285,7 +284,7 @@ static int httpd_read_event(DCB* dcb)
     }
     if (strcmp(url, "/services") == 0)
     {
-        ResultSet *set, *seviceGetList();
+        ResultSet* set, * seviceGetList();
         if ((set = serviceGetList()) != NULL)
         {
             resultset_stream_json(set, dcb);
@@ -295,7 +294,7 @@ static int httpd_read_event(DCB* dcb)
 #endif
     if (auth_ok && (uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
     {
-        strcpy((char *)GWBUF_DATA(uri), url);
+        strcpy((char*)GWBUF_DATA(uri), url);
         gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
         MXS_SESSION_ROUTE_QUERY(session, uri);
     }
@@ -312,7 +311,7 @@ static int httpd_read_event(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return
  */
-static int httpd_write_event(DCB *dcb)
+static int httpd_write_event(DCB* dcb)
 {
     return dcb_drain_writeq(dcb);
 }
@@ -326,7 +325,7 @@ static int httpd_write_event(DCB *dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int httpd_write(DCB *dcb, GWBUF *queue)
+static int httpd_write(DCB* dcb, GWBUF* queue)
 {
     int rc;
     rc = dcb_write(dcb, queue);
@@ -338,7 +337,7 @@ static int httpd_write(DCB *dcb, GWBUF *queue)
  *
  * @param dcb   The descriptor control block
  */
-static int httpd_error(DCB *dcb)
+static int httpd_error(DCB* dcb)
 {
     dcb_close(dcb);
     return 0;
@@ -349,7 +348,7 @@ static int httpd_error(DCB *dcb)
  *
  * @param dcb   The descriptor control block
  */
-static int httpd_hangup(DCB *dcb)
+static int httpd_hangup(DCB* dcb)
 {
     dcb_close(dcb);
     return 0;
@@ -361,17 +360,17 @@ static int httpd_hangup(DCB *dcb)
  *
  * @param listener   The descriptor control block
  */
-static int httpd_accept(DCB *listener)
+static int httpd_accept(DCB* listener)
 {
     int n_connect = 0;
-    DCB *client_dcb;
+    DCB* client_dcb;
 
     while ((client_dcb = dcb_accept(listener)) != NULL)
     {
-        HTTPD_session *client_data = NULL;
+        HTTPD_session* client_data = NULL;
 
         /* create the session data for HTTPD */
-        if ((client_data = (HTTPD_session *)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
+        if ((client_data = (HTTPD_session*)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
         {
             dcb_close(client_dcb);
             continue;
@@ -397,7 +396,7 @@ static int httpd_accept(DCB *listener)
  * @param dcb   The descriptor control block
  */
 
-static int httpd_close(DCB *dcb)
+static int httpd_close(DCB* dcb)
 {
     return 0;
 }
@@ -408,7 +407,7 @@ static int httpd_close(DCB *dcb)
  * @param       listener        The Listener DCB
  * @param       config          Configuration (ip:port)
  */
-static int httpd_listen(DCB *listener, char *config)
+static int httpd_listen(DCB* listener, char* config)
 {
     return (dcb_listen(listener, config, "HTTPD") < 0) ? 0 : 1;
 }
@@ -416,7 +415,7 @@ static int httpd_listen(DCB *listener, char *config)
 /**
  * HTTPD get line from client
  */
-static int httpd_get_line(int sock, char *buf, int size)
+static int httpd_get_line(int sock, char* buf, int size)
 {
     int i = 0;
     char c = '\0';
@@ -461,16 +460,16 @@ static int httpd_get_line(int sock, char *buf, int size)
 /**
  * HTTPD send basic headers with 200 OK
  */
-static void httpd_send_headers(DCB *dcb, int final, bool auth_ok)
+static void httpd_send_headers(DCB* dcb, int final, bool auth_ok)
 {
     char date[64] = "";
-    const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
+    const char* fmt = "%a, %d %b %Y %H:%M:%S GMT";
     time_t httpd_current_time = time(NULL);
 
     struct tm tm;
     localtime_r(&httpd_current_time, &tm);
     strftime(date, sizeof(date), fmt, &tm);
-    const char *response = auth_ok ? "200 OK" : "401 Unauthorized";
+    const char* response = auth_ok ? "200 OK" : "401 Unauthorized";
     dcb_printf(dcb,
                "HTTP/1.1 %s\r\n"
                "Date: %s\r\n"
@@ -478,7 +477,9 @@ static void httpd_send_headers(DCB *dcb, int final, bool auth_ok)
                "Connection: close\r\n"
                "WWW-Authenticate: Basic realm=\"MaxInfo\"\r\n"
                "Content-Type: application/json\r\n",
-               response, date, HTTP_SERVER_STRING);
+               response,
+               date,
+               HTTP_SERVER_STRING);
 
     /* close the headers */
     if (final)

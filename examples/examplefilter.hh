@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
@@ -20,7 +20,7 @@ class ExampleFilter : public maxscale::Filter<ExampleFilter, ExampleFilterSessio
 {
     // Prevent copy-constructor and assignment operator usage
     ExampleFilter(const ExampleFilter&);
-    ExampleFilter& operator = (const ExampleFilter&);
+    ExampleFilter& operator=(const ExampleFilter&);
 
 public:
     ~ExampleFilter();

@@ -60,12 +60,12 @@ public:
     int run_tests();
 private:
     MariaDBMonitor* m_monitor;
-    int m_current_test;
+    int             m_current_test;
 
     void init_servers(int count);
     void clear_servers();
     void add_replication(EdgeArray edges);
-    int check_result_cycles(CycleArray expected_cycles);
+    int  check_result_cycles(CycleArray expected_cycles);
 };
 
 int main()
@@ -79,7 +79,8 @@ int main()
 MariaDBMonitor::Test::Test()
     : m_monitor(new MariaDBMonitor(NULL))
     , m_current_test(0)
-{}
+{
+}
 
 MariaDBMonitor::Test::~Test()
 {
@@ -102,23 +103,26 @@ int MariaDBMonitor::Test::run_tests()
 
     // Test 2: 4 servers, two cycles with a connection between them
     init_servers(4);
-    EdgeArray edges2 = {{{1,2},{2,1},{3,2},{3,4},{4,3}}};
+    EdgeArray edges2 = {{{1, 2}, {2, 1}, {3, 2}, {3, 4}, {4, 3}}};
     add_replication(edges2);
-    CycleArray expected_cycles2 = {{{{1,2}},{{3,4}}}};
+    CycleArray expected_cycles2 = {{{{1, 2}}, {{3, 4}}}};
     results.push_back(check_result_cycles(expected_cycles2));
 
     // Test 3: 6 servers, with one cycle
     init_servers(6);
-    EdgeArray edges3 = {{{2,1},{3,2},{4,3},{2,4},{5,1},{6,5},{6,4}}};
+    EdgeArray edges3 = {{{2, 1}, {3, 2}, {4, 3}, {2, 4}, {5, 1}, {6, 5}, {6, 4}}};
     add_replication(edges3);
-    CycleArray expected_cycles3 = {{{{2,3,4}}}};
+    CycleArray expected_cycles3 = {{{{2, 3, 4}}}};
     results.push_back(check_result_cycles(expected_cycles3));
 
     // Test 4: 10 servers, with a big cycle composed of two smaller ones plus non-cycle servers
     init_servers(10);
-    EdgeArray edges4 = {{{1,5},{2,1},{2,5},{3,1},{3,4},{3,10},{4,1},{5,6},{6,7},{6,4},{7,8},{8,6},{9,8}}};
+    EdgeArray edges4
+        = {     {{1, 5}, {2, 1}, {2, 5}, {3, 1}, {3, 4}, {3, 10}, {4, 1}, {5, 6}, {6, 7}, {6, 4}, {7, 8},
+        {8, 6},
+        {9, 8}}};
     add_replication(edges4);
-    CycleArray expected_cycles4 = {{{{1,5,6,7,8,4}}}};
+    CycleArray expected_cycles4 = {{{{1, 5, 6, 7, 8, 4}}}};
     results.push_back(check_result_cycles(expected_cycles4));
 
     clear_servers();
@@ -134,16 +138,16 @@ int MariaDBMonitor::Test::run_tests()
 void MariaDBMonitor::Test::init_servers(int count)
 {
     clear_servers();
-    mxb_assert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty() &&
-               m_monitor->m_servers_by_id.empty());
+    mxb_assert(m_monitor->m_server_info.empty() && m_monitor->m_servers.empty()
+               && m_monitor->m_servers_by_id.empty());
 
     for (int i = 1; i < count + 1; i++)
     {
-        SERVER* base_server = new SERVER; // Contents mostly undefined
+        SERVER* base_server = new SERVER;   // Contents mostly undefined
         std::stringstream server_name;
         server_name << "Server" << i;
         base_server->name = MXS_STRDUP(server_name.str().c_str());
-        MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER; // Contents mostly undefined
+        MXS_MONITORED_SERVER* mon_server = new MXS_MONITORED_SERVER;    // Contents mostly undefined
         mon_server->server = base_server;
         MariaDBServer* new_server = new MariaDBServer(mon_server, i - 1);
         new_server->m_server_id = i;
@@ -236,8 +240,8 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
                 cycle_id = cycle_server->m_node.cycle;
                 if (used_cycle_ids.count(cycle_id) > 0)
                 {
-                    cout << test_name << cycle_server->name() << " is in unexpected cycle " <<
-                        cycle_id << ".\n";
+                    cout << test_name << cycle_server->name() << " is in unexpected cycle "
+                         << cycle_id << ".\n";
                     errors++;
                 }
                 else
@@ -247,8 +251,8 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
             }
             else if (cycle_server->m_node.cycle != cycle_id)
             {
-                cout << test_name << cycle_server->name() << " is in cycle " << cycle_server->m_node.cycle <<
-                    " when " << cycle_id << " was expected.\n";
+                cout << test_name << cycle_server->name() << " is in cycle " << cycle_server->m_node.cycle
+                     << " when " << cycle_id << " was expected.\n";
                 errors++;
             }
             no_cycle_servers.erase(cycle_server->m_server_id);

@@ -26,10 +26,10 @@ char USAGE[] = "usage: trxboundaryparser -n count -s statement\n";
 
 timespec timespec_subtract(const timespec& later, const timespec& earlier)
 {
-    timespec result = { 0, 0 };
+    timespec result = {0, 0};
 
-    mxb_assert((later.tv_sec > earlier.tv_sec) ||
-               ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
+    mxb_assert((later.tv_sec > earlier.tv_sec)
+               || ((later.tv_sec == earlier.tv_sec) && (later.tv_nsec > earlier.tv_nsec)));
 
     if (later.tv_nsec >= earlier.tv_nsec)
     {
@@ -44,7 +44,6 @@ timespec timespec_subtract(const timespec& later, const timespec& earlier)
 
     return result;
 }
-
 }
 
 int main(int argc, char* argv[])

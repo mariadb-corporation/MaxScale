@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -55,13 +55,12 @@ static mxs::ParamList params(
 /**
  * test1    Allocate a server and do lots of other things
  *
-  */
-static int
-test1()
+ */
+static int test1()
 {
-    SERVER   *server;
-    int     result;
-    char    *status;
+    SERVER* server;
+    int result;
+    char* status;
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
@@ -70,13 +69,14 @@ test1()
 
     char buf[120];
     fprintf(stderr, "\t..done\nTest Parameter for Server.");
-    mxb_assert_message(!server_get_parameter(server, "name", buf, sizeof(buf)), "Parameter should be null when not set");
+    mxb_assert_message(!server_get_parameter(server, "name", buf, sizeof(buf)),
+                       "Parameter should be null when not set");
     server_set_parameter(server, "name", "value");
     mxb_assert(server_get_parameter(server, "name", buf, sizeof(buf)));
     mxb_assert_message(strcmp("value", buf) == 0, "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     mxb_assert_message(NULL == server_find_by_unique_name("non-existent"),
-                    "Should not find non-existent unique name.");
+                       "Should not find non-existent unique name.");
     mxb_assert_message(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server_status(server);
@@ -92,7 +92,7 @@ test1()
     MXS_FREE(status);
     status = server_status(server);
     mxb_assert_message(0 == strcmp("Running", status),
-                    "Status of Server should be Running after master status cleared.");
+                       "Status of Server should be Running after master status cleared.");
     if (NULL != status)
     {
         MXS_FREE(status);
@@ -104,12 +104,11 @@ test1()
     server_free((Server*)server);
     fprintf(stderr, "\t..done\n");
     return 0;
-
 }
 
-#define TEST(A, B) do { if(!(A)){ printf(B"\n"); return false; }} while(false)
+#define TEST(A, B) do {if (!(A)) {printf(B "\n"); return false;}} while (false)
 
-bool test_load_config(const char *input, SERVER *server)
+bool test_load_config(const char* input, SERVER* server)
 {
     DUPLICATE_CONTEXT dcontext;
 
@@ -120,13 +119,15 @@ bool test_load_config(const char *input, SERVER *server)
 
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
-            CONFIG_CONTEXT *obj = ccontext.next;
-            MXS_CONFIG_PARAMETER *param = obj->parameters;
+            CONFIG_CONTEXT* obj = ccontext.next;
+            MXS_CONFIG_PARAMETER* param = obj->parameters;
             config_add_defaults(obj, config_server_params);
 
             TEST(strcmp(obj->object, server->name) == 0, "Server names differ");
-            TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0, "Server addresses differ");
-            TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0, "Server protocols differ");
+            TEST(strcmp(server->address, config_get_param(param, "address")->value) == 0,
+                 "Server addresses differ");
+            TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0,
+                 "Server protocols differ");
             TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
                  "Server authenticators differ");
             TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
@@ -144,9 +145,9 @@ bool test_serialize()
     char name[] = "serialized-server";
     char config_name[] = "serialized-server.cnf";
     char old_config_name[] = "serialized-server.cnf.old";
-    char *persist_dir = MXS_STRDUP_A("./");
+    char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    SERVER *server = server_alloc(name, params.params());
+    SERVER* server = server_alloc(name, params.params());
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -160,7 +161,7 @@ bool test_serialize()
     TEST(test_load_config(config_name, server), "Failed to load the serialized server");
 
     /** We should have two identical servers */
-    SERVER *created = server_find_by_unique_name(name);
+    SERVER* created = server_find_by_unique_name(name);
 
     rename(config_name, old_config_name);
 
@@ -175,7 +176,7 @@ bool test_serialize()
     return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     /**
      * Prepare test environment by pre-loading modules. This prevents the server

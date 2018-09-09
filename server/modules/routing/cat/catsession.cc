@@ -18,13 +18,13 @@
 
 using namespace maxscale;
 
-CatSession::CatSession(MXS_SESSION* session, Cat* router, SRWBackendList& backends):
-    RouterSession(session),
-    m_session(session),
-    m_backends(backends),
-    m_completed(0),
-    m_packet_num(0),
-    m_query(NULL)
+CatSession::CatSession(MXS_SESSION* session, Cat* router, SRWBackendList& backends)
+    : RouterSession(session)
+    , m_session(session)
+    , m_backends(backends)
+    , m_completed(0)
+    , m_packet_num(0)
+    , m_query(NULL)
 {
 }
 
@@ -96,8 +96,8 @@ void CatSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     {
         send = backend->get_reply_state() != REPLY_STATE_DONE;
     }
-    else if (backend->get_reply_state() == REPLY_STATE_RSET_ROWS &&
-             mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
+    else if (backend->get_reply_state() == REPLY_STATE_RSET_ROWS
+             && mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
     {
         send = true;
     }

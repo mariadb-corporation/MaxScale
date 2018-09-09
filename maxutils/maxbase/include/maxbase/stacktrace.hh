@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 #include <unistd.h>
@@ -27,6 +27,5 @@ static inline void default_stacktrace_handler(const char* symbol, const char* co
     write(STDOUT_FILENO, "\n", 1);
 }
 
-void dump_stacktrace(void (*handler)(const char* symbol, const char* command) = default_stacktrace_handler);
-
+void dump_stacktrace(void (* handler)(const char* symbol, const char* command) = default_stacktrace_handler);
 }

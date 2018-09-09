@@ -27,13 +27,13 @@
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void *mxs_malloc(size_t size/*, const char *caller*/)
+void* mxs_malloc(size_t size    /*, const char *caller*/)
 {
-    void *ptr = malloc(size);
+    void* ptr = malloc(size);
 
     if (!ptr)
     {
-        //MXS_OOM_MESSAGE(caller);
+        // MXS_OOM_MESSAGE(caller);
         MXS_OOM();
     }
 
@@ -53,13 +53,13 @@ void *mxs_malloc(size_t size/*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void *mxs_calloc(size_t nmemb, size_t size/*, const char *caller*/)
+void* mxs_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
 {
-    void *ptr = calloc(nmemb, size);
+    void* ptr = calloc(nmemb, size);
 
     if (!ptr)
     {
-        //MXS_OOM_MESSAGE(caller);
+        // MXS_OOM_MESSAGE(caller);
         MXS_OOM();
     }
 
@@ -76,18 +76,18 @@ void *mxs_calloc(size_t nmemb, size_t size/*, const char *caller*/)
  *
  * @param ptr Pointer to memory earlier allocated by `mxs_malloc`,
  *            `mxs_calloc`, `mxs_realloc`, `mxs_strdup`, `mxs_strndup`
-              or or their `_a` equivalents.
+ *             or or their `_a` equivalents.
  * @param size What size the memory block should be changed to.
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void *mxs_realloc(void *ptr, size_t size/*, const char *caller*/)
+void* mxs_realloc(void* ptr, size_t size    /*, const char *caller*/)
 {
     ptr = realloc(ptr, size);
 
     if (!ptr)
     {
-        //MXS_OOM_MESSAGE(caller);
+        // MXS_OOM_MESSAGE(caller);
         MXS_OOM();
     }
 
@@ -105,13 +105,13 @@ void *mxs_realloc(void *ptr, size_t size/*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char *mxs_strdup(const char *s1/*, const char *caller*/)
+char* mxs_strdup(const char* s1    /*, const char *caller*/)
 {
-    char *s2 = strdup(s1);
+    char* s2 = strdup(s1);
 
     if (!s2)
     {
-        //MXS_OOM_MESSAGE(caller);
+        // MXS_OOM_MESSAGE(caller);
         MXS_OOM();
     }
 
@@ -130,13 +130,13 @@ char *mxs_strdup(const char *s1/*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char *mxs_strndup(const char *s1, size_t n/*, const char *caller*/)
+char* mxs_strndup(const char* s1, size_t n    /*, const char *caller*/)
 {
-    char *s2 = strndup(s1, n);
+    char* s2 = strndup(s1, n);
 
     if (!s2)
     {
-        //MXS_OOM_MESSAGE(caller);
+        // MXS_OOM_MESSAGE(caller);
         MXS_OOM();
     }
 
@@ -155,7 +155,7 @@ char *mxs_strndup(const char *s1, size_t n/*, const char *caller*/)
  * @param ptr Pointer to the memory to be freed.
  * @param caller The name of the function calling this function.
  */
-void mxs_free(void *ptr/*, const char *caller*/)
+void mxs_free(void* ptr    /*, const char *caller*/)
 {
     free(ptr);
 }
@@ -176,9 +176,9 @@ void mxs_free(void *ptr/*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char *mxs_strdup_a(const char *s1/*, const char *caller*/)
+char* mxs_strdup_a(const char* s1    /*, const char *caller*/)
 {
-    char *s2 = mxs_strdup(s1/*, caller*/);
+    char* s2 = mxs_strdup(s1    /*, caller*/);
 
     if (!s2)
     {
@@ -205,9 +205,9 @@ char *mxs_strdup_a(const char *s1/*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char *mxs_strndup_a(const char *s1, size_t n/*, const char *caller*/)
+char* mxs_strndup_a(const char* s1, size_t n    /*, const char *caller*/)
 {
-    char *s2 = mxs_strndup(s1, n/*, caller*/);
+    char* s2 = mxs_strndup(s1, n    /*, caller*/);
 
     if (!s2)
     {

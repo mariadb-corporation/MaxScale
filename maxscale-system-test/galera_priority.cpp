@@ -17,13 +17,13 @@
 
 using namespace std;
 
-int check_server_id(TestConnections* test, char *node_id)
+int check_server_id(TestConnections* test, char* node_id)
 {
     char str[1024];
     int rval = 0;
-    if (execute_query(test->maxscales->conn_rwsplit[0], "BEGIN") ||
-            find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str) ||
-            execute_query(test->maxscales->conn_rwsplit[0], "COMMIT"))
+    if (execute_query(test->maxscales->conn_rwsplit[0], "BEGIN")
+        || find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str)
+        || execute_query(test->maxscales->conn_rwsplit[0], "COMMIT"))
     {
         test->tprintf("Failed to compare @@server_id.\n");
         rval = 1;
@@ -110,7 +110,8 @@ int simple_failover(TestConnections* test)
         if ((myerrno = test->maxscales->connect_rwsplit(0)) == 0 && test->maxscales->conn_rwsplit[0])
         {
             test->tprintf("Connecting to rwsplit was expected to fail but it was"
-                          " successful. Returned error was %d.\n", myerrno);
+                          " successful. Returned error was %d.\n",
+                          myerrno);
             if (execute_query(test->maxscales->conn_rwsplit[0], "SELECT @@server_id") == 0)
             {
                 test->tprintf("SELECT @@server_id was expected to fail but the query was successful.\n");
@@ -160,9 +161,9 @@ int simple_failover(TestConnections* test)
     return rval;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     test->galera->verbose = false;
     int rval1 = 0;
     rval1 += simple_failover(test);

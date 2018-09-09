@@ -10,7 +10,7 @@ static bool running = true;
 
 void* async_query(void* data)
 {
-    TestConnections *test = (TestConnections*)data;
+    TestConnections* test = (TestConnections*)data;
 
     while (running && test->global_result == 0)
     {
@@ -30,7 +30,7 @@ void* async_query(void* data)
 
 #define NUM_THR 5
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     pthread_t query_thr[NUM_THR];

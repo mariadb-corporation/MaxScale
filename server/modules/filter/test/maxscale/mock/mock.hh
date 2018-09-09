@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <string>
@@ -48,7 +48,5 @@ inline GWBUF* create_com_query(const std::string& statement)
 {
     return create_com_query(statement.c_str());
 }
-
 }
-
 }

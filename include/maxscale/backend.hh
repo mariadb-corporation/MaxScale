@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -29,7 +29,7 @@ namespace maxscale
 class Backend
 {
     Backend(const Backend&);
-    Backend& operator =(const Backend&);
+    Backend& operator=(const Backend&);
 public:
 
     /**
@@ -329,9 +329,9 @@ private:
      */
     enum backend_state
     {
-        IN_USE           = 0x01, /**< Backend has been taken into use */
-        WAITING_RESULT   = 0x02, /**< Waiting for a reply */
-        FATAL_FAILURE    = 0x04  /**< Backend references that should be dropped */
+        IN_USE         = 0x01,  /**< Backend has been taken into use */
+        WAITING_RESULT = 0x02,  /**< Waiting for a reply */
+        FATAL_FAILURE  = 0x04   /**< Backend references that should be dropped */
     };
 
     /**
@@ -349,16 +349,16 @@ private:
     void set_state(backend_state state);
 
 
-    bool               m_closed;           /**< True if a connection has been opened and closed */
-    SERVER_REF*        m_backend;          /**< Backend server */
-    DCB*               m_dcb;              /**< Backend DCB */
-    mxs::Buffer        m_pending_cmd;      /**< Pending commands */
-    int                m_state;            /**< State of the backend */
-    SessionCommandList m_session_commands; /**< List of session commands that are
-                                            * to be executed on this backend server */
-    std::string        m_uri;              /**< The combined address and port */
+    bool               m_closed;            /**< True if a connection has been opened and closed */
+    SERVER_REF*        m_backend;           /**< Backend server */
+    DCB*               m_dcb;               /**< Backend DCB */
+    mxs::Buffer        m_pending_cmd;       /**< Pending commands */
+    int                m_state;             /**< State of the backend */
+    SessionCommandList m_session_commands;  /**< List of session commands that are
+                                             * to be executed on this backend server */
+    std::string m_uri;                      /**< The combined address and port */
 };
 
 typedef std::shared_ptr<Backend> SBackend;
-typedef std::list<SBackend> BackendList;
+typedef std::list<SBackend>      BackendList;
 }

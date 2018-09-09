@@ -12,7 +12,7 @@
 #include "testconnections.h"
 #include "mariadb_func.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -41,4 +41,3 @@ int main(int argc, char *argv[])
 
     return test.global_result;
 }
-

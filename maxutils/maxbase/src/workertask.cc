@@ -51,5 +51,4 @@ void WorkerDisposableTask::dec_ref()
         delete this;
     }
 }
-
 }

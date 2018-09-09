@@ -41,7 +41,6 @@ GWBUF* gwbuf_create_com_query(const char* zStmt)
 
     return pBuf;
 }
-
 }
 
 namespace
@@ -290,7 +289,7 @@ int test_non_contiguous()
 
         while (pTail)
         {
-            size_t n = MYSQL_HEADER_LEN + rand() % 10; // Between 4 and 13 bytes long chunks.
+            size_t n = MYSQL_HEADER_LEN + rand() % 10;      // Between 4 and 13 bytes long chunks.
 
             GWBUF* pHead = gwbuf_split(&pTail, n);
 
@@ -344,7 +343,6 @@ int test()
 
     return rv;
 }
-
 }
 
 

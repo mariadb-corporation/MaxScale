@@ -10,10 +10,10 @@
 #include "sql_t1.h"
 #include "fw_copy_rules.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections *Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     char sql[4096];
     char pass_file[4096];
     char deny_file[4096];
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
         int local_result = 0;
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
-        FILE *file = fopen(pass_file, "r");
+        FILE* file = fopen(pass_file, "r");
 
         if (file)
         {
@@ -78,8 +78,8 @@ int main(int argc, char *argv[])
 
                 int rc = execute_query_from_file(Test->maxscales->conn_rwsplit[0], file);
 
-                if (rc != -1 && (rc == 0 ||
-                                 mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141))
+                if (rc != -1 && (rc == 0
+                                 || mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141))
                 {
                     Test->tprintf("Query should fail: %s\n", sql);
                     local_result++;
@@ -98,10 +98,12 @@ int main(int argc, char *argv[])
     }
 
     Test->tprintf("Trying rules with syntax error\n");
-    copy_rules(Test, (char *) "rules_syntax_error", rules_dir);
+    copy_rules(Test, (char*) "rules_syntax_error", rules_dir);
 
-    char *output = Test->maxscales->ssh_node_output(0,
-                   "maxadmin call command dbfwfilter rules/reload Database-Firewall", true, &exit_code);
+    char* output = Test->maxscales->ssh_node_output(0,
+                                                    "maxadmin call command dbfwfilter rules/reload Database-Firewall",
+                                                    true,
+                                                    &exit_code);
     Test->add_result(strcasestr(output, "Failed") == NULL, "Reloading rules should fail with syntax errors");
 
     Test->check_maxscale_processes(0, 1);

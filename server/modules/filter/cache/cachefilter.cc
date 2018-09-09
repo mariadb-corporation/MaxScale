@@ -41,7 +41,7 @@ void cache_config_finish(CACHE_CONFIG& config)
     MXS_FREE(config.rules);
     MXS_FREE(config.storage);
     MXS_FREE(config.storage_options);
-    MXS_FREE(config.storage_argv); // The items need not be freed, they point into storage_options.
+    MXS_FREE(config.storage_argv);      // The items need not be freed, they point into storage_options.
 
     config.max_resultset_rows = 0;
     config.max_resultset_size = 0;
@@ -118,7 +118,6 @@ int cache_process_init()
 
     return 0;
 }
-
 }
 
 //
@@ -144,9 +143,9 @@ static const MXS_ENUM_VALUE parameter_selects_values[] =
 // Enumeration values for `cache_in_transaction`
 static const MXS_ENUM_VALUE parameter_cache_in_trxs_values[] =
 {
-    {"never",                  CACHE_IN_TRXS_NEVER},
+    {"never",                  CACHE_IN_TRXS_NEVER    },
     {"read_only_transactions", CACHE_IN_TRXS_READ_ONLY},
-    {"all_transactions",       CACHE_IN_TRXS_ALL},
+    {"all_transactions",       CACHE_IN_TRXS_ALL      },
     {NULL}
 };
 
@@ -154,11 +153,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t show_argv[] =
     {
-        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name" }
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "show", MODULECMD_TYPE_PASSIVE,
-                               cache_command_show, MXS_ARRAY_NELEMS(show_argv), show_argv,
+    modulecmd_register_command(MXS_MODULE_NAME,
+                               "show",
+                               MODULECMD_TYPE_PASSIVE,
+                               cache_command_show,
+                               MXS_ARRAY_NELEMS(show_argv),
+                               show_argv,
                                "Show cache filter statistics");
 
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
@@ -173,9 +176,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         RCAP_TYPE_TRANSACTION_TRACKING,
         &CacheFilter::s_object,
         cache_process_init, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        NULL,               /* Process finish. */
+        NULL,               /* Thread init. */
+        NULL,               /* Thread finish. */
         {
             {
                 "storage",
@@ -256,7 +259,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     return &info;
-};
+}
 
 //
 // CacheFilter
@@ -338,7 +341,7 @@ uint64_t CacheFilter::getCapabilities()
 }
 
 // static
-bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
+bool CacheFilter::process_params(MXS_CONFIG_PARAMETER* ppParams, CACHE_CONFIG& config)
 {
     bool error = false;
 
@@ -370,13 +373,14 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& c
     {
         MXS_ERROR("The value of the configuration entry 'debug' must "
                   "be between %d and %d, inclusive.",
-                  CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+                  CACHE_DEBUG_MIN,
+                  CACHE_DEBUG_MAX);
         error = true;
     }
 
     config.rules = config_copy_string(ppParams, "rules");
 
-    const MXS_CONFIG_PARAMETER *pParam = config_get_param(ppParams, "storage_options");
+    const MXS_CONFIG_PARAMETER* pParam = config_get_param(ppParams, "storage_options");
 
     if (pParam)
     {
@@ -385,7 +389,7 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& c
         if (config.storage_options)
         {
             int argc = 1;
-            char *arg = config.storage_options;
+            char* arg = config.storage_options;
 
             while ((arg = strchr(arg, ',')))
             {
@@ -450,7 +454,10 @@ bool CacheFilter::process_params(MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& c
             {
                 MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
                             "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
-                            "down to %ld.", config.max_resultset_size, config.max_size, config.max_size);
+                            "down to %ld.",
+                            config.max_resultset_size,
+                            config.max_size,
+                            config.max_size);
                 config.max_resultset_size = config.max_size;
             }
         }

@@ -24,7 +24,8 @@
  * - wait to let replication happens
  * - check data on all nodes
  * - chack sha1
- * - repeat last test with FLUSH LOGS on master 1. before putting data to Master 2. after putting data to master
+ * - repeat last test with FLUSH LOGS on master 1. before putting data to Master 2. after putting data to
+ *master
  */
 
 
@@ -36,7 +37,7 @@
 #include "test_binlog_fnc.h"
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 

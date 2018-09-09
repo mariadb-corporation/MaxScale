@@ -29,21 +29,21 @@
  * prefix_User - User name to access backend setup (should have full access to 'test' DB with GRANT OPTION)
  * prefix_Password - Password to access backend setup
  */
-class Mariadb_nodes: public Nodes
+class Mariadb_nodes : public Nodes
 {
 public:
     /**
      * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
-    Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose);
+    Mariadb_nodes(const char* pref, const char* test_cwd, bool verbose);
 
     virtual ~Mariadb_nodes();
 
     /**
-    * @brief  MYSQL structs for every backend node
-    */
-    MYSQL *nodes[256];
+     * @brief  MYSQL structs for every backend node
+     */
+    MYSQL* nodes[256];
     /**
      * @brief  IP address strings for every backend node
      */
@@ -121,13 +121,13 @@ public:
      */
 
     /**
-    * @brief v51 true indicates that one backed is 5.1
-    */
+     * @brief v51 true indicates that one backed is 5.1
+     */
     bool v51;
 
     /**
-    * @brief test_dir path to test application
-    */
+     * @brief test_dir path to test application
+     */
     char test_dir[4096];
 
     /**
@@ -136,19 +136,19 @@ public:
     bool blocked[256];
 
     /**
-    * @brief  Open connctions to all backend nodes (to 'test' DB)
-    * @return 0 in case of success
-    */
+     * @brief  Open connctions to all backend nodes (to 'test' DB)
+     * @return 0 in case of success
+     */
 
     /**
      * @brief make_snapshot_command Command line to create a snapshot of all VMs
      */
-    char * take_snapshot_command;
+    char* take_snapshot_command;
 
     /**
      * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
      */
-    char * revert_snapshot_command;
+    char* revert_snapshot_command;
 
     int connect(int i);
     int connect();
@@ -167,7 +167,8 @@ public:
     }
 
     /**
-     * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
+     * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes
+     *(N) and  User/Password
      */
     void read_env();
     /**
@@ -281,7 +282,7 @@ public:
      * @param log_pos initial position
      * @return 0 if everything is ok
      */
-    int set_slave(MYSQL * conn, char master_host[], int master_port, char log_file[], char log_pos[]);
+    int set_slave(MYSQL* conn, char master_host[], int master_port, char log_file[], char log_pos[]);
 
     /**
      * @brief Creates 'repl' user on all nodes
@@ -294,7 +295,7 @@ public:
      * @param index The index of the node whose server_id to retrieve
      * @return Node id of the server or -1 on error
      */
-    int get_server_id(int index);
+    int         get_server_id(int index);
     std::string get_server_id_str(int index);
 
     /**
@@ -342,7 +343,8 @@ public:
     int configure_ssl(bool require);
 
     /**
-     * @brief disable_ssl Modifies my.cnf in order to get rid of ssl, redefine access user to allow connections without ssl
+     * @brief disable_ssl Modifies my.cnf in order to get rid of ssl, redefine access user to allow
+     *connections without ssl
      * @return 0 if success
      */
     int disable_ssl();
@@ -425,7 +427,7 @@ public:
      * @return 0 in case of success
      */
     virtual int prepare_server(int i);
-    int prepare_servers();
+    int         prepare_servers();
 
     /**
      * Static functions
@@ -448,16 +450,18 @@ public:
 
 private:
 
-    bool check_master_node(MYSQL *conn);
-    bool bad_slave_thread_status(MYSQL *conn, const char *field, int node);
+    bool check_master_node(MYSQL* conn);
+    bool bad_slave_thread_status(MYSQL* conn, const char* field, int node);
 };
 
 class Galera_nodes : public Mariadb_nodes
 {
 public:
 
-    Galera_nodes(const char *pref, const char *test_cwd, bool verbose) :
-        Mariadb_nodes(pref, test_cwd, verbose) { }
+    Galera_nodes(const char* pref, const char* test_cwd, bool verbose)
+        : Mariadb_nodes(pref, test_cwd, verbose)
+    {
+    }
 
     int start_galera();
 
@@ -473,12 +477,12 @@ public:
         return check_galera();
     }
 
-    //int prepare_galera_server(int i);
+    // int prepare_galera_server(int i);
 
-    //virtual int prepare_server(int i)
-    //{
+    // virtual int prepare_server(int i)
+    // {
     //    return prepare_galera_server(i);
-    //}
+    // }
 };
 
 #endif // MARIADB_NODES_H

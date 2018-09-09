@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "inmemorystorage.hh"
@@ -24,12 +24,15 @@ public:
 
     static SInMemoryStorageST Create(const std::string& name,
                                      const CACHE_STORAGE_CONFIG& config,
-                                     int argc, char* argv[]);
+                                     int argc,
+                                     char* argv[]);
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t get_value(const CACHE_KEY& key,
-                             uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
-                             GWBUF** ppResult);
+                             uint32_t flags,
+                             uint32_t soft_ttl,
+                             uint32_t hard_ttl,
+                             GWBUF**  ppResult);
     cache_result_t put_value(const CACHE_KEY& key, const GWBUF& pValue);
     cache_result_t del_value(const CACHE_KEY& key);
 
@@ -38,5 +41,5 @@ private:
 
 private:
     InMemoryStorageST(const InMemoryStorageST&);
-    InMemoryStorageST& operator = (const InMemoryStorageST&);
+    InMemoryStorageST& operator=(const InMemoryStorageST&);
 };

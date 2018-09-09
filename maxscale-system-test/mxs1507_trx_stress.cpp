@@ -11,7 +11,7 @@
 
 using namespace std;
 
-atomic<bool> running{true};
+atomic<bool> running {true};
 
 void client_thr(TestConnections* test, int id)
 {
@@ -39,7 +39,8 @@ int main(int argc, char** argv)
     test.repl->connect();
 
     cout << "Creating table" << endl;
-    test.try_query(test.repl->nodes[0], "CREATE OR REPLACE TABLE "
+    test.try_query(test.repl->nodes[0],
+                   "CREATE OR REPLACE TABLE "
                    "test.t1 (id int, a int)");
 
     cout << "Syncing slaves" << endl;

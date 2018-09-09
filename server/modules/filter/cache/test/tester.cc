@@ -146,7 +146,7 @@ GWBUF* Tester::gwbuf_from_string(const std::string& s)
         *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
         *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
         *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03; // COM_QUERY
+        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;    // COM_QUERY
         memcpy((char*)GWBUF_DATA(pBuf) + 5, s.c_str(), len);
     }
 
@@ -191,8 +191,8 @@ bool Tester::get_unique_statements(std::istream& in, size_t n_statements, Statem
 
     size_t n = 0;
     string statement;
-    while ((n < n_statements) &&
-           ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
+    while ((n < n_statements)
+           && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
     {
         if (statements.find(statement) == statements.end())
         {
@@ -221,8 +221,8 @@ bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* p
 
     size_t n = 0;
     string statement;
-    while ((n < n_statements) &&
-           ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
+    while ((n < n_statements)
+           && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
     {
         pStatements->push_back(statement);
         ++n;
@@ -270,7 +270,7 @@ bool Tester::get_cache_items(const Statements& statements,
     return success;
 }
 
-//static
+// static
 bool Tester::get_cache_items(std::istream& in,
                              size_t n_items,
                              const StorageFactory& factory,
@@ -288,7 +288,7 @@ bool Tester::get_cache_items(std::istream& in,
     return rv;
 }
 
-//static
+// static
 void Tester::clear_cache_items(CacheItems& cache_items)
 {
     for (CacheItems::iterator i = cache_items.begin(); i != cache_items.end(); ++i)
@@ -331,4 +331,3 @@ int Tester::execute(ostream& out, size_t n_seconds, const vector<Task*>& tasks)
 
     return rv;
 }
-

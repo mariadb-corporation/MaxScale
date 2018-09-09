@@ -47,11 +47,11 @@ GWBUF* SessionCommand::deep_copy_buffer()
     return rval;
 }
 
-SessionCommand::SessionCommand(GWBUF *buffer, uint64_t id):
-    m_buffer(buffer),
-    m_command(0),
-    m_pos(id),
-    m_reply_sent(false)
+SessionCommand::SessionCommand(GWBUF* buffer, uint64_t id)
+    : m_buffer(buffer)
+    , m_command(0)
+    , m_pos(id)
+    , m_reply_sent(false)
 {
     if (buffer)
     {
@@ -71,11 +71,11 @@ bool SessionCommand::eq(const SessionCommand& rhs) const
 std::string SessionCommand::to_string()
 {
     std::string str;
-    char *sql;
+    char* sql;
     int sql_len;
 
     /** TODO: Create C++ versions of modutil functions  */
-    GWBUF *buf = m_buffer.release();
+    GWBUF* buf = m_buffer.release();
 
     if (!GWBUF_IS_CONTIGUOUS(buf))
     {
@@ -98,5 +98,4 @@ void SessionCommand::mark_as_duplicate(const SessionCommand& rhs)
     // The commands now share the mxs::Buffer that contains the actual command
     m_buffer = rhs.m_buffer;
 }
-
 }

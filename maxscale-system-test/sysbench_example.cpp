@@ -11,9 +11,9 @@
 #include "testconnections.h"
 #include "sysbench_commands.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
 
     char sys1[4096];
 
@@ -29,8 +29,13 @@ int main(int argc, char *argv[])
 
     Test->stop_timeout();
 
-    sprintf(&sys1[0], sysbench_command_short, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0],
-            Test->maxscales->rwsplit_port[0], "off");
+    sprintf(&sys1[0],
+            sysbench_command_short,
+            Test->sysbench_dir,
+            Test->sysbench_dir,
+            Test->maxscales->IP[0],
+            Test->maxscales->rwsplit_port[0],
+            "off");
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0)
@@ -43,15 +48,15 @@ int main(int argc, char *argv[])
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
 
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE sbtest1");
     if (!Test->smoke)
     {
-        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest2");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest3");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest4");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE sbtest2");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE sbtest3");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE sbtest4");
     }
 
-    //global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
+    // global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);

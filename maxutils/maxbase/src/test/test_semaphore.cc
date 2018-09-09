@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 
@@ -181,7 +181,6 @@ void test_signal()
 
     thread.join();
 }
-
 }
 
 int main(int argc, char* argv[])

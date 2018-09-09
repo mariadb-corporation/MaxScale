@@ -48,16 +48,16 @@ MXS_BEGIN_DECLS
 #define CDC_FIELD_MAXLEN       8192
 #define CDC_REQUESTLINE_MAXLEN 8192
 
-#define CDC_UNDEFINED                    0
-#define CDC_ALLOC                        1
-#define CDC_STATE_WAIT_FOR_AUTH          2
-#define CDC_STATE_AUTH_OK                3
-#define CDC_STATE_AUTH_FAILED            4
-#define CDC_STATE_AUTH_ERR               5
-#define CDC_STATE_AUTH_NO_SESSION        6
-#define CDC_STATE_REGISTRATION           7
-#define CDC_STATE_HANDLE_REQUEST         8
-#define CDC_STATE_CLOSE                  9
+#define CDC_UNDEFINED             0
+#define CDC_ALLOC                 1
+#define CDC_STATE_WAIT_FOR_AUTH   2
+#define CDC_STATE_AUTH_OK         3
+#define CDC_STATE_AUTH_FAILED     4
+#define CDC_STATE_AUTH_ERR        5
+#define CDC_STATE_AUTH_NO_SESSION 6
+#define CDC_STATE_REGISTRATION    7
+#define CDC_STATE_HANDLE_REQUEST  8
+#define CDC_STATE_CLOSE           9
 
 #define CDC_UUID_LEN 32
 #define CDC_TYPE_LEN 16
@@ -66,11 +66,11 @@ MXS_BEGIN_DECLS
  */
 typedef struct cdc_session
 {
-    char user[CDC_USER_MAXLEN + 1];            /*< username for authentication */
-    char uuid[CDC_UUID_LEN + 1];               /*< client uuid in registration */
-    unsigned int flags[2];                     /*< Received flags              */
-    uint8_t  auth_data[SHA_DIGEST_LENGTH];     /*< Password Hash               */
-    int state;                                 /*< CDC protocol state          */
+    char         user[CDC_USER_MAXLEN + 1];     /*< username for authentication */
+    char         uuid[CDC_UUID_LEN + 1];        /*< client uuid in registration */
+    unsigned int flags[2];                      /*< Received flags              */
+    uint8_t      auth_data[SHA_DIGEST_LENGTH];  /*< Password Hash               */
+    int          state;                         /*< CDC protocol state          */
 } CDC_session;
 
 /**
@@ -78,14 +78,14 @@ typedef struct cdc_session
  */
 typedef struct  cdc_protocol
 {
-    int state;                      /*< CDC protocol state          */
-    char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
-    SPINLOCK lock;                  /*< Protocol structure lock     */
-    char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
+    int      state;                     /*< CDC protocol state          */
+    char     user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
+    SPINLOCK lock;                      /*< Protocol structure lock     */
+    char     type[CDC_TYPE_LEN + 1];    /*< Request Type            */
 } CDC_protocol;
 
 /* routines */
-extern int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+extern int gw_hex2bin(uint8_t* out, const char* in, unsigned int len);
 
 MXS_END_DECLS
 

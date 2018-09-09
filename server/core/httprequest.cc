@@ -51,12 +51,12 @@ static void process_uri(string& uri, std::deque<string>& uri_parts)
     }
 }
 
-HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string method, json_t* data):
-    m_json(data),
-    m_json_string(data ? mxs::json_dump(data, 0) : ""),
-    m_resource(url),
-    m_verb(method),
-    m_connection(connection)
+HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string method, json_t* data)
+    : m_json(data)
+    , m_json_string(data ? mxs::json_dump(data, 0) : "")
+    , m_resource(url)
+    , m_verb(method)
+    , m_connection(connection)
 {
     process_uri(url, m_resource_parts);
 
@@ -86,8 +86,8 @@ bool HttpRequest::validate_api_version()
 {
     bool rval = false;
 
-    if (m_resource_parts.size() > 0 &&
-        m_resource_parts[0] == MXS_REST_API_VERSION)
+    if (m_resource_parts.size() > 0
+        && m_resource_parts[0] == MXS_REST_API_VERSION)
     {
         m_resource_parts.pop_front();
         rval = true;
@@ -101,20 +101,21 @@ namespace
 struct ValueFormatter
 {
     std::stringstream ss;
-    const char* separator;
-    const char* terminator;
+    const char*       separator;
+    const char*       terminator;
 
-    ValueFormatter(const char* sep, const char* term):
-        separator(sep), terminator(term)
+    ValueFormatter(const char* sep, const char* term)
+        : separator(sep)
+        , terminator(term)
     {
     }
 };
 }
 
-static int value_combine_cb(void *cls,
+static int value_combine_cb(void* cls,
                             enum MHD_ValueKind kind,
-                            const char *key,
-                            const char *value)
+                            const char* key,
+                            const char* value)
 {
     ValueFormatter& cnf = *(ValueFormatter*)cls;
 
@@ -136,8 +137,10 @@ std::string HttpRequest::to_string() const
     req << m_verb << " " << m_resource;
 
     ValueFormatter opts("=", "&");
-    MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
-                              value_combine_cb, &opts);
+    MHD_get_connection_values(m_connection,
+                              MHD_GET_ARGUMENT_KIND,
+                              value_combine_cb,
+                              &opts);
 
     std::string optstr = opts.ss.str();
     size_t len = optstr.length();
@@ -155,8 +158,10 @@ std::string HttpRequest::to_string() const
     req << optstr << " " << "HTTP/1.1" << "\r\n";
 
     ValueFormatter hdr(": ", "\r\n");
-    MHD_get_connection_values(m_connection, MHD_HEADER_KIND,
-                              value_combine_cb, &hdr);
+    MHD_get_connection_values(m_connection,
+                              MHD_HEADER_KIND,
+                              value_combine_cb,
+                              &hdr);
 
     std::string hdrstr = hdr.ss.str();
 

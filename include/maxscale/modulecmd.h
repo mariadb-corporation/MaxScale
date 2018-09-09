@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file module_command.h Module driven commands
@@ -44,8 +44,8 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    uint64_t    type;        /**< The argument type and options */
-    const char *description; /**< The argument description */
+    uint64_t    type;       /**< The argument type and options */
+    const char* description;/**< The argument description */
 } modulecmd_arg_type_t;
 
 /**
@@ -53,15 +53,15 @@ typedef struct
  * the modulecmd_arg_type_t type's @c value member. An argument can be of
  * only one type.
  */
-#define MODULECMD_ARG_NONE        0 /**< Empty argument */
-#define MODULECMD_ARG_STRING      1 /**< String */
-#define MODULECMD_ARG_BOOLEAN     2 /**< Boolean value */
-#define MODULECMD_ARG_SERVICE     3 /**< Service */
-#define MODULECMD_ARG_SERVER      4 /**< Server */
-#define MODULECMD_ARG_SESSION     6 /**< Session */
-#define MODULECMD_ARG_DCB         8 /**< DCB */
-#define MODULECMD_ARG_MONITOR     9 /**< Monitor */
-#define MODULECMD_ARG_FILTER      10 /**< Filter */
+#define MODULECMD_ARG_NONE    0     /**< Empty argument */
+#define MODULECMD_ARG_STRING  1     /**< String */
+#define MODULECMD_ARG_BOOLEAN 2     /**< Boolean value */
+#define MODULECMD_ARG_SERVICE 3     /**< Service */
+#define MODULECMD_ARG_SERVER  4     /**< Server */
+#define MODULECMD_ARG_SESSION 6     /**< Session */
+#define MODULECMD_ARG_DCB     8     /**< DCB */
+#define MODULECMD_ARG_MONITOR 9     /**< Monitor */
+#define MODULECMD_ARG_FILTER  10    /**< Filter */
 
 /** What type of an action does the command perform? */
 enum modulecmd_type
@@ -73,31 +73,31 @@ enum modulecmd_type
 /**
  * Options for arguments, bits 9 through 32
  */
-#define MODULECMD_ARG_OPTIONAL            (1 << 8) /**< The argument is optional */
-#define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9) /**< Argument module name must match domain name */
+#define MODULECMD_ARG_OPTIONAL            (1 << 8)  /**< The argument is optional */
+#define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9)  /**< Argument module name must match domain name */
 
 /**
  * Helper macros
  */
-#define MODULECMD_GET_TYPE(t) ((t)->type & 0xff)
-#define MODULECMD_ARG_IS_REQUIRED(t) (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
+#define MODULECMD_GET_TYPE(t)            ((t)->type & 0xff)
+#define MODULECMD_ARG_IS_REQUIRED(t)     (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
 #define MODULECMD_ALLOW_NAME_MISMATCH(t) (((t)->type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0)
-#define MODULECMD_ARG_PRESENT(t) (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
+#define MODULECMD_ARG_PRESENT(t)         (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
 
 /** Argument list node */
 struct arg_node
 {
-    modulecmd_arg_type_t  type;
+    modulecmd_arg_type_t type;
     union
     {
-        char           *string;
-        bool           boolean;
-        SERVICE        *service;
-        SERVER         *server;
-        MXS_SESSION    *session;
-        DCB            *dcb;
-        MXS_MONITOR    *monitor;
-        MXS_FILTER_DEF *filter;
+        char*           string;
+        bool            boolean;
+        SERVICE*        service;
+        SERVER*         server;
+        MXS_SESSION*    session;
+        DCB*            dcb;
+        MXS_MONITOR*    monitor;
+        MXS_FILTER_DEF* filter;
     } value;
 };
 
@@ -105,7 +105,7 @@ struct arg_node
 typedef struct
 {
     int              argc;
-    struct arg_node *argv;
+    struct arg_node* argv;
 } MODULECMD_ARG;
 
 /**
@@ -129,22 +129,22 @@ typedef struct
  *
  * @return True on success, false on error
  */
-typedef bool (*MODULECMDFN)(const MODULECMD_ARG *argv, json_t** output);
+typedef bool (* MODULECMDFN)(const MODULECMD_ARG* argv, json_t** output);
 
 /**
  * A registered command
  */
 typedef struct modulecmd
 {
-    char                 *identifier; /**< Unique identifier */
-    char                 *domain; /**< Command domain */
-    char                 *description; /**< Command description */
-    enum modulecmd_type   type; /**< Command type, either active or passive */
-    MODULECMDFN           func; /**< The registered function */
-    int                   arg_count_min; /**< Minimum number of arguments */
-    int                   arg_count_max; /**< Maximum number of arguments */
-    modulecmd_arg_type_t *arg_types; /**< Argument types */
-    struct modulecmd     *next; /**< Next command */
+    char*                 identifier;   /**< Unique identifier */
+    char*                 domain;       /**< Command domain */
+    char*                 description;  /**< Command description */
+    enum modulecmd_type   type;         /**< Command type, either active or passive */
+    MODULECMDFN           func;         /**< The registered function */
+    int                   arg_count_min;/**< Minimum number of arguments */
+    int                   arg_count_max;/**< Maximum number of arguments */
+    modulecmd_arg_type_t* arg_types;    /**< Argument types */
+    struct modulecmd*     next;         /**< Next command */
 } MODULECMD;
 
 /** Check if the module command can modify the data/state of the module */
@@ -164,10 +164,13 @@ typedef struct modulecmd
  *
  * @return True if the module was successfully registered, false on error
  */
-bool modulecmd_register_command(const char *domain, const char *identifier,
-                                enum modulecmd_type type, MODULECMDFN entry_point,
-                                int argc, modulecmd_arg_type_t *argv,
-                                const char *description);
+bool modulecmd_register_command(const char* domain,
+                                const char* identifier,
+                                enum modulecmd_type type,
+                                MODULECMDFN entry_point,
+                                int argc,
+                                modulecmd_arg_type_t* argv,
+                                const char* description);
 
 /**
  * @brief Find a registered command
@@ -176,7 +179,7 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
  * @param identifier Command identifier
  * @return Registered command or NULL if no command was found
  */
-const MODULECMD* modulecmd_find_command(const char *domain, const char *identifier);
+const MODULECMD* modulecmd_find_command(const char* domain, const char* identifier);
 
 /**
  * @brief Parse arguments for a command
@@ -199,13 +202,13 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
  * @param argv Argument list in string format of size @c argc
  * @return Parsed arguments or NULL on error
  */
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **argv);
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** argv);
 
 /**
  * @brief Free parsed arguments returned by modulecmd_arg_parse
  * @param arg Arguments to free
  */
-void modulecmd_arg_free(MODULECMD_ARG *arg);
+void modulecmd_arg_free(MODULECMD_ARG* arg);
 
 /**
  * @brief Check if an optional argument was defined
@@ -217,7 +220,7 @@ void modulecmd_arg_free(MODULECMD_ARG *arg);
  * @param idx Index of the argument, starts at 0
  * @return True if the optional argument is present
  */
-bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx);
+bool modulecmd_arg_is_present(const MODULECMD_ARG* arg, int idx);
 
 /**
  * @brief Call a registered command
@@ -232,7 +235,7 @@ bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx);
  *
  * @return True on success, false on error
  */
-bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output);
+bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, json_t** output);
 
 /**
  * @brief Set the current error message
@@ -243,7 +246,7 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, jso
  * @param format Format string
  * @param ... Format string arguments
  */
-void modulecmd_set_error(const char *format, ...) mxs_attribute((format (printf, 1, 2)));
+void modulecmd_set_error(const char* format, ...) mxs_attribute((format (printf, 1, 2)));
 
 /**
  * @brief Get the latest error generated by the modulecmd system
@@ -282,8 +285,10 @@ json_t* modulecmd_get_json_error();
  * @return True on success, false on PCRE2 error. Use modulecmd_get_error()
  * to retrieve the error.
  */
-bool modulecmd_foreach(const char *domain_re, const char *ident_re,
-                       bool(*fn)(const MODULECMD *cmd, void *data), void *data);
+bool modulecmd_foreach(const char* domain_re,
+                       const char* ident_re,
+                       bool (* fn)(const MODULECMD* cmd, void* data),
+                       void* data);
 
 /**
  * @brief Return argument type as string
@@ -294,6 +299,6 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
  * @param type Type to convert
  * @return New string or NULL on memory allocation error
  */
-const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type);
+const char* modulecmd_argtype_to_str(modulecmd_arg_type_t* type);
 
 MXS_END_DECLS

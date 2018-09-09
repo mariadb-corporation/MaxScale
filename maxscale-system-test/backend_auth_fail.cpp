@@ -8,10 +8,10 @@
 
 int main(int argc, char** argv)
 {
-    MYSQL *mysql[1000];
-    TestConnections * Test = new TestConnections(argc, argv);
+    MYSQL* mysql[1000];
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->stop_timeout();
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 10;");
+    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 10;");
 
     for (int x = 0; x < 3; x++)
     {
@@ -39,5 +39,4 @@ int main(int argc, char** argv)
     int rval = Test->global_result;
     delete Test;
     return rval;
-
 }

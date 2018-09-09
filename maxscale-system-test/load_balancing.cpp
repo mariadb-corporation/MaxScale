@@ -1,12 +1,16 @@
 /**
  * @file load_balancing.cpp Checks how Maxscale balances load
  *
- * - also used for 'load_balancing_pers1' and 'load_balancing_pers10' tests (with 'persistpoolmax=1' and 'persistpoolmax=10' for all servers)
+ * - also used for 'load_balancing_pers1' and 'load_balancing_pers10' tests (with 'persistpoolmax=1' and
+ *'persistpoolmax=10' for all servers)
  *
- * - start two groups of threads: each group consists of 25 threads, each thread creates connections to RWSplit,
- * threads from first group try to execute as many SELECTs as possible, from second group - one query per second
+ * - start two groups of threads: each group consists of 25 threads, each thread creates connections to
+ *RWSplit,
+ * threads from first group try to execute as many SELECTs as possible, from second group - one query per
+ *second
  * - after 100 seconds all threads are stopped
- * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not greater then 3 times and no
+ * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not
+ *greater then 3 times and no
  * more then 10% of quesries went to Master
  */
 
@@ -18,10 +22,10 @@
 
 #include "big_load.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
     long int q;
     int threads_num = 25;
@@ -40,14 +44,24 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++)
     {
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connect_errors = 100000;");
+        execute_query(Test->repl->nodes[i], (char*) "set global max_connections = 300;");
+        execute_query(Test->repl->nodes[i], (char*) "set global max_connect_errors = 100000;");
     }
     Test->repl->close_connections();
 
     Test->tprintf("Creating query load with %d threads...\n", threads_num);
     Test->set_timeout(1200);
-    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], threads_num, Test, &i1, &i2, 1, false, true);
+    load(&new_inserts[0],
+         &new_selects[0],
+         &selects[0],
+         &inserts[0],
+         threads_num,
+         Test,
+         &i1,
+         &i2,
+         1,
+         false,
+         true);
 
     long int avr = (i1 + i2 ) / (Test->repl->N);
     Test->tprintf("average number of quries per node %ld\n", avr);
@@ -64,7 +78,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if ((new_selects[0] - selects[0]) > avr / 3 )
+    if ((new_selects[0] - selects[0]) > avr / 3)
     {
         Test->add_result(1,
                          "number of queries for master greater then 30%% of averange number of queries per node\n");
@@ -74,8 +88,8 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++)
     {
-        execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
+        execute_query(Test->repl->nodes[i], (char*) "flush hosts;");
+        execute_query(Test->repl->nodes[i], (char*) "set global max_connections = 151;");
     }
     Test->repl->close_connections();
 

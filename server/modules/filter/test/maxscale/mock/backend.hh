@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <map>
@@ -29,7 +29,7 @@ namespace mock
 class Backend
 {
     Backend(const Backend&);
-    Backend& operator = (const Backend&);
+    Backend& operator=(const Backend&);
 
 public:
     virtual ~Backend();
@@ -94,7 +94,7 @@ protected:
 class BufferBackend : public Backend
 {
     BufferBackend(const BufferBackend&);
-    BufferBackend& operator = (const BufferBackend&);
+    BufferBackend& operator=(const BufferBackend&);
 
 public:
     ~BufferBackend();
@@ -122,7 +122,7 @@ private:
     GWBUF* dequeue_response(const RouterSession* pSession, bool* pEmpty);
 
 private:
-    typedef std::deque<GWBUF*> Responses;
+    typedef std::deque<GWBUF*>                        Responses;
     typedef std::map<const RouterSession*, Responses> SessionResponses;
 
     SessionResponses m_session_responses;
@@ -135,7 +135,7 @@ private:
 class OkBackend : public BufferBackend
 {
     OkBackend(const OkBackend&);
-    OkBackend& operator = (const OkBackend&);
+    OkBackend& operator=(const OkBackend&);
 
 public:
     OkBackend();
@@ -149,7 +149,7 @@ public:
 class ResultSetBackend : public BufferBackend
 {
     ResultSetBackend(const ResultSetBackend&);
-    ResultSetBackend& operator = (const ResultSetBackend&);
+    ResultSetBackend& operator=(const ResultSetBackend&);
 
 public:
     ResultSetBackend();
@@ -165,5 +165,4 @@ public:
     bool m_created;
 };
 }
-
 }

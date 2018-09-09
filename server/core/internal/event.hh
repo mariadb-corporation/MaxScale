@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/event.hh>
@@ -23,9 +23,9 @@ namespace event
 
 enum result_t
 {
-    IGNORED,  /**< The configuration was ignored, it does not affect events. */
-    INVALID,  /**< The configuration was invalid. */
-    ACCEPTED  /**< The configuration was accepted. */
+    IGNORED,    /**< The configuration was ignored, it does not affect events. */
+    INVALID,    /**< The configuration was invalid. */
+    ACCEPTED    /**< The configuration was accepted. */
 };
 
 /**
@@ -40,7 +40,5 @@ enum result_t
  *         ACCEPTED, if @c zName and @c zValue are valid.
  */
 result_t configure(const char* zName, const char* zValue);
-
 }
-
 }

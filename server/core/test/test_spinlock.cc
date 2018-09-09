@@ -23,10 +23,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined(SS_DEBUG)
+#if !defined (SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined(NDEBUG)
+#if defined (NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -48,10 +48,9 @@
  *
  * Test that spinlock_acquire_nowait does hold the spinlock.
  */
-static int
-test1()
+static int test1()
 {
-    SPINLOCK    lck;
+    SPINLOCK lck;
 
     spinlock_init(&lck);
     spinlock_acquire(&lck);
@@ -78,11 +77,10 @@ test1()
 
 static int acquire_time;
 
-static void
-test2_helper(void *data)
+static void test2_helper(void* data)
 {
-    SPINLOCK   *lck = (SPINLOCK *)data;
-    unsigned long   t1 = time(0);
+    SPINLOCK* lck = (SPINLOCK*)data;
+    unsigned long t1 = time(0);
 
     spinlock_acquire(lck);
     acquire_time = time(0) - t1;
@@ -102,10 +100,9 @@ test2_helper(void *data)
  * release lock
  * verify that second thread took at least 8 seconds to obtain the lock
  */
-static int
-test2()
+static int test2()
 {
-    SPINLOCK    lck;
+    SPINLOCK lck;
     std::thread handle;
     struct timespec sleeptime;
 
@@ -115,7 +112,7 @@ test2()
     acquire_time = 0;
     spinlock_init(&lck);
     spinlock_acquire(&lck);
-    handle = std::thread(test2_helper, (void *)&lck);
+    handle = std::thread(test2_helper, (void*)&lck);
     nanosleep(&sleeptime, NULL);
     spinlock_release(&lck);
     handle.join();
@@ -136,26 +133,25 @@ test2()
  *
  * Start multiple threads that obtain spinlock and run process bound
  */
-#define THREADS 5
-#define ITERATIONS 50000
+#define THREADS      5
+#define ITERATIONS   50000
 #define PROCESS_LOOP 10000
-#define SECONDS 15
-#define NANOTIME 100000
+#define SECONDS      15
+#define NANOTIME     100000
 
-static int  times_run, failures;
+static int times_run, failures;
 static volatile int active;
-static int  threadrun[THREADS];
-static int  nowait[THREADS];
+static int threadrun[THREADS];
+static int nowait[THREADS];
 static SPINLOCK lck;
-static void
-test3_helper(void *data)
+static void test3_helper(void* data)
 {
 // SPINLOCK   *lck = (SPINLOCK *)data;
-    int         i;
-    int         n = *(int *)data;
-    time_t          rawtime;
+    int i;
+    int n = *(int*)data;
+    time_t rawtime;
 
-#if defined(ADD_SOME_NANOSLEEP)
+#if defined (ADD_SOME_NANOSLEEP)
     struct timespec sleeptime;
 
     sleeptime.tv_sec = 0;
@@ -178,10 +174,11 @@ test3_helper(void *data)
         }
         threadrun[n]++;
         /*
-        if (99 == (times_run % 100)) {
-            time ( &rawtime );
-            fprintf(stderr, "%s Done %d iterations of test, in thread %d.\n", asctime (localtime ( &rawtime )), times_run, n);
-        }
+         *  if (99 == (times_run % 100)) {
+         *   time ( &rawtime );
+         *   fprintf(stderr, "%s Done %d iterations of test, in thread %d.\n", asctime (localtime ( &rawtime
+         * )), times_run, n);
+         *  }
          */
         if (0 != active)
         {
@@ -191,33 +188,36 @@ test3_helper(void *data)
         else
         {
             active = 1;
-            for (i = 0; i < PROCESS_LOOP; i++);
+            for (i = 0; i < PROCESS_LOOP; i++)
+            {
+            }
         }
         active = 0;
         spinlock_release(&lck);
-        for (i = 0; i < (4 * PROCESS_LOOP); i++);
-#if defined(ADD_SOME_NANOSLEEP)
+        for (i = 0; i < (4 * PROCESS_LOOP); i++)
+        {
+        }
+#if defined (ADD_SOME_NANOSLEEP)
         nanosleep(&sleeptime, NULL);
 #endif
     }
     spinlock_release(&lck);
 }
 
-static int
-test3()
+static int test3()
 {
 // SPINLOCK lck;
-    std::thread     handle[THREADS];
-    int             i;
-    int             tnum[THREADS];
-    time_t          rawtime;
+    std::thread handle[THREADS];
+    int i;
+    int tnum[THREADS];
+    time_t rawtime;
 
     times_run = 0;
     active = 0;
     failures = 0;
     spinlock_init(&lck);
-    time ( &rawtime );
-    fprintf(stderr, "%s Starting %d threads.\n", asctime (localtime ( &rawtime )), THREADS);
+    time (&rawtime);
+    fprintf(stderr, "%s Starting %d threads.\n", asctime (localtime (&rawtime)), THREADS);
     for (i = 0; i < THREADS; i++)
     {
         threadrun[i] = 0;
@@ -226,26 +226,35 @@ test3()
     }
     for (i = 0; i < THREADS; i++)
     {
-        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n", i, threadrun[i],
+        fprintf(stderr,
+                "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n",
+                i,
+                threadrun[i],
                 nowait[i]);
     }
     for (i = 0; i < THREADS; i++)
     {
-        time ( &rawtime );
-        fprintf(stderr, "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n",
-                asctime (localtime ( &rawtime )), i);
+        time (&rawtime);
+        fprintf(stderr,
+                "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n",
+                asctime (localtime (&rawtime)),
+                i);
         handle[i].join();
     }
     for (i = 0; i < THREADS; i++)
     {
-        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times.\n", i, threadrun[i], nowait[i]);
+        fprintf(stderr,
+                "spinlock_test 3 thread %d ran %d times, no wait %d times.\n",
+                i,
+                threadrun[i],
+                nowait[i]);
     }
-    time ( &rawtime );
-    fprintf(stderr, "%s spinlock_test 3 completed, %d failures.\n", asctime (localtime ( &rawtime )), failures);
+    time (&rawtime);
+    fprintf(stderr, "%s spinlock_test 3 completed, %d failures.\n", asctime (localtime (&rawtime)), failures);
     return 0 == failures ? 0 : 1;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int result = 0;
 
@@ -255,4 +264,3 @@ int main(int argc, char **argv)
 
     exit(result);
 }
-

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "dbfwfilter.hh"
 #include "rules.hh"
@@ -22,20 +22,20 @@
  */
 struct UserTemplate
 {
-    UserTemplate(std::string name, const ValueList& rules, match_type mode):
-        name(name),
-        type(mode),
-        rulenames(rules)
+    UserTemplate(std::string name, const ValueList& rules, match_type mode)
+        : name(name)
+        , type(mode)
+        , rulenames(rules)
     {
     }
 
-    std::string name;      /** Name of the user */
-    match_type  type;      /** Matching type */
-    ValueList   rulenames; /** Names of the rules */
+    std::string name;       /** Name of the user */
+    match_type  type;       /** Matching type */
+    ValueList   rulenames;  /** Names of the rules */
 };
 
-typedef std::shared_ptr<UserTemplate>      SUserTemplate;
-typedef std::list<SUserTemplate>           TemplateList;
+typedef std::shared_ptr<UserTemplate> SUserTemplate;
+typedef std::list<SUserTemplate>      TemplateList;
 
 /**
  * A user definition
@@ -86,19 +86,25 @@ private:
 
     typedef std::vector<RuleList> RuleListVector;
 
-    RuleListVector rules_or_vector;        /*< If any of these rules match the action is triggered */
-    RuleListVector rules_and_vector;       /*< All of these rules must match for the action to trigger */
-    RuleListVector rules_strict_and_vector;/*< rules that skip the rest of the rules if one of them
-                                            * fails. This is only for rules paired with 'match strict_all'. */
-    std::string m_name;                    /*< Name of the user */
+    RuleListVector rules_or_vector;         /*< If any of these rules match the action is triggered */
+    RuleListVector rules_and_vector;        /*< All of these rules must match for the action to trigger */
+    RuleListVector rules_strict_and_vector; /*< rules that skip the rest of the rules if one of them
+                                             * fails. This is only for rules paired with 'match strict_all'.
+                                             **/
+    std::string m_name;                     /*< Name of the user */
 
     /**
      * Functions for matching rules
      */
-    bool match_any(Dbfw* my_instance, DbfwSession* my_session,
-                   GWBUF *queue, char** rulename);
-    bool do_match(Dbfw* my_instance, DbfwSession* my_session,
-                  GWBUF *queue, match_mode mode, char** rulename);
+    bool match_any(Dbfw* my_instance,
+                   DbfwSession* my_session,
+                   GWBUF* queue,
+                   char** rulename);
+    bool do_match(Dbfw* my_instance,
+                  DbfwSession* my_session,
+                  GWBUF* queue,
+                  match_mode mode,
+                  char** rulename);
 };
 
 typedef std::shared_ptr<User>                  SUser;

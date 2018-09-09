@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/log.h>
@@ -29,7 +29,7 @@ namespace maxscale
 class CustomParser
 {
     CustomParser(const CustomParser&);
-    CustomParser& operator = (const CustomParser&);
+    CustomParser& operator=(const CustomParser&);
 
 public:
     typedef int32_t token_t;
@@ -64,7 +64,10 @@ protected:
     {
 #ifdef MXS_CP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Custom parser: In statement '%.*s', unexpected token at '%.*s'.",
-                   (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
+                   (int)m_len,
+                   m_pSql,
+                   (int)(m_pEnd - m_pI),
+                   m_pI);
 #endif
     }
 
@@ -102,7 +105,7 @@ protected:
      */
     static bool is_number(char c)
     {
-        return (c >= '0' && c <= '9');
+        return c >= '0' && c <= '9';
     }
 
     /**
@@ -120,9 +123,8 @@ protected:
 
         char lc = uc + ('a' - 'A');
 
-        return
-            ((m_pI + offset) < m_pEnd) &&
-            ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
+        return ((m_pI + offset) < m_pEnd)
+               && ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
     }
 
     /**
@@ -176,7 +178,7 @@ protected:
     static char toupper(char c)
     {
         // Significantly faster than library version.
-        return (c >= 'a' && c <='z') ? c - ('a' - 'A') : c;
+        return (c >= 'a' && c <= 'z') ? c - ('a' - 'A') : c;
     }
 
     /**
@@ -211,7 +213,8 @@ protected:
 
         if (zWord == pEnd)
         {
-            if ((pI == m_pEnd) || (!isalpha(*pI))) // Handwritten isalpha not faster than library version.
+            if ((pI == m_pEnd) || (!isalpha(*pI)))      // Handwritten isalpha not faster than library
+                                                        // version.
             {
                 m_pI = pI;
             }
@@ -234,5 +237,4 @@ protected:
     const char* m_pI;
     const char* m_pEnd;
 };
-
 }

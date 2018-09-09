@@ -1,5 +1,7 @@
-/*lint -e662 */
-/*lint -e661 */
+/*
+ *lint -e662
+ *lint -e661
+ */
 
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
@@ -54,65 +56,65 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
-static GWBUF *blr_make_query(DCB *dcb, char *query);
-static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);
-static GWBUF *blr_make_binlog_dump(ROUTER_INSTANCE *router);
-void encode_value(unsigned char *data, unsigned int value, int len);
-void blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt);
-static void *CreateMySQLAuthData(const char *username,
-                                 const char *password,
-                                 const char *database);
-void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-static void blr_log_packet(int priority, const char *msg, uint8_t *ptr, int len);
-char *blr_extract_column(GWBUF *buf, int col);
-static bool blr_check_last_master_event(void *inst);
-extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
-static void blr_log_identity(ROUTER_INSTANCE *router);
-static void blr_extract_header_semisync(uint8_t *pkt, REP_HEADER *hdr);
-static int blr_get_master_semisync(GWBUF *buf);
-static void blr_terminate_master_replication(ROUTER_INSTANCE *router,
+static GWBUF* blr_make_query(DCB* dcb, char* query);
+static GWBUF* blr_make_registration(ROUTER_INSTANCE* router);
+static GWBUF* blr_make_binlog_dump(ROUTER_INSTANCE* router);
+void          encode_value(unsigned char* data, unsigned int value, int len);
+void          blr_handle_binlog_record(ROUTER_INSTANCE* router, GWBUF* pkt);
+static void*  CreateMySQLAuthData(const char* username,
+                                  const char* password,
+                                  const char* database);
+void        blr_extract_header(uint8_t* pkt, REP_HEADER* hdr);
+static void blr_log_packet(int priority, const char* msg, uint8_t* ptr, int len);
+char*       blr_extract_column(GWBUF* buf, int col);
+static bool blr_check_last_master_event(void* inst);
+extern int  blr_check_heartbeat(ROUTER_INSTANCE* router);
+static void blr_log_identity(ROUTER_INSTANCE* router);
+static void blr_extract_header_semisync(uint8_t* pkt, REP_HEADER* hdr);
+static int  blr_get_master_semisync(GWBUF* buf);
+static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
                                              uint8_t* ptr,
                                              int len);
-extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
-extern bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
-static void blr_register_serverid(ROUTER_INSTANCE *router, GWBUF *buf);
-static bool blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
-static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
-                                             GWBUF *buf);
-static void blr_register_send_command(ROUTER_INSTANCE *router,
-                                      const char *command,
+extern bool blr_notify_waiting_slave(ROUTER_SLAVE* slave);
+extern bool blr_save_mariadb_gtid(ROUTER_INSTANCE* inst);
+static void blr_register_serverid(ROUTER_INSTANCE* router, GWBUF* buf);
+static bool blr_register_heartbeat(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_setchecksum(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_getchecksum(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_handle_checksum(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_serveruuid(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_slaveuuid(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_utf8(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_selectversion(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_selectvercomment(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_selecthostname(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_selectmap(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_mxw_tables(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_getsemisync(ROUTER_INSTANCE* router, GWBUF* buf);
+static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE* router,
+                                             GWBUF* buf);
+static void blr_register_send_command(ROUTER_INSTANCE* router,
+                                      const char* command,
                                       unsigned int state);
-static void blr_register_cache_response(ROUTER_INSTANCE *router,
-                                        GWBUF **save_buf,
-                                        const char *save_tag,
-                                        GWBUF *in_buf);
-static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
-                                              GWBUF *buf);
-extern int blr_write_special_event(ROUTER_INSTANCE *router,
+static void blr_register_cache_response(ROUTER_INSTANCE* router,
+                                        GWBUF** save_buf,
+                                        const char* save_tag,
+                                        GWBUF* in_buf);
+static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf);
+static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE* router,
+                                              GWBUF* buf);
+extern int blr_write_special_event(ROUTER_INSTANCE* router,
                                    uint32_t file_offset,
                                    uint32_t hole_size,
-                                   REP_HEADER *hdr,
+                                   REP_HEADER* hdr,
                                    int type);
-extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
-static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
-                                     char *new_file);
-extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
-static int blr_check_connect_retry(ROUTER_INSTANCE *router);
+extern int  blr_file_new_binlog(ROUTER_INSTANCE* router, char* file);
+static bool blr_handle_missing_files(ROUTER_INSTANCE* router,
+                                     char* new_file);
+extern void blr_file_update_gtid(ROUTER_INSTANCE* router);
+static int  blr_check_connect_retry(ROUTER_INSTANCE* router);
 
 static int keepalive = 1;
 
@@ -125,7 +127,7 @@ static int keepalive = 1;
  */
 static void blr_start_master(void* data)
 {
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
+    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)data;
     mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
 
     if (router->client)
@@ -139,8 +141,8 @@ static void blr_start_master(void* data)
 
     if (router->master_state != BLRM_UNCONNECTED)
     {
-        if (router->master_state != BLRM_SLAVE_STOPPED &&
-            router->master_state != BLRM_CONNECTING)
+        if (router->master_state != BLRM_SLAVE_STOPPED
+            && router->master_state != BLRM_CONNECTING)
         {
             MXS_ERROR("%s: Master Connect: Unexpected master state [%s]\n",
                       router->service->name,
@@ -194,7 +196,7 @@ static void blr_start_master(void* data)
     router->client = client;
 
     /* Fake the client is reading */
-    client->state = DCB_STATE_POLLING;  /* Fake the client is reading */
+    client->state = DCB_STATE_POLLING;      /* Fake the client is reading */
 
     /* Create MySQL Athentication from configured user/passwd */
     client->data = CreateMySQLAuthData(router->user, router->password, "");
@@ -328,7 +330,7 @@ void blr_close_master_in_main(void* data)
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_master_close` there.
 
-    MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN); // The worker running in the main thread.
+    MXB_WORKER* worker = mxs_rworker_get(MXS_RWORKER_MAIN);     // The worker running in the main thread.
     mxb_assert(worker);
 
     intptr_t arg1 = (intptr_t)worker_cb_close_master;
@@ -348,8 +350,7 @@ void blr_close_master_in_main(void* data)
  *
  * @param   router      The router instance
  */
-static void
-blr_restart_master(ROUTER_INSTANCE *router)
+static void blr_restart_master(ROUTER_INSTANCE* router)
 {
     /* Now it is safe to unleash other threads on this router instance */
     spinlock_acquire(&router->lock);
@@ -379,7 +380,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
         router->retry_count++;
 
         int config_index = (router->config_index + 1) % router->configs.size();
-        if (config_index != router->config_index) // Will be different unless there is but one.
+        if (config_index != router->config_index)   // Will be different unless there is but one.
         {
             mxb_assert(config_index < static_cast<int>(router->configs.size()));
 
@@ -390,8 +391,10 @@ blr_restart_master(ROUTER_INSTANCE *router)
             blr_master_set_config(router, new_config);
 
             MXS_NOTICE("Connection to %s:%d failed, now trying with %s:%d.",
-                       old_config.host.c_str(), old_config.port,
-                       new_config.host.c_str(), new_config.port);
+                       old_config.host.c_str(),
+                       old_config.port,
+                       new_config.host.c_str(),
+                       new_config.port);
         }
 
         spinlock_release(&router->lock);
@@ -424,8 +427,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
  *
  * @param   router      The router instance
  */
-void
-blr_master_reconnect(ROUTER_INSTANCE *router)
+void blr_master_reconnect(ROUTER_INSTANCE* router)
 {
     int do_reconnect = 0;
 
@@ -464,8 +466,7 @@ blr_master_reconnect(ROUTER_INSTANCE *router)
  *
  * @param router    The router instance
  */
-void
-blr_master_close(ROUTER_INSTANCE *router)
+void blr_master_close(ROUTER_INSTANCE* router)
 {
     dcb_close(router->master);
     router->master = NULL;
@@ -491,8 +492,7 @@ blr_master_close(ROUTER_INSTANCE *router)
  * @param router    The router instance
  * @param buf       The incoming packet
  */
-void
-blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
+void blr_master_response(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     atomic_add(&router->handling_threads, 1);
     mxb_assert(router->handling_threads == 1);
@@ -537,18 +537,18 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     }
     else if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
     {
-        char *msg_err = NULL;
+        char* msg_err = NULL;
         int msg_len = 0;
         int len = gwbuf_length(buf);
         unsigned long mysql_errno = extract_field(MYSQL_ERROR_CODE(buf), 16);
 
-        msg_len = len - 7 - 6; // +7 is where msg starts, 6 is skipped the status message (#42000)
-        msg_err = (char *)MXS_MALLOC(msg_len + 1);
+        msg_len = len - 7 - 6;      // +7 is where msg starts, 6 is skipped the status message (#42000)
+        msg_err = (char*)MXS_MALLOC(msg_len + 1);
 
         if (msg_err)
         {
             // skip status message only as MYSQL_RESPONSE_ERR(buf) points to GWBUF_DATA(buf) +7
-            memcpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
+            memcpy(msg_err, (char*)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
 
             /* NULL terminated error string */
             *(msg_err + msg_len) = '\0';
@@ -610,11 +610,10 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param   dcb         The DCB where this will be written
  * @param   query       The text of the query to send
  */
-static GWBUF *
-blr_make_query(DCB *dcb, char *query)
+static GWBUF* blr_make_query(DCB* dcb, char* query)
 {
-    GWBUF *buf;
-    unsigned char *data;
+    GWBUF* buf;
+    unsigned char* data;
     int len;
 
     if ((buf = gwbuf_alloc(strlen(query) + MYSQL_HEADER_LEN + 1)) == NULL)
@@ -623,14 +622,14 @@ blr_make_query(DCB *dcb, char *query)
     }
     data = GWBUF_DATA(buf);
     len = strlen(query) + 1;
-    encode_value(&data[0], len, 24);    // Payload length
-    data[3] = 0;                // Sequence id
+    encode_value(&data[0], len, 24);// Payload length
+    data[3] = 0;                    // Sequence id
     // Payload
     data[4] = COM_QUERY;            // Command
     memcpy(&data[5], query, strlen(query));
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
     proto->current_command = MXS_COM_QUERY;
 
     return buf;
@@ -643,12 +642,11 @@ blr_make_query(DCB *dcb, char *query)
  * @param   router  The router instance
  * @return  A MySQL Replication registration message in a GWBUF structure
  */
-static GWBUF *
-blr_make_registration(ROUTER_INSTANCE *router)
+static GWBUF* blr_make_registration(ROUTER_INSTANCE* router)
 {
-    GWBUF *buf;
-    unsigned char *data;
-    int len = 18;    // Min size of COM_REGISTER_SLAVE payload
+    GWBUF* buf;
+    unsigned char* data;
+    int len = 18;   // Min size of COM_REGISTER_SLAVE payload
     int port = 3306;
     int hostname_len = 0;
 
@@ -667,15 +665,15 @@ blr_make_registration(ROUTER_INSTANCE *router)
     }
 
     data = GWBUF_DATA(buf);
-    encode_value(&data[0], len, 24); // Payload length
-    data[3] = 0;                     // Sequence ID
-    data[4] = COM_REGISTER_SLAVE;    // Command
+    encode_value(&data[0], len, 24);                // Payload length
+    data[3] = 0;                                    // Sequence ID
+    data[4] = COM_REGISTER_SLAVE;                   // Command
     encode_value(&data[5], router->serverid, 32);   // Slave Server ID
 
     // Point to hostname len offset
     data += 9;
 
-    *data++ = hostname_len;               // Slave hostname length
+    *data++ = hostname_len;                 // Slave hostname length
 
     // Copy hostname
     if (hostname_len)
@@ -686,9 +684,9 @@ blr_make_registration(ROUTER_INSTANCE *router)
     // Point to user
     data += hostname_len;
     // Set empty user
-    *data++ = 0;           // Slave username length
+    *data++ = 0;            // Slave username length
     // Set empty password
-    *data++ = 0;           // Slave password length
+    *data++ = 0;            // Slave password length
     // Add port
     if (router->service->ports)
     {
@@ -699,7 +697,7 @@ blr_make_registration(ROUTER_INSTANCE *router)
     encode_value(&data[6], router->masterid, 32);   // Master server-id, 4 bytes
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol *proto = (MySQLProtocol*)router->master->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol;
     proto->current_command = MXS_COM_REGISTER_SLAVE;
 
     return buf;
@@ -713,11 +711,10 @@ blr_make_registration(ROUTER_INSTANCE *router)
  * @param   router  The router instance
  * @return  A MySQL Replication COM_BINLOG_DUMP message in a GWBUF structure
  */
-static GWBUF *
-blr_make_binlog_dump(ROUTER_INSTANCE *router)
+static GWBUF* blr_make_binlog_dump(ROUTER_INSTANCE* router)
 {
-    GWBUF *buf;
-    unsigned char *data;
+    GWBUF* buf;
+    unsigned char* data;
     int binlog_file_len = strlen(router->binlog_name);
     /* COM_BINLOG_DUMP needs 11 bytes + binlogname (terminating NULL is not required) */
     int len = 11 + binlog_file_len;
@@ -728,11 +725,12 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
     }
     data = GWBUF_DATA(buf);
 
-    encode_value(&data[0], len, 24);       // Payload length
-    data[3] = 0;                           // Sequence ID
-    data[4] = COM_BINLOG_DUMP;             // Command
+    encode_value(&data[0], len, 24);        // Payload length
+    data[3] = 0;                            // Sequence ID
+    data[4] = COM_BINLOG_DUMP;              // Command
     encode_value(&data[5],
-                 router->current_pos, 32); // binlog position
+                 router->current_pos,
+                 32);                       // binlog position
 
     /* With mariadb10 always ask for annotate rows events */
     if (router->mariadb10_compat)
@@ -746,12 +744,14 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
     }
 
     encode_value(&data[11],
-                 router->serverid, 32);    // Server-id of MaxScale
-    memcpy((char *)&data[15], router->binlog_name,
-           binlog_file_len);               // binlog filename
+                 router->serverid,
+                 32);                       // Server-id of MaxScale
+    memcpy((char*)&data[15],
+           router->binlog_name,
+           binlog_file_len);                // binlog filename
 
     // This is hack to get the result set processing in order for binlogrouter
-    MySQLProtocol *proto = (MySQLProtocol*)router->master->protocol;
+    MySQLProtocol* proto = (MySQLProtocol*)router->master->protocol;
     proto->current_command = MXS_COM_BINLOG_DUMP;
 
     return buf;
@@ -765,8 +765,7 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
  * @param   value   The value to pack
  * @param   len Number of bits to encode value into
  */
-void
-encode_value(unsigned char *data, unsigned int value, int len)
+void encode_value(unsigned char* data, unsigned int value, int len)
 {
     while (len > 0)
     {
@@ -779,7 +778,7 @@ encode_value(unsigned char *data, unsigned int value, int len)
 /**
  * Check that the stored event checksum matches the calculated checksum
  */
-static bool verify_checksum(ROUTER_INSTANCE *router, size_t len, uint8_t *ptr)
+static bool verify_checksum(ROUTER_INSTANCE* router, size_t len, uint8_t* ptr)
 {
     bool rval = true;
     uint32_t offset = MYSQL_HEADER_LEN + 1;
@@ -793,7 +792,8 @@ static bool verify_checksum(ROUTER_INSTANCE *router, size_t len, uint8_t *ptr)
         rval = false;
         MXS_ERROR("%s: Checksum error in event from master, "
                   "binlog %s @ %lu. Closing master connection.",
-                  router->service->name, router->binlog_name,
+                  router->service->name,
+                  router->binlog_name,
                   router->current_pos);
         router->stats.n_badcrc++;
     }
@@ -807,7 +807,7 @@ static bool verify_checksum(ROUTER_INSTANCE *router, size_t len, uint8_t *ptr)
  * @param router Router instance
  * @param hdr Replication header
  */
-static void reset_errors(ROUTER_INSTANCE *router, REP_HEADER *hdr)
+static void reset_errors(ROUTER_INSTANCE* router, REP_HEADER* hdr)
 {
     spinlock_acquire(&router->lock);
 
@@ -839,10 +839,9 @@ static void reset_errors(ROUTER_INSTANCE *router, REP_HEADER *hdr)
  * @param router    The router instance
  * @param pkt       The binlog records
  */
-void
-blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
+void blr_handle_binlog_record(ROUTER_INSTANCE* router, GWBUF* pkt)
 {
-    uint8_t *msg = NULL;
+    uint8_t* msg = NULL;
     REP_HEADER hdr;
     uint32_t len = 0;
     int check_packet_len;
@@ -868,10 +867,10 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
         if (len < BINLOG_EVENT_HDR_LEN && router->master_event_state != BLR_EVENT_ONGOING)
         {
-            const char *event_msg = "unknown";
+            const char* event_msg = "unknown";
 
             /* Packet is too small to be a binlog event */
-            if (ptr[4] == 0xfe) /* EOF Packet */
+            if (ptr[4] == 0xfe)     /* EOF Packet */
             {
                 event_msg = "end of file";
             }
@@ -896,8 +895,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 /* Check for semi-sync in event with OK byte[4]:
                  * move pointer 2 bytes ahead and set check_packet_len accordingly
                  */
-                if (ptr[4] == 0 && router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE &&
-                    ptr[5] == BLR_MASTER_SEMI_SYNC_INDICATOR)
+                if (ptr[4] == 0 && router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE
+                    && ptr[5] == BLR_MASTER_SEMI_SYNC_INDICATOR)
                 {
 
                     check_packet_len = MASTER_BYTES_BEFORE_EVENT_SEMI_SYNC;
@@ -923,12 +922,13 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 /* Sanity check */
                 if (hdr.ok == 0)
                 {
-                    if (hdr.event_size != len - (check_packet_len - MYSQL_HEADER_LEN) &&
-                        (hdr.event_size + (check_packet_len - MYSQL_HEADER_LEN)) < MYSQL_PACKET_LENGTH_MAX)
+                    if (hdr.event_size != len - (check_packet_len - MYSQL_HEADER_LEN)
+                        && (hdr.event_size + (check_packet_len - MYSQL_HEADER_LEN)) < MYSQL_PACKET_LENGTH_MAX)
                     {
                         MXS_ERROR("Packet length is %d, but event size is %d, "
                                   "binlog file %s position %lu.",
-                                  len, hdr.event_size,
+                                  len,
+                                  hdr.event_size,
                                   router->binlog_name,
                                   router->current_pos);
 
@@ -970,7 +970,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             }
 
             /** Gather the event into one big buffer */
-            GWBUF *part = gwbuf_split(&pkt, len + MYSQL_HEADER_LEN);
+            GWBUF* part = gwbuf_split(&pkt, len + MYSQL_HEADER_LEN);
 
             if (semisync_bytes)
             {
@@ -978,8 +978,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 part = gwbuf_consume(part, semisync_bytes);
             }
 
-            mxb_assert(router->master_event_state == BLR_EVENT_STARTED ||
-                       router->master_event_state == BLR_EVENT_ONGOING);
+            mxb_assert(router->master_event_state == BLR_EVENT_STARTED
+                       || router->master_event_state == BLR_EVENT_ONGOING);
 
             if (router->master_event_state == BLR_EVENT_ONGOING)
             {
@@ -1092,8 +1092,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
  * @param pkt   The incoming packet in a GWBUF chain
  * @param hdr   The packet header to populate
  */
-void
-blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
+void blr_extract_header(register uint8_t* ptr, register REP_HEADER* hdr)
 {
 
     hdr->payload_len = EXTRACT24(ptr);
@@ -1115,19 +1114,18 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
  * @param hdr       The replication message header
  * @return          1 if the file could be rotated, 0 otherwise.
  */
-int
-blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
+int blr_rotate_event(ROUTER_INSTANCE* router, uint8_t* ptr, REP_HEADER* hdr)
 {
     int len, slen;
     uint64_t pos;
     char file[BINLOG_FNAMELEN + 1];
 
-    ptr += BINLOG_EVENT_HDR_LEN;      // Skip event header
-    len = hdr->event_size - BINLOG_EVENT_HDR_LEN; // Event size minus header
+    ptr += BINLOG_EVENT_HDR_LEN;                    // Skip event header
+    len = hdr->event_size - BINLOG_EVENT_HDR_LEN;   // Event size minus header
     pos = extract_field(ptr + 4, 32);
     pos <<= 32;
     pos |= extract_field(ptr, 32);
-    slen = len - (8 + BINLOG_EVENT_CRC_SIZE); // Allow for position and CRC
+    slen = len - (8 + BINLOG_EVENT_CRC_SIZE);   // Allow for position and CRC
     if (!router->master_chksum)
     {
         slen += BINLOG_EVENT_CRC_SIZE;
@@ -1155,8 +1153,8 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
     int remove_encrytion_ctx = 0;
 
     /* Different file name in rotate event or missing current binlog file */
-    if ((strncmp(router->binlog_name, file, slen) != 0) ||
-        !blr_binlog_file_exists(router, NULL))
+    if ((strncmp(router->binlog_name, file, slen) != 0)
+        || !blr_binlog_file_exists(router, NULL))
     {
         remove_encrytion_ctx = 1;
         router->stats.n_rotates++;
@@ -1176,8 +1174,8 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
          * including the ones without GTID events.
          */
 
-        if (router->mariadb10_compat &&
-            router->mariadb10_gtid)
+        if (router->mariadb10_compat
+            && router->mariadb10_gtid)
         {
             blr_file_update_gtid(router);
         }
@@ -1200,10 +1198,9 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
  *
  * This doesn't really belong here and should be moved at some stage.
  */
-static void *
-CreateMySQLAuthData(const char *username, const char *password, const char *database)
+static void* CreateMySQLAuthData(const char* username, const char* password, const char* database)
 {
-    MYSQL_session *auth_info;
+    MYSQL_session* auth_info;
 
     if (username == NULL || password == NULL)
     {
@@ -1214,26 +1211,28 @@ CreateMySQLAuthData(const char *username, const char *password, const char *data
     if (strlen(username) > MYSQL_USER_MAXLEN)
     {
         MXS_ERROR("Provided user name %s is longer than maximum length %d.",
-                  username, MYSQL_USER_MAXLEN);
+                  username,
+                  MYSQL_USER_MAXLEN);
         return NULL;
     }
 
     if (strlen(database) > MYSQL_DATABASE_MAXLEN)
     {
         MXS_ERROR("Provided database %s is longer than maximum length %d.",
-                  database, MYSQL_DATABASE_MAXLEN);
+                  database,
+                  MYSQL_DATABASE_MAXLEN);
         return NULL;
     }
 
-    if ((auth_info =
-             static_cast<MYSQL_session*>(MXS_CALLOC(1, sizeof(MYSQL_session)))) == NULL)
+    if ((auth_info
+             = static_cast<MYSQL_session*>(MXS_CALLOC(1, sizeof(MYSQL_session)))) == NULL)
     {
         return NULL;
     }
 
     strcpy(auth_info->user, username);
     strcpy(auth_info->db, database);
-    gw_sha1_str((const uint8_t *)password, strlen(password), auth_info->client_sha1);
+    gw_sha1_str((const uint8_t*)password, strlen(password), auth_info->client_sha1);
 
     return auth_info;
 }
@@ -1241,9 +1240,9 @@ CreateMySQLAuthData(const char *username, const char *password, const char *data
 /** Actions that can be taken when an event is being distributed to the slaves*/
 typedef enum
 {
-    SLAVE_SEND_EVENT, /*< Send the event to the slave */
-    SLAVE_FORCE_CATCHUP, /*< Force the slave into catchup mode */
-    SLAVE_EVENT_ALREADY_SENT /*< The slave already has the event, don't send it */
+    SLAVE_SEND_EVENT,       /*< Send the event to the slave */
+    SLAVE_FORCE_CATCHUP,    /*< Force the slave into catchup mode */
+    SLAVE_EVENT_ALREADY_SENT/*< The slave already has the event, don't send it */
 } slave_event_action_t;
 
 /**
@@ -1254,11 +1253,10 @@ typedef enum
  * @param ptr      Pointer to the message buffer
  * @param len      Length of message packet
  */
-static void
-blr_log_packet(int priority, const char *msg, uint8_t *ptr, int len)
+static void blr_log_packet(int priority, const char* msg, uint8_t* ptr, int len)
 {
     char buf[400] = "";
-    char *bufp;
+    char* bufp;
     int i;
 
     bufp = buf;
@@ -1284,8 +1282,7 @@ blr_log_packet(int priority, const char *msg, uint8_t *ptr, int len)
  * @param router    The router instance
  * @return non-zero if we are recivign binlog records
  */
-int
-blr_master_connected(ROUTER_INSTANCE *router)
+int blr_master_connected(ROUTER_INSTANCE* router)
 {
     return router->master_state == BLRM_BINLOGDUMP;
 }
@@ -1298,19 +1295,18 @@ blr_master_connected(ROUTER_INSTANCE *router)
  * @param col   The column number to return
  * @return  The result form the column or NULL. The caller must free the result
  */
-char *
-blr_extract_column(GWBUF *buf, int col)
+char* blr_extract_column(GWBUF* buf, int col)
 {
-    uint8_t *ptr;
+    uint8_t* ptr;
     int len, ncol, collen;
-    char    *rval;
+    char* rval;
 
     if (buf == NULL)
     {
         return NULL;
     }
 
-    ptr = (uint8_t *)GWBUF_DATA(buf);
+    ptr = (uint8_t*)GWBUF_DATA(buf);
     /* First packet should be the column count */
     len = EXTRACT24(ptr);
     ptr += 3;
@@ -1345,9 +1341,9 @@ blr_extract_column(GWBUF *buf, int col)
     ptr += 4;
 
     /** The first EOF packet signals the start of the resultset rows and the second
-     EOF packet signals the end of the result set. If the resultset
-     contains a second EOF packet right after the first one, the result set is empty and
-     contains no rows. */
+     *  EOF packet signals the end of the result set. If the resultset
+     *  contains a second EOF packet right after the first one, the result set is empty and
+     *  contains no rows. */
     if (len == 5 && *ptr == 0xfe)
     {
         return NULL;
@@ -1374,13 +1370,12 @@ blr_extract_column(GWBUF *buf, int col)
  *
  * @param router    The router instance
  */
-void
-blr_stop_start_master(ROUTER_INSTANCE *router)
+void blr_stop_start_master(ROUTER_INSTANCE* router)
 {
     if (router->master)
     {
-        if (router->master->fd != -1 &&
-            router->master->state == DCB_STATE_POLLING)
+        if (router->master->fd != -1
+            && router->master->state == DCB_STATE_POLLING)
         {
             blr_close_master_in_main(router);
         }
@@ -1400,13 +1395,13 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
 
     if (strcmp(router->binlog_name, router->prevbinlog) != 0)
     {
-        strcpy(router->prevbinlog, router->binlog_name); // Same size
+        strcpy(router->prevbinlog, router->binlog_name);    // Same size
     }
 
     if (router->client)
     {
-        if (router->client->fd != -1 &&
-            router->client->state == DCB_STATE_POLLING)
+        if (router->client->fd != -1
+            && router->client->state == DCB_STATE_POLLING)
         {
             // Is this dead code? dcb->fd for internal DCBs is always -1
             dcb_close(router->client);
@@ -1427,13 +1422,12 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
  * @param router    Current router instance
  */
 
-static bool
-blr_check_last_master_event(void *inst)
+static bool blr_check_last_master_event(void* inst)
 {
     bool rval = true;
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)inst;
+    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)inst;
     int master_check = 1;
-    int master_state =  BLRM_UNCONNECTED;
+    int master_state = BLRM_UNCONNECTED;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
     spinlock_acquire(&router->lock);
@@ -1453,14 +1447,15 @@ blr_check_last_master_event(void *inst)
         blr_stop_start_master(router);
     }
 
-    if ( (!master_check) || (master_state != BLRM_BINLOGDUMP) )
+    if ((!master_check) || (master_state != BLRM_BINLOGDUMP))
     {
         /*
          * Remove the task, it will be added again
          * when master state is back to BLRM_BINLOGDUMP
          * by blr_master_response()
          */
-        snprintf(task_name, BLRM_TASK_NAME_LEN,
+        snprintf(task_name,
+                 BLRM_TASK_NAME_LEN,
                  "%s heartbeat",
                  router->service->name);
 
@@ -1480,11 +1475,10 @@ blr_check_last_master_event(void *inst)
  * @return          0 if master connection must be closed and opened again, 1 otherwise
  */
 
-int
-blr_check_heartbeat(ROUTER_INSTANCE *router)
+int blr_check_heartbeat(ROUTER_INSTANCE* router)
 {
     time_t t_now = time(0);
-    const char *event_desc = NULL;
+    const char* event_desc = NULL;
 
     if (router->master_state != BLRM_BINLOGDUMP)
     {
@@ -1493,11 +1487,11 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
 
     event_desc = blr_last_event_description(router);
 
-    if (router->master_state == BLRM_BINLOGDUMP &&
-        router->lastEventReceived > 0)
+    if (router->master_state == BLRM_BINLOGDUMP
+        && router->lastEventReceived > 0)
     {
-        if (static_cast<unsigned long>(t_now - router->stats.lastReply) >
-            (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
+        if (static_cast<unsigned long>(t_now - router->stats.lastReply)
+            > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
         {
             MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
@@ -1522,15 +1516,15 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
  * @param   router  The router instance
  */
 
-static void blr_log_identity(ROUTER_INSTANCE *router)
+static void blr_log_identity(ROUTER_INSTANCE* router)
 {
-    char *master_uuid;
-    char *master_hostname;
-    char *master_version;
+    char* master_uuid;
+    char* master_hostname;
+    char* master_version;
 
     if (router->set_master_version)
     {
-        master_version  = router->set_master_version;
+        master_version = router->set_master_version;
     }
     else
     {
@@ -1539,7 +1533,7 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
 
     if (router->set_master_hostname)
     {
-        master_hostname  = router->set_master_hostname;
+        master_hostname = router->set_master_hostname;
     }
     else
     {
@@ -1560,12 +1554,12 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
                "Server_id: %d, Slave_UUID: %s, Host: %s",
                router->service->name,
                router->serverid,
-               router->uuid == NULL ?
-               "not available" :
-               router->uuid,
-               (router->set_slave_hostname && router->set_slave_hostname[0]) ?
-               router->set_slave_hostname :
-               "not set");
+               router->uuid == NULL
+               ? "not available"
+               : router->uuid,
+               (router->set_slave_hostname && router->set_slave_hostname[0])
+               ? router->set_slave_hostname
+               : "not set");
 
     /* Seen by the slaves */
 
@@ -1584,7 +1578,8 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
         MXS_NOTICE("%s: identity seen by the slaves: "
                    "server_id: %d, uuid: %s, hostname: %s, MySQL version: %s",
                    router->service->name,
-                   router->masterid, master_uuid,
+                   router->masterid,
+                   master_uuid,
                    (master_hostname == NULL ? "not available" : master_hostname),
                    (master_version == NULL ? "not available" : master_version));
     }
@@ -1600,17 +1595,19 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
  * @param buf Pointer where the data is read
  * @return Number of bytes written or 0 on error
  */
-int
-blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf)
+int blr_write_data_into_binlog(ROUTER_INSTANCE* router, uint32_t data_len, uint8_t* buf)
 {
     int n;
 
-    if ((n = pwrite(router->binlog_fd, buf, data_len,
+    if ((n = pwrite(router->binlog_fd,
+                    buf,
+                    data_len,
                     router->last_written)) != static_cast<int64_t>(data_len))
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name, router->binlog_position,
+                  router->service->name,
+                  router->binlog_position,
                   router->binlog_name,
                   mxs_strerror(errno));
 
@@ -1618,7 +1615,8 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name, router->last_written,
+                      router->service->name,
+                      router->last_written,
                       router->binlog_name,
                       mxs_strerror(errno));
         }
@@ -1643,21 +1641,21 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
  * @param first If this is the first packet of a multi-packet event
  * @return True on success, false when memory allocation fails
  */
-bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first)
+bool blr_send_packet(ROUTER_SLAVE* slave, uint8_t* buf, uint32_t len, bool first)
 {
     bool rval = true;
     unsigned int datalen = len + (first ? 1 : 0);
-    GWBUF *buffer = gwbuf_alloc(datalen + MYSQL_HEADER_LEN);
+    GWBUF* buffer = gwbuf_alloc(datalen + MYSQL_HEADER_LEN);
     if (buffer)
     {
-        uint8_t *data = GWBUF_DATA(buffer);
+        uint8_t* data = GWBUF_DATA(buffer);
         encode_value(data, datalen, 24);
         data += 3;
         *data++ = slave->seqno++;
 
         if (first)
         {
-            *data++ = 0; // OK byte
+            *data++ = 0;    // OK byte
         }
 
         if (len > 0)
@@ -1671,7 +1669,8 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
     else
     {
         MXS_ERROR("failed to allocate %u bytes of memory when writing an "
-                  "event.", datalen + MYSQL_HEADER_LEN);
+                  "event.",
+                  datalen + MYSQL_HEADER_LEN);
         rval = false;
     }
     return rval;
@@ -1694,14 +1693,14 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
 bool blr_send_event(blr_thread_role_t role,
                     const char* binlog_name,
                     uint32_t binlog_pos,
-                    ROUTER_SLAVE *slave,
-                    REP_HEADER *hdr,
-                    uint8_t *buf)
+                    ROUTER_SLAVE* slave,
+                    REP_HEADER*   hdr,
+                    uint8_t* buf)
 {
     bool rval = true;
 
-    if ((strcmp(slave->lsi_binlog_name, binlog_name) == 0) &&
-        (slave->lsi_binlog_pos == binlog_pos))
+    if ((strcmp(slave->lsi_binlog_name, binlog_name) == 0)
+        && (slave->lsi_binlog_pos == binlog_pos))
     {
         std::stringstream t1;
         std::stringstream t2;
@@ -1721,7 +1720,8 @@ bool blr_send_event(blr_thread_role_t role,
                   ROLETOSTR(role),
                   t2.str().c_str(),
                   ROLETOSTR(slave->lsi_sender_role),
-                  gwbuf_length(slave->dcb->writeq), slave->dcb,
+                  gwbuf_length(slave->dcb->writeq),
+                  slave->dcb,
                   slave->router->stats.n_binlogs);
         return false;
     }
@@ -1739,8 +1739,8 @@ bool blr_send_event(blr_thread_role_t role,
 
         while (rval && len > 0)
         {
-            uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1 :
-                                   MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
+            uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1
+                                         : MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
 
             if (blr_send_packet(slave, buf, payload_len, first))
             {
@@ -1775,7 +1775,8 @@ bool blr_send_event(blr_thread_role_t role,
     else
     {
         MXS_ERROR("Failed to send an event of %u bytes to slave at [%s]:%d.",
-                  hdr->event_size, slave->dcb->remote,
+                  hdr->event_size,
+                  slave->dcb->remote,
                   dcb_get_port(slave->dcb));
     }
     return rval;
@@ -1798,10 +1799,10 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     int err_msg_offset = 4 + 1 + 2 + 6;
     // Error message size is: len - (err_msg_offset - 4 bytes header)
     int msg_len = len - (err_msg_offset - 4);
-    char *msg_err = (char *)MXS_MALLOC(msg_len + 1);
+    char* msg_err = (char*)MXS_MALLOC(msg_len + 1);
     MXS_ABORT_IF_NULL(msg_err);
 
-    memcpy(msg_err, (char *)ptr + err_msg_offset, msg_len);
+    memcpy(msg_err, (char*)ptr + err_msg_offset, msg_len);
     *(msg_err + msg_len) = '\0';
 
     std::string s(msg_err);
@@ -1819,8 +1820,9 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
     // TODO: Would it or would it not be safe to access router->m_errmsg here?
     // TODO: Is the locking above really needed?
     MXS_ERROR("Error packet in binlog stream (%s@%lu): %s",
-              router->binlog_name, router->current_pos, s.c_str());
-
+              router->binlog_name,
+              router->current_pos,
+              s.c_str());
 }
 
 /**
@@ -1830,8 +1832,7 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
  * @param pkt   The incoming packet in a GWBUF chain
  * @param hdr   The packet header to populate
  */
-static void
-blr_extract_header_semisync(register uint8_t *ptr, register REP_HEADER *hdr)
+static void blr_extract_header_semisync(register uint8_t* ptr, register REP_HEADER* hdr)
 {
 
     hdr->payload_len = EXTRACT24(ptr);
@@ -1854,14 +1855,14 @@ blr_extract_header_semisync(register uint8_t *ptr, register REP_HEADER *hdr)
  * @return 1 if the packect is sent, 0 on errors
  */
 
-int blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos)
+int blr_send_semisync_ack(ROUTER_INSTANCE* router, uint64_t pos)
 {
     int seqno = 0;
     int semi_sync_flag = BLR_MASTER_SEMI_SYNC_INDICATOR;
-    GWBUF   *buf;
-    int     len;
-    uint8_t *data;
-    int     binlog_file_len = strlen(router->binlog_name);
+    GWBUF* buf;
+    int len;
+    uint8_t* data;
+    int binlog_file_len = strlen(router->binlog_name);
 
     /* payload is: 1 byte semi-sync indicator + 8 bytes position + binlog name len */
     len = 1 + 8 + binlog_file_len;
@@ -1874,9 +1875,9 @@ int blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos)
 
     data = GWBUF_DATA(buf);
 
-    encode_value(&data[0], len, 24);  // Payload length
-    data[3] = 0;                      // Sequence ID
-    data[4] = semi_sync_flag;         // Semi-sync indicator
+    encode_value(&data[0], len, 24);    // Payload length
+    data[3] = 0;                        // Sequence ID
+    data[4] = semi_sync_flag;           // Semi-sync indicator
 
     /**
      * Next Bytes are: 8 bytes log position + len bin_log filename
@@ -1886,7 +1887,7 @@ int blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos)
     encode_value(&data[5], pos, 64);
 
     /* Binlog filename */
-    memcpy((char *)&data[13], router->binlog_name, binlog_file_len);
+    memcpy((char*)&data[13], router->binlog_name, binlog_file_len);
 
     router->master->func.write(router->master, buf);
 
@@ -1899,12 +1900,11 @@ int blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos)
  * @param buf The GWBUF data with master reply.
  * @return Semisync value: non available, enabled, disabled
  */
-static int
-blr_get_master_semisync(GWBUF *buf)
+static int blr_get_master_semisync(GWBUF* buf)
 {
-    char *key;
-    char *val = NULL;
-    int  master_semisync = MASTER_SEMISYNC_NOT_AVAILABLE;
+    char* key;
+    char* val = NULL;
+    int master_semisync = MASTER_SEMISYNC_NOT_AVAILABLE;
 
     key = blr_extract_column(buf, 1);
 
@@ -1936,9 +1936,9 @@ blr_get_master_semisync(GWBUF *buf)
  *
  * @param   router      The router instance
  */
-void blr_notify_all_slaves(ROUTER_INSTANCE *router)
+void blr_notify_all_slaves(ROUTER_INSTANCE* router)
 {
-    ROUTER_SLAVE *slave;
+    ROUTER_SLAVE* slave;
     int notified = 0;
 
     spinlock_acquire(&router->lock);
@@ -1946,8 +1946,8 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
     while (slave)
     {
         /* Notify a slave that has CS_WAIT_DATA bit set */
-        if (slave->state == BLRS_DUMPING &&
-            blr_notify_waiting_slave(slave))
+        if (slave->state == BLRS_DUMPING
+            && blr_notify_waiting_slave(slave))
         {
             notified++;
         }
@@ -1976,10 +1976,10 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
  * @return          True if hearbeat request has been sent
  *                  false otherwise (router->heartbeat = 0)
  */
-static bool blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
+static bool blr_register_heartbeat(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     char query[BLRM_SET_HEARTBEAT_QUERY_LEN];
-    char *val = blr_extract_column(buf, 2);
+    char* val = blr_extract_column(buf, 2);
 
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2026,7 +2026,7 @@ static bool blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_setchecksum(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     /**
      * Response from master (set heartbeat reply) should be stored
@@ -2057,7 +2057,7 @@ static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_getchecksum(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2081,7 +2081,7 @@ static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_handle_checksum(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Set checksum from master reply
     blr_set_checksum(router, buf);
@@ -2103,7 +2103,7 @@ static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_serveruuid(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2125,10 +2125,10 @@ static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_slaveuuid(ROUTER_INSTANCE* router, GWBUF* buf)
 {
-    char *key;
-    char *val = NULL;
+    char* key;
+    char* val = NULL;
     char query[BLRM_MASTER_REGITRATION_QUERY_LEN + 1];
 
     key = blr_extract_column(buf, 1);
@@ -2167,7 +2167,7 @@ static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_utf8(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2190,7 +2190,7 @@ static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_selectversion(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2213,7 +2213,7 @@ static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_selectvercomment(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2236,7 +2236,7 @@ static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_selecthostname(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2259,7 +2259,7 @@ static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_selectmap(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2282,7 +2282,7 @@ static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2306,7 +2306,7 @@ static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_mxw_tables(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2330,7 +2330,7 @@ static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param router    Current router instance
  * @param buf       The GWBUF to fill with new request
  */
-static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_getsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
                router->service->name,
@@ -2354,7 +2354,7 @@ static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
  *                  registration command
  * @return          True is semi-sync can be started or false
  */
-static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     if (router->master_state == BLRM_CHECK_SEMISYNC)
     {
@@ -2419,8 +2419,8 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
-                                             GWBUF *buf)
+static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE* router,
+                                             GWBUF* buf)
 {
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -2440,12 +2440,12 @@ static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
  * @param command    The SQL command to send
  * @param state      The next registration state value
  */
-static void blr_register_send_command(ROUTER_INSTANCE *router,
-                                      const char *command,
+static void blr_register_send_command(ROUTER_INSTANCE* router,
+                                      const char* command,
                                       unsigned int state)
 {
     // Create MySQL protocol packet
-    GWBUF *buf = blr_make_query(router->master, (char *)command);
+    GWBUF* buf = blr_make_query(router->master, (char*)command);
     // Set the next registration phase state
     router->master_state = state;
     // Send the packet
@@ -2463,10 +2463,10 @@ static void blr_register_send_command(ROUTER_INSTANCE *router,
  * @param in_buf      GWBUF with server reply to previous
  *                    registration command
  */
-static void blr_register_cache_response(ROUTER_INSTANCE *router,
-                                        GWBUF **save_buf,
-                                        const char *save_tag,
-                                        GWBUF *in_buf)
+static void blr_register_cache_response(ROUTER_INSTANCE* router,
+                                        GWBUF** save_buf,
+                                        const char* save_tag,
+                                        GWBUF* in_buf)
 {
     if (*save_buf)
     {
@@ -2475,7 +2475,7 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
     // New value in memory
     *save_buf = in_buf;
     // New value saved to disk
-    blr_cache_response(router, (char *)save_tag, in_buf);
+    blr_cache_response(router, (char*)save_tag, in_buf);
 }
 
 /**
@@ -2489,7 +2489,7 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
  * @param router      Current router instance
  * @param in_buf      GWBUF with previous phase server response
  */
-static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
 {
     switch (router->master_state)
     {
@@ -2504,34 +2504,39 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                                   BLRM_SERVERID);
         router->retry_count = 0;
         break;
+
     case BLRM_SERVERID:
         // If set heartbeat is not being sent, next state is BLRM_HBPERIOD
         if (blr_register_heartbeat(router, buf))
         {
             break;
         }
+
     case BLRM_HBPERIOD:
         blr_register_setchecksum(router, buf);
         break;
+
     case BLRM_CHKSUM1:
         blr_register_getchecksum(router, buf);
         break;
+
     case BLRM_CHKSUM2:
         // Set router->master_chksum based on server reply
         blr_register_handle_checksum(router, buf);
         // Next state is BLRM_MARIADB10 or BLRM_GTIDMODE
         {
-            unsigned int state = router->mariadb10_compat ?
-                                 BLRM_MARIADB10 :
-                                 BLRM_GTIDMODE;
-            const char *command = router->mariadb10_compat ?
-                                  "SET @mariadb_slave_capability=4" :
-                                  "SELECT @@GLOBAL.GTID_MODE";
+            unsigned int state = router->mariadb10_compat
+                ? BLRM_MARIADB10
+                : BLRM_GTIDMODE;
+            const char* command = router->mariadb10_compat
+                ? "SET @mariadb_slave_capability=4"
+                : "SELECT @@GLOBAL.GTID_MODE";
 
             blr_register_send_command(router, command, state);
         }
         break;
-    case BLRM_MARIADB10: // MariaDB10 Only
+
+    case BLRM_MARIADB10:    // MariaDB10 Only
         // Save server response
         blr_register_cache_response(router,
                                     &router->saved_master.mariadb10,
@@ -2543,19 +2548,20 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
              * Always request "gtid_domain_id" to Master server
              * if MariaDB 10 Compatibilty is On
              */
-            unsigned int state = router->mariadb10_compat ?
-                                 BLRM_MARIADB10_GTID_DOMAIN :
-                                 BLRM_LATIN1;
-            const char *command = router->mariadb10_compat ?
-                                  "SELECT @@GLOBAL.gtid_domain_id" :
-                                  "SET NAMES latin1";
+            unsigned int state = router->mariadb10_compat
+                ? BLRM_MARIADB10_GTID_DOMAIN
+                : BLRM_LATIN1;
+            const char* command = router->mariadb10_compat
+                ? "SELECT @@GLOBAL.gtid_domain_id"
+                : "SET NAMES latin1";
             blr_register_send_command(router, command, state);
         }
         break;
-    case BLRM_MARIADB10_GTID_DOMAIN: // MariaDB10 Only
+
+    case BLRM_MARIADB10_GTID_DOMAIN:    // MariaDB10 Only
         {
             // Extract GTID domain
-            char *val = blr_extract_column(buf, 1);
+            char* val = blr_extract_column(buf, 1);
             // Store the Master GTID domain
             router->mariadb10_gtid_domain = atol(val);
             MXS_FREE(val);
@@ -2575,33 +2581,39 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             blr_register_mariadb_gtid_request(router, buf);
         }
         break;
-    case BLRM_MARIADB10_REQUEST_GTID: // MariaDB10 Only
+
+    case BLRM_MARIADB10_REQUEST_GTID:   // MariaDB10 Only
         // Don't save GTID request
         gwbuf_free(buf);
         blr_register_send_command(router,
                                   "SET @slave_gtid_strict_mode=1",
                                   BLRM_MARIADB10_GTID_STRICT);
         break;
-    case BLRM_MARIADB10_GTID_STRICT: // MariaDB10 Only
+
+    case BLRM_MARIADB10_GTID_STRICT:    // MariaDB10 Only
         // Don't save GTID strict
         gwbuf_free(buf);
         blr_register_send_command(router,
                                   "SET @slave_gtid_ignore_duplicates=1",
                                   BLRM_MARIADB10_GTID_NO_DUP);
         break;
-    case BLRM_MARIADB10_GTID_NO_DUP: // MariaDB10 Only
+
+    case BLRM_MARIADB10_GTID_NO_DUP:    // MariaDB10 Only
         // Don't save GTID ignore
         gwbuf_free(buf);
         blr_register_send_command(router,
                                   "SET NAMES latin1",
                                   BLRM_LATIN1);
         break;
-    case BLRM_GTIDMODE: // MySQL 5.6/5.7 only
+
+    case BLRM_GTIDMODE:     // MySQL 5.6/5.7 only
         blr_register_serveruuid(router, buf);
         break;
+
     case BLRM_MUUID:    // MySQL 5.6/5.7 only
         blr_register_slaveuuid(router, buf);
         break;
+
     case BLRM_SUUID:    // MySQL 5.6/5.7 only
         // Save server response
         blr_register_cache_response(router,
@@ -2612,9 +2624,11 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                                   "SET NAMES latin1",
                                   BLRM_LATIN1);
         break;
+
     case BLRM_LATIN1:
         blr_register_utf8(router, buf);
         break;
+
     case BLRM_UTF8:
         // Save server response
         blr_register_cache_response(router,
@@ -2623,40 +2637,47 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                                     buf);
         // Next state is MAXWELL BLRM_RESULTS_CHARSET or BLRM_SELECT1
         {
-            unsigned int state = router->maxwell_compat ?
-                                 BLRM_RESULTS_CHARSET :
-                                 BLRM_SELECT1;
-            const char *command = router->maxwell_compat ?
-                                  "SET character_set_results = NULL" :
-                                  "SELECT 1";
+            unsigned int state = router->maxwell_compat
+                ? BLRM_RESULTS_CHARSET
+                : BLRM_SELECT1;
+            const char* command = router->maxwell_compat
+                ? "SET character_set_results = NULL"
+                : "SELECT 1";
 
             blr_register_send_command(router, command, state);
             break;
         }
-    case BLRM_RESULTS_CHARSET: // MAXWELL only
-        gwbuf_free(buf); // Discard server reply, don't save it
+
+    case BLRM_RESULTS_CHARSET:  // MAXWELL only
+        gwbuf_free(buf);        // Discard server reply, don't save it
         blr_register_send_command(router,
                                   MYSQL_CONNECTOR_SQL_MODE_QUERY,
                                   BLRM_SQL_MODE);
         break;
-    case BLRM_SQL_MODE: // MAXWELL only
-        gwbuf_free(buf); // Discard server reply, don't save it
+
+    case BLRM_SQL_MODE:     // MAXWELL only
+        gwbuf_free(buf);    // Discard server reply, don't save it
         blr_register_send_command(router,
                                   "SELECT 1",
                                   BLRM_SELECT1);
         break;
+
     case BLRM_SELECT1:
         blr_register_selectversion(router, buf);
         break;
+
     case BLRM_SELECTVER:
         blr_register_selectvercomment(router, buf);
         break;
+
     case BLRM_SELECTVERCOM:
         blr_register_selecthostname(router, buf);
         break;
+
     case BLRM_SELECTHOSTNAME:
         blr_register_selectmap(router, buf);
         break;
+
     case BLRM_MAP:
         // Save server response
         blr_register_cache_response(router,
@@ -2675,7 +2696,8 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             // Continue: ready for the registration, nothing to write/read
             router->master_state = BLRM_REGISTER_READY;
         }
-    case BLRM_SERVER_VARS: // MAXWELL only
+
+    case BLRM_SERVER_VARS:      // MAXWELL only
         /**
          * This branch could be reached as fallthrough from BLRM_MAP
          * with new state BLRM_REGISTER_READY
@@ -2686,7 +2708,8 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             blr_register_mxw_binlogvars(router, buf);
             break;
         }
-    case BLRM_BINLOG_VARS: // MAXWELL only
+
+    case BLRM_BINLOG_VARS:      // MAXWELL only
         /**
          * This branch could be reached as fallthrough from BLRM_MAP
          * with new state BLRM_REGISTER_READY.
@@ -2697,18 +2720,20 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             blr_register_mxw_tables(router, buf);
             break;
         }
-    case BLRM_LOWER_CASE_TABLES: // MAXWELL only
+
+    case BLRM_LOWER_CASE_TABLES:    // MAXWELL only
         /**
          * This branch could be reached as fallthrough from BLRM_MAP
          * with new state BLRM_REGISTER_READY.
          * Go ahead if maxwell_compat is not set
          */
-        if (router->master_state == BLRM_LOWER_CASE_TABLES &&
-            router->maxwell_compat)
+        if (router->master_state == BLRM_LOWER_CASE_TABLES
+            && router->maxwell_compat)
         {
             blr_register_mxw_handlelowercase(router, buf);
             // Continue: ready for the registration, nothing to write/read
         }
+
     case BLRM_REGISTER_READY:
         // Prepare Slave registration request: COM_REGISTER_SLAVE
         buf = blr_make_registration(router);
@@ -2717,6 +2742,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         // Send the packet
         router->master->func.write(router->master, buf);
         break;
+
     case BLRM_REGISTER:
         /* discard master reply to COM_REGISTER_SLAVE */
         gwbuf_free(buf);
@@ -2732,6 +2758,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             /* Continue */
             router->master_state = BLRM_REQUEST_BINLOGDUMP;
         }
+
     case BLRM_CHECK_SEMISYNC:
         /**
          * This branch could be reached as fallthrough from BLRM_REGISTER
@@ -2744,6 +2771,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                 break;
             }
         }
+
     case BLRM_REQUEST_SEMISYNC:
         /**
          * This branch could be reached as fallthrough from BLRM_REGISTER or
@@ -2758,6 +2786,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
             /* Continue */
             router->master_state = BLRM_REQUEST_BINLOGDUMP;
         }
+
     case BLRM_REQUEST_BINLOGDUMP:
         /**
          * This branch is reached after semi-sync check/request or
@@ -2778,7 +2807,8 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         {
             MXS_NOTICE("%s: Request binlog records from %s at "
                        "position %lu from master server [%s]:%d",
-                       router->service->name, router->binlog_name,
+                       router->service->name,
+                       router->binlog_name,
                        router->current_pos,
                        router->service->dbref->server->address,
                        router->service->dbref->server->port);
@@ -2787,6 +2817,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         /* Log binlog router identity */
         blr_log_identity(router);
         break;
+
     case BLRM_BINLOGDUMP:
         /**
          * Main body, we have received a binlog record from the master
@@ -2825,8 +2856,8 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
-                                              GWBUF *buf)
+static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE* router,
+                                              GWBUF* buf)
 {
     const char format_gtid_val[] = "SET @slave_connect_state='%s'";
 
@@ -2861,9 +2892,9 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
  * @return          True for succesfull binlog file rotation,
  *                  False otherwise.
  */
-bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
-                            REP_HEADER *hdr,
-                            uint8_t *ptr)
+bool blr_handle_fake_rotate(ROUTER_INSTANCE* router,
+                            REP_HEADER* hdr,
+                            uint8_t* ptr)
 {
     mxb_assert(hdr->event_type == ROTATE_EVENT);
 
@@ -2871,8 +2902,8 @@ bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
     int len, slen;
     char file[BINLOG_FNAMELEN + 1];
 
-    len = hdr->event_size - BINLOG_EVENT_HDR_LEN; // Event size minus header
-    slen = len - (8 + BINLOG_EVENT_CRC_SIZE);     // Allow for position and CRC
+    len = hdr->event_size - BINLOG_EVENT_HDR_LEN;   // Event size minus header
+    slen = len - (8 + BINLOG_EVENT_CRC_SIZE);       // Allow for position and CRC
     if (!router->master_chksum)
     {
         slen += BINLOG_EVENT_CRC_SIZE;
@@ -2941,9 +2972,9 @@ bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
  * @param hdr       The Replication event header
  * @param ptr       The packet data
  */
-void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
-                               REP_HEADER *hdr,
-                               uint8_t *ptr)
+void blr_handle_fake_gtid_list(ROUTER_INSTANCE* router,
+                               REP_HEADER* hdr,
+                               uint8_t* ptr)
 {
     mxb_assert(hdr->event_type == MARIADB10_GTID_GTID_LIST_EVENT);
 
@@ -3014,17 +3045,17 @@ void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
  * @param    new_file    The filename in Fake ROTATE_EVENT
  * @return               true on success, false on errors
  */
-static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
-                                     char *new_file)
+static bool blr_handle_missing_files(ROUTER_INSTANCE* router,
+                                     char* new_file)
 {
-    char *fptr;
+    char* fptr;
     uint32_t new_fseqno;
     uint32_t curr_fseqno;
     char buf[BLRM_BINLOG_NAME_STR_LEN];
     char bigbuf[PATH_MAX + 1];
 
-    if (*new_file &&
-        (fptr = strrchr(new_file, '.')) == NULL)
+    if (*new_file
+        && (fptr = strrchr(new_file, '.')) == NULL)
     {
         return false;
     }
@@ -3048,8 +3079,8 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
         return true;
     }
 
-    if (*router->binlog_name &&
-        (fptr = strrchr(router->binlog_name, '.')) == NULL)
+    if (*router->binlog_name
+        && (fptr = strrchr(router->binlog_name, '.')) == NULL)
     {
         return false;
     }
@@ -3103,7 +3134,7 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
  * @return          The interval to use for next reconnect
  *                  or 0 if router->retry_limit has been hit.
  */
-static int blr_check_connect_retry(ROUTER_INSTANCE *router)
+static int blr_check_connect_retry(ROUTER_INSTANCE* router)
 {
     /* Stop reconnection to master */
     if (router->retry_count >= router->retry_limit)
@@ -3137,11 +3168,11 @@ static int blr_check_connect_retry(ROUTER_INSTANCE *router)
  * @param inst    The router instance
  * @param buf     The buffer with checksum value
  */
-void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf)
+void blr_set_checksum(ROUTER_INSTANCE* inst, GWBUF* buf)
 {
     if (buf)
     {
-        char *val = blr_extract_column(buf, 1);
+        char* val = blr_extract_column(buf, 1);
         if (val && strncasecmp(val, "NONE", 4) == 0)
         {
             inst->master_chksum = false;
@@ -3153,7 +3184,7 @@ void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf)
     }
 }
 
-void blr_master_set_config(ROUTER_INSTANCE *inst, const ChangeMasterConfig& config)
+void blr_master_set_config(ROUTER_INSTANCE* inst, const ChangeMasterConfig& config)
 {
     SERVICE* service = inst->service;
     SERVER* backend_server = service->dbref->server;

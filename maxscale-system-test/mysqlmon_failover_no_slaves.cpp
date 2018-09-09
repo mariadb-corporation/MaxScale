@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(2);
     test.repl->stash_server_settings(2);
     test.repl->disable_server_setting(2, "log-bin");
-    test.repl->start_node(2, (char *) "");
+    test.repl->start_node(2, (char*) "");
     // Slave 3. Stop this slave as well. The monitor is quick to turn failover off it a slave has another
     // slave connection or if a slave connection is not using gtid, so those situations are hard to test.
     // This may change later when failover support for such situations is added, so add a more interesting
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     test.try_query(nodes[1], "START SLAVE;");
     test.repl->stop_node(2);
     test.repl->restore_server_settings(2);
-    test.repl->start_node(2, (char *) "");
+    test.repl->start_node(2, (char*) "");
     test.try_query(nodes[3], "START SLAVE;");
     test.repl->fix_replication();
     return test.global_result;

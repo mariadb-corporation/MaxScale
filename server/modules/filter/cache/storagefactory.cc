@@ -75,7 +75,9 @@ bool open_cache_storage(const char* zName,
         {
             const char* s = dlerror();
             MXS_ERROR("Could not look up symbol %s from %s: %s",
-                      zName, CACHE_STORAGE_ENTRY_POINT, s ? s : "");
+                      zName,
+                      CACHE_STORAGE_ENTRY_POINT,
+                      s ? s : "");
         }
     }
     else
@@ -94,11 +96,10 @@ void close_cache_storage(void* handle, CACHE_STORAGE_API* pApi)
 
     if (dlclose(handle) != 0)
     {
-        const char *s = dlerror();
+        const char* s = dlerror();
         MXS_ERROR("Could not close module %s: ", s ? s : "");
     }
 }
-
 }
 
 StorageFactory::StorageFactory(void* handle,
@@ -124,7 +125,7 @@ StorageFactory::~StorageFactory()
     m_pApi = 0;
 }
 
-//static
+// static
 StorageFactory* StorageFactory::Open(const char* zName)
 {
     StorageFactory* pFactory = 0;
@@ -148,7 +149,8 @@ StorageFactory* StorageFactory::Open(const char* zName)
 
 Storage* StorageFactory::createStorage(const char* zName,
                                        const CACHE_STORAGE_CONFIG& config,
-                                       int argc, char* argv[])
+                                       int argc,
+                                       char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pApi);
@@ -176,7 +178,7 @@ Storage* StorageFactory::createStorage(const char* zName,
             // Ok, so the cache cannot handle eviction. Let's decorate the
             // real storage with a storage than can.
 
-            LRUStorage *pLruStorage = NULL;
+            LRUStorage* pLruStorage = NULL;
 
             if (config.thread_model == CACHE_THREAD_MODEL_ST)
             {
@@ -207,7 +209,8 @@ Storage* StorageFactory::createStorage(const char* zName,
 
 Storage* StorageFactory::createRawStorage(const char* zName,
                                           const CACHE_STORAGE_CONFIG& config,
-                                          int argc, char* argv[])
+                                          int argc,
+                                          char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pApi);

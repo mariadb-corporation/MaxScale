@@ -11,22 +11,25 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
     Test->repl->connect();
 
     const int TestConnNum = 100;
-    MYSQL *conn[TestConnNum];
+    MYSQL* conn[TestConnNum];
     int i;
     int conn_num;
 
-    MYSQL * backend_conn;
+    MYSQL* backend_conn;
     for (i = 0; i < Test->repl->N; i++)
     {
-        backend_conn = open_conn(Test->repl->port[i], Test->repl->IP[i], Test->repl->user_name, Test->repl->password,
+        backend_conn = open_conn(Test->repl->port[i],
+                                 Test->repl->IP[i],
+                                 Test->repl->user_name,
+                                 Test->repl->password,
                                  Test->repl->ssl);
         execute_query(backend_conn, "SET GLOBAL max_connections = 200;");
         mysql_close(backend_conn);
@@ -45,7 +48,10 @@ int main(int argc, char *argv[])
     int TotalConn = 0;
 
     Test->tprintf("Checking connections to Master: should be %d\n", TestConnNum);
-    conn_num = get_conn_num(Test->repl->nodes[0], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
+    conn_num = get_conn_num(Test->repl->nodes[0],
+                            Test->maxscales->ip(0),
+                            Test->maxscales->hostname[0],
+                            (char*) "test");
     if (conn_num != TestConnNum)
     {
         Test->add_result(1, "number of connections to Master is %d\n", conn_num);
@@ -55,7 +61,11 @@ int main(int argc, char *argv[])
     Test->tprintf("Checking connections to each node\n");
     for (int i = 1; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
+        conn_num
+            = get_conn_num(Test->repl->nodes[i],
+                           Test->maxscales->ip(0),
+                           Test->maxscales->hostname[0],
+                           (char*) "test");
         TotalConn += conn_num;
         Test->tprintf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor))
@@ -67,7 +77,6 @@ int main(int argc, char *argv[])
     if (TotalConn != TestConnNum)
     {
         Test->add_result(1, "total number of connections is wrong\n");
-
     }
     for (i = 0; i < TestConnNum; i++)
     {
@@ -78,7 +87,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-
-
-
-

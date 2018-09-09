@@ -30,7 +30,7 @@ namespace
  *
  * @return True on success, false if memory allocation failed
  */
-bool store_client_password(DCB *dcb, GWBUF *buffer)
+bool store_client_password(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     uint8_t header[MYSQL_HEADER_LEN];
@@ -38,8 +38,8 @@ bool store_client_password(DCB *dcb, GWBUF *buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(header);
-        MYSQL_session *ses = (MYSQL_session*)dcb->data;
-        ses->auth_token = (uint8_t *)MXS_CALLOC(plen, sizeof(uint8_t));
+        MYSQL_session* ses = (MYSQL_session*)dcb->data;
+        ses->auth_token = (uint8_t*)MXS_CALLOC(plen, sizeof(uint8_t));
         if (ses->auth_token)
         {
             ses->auth_token_len = gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token);
@@ -59,7 +59,7 @@ bool store_client_password(DCB *dcb, GWBUF *buffer)
  * @param column_names Column names
  * @return Always 0
  */
-int user_services_cb(void *data, int columns, char** column_vals, char** column_names)
+int user_services_cb(void* data, int columns, char** column_vals, char** column_names)
 {
     mxb_assert(columns == 1);
     PamClientSession::StringVector* results = static_cast<PamClientSession::StringVector*>(data);
@@ -78,14 +78,14 @@ int user_services_cb(void *data, int columns, char** column_vals, char** column_
 /** Used by the PAM conversation function */
 struct ConversationData
 {
-    DCB* m_client;
-    int m_counter;
+    DCB*   m_client;
+    int    m_counter;
     string m_password;
 
     ConversationData(DCB* client, int counter, const string& password)
-        : m_client(client),
-          m_counter(counter),
-          m_password(password)
+        : m_client(client)
+        , m_counter(counter)
+        , m_password(password)
     {
     }
 };
@@ -97,8 +97,10 @@ struct ConversationData
  * http://www.linux-pam.org/Linux-PAM-html/adg-interface-of-app-expected.html#adg-pam_conv
  * for more information.
  */
-int conversation_func(int num_msg, const struct pam_message **msg,
-                      struct pam_response **resp_out, void *appdata_ptr)
+int conversation_func(int num_msg,
+                      const struct pam_message** msg,
+                      struct pam_response** resp_out,
+                      void* appdata_ptr)
 {
     MXS_DEBUG("Entering PAM conversation function.");
     int rval = PAM_CONV_ERR;
@@ -106,16 +108,18 @@ int conversation_func(int num_msg, const struct pam_message **msg,
     if (data->m_counter > 1)
     {
         MXS_ERROR("Multiple calls to conversation function for client '%s'. %s",
-                  data->m_client->user, GENERAL_ERRMSG);
+                  data->m_client->user,
+                  GENERAL_ERRMSG);
     }
     else if (num_msg == 1)
     {
         pam_message first = *msg[0];
-        if ((first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON) ||
-            PASSWORD != first.msg)
+        if ((first.msg_style != PAM_PROMPT_ECHO_OFF && first.msg_style != PAM_PROMPT_ECHO_ON)
+            || PASSWORD != first.msg)
         {
             MXS_ERROR("Unexpected PAM message: type='%d', contents='%s'",
-                      first.msg_style, first.msg);
+                      first.msg_style,
+                      first.msg);
         }
         else
         {
@@ -132,7 +136,8 @@ int conversation_func(int num_msg, const struct pam_message **msg,
     else
     {
         MXS_ERROR("Conversation function received '%d' messages from API. Only "
-                  "singular messages are supported.", num_msg);
+                  "singular messages are supported.",
+                  num_msg);
     }
     data->m_counter++;
     return rval;
@@ -167,16 +172,22 @@ bool validate_pam_password(const string& user, const string& password, const str
             authenticated = true;
             MXS_DEBUG("pam_authenticate returned success.");
             break;
+
         case PAM_USER_UNKNOWN:
         case PAM_AUTH_ERR:
             // Normal failure, username or password was wrong.
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
+                          PAM_AUTH_ERR_MSG,
+                          user.c_str(),
+                          pam_strerror(pam_handle, pam_status));
             break;
+
         default:
             // More exotic error
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          PAM_AUTH_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
+                          PAM_AUTH_ERR_MSG,
+                          user.c_str(),
+                          pam_strerror(pam_handle, pam_status));
             break;
         }
     }
@@ -193,6 +204,7 @@ bool validate_pam_password(const string& user, const string& password, const str
         case PAM_SUCCESS:
             account_ok = true;
             break;
+
         default:
             // Credentials have already been checked to be ok, so this is again a bit of an exotic error.
             MXS_ERROR(PAM_ACC_ERR_MSG, user.c_str(), pam_strerror(pam_handle, pam_status));
@@ -202,18 +214,17 @@ bool validate_pam_password(const string& user, const string& password, const str
     pam_end(pam_handle, pam_status);
     return account_ok;
 }
-
 }
 
 PamClientSession::PamClientSession(sqlite3* dbhandle, const PamInstance& instance)
-    : m_state(PAM_AUTH_INIT),
-      m_sequence(0),
-      m_dbhandle(dbhandle),
-      m_instance(instance)
+    : m_state(PAM_AUTH_INIT)
+    , m_sequence(0)
+    , m_dbhandle(dbhandle)
+    , m_instance(instance)
 {
 }
 
-PamClientSession:: ~PamClientSession()
+PamClientSession::~PamClientSession()
 {
     sqlite3_close_v2(m_dbhandle);
 }
@@ -222,7 +233,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
 {
     // This handle is only used from one thread, can define no_mutex.
     sqlite3* dbhandle = NULL;
-    int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE |  SQLITE_OPEN_NOMUTEX;
+    int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
     if (sqlite3_open_v2(inst.m_dbname.c_str(), &dbhandle, db_flags, NULL) == SQLITE_OK)
     {
         sqlite3_busy_timeout(dbhandle, 1000);
@@ -232,7 +243,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
         MXS_ERROR("Failed to open SQLite3 handle.");
     }
     PamClientSession* rval = NULL;
-    if (!dbhandle || (rval = new (std::nothrow) PamClientSession(dbhandle, inst)) == NULL)
+    if (!dbhandle || (rval = new( std::nothrow) PamClientSession(dbhandle, inst)) == NULL)
     {
         sqlite3_close_v2(dbhandle);
     }
@@ -246,29 +257,32 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
  * @param session MySQL session
  * @param services_out Output for services
  */
-void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
+void PamClientSession::get_pam_user_services(const DCB* dcb,
+                                             const MYSQL_session* session,
                                              StringVector* services_out)
 {
-    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename +
-                            " WHERE " + FIELD_USER + " = '" + session->user + "' AND '" + dcb->remote +
-                            "' LIKE " + FIELD_HOST + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db +
-                            "' = '' OR '" + session->db + "' LIKE " + FIELD_DB +
-                            ") ORDER BY authentication_string;";
+    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
+        + " WHERE " + FIELD_USER + " = '" + session->user + "' AND '" + dcb->remote
+        + "' LIKE " + FIELD_HOST + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db
+        + "' = '' OR '" + session->db + "' LIKE " + FIELD_DB
+        + ") ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
-    char *err;
+    char* err;
     if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to execute query: '%s'", err);
         sqlite3_free(err);
     }
-    MXS_DEBUG("User '%s' matched %lu rows in %s db.", session->user,
-              services_out->size(), m_instance.m_tablename.c_str());
+    MXS_DEBUG("User '%s' matched %lu rows in %s db.",
+              session->user,
+              services_out->size(),
+              m_instance.m_tablename.c_str());
 
     if (services_out->empty())
     {
         // No service found for user with correct username & password. Check if anonymous user exists.
-        const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename +
-                                  " WHERE " + FIELD_USER + " = '' AND " + FIELD_HOST + " = '%';";
+        const string anon_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename
+            + " WHERE " + FIELD_USER + " = '' AND " + FIELD_HOST + " = '%';";
         if (sqlite3_exec(m_dbhandle, anon_query.c_str(), user_services_cb, services_out, &err) != SQLITE_OK)
         {
             MXS_ERROR("Failed to execute query: '%s'", err);
@@ -286,7 +300,8 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
  * This obviously only works with the basic password authentication scheme.
  *
  * @return Allocated packet
- * @see https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
+ * @see
+ *https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  */
 Buffer PamClientSession::create_auth_change_packet() const
 {
@@ -305,11 +320,11 @@ Buffer PamClientSession::create_auth_change_packet() const
     gw_mysql_set_byte3(pData, plen);
     pData += 3;
     *pData++ = m_sequence;
-    *pData++ = 0xfe; // AuthSwitchRequest command
+    *pData++ = 0xfe;                            // AuthSwitchRequest command
     memcpy(pData, DIALOG.c_str(), DIALOG_SIZE); // Plugin name
     pData += DIALOG_SIZE;
     *pData++ = DIALOG_ECHO_DISABLED;
-    memcpy(pData, PASSWORD.c_str(), PASSWORD.length()); // First message
+    memcpy(pData, PASSWORD.c_str(), PASSWORD.length());     // First message
 
     Buffer buffer(bufdata, buflen);
     return buffer;
@@ -318,7 +333,7 @@ Buffer PamClientSession::create_auth_change_packet() const
 int PamClientSession::authenticate(DCB* dcb)
 {
     int rval = ssl_authenticate_check_status(dcb);
-    MYSQL_session *ses = static_cast<MYSQL_session*>(dcb->data);
+    MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->data);
     if (rval == MXS_AUTH_SSL_COMPLETE && *ses->user)
     {
         rval = MXS_AUTH_FAILED;
@@ -391,7 +406,7 @@ int PamClientSession::authenticate(DCB* dcb)
     return rval;
 }
 
-bool PamClientSession::extract(DCB *dcb, GWBUF *buffer)
+bool PamClientSession::extract(DCB* dcb, GWBUF* buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
     m_sequence++;

@@ -17,7 +17,7 @@
 #include <time.h>
 
 
-void spinlock_init(SPINLOCK *lock)
+void spinlock_init(SPINLOCK* lock)
 {
     lock->lock = 0;
 #if SPINLOCK_PROFILE
@@ -31,9 +31,9 @@ void spinlock_init(SPINLOCK *lock)
 #endif
 }
 
-void spinlock_acquire(const SPINLOCK *const_lock)
+void spinlock_acquire(const SPINLOCK* const_lock)
 {
-    SPINLOCK *lock = (SPINLOCK*)const_lock;
+    SPINLOCK* lock = (SPINLOCK*)const_lock;
 #if SPINLOCK_PROFILE
     int spins = 0;
 
@@ -63,10 +63,9 @@ void spinlock_acquire(const SPINLOCK *const_lock)
 #endif
 }
 
-bool
-spinlock_acquire_nowait(const SPINLOCK *const_lock)
+bool spinlock_acquire_nowait(const SPINLOCK* const_lock)
 {
-    SPINLOCK *lock = (SPINLOCK*)const_lock;
+    SPINLOCK* lock = (SPINLOCK*)const_lock;
     if (__sync_lock_test_and_set(&(lock->lock), 1))
     {
         return false;
@@ -80,9 +79,9 @@ spinlock_acquire_nowait(const SPINLOCK *const_lock)
     return true;
 }
 
-void spinlock_release(const SPINLOCK *const_lock)
+void spinlock_release(const SPINLOCK* const_lock)
 {
-    SPINLOCK *lock = (SPINLOCK*)const_lock;
+    SPINLOCK* lock = (SPINLOCK*)const_lock;
     mxb_assert(lock->lock != 0);
 #if SPINLOCK_PROFILE
     if (lock->waiting > lock->max_waiting)
@@ -94,7 +93,7 @@ void spinlock_release(const SPINLOCK *const_lock)
     __sync_lock_release(&lock->lock);
 }
 
-void spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl)
+void spinlock_stats(const SPINLOCK* lock, void (* reporter)(void*, char*, int), void* hdl)
 {
 #if SPINLOCK_PROFILE
     reporter(hdl, "Spinlock acquired", lock->acquired);

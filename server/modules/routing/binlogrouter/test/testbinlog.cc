@@ -55,27 +55,28 @@
 #include "../../../../core/internal/service.hh"
 #include <maxscale/config.hh>
 
-static void printVersion(const char *progname);
-static void printUsage(const char *progname);
-static void master_free_parsed_options(ChangeMasterOptions *options);
-extern int blr_test_parse_change_master_command(char *input, char *error_string,
-                                                ChangeMasterOptions *config);
-extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, const char *filename, char *error);
-extern int blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
+static void printVersion(const char* progname);
+static void printUsage(const char* progname);
+static void master_free_parsed_options(ChangeMasterOptions* options);
+extern int  blr_test_parse_change_master_command(char* input,
+                                                 char* error_string,
+                                                 ChangeMasterOptions* config);
+extern char* blr_test_set_master_logfile(ROUTER_INSTANCE* router, const char* filename, char* error);
+extern int   blr_test_handle_change_master(ROUTER_INSTANCE* router, char* command, char* error);
 
 static struct option long_options[] =
 {
-    {"debug",     no_argument,            0,      'd'},
-    {"verbose",   no_argument,            0,      'v'},
-    {"version",   no_argument,            0,      'V'},
-    {"fix",       no_argument,            0,      'f'},
-    {"help",      no_argument,            0,      '?'},
-    {0, 0, 0, 0}
+    {"debug",   no_argument,     0,           'd'},
+    {"verbose", no_argument,     0,           'v'},
+    {"version", no_argument,     0,           'V'},
+    {"fix",     no_argument,     0,           'f'},
+    {"help",    no_argument,     0,           '?'},
+    {0,         0,               0,           0  }
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    ROUTER_INSTANCE *inst;
+    ROUTER_INSTANCE* inst;
     int ret;
     int rc;
     char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
@@ -83,9 +84,9 @@ int main(int argc, char **argv)
     char query[512 + 1] = "";
     char saved_query[512 + 1] = "";
     int command_offset = strlen("CHANGE MASTER TO");
-    char *master_log_file = NULL;
-    char *master_log_pos = NULL;
-    SERVICE *service;
+    char* master_log_file = NULL;
+    char* master_log_pos = NULL;
+    SERVICE* service;
     int tests = 1;
 
 
@@ -109,13 +110,13 @@ int main(int argc, char **argv)
     qc_init(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     hkinit();
 
-    CONFIG_CONTEXT ctx{(char*)""};
+    CONFIG_CONTEXT ctx {(char*)""};
     config_add_defaults(&ctx, get_module("binlogrouter", MODULE_ROUTER)->parameters);
 
     const char* options = "server_id=3,heartbeat=200,binlogdir=/tmp/my_dir,"
-        "transaction_safety=1,master_version=5.6.99-common,"
-        "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,"
-        "master_id=999,user=foo,password=bar";
+                          "transaction_safety=1,master_version=5.6.99-common,"
+                          "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,"
+                          "master_id=999,user=foo,password=bar";
 
     for (auto&& a : mxs::strtok(options, ","))
     {
@@ -177,10 +178,10 @@ int main(int argc, char **argv)
     }
 
     /********************************************
-     *
-     * First test suite is about syntax parsing
-     *
-     ********************************************/
+    *
+    * First test suite is about syntax parsing
+    *
+    ********************************************/
 
     printf("--------- CHANGE MASTER TO parsing tests ---------\n");
     /**
@@ -441,8 +442,9 @@ int main(int argc, char **argv)
      * Expected rc is 1, if 0 test fails
      */
     strcpy(error_string, "");
-    strcpy(query, "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWD='massi'" +
-           command_offset);
+    strcpy(query,
+           "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWD='massi'"
+           + command_offset);
     strcpy(saved_query, query);
     rc = blr_test_parse_change_master_command(query, error_string, &change_master);
     if (rc == 0)
@@ -463,8 +465,9 @@ int main(int argc, char **argv)
      * Expected rc is 0, if 1 test fails
      */
     strcpy(error_string, "");
-    strcpy(query, "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWORD='massi'" +
-           command_offset);
+    strcpy(query,
+           "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWORD='massi'"
+           + command_offset);
     strcpy(saved_query, query);
     rc = blr_test_parse_change_master_command(query, error_string, &change_master);
     if (rc == 1)
@@ -548,12 +551,15 @@ int main(int argc, char **argv)
     {
         if (strlen(error_string))
         {
-            printf("Test %d PASSED, MASTER_LOG_FILE [%s]: [%s]\n", tests,
-                   change_master.binlog_file.c_str(), error_string);
+            printf("Test %d PASSED, MASTER_LOG_FILE [%s]: [%s]\n",
+                   tests,
+                   change_master.binlog_file.c_str(),
+                   error_string);
         }
         else
         {
-            printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, an error message was expected\n", tests,
+            printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, an error message was expected\n",
+                   tests,
                    change_master.binlog_file.c_str());
             return 1;
         }
@@ -562,7 +568,8 @@ int main(int argc, char **argv)
     {
         printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, "
                "NULL was expected from blr_test_set_master_logfile()\n",
-               tests, change_master.binlog_file.c_str());
+               tests,
+               change_master.binlog_file.c_str());
         return 1;
     }
 
@@ -571,11 +578,11 @@ int main(int argc, char **argv)
     printf("--- MASTER_LOG_POS and MASTER_LOG_FILE rule/constraints checks ---\n");
 
     /********************************************
-     *
-     * Second part of test suite is for checking
-     * rules and constraints once syntax is OK
-     *
-     ********************************************/
+    *
+    * Second part of test suite is for checking
+    * rules and constraints once syntax is OK
+    *
+    ********************************************/
 
     /**
      * Test 18: change master without MASTER_LOG_FILE in BLRM_UNCONFIGURED state
@@ -595,8 +602,11 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("Test %d: an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n",
-               tests, blrm_states[inst->master_state], error_string);
+        printf(
+            "Test %d: an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n",
+            tests,
+            blrm_states[inst->master_state],
+            error_string);
         return 1;
     }
 
@@ -617,13 +627,19 @@ int main(int argc, char **argv)
 
     if (rc == -1 && inst->master_state == BLRM_UNCONFIGURED)
     {
-        printf("Test %d PASSED, cannot set MASTER_LOG_FILE in BLRM_UNCONFIGURED state for [%s]. Message [%s]\n",
-               tests, query, error_string);
+        printf(
+            "Test %d PASSED, cannot set MASTER_LOG_FILE in BLRM_UNCONFIGURED state for [%s]. Message [%s]\n",
+            tests,
+            query,
+            error_string);
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_FILE in BLRM_UNCONFIGURED state FAILED, an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n",
-               tests, blrm_states[inst->master_state], error_string);
+        printf(
+            "Test %d: set MASTER_LOG_FILE in BLRM_UNCONFIGURED state FAILED, an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n",
+            tests,
+            blrm_states[inst->master_state],
+            error_string);
         return 1;
     }
 
@@ -650,8 +666,10 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_FILE and MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n", tests,
-               blrm_states[inst->master_state], error_string);
+        printf("Test %d: set MASTER_LOG_FILE and MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n",
+               tests,
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
 
@@ -676,12 +694,17 @@ int main(int argc, char **argv)
 
     if (rc == -1)
     {
-        printf("Test %d PASSED, cannot set MASTER_LOG_FILE for [%s], Message [%s]\n", tests, query, error_string);
+        printf("Test %d PASSED, cannot set MASTER_LOG_FILE for [%s], Message [%s]\n",
+               tests,
+               query,
+               error_string);
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_FILE, Master State is %s Failed, Message [%s]\n", tests,
-               blrm_states[inst->master_state], error_string);
+        printf("Test %d: set MASTER_LOG_FILE, Master State is %s Failed, Message [%s]\n",
+               tests,
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
 
@@ -707,8 +730,10 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_FILE FAILED, Master State is %s. Message [%s]\n", tests,
-               blrm_states[inst->master_state], error_string);
+        printf("Test %d: set MASTER_LOG_FILE FAILED, Master State is %s. Message [%s]\n",
+               tests,
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
 
@@ -731,12 +756,17 @@ int main(int argc, char **argv)
 
     if (rc == -1)
     {
-        printf("Test %d PASSED, cannot set MASTER_LOG_POS for [%s], Message [%s]\n", tests, query, error_string);
+        printf("Test %d PASSED, cannot set MASTER_LOG_POS for [%s], Message [%s]\n",
+               tests,
+               query,
+               error_string);
     }
     else
     {
-        printf("Test %d: set MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n", tests,
-               blrm_states[inst->master_state], error_string);
+        printf("Test %d: set MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n",
+               tests,
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
 
@@ -781,7 +811,8 @@ int main(int argc, char **argv)
         printf("Test %d: GTID set MASTER_LOG_FILE FAILED, "
                "Master State is %s. Message [%s]\n",
                tests,
-               blrm_states[inst->master_state], error_string);
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
 
@@ -813,7 +844,8 @@ int main(int argc, char **argv)
         printf("Test %d: GTID set MASTER_USE_GTID=Slave_pos FAILED, "
                "Master State is %s. Message [%s]\n",
                tests,
-               blrm_states[inst->master_state], error_string);
+               blrm_states[inst->master_state],
+               error_string);
         return 1;
     }
     else
@@ -821,7 +853,8 @@ int main(int argc, char **argv)
         printf("Test %d PASSED, GTID set MASTER_USE_GTID=Slave_pos "
                "for [%s]: %s\n",
                tests,
-               query, error_string);
+               query,
+               error_string);
     }
 
     tests++;
@@ -829,10 +862,12 @@ int main(int argc, char **argv)
     /**
      * Verify SQL query initial comment skipping function works on a real use case.
      */
-    const char *mysql_connector_j_actual =
-        blr_skip_leading_sql_comments("/* mysql-connector-java-5.1.39 ( Revision: 3289a357af6d09ecc1a10fd3c26e95183e5790ad ) */SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout");
-    const char *mysql_connector_j_expected =
-        "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout";
+    const char* mysql_connector_j_actual
+        = blr_skip_leading_sql_comments(
+                "/* mysql-connector-java-5.1.39 ( Revision: 3289a357af6d09ecc1a10fd3c26e95183e5790ad ) */SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout");
+    const char* mysql_connector_j_expected
+        =
+            "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout";
     if (strcmp(mysql_connector_j_actual, mysql_connector_j_expected) == 0)
     {
         printf("Test %d PASSED\n", tests);
@@ -845,8 +880,8 @@ int main(int argc, char **argv)
 
     tests++;
 
-    const char *no_comment_query_actual = blr_skip_leading_sql_comments("SELECT foo FROM bar LIMIT 1");
-    const char *no_comment_query_expected = "SELECT foo FROM bar LIMIT 1";
+    const char* no_comment_query_actual = blr_skip_leading_sql_comments("SELECT foo FROM bar LIMIT 1");
+    const char* no_comment_query_expected = "SELECT foo FROM bar LIMIT 1";
     if (strcmp(no_comment_query_actual, no_comment_query_expected) == 0)
     {
         printf("Test %d PASSED\n", tests);
@@ -859,8 +894,9 @@ int main(int argc, char **argv)
 
     tests++;
 
-    const char *unclosed_comment_query_actual = blr_skip_leading_sql_comments("/* SELECT foo FROM bar LIMIT 1");
-    const char *unclosed_comment_query_expected = "";
+    const char* unclosed_comment_query_actual
+        = blr_skip_leading_sql_comments("/* SELECT foo FROM bar LIMIT 1");
+    const char* unclosed_comment_query_expected = "";
     if (strcmp(unclosed_comment_query_actual, unclosed_comment_query_expected) == 0)
     {
         printf("Test %d PASSED\n", tests);
@@ -878,8 +914,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-static void
-master_free_parsed_options(ChangeMasterOptions *options)
+static void master_free_parsed_options(ChangeMasterOptions* options)
 {
     options->host.clear();
     options->port.clear();

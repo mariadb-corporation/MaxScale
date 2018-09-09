@@ -13,27 +13,33 @@ void prepare(TestConnections& test)
     t.c_iflag &= ~ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
 
-    test.maxscales->ssh_node_f(0, true, "pcs resource disable maxscale-clone; pcs resource disable replication-manager");
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "pcs resource disable maxscale-clone; pcs resource disable replication-manager");
 
     test.repl->fix_replication();
     system("./manage_mrm.sh configure 2");
     test.maxscales->copy_from_node((char*)"/etc/maxscale.cnf", (char*)".", 0);
     test.maxscales->copy_to_node("./config.toml", "~", 0);
-    test.maxscales->ssh_node_f(0, false, "sudo cp ~/maxscale.cnf /etc/; sudo cp ~/config.toml /etc/replication-manager/");
+    test.maxscales->ssh_node_f(0,
+                               false,
+                               "sudo cp ~/maxscale.cnf /etc/; sudo cp ~/config.toml /etc/replication-manager/");
 
     system("sed -i 's/version_string=.*/version_string=10.1.19-maxscale-standby/' ./maxscale.cnf");
     test.galera->copy_to_node("./maxscale.cnf", "~", 0);
     test.galera->copy_to_node("./config.toml", "~", 0);
     test.galera->ssh_node(0, "sudo cp ~/config.toml /etc/replication-manager", false);
     test.galera->ssh_node(0, "sudo cp ~/maxscale.cnf /etc/", false);
-    test.maxscales->ssh_node_f(0, true, "replication-manager bootstrap --clean-all;pcs resource enable maxscale-clone; pcs resource enable replication-manager");
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "replication-manager bootstrap --clean-all;pcs resource enable maxscale-clone; pcs resource enable replication-manager");
     sleep(5);
 }
 
 void get_output(TestConnections& test)
 {
     test.tprintf("Maxadmin output:");
-    char *output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
+    char* output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 }
@@ -42,9 +48,9 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
-    const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
-    const char *query2 = "SELECT * FROM test.t1";
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    const char* query1 = "INSERT INTO test.t1 VALUES (%d)";
+    const char* query2 = "SELECT * FROM test.t1";
 
     printf("\nExecuting queries though MaxScale:\n\n");
     printf("BEGIN\n");
@@ -54,7 +60,7 @@ void check(TestConnections& test)
     test.try_query(conn, query1, inserts++);
     mysql_query(conn, query2);
 
-    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_RES* res = mysql_store_result(conn);
     test.add_result(res == NULL, "Query shoud return a result set");
 
     if (res)
@@ -62,8 +68,11 @@ void check(TestConnections& test)
         std::string values;
         MYSQL_ROW row;
         int num_rows = mysql_num_rows(res);
-        test.add_result(num_rows != inserts, "Query returned %d rows when %d rows were expected", num_rows, inserts);
-        const char *separator = "";
+        test.add_result(num_rows != inserts,
+                        "Query returned %d rows when %d rows were expected",
+                        num_rows,
+                        inserts);
+        const char* separator = "";
 
         while ((row = mysql_fetch_row(res)))
         {

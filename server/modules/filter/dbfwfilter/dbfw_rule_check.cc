@@ -13,7 +13,7 @@
 
 #include "dbfwfilter.cc"
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int rval = 1;
 
@@ -29,8 +29,8 @@ int main(int argc, char **argv)
         {
             MXS_NOTICE("Parsing rule file: %s", argv[1]);
 
-            RuleList  rules;
-            UserMap   users;
+            RuleList rules;
+            UserMap users;
 
             if (process_rule_file(argv[1], &rules, &users))
             {
@@ -48,7 +48,6 @@ int main(int argc, char **argv)
         }
 
         mxs_log_finish();
-
     }
 
     return rval;

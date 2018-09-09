@@ -20,13 +20,13 @@
 #include <signal.h>
 #include <maxscale/utils.h>
 
-#define WRITE_EVENT         0
-#define UPDATE_EVENT        1
-#define UPDATE_EVENT_AFTER  2
-#define DELETE_EVENT        3
+#define WRITE_EVENT        0
+#define UPDATE_EVENT       1
+#define UPDATE_EVENT_AFTER 2
+#define DELETE_EVENT       3
 
-static bool warn_decimal = false; /**< Remove when support for DECIMAL is added */
-static bool warn_bit = false; /**< Remove when support for BIT is added */
+static bool warn_decimal = false;       /**< Remove when support for DECIMAL is added */
+static bool warn_bit = false;           /**< Remove when support for BIT is added */
 static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET values
                                          * larger than 255 is added */
 
@@ -72,8 +72,11 @@ static int get_event_type(uint8_t event)
  * @param metadata Field metadata
  * @param value    Pointer to the start of the in-memory representation of the data
  */
-void set_numeric_field_value(SRowEventHandler& conv, int idx, uint8_t type,
-                             uint8_t *metadata, uint8_t *value)
+void set_numeric_field_value(SRowEventHandler& conv,
+                             int idx,
+                             uint8_t type,
+                             uint8_t* metadata,
+                             uint8_t* value)
 {
     switch (type)
     {
@@ -86,7 +89,7 @@ void set_numeric_field_value(SRowEventHandler& conv, int idx, uint8_t type,
 
     case TABLE_COL_TYPE_SHORT:
         {
-            short s =  gw_mysql_get_byte2(value);
+            short s = gw_mysql_get_byte2(value);
             conv->column(idx, s);
             break;
         }
@@ -147,7 +150,7 @@ void set_numeric_field_value(SRowEventHandler& conv, int idx, uint8_t type,
  * @param current_column Zero indexed column number
  * @return True if the bit is set
  */
-static bool bit_is_set(uint8_t *ptr, int columns, int current_column)
+static bool bit_is_set(uint8_t* ptr, int columns, int current_column)
 {
     if (current_column >= 8)
     {
@@ -155,7 +158,7 @@ static bool bit_is_set(uint8_t *ptr, int columns, int current_column)
         current_column = current_column % 8;
     }
 
-    return ((*ptr) & (1 << current_column));
+    return (*ptr) & (1 << current_column);
 }
 
 /**
@@ -192,17 +195,18 @@ int get_metadata_len(uint8_t type)
 }
 
 // Make sure that both `i` and `trace` are defined before using this macro
-#define check_overflow(t) do \
+#define check_overflow(t) \
+    do \
     { \
         if (!(t)) \
         { \
-            for (long x = 0; x < i;x++) \
+            for (long x = 0; x < i; x++) \
             { \
                 MXS_ALERT("%s", trace[x]); \
             } \
             raise(SIGABRT); \
         } \
-    }while(false)
+    } while (false)
 
 // Debug function for checking whether a row event consists of only NULL values
 static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
@@ -232,13 +236,16 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
-                                SRowEventHandler& conv, uint8_t *ptr,
-                                uint8_t *columns_present, uint8_t *end)
+uint8_t* process_row_event_data(STableMapEvent map,
+                                STableCreateEvent create,
+                                SRowEventHandler& conv,
+                                uint8_t* ptr,
+                                uint8_t* columns_present,
+                                uint8_t* end)
 {
     int npresent = 0;
     long ncolumns = map->columns();
-    uint8_t *metadata = &map->column_metadata[0];
+    uint8_t* metadata = &map->column_metadata[0];
     size_t metadata_offset = 0;
 
     /** BIT type values use the extra bits in the row event header */
@@ -246,7 +253,7 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
     mxb_assert(ptr < end);
 
     /** Store the null value bitmap */
-    uint8_t *null_bitmap = ptr;
+    uint8_t* null_bitmap = ptr;
     ptr += (ncolumns + 7) / 8;
     mxb_assert(ptr < end || (bit_is_set(null_bitmap, ncolumns, 0)));
 
@@ -386,9 +393,11 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
             {
                 char buf[80];
                 struct tm tm;
-                ptr += unpack_temporal_value(map->column_types[i], ptr,
+                ptr += unpack_temporal_value(map->column_types[i],
+                                             ptr,
                                              &metadata[metadata_offset],
-                                             create->columns[i].length, &tm);
+                                             create->columns[i].length,
+                                             &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 conv->column(i, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
@@ -399,8 +408,10 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
             {
                 uint8_t lval[16];
                 memset(lval, 0, sizeof(lval));
-                ptr += unpack_numeric_field(ptr, map->column_types[i],
-                                            &metadata[metadata_offset], lval);
+                ptr += unpack_numeric_field(ptr,
+                                            map->column_types[i],
+                                            &metadata[metadata_offset],
+                                            lval);
                 set_numeric_field_value(conv, i, map->column_types[i], &metadata[metadata_offset], lval);
                 sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
                 check_overflow(ptr <= end);
@@ -427,7 +438,7 @@ uint8_t* process_row_event_data(STableMapEvent map, STableCreateEvent create,
  * @param dest Destination where the string is stored
  * @param len Size of destination
  */
-void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *tbl_id, char* dest, size_t len)
+void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len)
 {
     uint64_t table_id = 0;
     size_t id_size = post_header_len == 6 ? 4 : 6;
@@ -464,7 +475,7 @@ void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *tbl_id, ch
  * @param hdr Replication header
  * @param ptr Pointer to event payload
  */
-bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
+bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
     uint64_t id;
@@ -490,8 +501,8 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
         {
             auto old = it->second;
 
-            if (old->id == map->id && old->version == map->version &&
-                old->table == map->table && old->database == map->database)
+            if (old->id == map->id && old->version == map->version
+                && old->table == map->table && old->database == map->database)
             {
                 // We can reuse the table map object
                 return true;
@@ -521,7 +532,8 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
     {
         MXS_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
-                    "table until a DDL statement for it is read.", table_ident);
+                    "table until a DDL statement for it is read.",
+                    table_ident);
     }
 
     return rval;
@@ -538,10 +550,10 @@ bool Rpl::handle_table_map_event(REP_HEADER *hdr, uint8_t *ptr)
  * @param ptr Pointer to the start of the event
  * @return True on succcess, false on error
  */
-bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
+bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     bool rval = false;
-    uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
+    uint8_t* end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
     uint8_t table_id_size = m_event_type_hdr_lens[hdr->event_type] == 6 ? 4 : 6;
     uint64_t table_id = 0;
 
@@ -589,8 +601,8 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
      * used to calculate a "delta" of sorts if necessary. Currently we store
      * both the before and the after images. */
     uint8_t col_update[coldata_size];
-    if (hdr->event_type == UPDATE_ROWS_EVENTv1 ||
-        hdr->event_type == UPDATE_ROWS_EVENTv2)
+    if (hdr->event_type == UPDATE_ROWS_EVENTv1
+        || hdr->event_type == UPDATE_ROWS_EVENTv2)
     {
         memcpy(&col_update, ptr, coldata_size);
         ptr += coldata_size;
@@ -614,8 +626,8 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
         bool ok = m_handler->prepare_table(map->database, map->table);
         auto create = m_created_tables.find(table_ident);
 
-        if (ok && create != m_created_tables.end() &&
-            ncolumns == map->columns() && create->second->columns.size() == map->columns())
+        if (ok && create != m_created_tables.end()
+            && ncolumns == map->columns() && create->second->columns.size() == map->columns())
         {
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
@@ -652,31 +664,39 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
         else if (!ok)
         {
             MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
-                      " errors for more details.", map->database.c_str(), map->table.c_str());
+                      " errors for more details.",
+                      map->database.c_str(),
+                      map->table.c_str());
         }
         else if (create == m_created_tables.end())
         {
             MXS_ERROR("Create table statement for %s.%s was not found from the "
                       "binary logs or the stored schema was not correct.",
-                      map->database.c_str(), map->table.c_str());
+                      map->database.c_str(),
+                      map->table.c_str());
         }
         else if (ncolumns == map->columns() && create->second->columns.size() != map->columns())
         {
             MXS_ERROR("Table map event has a different column count for table "
                       "%s.%s than the CREATE TABLE statement. Possible "
-                      "unsupported DDL detected.", map->database.c_str(), map->table.c_str());
+                      "unsupported DDL detected.",
+                      map->database.c_str(),
+                      map->table.c_str());
         }
         else
         {
             MXS_ERROR("Row event and table map event have different column "
                       "counts for table %s.%s, only full row image is currently "
-                      "supported.", map->database.c_str(), map->table.c_str());
+                      "supported.",
+                      map->database.c_str(),
+                      map->table.c_str());
         }
     }
     else
     {
         MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
-                 "be processed.", table_id);
+                 "be processed.",
+                 table_id);
     }
 
     return rval;
@@ -692,7 +712,7 @@ bool Rpl::handle_row_event(REP_HEADER *hdr, uint8_t *ptr)
 bool is_create_table_statement(pcre2_code* create_table_re, char* ptr, size_t len)
 {
     int rc = 0;
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(create_table_re, NULL);
+    pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(create_table_re, NULL);
 
     if (mdata)
     {
@@ -719,17 +739,17 @@ bool is_create_as_statement(const char* ptr, size_t len)
     char sql[len + 1];
     memcpy(sql, ptr, len);
     sql[len] = '\0';
-    const char* pattern =
-        // Case-insensitive mode
-        "(?i)"
-        // Main CREATE TABLE part (the \s is for any whitespace)
-        "create\\stable\\s"
-        // Optional IF NOT EXISTS
-        "(if\\snot\\sexists\\s)?"
-        // The table name with optional database name, both enclosed in optional backticks
-        "(`?\\S+`?.)`?\\S+`?\\s"
-        // And finally the AS keyword
-        "as";
+    const char* pattern
+        =   // Case-insensitive mode
+            "(?i)"
+            // Main CREATE TABLE part (the \s is for any whitespace)
+            "create\\stable\\s"
+            // Optional IF NOT EXISTS
+            "(if\\snot\\sexists\\s)?"
+            // The table name with optional database name, both enclosed in optional backticks
+            "(`?\\S+`?.)`?\\S+`?\\s"
+            // And finally the AS keyword
+            "as";
 
     return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
 }
@@ -744,7 +764,7 @@ bool is_create_as_statement(const char* ptr, size_t len)
 bool is_alter_table_statement(pcre2_code* alter_table_re, char* ptr, size_t len)
 {
     int rc = 0;
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(alter_table_re, NULL);
+    pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(alter_table_re, NULL);
 
     if (mdata)
     {
@@ -792,7 +812,7 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
     return m_handler->create_table(created);
 }
 
-void unify_whitespace(char *sql, int len)
+void unify_whitespace(char* sql, int len)
 {
     for (int i = 0; i < len; i++)
     {
@@ -813,7 +833,7 @@ void unify_whitespace(char *sql, int len)
  * @param len Pointer to current length of string, updated to new length if
  *            @c sql is modified
  */
-static void strip_executable_comments(char *sql, int* len)
+static void strip_executable_comments(char* sql, int* len)
 {
     if (strncmp(sql, "/*!", 3) == 0 || strncmp(sql, "/*M!", 4) == 0)
     {
@@ -845,18 +865,18 @@ static void strip_executable_comments(char *sql, int* len)
  * @param pending_transaction Pointer where status of pending transaction is stored
  * @param ptr Pointer to the start of the event payload
  */
-void Rpl::handle_query_event(REP_HEADER *hdr, uint8_t *ptr)
+void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
 {
     int dblen = ptr[DBNM_OFF];
     int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
     int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
-    char *sql = (char *) ptr + PHDR_OFF + vblklen + 1 + dblen;
+    char* sql = (char*) ptr + PHDR_OFF + vblklen + 1 + dblen;
     char db[dblen + 1];
     memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
     db[dblen] = 0;
 
     size_t sqlsz = len, tmpsz = len;
-    char *tmp = static_cast<char*>(MXS_MALLOC(len + 1));
+    char* tmp = static_cast<char*>(MXS_MALLOC(len + 1));
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
@@ -906,7 +926,9 @@ void Rpl::handle_query_event(REP_HEADER *hdr, uint8_t *ptr)
             static bool warn_create_as = true;
             if (warn_create_as)
             {
-                MXS_WARNING("`CREATE TABLE AS` is not yet supported, ignoring events to this table: %.*s", len, sql);
+                MXS_WARNING("`CREATE TABLE AS` is not yet supported, ignoring events to this table: %.*s",
+                            len,
+                            sql);
                 warn_create_as = false;
             }
         }
@@ -962,8 +984,8 @@ void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
     {
         handle_table_map_event(&hdr, ptr);
     }
-    else if ((hdr.event_type >= WRITE_ROWS_EVENTv0 && hdr.event_type <= DELETE_ROWS_EVENTv1) ||
-             (hdr.event_type >= WRITE_ROWS_EVENTv2 && hdr.event_type <= DELETE_ROWS_EVENTv2))
+    else if ((hdr.event_type >= WRITE_ROWS_EVENTv0 && hdr.event_type <= DELETE_ROWS_EVENTv1)
+             || (hdr.event_type >= WRITE_ROWS_EVENTv2 && hdr.event_type <= DELETE_ROWS_EVENTv2))
     {
         handle_row_event(&hdr, ptr);
     }

@@ -1,22 +1,23 @@
 /**
- * @file bug643.cpp  regression case for bugs 643 ("Hints, RWSplit: MaxScale goes into infinite loop and crashes") and bug645
+ * @file bug643.cpp  regression case for bugs 643 ("Hints, RWSplit: MaxScale goes into infinite loop and
+ *crashes") and bug645
  * - setup RWSplit in the following way for bug643
  * @verbatim
-[RW Split Router]
-type=service
-router=readwritesplit
-servers=server1,server2,server3,server4
-max_slave_connections=100%
-use_sql_variables_in=all
-user=skysql
-passwd=skysql
-filters=duplicate
-
-[duplicate]
-type=filter
-module=tee
-service=RW Split Router
- @endverbatim
+ *  [RW Split Router]
+ *  type=service
+ *  router=readwritesplit
+ *  servers=server1,server2,server3,server4
+ *  max_slave_connections=100%
+ *  use_sql_variables_in=all
+ *  user=skysql
+ *  passwd=skysql
+ *  filters=duplicate
+ *
+ *  [duplicate]
+ *  type=filter
+ *  module=tee
+ *  service=RW Split Router
+ *  @endverbatim
  * - try to connect
  * - try simple query using ReadConn router (both, master and slave)
  * - check warnig in the log "RW Split Router: Recursive use of tee filter in service"
@@ -25,9 +26,9 @@ service=RW Split Router
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
     Test->tprintf("Trying to connect to all Maxscale services\n");
@@ -35,13 +36,13 @@ int main(int argc, char *argv[])
     Test->maxscales->connect_maxscale(0);
     Test->tprintf("Trying to send query to ReadConn master\n");
     fflush(stdout);
-    Test->try_query(Test->maxscales->conn_master[0], (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_master[0], (char*) "show processlist");
     Test->tprintf("Trying to send query to ReadConn slave\n");
     fflush(stdout);
-    Test->try_query(Test->maxscales->conn_slave[0], (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_slave[0], (char*) "show processlist");
     Test->tprintf("Trying to send query to RWSplit, expecting failure\n");
     fflush(stdout);
-    if (execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist") == 0)
+    if (execute_query(Test->maxscales->conn_rwsplit[0], (char*) "show processlist") == 0)
     {
         Test->add_result(1, "FAIL: Query to broken service succeeded!\n");
     }

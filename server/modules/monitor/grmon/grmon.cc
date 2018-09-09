@@ -47,19 +47,19 @@ bool GRMon::has_sufficient_permissions() const
 
 static inline bool is_false(const char* value)
 {
-    return strcasecmp(value, "0") == 0 ||
-           strcasecmp(value, "no") == 0 ||
-           strcasecmp(value, "off") == 0 ||
-           strcasecmp(value, "false") == 0;
+    return strcasecmp(value, "0") == 0
+           || strcasecmp(value, "no") == 0
+           || strcasecmp(value, "off") == 0
+           || strcasecmp(value, "false") == 0;
 }
 
 static bool is_master(MXS_MONITORED_SERVER* server)
 {
     bool rval = false;
     MYSQL_RES* result;
-    const char* master_query =
-        "SELECT VARIABLE_VALUE, @@server_uuid, @@read_only FROM performance_schema.global_status "
-        "WHERE VARIABLE_NAME= 'group_replication_primary_member'";
+    const char* master_query
+        = "SELECT VARIABLE_VALUE, @@server_uuid, @@read_only FROM performance_schema.global_status "
+          "WHERE VARIABLE_NAME= 'group_replication_primary_member'";
 
     if (mysql_query(server->con, master_query) == 0 && (result = mysql_store_result(server->con)))
     {
@@ -137,22 +137,22 @@ void GRMon::update_server_status(MXS_MONITORED_SERVER* monitored_server)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
+    {
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_GA,
+        MXS_MONITOR_VERSION,
+        "A Group Replication cluster monitor",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &maxscale::MonitorApi<GRMon>::s_api,
+        NULL,       /* Process init. */
+        NULL,       /* Process finish. */
+        NULL,       /* Thread init. */
+        NULL,       /* Thread finish. */
         {
-            MXS_MODULE_API_MONITOR,
-            MXS_MODULE_GA,
-            MXS_MONITOR_VERSION,
-            "A Group Replication cluster monitor",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &maxscale::MonitorApi<GRMon>::s_api,
-            NULL, /* Process init. */
-            NULL, /* Process finish. */
-            NULL, /* Thread init. */
-            NULL, /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
     return &info;
 }

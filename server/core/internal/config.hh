@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 /**
  * @file core/maxscale/config.h - The private config interface
@@ -25,13 +25,13 @@
 #include <maxbase/jansson.h>
 #include <maxscale/ssl.h>
 
-#define DEFAULT_NBPOLLS             3      /**< Default number of non block polls before we block */
-#define DEFAULT_POLLSLEEP           1000   /**< Default poll wait time (milliseconds) */
-#define DEFAULT_NTHREADS            1      /**< Default number of polling threads */
-#define DEFAULT_QUERY_RETRIES       1      /**< Number of retries for interrupted queries */
-#define DEFAULT_QUERY_RETRY_TIMEOUT 5      /**< Timeout for query retries */
-#define MIN_WRITEQ_HIGH_WATER       4096UL /**< Min high water mark of dcb write queue */
-#define MIN_WRITEQ_LOW_WATER        512UL  /**< Min low water mark of dcb write queue */
+#define DEFAULT_NBPOLLS             3       /**< Default number of non block polls before we block */
+#define DEFAULT_POLLSLEEP           1000    /**< Default poll wait time (milliseconds) */
+#define DEFAULT_NTHREADS            1       /**< Default number of polling threads */
+#define DEFAULT_QUERY_RETRIES       1       /**< Number of retries for interrupted queries */
+#define DEFAULT_QUERY_RETRY_TIMEOUT 5       /**< Timeout for query retries */
+#define MIN_WRITEQ_HIGH_WATER       4096UL  /**< Min high water mark of dcb write queue */
+#define MIN_WRITEQ_LOW_WATER        512UL   /**< Min low water mark of dcb write queue */
 
 // Default version string sent to clients
 #define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
@@ -75,12 +75,12 @@ void config_set_global_defaults();
  * @param ctx    Configuration context where the parameters are added
  * @param params Module parameters
  */
-void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params);
+void config_add_defaults(CONFIG_CONTEXT* ctx, const MXS_MODULE_PARAM* params);
 
 char*                 config_clean_string_list(const char* str);
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param);
-bool                  config_load(const char *);
-bool                  config_load_global(const char *filename);
+bool                  config_load(const char*);
+bool                  config_load_global(const char* filename);
 void                  config_parameter_free(MXS_CONFIG_PARAMETER* p1);
 
 /**
@@ -89,14 +89,14 @@ void                  config_parameter_free(MXS_CONFIG_PARAMETER* p1);
  * @param section Context name
  * @return New context or NULL on memory allocation failure
  */
-CONFIG_CONTEXT* config_context_create(const char *section);
+CONFIG_CONTEXT* config_context_create(const char* section);
 
 /**
  * @brief Free a configuration context
  *
  * @param context The context to free
  */
-void config_context_free(CONFIG_CONTEXT *context);
+void config_context_free(CONFIG_CONTEXT* context);
 
 /**
  * @brief Add a parameter to a configuration context
@@ -148,8 +148,10 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  *
  * @return True on success, false on error
  */
-bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
-                       bool require_cert, SSL_LISTENER** dest);
+bool config_create_ssl(const char* name,
+                       MXS_CONFIG_PARAMETER* params,
+                       bool require_cert,
+                       SSL_LISTENER** dest);
 
 /**
  * @brief Check if all SSL parameters are defined
@@ -162,7 +164,7 @@ bool config_create_ssl(const char* name, MXS_CONFIG_PARAMETER* params,
  * @param obj Configuration context
  * @return True if all required parameters are present
  */
-bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
+bool config_have_required_ssl_params(CONFIG_CONTEXT* obj);
 
 /**
  * @brief Add non-standard configuration parameters to a JSON object
@@ -187,7 +189,7 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
  *
  * @param name Object name to fix
  */
-void fix_object_name(char *name);
+void fix_object_name(char* name);
 void fix_object_name(std::string& name);
 
 /**
@@ -206,7 +208,7 @@ bool config_global_serialize();
  */
 bool export_config_file(const char* filename);
 
-bool is_normal_server_parameter(const char *param);
+bool is_normal_server_parameter(const char* param);
 
 /**
  * Converts a string into the corresponding value, interpreting
@@ -223,7 +225,8 @@ bool is_normal_server_parameter(const char *param);
 bool get_suffixed_size(const char* value, uint64_t* dest);
 
 // Dump a parameter list into a file as `key=value` pairs
-void dump_param_list(int file, MXS_CONFIG_PARAMETER* list,
+void dump_param_list(int file,
+                     MXS_CONFIG_PARAMETER* list,
                      const std::unordered_set<std::string>& ignored,
                      const MXS_MODULE_PARAM* common_params,
                      const MXS_MODULE_PARAM* module_params);

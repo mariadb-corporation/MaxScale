@@ -18,11 +18,11 @@
 
 using std::shared_ptr;
 
-CacheST::CacheST(const std::string&              name,
-                 const CACHE_CONFIG*             pConfig,
+CacheST::CacheST(const std::string& name,
+                 const CACHE_CONFIG* pConfig,
                  const std::vector<SCacheRules>& rules,
-                 SStorageFactory                 sFactory,
-                 Storage*                        pStorage)
+                 SStorageFactory sFactory,
+                 Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
     MXS_NOTICE("Created single threaded cache.");
@@ -52,10 +52,10 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 }
 
 // static
-CacheST* CacheST::Create(const std::string&              name,
+CacheST* CacheST::Create(const std::string& name,
                          const std::vector<SCacheRules>& rules,
-                         SStorageFactory                 sFactory,
-                         const CACHE_CONFIG*             pConfig)
+                         SStorageFactory sFactory,
+                         const CACHE_CONFIG* pConfig)
 {
     mxb_assert(sFactory.get());
     mxb_assert(pConfig);
@@ -73,16 +73,16 @@ bool CacheST::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSess
     return CacheSimple::do_must_refresh(key, pSession);
 }
 
-void CacheST::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
+void CacheST::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     CacheSimple::do_refreshed(key, pSession);
 }
 
 // static
-CacheST* CacheST::Create(const std::string&              name,
-                         const CACHE_CONFIG*             pConfig,
+CacheST* CacheST::Create(const std::string& name,
+                         const CACHE_CONFIG* pConfig,
                          const std::vector<SCacheRules>& rules,
-                         SStorageFactory                 sFactory)
+                         SStorageFactory sFactory)
 {
     CacheST* pCache = NULL;
 

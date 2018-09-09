@@ -16,18 +16,18 @@ struct Bind
         bind.length = &length;
     }
 
-    MYSQL_BIND bind;
-    char err = 0;
-    char is_null = 0;
-    char is_unsigned = 0;
-    uint8_t buffer[1024];
+    MYSQL_BIND    bind;
+    char          err = 0;
+    char          is_null = 0;
+    char          is_unsigned = 0;
+    uint8_t       buffer[1024];
     unsigned long length = 0;
 };
 
 struct TestCase
 {
-    std::string name;
-    std::function<bool (MYSQL*, MYSQL_STMT*, Bind&)> func;
+    std::string                                     name;
+    std::function<bool(MYSQL*, MYSQL_STMT*, Bind&)> func;
 };
 
 void run_test(TestConnections& test, TestCase test_case)
@@ -49,7 +49,8 @@ void run_test(TestConnections& test, TestCase test_case)
     }
 
     cout << test_case.name << endl;
-    test.assert(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind), "Test '%s' failed",
+    test.assert(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind),
+                "Test '%s' failed",
                 test_case.name.c_str());
 
     mysql_stmt_close(stmt);
@@ -82,19 +83,17 @@ int main(int argc, char* argv[])
     {
         {
             "Simple execute and fetch",
-            [](MYSQL * conn, MYSQL_STMT * stmt, Bind & bind)
-            {
+            [](MYSQL* conn, MYSQL_STMT* stmt, Bind& bind){
                 bool rval = true;
 
-                if (mysql_stmt_execute(stmt) ||
-                mysql_stmt_bind_result(stmt, &bind.bind))
+                if (mysql_stmt_execute(stmt)
+                    || mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
 
                 while (mysql_stmt_fetch(stmt) == 0)
                 {
-                    ;
                 }
 
                 return rval;
@@ -102,15 +101,14 @@ int main(int argc, char* argv[])
         },
         {
             "Multiple overlapping executions without fetch",
-            [](MYSQL * conn, MYSQL_STMT * stmt, Bind & bind)
-            {
+            [](MYSQL* conn, MYSQL_STMT* stmt, Bind& bind){
                 bool rval = true;
 
-                if (mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt))
+                if (mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt))
                 {
                     rval = false;
                 }
@@ -120,22 +118,20 @@ int main(int argc, char* argv[])
         },
         {
             "Multiple overlapping executions with fetch",
-            [](MYSQL * conn, MYSQL_STMT * stmt, Bind & bind)
-            {
+            [](MYSQL* conn, MYSQL_STMT* stmt, Bind& bind){
                 bool rval = true;
 
-                if (mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_bind_result(stmt, &bind.bind))
+                if (mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
 
                 while (mysql_stmt_fetch(stmt) == 0)
                 {
-                    ;
                 }
 
                 return rval;
@@ -143,15 +139,14 @@ int main(int argc, char* argv[])
         },
         {
             "Execution of queries while fetching",
-            [](MYSQL * conn, MYSQL_STMT * stmt, Bind & bind)
-            {
+            [](MYSQL* conn, MYSQL_STMT* stmt, Bind& bind){
                 bool rval = true;
 
-                if (mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_bind_result(stmt, &bind.bind))
+                if (mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_bind_result(stmt, &bind.bind))
                 {
                     rval = false;
                 }
@@ -166,16 +161,15 @@ int main(int argc, char* argv[])
         },
         {
             "Multiple overlapping executions and a query",
-            [](MYSQL * conn, MYSQL_STMT * stmt, Bind & bind)
-            {
+            [](MYSQL* conn, MYSQL_STMT* stmt, Bind& bind){
                 bool rval = true;
 
-                if (mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_stmt_execute(stmt) ||
-                mysql_query(conn, "SET @a = 1"))
+                if (mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_stmt_execute(stmt)
+                    || mysql_query(conn, "SET @a = 1"))
                 {
                     rval = false;
                 }

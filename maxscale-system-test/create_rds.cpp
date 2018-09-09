@@ -10,8 +10,8 @@
 #include <jansson.h>
 #include "rds_vpc.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    RDS * cluster = new RDS((char *) "auroratest");
+    RDS* cluster = new RDS((char*) "auroratest");
     return cluster->create_rds_db(4);
 }

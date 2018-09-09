@@ -77,7 +77,7 @@ void Avro::read_source_service_options(SERVICE* source)
         }
     }
 
-    for (const auto& opt: mxs::strtok(config_get_string(params, "router_options"), ", \t"))
+    for (const auto& opt : mxs::strtok(config_get_string(params, "router_options"), ", \t"))
     {
         auto kv = mxs::strtok(opt, "=");
 
@@ -92,15 +92,15 @@ void Avro::read_source_service_options(SERVICE* source)
     }
 }
 
-//static
+// static
 Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
 {
     SERVICE* source_service = NULL;
-    MXS_CONFIG_PARAMETER *param = config_get_param(service->svc_config_param, "source");
+    MXS_CONFIG_PARAMETER* param = config_get_param(service->svc_config_param, "source");
 
     if (param)
     {
-        SERVICE *source = service_find(param->value);
+        SERVICE* source = service_find(param->value);
         mxb_assert(source);
 
         if (source)
@@ -113,7 +113,9 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
             else
             {
                 MXS_ERROR("Service '%s' uses router module '%s' instead of "
-                          "'binlogrouter'.", source->name, source->routerModule);
+                          "'binlogrouter'.",
+                          source->name,
+                          source->routerModule);
                 return NULL;
             }
         }
@@ -124,23 +126,23 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
         }
     }
 
-    return new (std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
+    return new( std::nothrow) Avro(service, service->svc_config_param, source_service, handler);
 }
 
-Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler):
-    service(service),
-    filestem(config_get_string(params, "filestem")),
-    binlogdir(config_get_string(params, "binlogdir")),
-    avrodir(config_get_string(params, "avrodir")),
-    current_pos(4),
-    binlog_fd(-1),
-    trx_count(0),
-    trx_target(config_get_integer(params, "group_trx")),
-    row_count(0),
-    row_target(config_get_integer(params, "group_rows")),
-    task_handle(0),
-    handler(service, handler, config_get_compiled_regex(params, "match", 0, NULL),
-            config_get_compiled_regex(params, "exclude", 0, NULL))
+Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)
+    : service(service)
+    , filestem(config_get_string(params, "filestem"))
+    , binlogdir(config_get_string(params, "binlogdir"))
+    , avrodir(config_get_string(params, "avrodir"))
+    , current_pos(4)
+    , binlog_fd(-1)
+    , trx_count(0)
+    , trx_target(config_get_integer(params, "group_trx"))
+    , row_count(0)
+    , row_target(config_get_integer(params, "group_rows"))
+    , task_handle(0)
+    , handler(service, handler, config_get_compiled_regex(params, "match", 0, NULL),
+              config_get_compiled_regex(params, "exclude", 0, NULL))
 {
     if (source)
     {
@@ -148,7 +150,10 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     }
 
     char filename[BINLOG_FNAMELEN + 1];
-    snprintf(filename, sizeof(filename), BINLOG_NAMEFMT, filestem.c_str(),
+    snprintf(filename,
+             sizeof(filename),
+             BINLOG_NAMEFMT,
+             filestem.c_str(),
              config_get_integer(params, "start_index"));
     binlog_name = filename;
 

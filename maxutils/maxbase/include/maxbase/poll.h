@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/cdefs.h>
 #include <sys/epoll.h>
@@ -43,7 +43,7 @@ typedef struct MXB_WORKER
  *
  * @return A combination of mxb_poll_action_t enumeration values.
  */
-typedef uint32_t (*mxb_poll_handler_t)(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+typedef uint32_t (* mxb_poll_handler_t)(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 
 typedef struct MXB_POLL_DATA
 {

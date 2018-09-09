@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/cdefs.h>
 #include <stdlib.h>
@@ -21,13 +21,13 @@
 MXS_BEGIN_DECLS
 
 /** Length-encoded integers */
-size_t mxs_leint_bytes(const uint8_t* ptr);
+size_t   mxs_leint_bytes(const uint8_t* ptr);
 uint64_t mxs_leint_value(const uint8_t* c);
-uint64_t mxs_leint_consume(uint8_t ** c);
+uint64_t mxs_leint_consume(uint8_t** c);
 
 /** Length-encoded strings */
 char* mxs_lestr_consume_dup(uint8_t** c);
-char* mxs_lestr_consume(uint8_t** c, size_t *size);
+char* mxs_lestr_consume(uint8_t** c, size_t* size);
 
 /**
  * Creates a connection to a MySQL database engine. If necessary, initializes SSL.
@@ -39,7 +39,7 @@ char* mxs_lestr_consume(uint8_t** c, size_t *size);
  *
  * @return New connection or NULL on error
  */
-MYSQL* mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
+MYSQL* mxs_mysql_real_connect(MYSQL* mysql, SERVER* server, const char* user, const char* passwd);
 
 /**
  * Check if the MYSQL error number is a connection error
@@ -71,7 +71,7 @@ int mxs_mysql_query(MYSQL* conn, const char* query);
  *
  * @note The string is modified in place.
  */
-bool mxs_mysql_trim_quotes(char *s);
+bool mxs_mysql_trim_quotes(char* s);
 
 /**
  * Helper function for getting values by field name
@@ -87,8 +87,8 @@ const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* ke
 
 typedef enum mxs_pcre_quote_approach
 {
-    MXS_PCRE_QUOTE_VERBATIM, /*<! Quote all PCRE characters. */
-    MXS_PCRE_QUOTE_WILDCARD  /*<! Quote all PCRE characters, except % that is converted into .*. */
+    MXS_PCRE_QUOTE_VERBATIM,    /*<! Quote all PCRE characters. */
+    MXS_PCRE_QUOTE_WILDCARD     /*<! Quote all PCRE characters, except % that is converted into .*. */
 } mxs_pcre_quote_approach_t;
 
 typedef enum mxs_mysql_name_kind
@@ -119,8 +119,8 @@ typedef enum mxs_mysql_name_kind
  *
  * @return Whether or not the name contains a wildcard.
  */
-mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
-                                             const char *mysql,
+mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
+                                             const char* mysql,
                                              mxs_pcre_quote_approach_t approach);
 
 /**

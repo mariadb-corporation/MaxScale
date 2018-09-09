@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <vector>
@@ -23,10 +23,10 @@ class SetParser : public maxscale::CustomParser
 public:
     enum status_t
     {
-        ERROR,           // Some fatal error occurred; mem alloc failed, parsing failed, etc.
-        IS_SET_SQL_MODE, // The COM_QUERY is "set [GLOBAL|SESSION] sql_mode=..."
-        IS_SET_MAXSCALE, // The COM_QUERY is "set @MAXSCALE..."
-        NOT_RELEVANT     // Neither of the above.
+        ERROR,          // Some fatal error occurred; mem alloc failed, parsing failed, etc.
+        IS_SET_SQL_MODE,// The COM_QUERY is "set [GLOBAL|SESSION] sql_mode=..."
+        IS_SET_MAXSCALE,// The COM_QUERY is "set @MAXSCALE..."
+        NOT_RELEVANT    // Neither of the above.
     };
 
     enum
@@ -49,15 +49,22 @@ public:
     {
     public:
         typedef std::pair<const char*, const char*> Item;
-        typedef std::vector<Item> Items;
+        typedef std::vector<Item>                   Items;
 
         Result()
-        {}
+        {
+        }
 
-        const Items& variables() const { return m_variables; }
-        const Items& values() const { return m_values; }
+        const Items& variables() const
+        {
+            return m_variables;
+        }
+        const Items& values() const
+        {
+            return m_values;
+        }
 
-        void add_variable(const char *begin, const char* end)
+        void add_variable(const char* begin, const char* end)
         {
             m_variables.push_back(Item(begin, end));
         }
@@ -226,10 +233,9 @@ public:
 private:
     static bool is_set(const char* pStmt)
     {
-        return
-            (pStmt[0] == 's' || pStmt[0] == 'S') &&
-            (pStmt[1] == 'e' || pStmt[1] == 'E') &&
-            (pStmt[2] == 't' || pStmt[2] == 'T');
+        return (pStmt[0] == 's' || pStmt[0] == 'S')
+               && (pStmt[1] == 'e' || pStmt[1] == 'E')
+               && (pStmt[2] == 't' || pStmt[2] == 'T');
     }
 
     static bool is_set(const uint8_t* pStmt)
@@ -239,7 +245,7 @@ private:
 
     static bool is_error(status_t rv)
     {
-        return (rv == ERROR);
+        return rv == ERROR;
     }
 
     status_t initialize(GWBUF* pBuffer)
@@ -271,8 +277,8 @@ private:
 
             ++m_pI;
 
-            while ((m_pI < m_pEnd) &&
-                   (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
+            while ((m_pI < m_pEnd)
+                   && (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
             {
                 ++m_pI;
             }
@@ -526,7 +532,8 @@ private:
             if (m_pI != m_pEnd)
             {
                 MXS_WARNING("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI), m_pI);
+                            (int)(m_pEnd - m_pI),
+                            m_pI);
             }
 
             token = PARSER_EXHAUSTED;

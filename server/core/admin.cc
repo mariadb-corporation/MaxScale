@@ -42,16 +42,16 @@ using std::ifstream;
 static struct MHD_Daemon* http_daemon = NULL;
 
 /** In-memory certificates in PEM format */
-static char* admin_ssl_key     = NULL;
-static char* admin_ssl_cert    = NULL;
+static char* admin_ssl_key = NULL;
+static char* admin_ssl_cert = NULL;
 static char* admin_ssl_ca_cert = NULL;
 
-static bool  using_ssl = false;
+static bool using_ssl = false;
 
-int kv_iter(void *cls,
+int kv_iter(void* cls,
             enum MHD_ValueKind kind,
-            const char *key,
-            const char *value)
+            const char* key,
+            const char* value)
 {
     size_t* rval = (size_t*)cls;
 
@@ -64,32 +64,33 @@ int kv_iter(void *cls,
     return MHD_YES;
 }
 
-static inline size_t request_data_length(MHD_Connection *connection)
+static inline size_t request_data_length(MHD_Connection* connection)
 {
     size_t rval = 0;
     MHD_get_connection_values(connection, MHD_HEADER_KIND, kv_iter, &rval);
     return rval;
 }
 
-static bool modifies_data(MHD_Connection *connection, string method)
+static bool modifies_data(MHD_Connection* connection, string method)
 {
-    return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT ||
-            method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH) &&
-           request_data_length(connection);
+    return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
+            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH)
+           && request_data_length(connection);
 }
 
-static void send_auth_error(MHD_Connection *connection)
+static void send_auth_error(MHD_Connection* connection)
 {
     static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
-    MHD_Response *resp =
-        MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* resp
+        = MHD_create_response_from_buffer(sizeof(error_resp) - 1,
+                                          error_resp,
+                                          MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
     MHD_destroy_response(resp);
 }
 
-int Client::process(string url, string method, const char* upload_data, size_t *upload_size)
+int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
 {
     json_t* json = NULL;
 
@@ -102,12 +103,13 @@ int Client::process(string url, string method, const char* upload_data, size_t *
 
     json_error_t err = {};
 
-    if (m_data.length() &&
-        (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
+    if (m_data.length()
+        && (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
     {
         string msg = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ")
             + err.text + "\" } ] }";
-        MHD_Response *response = MHD_create_response_from_buffer(msg.size(), &msg[0],
+        MHD_Response* response = MHD_create_response_from_buffer(msg.size(),
+                                                                 &msg[0],
                                                                  MHD_RESPMEM_MUST_COPY);
         MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
         MHD_destroy_response(response);
@@ -146,9 +148,10 @@ int Client::process(string url, string method, const char* upload_data, size_t *
         data = mxs::json_dump(js, flags);
     }
 
-    MHD_Response *response =
-        MHD_create_response_from_buffer(data.size(), (void*)data.c_str(),
-                                        MHD_RESPMEM_MUST_COPY);
+    MHD_Response* response
+        = MHD_create_response_from_buffer(data.size(),
+                                          (void*)data.c_str(),
+                                          MHD_RESPMEM_MUST_COPY);
 
     const Headers& headers = reply.get_headers();
 
@@ -163,9 +166,9 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     return rval;
 }
 
-void close_client(void *cls,
-                  MHD_Connection *connection,
-                  void **con_cls,
+void close_client(void* cls,
+                  MHD_Connection* connection,
+                  void** con_cls,
                   enum MHD_RequestTerminationCode toe)
 {
     Client* client = static_cast<Client*>(*con_cls);
@@ -186,8 +189,10 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             if (config_get_global_options()->admin_log_auth_failures)
             {
                 MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
-                            user ? user : "", pw ? "using password" : "no password",
-                            method, url);
+                            user ? user : "",
+                            pw ? "using password" : "no password",
+                            method,
+                            url);
             }
             send_auth_error(connection);
             rval = false;
@@ -198,14 +203,18 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             {
                 MXS_WARNING("Authorization failed for '%s', request requires "
                             "administrative privileges. Request: %s %s",
-                            user, method, url);
+                            user,
+                            method,
+                            url);
             }
             rval = false;
         }
         else
         {
-            MXS_INFO("Accept authentication from '%s', %s. Request: %s", user ? user : "",
-                     pw ? "using password" : "no password", url);
+            MXS_INFO("Accept authentication from '%s', %s. Request: %s",
+                     user ? user : "",
+                     pw ? "using password" : "no password",
+                     url);
         }
         MXS_FREE(user);
         MXS_FREE(pw);
@@ -216,19 +225,19 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
     return rval;
 }
 
-int handle_client(void *cls,
-                  MHD_Connection *connection,
-                  const char *url,
-                  const char *method,
-                  const char *version,
-                  const char *upload_data,
-                  size_t *upload_data_size,
-                  void **con_cls)
+int handle_client(void* cls,
+                  MHD_Connection* connection,
+                  const char* url,
+                  const char* method,
+                  const char* version,
+                  const char* upload_data,
+                  size_t* upload_data_size,
+                  void**  con_cls)
 
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new (std::nothrow) Client(connection)) == NULL)
+        if ((*con_cls = new( std::nothrow) Client(connection)) == NULL)
         {
             return MHD_NO;
         }
@@ -286,7 +295,7 @@ int handle_client(void *cls,
 
 static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_storage* addr)
 {
-    struct addrinfo *ai = NULL, hint = {};
+    struct addrinfo* ai = NULL, hint = {};
     int rc;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
@@ -305,12 +314,12 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
 
         if (addr->ss_family == AF_INET)
         {
-            struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+            struct sockaddr_in* ip = (struct sockaddr_in*)addr;
             (*ip).sin_port = htons(port);
         }
         else if (addr->ss_family == AF_INET6)
         {
-            struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+            struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
             (*ip).sin6_port = htons(port);
         }
     }
@@ -325,8 +334,8 @@ static char* load_cert(const char* file)
     ifstream infile(file);
     struct stat st;
 
-    if (stat(file, &st) == 0 &&
-        (rval = new (std::nothrow) char[st.st_size + 1]))
+    if (stat(file, &st) == 0
+        && (rval = new( std::nothrow) char[st.st_size + 1]))
     {
         infile.read(rval, st.st_size);
         rval[st.st_size] = '\0';
@@ -351,9 +360,9 @@ static bool load_ssl_certificates()
 
     if (*key && *cert && *ca)
     {
-        if ((admin_ssl_key = load_cert(key)) &&
-            (admin_ssl_cert = load_cert(cert)) &&
-            (admin_ssl_ca_cert = load_cert(ca)))
+        if ((admin_ssl_key = load_cert(key))
+            && (admin_ssl_cert = load_cert(cert))
+            && (admin_ssl_ca_cert = load_cert(ca)))
         {
             rval = true;
         }
@@ -393,13 +402,24 @@ bool mxs_admin_init()
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead
-        http_daemon = MHD_start_daemon(options, 0, NULL, NULL, handle_client, NULL,
-                                       MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
-                                       MHD_OPTION_SOCK_ADDR, &addr,
-                                       !using_ssl ? MHD_OPTION_END :
-                                       MHD_OPTION_HTTPS_MEM_KEY, admin_ssl_key,
-                                       MHD_OPTION_HTTPS_MEM_CERT, admin_ssl_cert,
-                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_cert,
+        http_daemon = MHD_start_daemon(options,
+                                       0,
+                                       NULL,
+                                       NULL,
+                                       handle_client,
+                                       NULL,
+                                       MHD_OPTION_NOTIFY_COMPLETED,
+                                       close_client,
+                                       NULL,
+                                       MHD_OPTION_SOCK_ADDR,
+                                       &addr,
+                                       !using_ssl ? MHD_OPTION_END
+                                                  : MHD_OPTION_HTTPS_MEM_KEY,
+                                       admin_ssl_key,
+                                       MHD_OPTION_HTTPS_MEM_CERT,
+                                       admin_ssl_cert,
+                                       MHD_OPTION_HTTPS_MEM_TRUST,
+                                       admin_ssl_cert,
                                        MHD_OPTION_END);
     }
 

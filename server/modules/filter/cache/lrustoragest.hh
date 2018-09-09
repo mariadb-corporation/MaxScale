@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include "lrustorage.hh"
@@ -29,7 +29,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue) const;
+                             GWBUF**  ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key,
                              const GWBUF* pValue);
@@ -50,5 +50,5 @@ private:
     LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
 
     LRUStorageST(const LRUStorageST&);
-    LRUStorageST& operator = (const LRUStorageST&);
+    LRUStorageST& operator=(const LRUStorageST&);
 };

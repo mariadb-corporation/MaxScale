@@ -1,5 +1,6 @@
 /**
- * @file bug547.cpp regression case for bug 547 and bug 594 ( "get_dcb fails if slaves are not available" and "Maxscale fails to start without anything in the logs if there is no slave available" )
+ * @file bug547.cpp regression case for bug 547 and bug 594 ( "get_dcb fails if slaves are not available" and
+ *"Maxscale fails to start without anything in the logs if there is no slave available" )
  * Behaviour has been changed and this test check only for crash
  * - block all slaves
  * - try some queries (create table, do INSERT using RWSplit router)
@@ -7,18 +8,19 @@
  */
 
 /*
-Vilho Raatikka 2014-09-16 07:43:54 UTC
-get_dcb function returns the backend descriptor for router. Some merge has broken the logic and in case of non-existent slave the router simply fails to find a backend server although master would be available.
-Comment 1 Vilho Raatikka 2014-09-16 09:40:14 UTC
-get_dcb now searches master if slaves are not available.
-*/
+ *  Vilho Raatikka 2014-09-16 07:43:54 UTC
+ *  get_dcb function returns the backend descriptor for router. Some merge has broken the logic and in case of
+ * non-existent slave the router simply fails to find a backend server although master would be available.
+ *  Comment 1 Vilho Raatikka 2014-09-16 09:40:14 UTC
+ *  get_dcb now searches master if slaves are not available.
+ */
 
 // also relates to bug594
 // all slaves in MaxScale config have wrong IP
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -55,4 +57,3 @@ int main(int argc, char *argv[])
 
     return test.global_result;
 }
-

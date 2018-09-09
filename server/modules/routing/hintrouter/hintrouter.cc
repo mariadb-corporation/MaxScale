@@ -22,27 +22,29 @@
 
 static const MXS_ENUM_VALUE default_action_values[] =
 {
-    {"master", HINT_ROUTE_TO_MASTER},
-    {"slave", HINT_ROUTE_TO_SLAVE},
-    {"named", HINT_ROUTE_TO_NAMED_SERVER},
-    {"all", HINT_ROUTE_TO_ALL},
-    {NULL} /* Last must be NULL */
+    {"master", HINT_ROUTE_TO_MASTER      },
+    {"slave",  HINT_ROUTE_TO_SLAVE       },
+    {"named",  HINT_ROUTE_TO_NAMED_SERVER},
+    {"all",    HINT_ROUTE_TO_ALL         },
+    {NULL}      /* Last must be NULL */
 };
 static const char DEFAULT_ACTION[] = "default_action";
 static const char DEFAULT_SERVER[] = "default_server";
 static const char MAX_SLAVES[] = "max_slaves";
 
-HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server,
+HintRouter::HintRouter(SERVICE* pService,
+                       HINT_TYPE default_action,
+                       string&   default_server,
                        int max_slaves)
-    : maxscale::Router<HintRouter, HintRouterSession>(pService),
-      m_routed_to_master(0),
-      m_routed_to_slave(0),
-      m_routed_to_named(0),
-      m_routed_to_all(0),
-      m_default_action(default_action),
-      m_default_server(default_server),
-      m_max_slaves(max_slaves),
-      m_total_slave_conns(0)
+    : maxscale::Router<HintRouter, HintRouterSession>(pService)
+    , m_routed_to_master(0)
+    , m_routed_to_slave(0)
+    , m_routed_to_named(0)
+    , m_routed_to_all(0)
+    , m_default_action(default_action)
+    , m_default_server(default_server)
+    , m_max_slaves(max_slaves)
+    , m_total_slave_conns(0)
 {
     HR_ENTRY();
     if (m_max_slaves < 0)
@@ -53,19 +55,20 @@ HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& defa
     MXS_NOTICE("Hint router [%s] created.", pService->name);
 }
 
-//static
+// static
 HintRouter* HintRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
     HR_ENTRY();
 
-    HINT_TYPE default_action = (HINT_TYPE)config_get_enum(params, DEFAULT_ACTION,
+    HINT_TYPE default_action = (HINT_TYPE)config_get_enum(params,
+                                                          DEFAULT_ACTION,
                                                           default_action_values);
     string default_server(config_get_string(params, DEFAULT_SERVER));
     int max_slaves = config_get_integer(params, MAX_SLAVES);
     return new HintRouter(pService, default_action, default_server, max_slaves);
 }
 
-HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
+HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession)
 {
     typedef HintRouterSession::RefArray::size_type array_index;
     HR_ENTRY();
@@ -189,7 +192,8 @@ json_t* HintRouter::diagnostics_json() const
     return rval;
 }
 
-Dcb HintRouter::connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
+Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
+                                   SERVER_REF*  sref,
                                    HintRouterSession::BackendMap* all_backends)
 {
     Dcb result(NULL);
@@ -217,17 +221,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE module =
     {
-        MXS_MODULE_API_ROUTER,   /* Module type */
-        MXS_MODULE_BETA_RELEASE, /* Release status */
-        MXS_ROUTER_VERSION,      /* Implemented module API version */
-        "A hint router", /* Description */
-        "V1.0.0", /* Module version */
+        MXS_MODULE_API_ROUTER,                              /* Module type */
+        MXS_MODULE_BETA_RELEASE,                            /* Release status */
+        MXS_ROUTER_VERSION,                                 /* Implemented module API version */
+        "A hint router",                                    /* Description */
+        "V1.0.0",                                           /* Module version */
         RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
         &HintRouter::s_object,
-        NULL, /* Process init, can be null */
-        NULL, /* Process finish, can be null */
-        NULL, /* Thread init */
-        NULL, /* Thread finish */
+        NULL,                                               /* Process init, can be null */
+        NULL,                                               /* Process finish, can be null */
+        NULL,                                               /* Thread init */
+        NULL,                                               /* Thread finish */
         {
             {
                 DEFAULT_ACTION,
@@ -236,8 +240,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 default_action_values
             },
-            {DEFAULT_SERVER, MXS_MODULE_PARAM_SERVER, ""},
-            {MAX_SLAVES, MXS_MODULE_PARAM_INT, "-1"},
+            {DEFAULT_SERVER,                              MXS_MODULE_PARAM_SERVER,""  },
+            {MAX_SLAVES,                                  MXS_MODULE_PARAM_INT,  "-1"},
             {MXS_END_MODULE_PARAMS}
         }
     };

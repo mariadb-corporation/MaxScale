@@ -26,7 +26,7 @@
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator
  */
 
-void* gssapi_backend_auth_alloc(void *instance)
+void* gssapi_backend_auth_alloc(void* instance)
 {
     gssapi_auth_t* rval = static_cast<gssapi_auth_t*>(MXS_MALLOC(sizeof(gssapi_auth_t)));
 
@@ -41,11 +41,11 @@ void* gssapi_backend_auth_alloc(void *instance)
     return rval;
 }
 
-void gssapi_backend_auth_free(void *data)
+void gssapi_backend_auth_free(void* data)
 {
     if (data)
     {
-        gssapi_auth_t *auth = (gssapi_auth_t*)data;
+        gssapi_auth_t* auth = (gssapi_auth_t*)data;
         MXS_FREE(auth->principal_name);
         MXS_FREE(auth);
     }
@@ -56,7 +56,7 @@ void gssapi_backend_auth_free(void *data)
  * @param dcb Backend DCB
  * @return True on success, false on error
  */
-static bool send_new_auth_token(DCB *dcb)
+static bool send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
     OM_uint32 major = 0, minor = 0;
@@ -65,7 +65,7 @@ static bool send_new_auth_token(DCB *dcb)
     gss_buffer_desc out = {0, 0};
     gss_buffer_desc target = {0, 0};
     gss_name_t princ = GSS_C_NO_NAME;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     /** The service principal name is sent by the backend server */
     target.value = auth->principal_name;
@@ -80,9 +80,19 @@ static bool send_new_auth_token(DCB *dcb)
     }
 
     /** Request the token for the service */
-    major = gss_init_sec_context(&minor, GSS_C_NO_CREDENTIAL,
-                                 &handle, princ, GSS_C_NO_OID, 0, 0,
-                                 GSS_C_NO_CHANNEL_BINDINGS, &in, NULL, &out, 0, 0);
+    major = gss_init_sec_context(&minor,
+                                 GSS_C_NO_CREDENTIAL,
+                                 &handle,
+                                 princ,
+                                 GSS_C_NO_OID,
+                                 0,
+                                 0,
+                                 GSS_C_NO_CHANNEL_BINDINGS,
+                                 &in,
+                                 NULL,
+                                 &out,
+                                 0,
+                                 0);
     if (GSS_ERROR(major))
     {
         report_error(major, minor);
@@ -90,11 +100,11 @@ static bool send_new_auth_token(DCB *dcb)
     else
     {
         /** We successfully requested the token, send it to the backend server */
-        GWBUF *buffer = gwbuf_alloc(MYSQL_HEADER_LEN + out.length);
+        GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + out.length);
 
         if (buffer)
         {
-            uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
+            uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
             gw_mysql_set_byte3(data, out.length);
             data += 3;
             *data++ = ++auth->sequence;
@@ -122,7 +132,6 @@ static bool send_new_auth_token(DCB *dcb)
     }
 
     return rval;
-
 }
 
 /**
@@ -132,13 +141,13 @@ static bool send_new_auth_token(DCB *dcb)
  * @param buffer Buffer containing an AuthSwitchRequest packet
  * @return True on success, false on error
  */
-bool extract_principal_name(DCB *dcb, GWBUF *buffer)
+bool extract_principal_name(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
     uint8_t databuf[buflen];
-    uint8_t *data = databuf;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    uint8_t* data = databuf;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     /** Copy the payload and the current packet sequence number */
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, buflen, databuf);
@@ -150,9 +159,10 @@ bool extract_principal_name(DCB *dcb, GWBUF *buffer)
          * it's possible that the server authenticated us as the anonymous user. This
          * means that the server is not secure. */
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  dcb->server->name, databuf[0] == MYSQL_REPLY_OK ?
-                  " Authentication was complete before it even started, "
-                  "anonymous users might not be disabled." : "");
+                  dcb->server->name,
+                  databuf[0] == MYSQL_REPLY_OK
+                  ? " Authentication was complete before it even started, "
+                    "anonymous users might not be disabled." : "");
         return false;
     }
 
@@ -176,7 +186,7 @@ bool extract_principal_name(DCB *dcb, GWBUF *buffer)
 
     if (buflen > 0)
     {
-        uint8_t *principal = static_cast<uint8_t*>(MXS_MALLOC(buflen + 1));
+        uint8_t* principal = static_cast<uint8_t*>(MXS_MALLOC(buflen + 1));
 
         if (principal)
         {
@@ -204,10 +214,10 @@ bool extract_principal_name(DCB *dcb, GWBUF *buffer)
  * @return True if authentication is ongoing or complete,
  * false if authentication failed.
  */
-static bool gssapi_backend_auth_extract(DCB *dcb, GWBUF *buffer)
+static bool gssapi_backend_auth_extract(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(dcb, buffer))
     {
@@ -231,7 +241,7 @@ static bool gssapi_backend_auth_extract(DCB *dcb, GWBUF *buffer)
  * @param dcb Backend DCB
  * @return True if DCB supports SSL
  */
-static bool gssapi_backend_auth_connectssl(DCB *dcb)
+static bool gssapi_backend_auth_connectssl(DCB* dcb)
 {
     return dcb->server->server_ssl != NULL;
 }
@@ -242,10 +252,10 @@ static bool gssapi_backend_auth_connectssl(DCB *dcb)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-static int gssapi_backend_auth_authenticate(DCB *dcb)
+static int gssapi_backend_auth_authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+    gssapi_auth_t* auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     if (auth->state == GSSAPI_AUTH_INIT)
     {
@@ -254,7 +264,6 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
             rval = MXS_AUTH_INCOMPLETE;
             auth->state = GSSAPI_AUTH_DATA_SENT;
         }
-
     }
     else if (auth->state == GSSAPI_AUTH_OK)
     {
@@ -269,40 +278,39 @@ extern "C"
 /**
  * Module handle entry point
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                               /* No initialize entry point */
-        gssapi_backend_auth_alloc,          /* Allocate authenticator data */
-        gssapi_backend_auth_extract,        /* Extract data into structure   */
-        gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
-        gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
-        NULL,                               /* Client plugin will free shared data */
-        gssapi_backend_auth_free,           /* Free authenticator data */
-        NULL,                               /* Load users from backend databases */
-        NULL,                               /* No diagnostic */
-        NULL,
-        NULL                                /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            NULL,                               /* No initialize entry point */
+            gssapi_backend_auth_alloc,          /* Allocate authenticator data */
+            gssapi_backend_auth_extract,        /* Extract data into structure   */
+            gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
+            gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
+            NULL,                               /* Client plugin will free shared data */
+            gssapi_backend_auth_free,           /* Free authenticator data */
+            NULL,                               /* Load users from backend databases */
+            NULL,                               /* No diagnostic */
+            NULL,
+            NULL                            /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "GSSAPI backend authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "GSSAPI backend authenticator",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
-
+        return &info;
+    }
 }

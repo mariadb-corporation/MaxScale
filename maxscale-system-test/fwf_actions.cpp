@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     char rules_dir[4096];
 
-    TestConnections *test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
     test->stop_timeout();
 
     test->tprintf("Creating rules\n");

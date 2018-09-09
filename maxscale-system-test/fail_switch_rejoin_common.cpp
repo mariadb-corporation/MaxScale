@@ -14,7 +14,7 @@ void get_output(TestConnections& test)
 {
     int ec;
     test.tprintf("Maxadmin output:");
-    char *output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &ec);
+    char* output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &ec);
     test.tprintf("%s", output);
     free(output);
 
@@ -22,9 +22,11 @@ void get_output(TestConnections& test)
     {
         test.tprintf("MaxScale output:");
     }
-    output = test.maxscales->ssh_node_output(0, "cat /var/log/maxscale/maxscale.log && "
-             "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
-             true, &ec);
+    output = test.maxscales->ssh_node_output(0,
+                                             "cat /var/log/maxscale/maxscale.log && "
+                                             "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
+                                             true,
+                                             &ec);
     if (test.verbose)
     {
         test.tprintf("%s", output);
@@ -34,16 +36,16 @@ void get_output(TestConnections& test)
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
-    const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
-    const char *query2 = "SELECT * FROM test.t1";
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    const char* query1 = "INSERT INTO test.t1 VALUES (%d)";
+    const char* query2 = "SELECT * FROM test.t1";
 
     test.try_query(conn, "BEGIN");
     test.tprintf(query1, inserts);
     test.try_query(conn, query1, inserts++);
     mysql_query(conn, query2);
 
-    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_RES* res = mysql_store_result(conn);
     test.add_result(res == NULL, "Query should return a result set");
 
     if (res)
@@ -51,9 +53,11 @@ void check(TestConnections& test)
         std::string values;
         MYSQL_ROW row;
         int num_rows = mysql_num_rows(res);
-        test.add_result(num_rows != inserts, "Query returned %d rows when %d rows were expected",
-                        num_rows, inserts);
-        const char *separator = "";
+        test.add_result(num_rows != inserts,
+                        "Query returned %d rows when %d rows were expected",
+                        num_rows,
+                        inserts);
+        const char* separator = "";
 
         while ((row = mysql_fetch_row(res)))
         {
@@ -75,7 +79,7 @@ void check(TestConnections& test)
  */
 int get_master_server_id(TestConnections& test)
 {
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
     int id = -1;
     char str[1024];
 
@@ -158,7 +162,7 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
     bool rval = false;
 
     mysql_query(conn, SELECT);
-    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_RES* res = mysql_store_result(conn);
     test.assert(res != NULL, "Query did not return a result set");
 
     if (res)
@@ -179,8 +183,10 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
             expected_val++;
         }
         int num_rows = expected_val;
-        test.assert(num_rows == inserts, "Query returned %d rows when %d rows were expected",
-                    num_rows, inserts);
+        test.assert(num_rows == inserts,
+                    "Query returned %d rows when %d rows were expected",
+                    num_rows,
+                    inserts);
         if (num_rows != inserts)
         {
             rval = false;

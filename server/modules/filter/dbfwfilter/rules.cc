@@ -26,12 +26,12 @@ static inline bool query_is_sql(GWBUF* query)
     return modutil_is_SQL(query) || modutil_is_SQL_prepare(query);
 }
 
-Rule::Rule(std::string name, std::string type):
-    on_queries(FW_OP_UNDEFINED),
-    times_matched(0),
-    active(NULL),
-    m_name(name),
-    m_type(type)
+Rule::Rule(std::string name, std::string type)
+    : on_queries(FW_OP_UNDEFINED)
+    , times_matched(0)
+    , active(NULL)
+    , m_name(name)
+    , m_type(type)
 {
 }
 
@@ -61,9 +61,9 @@ bool Rule::matches_query_type(GWBUF* buffer) const
         {
             qc_query_op_t optype = qc_get_operation(buffer);
 
-            rval = (on_queries & qc_op_to_fw_op(optype)) ||
-                   (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
-                    (on_queries & FW_OP_CHANGE_DB));
+            rval = (on_queries & qc_op_to_fw_op(optype))
+                || (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer))
+                    && (on_queries & FW_OP_CHANGE_DB));
         }
     }
 
@@ -131,7 +131,7 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
     if (query_is_sql(buffer))
     {
         pcre2_code* re = m_re.get();
-        pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(re, NULL);
+        pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(re, NULL);
         MXS_ABORT_IF_NULL(mdata);
 
         char* sql;
@@ -173,7 +173,8 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
             if (it != m_values.end())
             {
                 MXS_NOTICE("rule '%s': query targets specified column: %s",
-                           name().c_str(), tok.c_str());
+                           name().c_str(),
+                           tok.c_str());
                 if (session->get_action() == FW_ACTION_BLOCK)
                 {
                     *msg = create_error("Permission denied to column '%s'.", tok.c_str());
@@ -204,11 +205,12 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
             ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
-            if ((!m_inverted && (it != m_values.end())) ||
-                (m_inverted && (it == m_values.end())))
+            if ((!m_inverted && (it != m_values.end()))
+                || (m_inverted && (it == m_values.end())))
             {
                 MXS_NOTICE("rule '%s': query matches function: %s",
-                           name().c_str(), tok.c_str());
+                           name().c_str(),
+                           tok.c_str());
                 if (session->get_action() == FW_ACTION_BLOCK)
                 {
                     *msg = create_error("Permission denied to function '%s'.", tok.c_str());
@@ -241,7 +243,8 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
                 if (it != m_values.end())
                 {
                     MXS_NOTICE("rule '%s': query uses a function with specified column: %s",
-                               name().c_str(), tok.c_str());
+                               name().c_str(),
+                               tok.c_str());
                     if (session->get_action() == FW_ACTION_BLOCK)
                     {
                         *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
@@ -272,8 +275,8 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
                                                           m_values.end(),
                                                           func);
 
-            if ((!m_inverted && (func_it != m_values.end())) ||
-                (m_inverted && (func_it == m_values.end())))
+            if ((!m_inverted && (func_it != m_values.end()))
+                || (m_inverted && (func_it == m_values.end())))
             {
                 /** The function matches, now check if the column matches */
 
@@ -288,11 +291,14 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
                     if (col_it != m_columns.end())
                     {
                         MXS_NOTICE("rule '%s': query uses function '%s' with specified column: %s",
-                                   name().c_str(), col.c_str(), func.c_str());
+                                   name().c_str(),
+                                   col.c_str(),
+                                   func.c_str());
                         if (session->get_action() == FW_ACTION_BLOCK)
                         {
                             *msg = create_error("Permission denied to column '%s' with function '%s'.",
-                                                col.c_str(), func.c_str());
+                                                col.c_str(),
+                                                func.c_str());
                         }
                         return true;
                     }
@@ -319,7 +325,8 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
             matches = true;
 
             MXS_INFO("rule '%s': user denied for %f seconds",
-                     name().c_str(), blocked_for);
+                     name().c_str(),
+                     blocked_for);
         }
         else
         {
@@ -332,8 +339,11 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
         if (queryspeed->count >= m_max)
         {
             MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
-                     "denying queries from user for %d seconds.", name().c_str(),
-                     m_max, m_timeperiod, m_holdoff);
+                     "denying queries from user for %d seconds.",
+                     name().c_str(),
+                     m_max,
+                     m_timeperiod,
+                     m_holdoff);
 
             queryspeed->triggered = time_now;
             queryspeed->active = true;

@@ -36,10 +36,10 @@
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 
-static bool http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-static bool http_auth_is_client_ssl_capable(DCB *dcb);
-static int http_auth_authenticate(DCB *dcb);
-static void http_auth_free_client_data(DCB *dcb);
+static bool http_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
+static bool http_auth_is_client_ssl_capable(DCB* dcb);
+static int  http_auth_authenticate(DCB* dcb);
+static void http_auth_free_client_data(DCB* dcb);
 
 typedef struct http_auth
 {
@@ -57,41 +57,41 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_AUTHENTICATOR MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        NULL,                            /* No initialize entry point */
-        NULL,                            /* No create entry point */
-        http_auth_set_protocol_data,     /* Extract data into structure   */
-        http_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-        http_auth_authenticate,          /* Authenticate user credentials */
-        http_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                            /* No destroy entry point */
-        users_default_loadusers,         /* Load generic users */
-        users_default_diagnostic,        /* Default user diagnostic */
-        users_default_diagnostic_json,   /* Default user diagnostic */
-        NULL                             /* No user reauthentication */
-    };
+        static MXS_AUTHENTICATOR MyObject =
+        {
+            NULL,                           /* No initialize entry point */
+            NULL,                           /* No create entry point */
+            http_auth_set_protocol_data,    /* Extract data into structure   */
+            http_auth_is_client_ssl_capable,/* Check if client supports SSL  */
+            http_auth_authenticate,         /* Authenticate user credentials */
+            http_auth_free_client_data,     /* Free the client data held in DCB */
+            NULL,                           /* No destroy entry point */
+            users_default_loadusers,        /* Load generic users */
+            users_default_diagnostic,       /* Default user diagnostic */
+            users_default_diagnostic_json,  /* Default user diagnostic */
+            NULL                            /* No user reauthentication */
+        };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The MaxScale HTTP BA authenticator",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        { { MXS_END_MODULE_PARAMS} }
-    };
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "The MaxScale HTTP BA authenticator",
+            "V1.1.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL,   /* Process init. */
+            NULL,   /* Process finish. */
+            NULL,   /* Thread init. */
+            NULL,   /* Thread finish. */
+            {{MXS_END_MODULE_PARAMS}}
+        };
 
-    return &info;
-}
+        return &info;
+    }
 /*lint +e14 */
 }
 
@@ -103,11 +103,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status - always 0 to denote success
  */
-static int
-http_auth_authenticate(DCB *dcb)
+static int http_auth_authenticate(DCB* dcb)
 {
     int rval = 1;
-    HTTP_AUTH *ses = (HTTP_AUTH*)dcb->data;
+    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->data;
     const char* user;
     const char* password;
 
@@ -134,8 +133,7 @@ http_auth_authenticate(DCB *dcb)
  * @param buffer Pointer to pointer to buffers containing data from client
  * @return Authentication status - true for success, false for failure
  */
-static bool
-http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
+static bool http_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
 {
     bool rval = false;
     char* value = (char*)GWBUF_DATA(buf);
@@ -146,19 +144,19 @@ http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
         tok++;
         char outbuf[strlen(tok) * 2 + 1];
 
-        BIO *b64 = BIO_new(BIO_f_base64());
+        BIO* b64 = BIO_new(BIO_f_base64());
         BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
-        BIO *bio = BIO_new_mem_buf(tok, -1);
+        BIO* bio = BIO_new_mem_buf(tok, -1);
         BIO_push(b64, bio);
         int nread = BIO_read(b64, outbuf, sizeof(outbuf));
         outbuf[nread] = '\0';
         BIO_free_all(b64);
-        char *pw_start = strchr(outbuf, ':');
+        char* pw_start = strchr(outbuf, ':');
         if (pw_start)
         {
             *pw_start++ = '\0';
-            HTTP_AUTH *ses = static_cast<HTTP_AUTH*>(MXS_MALLOC(sizeof(*ses)));
+            HTTP_AUTH* ses = static_cast<HTTP_AUTH*>(MXS_MALLOC(sizeof(*ses)));
             char* user = MXS_STRDUP(outbuf);
             char* pw = MXS_STRDUP(pw_start);
 
@@ -190,8 +188,7 @@ http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable - false
  */
-static bool
-http_auth_is_client_ssl_capable(DCB *dcb)
+static bool http_auth_is_client_ssl_capable(DCB* dcb)
 {
     return false;
 }
@@ -204,10 +201,9 @@ http_auth_is_client_ssl_capable(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  */
-static void
-http_auth_free_client_data(DCB *dcb)
+static void http_auth_free_client_data(DCB* dcb)
 {
-    HTTP_AUTH *ses = (HTTP_AUTH*)dcb->data;
+    HTTP_AUTH* ses = (HTTP_AUTH*)dcb->data;
     MXS_FREE(ses->user);
     MXS_FREE(ses->pw);
     MXS_FREE(ses);

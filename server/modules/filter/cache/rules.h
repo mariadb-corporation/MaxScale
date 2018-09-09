@@ -45,30 +45,30 @@ typedef enum cache_rule_op
 
 typedef struct cache_rule
 {
-    cache_rule_attribute_t attribute; // What attribute is evalued.
-    cache_rule_op_t        op;        // What operator is used.
-    char                  *value;     // The value from the rule file.
+    cache_rule_attribute_t attribute;   // What attribute is evalued.
+    cache_rule_op_t        op;          // What operator is used.
+    char*                  value;       // The value from the rule file.
     struct
     {
-        char *database;
-        char *table;
-        char *column;
-    } simple;                         // Details, only for CACHE_OP_[EQ|NEQ]
+        char* database;
+        char* table;
+        char* column;
+    } simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
     struct
     {
-        pcre2_code        *code;
-        pcre2_match_data **datas;
-    } regexp;                         // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-    uint32_t               debug;     // The debug level.
-    struct cache_rule     *next;
+        pcre2_code*        code;
+        pcre2_match_data** datas;
+    }                  regexp;          // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+    uint32_t           debug;           // The debug level.
+    struct cache_rule* next;
 } CACHE_RULE;
 
 typedef struct cache_rules
 {
-    json_t     *root;         // The JSON root object.
-    uint32_t    debug;        // The debug level.
-    CACHE_RULE *store_rules;  // The rules for when to store data to the cache.
-    CACHE_RULE *use_rules;    // The rules for when to use data from the cache.
+    json_t*     root;           // The JSON root object.
+    uint32_t    debug;          // The debug level.
+    CACHE_RULE* store_rules;    // The rules for when to store data to the cache.
+    CACHE_RULE* use_rules;      // The rules for when to use data from the cache.
 } CACHE_RULES;
 
 /**
@@ -78,7 +78,7 @@ typedef struct cache_rules
  *
  * @return Corresponding string, not to be freed.
  */
-const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
+const char* cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
 
 /**
  * Returns a string representation of an operator.
@@ -87,7 +87,7 @@ const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
  *
  * @return Corresponding string, not to be freed.
  */
-const char *cache_rule_op_to_string(cache_rule_op_t op);
+const char* cache_rule_op_to_string(cache_rule_op_t op);
 
 /**
  * Create a default cache rules object.
@@ -96,7 +96,7 @@ const char *cache_rule_op_to_string(cache_rule_op_t op);
  *
  * @return The rules object or NULL is allocation fails.
  */
-CACHE_RULES *cache_rules_create(uint32_t debug);
+CACHE_RULES* cache_rules_create(uint32_t debug);
 
 /**
  * Frees the rules object.
@@ -105,7 +105,7 @@ CACHE_RULES *cache_rules_create(uint32_t debug);
  *
  * @return The corresponding rules object, or NULL in case of error.
  */
-void cache_rules_free(CACHE_RULES *rules);
+void cache_rules_free(CACHE_RULES* rules);
 
 /**
  * Frees all rules in an array of rules *and* the array itself.
@@ -128,8 +128,10 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules);
  *
  * @return bool True, if the rules could be loaded, false otherwise.
  */
-bool cache_rules_load(const char* zPath, uint32_t debug,
-                      CACHE_RULES*** pppRules, int32_t* pnRules);
+bool cache_rules_load(const char* zPath,
+                      uint32_t debug,
+                      CACHE_RULES*** pppRules,
+                      int32_t* pnRules);
 
 /**
  * Parses the caching rules from a string and returns corresponding object.
@@ -144,8 +146,10 @@ bool cache_rules_load(const char* zPath, uint32_t debug,
  *
  * @return bool True, if the rules could be parsed, false otherwise.
  */
-bool cache_rules_parse(const char *json, uint32_t debug,
-                       CACHE_RULES*** pppRules, int32_t* pnRules);
+bool cache_rules_parse(const char* json,
+                       uint32_t debug,
+                       CACHE_RULES*** pppRules,
+                       int32_t* pnRules);
 
 /**
  * Prints the rules.
@@ -153,7 +157,7 @@ bool cache_rules_parse(const char *json, uint32_t debug,
  * @param pdcb    The DCB where the rules should be printed.
  * @param indent  By how many spaces to indent the output.
  */
-void cache_rules_print(const CACHE_RULES *rules, DCB* dcb, size_t indent);
+void cache_rules_print(const CACHE_RULES* rules, DCB* dcb, size_t indent);
 
 /**
  * Returns boolean indicating whether the result of the query should be stored.
@@ -165,7 +169,7 @@ void cache_rules_print(const CACHE_RULES *rules, DCB* dcb, size_t indent);
  *
  * @return True, if the results should be stored.
  */
-bool cache_rules_should_store(CACHE_RULES *rules, int thread_id, const char *default_db, const GWBUF* query);
+bool cache_rules_should_store(CACHE_RULES* rules, int thread_id, const char* default_db, const GWBUF* query);
 
 /**
  * Returns boolean indicating whether the cache should be used, that is consulted.
@@ -176,11 +180,11 @@ bool cache_rules_should_store(CACHE_RULES *rules, int thread_id, const char *def
  *
  * @return True, if the cache should be used.
  */
-bool cache_rules_should_use(CACHE_RULES *rules, int thread_id, const MXS_SESSION *session);
+bool cache_rules_should_use(CACHE_RULES* rules, int thread_id, const MXS_SESSION* session);
 
 MXS_END_DECLS
 
-#if defined(__cplusplus)
+#if defined (__cplusplus)
 
 class CacheRules
 {
@@ -188,7 +192,7 @@ public:
     typedef std::shared_ptr<CacheRules> SCacheRules;
 
     CacheRules(const CacheRules&) = delete;
-    CacheRules& operator = (const CacheRules&) = delete;
+    CacheRules& operator=(const CacheRules&) = delete;
 
     ~CacheRules();
 
@@ -221,7 +225,7 @@ public:
      *
      * @return True, if the rules could be loaded, false otherwise.
      */
-    static bool load(const char *zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
+    static bool load(const char* zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
 
     /**
      * Returns the json rules object.

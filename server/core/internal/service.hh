@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/service.h>
 #include <maxscale/resultset.hh>
@@ -27,12 +27,12 @@
 
 struct LastUserLoad
 {
-    time_t last = 0;   // The last time the users were loaded
-    bool   warned = false; // Has a warning been logged
+    time_t last = 0;        // The last time the users were loaded
+    bool   warned = false;  // Has a warning been logged
 };
 
 // The internal service representation
-class Service: public SERVICE
+class Service : public SERVICE
 {
 public:
     using FilterList = std::vector<SFilterDef>;
@@ -95,24 +95,24 @@ public:
      *
      * @return True on success
      */
-    bool dump_config(const char *filename) const;
+    bool dump_config(const char* filename) const;
 
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
 
     // TODO: Make these private
-    mutable std::mutex         lock;
+    mutable std::mutex lock;
 
 private:
-    FilterList  m_filters;        /**< Ordered list of filters */
-    std::string m_name;           /**< Name of the service */
-    std::string m_router_name;    /**< Router module */
-    std::string m_user;           /**< Username */
-    std::string m_password;       /**< Password */
-    std::string m_weightby;       /**< Weighting parameter name */
-    std::string m_version_string; /**< Version string sent to clients */
-    RateLimits  m_rate_limits;    /**< The refresh rate limits for users of each thread */
-    uint64_t    m_wkey;           /**< Key for worker local data */
+    FilterList  m_filters;          /**< Ordered list of filters */
+    std::string m_name;             /**< Name of the service */
+    std::string m_router_name;      /**< Router module */
+    std::string m_user;             /**< Username */
+    std::string m_password;         /**< Password */
+    std::string m_weightby;         /**< Weighting parameter name */
+    std::string m_version_string;   /**< Version string sent to clients */
+    RateLimits  m_rate_limits;      /**< The refresh rate limits for users of each thread */
+    uint64_t    m_wkey;             /**< Key for worker local data */
 
     // Get the worker local filter list
     FilterList* get_local_filters() const;
@@ -143,7 +143,7 @@ private:
  *
  * @return The newly created service or NULL if an error occurred
  */
-Service* service_alloc(const char *name, const char *router, MXS_CONFIG_PARAMETER* params);
+Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params);
 
 /**
  * Free a service
@@ -162,7 +162,7 @@ void service_free(Service* service);
  *
  * @param service Service to destroy
  */
-void service_destroy(Service *service);
+void service_destroy(Service* service);
 
 /**
  * Check whether a service can be destroyed
@@ -171,7 +171,7 @@ void service_destroy(Service *service);
  *
  * @return True if service can be destroyed
  */
-bool service_can_be_destroyed(Service *service);
+bool service_can_be_destroyed(Service* service);
 
 /**
  * @brief Shut all services down
@@ -211,10 +211,14 @@ bool service_thread_init();
 /**
  * Creating and adding new components to services
  */
-SERV_LISTENER* serviceCreateListener(Service *service, const char *name,
-                                     const char *protocol, const char *address,
-                                     unsigned short port, const char *authenticator,
-                                     const char *options, SSL_LISTENER *ssl);
+SERV_LISTENER* serviceCreateListener(Service* service,
+                                     const char* name,
+                                     const char* protocol,
+                                     const char* address,
+                                     unsigned short port,
+                                     const char* authenticator,
+                                     const char* options,
+                                     SSL_LISTENER* ssl);
 
 /**
  * @brief Remove a listener from use
@@ -226,9 +230,9 @@ SERV_LISTENER* serviceCreateListener(Service *service, const char *name,
  *
  * @return True if listener was found and removed
  */
-bool service_remove_listener(Service *service, const char* target);
+bool service_remove_listener(Service* service, const char* target);
 
-void serviceRemoveBackend(Service *service, const SERVER *server);
+void serviceRemoveBackend(Service* service, const SERVER* server);
 
 /**
  * @brief Serialize a service to a file
@@ -241,20 +245,20 @@ void serviceRemoveBackend(Service *service, const SERVER *server);
  * @param service Service to serialize
  * @return False if the serialization of the service fails, true if it was successful
  */
-bool service_serialize(const Service *service);
+bool service_serialize(const Service* service);
 
 /**
  * Internal utility functions
  */
 bool service_all_services_have_listeners(void);
-bool service_isvalid(Service *service);
+bool service_isvalid(Service* service);
 
 /**
  * Check if a service uses @c servers
  * @param server Server that is queried
  * @return True if server is used by at least one service
  */
-bool service_server_in_use(const SERVER *server);
+bool service_server_in_use(const SERVER* server);
 
 /**
  * Check if filter is used by any service
@@ -276,7 +280,7 @@ void service_update_weights();
  * @param service Service where the parameters are added
  * @param param Parameters to add
  */
-void service_add_parameters(Service *service, const MXS_CONFIG_PARAMETER *param);
+void service_add_parameters(Service* service, const MXS_CONFIG_PARAMETER* param);
 
 /**
  * @brief Add parameters to a service
@@ -287,7 +291,7 @@ void service_add_parameters(Service *service, const MXS_CONFIG_PARAMETER *param)
  * @param key     Parameter name
  * @param value   Parameter value
  */
-void service_add_parameter(Service *service, const char* key, const char* value);
+void service_add_parameter(Service* service, const char* key, const char* value);
 
 /**
  * @brief Remove service parameter
@@ -295,7 +299,7 @@ void service_add_parameter(Service *service, const char* key, const char* value)
  * @param service Service to modify
  * @param key     Parameter to remove
  */
-void service_remove_parameter(Service *service, const char* key);
+void service_remove_parameter(Service* service, const char* key);
 
 /**
  * @brief Replace service parameter
@@ -304,10 +308,10 @@ void service_remove_parameter(Service *service, const char* key);
  * @param key     Parameter name
  * @param value   Parameter value
  */
-void service_replace_parameter(Service *service, const char* key, const char* value);
+void service_replace_parameter(Service* service, const char* key, const char* value);
 
 // Internal search function
-Service* service_internal_find(const char *name);
+Service* service_internal_find(const char* name);
 
 /**
  * @brief Check if a service uses a server
@@ -315,7 +319,7 @@ Service* service_internal_find(const char *name);
  * @param server Server being used
  * @return True if service uses the server
  */
-bool serviceHasBackend(Service *service, SERVER *server);
+bool serviceHasBackend(Service* service, SERVER* server);
 
 /**
  * @brief Start new a listener for a service
@@ -324,7 +328,7 @@ bool serviceHasBackend(Service *service, SERVER *server);
  * @param port Listener to start
  * @return True if listener was started
  */
-bool serviceLaunchListener(Service *service, SERV_LISTENER *port);
+bool serviceLaunchListener(Service* service, SERV_LISTENER* port);
 
 /**
  * @brief Find listener with specified properties.
@@ -353,8 +357,11 @@ SERV_LISTENER* service_find_listener(Service* service,
  * @param port Listener port
  * @return True if service has the listener
  */
-bool serviceHasListener(Service* service, const char* name, const char* protocol,
-                        const char* address, unsigned short port);
+bool serviceHasListener(Service* service,
+                        const char* name,
+                        const char* protocol,
+                        const char* address,
+                        unsigned short port);
 
 /**
  * @brief Check if a MaxScale service listens on a port
@@ -372,10 +379,10 @@ bool service_port_is_used(unsigned short port);
  *
  * @return True if the service has a listener with a matching name
  */
-bool service_has_named_listener(Service *service, const char *name);
+bool service_has_named_listener(Service* service, const char* name);
 
 // Required by MaxAdmin
-int service_enable_root(Service *service, int action);
+int service_enable_root(Service* service, int action);
 
 /**
  * @brief Convert a service to JSON

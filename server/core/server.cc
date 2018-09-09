@@ -67,11 +67,11 @@ using Guard = std::lock_guard<std::mutex>;
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
 
-const char CN_MONITORPW[]          = "monitorpw";
-const char CN_MONITORUSER[]        = "monitoruser";
-const char CN_PERSISTMAXTIME[]     = "persistmaxtime";
-const char CN_PERSISTPOOLMAX[]     = "persistpoolmax";
-const char CN_PROXY_PROTOCOL[]     = "proxy_protocol";
+const char CN_MONITORPW[] = "monitorpw";
+const char CN_MONITORUSER[] = "monitoruser";
+const char CN_PERSISTMAXTIME[] = "persistmaxtime";
+const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
+const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
 static std::mutex server_lock;
 static std::list<Server*> all_servers;
@@ -79,10 +79,10 @@ static const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the ma
                                         "set/cleared manually. Status was not modified.";
 static const char WRN_REQUEST_OVERWRITTEN[] = "Previous maintenance request was not yet read by the monitor "
                                               "and was overwritten.";
-static void server_parameter_free(SERVER_PARAM *tofree);
+static void server_parameter_free(SERVER_PARAM* tofree);
 
 
-SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
+SERVER* server_alloc(const char* name, MXS_CONFIG_PARAMETER* params)
 {
     const char* monuser = config_get_string(params, CN_MONITORUSER);
     const char* monpw = config_get_string(params, CN_MONITORPW);
@@ -90,7 +90,9 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
     if ((*monuser != '\0') != (*monpw != '\0'))
     {
         MXS_ERROR("Both '%s' and '%s' need to be defined for server '%s'",
-                  CN_MONITORUSER, CN_MONITORPW, name);
+                  CN_MONITORUSER,
+                  CN_MONITORPW,
+                  name);
         return NULL;
     }
 
@@ -100,16 +102,19 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
     if (!authenticator[0] && !(authenticator = get_default_authenticator(protocol)))
     {
         MXS_ERROR("No authenticator defined for server '%s' and no default "
-                  "authenticator for protocol '%s'.", name, protocol);
+                  "authenticator for protocol '%s'.",
+                  name,
+                  protocol);
         return NULL;
     }
 
-    void *auth_instance = NULL;
+    void* auth_instance = NULL;
     // Backend authenticators do not have options.
     if (!authenticator_init(&auth_instance, authenticator, NULL))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
-                  authenticator, name);
+                  authenticator,
+                  name);
         return NULL;
     }
 
@@ -121,11 +126,11 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
         return NULL;
     }
 
-    Server *server = new (std::nothrow) Server;
-    char *my_name = MXS_STRDUP(name);
-    char *my_protocol = MXS_STRDUP(protocol);
-    char *my_authenticator = MXS_STRDUP(authenticator);
-    DCB **persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
+    Server* server = new( std::nothrow) Server;
+    char* my_name = MXS_STRDUP(name);
+    char* my_protocol = MXS_STRDUP(protocol);
+    char* my_authenticator = MXS_STRDUP(authenticator);
+    DCB** persistent = (DCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !my_name || !my_protocol || !my_authenticator || !persistent)
     {
@@ -143,7 +148,8 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
     if (snprintf(server->address, sizeof(server->address), "%s", address) > (int)sizeof(server->address))
     {
         MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
-                    address, sizeof(server->address));
+                    address,
+                    sizeof(server->address));
     }
 
     server->name = my_name;
@@ -184,7 +190,7 @@ SERVER* server_alloc(const char *name, MXS_CONFIG_PARAMETER* params)
         server_add_mon_user(server, monuser, monpw);
     }
 
-    for (MXS_CONFIG_PARAMETER *p = params; p; p = p->next)
+    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
     {
         server_set_parameter(server, p->name, p->value);
     }
@@ -247,13 +253,13 @@ void server_free(Server* server)
  *
  * @return A DCB or NULL if no connection is found
  */
-DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, const char *protocol, int id)
+DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, const char* protocol, int id)
 {
-    DCB *dcb, *previous = NULL;
+    DCB* dcb, * previous = NULL;
 
     if (server->persistent[id]
         && dcb_persistent_clean_count(server->persistent[id], id, false)
-        && server->persistent[id] // Check after cleaning
+        && server->persistent[id]   // Check after cleaning
         && (server->status & SERVER_RUNNING))
     {
         dcb = server->persistent[id];
@@ -263,7 +269,7 @@ DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, con
                 && dcb->protoname
                 && dcb->remote
                 && ip
-                && !dcb-> dcb_errhandle_called
+                && !dcb->dcb_errhandle_called
                 && !(dcb->flags & DCBF_HUNG)
                 && 0 == strcmp(dcb->user, user)
                 && 0 == strcmp(dcb->remote, ip)
@@ -295,7 +301,7 @@ DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, con
                           dcb->protoname ? dcb->protoname : "NULL",
                           protocol,
                           (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                          dcb-> dcb_errhandle_called ? "true" : "false");
+                          dcb->dcb_errhandle_called ? "true" : "false");
             }
             previous = dcb;
             dcb = dcb->nextpersistent;
@@ -310,7 +316,7 @@ DCB* server_get_persistent(SERVER *server, const char *user, const char* ip, con
  * @param name Name of the server
  * @return The server or NULL if not found
  */
-SERVER * server_find_by_unique_name(const char *name)
+SERVER* server_find_by_unique_name(const char* name)
 {
     Guard guard(server_lock);
 
@@ -338,11 +344,11 @@ SERVER * server_find_by_unique_name(const char *name)
  * names. If all were invalid, the output is left untouched.
  * @return Number of valid server names found
  */
-int server_find_by_unique_names(char **server_names, int size, SERVER*** output)
+int server_find_by_unique_names(char** server_names, int size, SERVER*** output)
 {
     mxb_assert(server_names && (size > 0));
 
-    SERVER **results = (SERVER**)MXS_CALLOC(size, sizeof(SERVER*));
+    SERVER** results = (SERVER**)MXS_CALLOC(size, sizeof(SERVER*));
     if (!results)
     {
         return 0;
@@ -373,7 +379,7 @@ int server_find_by_unique_names(char **server_names, int size, SERVER*** output)
  * @param       port            The server port
  * @return      The server or NULL if not found
  */
-SERVER* server_find(const char *servname, unsigned short port)
+SERVER* server_find(const char* servname, unsigned short port)
 {
     Guard guard(server_lock);
 
@@ -393,8 +399,7 @@ SERVER* server_find(const char *servname, unsigned short port)
  *
  * @param server        Server to print
  */
-void
-printServer(const SERVER *server)
+void printServer(const SERVER* server)
 {
     printf("Server %p\n", server);
     printf("\tServer:                       %s\n", server->address);
@@ -412,8 +417,7 @@ printServer(const SERVER *server)
  * Designed to be called within a debugger session in order
  * to display all active servers within the gateway
  */
-void
-printAllServers()
+void printAllServers()
 {
     Guard guard(server_lock);
 
@@ -432,8 +436,7 @@ printAllServers()
  * Designed to be called within a debugger session in order
  * to display all active servers within the gateway
  */
-void
-dprintAllServers(DCB *dcb)
+void dprintAllServers(DCB* dcb)
 {
     Guard guard(server_lock);
 
@@ -449,8 +452,7 @@ dprintAllServers(DCB *dcb)
 /**
  * Print all servers in Json format to a DCB
  */
-void
-dprintAllServersJson(DCB *dcb)
+void dprintAllServersJson(DCB* dcb)
 {
     json_t* all_servers_json = server_list_to_json("");
     char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
@@ -465,8 +467,8 @@ dprintAllServersJson(DCB *dcb)
 class CleanupTask : public Worker::Task
 {
 public:
-    CleanupTask(const SERVER* server):
-        m_server(server)
+    CleanupTask(const SERVER* server)
+        : m_server(server)
     {
     }
 
@@ -480,7 +482,7 @@ public:
     }
 
 private:
-    const SERVER* m_server; /**< Server to clean up */
+    const SERVER* m_server;     /**< Server to clean up */
 };
 
 /**
@@ -502,8 +504,7 @@ static void cleanup_persistent_connections(const SERVER* server)
  * Designed to be called within a debugger session in order
  * to display all active servers within the gateway
  */
-void
-dprintServer(DCB *dcb, const SERVER *server)
+void dprintServer(DCB* dcb, const SERVER* server)
 {
     if (!server_is_active(server))
     {
@@ -520,7 +521,8 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string);
     dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
-    dcb_printf(dcb, "\tLast event:                          %s\n",
+    dcb_printf(dcb,
+               "\tLast event:                          %s\n",
                mon_get_event_name((mxs_monitor_event_t)server->last_event));
     time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(server->triggered_at);
     dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
@@ -535,10 +537,11 @@ dprintServer(DCB *dcb, const SERVER *server)
     {
         struct tm result;
         char buf[40];
-        dcb_printf(dcb, "\tLast Repl Heartbeat:                 %s",
-                   asctime_r(localtime_r((time_t *)(&server->node_ts), &result), buf));
+        dcb_printf(dcb,
+                   "\tLast Repl Heartbeat:                 %s",
+                   asctime_r(localtime_r((time_t*)(&server->node_ts), &result), buf));
     }
-    SERVER_PARAM *param;
+    SERVER_PARAM* param;
     if ((param = server->parameters))
     {
         dcb_printf(dcb, "\tServer Parameters:\n");
@@ -546,8 +549,10 @@ dprintServer(DCB *dcb, const SERVER *server)
         {
             if (param->active)
             {
-                dcb_printf(dcb, "\t                                       %s\t%s\n",
-                           param->name, param->value);
+                dcb_printf(dcb,
+                           "\t                                       %s\t%s\n",
+                           param->name,
+                           param->value);
             }
             param = param->next;
         }
@@ -577,24 +582,29 @@ dprintServer(DCB *dcb, const SERVER *server)
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
         dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->persistmaxtime);
         dcb_printf(dcb, "\tConnections taken from pool:         %lu\n", server->stats.n_from_pool);
-        double d =  (double)server->stats.n_from_pool / (double)(server->stats.n_connections +
-                                                                 server->stats.n_from_pool + 1);
+        double d = (double)server->stats.n_from_pool / (double)(server->stats.n_connections
+                                                                + server->stats.n_from_pool + 1);
         dcb_printf(dcb, "\tPool availability:                   %0.2lf%%\n", d * 100.0);
     }
     if (server->server_ssl)
     {
-        SSL_LISTENER *l = server->server_ssl;
-        dcb_printf(dcb, "\tSSL initialized:                     %s\n",
+        SSL_LISTENER* l = server->server_ssl;
+        dcb_printf(dcb,
+                   "\tSSL initialized:                     %s\n",
                    l->ssl_init_done ? "yes" : "no");
-        dcb_printf(dcb, "\tSSL method type:                     %s\n",
+        dcb_printf(dcb,
+                   "\tSSL method type:                     %s\n",
                    ssl_method_type_to_string(l->ssl_method_type));
         dcb_printf(dcb, "\tSSL certificate verification depth:  %d\n", l->ssl_cert_verify_depth);
         dcb_printf(dcb, "\tSSL peer verification :  %s\n", l->ssl_verify_peer_certificate ? "true" : "false");
-        dcb_printf(dcb, "\tSSL certificate:                     %s\n",
+        dcb_printf(dcb,
+                   "\tSSL certificate:                     %s\n",
                    l->ssl_cert ? l->ssl_cert : "null");
-        dcb_printf(dcb, "\tSSL key:                             %s\n",
+        dcb_printf(dcb,
+                   "\tSSL key:                             %s\n",
                    l->ssl_key ? l->ssl_key : "null");
-        dcb_printf(dcb, "\tSSL CA certificate:                  %s\n",
+        dcb_printf(dcb,
+                   "\tSSL CA certificate:                  %s\n",
                    l->ssl_ca_cert ? l->ssl_ca_cert : "null");
     }
     if (server->proxy_protocol)
@@ -609,8 +619,7 @@ dprintServer(DCB *dcb, const SERVER *server)
  * @param       pdcb    DCB to print results to
  * @param       server  SERVER for which DCBs are to be printed
  */
-void
-dprintPersistentDCBs(DCB *pdcb, const SERVER *server)
+void dprintPersistentDCBs(DCB* pdcb, const SERVER* server)
 {
     dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->stats.n_persistent);
 }
@@ -619,32 +628,38 @@ dprintPersistentDCBs(DCB *pdcb, const SERVER *server)
  * List all servers in a tabular form to a DCB
  *
  */
-void
-dListServers(DCB *dcb)
+void dListServers(DCB* dcb)
 {
     Guard guard(server_lock);
-    bool have_servers = std::any_of(all_servers.begin(), all_servers.end(), [](Server* s)
-    {
-        return s->is_active;
-    });
+    bool have_servers = std::any_of(all_servers.begin(),
+                                    all_servers.end(),
+                                    [](Server* s) {
+                                        return s->is_active;
+                                    });
 
     if (have_servers)
     {
         dcb_printf(dcb, "Servers.\n");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
-        dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
-                   "Server", "Address", "Status");
+        dcb_printf(dcb,
+                   "%-18s | %-15s | Port  | Connections | %-20s\n",
+                   "Server",
+                   "Address",
+                   "Status");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 
         for (Server* server : all_servers)
         {
             if (server->is_active)
             {
-                char *stat = server_status(server);
-                dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
-                           server->name, server->address,
+                char* stat = server_status(server);
+                dcb_printf(dcb,
+                           "%-18s | %-15s | %5d | %11d | %s\n",
+                           server->name,
+                           server->address,
                            server->port,
-                           server->stats.n_current, stat);
+                           server->stats.n_current,
+                           stat);
                 MXS_FREE(stat);
             }
         }
@@ -660,7 +675,7 @@ dListServers(DCB *dcb)
  * @param server The server to return the status of
  * @return A string representation of the status flags
  */
-char* server_status(const SERVER *server)
+char* server_status(const SERVER* server)
 {
     mxb_assert(server);
     uint64_t server_status = server->status;
@@ -669,14 +684,13 @@ char* server_status(const SERVER *server)
     string separator;
 
     // Helper function.
-    auto concatenate_if = [&result, &separator](bool condition, const string& desc)
-    {
-        if (condition)
-        {
-            result += separator + desc;
-            separator = ", ";
-        }
-    };
+    auto concatenate_if = [&result, &separator](bool condition, const string& desc) {
+            if (condition)
+            {
+                result += separator + desc;
+                separator = ", ";
+            }
+        };
 
     // TODO: The following values should be revisited at some point, but since they are printed by
     // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
@@ -729,8 +743,7 @@ char* server_status(const SERVER *server)
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
-void
-server_set_status_nolock(SERVER *server, uint64_t bit)
+void server_set_status_nolock(SERVER* server, uint64_t bit)
 {
     server->status |= bit;
 
@@ -750,8 +763,7 @@ server_set_status_nolock(SERVER *server, uint64_t bit)
  * @param bits_to_clear  The bits to clear for the server.
  * @param bits_to_set    The bits to set for the server.
  */
-void
-server_clear_set_status_nolock(SERVER *server, uint64_t bits_to_clear, uint64_t bits_to_set)
+void server_clear_set_status_nolock(SERVER* server, uint64_t bits_to_clear, uint64_t bits_to_set)
 {
     /** clear error logged flag before the next failure */
     if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
@@ -771,8 +783,7 @@ server_clear_set_status_nolock(SERVER *server, uint64_t bits_to_clear, uint64_t 
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
-void
-server_clear_status_nolock(SERVER *server, uint64_t bit)
+void server_clear_status_nolock(SERVER* server, uint64_t bit)
 {
     server->status &= ~bit;
 }
@@ -785,8 +796,7 @@ server_clear_status_nolock(SERVER *server, uint64_t bit)
  * @param dest_server       The server to be updated
  * @param source_server         The server to provide the new bit string
  */
-void
-server_transfer_status(SERVER *dest_server, const SERVER *source_server)
+void server_transfer_status(SERVER* dest_server, const SERVER* source_server)
 {
     dest_server->status = source_server->status;
 }
@@ -799,21 +809,24 @@ server_transfer_status(SERVER *dest_server, const SERVER *source_server)
  * @param user          The user name to use
  * @param passwd        The password of the user
  */
-void
-server_add_mon_user(SERVER *server, const char *user, const char *passwd)
+void server_add_mon_user(SERVER* server, const char* user, const char* passwd)
 {
-    if (user != server->monuser &&
-        snprintf(server->monuser, sizeof(server->monuser), "%s", user) > (int)sizeof(server->monuser))
+    if (user != server->monuser
+        && snprintf(server->monuser, sizeof(server->monuser), "%s", user) > (int)sizeof(server->monuser))
     {
         MXS_WARNING("Truncated monitor user for server '%s', maximum username "
-                    "length is %lu characters.", server->name, sizeof(server->monuser));
+                    "length is %lu characters.",
+                    server->name,
+                    sizeof(server->monuser));
     }
 
-    if (passwd != server->monpw &&
-        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > (int)sizeof(server->monpw))
+    if (passwd != server->monpw
+        && snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > (int)sizeof(server->monpw))
     {
         MXS_WARNING("Truncated monitor password for server '%s', maximum password "
-                    "length is %lu characters.", server->name, sizeof(server->monpw));
+                    "length is %lu characters.",
+                    server->name,
+                    sizeof(server->monpw));
     }
 }
 
@@ -830,8 +843,7 @@ server_add_mon_user(SERVER *server, const char *user, const char *passwd)
  * @param user          The monitor user for the server
  * @param passwd        The password to use for the monitor user
  */
-void
-server_update_credentials(SERVER *server, const char *user, const char *passwd)
+void server_update_credentials(SERVER* server, const char* user, const char* passwd)
 {
     if (user != NULL && passwd != NULL)
     {
@@ -841,10 +853,10 @@ server_update_credentials(SERVER *server, const char *user, const char *passwd)
 
 static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
 {
-    char *my_name = MXS_STRDUP(name);
-    char *my_value = MXS_STRDUP(value);
+    char* my_name = MXS_STRDUP(name);
+    char* my_value = MXS_STRDUP(value);
 
-    SERVER_PARAM *param = (SERVER_PARAM *)MXS_MALLOC(sizeof(SERVER_PARAM));
+    SERVER_PARAM* param = (SERVER_PARAM*)MXS_MALLOC(sizeof(SERVER_PARAM));
 
     if (!my_name || !my_value || !param)
     {
@@ -861,12 +873,12 @@ static SERVER_PARAM* allocate_parameter(const char* name, const char* value)
     return param;
 }
 
-bool server_remove_parameter(SERVER *server, const char *name)
+bool server_remove_parameter(SERVER* server, const char* name)
 {
     bool rval = false;
     spinlock_acquire(&server->lock);
 
-    for (SERVER_PARAM *p = server->parameters; p; p = p->next)
+    for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
         if (strcmp(p->name, name) == 0 && p->active)
         {
@@ -880,7 +892,7 @@ bool server_remove_parameter(SERVER *server, const char *name)
     return rval;
 }
 
-void server_set_parameter(SERVER *server, const char *name, const char *value)
+void server_set_parameter(SERVER* server, const char* name, const char* value)
 {
     SERVER_PARAM* param = allocate_parameter(name, value);
 
@@ -893,7 +905,7 @@ void server_set_parameter(SERVER *server, const char *name, const char *value)
         server->parameters = param;
 
         // Mark old value, if found, as inactive
-        for (SERVER_PARAM *p = server->parameters->next; p; p = p->next)
+        for (SERVER_PARAM* p = server->parameters->next; p; p = p->next)
         {
             if (strcmp(p->name, name) == 0 && p->active)
             {
@@ -910,9 +922,9 @@ void server_set_parameter(SERVER *server, const char *name, const char *value)
  * Free a list of server parameters
  * @param tofree Parameter list to free
  */
-static void server_parameter_free(SERVER_PARAM *tofree)
+static void server_parameter_free(SERVER_PARAM* tofree)
 {
-    SERVER_PARAM *param;
+    SERVER_PARAM* param;
 
     if (tofree)
     {
@@ -929,11 +941,11 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  *
  * @note Should only be called when the server is already locked
  */
-static size_t server_get_parameter_nolock(const SERVER *server, const char *name, char* out, size_t size)
+static size_t server_get_parameter_nolock(const SERVER* server, const char* name, char* out, size_t size)
 {
     mxb_assert(SPINLOCK_IS_LOCKED(&server->lock));
     size_t len = 0;
-    SERVER_PARAM *param = server->parameters;
+    SERVER_PARAM* param = server->parameters;
 
     while (param)
     {
@@ -958,7 +970,7 @@ static size_t server_get_parameter_nolock(const SERVER *server, const char *name
  *
  * @return Length of the parameter value or 0 if parameter was not found
  */
-size_t server_get_parameter(const SERVER *server, const char *name, char* out, size_t size)
+size_t server_get_parameter(const SERVER* server, const char* name, char* out, size_t size)
 {
     spinlock_acquire(&server->lock);
     size_t len = server_get_parameter_nolock(server, name, out, size);
@@ -973,7 +985,8 @@ size_t server_get_parameter(const SERVER *server, const char *name, char* out, s
  */
 std::unique_ptr<ResultSet> serverGetList()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+    std::unique_ptr<ResultSet> set
+        = ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
     Guard guard(server_lock);
 
     for (Server* server : all_servers)
@@ -997,8 +1010,7 @@ std::unique_ptr<ResultSet> serverGetList()
  * @param address       The new address
  *
  */
-void
-server_update_address(SERVER *server, const char *address)
+void server_update_address(SERVER* server, const char* address)
 {
     Guard guard(server_lock);
 
@@ -1015,8 +1027,7 @@ server_update_address(SERVER *server, const char *address)
  * @param port          The new port value
  *
  */
-void
-server_update_port(SERVER *server, unsigned short port)
+void server_update_port(SERVER* server, unsigned short port)
 {
     Guard guard(server_lock);
 
@@ -1032,15 +1043,15 @@ static struct
     uint64_t    bit;
 } ServerBits[] =
 {
-    { "running",     SERVER_RUNNING },
-    { "master",      SERVER_MASTER },
-    { "slave",       SERVER_SLAVE },
-    { "synced",      SERVER_JOINED },
-    { "ndb",         SERVER_NDB },
-    { "maintenance", SERVER_MAINT },
-    { "maint",       SERVER_MAINT },
-    { "stale",       SERVER_WAS_MASTER },
-    { NULL,          0 }
+    {"running",     SERVER_RUNNING            },
+    {"master",      SERVER_MASTER             },
+    {"slave",       SERVER_SLAVE              },
+    {"synced",      SERVER_JOINED             },
+    {"ndb",         SERVER_NDB                },
+    {"maintenance", SERVER_MAINT              },
+    {"maint",       SERVER_MAINT              },
+    {"stale",       SERVER_WAS_MASTER         },
+    {NULL,          0                         }
 };
 
 /**
@@ -1049,8 +1060,7 @@ static struct
  * @param str   String representation
  * @return bit value or 0 on error
  */
-uint64_t
-server_map_status(const char *str)
+uint64_t server_map_status(const char* str)
 {
     int i;
 
@@ -1157,7 +1167,6 @@ private:
     // inserts into the container won't invalidate the next pointers
     std::list<MXS_CONFIG_PARAMETER> m_params;
 };
-
 }
 
 /**
@@ -1167,14 +1176,17 @@ private:
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_server_config(const SERVER *server, const char *filename)
+static bool create_server_config(const SERVER* server, const char* filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (file == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
-                  filename, server->name, errno, mxs_strerror(errno));
+                  filename,
+                  server->name,
+                  errno,
+                  mxs_strerror(errno));
         return false;
     }
 
@@ -1183,8 +1195,11 @@ static bool create_server_config(const SERVER *server, const char *filename)
     dprintf(file, "%s=server\n", CN_TYPE);
 
     const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
-    dump_param_list(file, ParamAdaptor(server->parameters),{CN_TYPE},
-                         config_server_params, mod->parameters);
+    dump_param_list(file,
+                    ParamAdaptor(server->parameters),
+                    {CN_TYPE},
+                    config_server_params,
+                    mod->parameters);
 
     std::unordered_set<std::string> known;
 
@@ -1209,24 +1224,29 @@ static bool create_server_config(const SERVER *server, const char *filename)
     return true;
 }
 
-bool server_serialize(const SERVER *server)
+bool server_serialize(const SERVER* server)
 {
     bool rval = false;
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+    snprintf(filename,
+             sizeof(filename),
+             "%s/%s.cnf.tmp",
+             get_config_persistdir(),
              server->name);
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
     }
     else if (create_server_config(server, filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
 
-        char *dot = strrchr(final_filename, '.');
+        char* dot = strrchr(final_filename, '.');
         mxb_assert(dot);
         *dot = '\0';
 
@@ -1237,7 +1257,9 @@ bool server_serialize(const SERVER *server)
         else
         {
             MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename,
+                      errno,
+                      mxs_strerror(errno));
         }
     }
 
@@ -1252,13 +1274,13 @@ bool server_serialize(const SERVER *server)
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
-bool mxs::server_set_status(SERVER *server, int bit, string* errmsg_out)
+bool mxs::server_set_status(SERVER* server, int bit, string* errmsg_out)
 {
     bool written = false;
     /* First check if the server is monitored. This isn't done under a lock
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid. */
-    MXS_MONITOR *mon = monitor_server_in_use(server);
+    MXS_MONITOR* mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
@@ -1302,10 +1324,10 @@ bool mxs::server_set_status(SERVER *server, int bit, string* errmsg_out)
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
-bool mxs::server_clear_status(SERVER *server, int bit, string* errmsg_out)
+bool mxs::server_clear_status(SERVER* server, int bit, string* errmsg_out)
 {
     bool written = false;
-    MXS_MONITOR *mon = monitor_server_in_use(server);
+    MXS_MONITOR* mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
@@ -1340,15 +1362,15 @@ bool mxs::server_clear_status(SERVER *server, int bit, string* errmsg_out)
     return written;
 }
 
-bool server_is_mxs_service(const SERVER *server)
+bool server_is_mxs_service(const SERVER* server)
 {
     bool rval = false;
 
     /** Do a coarse check for local server pointing to a MaxScale service */
-    if (strcmp(server->address, "127.0.0.1") == 0 ||
-        strcmp(server->address, "::1") == 0 ||
-        strcmp(server->address, "localhost") == 0 ||
-        strcmp(server->address, "localhost.localdomain") == 0)
+    if (strcmp(server->address, "127.0.0.1") == 0
+        || strcmp(server->address, "::1") == 0
+        || strcmp(server->address, "localhost") == 0
+        || strcmp(server->address, "localhost.localdomain") == 0)
     {
         if (service_port_is_used(server->port))
         {
@@ -1368,8 +1390,11 @@ static json_t* server_json_attributes(const SERVER* server)
     json_t* params = json_object();
 
     const MXS_MODULE* mod = get_module(server->protocol, MODULE_PROTOCOL);
-    config_add_module_params_json(ParamAdaptor(server->parameters), {CN_TYPE},
-                                  config_server_params, mod->parameters, params);
+    config_add_module_params_json(ParamAdaptor(server->parameters),
+                                  {CN_TYPE},
+                                  config_server_params,
+                                  mod->parameters,
+                                  params);
 
     // Add weighting parameters that weren't added by config_add_module_params_json
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
@@ -1481,7 +1506,7 @@ json_t* server_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
-bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_threshold)
+bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_threshold)
 {
     bool rv = false;
 
@@ -1493,7 +1518,7 @@ bool server_set_disk_space_threshold(SERVER *server, const char *disk_space_thre
     {
         if (!server->disk_space_threshold)
         {
-            server->disk_space_threshold = new (std::nothrow) MxsDiskSpaceThreshold;
+            server->disk_space_threshold = new( std::nothrow) MxsDiskSpaceThreshold;
         }
 
         if (server->disk_space_threshold)
@@ -1516,7 +1541,7 @@ namespace
 std::mutex add_response_mutex;
 }
 
-void server_add_response_average(SERVER *server, double ave, int num_samples)
+void server_add_response_average(SERVER* server, double ave, int num_samples)
 {
     std::lock_guard<std::mutex> lock(add_response_mutex);
     server->response_time->add(ave, num_samples);

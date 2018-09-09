@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/monitor.hh>
@@ -23,12 +23,12 @@ class MMMonitor : public maxscale::MonitorInstanceSimple
 {
 public:
     MMMonitor(const MMMonitor&) = delete;
-    MMMonitor& operator = (const MMMonitor&) = delete;
+    MMMonitor& operator=(const MMMonitor&) = delete;
 
     ~MMMonitor();
     static MMMonitor* create(MXS_MONITOR* monitor);
-    void diagnostics(DCB* dcb) const;
-    json_t* diagnostics_json() const;
+    void              diagnostics(DCB* dcb) const;
+    json_t*           diagnostics_json() const;
 
 protected:
     bool configure(const MXS_CONFIG_PARAMETER* params);
@@ -37,10 +37,10 @@ protected:
     void post_tick();
 
 private:
-    unsigned long m_id;      /**< Monitor ID */
-    int m_detectStaleMaster; /**< Monitor flag for Stale Master detection */
+    unsigned long m_id;                 /**< Monitor ID */
+    int           m_detectStaleMaster;  /**< Monitor flag for Stale Master detection */
 
     MMMonitor(MXS_MONITOR* monitor);
 
-    MXS_MONITORED_SERVER *get_current_master();
+    MXS_MONITORED_SERVER* get_current_master();
 };

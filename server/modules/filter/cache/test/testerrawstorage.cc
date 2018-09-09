@@ -43,4 +43,3 @@ Storage* TesterRawStorage::get_storage(const CACHE_STORAGE_CONFIG& config) const
 {
     return m_factory.createRawStorage("unspecified", config);
 }
-

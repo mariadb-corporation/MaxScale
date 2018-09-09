@@ -114,7 +114,6 @@ enum What
     SOFT_TTL,
     HARD_TTL
 };
-
 }
 
 void set(TestConnections& test, Cache::What what, uint32_t value)
@@ -129,7 +128,6 @@ void set(TestConnections& test, Cache::What what, uint32_t value)
     cout << stmt << endl;
     test.try_query(pMysql, "%s", stmt.c_str());
 }
-
 }
 
 
@@ -157,8 +155,8 @@ void run(TestConnections& test)
     test.assert(value == 1, "Initial value was not 1.");
 
     // Update the real value.
-    update(test, Column::A, 2); // Now the cache contains 1 and the db 2.
-    update(test, Column::B, 2); // Now the cache contains 1 and the db 2.
+    update(test, Column::A, 2);     // Now the cache contains 1 and the db 2.
+    update(test, Column::B, 2);     // Now the cache contains 1 and the db 2.
 
     sleep(5);
 
@@ -176,7 +174,6 @@ void run(TestConnections& test)
     select(test, Column::B, &value);
     test.assert(value == 1, "The value received was not from the cache.");
 }
-
 }
 
 int main(int argc, char* argv[])

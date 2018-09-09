@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include "cat.hh"
 
@@ -21,10 +21,10 @@ class Cat;
 /**
  * The client session structure used within this router.
  */
-class CatSession: public mxs::RouterSession
+class CatSession : public mxs::RouterSession
 {
     CatSession(const CatSession&) = delete;
-    CatSession& operator =(const CatSession&) = delete;
+    CatSession& operator=(const CatSession&) = delete;
 public:
 
     CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackendList& backends);
@@ -64,10 +64,10 @@ public:
      * @param action    The context.
      * @param pSuccess  On output, if false, the session will be terminated.
      */
-    void handleError(GWBUF*             pMessage,
-                     DCB*               pProblem,
+    void handleError(GWBUF* pMessage,
+                     DCB*   pProblem,
                      mxs_error_action_t action,
-                     bool*              pSuccess);
+                     bool* pSuccess);
 private:
 
     MXS_SESSION*                  m_session;

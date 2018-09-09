@@ -1,5 +1,6 @@
 /**
- * @file readconnrouter_master.cpp Connect to ReadConn in master mode and check if there is only one backend connection to master
+ * @file readconnrouter_master.cpp Connect to ReadConn in master mode and check if there is only one backend
+ *connection to master
  *
  * - connect to ReadCon master
  * - expect only 1 connection to node 0 and no connections to ther nodes
@@ -23,14 +24,18 @@ using namespace std;
  * @param master Master node index
  * @return 0 if check succedded
  */
-int check_connnections_only_to_master(TestConnections * Test, int master)
+int check_connnections_only_to_master(TestConnections* Test, int master)
 {
     int res = 0;
     int conn_num;
     printf("Checking number of connections to each node\n");
     for (int i = 0; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
+        conn_num
+            = get_conn_num(Test->repl->nodes[i],
+                           Test->maxscales->ip(0),
+                           Test->maxscales->hostname[0],
+                           (char*) "test");
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if (((i == master) && (conn_num != 1)) || ((i != master) && (conn_num != 0)))
         {
@@ -41,9 +46,9 @@ int check_connnections_only_to_master(TestConnections * Test, int master)
     return res;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(100);
 
     Test->repl->connect();
@@ -75,10 +80,9 @@ int main(int argc, char *argv[])
     printf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 
-    Test->check_log_err(0, (char *) "The service 'CLI' is missing a definition of the servers", false);
+    Test->check_log_err(0, (char*) "The service 'CLI' is missing a definition of the servers", false);
 
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-

@@ -6,16 +6,17 @@
  * - check that queries work
  * - unblock backend nodes
  * - wait for monitor
- * - check that we are still using the last node to which we failed over to and that the old nodes are in maintenance mode
+ * - check that we are still using the last node to which we failed over to and that the old nodes are in
+ *maintenance mode
  */
 
 
 #include <iostream>
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * test = new TestConnections(argc, argv);
+    TestConnections* test = new TestConnections(argc, argv);
 
     test->tprintf("Create the test table and insert some data ");
     test->connect_maxscale();
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
     test.maxscales->wait_for_monitor();
 
     test->tprintf("Connect and insert should work ");
-    char *output = test->ssh_maxscale_output(true, "maxadmin list servers");
+    char* output = test->ssh_maxscale_output(true, "maxadmin list servers");
     test->tprintf("%s", output);
     free(output);
     test->connect_maxscale();
@@ -61,7 +62,9 @@ int main(int argc, char *argv[])
     test->repl->connect();
     find_field(test->repl->nodes[3], "SELECT @@server_id", "@@server_id", real_id);
     test->add_result(strcmp(maxscale_id, real_id) != 0,
-                     "@@server_id is different: %s != %s", maxscale_id, real_id);
+                     "@@server_id is different: %s != %s",
+                     maxscale_id,
+                     real_id);
     test->close_maxscale_connections();
 
     test->stop_maxscale();

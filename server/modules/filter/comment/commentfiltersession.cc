@@ -23,8 +23,8 @@
 using namespace std;
 
 CommentFilterSession::CommentFilterSession(MXS_SESSION* pSession, const CommentFilter* pFilter)
-    : maxscale::FilterSession(pSession),
-      m_filter(*pFilter)
+    : maxscale::FilterSession(pSession)
+    , m_filter(*pFilter)
 {
 }
 
@@ -32,7 +32,7 @@ CommentFilterSession::~CommentFilterSession()
 {
 }
 
-//static
+// static
 CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession, const CommentFilter* pFilter)
 {
     return new CommentFilterSession(pSession, pFilter);
@@ -50,8 +50,8 @@ int CommentFilterSession::routeQuery(GWBUF* pPacket)
         string comment = parseComment(m_filter.comment());
         string newsql = string("/* ").append(comment).append(" */").append(sql);
         pPacket = modutil_replace_SQL(pPacket, (char*)newsql.c_str());
-        //maxscale expects contiguous memory to arrive from client so we must make the buffer contiguous
-        //after using modutil_replace_SQL.
+        // maxscale expects contiguous memory to arrive from client so we must make the buffer contiguous
+        // after using modutil_replace_SQL.
         GWBUF* pModified_packet = gwbuf_make_contiguous(pPacket);
         if (pModified_packet)
         {
@@ -71,7 +71,7 @@ int CommentFilterSession::clientReply(GWBUF* pPacket)
 {
     return mxs::FilterSession::clientReply(pPacket);
 }
-//TODO this probably should be refactored in some way in case we add more variables
+// TODO this probably should be refactored in some way in case we add more variables
 string CommentFilterSession::parseComment(string comment)
 {
     string ip = m_pSession->client_dcb->remote;

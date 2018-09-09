@@ -29,7 +29,7 @@ void reset_replication(TestConnections& test)
         int ec;
         stringstream switchover;
         switchover << "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
-        test.maxscales->ssh_node_output(0, switchover.str().c_str() , true, &ec);
+        test.maxscales->ssh_node_output(0, switchover.str().c_str(), true, &ec);
         test.maxscales->wait_for_monitor(2);
         master_id = get_master_server_id(test);
         cout << "Master server id is now back to " << master_id << endl;
@@ -50,10 +50,10 @@ void reset_replication(TestConnections& test)
 int prepare_test_1(TestConnections& test)
 {
     cout << LINE << endl;
-    cout << "Part 1: Stopping master and waiting for failover. Check that another server is promoted." <<
-         endl;
+    cout << "Part 1: Stopping master and waiting for failover. Check that another server is promoted."
+         << endl;
     cout << LINE << endl;
-    int node0_id = test.repl->get_server_id(0); // Read master id now before shutdown.
+    int node0_id = test.repl->get_server_id(0);     // Read master id now before shutdown.
     test.repl->stop_node(0);
     return node0_id;
 }
@@ -96,8 +96,9 @@ void check_test_2(TestConnections& test)
     get_output(test);
     int master_id = get_master_server_id(test);
     cout << "Master server id is " << master_id << endl;
-    bool success = (master_id > 0 &&
-                    (master_id == test.repl->get_server_id(2) || master_id == test.repl->get_server_id(3)));
+    bool success = (master_id > 0
+                    && (master_id == test.repl->get_server_id(2)
+                        || master_id == test.repl->get_server_id(3)));
     test.assert(success, WRONG_SLAVE);
     if (test.global_result == 0)
     {
@@ -120,8 +121,8 @@ void prepare_test_3(TestConnections& test)
 {
     cout << LINE << "\n";
     cout << "Part 3: Disable log_bin on server 2, making it invalid for promotion. Enable log-slave-updates "
-         " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
-         " master failure." << "\n" << LINE << endl;
+            " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
+            " master failure." << "\n" << LINE << endl;
     get_output(test);
     test.maxscales->stop_maxscale(0);
     test.repl->stop_node(1);
@@ -139,9 +140,9 @@ void prepare_test_3(TestConnections& test)
     test.repl->add_server_setting(1, log_slave);
     test.repl->add_server_setting(3, log_slave);
 
-    test.repl->start_node(1, (char *) "");
-    test.repl->start_node(2, (char *) "");
-    test.repl->start_node(3, (char *) "");
+    test.repl->start_node(1, (char*) "");
+    test.repl->start_node(2, (char*) "");
+    test.repl->start_node(3, (char*) "");
     test.maxscales->start_maxscale(0);
     test.maxscales->wait_for_monitor(2);
 
@@ -185,8 +186,8 @@ void check_test_3(TestConnections& test)
     test.repl->restore_server_settings(2);
     test.repl->restore_server_settings(3);
 
-    test.repl->start_node(1, (char *) "");
-    test.repl->start_node(2, (char *) "");
-    test.repl->start_node(3, (char *) "");
+    test.repl->start_node(1, (char*) "");
+    test.repl->start_node(2, (char*) "");
+    test.repl->start_node(3, (char*) "");
     test.maxscales->start_maxscale(0);
 }

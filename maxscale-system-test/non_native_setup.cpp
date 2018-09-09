@@ -12,7 +12,7 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     int local_argc = argc - 1;
     char** local_argv = &argv[1];
 
-    TestConnections * Test = new TestConnections(local_argc, local_argv);
+    TestConnections* Test = new TestConnections(local_argc, local_argv);
     (void)Test;
     sleep(3);
 

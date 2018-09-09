@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 #include <stdexcept>
@@ -70,5 +70,4 @@ public:
         mxb_log_finish();
     }
 };
-
 }

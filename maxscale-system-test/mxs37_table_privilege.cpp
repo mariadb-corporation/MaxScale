@@ -12,9 +12,9 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
     Test->maxscales->connect_maxscale(0);
@@ -24,7 +24,8 @@ int main(int argc, char *argv[])
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP USER 'table_privilege'@'%'");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
     execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (id INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
+    execute_query(Test->maxscales->conn_rwsplit[0],
+                  "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
     execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON test.t1 TO 'table_privilege'@'%%'");
 
     Test->stop_timeout();
@@ -44,8 +45,12 @@ int main(int argc, char *argv[])
      */
     for (int i = 0; i < 5; i++)
     {
-        MYSQL *conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "test",
-                                   (char *) "table_privilege", (char *) "pass", Test->ssl);
+        MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+                                   Test->maxscales->IP[0],
+                                   (char*) "test",
+                                   (char*) "table_privilege",
+                                   (char*) "pass",
+                                   Test->ssl);
         if (mysql_errno(conn) != 0)
         {
             Test->tprintf("Failed to connect: %s", mysql_error(conn));
@@ -54,7 +59,7 @@ int main(int argc, char *argv[])
         {
             Test->set_timeout(20);
             Test->tprintf("Trying SELECT\n");
-            if (execute_query(conn, (char *) "SELECT * FROM t1") == 0)
+            if (execute_query(conn, (char*) "SELECT * FROM t1") == 0)
             {
                 error = false;
                 break;
@@ -79,4 +84,3 @@ int main(int argc, char *argv[])
 
     return rval;
 }
-

@@ -85,34 +85,38 @@ static int hktask_id = 0;
 /*
  * The filter entry points
  */
-static MXS_FILTER *createInstance(const char *name, MXS_CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
-static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
-static uint64_t getCapabilities(MXS_FILTER *instance);
+static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session);
+static void                closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void                setDownstream(MXS_FILTER* instance,
+                                         MXS_FILTER_SESSION* fsession,
+                                         MXS_DOWNSTREAM* downstream);
+static void setUpstream(MXS_FILTER* instance,
+                        MXS_FILTER_SESSION* fsession,
+                        MXS_UPSTREAM* upstream);
+static int      routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static int      clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
- *Structure used to store messages and their properties.
+ * Structure used to store messages and their properties.
  */
 typedef struct mqmessage_t
 {
-    amqp_basic_properties_t *prop;
-    char *msg;
-    struct mqmessage_t *next;
+    amqp_basic_properties_t* prop;
+    char*                    msg;
+    struct mqmessage_t*      next;
 } mqmessage;
 
 /**
- *Logging trigger levels
+ * Logging trigger levels
  */
 enum log_trigger_t
 {
-    TRG_ALL = 0x00,
+    TRG_ALL    = 0x00,
     TRG_SOURCE = 0x01,
     TRG_SCHEMA = 0x02,
     TRG_OBJECT = 0x04
@@ -132,9 +136,9 @@ enum log_trigger_t
 typedef struct source_trigger_t
 {
     char** user;
-    int usize;
+    int    usize;
     char** host;
-    int hsize;
+    int    hsize;
 } SRC_TRIG;
 
 /**
@@ -148,7 +152,7 @@ typedef struct source_trigger_t
 typedef struct schema_trigger_t
 {
     char** objects;
-    int size;
+    int    size;
 } SHM_TRIG;
 
 /**
@@ -163,7 +167,7 @@ typedef struct schema_trigger_t
 typedef struct object_trigger_t
 {
     char** objects;
-    int size;
+    int    size;
 } OBJ_TRIG;
 
 /**
@@ -171,9 +175,9 @@ typedef struct object_trigger_t
  */
 typedef struct mqstats_t
 {
-    int n_msg; /*< Total number of messages */
-    int n_sent; /*< Number of sent messages */
-    int n_queued; /*< Number of unsent messages */
+    int n_msg;      /*< Total number of messages */
+    int n_sent;     /*< Number of sent messages */
+    int n_queued;   /*< Number of unsent messages */
 } MQSTATS;
 
 /**
@@ -188,35 +192,35 @@ typedef struct mqstats_t
  */
 typedef struct
 {
-    int port;
-    char *hostname;
-    char *username;
-    char *password;
-    char *vhost;
-    char *exchange;
-    char *exchange_type;
-    char *key;
-    char *queue;
-    bool use_ssl;
-    bool log_all;
-    bool strict_logging;
-    char *ssl_CA_cert;
-    char *ssl_client_cert;
-    char *ssl_client_key;
-    amqp_connection_state_t conn; /**The connection object*/
-    amqp_socket_t* sock; /**The currently active socket*/
-    amqp_channel_t channel; /**The current channel in use*/
-    int conn_stat; /**state of the connection to the server*/
-    int rconn_intv; /**delay for reconnects, in seconds*/
-    time_t last_rconn; /**last reconnect attempt*/
-    SPINLOCK rconn_lock;
-    SPINLOCK msg_lock;
-    mqmessage* messages;
-    enum log_trigger_t trgtype;
-    SRC_TRIG* src_trg;
-    SHM_TRIG* shm_trg;
-    OBJ_TRIG* obj_trg;
-    MQSTATS stats;
+    int                     port;
+    char*                   hostname;
+    char*                   username;
+    char*                   password;
+    char*                   vhost;
+    char*                   exchange;
+    char*                   exchange_type;
+    char*                   key;
+    char*                   queue;
+    bool                    use_ssl;
+    bool                    log_all;
+    bool                    strict_logging;
+    char*                   ssl_CA_cert;
+    char*                   ssl_client_cert;
+    char*                   ssl_client_key;
+    amqp_connection_state_t conn;       /**The connection object*/
+    amqp_socket_t*          sock;       /**The currently active socket*/
+    amqp_channel_t          channel;    /**The current channel in use*/
+    int                     conn_stat;  /**state of the connection to the server*/
+    int                     rconn_intv; /**delay for reconnects, in seconds*/
+    time_t                  last_rconn; /**last reconnect attempt*/
+    SPINLOCK                rconn_lock;
+    SPINLOCK                msg_lock;
+    mqmessage*              messages;
+    enum log_trigger_t      trgtype;
+    SRC_TRIG*               src_trg;
+    SHM_TRIG*               shm_trg;
+    OBJ_TRIG*               obj_trg;
+    MQSTATS                 stats;
 } MQ_INSTANCE;
 
 /**
@@ -230,22 +234,22 @@ typedef struct
  */
 typedef struct
 {
-    char* uid; /**Unique identifier used to tag messages*/
-    char* db; /**The currently active database*/
+    char*          uid; /**Unique identifier used to tag messages*/
+    char*          db;  /**The currently active database*/
     MXS_DOWNSTREAM down;
-    MXS_UPSTREAM up;
-    MXS_SESSION* session;
-    bool was_query; /**True if the previous routeQuery call had valid content*/
+    MXS_UPSTREAM   up;
+    MXS_SESSION*   session;
+    bool           was_query;   /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
 bool sendMessage(void* data);
 
 static const MXS_ENUM_VALUE trigger_values[] =
 {
-    {"source", TRG_SOURCE},
-    {"schema", TRG_SCHEMA},
-    {"object", TRG_OBJECT},
-    {"all", TRG_ALL},
+    {"source", TRG_SOURCE                                             },
+    {"schema", TRG_SCHEMA                                             },
+    {"object", TRG_OBJECT                                             },
+    {"all",    TRG_ALL                                                },
     {NULL}
 };
 
@@ -260,64 +264,78 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        setUpstream,
-        routeQuery,
-        clientReply,
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        NULL, // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_ALPHA_RELEASE,
-        MXS_FILTER_VERSION,
-        "A RabbitMQ query logging filter",
-        "V1.0.2",
-        RCAP_TYPE_CONTIGUOUS_INPUT,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        static MXS_FILTER_OBJECT MyObject =
         {
-            {"hostname", MXS_MODULE_PARAM_STRING, "localhost"},
-            {"username", MXS_MODULE_PARAM_STRING, "guest"},
-            {"password", MXS_MODULE_PARAM_STRING, "guest"},
-            {"vhost", MXS_MODULE_PARAM_STRING, "/"},
-            {"port", MXS_MODULE_PARAM_COUNT, "5672"},
-            {"exchange", MXS_MODULE_PARAM_STRING, "default_exchange"},
-            {"key", MXS_MODULE_PARAM_STRING, "key"},
-            {"queue", MXS_MODULE_PARAM_STRING},
-            {"ssl_client_certificate", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"ssl_client_key", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"ssl_CA_cert", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"exchange_type", MXS_MODULE_PARAM_STRING, "direct"},
-            {"logging_trigger", MXS_MODULE_PARAM_ENUM, "all", MXS_MODULE_OPT_NONE, trigger_values},
-            {"logging_source_user", MXS_MODULE_PARAM_STRING},
-            {"logging_source_host", MXS_MODULE_PARAM_STRING},
-            {"logging_schema", MXS_MODULE_PARAM_STRING},
-            {"logging_object", MXS_MODULE_PARAM_STRING},
-            {"logging_log_all", MXS_MODULE_PARAM_BOOL, "false"},
-            {"logging_strict", MXS_MODULE_PARAM_BOOL, "true"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            createInstance,
+            newSession,
+            closeSession,
+            freeSession,
+            setDownstream,
+            setUpstream,
+            routeQuery,
+            clientReply,
+            diagnostic,
+            diagnostic_json,
+            getCapabilities,
+            NULL,   // No destroyInstance
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_FILTER,
+            MXS_MODULE_ALPHA_RELEASE,
+            MXS_FILTER_VERSION,
+            "A RabbitMQ query logging filter",
+            "V1.0.2",
+            RCAP_TYPE_CONTIGUOUS_INPUT,
+            &MyObject,
+            NULL,                               /* Process init. */
+            NULL,                               /* Process finish. */
+            NULL,                               /* Thread init. */
+            NULL,                               /* Thread finish. */
+            {
+                {"hostname",                  MXS_MODULE_PARAM_STRING,
+                 "localhost"                                         },
+                {"username",                  MXS_MODULE_PARAM_STRING,
+                 "guest"                                                                       },
+                {"password",                  MXS_MODULE_PARAM_STRING,
+                 "guest"                                                                                                },
+                {"vhost",                     MXS_MODULE_PARAM_STRING,
+                 "/"                                                                                                                             },
+                {"port",                      MXS_MODULE_PARAM_COUNT,
+                 "5672"                                                                                                                                                   },
+                {"exchange",                  MXS_MODULE_PARAM_STRING,
+                 "default_exchange"                                                                                                                                                                },
+                {"key",                       MXS_MODULE_PARAM_STRING,
+                 "key"                                                                                                                                                                                                      },
+                {"queue",                     MXS_MODULE_PARAM_STRING},
+                {"ssl_client_certificate",    MXS_MODULE_PARAM_PATH,                         NULL,
+                 MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                             },
+                {"ssl_client_key",            MXS_MODULE_PARAM_PATH,                         NULL,
+                 MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                        },
+                {"ssl_CA_cert",               MXS_MODULE_PARAM_PATH,                         NULL,
+                 MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                         },
+                {"exchange_type",             MXS_MODULE_PARAM_STRING,
+                 "direct"                                                                                                                                                                                                   },
+                {"logging_trigger",           MXS_MODULE_PARAM_ENUM,                         "all",
+                 MXS_MODULE_OPT_NONE,
+                 trigger_values                                                                                                                                                                                              },
+                {"logging_source_user",       MXS_MODULE_PARAM_STRING},
+                {"logging_source_host",       MXS_MODULE_PARAM_STRING},
+                {"logging_schema",            MXS_MODULE_PARAM_STRING},
+                {"logging_object",            MXS_MODULE_PARAM_STRING},
+                {"logging_log_all",           MXS_MODULE_PARAM_BOOL,
+                 "false"                                                                                                                                                                                                    },
+                {"logging_strict",            MXS_MODULE_PARAM_BOOL,
+                 "true"                                                                                                                                                                                                     },
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
 
+        return &info;
+    }
 }
 
 /**
@@ -327,8 +345,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * and queues if they are lost
  *
  */
-static int
-init_conn(MQ_INSTANCE *my_instance)
+static int init_conn(MQ_INSTANCE* my_instance)
 {
     int rval = 0;
     int amqp_ok = AMQP_STATUS_OK;
@@ -366,7 +383,6 @@ init_conn(MQ_INSTANCE *my_instance)
     {
         MXS_ERROR("TCP socket creation failed.");
         goto cleanup;
-
     }
 
     /**Socket creation was successful, trying to open the socket*/
@@ -377,8 +393,14 @@ init_conn(MQ_INSTANCE *my_instance)
         goto cleanup;
     }
     amqp_rpc_reply_t reply;
-    reply = amqp_login(my_instance->conn, my_instance->vhost, 0, AMQP_DEFAULT_FRAME_SIZE, 0,
-                       AMQP_SASL_METHOD_PLAIN, my_instance->username, my_instance->password);
+    reply = amqp_login(my_instance->conn,
+                       my_instance->vhost,
+                       0,
+                       AMQP_DEFAULT_FRAME_SIZE,
+                       0,
+                       AMQP_SASL_METHOD_PLAIN,
+                       my_instance->username,
+                       my_instance->password);
     if (reply.reply_type != AMQP_RESPONSE_NORMAL)
     {
         MXS_ERROR("Login to RabbitMQ server failed.");
@@ -392,12 +414,15 @@ init_conn(MQ_INSTANCE *my_instance)
         goto cleanup;
     }
 
-    amqp_exchange_declare(my_instance->conn, my_instance->channel,
+    amqp_exchange_declare(my_instance->conn,
+                          my_instance->channel,
                           amqp_cstring_bytes(my_instance->exchange),
                           amqp_cstring_bytes(my_instance->exchange_type),
-                          false, true,
+                          false,
+                          true,
 #ifdef RABBITMQ_060
-                          false, false,
+                          false,
+                          false,
 #endif
                           amqp_empty_table);
 
@@ -410,26 +435,35 @@ init_conn(MQ_INSTANCE *my_instance)
         {
             if (reply.reply.id == AMQP_CHANNEL_CLOSE_METHOD)
             {
-                amqp_send_method(my_instance->conn, my_instance->channel,
-                                 AMQP_CHANNEL_CLOSE_OK_METHOD, NULL);
+                amqp_send_method(my_instance->conn,
+                                 my_instance->channel,
+                                 AMQP_CHANNEL_CLOSE_OK_METHOD,
+                                 NULL);
             }
             else if (reply.reply.id == AMQP_CONNECTION_CLOSE_METHOD)
             {
-                amqp_send_method(my_instance->conn, my_instance->channel,
-                                 AMQP_CONNECTION_CLOSE_OK_METHOD, NULL);
+                amqp_send_method(my_instance->conn,
+                                 my_instance->channel,
+                                 AMQP_CONNECTION_CLOSE_OK_METHOD,
+                                 NULL);
             }
 
             my_instance->channel++;
             amqp_channel_open(my_instance->conn, my_instance->channel);
 
-            amqp_exchange_delete(my_instance->conn, my_instance->channel,
-                                 amqp_cstring_bytes(my_instance->exchange), 0);
-            amqp_exchange_declare(my_instance->conn, my_instance->channel,
+            amqp_exchange_delete(my_instance->conn,
+                                 my_instance->channel,
+                                 amqp_cstring_bytes(my_instance->exchange),
+                                 0);
+            amqp_exchange_declare(my_instance->conn,
+                                  my_instance->channel,
                                   amqp_cstring_bytes(my_instance->exchange),
                                   amqp_cstring_bytes(my_instance->exchange_type),
-                                  false, true,
+                                  false,
+                                  true,
 #ifdef RABBITMQ_060
-                                  false, false,
+                                  false,
+                                  false,
 #endif
                                   amqp_empty_table);
             reply = amqp_get_rpc_reply(my_instance->conn);
@@ -446,9 +480,13 @@ init_conn(MQ_INSTANCE *my_instance)
 
 
 
-        amqp_queue_declare(my_instance->conn, my_instance->channel,
+        amqp_queue_declare(my_instance->conn,
+                           my_instance->channel,
                            amqp_cstring_bytes(my_instance->queue),
-                           0, 1, 0, 0,
+                           0,
+                           1,
+                           0,
+                           0,
                            amqp_empty_table);
         reply = amqp_get_rpc_reply(my_instance->conn);
         if (reply.reply_type != AMQP_RESPONSE_NORMAL)
@@ -458,7 +496,8 @@ init_conn(MQ_INSTANCE *my_instance)
         }
 
 
-        amqp_queue_bind(my_instance->conn, my_instance->channel,
+        amqp_queue_bind(my_instance->conn,
+                        my_instance->channel,
                         amqp_cstring_bytes(my_instance->queue),
                         amqp_cstring_bytes(my_instance->exchange),
                         amqp_cstring_bytes(my_instance->key),
@@ -475,7 +514,6 @@ init_conn(MQ_INSTANCE *my_instance)
 cleanup:
 
     return rval;
-
 }
 
 /**
@@ -491,7 +529,7 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
 {
     char tmp[strlen(str) + 1];
     strcpy(tmp, str);
-    char *lasts, *tk = tmp;
+    char* lasts, * tk = tmp;
     int i = 0, size = 1;
 
 
@@ -500,7 +538,7 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
         size++;
     }
 
-    char **arr = static_cast<char**>(MXS_MALLOC(sizeof(char*) * size));
+    char** arr = static_cast<char**>(MXS_MALLOC(sizeof(char*) * size));
     MXS_ABORT_IF_NULL(arr);
 
     *szstore = size;
@@ -525,10 +563,9 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *
-createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
+static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    MQ_INSTANCE *my_instance = static_cast<MQ_INSTANCE*>(MXS_CALLOC(1, sizeof(MQ_INSTANCE)));
+    MQ_INSTANCE* my_instance = static_cast<MQ_INSTANCE*>(MXS_CALLOC(1, sizeof(MQ_INSTANCE)));
 
     if (my_instance)
     {
@@ -548,8 +585,8 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         my_instance->rconn_intv = 1;
 
         my_instance->port = config_get_integer(params, "port");
-        my_instance->trgtype =
-            static_cast<log_trigger_t>(config_get_enum(params, "logging_trigger", trigger_values));
+        my_instance->trgtype
+            = static_cast<log_trigger_t>(config_get_enum(params, "logging_trigger", trigger_values));
         my_instance->log_all = config_get_bool(params, "logging_log_all");
         my_instance->strict_logging = config_get_bool(params, "logging_strict");
         my_instance->hostname = MXS_STRDUP_A(config_get_string(params, "hostname"));
@@ -582,7 +619,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
             MXS_ABORT_IF_NULL(my_instance->obj_trg);
         }
 
-        MXS_CONFIG_PARAMETER *p = config_get_param(params, "logging_source_user");
+        MXS_CONFIG_PARAMETER* p = config_get_param(params, "logging_source_user");
 
         if (p && my_instance->src_trg)
         {
@@ -610,9 +647,9 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
             my_instance->obj_trg->objects = parse_optstr(p->value, ",", &my_instance->obj_trg->size);
         }
 
-        my_instance->use_ssl = my_instance->ssl_client_cert &&
-                               my_instance->ssl_client_key &&
-                               my_instance->ssl_CA_cert;
+        my_instance->use_ssl = my_instance->ssl_client_cert
+            && my_instance->ssl_client_key
+            && my_instance->ssl_CA_cert;
 
         if (my_instance->use_ssl)
         {
@@ -628,7 +665,7 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
         hktask_add(taskname, sendMessage, (void*)my_instance, 5);
     }
 
-    return (MXS_FILTER *)my_instance;
+    return (MXS_FILTER*)my_instance;
 }
 
 /**
@@ -638,26 +675,30 @@ createInstance(const char *name, MXS_CONFIG_PARAMETER *params)
  * @param qname Name of the queue to be declared
  * @return Returns 0 if an error occurred, 1 if successful
  */
-int declareQueue(MQ_INSTANCE *my_instance, MQ_SESSION* my_session, char* qname)
+int declareQueue(MQ_INSTANCE* my_instance, MQ_SESSION* my_session, char* qname)
 {
     int success = 1;
     amqp_rpc_reply_t reply;
 
     spinlock_acquire(&my_instance->rconn_lock);
 
-    amqp_queue_declare(my_instance->conn, my_instance->channel,
+    amqp_queue_declare(my_instance->conn,
+                       my_instance->channel,
                        amqp_cstring_bytes(qname),
-                       0, 1, 0, 1,
+                       0,
+                       1,
+                       0,
+                       1,
                        amqp_empty_table);
     reply = amqp_get_rpc_reply(my_instance->conn);
     if (reply.reply_type != AMQP_RESPONSE_NORMAL)
     {
         success = 0;
         MXS_ERROR("Queue declaration failed.");
-
     }
 
-    amqp_queue_bind(my_instance->conn, my_instance->channel,
+    amqp_queue_bind(my_instance->conn,
+                    my_instance->channel,
                     amqp_cstring_bytes(qname),
                     amqp_cstring_bytes(my_instance->exchange),
                     amqp_cstring_bytes(my_session->uid),
@@ -667,7 +708,6 @@ int declareQueue(MQ_INSTANCE *my_instance, MQ_SESSION* my_session, char* qname)
     {
         success = 0;
         MXS_ERROR("Failed to bind queue to exchange.");
-
     }
     spinlock_release(&my_instance->rconn_lock);
     return success;
@@ -681,8 +721,8 @@ int declareQueue(MQ_INSTANCE *my_instance, MQ_SESSION* my_session, char* qname)
  */
 bool sendMessage(void* data)
 {
-    MQ_INSTANCE *instance = (MQ_INSTANCE*) data;
-    mqmessage *tmp;
+    MQ_INSTANCE* instance = (MQ_INSTANCE*) data;
+    mqmessage* tmp;
     int err_num = AMQP_STATUS_OK;
 
     spinlock_acquire(&instance->rconn_lock);
@@ -727,10 +767,14 @@ bool sendMessage(void* data)
 
     while (tmp)
     {
-        err_num = amqp_basic_publish(instance->conn, instance->channel,
+        err_num = amqp_basic_publish(instance->conn,
+                                     instance->channel,
                                      amqp_cstring_bytes(instance->exchange),
                                      amqp_cstring_bytes(instance->key),
-                                     0, 0, tmp->prop, amqp_cstring_bytes(tmp->msg));
+                                     0,
+                                     0,
+                                     tmp->prop,
+                                     amqp_cstring_bytes(tmp->msg));
 
         spinlock_acquire(&instance->rconn_lock);
         instance->conn_stat = err_num;
@@ -776,7 +820,7 @@ bool sendMessage(void* data)
  * @param prop Message properties
  * @param msg Message content
  */
-void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg)
+void pushMessage(MQ_INSTANCE* instance, amqp_basic_properties_t* prop, char* msg)
 {
 
     mqmessage* newmsg = static_cast<mqmessage*>(MXS_CALLOC(1, sizeof(mqmessage)));
@@ -812,10 +856,9 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session)
 {
-    const char *db = mxs_mysql_get_current_db(session);
+    const char* db = mxs_mysql_get_current_db(session);
     char* my_db = NULL;
 
     if (*db)
@@ -827,7 +870,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
         }
     }
 
-    MQ_SESSION *my_session;
+    MQ_SESSION* my_session;
 
     if ((my_session = static_cast<MQ_SESSION*>(MXS_CALLOC(1, sizeof(MQ_SESSION)))) != NULL)
     {
@@ -852,8 +895,9 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
  * @param instance      The filter instance data
  * @param session       The session being closed
  */
-static void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session) { }
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
+{
+}
 
 /**
  * Free the memory associated with the session
@@ -861,10 +905,9 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session) { }
  * @param instance      The filter instance
  * @param session       The filter session
  */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    MQ_SESSION *my_session = (MQ_SESSION *) session;
+    MQ_SESSION* my_session = (MQ_SESSION*) session;
     MXS_FREE(my_session->uid);
     MXS_FREE(my_session->db);
     MXS_FREE(my_session);
@@ -879,16 +922,15 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param session       The filter session
  * @param downstream    The downstream filter or router.
  */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_DOWNSTREAM* downstream)
 {
-    MQ_SESSION *my_session = (MQ_SESSION *) session;
+    MQ_SESSION* my_session = (MQ_SESSION*) session;
     my_session->down = *downstream;
 }
 
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER* instance, MXS_FILTER_SESSION* session, MXS_UPSTREAM* upstream)
 {
-    MQ_SESSION *my_session = (MQ_SESSION *) session;
+    MQ_SESSION* my_session = (MQ_SESSION*) session;
     my_session->up = *upstream;
 }
 
@@ -937,18 +979,17 @@ unsigned int pktlen(void* c)
  * @param session       The filter session
  * @param queue         The query data
  */
-static int
-routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
+static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    MQ_SESSION *my_session = (MQ_SESSION *) session;
-    MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
-    char *ptr, t_buf[128], *combined, *canon_q;
-    const char *sesshost, *sessusr;
+    MQ_SESSION* my_session = (MQ_SESSION*) session;
+    MQ_INSTANCE* my_instance = (MQ_INSTANCE*) instance;
+    char* ptr, t_buf[128], * combined, * canon_q;
+    const char* sesshost, * sessusr;
     bool success = false, src_ok = false, schema_ok = false, obj_ok = false;
     int length, i, j, dbcount = 0;
     char** sesstbls;
     unsigned int plen = 0;
-    amqp_basic_properties_t *prop;
+    amqp_basic_properties_t* prop;
 
     /**The user is changing databases*/
     if (*(static_cast<char*>(queue->start) + 4) == 0x02)
@@ -990,7 +1031,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     if (strcmp(my_instance->src_trg->user[i], sessusr) == 0)
                     {
                         MXS_INFO("Trigger is TRG_SOURCE: user: %s = %s",
-                                 my_instance->src_trg->user[i], sessusr);
+                                 my_instance->src_trg->user[i],
+                                 sessusr);
                         src_ok = true;
                         break;
                     }
@@ -1008,7 +1050,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     if (strcmp(my_instance->src_trg->host[i], sesshost) == 0)
                     {
                         MXS_INFO("Trigger is TRG_SOURCE: host: %s = %s",
-                                 my_instance->src_trg->host[i], sesshost);
+                                 my_instance->src_trg->host[i],
+                                 sesshost);
                         src_ok = true;
                         break;
                     }
@@ -1038,7 +1081,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             {
                 if ((tmp = strchr(tblnames[z], '.')) != NULL)
                 {
-                    char *lasts;
+                    char* lasts;
                     tmp = strtok_r(tblnames[z], ".", &lasts);
                     for (i = 0; i < my_instance->shm_trg->size; i++)
                     {
@@ -1047,7 +1090,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                         {
 
                             MXS_INFO("Trigger is TRG_SCHEMA: %s = %s",
-                                     tmp, my_instance->shm_trg->objects[i]);
+                                     tmp,
+                                     my_instance->shm_trg->objects[i]);
 
                             schema_ok = true;
                             break;
@@ -1072,7 +1116,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     {
 
                         MXS_INFO("Trigger is TRG_SCHEMA: %s = %s",
-                                 my_session->db, my_instance->shm_trg->objects[i]);
+                                 my_session->db,
+                                 my_instance->shm_trg->objects[i]);
 
                         schema_ok = true;
                         break;
@@ -1086,7 +1131,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 obj_ok = true;
                 goto validate_triggers;
             }
-
         }
         else
         {
@@ -1105,7 +1149,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
                 if ((strchr(sesstbls[j], '.')) != NULL)
                 {
-                    char *lasts;
+                    char* lasts;
                     tbnm = strtok_r(sesstbls[j], ".", &lasts);
                     tbnm = strtok_r(NULL, ".", &lasts);
                 }
@@ -1123,12 +1167,11 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     {
                         obj_ok = true;
                         MXS_INFO("Trigger is TRG_OBJECT: %s = %s",
-                                 my_instance->obj_trg->objects[i], sesstbls[j]);
+                                 my_instance->obj_trg->objects[i],
+                                 sesstbls[j]);
                         break;
                     }
-
                 }
-
             }
             if (dbcount > 0)
             {
@@ -1146,7 +1189,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 schema_ok = true;
                 goto validate_triggers;
             }
-
         }
         else
         {
@@ -1154,7 +1196,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         }
 
 
-    validate_triggers:
+validate_triggers:
 
         if (src_ok && schema_ok && obj_ok)
         {
@@ -1164,10 +1206,14 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
              */
 
             MXS_INFO("Routing message to: [%s]:%d %s as %s/%s, exchange: %s<%s> key:%s queue:%s",
-                     my_instance->hostname, my_instance->port,
-                     my_instance->vhost, my_instance->username,
-                     my_instance->password, my_instance->exchange,
-                     my_instance->exchange_type, my_instance->key,
+                     my_instance->hostname,
+                     my_instance->port,
+                     my_instance->vhost,
+                     my_instance->username,
+                     my_instance->password,
+                     my_instance->exchange,
+                     my_instance->exchange_type,
+                     my_instance->key,
                      my_instance->queue);
 
             if (my_session->uid == NULL)
@@ -1188,10 +1234,10 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 prop = static_cast<amqp_basic_properties_t*>(MXS_MALLOC(sizeof(amqp_basic_properties_t)));
                 if (prop)
                 {
-                    prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
-                                   AMQP_BASIC_DELIVERY_MODE_FLAG |
-                                   AMQP_BASIC_MESSAGE_ID_FLAG |
-                                   AMQP_BASIC_CORRELATION_ID_FLAG;
+                    prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG
+                        | AMQP_BASIC_DELIVERY_MODE_FLAG
+                        | AMQP_BASIC_MESSAGE_ID_FLAG
+                        | AMQP_BASIC_CORRELATION_ID_FLAG;
                     prop->content_type = amqp_cstring_bytes("text/plain");
                     prop->delivery_mode = AMQP_DELIVERY_PERSISTENT;
                     prop->correlation_id = amqp_cstring_bytes(my_session->uid);
@@ -1206,7 +1252,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     {
                         MXS_ERROR("Cannot form canonical query.");
                     }
-
                 }
 
                 memset(t_buf, 0, 128);
@@ -1221,14 +1266,14 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 pushMessage(my_instance, prop, combined);
                 MXS_FREE(canon_q);
             }
-
         }
 
         /** Pass the query downstream */
     }
 
     return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session, queue);
+                                       my_session->down.session,
+                                       queue);
 }
 
 /**
@@ -1309,7 +1354,7 @@ unsigned int consume_leitoi(unsigned char** c)
 char* consume_lestr(unsigned char** c)
 {
     unsigned int slen = consume_leitoi(c);
-    char *str = static_cast<char*>(MXS_CALLOC((slen + 1), sizeof(char)));
+    char* str = static_cast<char*>(MXS_CALLOC((slen + 1), sizeof(char)));
     if (str)
     {
         memcpy(str, *c, slen);
@@ -1319,7 +1364,7 @@ char* consume_lestr(unsigned char** c)
 }
 
 /**
- *Checks whether the packet is an EOF packet.
+ * Checks whether the packet is an EOF packet.
  * @param p Pointer to the first byte of a packet
  * @return 1 if the packet is an EOF packet and 0 if it is not
  */
@@ -1343,13 +1388,13 @@ unsigned int is_eof(void* p)
  * @param session       The filter session
  * @param reply         The response data
  */
-static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* reply)
 {
-    MQ_SESSION *my_session = (MQ_SESSION *) session;
-    MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
-    char t_buf[128], *combined;
+    MQ_SESSION* my_session = (MQ_SESSION*) session;
+    MQ_INSTANCE* my_instance = (MQ_INSTANCE*) instance;
+    char t_buf[128], * combined;
     unsigned int pkt_len = pktlen(reply->sbuf->data), offset = 0;
-    amqp_basic_properties_t *prop;
+    amqp_basic_properties_t* prop;
 
     if (my_session->was_query)
     {
@@ -1362,10 +1407,10 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
         {
             if ((prop = static_cast<amqp_basic_properties_t*>(MXS_MALLOC(sizeof(amqp_basic_properties_t)))))
             {
-                prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
-                               AMQP_BASIC_DELIVERY_MODE_FLAG |
-                               AMQP_BASIC_MESSAGE_ID_FLAG |
-                               AMQP_BASIC_CORRELATION_ID_FLAG;
+                prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG
+                    | AMQP_BASIC_DELIVERY_MODE_FLAG
+                    | AMQP_BASIC_MESSAGE_ID_FLAG
+                    | AMQP_BASIC_CORRELATION_ID_FLAG;
                 prop->content_type = amqp_cstring_bytes("text/plain");
                 prop->delivery_mode = AMQP_DELIVERY_PERSISTENT;
                 prop->correlation_id = amqp_cstring_bytes(my_session->uid);
@@ -1386,7 +1431,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
             {
                 /**OK packet*/
                 unsigned int aff_rows = 0, l_id = 0, s_flg = 0, wrn = 0;
-                unsigned char *ptr = (unsigned char*) (reply->sbuf->data + 5);
+                unsigned char* ptr = (unsigned char*) (reply->sbuf->data + 5);
                 pkt_len = pktlen(reply->sbuf->data);
                 aff_rows = consume_leitoi(&ptr);
                 l_id = consume_leitoi(&ptr);
@@ -1394,11 +1439,15 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
                 s_flg |= (*ptr++ << 8);
                 wrn |= *ptr++;
                 wrn |= (*ptr++ << 8);
-                sprintf(combined + offset, "OK - affected_rows: %d "
+                sprintf(combined + offset,
+                        "OK - affected_rows: %d "
                         " last_insert_id: %d "
                         " status_flags: %#0x "
                         " warnings: %d ",
-                        aff_rows, l_id, s_flg, wrn);
+                        aff_rows,
+                        l_id,
+                        s_flg,
+                        wrn);
                 offset += strnlen(combined, GWBUF_LENGTH(reply) + 256) - offset;
 
                 if (pkt_len > 7)
@@ -1412,33 +1461,31 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
 
                 packet_ok = 1;
                 was_last = 1;
-
             }
             else if (*(reply->sbuf->data + 4) == 0xff)
             {
                 /**ERR packet*/
-                sprintf(combined + offset, "ERROR - message: %.*s",
+                sprintf(combined + offset,
+                        "ERROR - message: %.*s",
                         (int) (static_cast<unsigned char*>(reply->end) - (reply->sbuf->data + 13)),
-                        (char *) reply->sbuf->data + 13);
+                        (char*) reply->sbuf->data + 13);
                 packet_ok = 1;
                 was_last = 1;
-
             }
             else if (*(reply->sbuf->data + 4) == 0xfb)
             {
                 /**LOCAL_INFILE request packet*/
-                unsigned char *rset = (unsigned char*) reply->sbuf->data;
+                unsigned char* rset = (unsigned char*) reply->sbuf->data;
                 strcpy(combined + offset, "LOCAL_INFILE: ");
                 strncat(combined + offset, (const char*) rset + 5, pktlen(rset));
                 packet_ok = 1;
                 was_last = 1;
-
             }
             else
             {
                 /**Result set*/
-                unsigned char *rset = (unsigned char*) (reply->sbuf->data + 4);
-                char *tmp;
+                unsigned char* rset = (unsigned char*) (reply->sbuf->data + 4);
+                char* tmp;
                 unsigned int col_cnt = consume_leitoi(&rset);
 
                 tmp = static_cast<char*>(MXS_CALLOC(256, sizeof(char)));
@@ -1452,7 +1499,6 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
 
                 packet_ok = 1;
                 was_last = 1;
-
             }
             if (packet_ok)
             {
@@ -1466,15 +1512,14 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
 
                     MXS_FREE(my_session->uid);
                     my_session->uid = NULL;
-
                 }
             }
         }
-
     }
 
     return my_session->up.clientReply(my_session->up.instance,
-                                      my_session->up.session, reply);
+                                      my_session->up.session,
+                                      reply);
 }
 
 /**
@@ -1487,22 +1532,29 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
  * @param       fsession        Filter session, may be NULL
  * @param       dcb             The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
 {
-    MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
+    MQ_INSTANCE* my_instance = (MQ_INSTANCE*) instance;
 
     if (my_instance)
     {
-        dcb_printf(dcb, "Connecting to [%s]:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
-                   my_instance->hostname, my_instance->port,
+        dcb_printf(dcb,
+                   "Connecting to [%s]:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
+                   my_instance->hostname,
+                   my_instance->port,
                    my_instance->username,
-                   my_instance->vhost, my_instance->exchange,
-                   my_instance->key, my_instance->queue
-                  );
-        dcb_printf(dcb, "%-16s%-16s%-16s\n",
-                   "Messages", "Queued", "Sent");
-        dcb_printf(dcb, "%-16d%-16d%-16d\n",
+                   my_instance->vhost,
+                   my_instance->exchange,
+                   my_instance->key,
+                   my_instance->queue
+                   );
+        dcb_printf(dcb,
+                   "%-16s%-16s%-16s\n",
+                   "Messages",
+                   "Queued",
+                   "Sent");
+        dcb_printf(dcb,
+                   "%-16d%-16d%-16d\n",
                    my_instance->stats.n_msg,
                    my_instance->stats.n_queued,
                    my_instance->stats.n_sent);
@@ -1518,10 +1570,9 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  * @param       instance        The filter instance
  * @param       fsession        Filter session, may be NULL
  */
-static json_t*
-diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    MQ_INSTANCE *my_instance = (MQ_INSTANCE*)instance;
+    MQ_INSTANCE* my_instance = (MQ_INSTANCE*)instance;
     json_t* rval = json_object();
 
     json_object_set_new(rval, "host", json_string(my_instance->hostname));

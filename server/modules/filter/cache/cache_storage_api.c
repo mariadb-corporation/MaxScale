@@ -29,5 +29,3 @@ bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
 
     return lhs->data == rhs->data;
 }
-
-

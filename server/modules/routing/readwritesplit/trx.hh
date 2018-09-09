@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -27,8 +27,8 @@ public:
     // A log of executed queries, for transaction replay
     typedef std::list<mxs::Buffer> TrxLog;
 
-    Trx():
-        m_size(0)
+    Trx()
+        : m_size(0)
     {
     }
 
@@ -149,7 +149,7 @@ public:
     }
 
 private:
-    mxs::SHA1Checksum m_checksum; /**< Checksum of the transaction */
-    TrxLog            m_log; /**< The transaction contents */
-    size_t            m_size; /**< Transaction size in bytes */
+    mxs::SHA1Checksum m_checksum;   /**< Checksum of the transaction */
+    TrxLog            m_log;        /**< The transaction contents */
+    size_t            m_size;       /**< Transaction size in bytes */
 };

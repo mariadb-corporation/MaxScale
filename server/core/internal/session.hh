@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <maxscale/ccdefs.hh>
 
@@ -38,18 +38,18 @@ typedef struct SESSION_VARIABLE
 } SESSION_VARIABLE;
 
 typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-typedef std::deque<std::vector<uint8_t>> SessionStmtQueue;
-typedef std::unordered_set<DCB*> DCBSet;
+typedef std::deque<std::vector<uint8_t>>                  SessionStmtQueue;
+typedef std::unordered_set<DCB*>                          DCBSet;
 
 // Class that holds the session specific filter data
 class SessionFilter
 {
 public:
 
-    SessionFilter(const SFilterDef& f):
-        filter(f),
-        instance(nullptr),
-        session(nullptr)
+    SessionFilter(const SFilterDef& f)
+        : filter(f)
+        , instance(nullptr)
+        , session(nullptr)
     {
     }
 
@@ -58,7 +58,7 @@ public:
     MXS_FILTER_SESSION* session;
 };
 
-class Session: public MXS_SESSION
+class Session : public MXS_SESSION
 {
 public:
     using FilterList = std::vector<SessionFilter>;
@@ -72,9 +72,11 @@ public:
         return m_filters;
     }
 
-    bool add_variable(const char* name, session_variable_handler_t handler, void* context);
-    char* set_variable_value(const char* name_begin, const char* name_end,
-                             const char* value_begin, const char* value_end);
+    bool  add_variable(const char* name, session_variable_handler_t handler, void* context);
+    char* set_variable_value(const char* name_begin,
+                             const char* name_end,
+                             const char* value_begin,
+                             const char* value_end);
     bool remove_variable(const char* name, void** context);
     void retain_statement(GWBUF* pBuffer);
     void dump_statements() const;
@@ -99,10 +101,9 @@ public:
 private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
-    SessionStmtQueue  m_last_statements; /*< The N last statements by the client */
-    DCBSet            m_dcb_set;         /*< Set of associated backend DCBs */
+    SessionStmtQueue  m_last_statements;/*< The N last statements by the client */
+    DCBSet            m_dcb_set;        /*< Set of associated backend DCBs */
 };
-
 }
 
 std::unique_ptr<ResultSet> sessionGetList();

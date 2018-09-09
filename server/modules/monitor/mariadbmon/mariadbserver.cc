@@ -28,11 +28,11 @@ using maxscale::string_printf;
 
 namespace
 {
-    // Used for Slave_IO_Running
-    const char YES[] = "Yes";
-    const char PREPARING[] = "Preparing";
-    const char CONNECTING[] = "Connecting";
-    const char NO[] = "No";
+// Used for Slave_IO_Running
+const char YES[] = "Yes";
+const char PREPARING[] = "Preparing";
+const char CONNECTING[] = "Connecting";
+const char NO[] = "No";
 }
 
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
@@ -55,7 +55,8 @@ NodeData::NodeData()
     , in_stack(false)
     , cycle(CYCLE_NONE)
     , reach(REACH_UNKNOWN)
-{}
+{
+}
 
 void NodeData::reset_results()
 {
@@ -114,7 +115,10 @@ bool MariaDBServer::execute_cmd(const string& cmd, std::string* errmsg_out)
             int cols = mysql_num_fields(result);
             int rows = mysql_num_rows(result);
             *errmsg_out = string_printf("Query '%s' returned %d columns and %d rows of data when none "
-                                        "was expected.", cmd.c_str(), cols, rows);
+                                        "was expected.",
+                                        cmd.c_str(),
+                                        cols,
+                                        rows);
         }
     }
     else if (errmsg_out)
@@ -131,19 +135,21 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     bool all_slaves_status = false;
     switch (m_version)
     {
-        case version::MARIADB_100:
-        case version::BINLOG_ROUTER:
-            columns = 42;
-            all_slaves_status = true;
-            query = "SHOW ALL SLAVES STATUS";
-            break;
-        case version::MARIADB_MYSQL_55:
-            columns = 40;
-            query = "SHOW SLAVE STATUS";
-            break;
-        default:
-            mxb_assert(!true); // This method should not be called for versions < 5.5
-            return false;
+    case version::MARIADB_100:
+    case version::BINLOG_ROUTER:
+        columns = 42;
+        all_slaves_status = true;
+        query = "SHOW ALL SLAVES STATUS";
+        break;
+
+    case version::MARIADB_MYSQL_55:
+        columns = 40;
+        query = "SHOW SLAVE STATUS";
+        break;
+
+    default:
+        mxb_assert(!true);      // This method should not be called for versions < 5.5
+        return false;
     }
 
     auto result = execute_query(query, errmsg_out);
@@ -154,7 +160,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     else if (result->get_col_count() < columns)
     {
         MXS_ERROR("'%s' returned less than the expected amount of columns. Expected %u columns, "
-                  "got %" PRId64 ".", query.c_str(), columns, result->get_col_count());
+                  "got %" PRId64 ".",
+                  query.c_str(),
+                  columns,
+                  result->get_col_count());
         return false;
     }
 
@@ -170,9 +179,9 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     auto i_seconds_behind_master = result->get_col_index("Seconds_Behind_Master");
 
     const char INVALID_DATA[] = "'%s' returned invalid data.";
-    if (i_master_host < 0 || i_master_port < 0 || i_slave_io_running < 0 || i_slave_sql_running < 0 ||
-        i_master_server_id < 0 || i_last_io_errno < 0  || i_last_io_error < 0 || i_last_sql_error < 0 ||
-        i_seconds_behind_master < 0)
+    if (i_master_host < 0 || i_master_port < 0 || i_slave_io_running < 0 || i_slave_sql_running < 0
+        || i_master_server_id < 0 || i_last_io_errno < 0 || i_last_io_error < 0 || i_last_sql_error < 0
+        || i_seconds_behind_master < 0)
     {
         MXS_ERROR(INVALID_DATA, query.c_str());
         return false;
@@ -187,8 +196,8 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         i_slave_hb_period = result->get_col_index("Slave_heartbeat_period");
         i_using_gtid = result->get_col_index("Using_Gtid");
         i_gtid_io_pos = result->get_col_index("Gtid_IO_Pos");
-        if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0 ||
-            i_using_gtid < 0 || i_gtid_io_pos < 0)
+        if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0
+            || i_using_gtid < 0 || i_gtid_io_pos < 0)
         {
             MXS_ERROR(INVALID_DATA, query.c_str());
             return false;
@@ -205,15 +214,15 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         string last_sql_error = result->get_string(i_last_sql_error);
         new_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-        new_row.slave_io_running =
-            SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
+        new_row.slave_io_running
+            = SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         new_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
         new_row.master_server_id = result->get_uint(i_master_server_id);
 
         auto rlag = result->get_uint(i_seconds_behind_master);
         // If slave connection is stopped, the value given by the backend is null -> -1.
-        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
-            (rlag > INT_MAX) ? INT_MAX : rlag;
+        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED
+                                                   : (rlag > INT_MAX) ? INT_MAX : rlag;
 
         if (all_slaves_status)
         {
@@ -236,8 +245,8 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
             // When the new row was created, 'last_data_time' was set to the current time. If it seems
             // like the slave is not receiving data from the master, set the time to the one
             // in the previous monitor tick.
-            if (new_row.received_heartbeats == old_row->received_heartbeats &&
-                new_row.gtid_io_pos == old_row->gtid_io_pos)
+            if (new_row.received_heartbeats == old_row->received_heartbeats
+                && new_row.gtid_io_pos == old_row->gtid_io_pos)
             {
                 new_row.last_data_time = old_row->last_data_time;
             }
@@ -333,7 +342,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     MXS_MONITORED_SERVER* database = m_server_base;
     string query = "SELECT @@global.server_id, @@read_only;";
     int columns = 2;
-    if (m_version ==  version::MARIADB_100)
+    if (m_version == version::MARIADB_100)
     {
         query.erase(query.end() - 1);
         query += ", @@global.gtid_domain_id;";
@@ -349,7 +358,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     {
         rval = true;
         int64_t server_id_parsed = result->get_uint(i_id);
-        if (server_id_parsed < 0) // This is very unlikely, requiring an error in server or connector.
+        if (server_id_parsed < 0)   // This is very unlikely, requiring an error in server or connector.
         {
             server_id_parsed = SERVER_ID_UNKNOWN;
             rval = false;
@@ -371,7 +380,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
         if (columns == 3)
         {
             int64_t domain_id_parsed = result->get_uint(i_domain);
-            if (domain_id_parsed < 0) // Same here.
+            if (domain_id_parsed < 0)   // Same here.
             {
                 domain_id_parsed = GTID_DOMAIN_UNKNOWN;
                 rval = false;
@@ -391,16 +400,16 @@ void MariaDBServer::warn_replication_settings() const
     const char* servername = name();
     if (m_rpl_settings.gtid_strict_mode == false)
     {
-        const char NO_STRICT[] =
-            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-            "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+        const char NO_STRICT[]
+            = "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+              "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
         MXS_WARNING(NO_STRICT, servername);
     }
     if (m_rpl_settings.log_slave_updates == false)
     {
-        const char NO_SLAVE_UPDATES[] =
-            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-            "will break for lagging slaves if '%s' is promoted.";
+        const char NO_SLAVE_UPDATES[]
+            = "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+              "will break for lagging slaves if '%s' is promoted.";
         MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
 }
@@ -413,8 +422,8 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
      * use gtid_current_pos. */
     const bool use_binlog_pos = m_rpl_settings.log_bin && m_rpl_settings.log_slave_updates;
 
-    int seconds_remaining = 1; // Cheat a bit here to allow at least one iteration.
-    int sleep_ms = 200; // How long to sleep on next iteration. Incremented slowly.
+    int seconds_remaining = 1;  // Cheat a bit here to allow at least one iteration.
+    int sleep_ms = 200;         // How long to sleep on next iteration. Incremented slowly.
     time_t start_time = time(NULL);
     while (seconds_remaining > 0 && !gtid_reached && !error)
     {
@@ -433,7 +442,7 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
                 {
                     // Sleep for a moment, then try again.
                     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
-                    sleep_ms += 100; // Sleep a bit more next iteration.
+                    sleep_ms += 100;    // Sleep a bit more next iteration.
                 }
             }
         }
@@ -445,7 +454,8 @@ bool MariaDBServer::wait_until_gtid(const GtidList& target, int timeout, json_t*
 
     if (error)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Failed to update gtid on server '%s' while waiting for catchup.",
+        PRINT_MXS_JSON_ERROR(err_out,
+                             "Failed to update gtid on server '%s' while waiting for catchup.",
                              name());
     }
     else if (!gtid_reached)
@@ -559,15 +569,18 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result, "server_id", json_integer(m_server_id));
     json_object_set_new(result, "read_only", json_boolean(m_read_only));
 
-    json_object_set_new(result, "gtid_current_pos",
-                        m_gtid_current_pos.empty() ? json_null() :
-                            json_string(m_gtid_current_pos.to_string().c_str()));
+    json_object_set_new(result,
+                        "gtid_current_pos",
+                        m_gtid_current_pos.empty() ? json_null()
+                                                   : json_string(m_gtid_current_pos.to_string().c_str()));
 
-    json_object_set_new(result, "gtid_binlog_pos",
-                        m_gtid_binlog_pos.empty() ? json_null() :
-                            json_string(m_gtid_binlog_pos.to_string().c_str()));
+    json_object_set_new(result,
+                        "gtid_binlog_pos",
+                        m_gtid_binlog_pos.empty() ? json_null()
+                                                  : json_string(m_gtid_binlog_pos.to_string().c_str()));
 
-    json_object_set_new(result, "master_group",
+    json_object_set_new(result,
+                        "master_group",
                         (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
 
     json_t* slave_connections = json_array();
@@ -607,9 +620,9 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* error_out)
             rval = m_gtid_current_pos.can_replicate_from(master->m_gtid_binlog_pos);
             if (!rval)
             {
-                *error_out = string("gtid_current_pos of '") + name() + "' (" +
-                    m_gtid_current_pos.to_string() + ") is incompatible with gtid_binlog_pos of '" +
-                    master->name() + "' (" + master->m_gtid_binlog_pos.to_string() + ").";
+                *error_out = string("gtid_current_pos of '") + name() + "' ("
+                    + m_gtid_current_pos.to_string() + ") is incompatible with gtid_binlog_pos of '"
+                    + master->name() + "' (" + master->m_gtid_binlog_pos.to_string() + ").";
             }
         }
     }
@@ -627,10 +640,10 @@ bool MariaDBServer::redirect_one_slave(const string& change_cmd)
     const char* query = "STOP SLAVE;";
     if (mxs_mysql_query(slave_conn, query) == 0)
     {
-        query = "RESET SLAVE;"; // To erase any old I/O or SQL errors
+        query = "RESET SLAVE;";     // To erase any old I/O or SQL errors
         if (mxs_mysql_query(slave_conn, query) == 0)
         {
-            query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+            query = "CHANGE MASTER TO ...";     // Don't show the real query as it contains a password.
             if (mxs_mysql_query(slave_conn, change_cmd.c_str()) == 0)
             {
                 query = "START SLAVE;";
@@ -645,8 +658,10 @@ bool MariaDBServer::redirect_one_slave(const string& change_cmd)
 
     if (!success)
     {
-        MXS_WARNING("Slave '%s' redirection failed: '%s'. Query: '%s'.", name(),
-                    mysql_error(slave_conn), query);
+        MXS_WARNING("Slave '%s' redirection failed: '%s'. Query: '%s'.",
+                    name(),
+                    mysql_error(slave_conn),
+                    query);
     }
     return success;
 }
@@ -667,7 +682,7 @@ bool MariaDBServer::join_cluster(const string& change_cmd, bool disable_server_e
             // diverged from the rest of the cluster.
             disable_events();
         }
-        query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+        query = "CHANGE MASTER TO ...";     // Don't show the real query as it contains a password.
         if (mxs_mysql_query(server_conn, change_cmd.c_str()) == 0)
         {
             query = "START SLAVE;";
@@ -703,8 +718,10 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
             std::getline(sql_file, line);
             if (sql_file.bad())
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Error when reading sql text file '%s': '%s'.",
-                                     path.c_str(), mxs_strerror(errno));
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Error when reading sql text file '%s': '%s'.",
+                                     path.c_str(),
+                                     mxs_strerror(errno));
                 error = true;
             }
             // Skip empty lines and comment lines
@@ -722,8 +739,12 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Failed to execute sql from text file '%s'. Query: '%s'. "
-                                         "Error: '%s'.", path.c_str(), line.c_str(), mysql_error(conn));
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Failed to execute sql from text file '%s'. Query: '%s'. "
+                                         "Error: '%s'.",
+                                         path.c_str(),
+                                         line.c_str(),
+                                         mysql_error(conn));
                     error = true;
                 }
             }
@@ -745,21 +766,24 @@ void MariaDBServer::monitor_server()
     /* Query different things depending on server version/type. */
     switch (m_version)
     {
-        case version::MARIADB_MYSQL_55:
-            query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
-            break;
-        case version::MARIADB_100:
-            query_ok = read_server_variables(&errmsg) && update_gtids(&errmsg) &&
-                       update_slave_status(&errmsg);
-            break;
-        case version::BINLOG_ROUTER:
-            // TODO: Add special version of server variable query.
-            query_ok = update_slave_status(&errmsg);
-            break;
-        default:
-            // Do not update unknown versions.
-            query_ok = true;
-            break;
+    case version::MARIADB_MYSQL_55:
+        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
+        break;
+
+    case version::MARIADB_100:
+        query_ok = read_server_variables(&errmsg) && update_gtids(&errmsg)
+            && update_slave_status(&errmsg);
+        break;
+
+    case version::BINLOG_ROUTER:
+        // TODO: Add special version of server variable query.
+        query_ok = update_slave_status(&errmsg);
+        break;
+
+    default:
+        // Do not update unknown versions.
+        query_ok = true;
+        break;
     }
 
     if (query_ok)
@@ -789,8 +813,8 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     if (rval)
     {
         /** Store master_id of current node. */
-        m_server_base->server->master_id = !m_slave_status.empty() ?
-            m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
+        m_server_base->server->master_id = !m_slave_status.empty()
+            ? m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
     return rval;
 }
@@ -806,9 +830,9 @@ void MariaDBServer::update_server_version()
     mxs_mysql_set_server_version(conn, srv);
 
     // Check whether this server is a MaxScale Binlog Server.
-    MYSQL_RES *result;
-    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0 &&
-        (result = mysql_store_result(conn)) != NULL)
+    MYSQL_RES* result;
+    if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
+        && (result = mysql_store_result(conn)) != NULL)
     {
         m_version = version::BINLOG_ROUTER;
         mysql_free_result(result);
@@ -829,7 +853,8 @@ void MariaDBServer::update_server_version()
         {
             m_version = version::OLD;
             MXS_ERROR("MariaDB/MySQL version of server '%s' is less than 5.5, which is not supported. "
-                      "The server is ignored by the monitor. Server version: '%s'.", name(),
+                      "The server is ignored by the monitor. Server version: '%s'.",
+                      name(),
                       srv->version_string);
         }
     }
@@ -852,7 +877,8 @@ void MariaDBServer::check_permissions()
         if (!had_status(SERVER_AUTH_ERROR))
         {
             MXS_WARNING("Error during monitor permissions test for server '%s': %s",
-                        name(), err_msg.c_str());
+                        name(),
+                        err_msg.c_str());
         }
     }
     else
@@ -893,8 +919,8 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
         {
             // It's enough to check just the following two items, as these are used in
             // 'build_replication_graph'.
-            if (old_slave_status[i].slave_io_running != new_slave_status[i].slave_io_running ||
-                old_slave_status[i].master_server_id != new_slave_status[i].master_server_id)
+            if (old_slave_status[i].slave_io_running != new_slave_status[i].slave_io_running
+                || old_slave_status[i].master_server_id != new_slave_status[i].master_server_id)
             {
                 rval = false;
                 break;
@@ -915,10 +941,9 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
 const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& search_row, size_t guess_ind)
 {
     // Helper function. Checks if the connection in the new row is to the same server than in the old row.
-    auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool
-    {
-        return (rhs.master_host == lhs.master_host && rhs.master_port == lhs.master_port);
-    };
+    auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool {
+            return rhs.master_host == lhs.master_host && rhs.master_port == lhs.master_port;
+        };
 
     // Usually the same slave connection can be found from the same index than in the previous slave
     // status array, but this is not 100% (e.g. dba has just added a new connection).
@@ -951,7 +976,7 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     // TODO: Add relay server support
     if (!is_master())
     {
-        reason =  "it is not the current master or it is in maintenance.";
+        reason = "it is not the current master or it is in maintenance.";
     }
     else if (!update_replication_settings(&query_error))
     {
@@ -984,11 +1009,11 @@ bool MariaDBServer::can_be_demoted_failover(string* reason_out)
 
     if (is_master())
     {
-        reason =  "it is a running master.";
+        reason = "it is a running master.";
     }
     else if (is_running())
     {
-        reason =  "it is running.";
+        reason = "it is running.";
     }
     else if (m_gtid_binlog_pos.empty())
     {
@@ -1062,8 +1087,8 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     {
         auto master_id = ss.master_server_id;
         // Should this check 'Master_Host' and 'Master_Port' instead of server id:s?
-        if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected &&
-            ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+        if (master_id > 0 && master_id == target_id && ss.slave_sql_running && ss.seen_connected
+            && ss.slave_io_running != SlaveStatus::SLAVE_IO_NO)
         {
             rval = &ss;
             break;
@@ -1077,42 +1102,50 @@ bool MariaDBServer::disable_events()
     ManipulatorFunc disabler = [this](const string& db_name,
                                       const string& event_name,
                                       const string& event_definer,
-                                      const string& event_status) -> bool
-    {
-        bool rval = true;
-        string error_msg;
-        if (event_status == "ENABLED")
-        {
-            // Found an enabled event. Disable it. Must first switch to the correct database.
-            string use_db_query = string_printf("USE %s;", db_name.c_str());
-            if (execute_cmd(use_db_query, &error_msg))
+                                      const string& event_status) -> bool {
+            bool rval = true;
+            string error_msg;
+            if (event_status == "ENABLED")
             {
-                // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
-                // This causes problems if the monitor user does not have privileges to run
-                // the event contents. Prevent this by setting definer explicitly.
-                string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s DISABLE ON SLAVE;",
-                                                         event_definer.c_str(), event_name.c_str());
-                if (execute_cmd(alter_event_query, &error_msg))
+                // Found an enabled event. Disable it. Must first switch to the correct database.
+                string use_db_query = string_printf("USE %s;", db_name.c_str());
+                if (execute_cmd(use_db_query, &error_msg))
                 {
-                    MXS_NOTICE("Event '%s' of database '%s' disabled on '%s'.",
-                               event_name.c_str(), db_name.c_str(), name());
+                    // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
+                    // This causes problems if the monitor user does not have privileges to run
+                    // the event contents. Prevent this by setting definer explicitly.
+                    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s DISABLE ON SLAVE;",
+                                                             event_definer.c_str(),
+                                                             event_name.c_str());
+                    if (execute_cmd(alter_event_query, &error_msg))
+                    {
+                        MXS_NOTICE("Event '%s' of database '%s' disabled on '%s'.",
+                                   event_name.c_str(),
+                                   db_name.c_str(),
+                                   name());
+                    }
+                    else
+                    {
+                        rval = false;
+                        MXS_ERROR("Could not disable event '%s' of database '%s' on '%s': %s",
+                                  event_name.c_str(),
+                                  db_name.c_str(),
+                                  name(),
+                                  error_msg.c_str());
+                    }
                 }
                 else
                 {
                     rval = false;
-                    MXS_ERROR("Could not disable event '%s' of database '%s' on '%s': %s",
-                              event_name.c_str(), db_name.c_str(), name() , error_msg.c_str());
+                    MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not disabled.",
+                              db_name.c_str(),
+                              name(),
+                              event_name.c_str(),
+                              error_msg.c_str());
                 }
             }
-            else
-            {
-                rval = false;
-                MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not disabled.",
-                          db_name.c_str(), name(), event_name.c_str(), error_msg.c_str());
-            }
-        }
-        return rval;
-    };
+            return rval;
+        };
 
     warn_event_scheduler();
     return events_foreach(disabler);
@@ -1125,39 +1158,47 @@ bool MariaDBServer::enable_events()
     ManipulatorFunc enabler = [this](const string& db_name,
                                      const string& event_name,
                                      const string& event_definer,
-                                     const string& event_status) -> bool
-    {
-        bool rval = true;
-        string error_msg;
-        if (event_status == "SLAVESIDE_DISABLED")
-        {
-            // Found a disabled event. Enable it. Must first switch to the correct database.
-            string use_db_query = string_printf("USE %s;", db_name.c_str());
-            if (execute_cmd(use_db_query, &error_msg))
+                                     const string& event_status) -> bool {
+            bool rval = true;
+            string error_msg;
+            if (event_status == "SLAVESIDE_DISABLED")
             {
-                string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s ENABLE;",
-                                                         event_definer.c_str(), event_name.c_str());
-                if (execute_cmd(alter_event_query, &error_msg))
+                // Found a disabled event. Enable it. Must first switch to the correct database.
+                string use_db_query = string_printf("USE %s;", db_name.c_str());
+                if (execute_cmd(use_db_query, &error_msg))
                 {
-                    MXS_NOTICE("Event '%s' of database '%s' enabled on '%s'.",
-                               event_name.c_str(), db_name.c_str(), name());
+                    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s ENABLE;",
+                                                             event_definer.c_str(),
+                                                             event_name.c_str());
+                    if (execute_cmd(alter_event_query, &error_msg))
+                    {
+                        MXS_NOTICE("Event '%s' of database '%s' enabled on '%s'.",
+                                   event_name.c_str(),
+                                   db_name.c_str(),
+                                   name());
+                    }
+                    else
+                    {
+                        rval = false;
+                        MXS_ERROR("Could not enable event '%s' of database '%s' on '%s': %s",
+                                  event_name.c_str(),
+                                  db_name.c_str(),
+                                  name(),
+                                  error_msg.c_str());
+                    }
                 }
                 else
                 {
                     rval = false;
-                    MXS_ERROR("Could not enable event '%s' of database '%s' on '%s': %s",
-                              event_name.c_str(), db_name.c_str(), name() , error_msg.c_str());
+                    MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not enabled.",
+                              db_name.c_str(),
+                              name(),
+                              event_name.c_str(),
+                              error_msg.c_str());
                 }
             }
-            else
-            {
-                rval = false;
-                MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not enabled.",
-                          db_name.c_str(), name(), event_name.c_str(), error_msg.c_str());
-            }
-        }
-        return rval;
-    };
+            return rval;
+        };
 
     warn_event_scheduler();
     return events_foreach(enabler);
@@ -1226,9 +1267,12 @@ string SlaveStatus::to_string() const
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
-            "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
-            host_port.c_str(), running_states.c_str(), master_server_id,
-            gtid_io_pos.to_string().c_str(), seconds_behind_master);
+        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
+        host_port.c_str(),
+        running_states.c_str(),
+        master_server_id,
+        gtid_io_pos.to_string().c_str(),
+        seconds_behind_master);
     return rval;
 }
 
@@ -1238,12 +1282,14 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "connection_name", json_string(name.c_str()));
     json_object_set_new(result, "master_host", json_string(master_host.c_str()));
     json_object_set_new(result, "master_port", json_integer(master_port));
-    json_object_set_new(result, "slave_io_running",
+    json_object_set_new(result,
+                        "slave_io_running",
                         json_string(slave_io_to_string(slave_io_running).c_str()));
     json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
-    json_object_set_new(result, "seconds_behing_master",
-                        seconds_behind_master == MXS_RLAG_UNDEFINED ? json_null() :
-                            json_integer(seconds_behind_master));
+    json_object_set_new(result,
+                        "seconds_behing_master",
+                        seconds_behind_master == MXS_RLAG_UNDEFINED ? json_null()
+                                                                    : json_integer(seconds_behind_master));
     json_object_set_new(result, "master_server_id", json_integer(master_server_id));
     json_object_set_new(result, "last_io_or_sql_error", json_string(last_error.c_str()));
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
@@ -1262,7 +1308,7 @@ SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::str
     {
         rval = SLAVE_IO_CONNECTING;
     }
-    else if (str !=  NO)
+    else if (str != NO)
     {
         MXS_ERROR("Unexpected value for Slave_IO_Running: '%s'.", str.c_str());
     }
@@ -1274,17 +1320,20 @@ string SlaveStatus::slave_io_to_string(SlaveStatus::slave_io_running_t slave_io)
     string rval;
     switch (slave_io)
     {
-        case SlaveStatus::SLAVE_IO_YES:
-            rval = YES;
-            break;
-        case SlaveStatus::SLAVE_IO_CONNECTING:
-            rval = CONNECTING;
-            break;
-        case SlaveStatus::SLAVE_IO_NO:
-            rval = NO;
-            break;
-        default:
-            mxb_assert(!false);
+    case SlaveStatus::SLAVE_IO_YES:
+        rval = YES;
+        break;
+
+    case SlaveStatus::SLAVE_IO_CONNECTING:
+        rval = CONNECTING;
+        break;
+
+    case SlaveStatus::SLAVE_IO_NO:
+        rval = NO;
+        break;
+
+    default:
+        mxb_assert(!false);
     }
     return rval;
 }
@@ -1334,7 +1383,7 @@ int64_t QueryResult::get_current_row_index() const
 
 int64_t QueryResult::get_col_count() const
 {
-    return m_resultset ? mysql_num_fields(m_resultset): -1;
+    return m_resultset ? mysql_num_fields(m_resultset) : -1;
 }
 
 int64_t QueryResult::get_row_count() const
@@ -1362,7 +1411,7 @@ int64_t QueryResult::get_uint(int64_t column_ind) const
     int64_t rval = -1;
     if (data && *data)
     {
-        errno = 0; // strtoll sets this
+        errno = 0;      // strtoll sets this
         char* endptr = NULL;
         auto parsed = strtoll(data, &endptr, 10);
         if (parsed >= 0 && errno == 0 && *endptr == '\0')
@@ -1377,5 +1426,5 @@ bool QueryResult::get_bool(int64_t column_ind) const
 {
     mxb_assert(column_ind < get_col_count() && column_ind >= 0);
     char* data = m_rowdata[column_ind];
-    return data ? (strcmp(data,"Y") == 0 || strcmp(data, "1") == 0) : false;
+    return data ? (strcmp(data, "Y") == 0 || strcmp(data, "1") == 0) : false;
 }

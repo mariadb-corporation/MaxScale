@@ -15,7 +15,7 @@ DEFINE_EXCEPTION(Whoopsy);
 
 // TODO these should be read from maxscale.cnf. Maybe the test-lib should replace
 // any "###ENV_VAR###", with environment variables so that code and conf can share.
-constexpr int   max_qps = 1000;
+constexpr int max_qps = 1000;
 constexpr float throttling_duration = 10000 / 1000.0;
 constexpr float sampling_duration = 250 / 1000.0;
 constexpr float continuous_duration = 2000 / 1000.0;
@@ -24,7 +24,8 @@ constexpr int NUM_ROWS = 100000;
 
 void create_table(MYSQL* conn)
 {
-    if (execute_query_silent(conn, "drop table if exists test.throttle;"
+    if (execute_query_silent(conn,
+                             "drop table if exists test.throttle;"
                              "create table test.throttle(id int, name varchar(30),"
                              "primary key(id));"))
     {
@@ -57,9 +58,9 @@ void insert_rows(MYSQL* conn)
 
 struct ReadSpeed
 {
-    bool error;
+    bool           error;
     base::Duration duration;
-    float qps;
+    float          qps;
 };
 
 ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
@@ -87,8 +88,8 @@ ReadSpeed read_rows(MYSQL* conn, int num_rows, int max_qps, bool expect_error)
         // Maybe a create function template make_unique_deleter. Should work for most cases.
         // But it would be safer with one regular function per type/function pair, returning
         // a unique pointer.
-        std::unique_ptr<MYSQL_RES, void(*)(MYSQL_RES*)> result(mysql_store_result(conn),
-                                                               mysql_free_result);
+        std::unique_ptr<MYSQL_RES, void (*)(MYSQL_RES*)> result(mysql_store_result(conn),
+                                                                mysql_free_result);
         if (!result)
         {
             THROW(Whoopsy, "No resultset for index=" << index);
@@ -150,12 +151,12 @@ void verify_throttling_performace(TestConnections& test)
     auto rs2 = read_rows(test.maxscales->conn_rwsplit[0], three_quarter, 0, false);
     std::cout << "2: " << rs2.qps << "qps " << " duration " << rs2.duration << '\n';
 
-    if (std::abs(rs1.qps - max_qps) > 0.1 * max_qps ||
-        std::abs(rs2.qps - max_qps) > 0.1 * max_qps)
+    if (std::abs(rs1.qps - max_qps) > 0.1 * max_qps
+        || std::abs(rs2.qps - max_qps) > 0.1 * max_qps)
     {
         std::ostringstream os;
-        os << "Throttled speed 1: " << rs1.qps << " or 2: " << rs2.qps <<
-           "differs from max_qps " << max_qps << " by more than 10%%";
+        os << "Throttled speed 1: " << rs1.qps << " or 2: " << rs2.qps
+           << "differs from max_qps " << max_qps << " by more than 10%%";
         test.add_result(1, os.str().c_str());
     }
 }
@@ -185,10 +186,10 @@ void verify_throttling_disconnect(TestConnections& test)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     srand(clock());
-    TestConnections test{argc, argv};
+    TestConnections test {argc, argv};
 
     try
     {

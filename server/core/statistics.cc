@@ -37,7 +37,7 @@ static bool stats_initialized = false;
 
 static size_t get_cache_line_size()
 {
-    size_t rval = 64; // Cache lines are 64 bytes for x86
+    size_t rval = 64;   // Cache lines are 64 bytes for x86
 
 #ifdef _SC_LEVEL1_DCACHE_LINESIZE
     rval = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
@@ -47,7 +47,10 @@ static size_t get_cache_line_size()
     {
         MXS_WARNING("Cache line size reported to be %lu bytes when a 64-bit "
                     "integer is %lu bytes. Increasing statistics to the minimum "
-                    "size of %lu bytes.", rval, sizeof(int64_t), sizeof(int64_t));
+                    "size of %lu bytes.",
+                    rval,
+                    sizeof(int64_t),
+                    sizeof(int64_t));
         rval = sizeof(int64_t);
     }
 
@@ -164,21 +167,21 @@ int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type)
 void ts_stats_increment(ts_stats_t stats, int thread_id)
 {
     mxb_assert(thread_id < thread_count);
-    int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
+    int64_t* item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
     *item += 1;
 }
 
 void ts_stats_set(ts_stats_t stats, int value, int thread_id)
 {
     mxb_assert(thread_id < thread_count);
-    int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
+    int64_t* item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
     *item = value;
 }
 
 void ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
 {
     mxb_assert(thread_id < thread_count);
-    int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
+    int64_t* item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
 
     if (value > *item)
     {
@@ -189,7 +192,7 @@ void ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
 void ts_stats_set_min(ts_stats_t stats, int value, int thread_id)
 {
     mxb_assert(thread_id < thread_count);
-    int64_t *item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
+    int64_t* item = (int64_t*)MXS_PTR(stats, thread_id * cache_linesize);
 
     if (value < *item)
     {

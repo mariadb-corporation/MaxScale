@@ -35,10 +35,11 @@ class EventCount
 public:
     EventCount(const EventCount&) = delete;
     EventCount& operator=(const EventCount&) = delete;
-    explicit EventCount(const std::string& event_id, Duration time_window,
+    explicit EventCount(const std::string& event_id,
+                        Duration time_window,
                         Duration granularity = Duration(std::chrono::milliseconds(10)));
-    EventCount(EventCount&&);  // can't be defaulted in gcc 4.4
-    EventCount& operator=(EventCount&&); // can't be defaulted in gcc 4.4
+    EventCount(EventCount&&);           // can't be defaulted in gcc 4.4
+    EventCount& operator=(EventCount&&);// can't be defaulted in gcc 4.4
 
     const std::string& event_id() const
     {
@@ -49,22 +50,25 @@ public:
         return m_time_window;
     }
     void dump(std::ostream& os) const;
-    int count() const;
+    int  count() const;
     void increment();
 
     // these defs need not be public once lambdas are available
     struct Timestamp
     {
         TimePoint time_point;
-        int count;
-        Timestamp(TimePoint p, int c) : time_point(p), count(c) {}
+        int       count;
+        Timestamp(TimePoint p, int c) : time_point(p)
+            , count(c)
+        {
+        }
     };
 private:
-    void purge() const; // remove out of window stats
+    void purge() const;     // remove out of window stats
 
-    std::string m_event_id;
-    Duration m_time_window;
-    Duration::rep m_granularity;
+    std::string                    m_event_id;
+    Duration                       m_time_window;
+    Duration::rep                  m_granularity;
     mutable std::vector<Timestamp> m_timestamps;
 };
 
@@ -76,10 +80,11 @@ class SessionCount
 public:
     SessionCount(const SessionCount&) = delete;
     SessionCount& operator=(const SessionCount&) = delete;
-    SessionCount(const std::string& sess_id, Duration time_window,
+    SessionCount(const std::string& sess_id,
+                 Duration time_window,
                  Duration granularity = Duration(std::chrono::milliseconds(10)));
-    SessionCount(SessionCount &&);  // can't be defaulted in gcc 4.4
-    SessionCount& operator=(SessionCount&&); // can't be defaulted in gcc 4.4
+    SessionCount(SessionCount&&);           // can't be defaulted in gcc 4.4
+    SessionCount& operator=(SessionCount&&);// can't be defaulted in gcc 4.4
 
     const std::string& session_id() const
     {
@@ -90,23 +95,22 @@ public:
         return m_time_window;
     }
     const std::vector<EventCount>& event_counts() const;
-    void dump(std::ostream& os) const;
-    bool empty() const; // no stats
+    void                           dump(std::ostream& os) const;
+    bool                           empty() const;   // no stats
 
     void increment(const std::string& event_id);
 private:
-    void purge() const; // remove out of window stats
+    void purge() const;     // remove out of window stats
 
-    std::string m_sess_id;
-    Duration m_time_window;
-    Duration m_granularity;
-    mutable int m_cleanup_countdown;
+    std::string                     m_sess_id;
+    Duration                        m_time_window;
+    Duration                        m_granularity;
+    mutable int                     m_cleanup_countdown;
     mutable std::vector<EventCount> m_event_counts;
 };
 
 // conveniece. Any real formatted output should go elsewhere.
 std::ostream& operator<<(std::ostream& os, const SessionCount& stats);
-void dump(std::ostream& os, const std::vector<SessionCount>& sessions);
-void dumpTotals(std::ostream& os, const std::vector<SessionCount> &sessions);
-
-} // maxbase
+void          dump(std::ostream& os, const std::vector<SessionCount>& sessions);
+void          dumpTotals(std::ostream& os, const std::vector<SessionCount>& sessions);
+}   // maxbase

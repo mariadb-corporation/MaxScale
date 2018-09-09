@@ -1,10 +1,11 @@
 /**
- * @file mxs1045.cpp Regression case for the bug "Defunct processes after maxscale have executed script during failover"
+ * @file mxs1045.cpp Regression case for the bug "Defunct processes after maxscale have executed script during
+ *failover"
  * - configure monitor:
  * @verbatim
-script=/bin/sh -c "echo hello world!"
-events=master_down,server_down
-
+ *  script=/bin/sh -c "echo hello world!"
+ *  events=master_down,server_down
+ *
  * @endverbatim
  * - block one node
  * - Check that script execution doesn't leave zombie processes
@@ -12,7 +13,7 @@ events=master_down,server_down
 
 #include "testconnections.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
@@ -25,7 +26,8 @@ int main(int argc, char *argv[])
     test.tprintf("Check that there are no zombies");
 
     int res = test.maxscales->ssh_node(0,
-                                       "if [ \"`ps -ef|grep defunct|grep -v grep`\" != \"\" ]; then exit 1; fi", false);
+                                       "if [ \"`ps -ef|grep defunct|grep -v grep`\" != \"\" ]; then exit 1; fi",
+                                       false);
     test.add_result(res, "Zombie processes were found");
 
     test.repl->unblock_node(0);

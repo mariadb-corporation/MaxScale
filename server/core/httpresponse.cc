@@ -24,9 +24,9 @@
 using std::string;
 using std::stringstream;
 
-HttpResponse::HttpResponse(int code, json_t* response):
-    m_body(response),
-    m_code(code)
+HttpResponse::HttpResponse(int code, json_t* response)
+    : m_body(response)
+    , m_code(code)
 {
     string http_date = http_get_date();
     add_header(HTTP_RESPONSE_HEADER_DATE, http_date);
@@ -37,10 +37,10 @@ HttpResponse::HttpResponse(int code, json_t* response):
     }
 }
 
-HttpResponse::HttpResponse(const HttpResponse& response):
-    m_body(json_incref(response.m_body)),
-    m_code(response.m_code),
-    m_headers(response.m_headers)
+HttpResponse::HttpResponse(const HttpResponse& response)
+    : m_body(json_incref(response.m_body))
+    , m_code(response.m_code)
+    , m_headers(response.m_headers)
 {
 }
 
