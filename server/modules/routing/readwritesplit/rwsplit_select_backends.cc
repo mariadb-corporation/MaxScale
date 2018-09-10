@@ -443,33 +443,3 @@ bool RWSplit::select_connect_backend_servers(MXS_SESSION* session,
     }
     return true;
 }
-
-/** Documenting ideas and tests. This will be removed before merging to develop.
- * The strategi with least opearations performs very well.
- * Lowest response time (should rename to fastest server) beats all other methods
- * but least operations comes near. There are probably a whole set of rules for adaptive
- * load balancing. For example,
- * 1. If there is low traffic (few operations), pick the fastest machine. But due to its nature
- *    other machines need to be tested once in awhile.
- * 2. Favour the fast machines more than the distribution would suggest. Squaring the normalized
- *    fitness (goodness) is clearly right, but maybe not the optimal choise.
- * 3. The parameters of EMAverage do not seem to weigh in as much as my intuition suggested.
- *    The tests with machines with very different speeds still give great results.
- *    The important thing is that it responds fast enough to changes in speed, some of which is
- *    caused by the load balancing itself (favoring a fast machine makes it slower).
- * 4. My tests have used a single and simple sql query. In the face of very divergent queries,
- *    maybe a standard query could be used to asses a servers speed, initially and once in a while,
- *    if traffic slows down.
- * 5. Alternatively to 4), the EMAverage could take the time between queries into account, so that
- *    it converges faster to new measurments if they are far apart in time. I have a feeling
- *    this could make a real difference.
- * 5. It might make sense to do a little math to see how to best use slower machines. It is clear
- *    some queries should be offloaded to them when volume is high, and the random method I use
- *    could be made better.
- * 6. Another idea is to favor faster machines even more, but at the same time increase the rating
- *    of slower machines as time goes by. In that way slower machines are not used unecessarily,
- *    but in time they still get some traffic, which might show them to now be faster, or immediately
- *    be downgraded again.
- * 7. Canonicals could be used, but I don't really see how...
- * 8. are all those preconditions needed (like rlag)
- */
