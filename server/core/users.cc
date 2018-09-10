@@ -20,6 +20,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 #include <maxscale/authenticator.hh>
 #include <maxscale/jansson.hh>
@@ -109,7 +110,9 @@ public:
         return std::count_if(m_data.begin(), m_data.end(), is_admin);
     }
 
-    bool check_permissions(std::string user, user_account_type perm) const
+    bool check_permissions(const std::string& user,
+                           const std::string& password,
+                           user_account_type  perm) const
     {
         std::lock_guard<std::mutex> guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
@@ -295,16 +298,16 @@ bool users_auth(USERS* users, const char* user, const char* password)
 
     if (u->get(user, &info))
     {
-        rval = strcmp(password, info.password.c_str()) == 0;
+        rval = info.password == mxs::crypt(password, ADMIN_SALT);
     }
 
     return rval;
 }
 
-bool users_is_admin(USERS* users, const char* user)
+bool users_is_admin(USERS* users, const char* user, const char* password)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->check_permissions(user, USER_ACCOUNT_ADMIN);
+    return u->check_permissions(user, password ? password : "", USER_ACCOUNT_ADMIN);
 }
 
 int users_admin_count(USERS* users)

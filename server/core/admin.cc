@@ -192,7 +192,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             send_auth_error(connection);
             rval = false;
         }
-        else if (!admin_user_is_inet_admin(user) && modifies_data(connection, method))
+        else if (!admin_user_is_inet_admin(user, pw) && modifies_data(connection, method))
         {
             if (config_get_global_options()->admin_log_auth_failures)
             {

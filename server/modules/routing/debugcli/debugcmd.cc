@@ -2046,7 +2046,7 @@ static bool user_is_authorized(DCB* dcb)
     }
     else
     {
-        if (!admin_user_is_inet_admin(dcb->user))
+        if (!admin_user_is_inet_admin(dcb->user, nullptr))
         {
             rval = false;
         }

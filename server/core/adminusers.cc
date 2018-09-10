@@ -27,6 +27,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.hh>
+#include <maxscale/utils.hh>
 
 /**
  * @file adminusers.c - Administration user account management
@@ -209,7 +210,7 @@ static std::string path_from_type(enum user_type type)
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
     user_account_type account = USER_ACCOUNT_BASIC;
-    if ((type == USER_TYPE_INET && admin_user_is_inet_admin(user))
+    if ((type == USER_TYPE_INET && admin_user_is_inet_admin(user, nullptr))
         || (type == USER_TYPE_UNIX && admin_user_is_unix_admin(user)))
     {
         account = USER_ACCOUNT_ADMIN;
@@ -431,9 +432,8 @@ bool admin_linux_account_enabled(const char* uname)
  */
 const char* admin_add_inet_user(const char* uname, const char* password, enum user_account_type type)
 {
-    char cpassword[MXS_CRYPT_SIZE];
-    mxs_crypt(password, ADMIN_SALT, cpassword);
-    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword, type);
+    auto cpassword = mxs::crypt(password, ADMIN_SALT);
+    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword.c_str(), type);
 }
 
 /**
@@ -482,21 +482,19 @@ bool admin_verify_inet_user(const char* username, const char* password)
 
     if (inet_users)
     {
-        char cpassword[MXS_CRYPT_SIZE];
-        mxs_crypt(password, ADMIN_SALT, cpassword);
-        rv = users_auth(inet_users, username, cpassword);
+        rv = users_auth(inet_users, username, password);
     }
 
     return rv;
 }
 
-bool admin_user_is_inet_admin(const char* username)
+bool admin_user_is_inet_admin(const char* username, const char* password)
 {
     bool rval = false;
 
     if (inet_users)
     {
-        rval = users_is_admin(inet_users, username);
+        rval = users_is_admin(inet_users, username, password);
     }
 
     return rval;
@@ -508,7 +506,7 @@ bool admin_user_is_unix_admin(const char* username)
 
     if (linux_users)
     {
-        rval = users_is_admin(linux_users, username);
+        rval = users_is_admin(linux_users, username, nullptr);
     }
 
     return rval;
@@ -521,7 +519,7 @@ bool admin_have_admin()
 
 bool admin_is_last_admin(const char* user)
 {
-    return (admin_user_is_inet_admin(user) || admin_user_is_unix_admin(user))
+    return (admin_user_is_inet_admin(user, nullptr) || admin_user_is_unix_admin(user))
            && (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
 }
 

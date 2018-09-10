@@ -100,12 +100,13 @@ bool users_find(USERS* users, const char* user);
 /**
  * Check if user is an administrator
  *
- * @param users The users table
- * @param user  User to check
+ * @param users    The users table
+ * @param user     User to check
+ * @param password Password of the user or NULL if password isn't available
  *
  * @return True if user is an administrator
  */
-bool users_is_admin(USERS* users, const char* user);
+bool users_is_admin(USERS* users, const char* user, const char* password);
 
 /**
  * Check how many admin account exists
