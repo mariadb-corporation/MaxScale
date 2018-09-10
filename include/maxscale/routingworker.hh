@@ -490,6 +490,12 @@ public:
         return get_local_value();
     }
 
+    // Dereference operator
+    T& operator*()
+    {
+        return *get_local_value();
+    }
+
     /**
      * Assign a value
      *

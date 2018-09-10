@@ -219,6 +219,21 @@ struct Stats
     uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
 };
 
+// Statistics for one server
+struct ServerStats
+{
+    uint64_t total = 0;     // Sum of master + slave + all
+    uint64_t read = 0;      // Write queries
+    uint64_t write = 0;     // Read queries
+
+    void operator+=(const ServerStats& rhs)
+    {
+        total += rhs.total;
+        read += rhs.read;
+        write += rhs.write;
+    }
+};
+
 class RWSplitSession;
 
 /**
@@ -230,6 +245,9 @@ class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
     RWSplit& operator=(const RWSplit&);
 
 public:
+
+    using SrvStatMap = std::map<SERVER*, ServerStats>;
+
     RWSplit(SERVICE* service, const Config& config);
     ~RWSplit();
 
@@ -237,14 +255,17 @@ public:
     const Config& config() const;
     Stats&        stats();
     const Stats&  stats() const;
-    int           max_slave_count() const;
-    bool          have_enough_servers() const;
-    bool          select_connect_backend_servers(MXS_SESSION*         session,
-                                                 mxs::SRWBackendList& backends,
-                                                 mxs::SRWBackend& current_master,
-                                                 mxs::SessionCommandList* sescmd_list,
-                                                 int* expected_responses,
-                                                 connection_type type);
+    ServerStats&  server_stats(SERVER* server);
+    SrvStatMap    all_server_stats() const;
+
+    int  max_slave_count() const;
+    bool have_enough_servers() const;
+    bool select_connect_backend_servers(MXS_SESSION* session,
+                                        mxs::SRWBackendList& backends,
+                                        mxs::SRWBackend& current_master,
+                                        mxs::SessionCommandList* sescmd_list,
+                                        int* expected_responses,
+                                        connection_type type);
     // API functions
 
     /**
@@ -311,9 +332,10 @@ private:
     // Called when worker local data needs to be updated
     static void update_config(void* data);
 
-    SERVICE*                   m_service;   /**< Service where the router belongs*/
-    mxs::rworker_local<Config> m_config;
-    Stats                      m_stats;
+    SERVICE*                       m_service;   /**< Service where the router belongs*/
+    mxs::rworker_local<Config>     m_config;
+    Stats                          m_stats;
+    mxs::rworker_local<SrvStatMap> m_server_stats;
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)

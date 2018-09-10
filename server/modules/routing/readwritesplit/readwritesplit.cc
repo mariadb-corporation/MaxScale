@@ -107,6 +107,27 @@ const Stats& RWSplit::stats() const
 {
     return m_stats;
 }
+
+ServerStats& RWSplit::server_stats(SERVER* server)
+{
+    return (*m_server_stats)[server];
+}
+
+RWSplit::SrvStatMap RWSplit::all_server_stats() const
+{
+    SrvStatMap stats;
+
+    for (const auto& a : m_server_stats.values())
+    {
+        for (const auto& b : a)
+        {
+            stats[b.first] += b.second;
+        }
+    }
+
+    return stats;
+}
+
 int RWSplit::max_slave_count() const
 {
     int router_nservers = m_service->n_dbref;
@@ -354,6 +375,22 @@ void RWSplit::diagnostics(DCB* dcb)
                        ref->server->stats.n_current_ops);
         }
     }
+
+    auto srv_stats = all_server_stats();
+
+    if (!srv_stats.empty())
+    {
+        dcb_printf(dcb, "    Server    Total    Read    Write\n");
+        for (const auto& s : srv_stats)
+        {
+            dcb_printf(dcb,
+                       "    %s %10lu %10lu %10lu\n",
+                       s.first->name,
+                       s.second.total,
+                       s.second.read,
+                       s.second.write);
+        }
+    }
 }
 
 json_t* RWSplit::diagnostics_json() const
@@ -375,6 +412,25 @@ json_t* RWSplit::diagnostics_json() const
     if (*weightby)
     {
         json_object_set_new(rval, "weightby", json_string(weightby));
+    }
+
+    auto srv_stats = all_server_stats();
+
+    if (!srv_stats.empty())
+    {
+        json_t* arr = json_array();
+
+        for (const auto& a : srv_stats)
+        {
+            json_t* obj = json_object();
+            json_object_set_new(obj, "id", json_string(a.first->name));
+            json_object_set_new(obj, "total", json_integer(a.second.total));
+            json_object_set_new(obj, "read", json_integer(a.second.read));
+            json_object_set_new(obj, "write", json_integer(a.second.write));
+            json_array_append_new(arr, obj);
+        }
+
+        json_object_set_new(rval, "server_query_statistics", arr);
     }
 
     return rval;
