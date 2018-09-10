@@ -42,6 +42,8 @@
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
 #include <thread>
+#include <curl/curl.h>
+#include <crypt.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/config.hh>
@@ -1167,6 +1169,20 @@ int64_t get_total_memory()
 
 namespace maxscale
 {
+
+std::string crypt(const std::string& password, const std::string& salt)
+{
+#if HAVE_GLIBC
+    struct crypt_data cdata;
+    cdata.initialized = 0;
+    return crypt_r(password.c_str(), salt.c_str(), &cdata);
+#else
+    static std::mutex mxs_crypt_lock;
+    std::lock_guard<std::mutex> guard(mxs_crypt_lock);
+    std::string pw = crypt(password.c_str(), salt.c_str());
+    return pw;
+#endif
+}
 
 std::string to_hex(uint8_t value)
 {
