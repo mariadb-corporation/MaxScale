@@ -170,7 +170,9 @@ exports.builder = function(yargs) {
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'users/inet',[
-                    {'Name':'id'}
+                    {'Name':'id'},
+                    {'Type':'type'},
+                    {'Privileges':'attributes.account'},
                 ])
             })
         })
