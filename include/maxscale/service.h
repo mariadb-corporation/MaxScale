@@ -20,7 +20,7 @@
 
 #include <maxscale/cdefs.h>
 
-#include <cmath>
+#include <math.h>
 #include <time.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
