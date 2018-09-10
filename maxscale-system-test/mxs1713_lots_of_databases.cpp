@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     }
     test.tprintf("Done!");
 
-    test.assert(errors.empty(), "None of the queries should fail: %s",
+    test.expect(errors.empty(), "None of the queries should fail: %s",
                 std::accumulate(errors.begin(), errors.end(), std::string(),
     [](const std::string &a, const std::string &b) {
         return a + b + " ";

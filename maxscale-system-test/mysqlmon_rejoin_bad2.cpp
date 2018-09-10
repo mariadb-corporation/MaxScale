@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     get_output(test);
     int master_id_new = get_master_server_id(test);
     cout << "Master server id is " << master_id_new << endl;
-    test.assert(master_id_new > 0 && master_id_new != master_id_old,
+    test.expect(master_id_new > 0 && master_id_new != master_id_old,
                 "Failover did not promote a new master.");
     if (test.global_result != 0)
     {
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     // Stop maxscale to prevent an unintended rejoin.
     if (test.stop_maxscale(0))
     {
-        test.assert(false, "Could not stop MaxScale.");
+        test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
     }
     // Restart old master. Then add some events to it.
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     // Restart maxscale. Should not rejoin old master.
     if (test.start_maxscale(0))
     {
-        test.assert(false, "Could not start MaxScale.");
+        test.expect(false, "Could not start MaxScale.");
         return test.global_result;
     }
     test.maxscales->wait_for_monitor();

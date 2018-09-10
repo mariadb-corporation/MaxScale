@@ -159,7 +159,7 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
 
     mysql_query(conn, SELECT);
     MYSQL_RES *res = mysql_store_result(conn);
-    test.assert(res != NULL, "Query did not return a result set");
+    test.expect(res != NULL, "Query did not return a result set");
 
     if (res)
     {
@@ -172,14 +172,14 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
             int value_read = strtol(row[0], NULL, 0);
             if (value_read != expected_val)
             {
-                test.assert(false, "Query returned %d when %d was expected", value_read, expected_val);
+                test.expect(false, "Query returned %d when %d was expected", value_read, expected_val);
                 rval = false;
                 break;
             }
             expected_val++;
         }
         int num_rows = expected_val;
-        test.assert(num_rows == inserts, "Query returned %d rows when %d rows were expected",
+        test.expect(num_rows == inserts, "Query returned %d rows when %d rows were expected",
                     num_rows, inserts);
         if (num_rows != inserts)
         {

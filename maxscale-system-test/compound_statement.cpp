@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 
     // Do the select inside a transacttion so that it gets routed to the master
     test.try_query(test.maxscales->conn_rwsplit[0], "BEGIN");
-    test.assert(execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT id FROM test.t1", "2") == 0,
+    test.expect(execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT id FROM test.t1", "2") == 0,
                 "Table should contain one row with value 2");
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
 

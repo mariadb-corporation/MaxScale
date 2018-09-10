@@ -33,7 +33,7 @@ void run(TestConnections& test)
     init(test);
 
     MYSQL* pMysql = mysql_init(NULL);
-    test.assert(pMysql, "Could not create MYSQL handle.");
+    test.expect(pMysql, "Could not create MYSQL handle.");
 
     const char* zUser = test.maxscales->user_name;
     const char* zPassword = test.maxscales->password;
@@ -57,7 +57,7 @@ void run(TestConnections& test)
     }
     else
     {
-        test.assert(false, "Could not connect to MaxScale.");
+        test.expect(false, "Could not connect to MaxScale.");
     }
 }
 
@@ -84,17 +84,17 @@ int main(int argc, char* argv[])
             }
             else
             {
-                test.assert(false, "Could not connect to RWS.");
+                test.expect(false, "Could not connect to RWS.");
             }
         }
         else
         {
-            test.assert(false, "Could not start MaxScale.");
+            test.expect(false, "Could not start MaxScale.");
         }
     }
     else
     {
-        test.assert(false, "Could not copy masking file to MaxScale node.");
+        test.expect(false, "Could not copy masking file to MaxScale node.");
     }
 
     return test.global_result;

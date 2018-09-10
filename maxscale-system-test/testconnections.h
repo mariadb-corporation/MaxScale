@@ -252,7 +252,7 @@ public:
     void add_result(bool result, const char *format, ...);
 
     /** Same as add_result() but inverted */
-    void assert(bool result, const char *format, ...);
+    void expect(bool result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables

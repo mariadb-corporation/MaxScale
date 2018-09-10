@@ -450,18 +450,18 @@ bool check_server_status(TestConnections& test, int id)
         if (find_field(pConn, "SHOW SLAVE STATUS", "Last_IO_Error", result) == 0)
         {
             cout << result << endl;
-            test.assert(false, "Server is neither slave, nor master.");
+            test.expect(false, "Server is neither slave, nor master.");
         }
         else
         {
             cout << "?" << endl;
-            test.assert(false, "Could not execute \"SHOW SLAVE STATUS\"");
+            test.expect(false, "Could not execute \"SHOW SLAVE STATUS\"");
         }
     }
     else
     {
         cout << "?" << endl;
-        test.assert(false, "Unexpected server state for %s.", server.c_str());
+        test.expect(false, "Unexpected server state for %s.", server.c_str());
     }
 
     return is_master;
@@ -476,7 +476,7 @@ void check_server_statuses(TestConnections& test)
     masters += check_server_status(test, 3);
     masters += check_server_status(test, 4);
 
-    test.assert(masters == 1, "Unpexpected number of masters: %d", masters);
+    test.expect(masters == 1, "Unpexpected number of masters: %d", masters);
 }
 
 int get_next_master_id(TestConnections& test, int current_id)
@@ -600,18 +600,18 @@ void run(TestConnections& test)
 
                 if (master_id < 0)
                 {
-                    test.assert(false, "No master available after switchover.");
+                    test.expect(false, "No master available after switchover.");
                 }
                 else if (master_id != current_master_id)
                 {
-                    test.assert(false,
+                    test.expect(false,
                                 "Master should have been server%d, but it was server%d.",
                                 current_master_id, master_id);
                 }
             }
             else
             {
-                test.assert(false,
+                test.expect(false,
                             "Could not find any slave to switch to.");
             }
         }

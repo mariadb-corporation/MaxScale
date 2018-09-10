@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
-    test.assert(master_id == -1, "Master was promoted even when no slave was eligible.");
+    test.expect(master_id == -1, "Master was promoted even when no slave was eligible.");
 
     test.repl->unblock_node(0);
 

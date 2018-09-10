@@ -462,17 +462,17 @@ bool check_server_status(TestConnections& test, int id)
             else
             {
                 cout << result;
-                test.assert(false, "Merely 'Running' node did not error in expected way.");
+                test.expect(false, "Merely 'Running' node did not error in expected way.");
             }
         }
         else
         {
-            test.assert(false, "Could not execute \"SHOW SLAVE STATUS\"");
+            test.expect(false, "Could not execute \"SHOW SLAVE STATUS\"");
         }
     }
     else
     {
-        test.assert(false, "Unexpected server state for %s.", server.c_str());
+        test.expect(false, "Unexpected server state for %s.", server.c_str());
     }
 
     cout << endl;
@@ -497,7 +497,7 @@ void check_server_statuses(TestConnections& test)
     }
     else if (masters != 1)
     {
-        test.assert(!true, "Unexpected number of masters: %d", masters);
+        test.expect(!true, "Unexpected number of masters: %d", masters);
     }
 }
 
@@ -552,7 +552,7 @@ void run(TestConnections& test)
             }
             else
             {
-                test.assert(false, "Unexpected master id: %d");
+                test.expect(false, "Unexpected master id: %d");
             }
         }
 

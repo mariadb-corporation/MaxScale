@@ -96,7 +96,7 @@ void expect(TestConnections& test, const char* zServer, const StringSet& expecte
 
     if (found != expected)
     {
-        test.assert(false, "Found states are not the same as the expected ones.");
+        test.expect(false, "Found states are not the same as the expected ones.");
         ++test.global_result;
     }
 

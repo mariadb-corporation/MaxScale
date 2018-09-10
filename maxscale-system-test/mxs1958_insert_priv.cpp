@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
 
     MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "insert_only", "insert_only", false);
-    test.assert(mysql_errno(conn) == 0, "User without SELECT privileges should be allowed to connect");
+    test.expect(mysql_errno(conn) == 0, "User without SELECT privileges should be allowed to connect");
     mysql_close(conn);
 
     execute_query(test.repl->nodes[0], "DROP USER 'insert_only'@'%%'");
