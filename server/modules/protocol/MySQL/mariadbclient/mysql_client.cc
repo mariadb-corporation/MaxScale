@@ -69,7 +69,7 @@ static int   gw_client_hangup_event(DCB* dcb);
 static char* gw_default_auth();
 static int   gw_connection_limit(DCB* dcb, int limit);
 static int   MySQLSendHandshake(DCB* dcb);
-static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF * *);
+static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
 static void           mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_number);
 static int            gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
 static int            gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read);

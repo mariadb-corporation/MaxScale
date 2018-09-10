@@ -156,7 +156,7 @@ std::string get_text_ps_id(GWBUF* buffer)
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
                    GWBUF* querybuf,
-                   bool (* func)(QueryClassifier & qc, const std::string&))
+                   bool (* func)(QueryClassifier& qc, const std::string&))
 {
     bool rval = true;
     int n_tables;

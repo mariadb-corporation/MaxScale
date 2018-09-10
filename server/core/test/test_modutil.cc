@@ -587,7 +587,7 @@ void test_large_packets()
         GWBUF* buffer = gwbuf_append(create_buffer(0x00ffffff), create_buffer(i));
         mxb_assert(gwbuf_length(buffer) == 0xffffffUL + i + 8);
         GWBUF_RTRIM(buffer->next, 1)
-        GWBUF * complete = modutil_get_complete_packets(&buffer);
+        GWBUF* complete = modutil_get_complete_packets(&buffer);
         mxb_assert_message(buffer, "Incomplete buffer is not NULL");
         mxb_assert_message(complete, "The complete buffer is not NULL");
         mxb_assert_message(gwbuf_length(complete) == 0xffffff + 4, "Length should be correct");

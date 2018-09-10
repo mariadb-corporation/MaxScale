@@ -2991,7 +2991,7 @@ public:
     }
 
 private:
-    bool (* m_func)(DCB * dcb, void* data);
+    bool (* m_func)(DCB* dcb, void* data);
     void* m_data;
     int   m_more;
 };

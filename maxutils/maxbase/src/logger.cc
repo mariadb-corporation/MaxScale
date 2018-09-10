@@ -211,7 +211,7 @@ bool FileLogger::write_header()
     asctime_r(&tm, time_string);
 
     size_t size = ident.length() + 2 * sizeof(' ') + m_filename.length() + 2 * sizeof(' ') + strlen(
-            time_string);
+        time_string);
 
     char header[size + 2 + 1];      // For the 2 newlines and the trailing NULL.
     sprintf(header, "\n\n%s  %s  %s", ident.c_str(), m_filename.c_str(), time_string);

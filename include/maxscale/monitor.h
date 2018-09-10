@@ -90,7 +90,7 @@ typedef struct mxs_monitor_api
      *
      * @param monitor  The monitor object.
      */
-    void (* destroyInstance)(MXS_MONITOR_INSTANCE * monitor);
+    void (* destroyInstance)(MXS_MONITOR_INSTANCE* monitor);
 
     /**
      * @brief Start the monitor
@@ -104,8 +104,8 @@ typedef struct mxs_monitor_api
      *
      * @return True, if the monitor could be started, false otherwise.
      */
-    bool (* startMonitor)(MXS_MONITOR_INSTANCE * monitor,
-                          const MXS_CONFIG_PARAMETER * params);
+    bool (* startMonitor)(MXS_MONITOR_INSTANCE* monitor,
+                          const MXS_CONFIG_PARAMETER* params);
 
     /**
      * @brief Stop the monitor
@@ -115,7 +115,7 @@ typedef struct mxs_monitor_api
      *
      * @param monitor The monitor object
      */
-    void (* stopMonitor)(MXS_MONITOR_INSTANCE * monitor);
+    void (* stopMonitor)(MXS_MONITOR_INSTANCE* monitor);
 
     /**
      * @brief Write diagnostic information to a DCB.
@@ -123,7 +123,7 @@ typedef struct mxs_monitor_api
      * @param monitor  The monitor object.
      * @param dcb      The dcb to write to.
      */
-    void (* diagnostics)(const MXS_MONITOR_INSTANCE * monitor, DCB * dcb);
+    void (* diagnostics)(const MXS_MONITOR_INSTANCE* monitor, DCB* dcb);
 
     /**
      * @brief Return diagnostic information about the monitor

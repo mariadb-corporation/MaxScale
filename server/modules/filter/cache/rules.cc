@@ -161,7 +161,7 @@ static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root);
 
 typedef bool (* cache_rules_parse_element_t)(CACHE_RULES* self, json_t* object, size_t index);
 
-static bool cache_rules_parse_array(CACHE_RULES* self, json_t* store, const char* name,
+static bool cache_rules_parse_array(CACHE_RULES * self, json_t* store, const char* name,
                                     cache_rules_parse_element_t);
 static bool cache_rules_parse_store_element(CACHE_RULES* self, json_t* object, size_t index);
 static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, size_t index);
