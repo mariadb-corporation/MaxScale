@@ -727,9 +727,9 @@ void RoutingWorker::shutdown_all()
 namespace
 {
 
-int64_t one_stats_get(int64_t Worker::STATISTICS::* what, enum ts_stats_type type)
+std::vector<Worker::STATISTICS> get_stats()
 {
-    int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
+    std::vector<Worker::STATISTICS> rval;
 
     int nWorkers = this_unit.next_worker_id;
 
@@ -738,83 +738,38 @@ int64_t one_stats_get(int64_t Worker::STATISTICS::* what, enum ts_stats_type typ
         RoutingWorker* pWorker = RoutingWorker::get(i);
         mxb_assert(pWorker);
 
-        const Worker::STATISTICS& s = pWorker->statistics();
-
-        int64_t value = s.*what;
-
-        switch (type)
-        {
-        case TS_STATS_MAX:
-            if (value > best)
-            {
-                best = value;
-            }
-            break;
-
-        case TS_STATS_MIX:
-            if (value < best)
-            {
-                best = value;
-            }
-            break;
-
-        case TS_STATS_AVG:
-        case TS_STATS_SUM:
-            best += value;
-            break;
-        }
+        rval.push_back(pWorker->statistics());
     }
 
-    return type == TS_STATS_AVG ? best / (nWorkers != 0 ? nWorkers : 1) : best;
+    return rval;
 }
 }
 
 // static
 Worker::STATISTICS RoutingWorker::get_statistics()
 {
+    auto s = get_stats();
+
     STATISTICS cs;
 
-    cs.n_read = one_stats_get(&STATISTICS::n_read, TS_STATS_SUM);
-    cs.n_write = one_stats_get(&STATISTICS::n_write, TS_STATS_SUM);
-    cs.n_error = one_stats_get(&STATISTICS::n_error, TS_STATS_SUM);
-    cs.n_hup = one_stats_get(&STATISTICS::n_hup, TS_STATS_SUM);
-    cs.n_accept = one_stats_get(&STATISTICS::n_accept, TS_STATS_SUM);
-    cs.n_polls = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
-    cs.n_pollev = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
-    cs.n_nbpollev = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
-    cs.evq_avg = one_stats_get(&STATISTICS::evq_avg, TS_STATS_AVG);
-    cs.evq_max = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
-    cs.blockingpolls = one_stats_get(&STATISTICS::blockingpolls, TS_STATS_SUM);
-    cs.maxqtime = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
-    cs.maxexectime = one_stats_get(&STATISTICS::maxexectime, TS_STATS_MAX);
-
-    for (int i = 0; i < Worker::STATISTICS::MAXNFDS - 1; i++)
-    {
-        for (int j = 0; j < this_unit.next_worker_id; ++j)
-        {
-            Worker* pWorker = RoutingWorker::get(j);
-            mxb_assert(pWorker);
-
-            cs.n_fds[i] += pWorker->statistics().n_fds[i];
-        }
-    }
-
-    for (int i = 0; i <= Worker::STATISTICS::N_QUEUE_TIMES; ++i)
-    {
-        int nWorkers = this_unit.next_worker_id;
-
-        for (int j = 0; j < nWorkers; ++j)
-        {
-            Worker* pWorker = RoutingWorker::get(j);
-            mxb_assert(pWorker);
-
-            cs.qtimes[i] += pWorker->statistics().qtimes[i];
-            cs.exectimes[i] += pWorker->statistics().exectimes[i];
-        }
-
-        cs.qtimes[i] /= (nWorkers != 0 ? nWorkers : 1);
-        cs.exectimes[i] /= (nWorkers != 0 ? nWorkers : 1);
-    }
+    cs.n_read = mxs::sum(s, &STATISTICS::n_read);
+    cs.n_write = mxs::sum(s, &STATISTICS::n_write);
+    cs.n_error = mxs::sum(s, &STATISTICS::n_error);
+    cs.n_hup = mxs::sum(s, &STATISTICS::n_hup);
+    cs.n_accept = mxs::sum(s, &STATISTICS::n_accept);
+    cs.n_polls = mxs::sum(s, &STATISTICS::n_polls);
+    cs.n_pollev = mxs::sum(s, &STATISTICS::n_pollev);
+    cs.n_nbpollev = mxs::sum(s, &STATISTICS::n_nbpollev);
+    cs.evq_avg = mxs::avg(s, &STATISTICS::evq_avg);
+    cs.evq_max = mxs::max(s, &STATISTICS::evq_max);
+    cs.blockingpolls = mxs::sum(s, &STATISTICS::blockingpolls);
+    cs.maxqtime = mxs::max(s, &STATISTICS::maxqtime);
+    cs.maxexectime = mxs::max(s, &STATISTICS::maxexectime);
+    cs.n_fds = mxs::sum_element(s, &STATISTICS::n_fds);
+    cs.n_fds = mxs::min_element(s, &STATISTICS::n_fds);
+    cs.n_fds = mxs::max_element(s, &STATISTICS::n_fds);
+    cs.qtimes = mxs::avg_element(s, &STATISTICS::qtimes);
+    cs.exectimes = mxs::avg_element(s, &STATISTICS::exectimes);
 
     return cs;
 }
@@ -822,65 +777,50 @@ Worker::STATISTICS RoutingWorker::get_statistics()
 // static
 int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
 {
-    int64_t rv = 0;
+    auto s = get_stats();
 
-    int64_t Worker::STATISTICS::* member = NULL;
-    enum ts_stats_type approach;
+    int64_t rv = 0;
 
     switch (what)
     {
     case POLL_STAT_READ:
-        member = &Worker::STATISTICS::n_read;
-        approach = TS_STATS_SUM;
+        rv = mxs::sum(s, &STATISTICS::n_read);
         break;
 
     case POLL_STAT_WRITE:
-        member = &Worker::STATISTICS::n_write;
-        approach = TS_STATS_SUM;
+        rv = mxs::sum(s, &STATISTICS::n_write);
         break;
 
     case POLL_STAT_ERROR:
-        member = &Worker::STATISTICS::n_error;
-        approach = TS_STATS_SUM;
+        rv = mxs::sum(s, &STATISTICS::n_error);
         break;
 
     case POLL_STAT_HANGUP:
-        member = &Worker::STATISTICS::n_hup;
-        approach = TS_STATS_SUM;
+        rv = mxs::sum(s, &STATISTICS::n_hup);
         break;
 
     case POLL_STAT_ACCEPT:
-        member = &Worker::STATISTICS::n_accept;
-        approach = TS_STATS_SUM;
+        rv = mxs::sum(s, &STATISTICS::n_accept);
         break;
 
     case POLL_STAT_EVQ_AVG:
-        member = &Worker::STATISTICS::evq_avg;
-        approach = TS_STATS_AVG;
+        rv = mxs::avg(s, &STATISTICS::evq_avg);
         break;
 
     case POLL_STAT_EVQ_MAX:
-        member = &Worker::STATISTICS::evq_max;
-        approach = TS_STATS_MAX;
+        rv = mxs::max(s, &STATISTICS::evq_max);
         break;
 
     case POLL_STAT_MAX_QTIME:
-        member = &Worker::STATISTICS::maxqtime;
-        approach = TS_STATS_MAX;
+        rv = mxs::max(s, &STATISTICS::maxqtime);
         break;
 
     case POLL_STAT_MAX_EXECTIME:
-        member = &Worker::STATISTICS::maxexectime;
-        approach = TS_STATS_MAX;
+        rv = mxs::max(s, &STATISTICS::maxexectime);
         break;
 
     default:
         mxb_assert(!true);
-    }
-
-    if (member)
-    {
-        rv = one_stats_get(member, approach);
     }
 
     return rv;
