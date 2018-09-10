@@ -1,6 +1,6 @@
 /**
  * @file show_monitor_crash.cpp show_monitor_crash regression case for crash if maxadmin 'show monitors'
- *command is issued, but no monitor is not running
+ * command is issued, but no monitor is not running
  *
  * - maxscale.cnf contains wrong monitor config (user name is wrong)
  * - issue 'show monitors' maxadmin command

@@ -48,4 +48,4 @@ private:
                                     const char* value);
 };
 
-#endif  // __INIREADER_H__
+#endif      // __INIREADER_H__

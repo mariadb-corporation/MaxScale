@@ -101,8 +101,7 @@ ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* 
         maxbase::Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
 
         ThrottleConfig config = {max_qps,             sampling_duration,
-                                 throttling_duration, continuous_duration
-        };
+                                 throttling_duration, continuous_duration};
 
         filter = new ThrottleFilter(config);
     }

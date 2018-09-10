@@ -1154,8 +1154,7 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA* csdata)
 {
     /* Note: sequence id is always 01 (4th byte) */
     const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = {07, 00, 00, 01, 00, 00,
-                                                        00, 02, 00, 00, 00
-    };
+                                                        00, 02, 00, 00, 00};
 
     mxb_assert(csdata->res.data != NULL);
 

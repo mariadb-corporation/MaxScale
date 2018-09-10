@@ -1,6 +1,6 @@
 /**
  * @file bug488.cpp regression case for bug 488 ("SHOW VARIABLES randomly failing with "Lost connection to
- *MySQL server")
+ * MySQL server")
  *
  * - try "SHOW VARIABLES;" 100 times against all Maxscale services
  * First round: 100 iterations for RWSplit, then ReadConn Master, then ReadConn Slave

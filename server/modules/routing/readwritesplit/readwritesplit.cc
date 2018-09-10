@@ -408,20 +408,25 @@ bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    static const char description[] = "A Read/Write splitting router for enhancement read scalability";
+
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_ROUTER,                                            MXS_MODULE_GA,
+        MXS_MODULE_API_ROUTER,
+        MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
-        "A Read/Write splitting router for enhancement read scalability",
+        description,
         "V1.1.0",
-        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING
-        | RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING
+        RCAP_TYPE_STMT_INPUT
+        | RCAP_TYPE_TRANSACTION_TRACKING
+        | RCAP_TYPE_PACKET_OUTPUT
+        | RCAP_TYPE_SESSION_STATE_TRACKING
         | RCAP_TYPE_RUNTIME_CONFIG,
         &RWSplit::s_object,
-        NULL,                                                               /* Process init. */
-        NULL,                                                               /* Process finish. */
-        NULL,                                                               /* Thread init. */
-        NULL,                                                               /* Thread finish. */
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
             {
                 "use_sql_variables_in",
@@ -444,40 +449,23 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 master_failure_mode_values
             },
-            {"max_slave_replication_lag",                                 MXS_MODULE_PARAM_INT,
-             "-1"                                                         },
-            {"max_slave_connections",                                     MXS_MODULE_PARAM_STRING,
-             MAX_SLAVE_COUNT                                              },
-            {"retry_failed_reads",                                        MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                    },
-            {"disable_sescmd_history",                                    MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                },
-            {"max_sescmd_history",                                        MXS_MODULE_PARAM_COUNT,
-             "50"                                                                                                                                                                                                },
-            {"strict_multi_stmt",                                         MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                          },
-            {"strict_sp_calls",                                           MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                       },
-            {"master_accept_reads",                                       MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                    },
-            {"connection_keepalive",                                      MXS_MODULE_PARAM_COUNT,
-             "0"                                                                                                                                                                                                                                                                                                                                                                                     },
-            {"causal_reads",                                              MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                              },
-            {"causal_reads_timeout",                                      MXS_MODULE_PARAM_STRING,
-             "120"                                                                                                                                                                                                                                                                                                                                                                                                                                                                             },
-            {"master_reconnection",                                       MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        },
-            {"delayed_retry",                                             MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     },
-            {"delayed_retry_timeout",                                     MXS_MODULE_PARAM_COUNT,
-             "10"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     },
-            {"transaction_replay",                                        MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               },
-            {"transaction_replay_max_size",                               MXS_MODULE_PARAM_SIZE,
-             "1Mi"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              },
-            {"optimistic_trx",                                            MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            },
+            {"max_slave_replication_lag",  MXS_MODULE_PARAM_INT,     "-1"           },
+            {"max_slave_connections",      MXS_MODULE_PARAM_STRING,  MAX_SLAVE_COUNT},
+            {"retry_failed_reads",         MXS_MODULE_PARAM_BOOL,    "true"         },
+            {"disable_sescmd_history",     MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"max_sescmd_history",         MXS_MODULE_PARAM_COUNT,   "50"           },
+            {"strict_multi_stmt",          MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"strict_sp_calls",            MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"master_accept_reads",        MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"connection_keepalive",       MXS_MODULE_PARAM_COUNT,   "0"            },
+            {"causal_reads",               MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"causal_reads_timeout",       MXS_MODULE_PARAM_STRING,  "120"          },
+            {"master_reconnection",        MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"delayed_retry",              MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"delayed_retry_timeout",      MXS_MODULE_PARAM_COUNT,   "10"           },
+            {"transaction_replay",         MXS_MODULE_PARAM_BOOL,    "false"        },
+            {"transaction_replay_max_size",MXS_MODULE_PARAM_SIZE,    "1Mi"          },
+            {"optimistic_trx",             MXS_MODULE_PARAM_BOOL,    "false"        },
             {MXS_END_MODULE_PARAMS}
         }
     };

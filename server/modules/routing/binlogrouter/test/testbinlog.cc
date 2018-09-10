@@ -66,12 +66,12 @@ extern int   blr_test_handle_change_master(ROUTER_INSTANCE* router, char* comman
 
 static struct option long_options[] =
 {
-    {"debug",   no_argument,     0,           'd'},
-    {"verbose", no_argument,     0,           'v'},
-    {"version", no_argument,     0,           'V'},
-    {"fix",     no_argument,     0,           'f'},
-    {"help",    no_argument,     0,           '?'},
-    {0,         0,               0,           0  }
+    {"debug",   no_argument,     0,               'd'          },
+    {"verbose", no_argument,     0,               'v'          },
+    {"version", no_argument,     0,               'V'          },
+    {"fix",     no_argument,     0,               'f'          },
+    {"help",    no_argument,     0,               '?'          },
+    {0,         0,               0,               0            }
 };
 
 int main(int argc, char** argv)
@@ -511,7 +511,7 @@ int main(int argc, char** argv)
      * Expected rc is 0, if 1 test fails
      */
     strcpy(error_string, "");
-    change_master = ChangeMasterOptions{};
+    change_master = ChangeMasterOptions {};
     strcpy(query,
            "CHANGE MASTER TO MasTER_hoST =  '127.0.0.1', MASTER_PORT=9999, MASTER_PASSWORD='massi', MAster_user='eee', master_log_file=     'fffff', master_log_pos= 55"
            + command_offset);

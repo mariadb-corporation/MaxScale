@@ -81,7 +81,7 @@ typedef enum cache_in_trxs
 
 typedef struct cache_config
 {
-    uint64_t             max_resultset_rows;/**< The maximum number of rows of a resultset for it to be
+    uint64_t max_resultset_rows;            /**< The maximum number of rows of a resultset for it to be
                                              * cached. */
     uint64_t             max_resultset_size;/**< The maximum size of a resultset for it to be cached. */
     char*                rules;             /**< Name of rules file. */

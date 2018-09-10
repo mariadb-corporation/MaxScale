@@ -5,12 +5,12 @@
  *'persistpoolmax=1' and 'persistpoolmax=10' for all servers)
  *
  * - start two groups of threads: each group consists of 25 threads, each thread creates connections to
- *RWSplit,
+ * RWSplit,
  * threads from first group try to execute as many SELECTs as possible, from second group - one query per
- *second
+ * second
  * - after 100 seconds all threads are stopped
  * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not
- *greater then 3 times and no
+ * greater then 3 times and no
  * more then 10% of quesries went to Master
  */
 

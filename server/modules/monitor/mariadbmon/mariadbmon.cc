@@ -1014,51 +1014,125 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread init. */
         NULL,                                       /* Thread finish. */
         {
-            {"detect_replication_lag",               MXS_MODULE_PARAM_BOOL,
-             "false"                                                },
-            {"detect_stale_master",                  MXS_MODULE_PARAM_BOOL,
-             "true"                                                                              },
-            {"detect_stale_slave",                   MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                          },
-            {"mysql51_replication",                  MXS_MODULE_PARAM_BOOL,
-             "false",
-             MXS_MODULE_OPT_DEPRECATED                                                                              },
-            {"multimaster",                          MXS_MODULE_PARAM_BOOL,
-             "false",
-             MXS_MODULE_OPT_DEPRECATED                                                                               },
-            {CN_DETECT_STANDALONE_MASTER,            MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                                                      },
-            {CN_FAILCOUNT,                           MXS_MODULE_PARAM_COUNT,
-             "5"                                                                                                                                                                     },
-            {"allow_cluster_recovery",               MXS_MODULE_PARAM_BOOL,                            "true",
-             MXS_MODULE_OPT_DEPRECATED                                                                                                                                       },
-            {"ignore_external_masters",              MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
-            {CN_AUTO_FAILOVER,                       MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
-            {CN_FAILOVER_TIMEOUT,                    MXS_MODULE_PARAM_COUNT,
-             "90"                                                                                                                                                                    },
-            {CN_SWITCHOVER_TIMEOUT,                  MXS_MODULE_PARAM_COUNT,
-             "90"                                                                                                                                                                    },
-            {CN_REPLICATION_USER,                    MXS_MODULE_PARAM_STRING},
-            {CN_REPLICATION_PASSWORD,                MXS_MODULE_PARAM_STRING},
-            {CN_VERIFY_MASTER_FAILURE,               MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                                                                                  },
-            {CN_MASTER_FAILURE_TIMEOUT,              MXS_MODULE_PARAM_COUNT,
-             "10"                                                                                                                                                                    },
-            {CN_AUTO_REJOIN,                         MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
-            {CN_ENFORCE_READONLY,                    MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
-            {CN_NO_PROMOTE_SERVERS,                  MXS_MODULE_PARAM_SERVERLIST},
-            {CN_PROMOTION_SQL_FILE,                  MXS_MODULE_PARAM_PATH},
-            {CN_DEMOTION_SQL_FILE,                   MXS_MODULE_PARAM_PATH},
-            {CN_SWITCHOVER_ON_LOW_DISK_SPACE,        MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
-            {CN_MAINTENANCE_ON_LOW_DISK_SPACE,       MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                                                                                  },
-            {CN_HANDLE_EVENTS,                       MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                 },
+            {
+                "detect_replication_lag",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                "detect_stale_master",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                "detect_stale_slave",
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                "mysql51_replication",
+                MXS_MODULE_PARAM_BOOL,
+                "false",
+                MXS_MODULE_OPT_DEPRECATED
+            },
+            {
+                "multimaster",
+                MXS_MODULE_PARAM_BOOL,
+                "false",
+                MXS_MODULE_OPT_DEPRECATED
+            },
+            {
+                CN_DETECT_STANDALONE_MASTER,
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                CN_FAILCOUNT,
+                MXS_MODULE_PARAM_COUNT,
+                "5"
+            },
+            {
+                "allow_cluster_recovery",
+                MXS_MODULE_PARAM_BOOL,
+                "true",
+                MXS_MODULE_OPT_DEPRECATED
+            },
+            {
+                "ignore_external_masters",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                CN_AUTO_FAILOVER,
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                CN_FAILOVER_TIMEOUT,
+                MXS_MODULE_PARAM_COUNT,
+
+                "90"
+            },
+            {
+                CN_SWITCHOVER_TIMEOUT,
+                MXS_MODULE_PARAM_COUNT,
+                "90"
+            },
+            {
+                CN_REPLICATION_USER,
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                CN_REPLICATION_PASSWORD,
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                CN_VERIFY_MASTER_FAILURE,
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                CN_MASTER_FAILURE_TIMEOUT,
+                MXS_MODULE_PARAM_COUNT,
+                "10"
+            },
+            {
+                CN_AUTO_REJOIN,
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                CN_ENFORCE_READONLY,
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                CN_NO_PROMOTE_SERVERS,
+                MXS_MODULE_PARAM_SERVERLIST
+            },
+            {
+                CN_PROMOTION_SQL_FILE,
+                MXS_MODULE_PARAM_PATH
+            },
+            {
+                CN_DEMOTION_SQL_FILE,
+                MXS_MODULE_PARAM_PATH
+            },
+            {
+                CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                CN_MAINTENANCE_ON_LOW_DISK_SPACE,
+                MXS_MODULE_PARAM_BOOL,
+                "true"
+            },
+            {
+                CN_HANDLE_EVENTS,
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

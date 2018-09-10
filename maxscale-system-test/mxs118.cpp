@@ -1,6 +1,6 @@
 /**
  * @file mxs118.cpp bug mxs118 regression case ("Two monitors loaded at the same time result into not working
- *installation")
+ * installation")
  *
  * - Configure two monitors using same backend serves
  * - try to connect to maxscale

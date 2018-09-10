@@ -1,6 +1,6 @@
 /**
  * @file mxs280_select_outfile.cpp bug mxs280 regression case ("SELECT INTO OUTFILE query succeeds even if
- *backed fails")
+ * backed fails")
  *
  * - Create /tmp/t1.csv on all backends
  * - creat t1 table, put some data into it

@@ -100,57 +100,57 @@ typedef struct server_ref_t
  */
 typedef struct service
 {
-    const char*    name;                                                /**< The service name */
-    int            state;                                               /**< The service state */
-    int            client_count;                                        /**< Number of connected clients */
-    int            max_connections;                                     /**< Maximum client connections */
-    SERV_LISTENER* ports;                                               /**< Linked list of ports and
-                                                                         * protocols
-                                                                         * that this service will listen on */
-    const char*               routerModule;                             /**< Name of router module to use */
-    struct mxs_router_object* router;                                   /**< The router we are using */
-    struct mxs_router*        router_instance;                          /**< The router instance for this
-                                                                         * service */
-    char                      version_string[MAX_SERVICE_VERSION_LEN];  /**< version string for this service
-                                                                         * listeners */
-    SERVER_REF*               dbref;                                    /**< server references */
-    int                       n_dbref;                                  /**< Number of server references */
-    char                      user[MAX_SERVICE_USER_LEN];               /**< The user name to use to extract
-                                                                         * information */
-    char                      password[MAX_SERVICE_PASSWORD_LEN];       /**< The authentication data requied
-                                                                         * */
-    SERVICE_STATS             stats;                                    /**< The service statistics */
-    bool                      enable_root;                              /**< Allow root user  access */
-    bool                      localhost_match_wildcard_host;            /**< Match localhost against wildcard
-                                                                         * */
-    MXS_CONFIG_PARAMETER*     svc_config_param;                         /**<  list of config params and values
-                                                                         * */
-    int                       svc_config_version;                       /**<  Version number of configuration
-                                                                         * */
-    bool                      svc_do_shutdown;                          /**< tells the service to exit loops
-                                                                         * etc. */
-    bool                      users_from_all;                           /**< Load users from one server or all
-                                                                         * of them */
-    bool                      strip_db_esc;                             /**< Remove the '\' characters from
-                                                                         * database names
-                                                                         * when querying them from the server.
-                                                                         *MySQL Workbench seems
-                                                                         * to escape at least the underscore
-                                                                         *character. */
-    int64_t  conn_idle_timeout;                                         /**< Session timeout in seconds */
-    char     weightby[MAX_SERVICE_WEIGHTBY_LEN];                        /**< Service weighting parameter name
-                                                                         * */
-    bool     retry_start;                                               /**< If starting of the service should
-                                                                         * be retried later */
-    bool     log_auth_warnings;                                         /**< Log authentication failures and
-                                                                         * warnings */
-    uint64_t capabilities;                                              /**< The capabilities of the service,
-                                                                         * @see enum routing_capability */
-    int      max_retry_interval;                                        /**< Maximum retry interval */
-    bool     session_track_trx_state;                                   /**< Get transaction state via session
-                                                                         * track mechanism */
-    int      active;                                                    /**< Whether the service is still
-                                                                         * active */
+    const char*    name;                            /**< The service name */
+    int            state;                           /**< The service state */
+    int            client_count;                    /**< Number of connected clients */
+    int            max_connections;                 /**< Maximum client connections */
+    SERV_LISTENER* ports;                           /**< Linked list of ports and
+                                                     * protocols
+                                                     * that this service will listen on */
+    const char*               routerModule;         /**< Name of router module to use */
+    struct mxs_router_object* router;               /**< The router we are using */
+    struct mxs_router*        router_instance;      /**< The router instance for this
+                                                     * service */
+    char version_string[MAX_SERVICE_VERSION_LEN];   /**< version string for this service
+                                                     * listeners */
+    SERVER_REF* dbref;                              /**< server references */
+    int         n_dbref;                            /**< Number of server references */
+    char        user[MAX_SERVICE_USER_LEN];         /**< The user name to use to extract
+                                                     * information */
+    char password[MAX_SERVICE_PASSWORD_LEN];        /**< The authentication data requied
+                                                     * */
+    SERVICE_STATS stats;                            /**< The service statistics */
+    bool          enable_root;                      /**< Allow root user  access */
+    bool          localhost_match_wildcard_host;    /**< Match localhost against wildcard
+                                                     * */
+    MXS_CONFIG_PARAMETER* svc_config_param;         /**<  list of config params and values
+                                                     * */
+    int svc_config_version;                         /**<  Version number of configuration
+                                                     * */
+    bool svc_do_shutdown;                           /**< tells the service to exit loops
+                                                     * etc. */
+    bool users_from_all;                            /**< Load users from one server or all
+                                                     * of them */
+    bool strip_db_esc;                              /**< Remove the '\' characters from
+                                                     * database names
+                                                     * when querying them from the server.
+                                                     * MySQL Workbench seems
+                                                     * to escape at least the underscore
+                                                     * character. */
+    int64_t conn_idle_timeout;                      /**< Session timeout in seconds */
+    char    weightby[MAX_SERVICE_WEIGHTBY_LEN];     /**< Service weighting parameter name
+                                                     * */
+    bool retry_start;                               /**< If starting of the service should
+                                                     * be retried later */
+    bool log_auth_warnings;                         /**< Log authentication failures and
+                                                     * warnings */
+    uint64_t capabilities;                          /**< The capabilities of the service,
+                                                     * @see enum routing_capability */
+    int  max_retry_interval;                        /**< Maximum retry interval */
+    bool session_track_trx_state;                   /**< Get transaction state via session
+                                                     * track mechanism */
+    int active;                                     /**< Whether the service is still
+                                                     * active */
 } SERVICE;
 
 typedef enum count_spec_t

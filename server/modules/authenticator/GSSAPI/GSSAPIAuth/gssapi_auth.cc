@@ -207,7 +207,7 @@ void gssapi_auth_free(void* data)
  *
  * @return Allocated packet or NULL if memory allocation failed
  * @see
- *https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
+ * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
 static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE* instance, gssapi_auth_t* auth)
@@ -734,7 +734,9 @@ extern "C"
             NULL,   /* Process finish. */
             NULL,   /* Thread init. */
             NULL,   /* Thread finish. */
-            {{MXS_END_MODULE_PARAMS}}
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
         };
 
         return &info;

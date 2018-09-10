@@ -4,7 +4,7 @@
  * - create 'user' with password 'pass2'
  * - create load on Master (3 threads are inserting data into 't1' in the loop)
  * - in 40 parallel threads open connection, execute change_user to 'user', execute change_user to default
- *user, close connection
+ * user, close connection
  * - repeat test first only for RWSplit and second for all maxscales->routers[0]
  * - check logs for lack of "Unable to write to backend 'server2' due to authentication failure" errors
  * - check for lack of crashes in the log

@@ -163,6 +163,7 @@ extern "C"
  */
     MXS_MODULE* MXS_CREATE_MODULE()
     {
+        static const char description[] = "Transaction Performance Monitoring filter";
         static MXS_FILTER_OBJECT MyObject =
         {
             createInstance,
@@ -184,25 +185,21 @@ extern "C"
             MXS_MODULE_API_FILTER,
             MXS_MODULE_GA,
             MXS_FILTER_VERSION,
-            "Transaction Performance Monitoring filter",
+            description,
             "V1.0.1",
             RCAP_TYPE_CONTIGUOUS_INPUT,
             &MyObject,
-            NULL,                                       /* Process init. */
-            NULL,                                       /* Process finish. */
-            NULL,                                       /* Thread init. */
-            NULL,                                       /* Thread finish. */
+            NULL,
+            NULL,
+            NULL,
+            NULL,
             {
-                {"named_pipe",                          MXS_MODULE_PARAM_STRING,
-                 DEFAULT_NAMED_PIPE                                  },
-                {"filename",                            MXS_MODULE_PARAM_STRING,
-                 DEFAULT_FILE_NAME                                                                },
-                {"delimiter",                           MXS_MODULE_PARAM_STRING,
-                 DEFAULT_LOG_DELIMITER                                                                                        },
-                {"query_delimiter",                     MXS_MODULE_PARAM_STRING,
-                 DEFAULT_QUERY_DELIMITER                                                                                      },
-                {"source",                              MXS_MODULE_PARAM_STRING},
-                {"user",                                MXS_MODULE_PARAM_STRING},
+                {"named_pipe",         MXS_MODULE_PARAM_STRING,  DEFAULT_NAMED_PIPE     },
+                {"filename",           MXS_MODULE_PARAM_STRING,  DEFAULT_FILE_NAME      },
+                {"delimiter",          MXS_MODULE_PARAM_STRING,  DEFAULT_LOG_DELIMITER  },
+                {"query_delimiter",    MXS_MODULE_PARAM_STRING,  DEFAULT_QUERY_DELIMITER},
+                {"source",             MXS_MODULE_PARAM_STRING},
+                {"user",               MXS_MODULE_PARAM_STRING},
                 {MXS_END_MODULE_PARAMS}
             }
         };

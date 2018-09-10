@@ -1,6 +1,6 @@
 /**
  * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use
- *database is sent forever with tee filter to a readwrite split service")
+ * database is sent forever with tee filter to a readwrite split service")
  * - also used for 'sql_queries_pers1' and 'sql_queries_pers10' tests (with 'persistpoolmax=1' and
  *'persistpoolmax=10' for all servers)
  * - for bug648:

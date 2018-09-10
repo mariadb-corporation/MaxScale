@@ -108,10 +108,10 @@ public:
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
-     *services
+     * services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
      * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and
-     *maxscales->conn_slave[0] MYSQL structs
+     * maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
     int connect_maxscale(int m = 0);
@@ -132,21 +132,21 @@ public:
 
     /**
      * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in
-     *maxscales->conn_rwsplit[0]
+     * maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
     int connect_rwsplit(int m = 0);
 
     /**
      * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in
-     *maxscales->conn_master[0]
+     * maxscales->conn_master[0]
      * @return 0 in case of success
      */
     int connect_readconn_master(int m = 0);
 
     /**
      * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in
-     *maxscales->conn_slave[0]
+     * maxscales->conn_slave[0]
      * @return 0 in case of success
      */
     int connect_readconn_slave(int m = 0);
@@ -280,7 +280,7 @@ public:
 
     /**
      * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show
-     *server'
+     * server'
      * @param nodes Mariadb_nodes object
      * @return node index if one master found, -1 if no master found or several masters found
      */
@@ -309,4 +309,4 @@ public:
     void wait_for_monitor(int intervals = 1, int m = 0);
 };
 
-#endif // MAXSCALES_H
+#endif      // MAXSCALES_H

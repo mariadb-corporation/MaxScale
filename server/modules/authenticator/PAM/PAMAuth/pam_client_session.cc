@@ -301,7 +301,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb,
  *
  * @return Allocated packet
  * @see
- *https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
+ * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  */
 Buffer PamClientSession::create_auth_change_packet() const
 {

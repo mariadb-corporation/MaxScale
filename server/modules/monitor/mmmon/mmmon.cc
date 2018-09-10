@@ -442,7 +442,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                   /* Thread init. */
         NULL,                                   /* Thread finish. */
         {
-            {"detect_stale_master",             MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "detect_stale_master",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

@@ -242,134 +242,134 @@ static CONFIG_CONTEXT config_context;
 static const MXS_ENUM_VALUE ssl_values[] =
 {
     {"required",
-     1                                                                                           },
+     1},
     {"true",
-     1                                                                                           },
+     1},
     {"yes",
-     1                                                                                           },
+     1},
     {"on",
-     1                                                                                           },
+     1},
     {"1",
-     1                                                                                           },
+     1},
     {"disabled",
-     0                                                                                           },
+     0},
     {"false",
-     0                                                                                           },
+     0},
     {"no",
-     0                                                                                           },
+     0},
     {"off",
-     0                                                                                           },
+     0},
     {"0",
-     0                                                                                           },
+     0},
     {NULL}
 };
 
 static const MXS_ENUM_VALUE ssl_version_values[] =
 {
     {"MAX",
-     1                                                                                             },
+     1},
 #ifndef OPENSSL_1_1
     {"TLSv10",
-     1                                                                                             },
+     1},
 #endif
 #ifdef OPENSSL_1_0
     {"TLSv11",
-     1                                                                                             },
+     1},
     {"TLSv12",
-     1                                                                                             },
+     1},
 #endif
     {NULL}
 };
 
 const MXS_MODULE_PARAM config_service_params[] =
 {
-    {CN_TYPE,                          MXS_MODULE_PARAM_STRING,                          NULL,
+    {CN_TYPE,                          MXS_MODULE_PARAM_STRING, NULL,
      MXS_MODULE_OPT_REQUIRED},
-    {CN_ROUTER,                        MXS_MODULE_PARAM_STRING,                          NULL,
-     MXS_MODULE_OPT_REQUIRED                        },
+    {CN_ROUTER,                        MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
     {CN_ROUTER_OPTIONS,                MXS_MODULE_PARAM_STRING},
     {CN_SERVERS,                       MXS_MODULE_PARAM_STRING},
-    {CN_USER,                          MXS_MODULE_PARAM_STRING},                        // Not mandatory due
-                                                                                        // to
-                                                                                        // RCAP_TYPE_NO_AUTH
-    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},                        // Not mandatory due
-                                                                                        // to
-                                                                                        // RCAP_TYPE_NO_AUTH
-    {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,                            "false"},
-    {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,                           "3600"},
-    {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,                           "0"},
-    {CN_CONNECTION_TIMEOUT,            MXS_MODULE_PARAM_COUNT,                           "0"},
-    {CN_AUTH_ALL_SERVERS,              MXS_MODULE_PARAM_BOOL,                            "false"},
-    {CN_STRIP_DB_ESC,                  MXS_MODULE_PARAM_BOOL,                            "true"},
-    {CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL,                            "true"},
+    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due
+                                                                // to
+                                                                // RCAP_TYPE_NO_AUTH
+    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due
+                                                                // to
+                                                                // RCAP_TYPE_NO_AUTH
+    {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,   "false"},
+    {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,  "3600"},
+    {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_CONNECTION_TIMEOUT,            MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_AUTH_ALL_SERVERS,              MXS_MODULE_PARAM_BOOL,   "false"},
+    {CN_STRIP_DB_ESC,                  MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL,   "true"},
     {CN_VERSION_STRING,                MXS_MODULE_PARAM_STRING,
      DEFAULT_VERSION_STRING},
     {CN_FILTERS,                       MXS_MODULE_PARAM_STRING},
     {CN_WEIGHTBY,                      MXS_MODULE_PARAM_STRING},
-    {CN_LOG_AUTH_WARNINGS,             MXS_MODULE_PARAM_BOOL,                            "true"},
-    {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,                            "true"},
-    {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,                            "false"},
+    {CN_LOG_AUTH_WARNINGS,             MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_RETRY_ON_FAILURE,              MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_SESSION_TRACK_TRX_STATE,       MXS_MODULE_PARAM_BOOL,   "false"},
     {NULL}
 };
 
 const MXS_MODULE_PARAM config_listener_params[] =
 {
-    {CN_TYPE,                        MXS_MODULE_PARAM_STRING,                        NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                              },
-    {CN_SERVICE,                     MXS_MODULE_PARAM_SERVICE,                       NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                           },
-    {CN_PROTOCOL,                    MXS_MODULE_PARAM_STRING,                        NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                       },
-    {CN_PORT,                        MXS_MODULE_PARAM_COUNT},                       // Either port or socket,
-                                                                                    // checked when created
+    {CN_TYPE,                        MXS_MODULE_PARAM_STRING,  NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_SERVICE,                     MXS_MODULE_PARAM_SERVICE, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_PROTOCOL,                    MXS_MODULE_PARAM_STRING,  NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_PORT,                        MXS_MODULE_PARAM_COUNT},   // Either port or socket,
+                                                                // checked when created
     {CN_SOCKET,                      MXS_MODULE_PARAM_STRING},
     {CN_AUTHENTICATOR_OPTIONS,       MXS_MODULE_PARAM_STRING},
-    {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING,                        "::"},
+    {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING,  "::"},
     {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
-    {CN_SSL,                         MXS_MODULE_PARAM_ENUM,                          "false",
+    {CN_SSL,                         MXS_MODULE_PARAM_ENUM,    "false",
      MXS_MODULE_OPT_ENUM_UNIQUE,
-     ssl_values                                                                                                                                        },
-    {CN_SSL_CERT,                    MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                  },
-    {CN_SSL_KEY,                     MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                              },
-    {CN_SSL_CA_CERT,                 MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                                    },
-    {CN_SSL_VERSION,                 MXS_MODULE_PARAM_ENUM,                          "MAX",
+     ssl_values},
+    {CN_SSL_CERT,                    MXS_MODULE_PARAM_PATH,    NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_KEY,                     MXS_MODULE_PARAM_PATH,    NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_CA_CERT,                 MXS_MODULE_PARAM_PATH,    NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_VERSION,                 MXS_MODULE_PARAM_ENUM,    "MAX",
      MXS_MODULE_OPT_ENUM_UNIQUE,
-     ssl_version_values                                                                                                                                                                   },
-    {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,                         "9"},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,                          "true"},
+     ssl_version_values},
+    {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,   "9"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,    "true"},
     {NULL}
 };
 
 const MXS_MODULE_PARAM config_monitor_params[] =
 {
-    {CN_TYPE,                      MXS_MODULE_PARAM_STRING,                      NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                  },
-    {CN_MODULE,                    MXS_MODULE_PARAM_STRING,                      NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                        },
+    {CN_TYPE,                      MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_MODULE,                    MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
 
-    {CN_USER,                      MXS_MODULE_PARAM_STRING,                      NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                                             },
-    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING,                      NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                                                              },
+    {CN_USER,                      MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
 
     {CN_SERVERS,                   MXS_MODULE_PARAM_STRING},
-    {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,                       "2000"},
-    {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,                       "3"},
-    {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_COUNT,                       "1"},
-    {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_COUNT,                       "2"},
-    {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,                       "1"},
+    {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
+    {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,  "3"},
+    {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_COUNT,  "1"},
+    {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_COUNT,  "2"},
+    {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,  "1"},
 
-    {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_COUNT,                       "28800"},
+    {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_COUNT,  "28800"},
     {CN_DISK_SPACE_THRESHOLD,      MXS_MODULE_PARAM_STRING},
-    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT,                       "0"},
+    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT,  "0"},
 
-    {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},                    // Cannot be a path type as
-                                                                                // the script may have
-                                                                                // parameters
-    {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_COUNT,                       "90"},
+    {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},// Cannot be a path type as
+                                                            // the script may have
+                                                            // parameters
+    {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_COUNT,  "90"},
     {
         CN_EVENTS,
         MXS_MODULE_PARAM_ENUM,
@@ -382,42 +382,42 @@ const MXS_MODULE_PARAM config_monitor_params[] =
 
 const MXS_MODULE_PARAM config_filter_params[] =
 {
-    {CN_TYPE,   MXS_MODULE_PARAM_STRING,   NULL,
-     MXS_MODULE_OPT_REQUIRED                                      },
-    {CN_MODULE, MXS_MODULE_PARAM_STRING,   NULL,
-     MXS_MODULE_OPT_REQUIRED                                       },
+    {CN_TYPE,   MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_MODULE, MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
     {NULL}
 };
 
 const MXS_MODULE_PARAM config_server_params[] =
 {
-    {CN_TYPE,                        MXS_MODULE_PARAM_STRING,                        NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                                                                                                                                                                                                 },
-    {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING,                        NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                                                                                                                                                                                                                              },
-    {CN_PROTOCOL,                    MXS_MODULE_PARAM_STRING,                        NULL,
-     MXS_MODULE_OPT_REQUIRED                                                                                                                                                                                                                                                                                                                                                                                                                                                                          },
-    {CN_PORT,                        MXS_MODULE_PARAM_COUNT,                         "3306"},
+    {CN_TYPE,                        MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_ADDRESS,                     MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_PROTOCOL,                    MXS_MODULE_PARAM_STRING, NULL,
+     MXS_MODULE_OPT_REQUIRED},
+    {CN_PORT,                        MXS_MODULE_PARAM_COUNT,  "3306"},
     {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
     {CN_MONITORUSER,                 MXS_MODULE_PARAM_STRING},
     {CN_MONITORPW,                   MXS_MODULE_PARAM_STRING},
-    {CN_PERSISTPOOLMAX,              MXS_MODULE_PARAM_COUNT,                         "0"},
-    {CN_PERSISTMAXTIME,              MXS_MODULE_PARAM_COUNT,                         "0"},
-    {CN_PROXY_PROTOCOL,              MXS_MODULE_PARAM_BOOL,                          "false"},
-    {CN_SSL,                         MXS_MODULE_PARAM_ENUM,                          "false",
+    {CN_PERSISTPOOLMAX,              MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_PERSISTMAXTIME,              MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_PROXY_PROTOCOL,              MXS_MODULE_PARAM_BOOL,   "false"},
+    {CN_SSL,                         MXS_MODULE_PARAM_ENUM,   "false",
      MXS_MODULE_OPT_ENUM_UNIQUE,
-     ssl_values                                                                                                                                                                                                                                                                                                                                                                                                                                                           },
-    {CN_SSL_CERT,                    MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             },
-    {CN_SSL_KEY,                     MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         },
-    {CN_SSL_CA_CERT,                 MXS_MODULE_PARAM_PATH,                          NULL,
-     MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      },
-    {CN_SSL_VERSION,                 MXS_MODULE_PARAM_ENUM,                          "MAX",
+     ssl_values},
+    {CN_SSL_CERT,                    MXS_MODULE_PARAM_PATH,   NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_KEY,                     MXS_MODULE_PARAM_PATH,   NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_CA_CERT,                 MXS_MODULE_PARAM_PATH,   NULL,
+     MXS_MODULE_OPT_PATH_R_OK},
+    {CN_SSL_VERSION,                 MXS_MODULE_PARAM_ENUM,   "MAX",
      MXS_MODULE_OPT_ENUM_UNIQUE,
-     ssl_version_values                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                },
-    {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,                         "9"},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,                          "true"},
+     ssl_version_values},
+    {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,  "9"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "true"},
     {NULL}
 };
 
@@ -2109,19 +2109,19 @@ static struct
 } lognames[] =
 {
     {"log_messages", LOG_NOTICE,
-     "log_notice"                                                                                                       },//
-                                                    // Deprecated
+     "log_notice"},     //
+    // Deprecated
     {"log_trace",    LOG_INFO,
-     "log_info"                                                                                                              },//
-                                                    // Deprecated
+     "log_info"},   //
+    // Deprecated
     {"log_debug",    LOG_DEBUG,
-     NULL                                                                                                                        },
+     NULL},
     {"log_warning",  LOG_WARNING,
-     NULL                                                                                                                            },
+     NULL},
     {"log_notice",   LOG_NOTICE,
-     NULL                                                                                                                                },
+     NULL},
     {"log_info",     LOG_INFO,
-     NULL                                                                                                                                },
+     NULL},
     {NULL,           0}
 };
 
@@ -2276,7 +2276,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
 
-        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
+        decltype(gateway.qc_cache_properties.max_size)max_size = int_value;
 
         if (max_size >= 0)
         {

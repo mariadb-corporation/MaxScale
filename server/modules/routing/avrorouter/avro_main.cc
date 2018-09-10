@@ -453,9 +453,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t args_convert[] =
     {
         {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-         "The avrorouter service"                                                                          },
+         "The avrorouter service"},
         {MODULECMD_ARG_STRING,
-         "Action, whether to 'start' or 'stop' the conversion process"                                      }
+         "Action, whether to 'start' or 'stop' the conversion process"}
     };
     modulecmd_register_command(MXS_MODULE_NAME,
                                "convert",
@@ -529,24 +529,24 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_CREAT
             },
             {"source",
-             MXS_MODULE_PARAM_SERVICE                                                                                      },
+             MXS_MODULE_PARAM_SERVICE},
             {"filestem",                          MXS_MODULE_PARAM_STRING,
-             BINLOG_NAME_ROOT                                                                       },
+             BINLOG_NAME_ROOT},
             {"group_rows",                        MXS_MODULE_PARAM_COUNT,
-             "1000"                                                                                                               },
+             "1000"},
             {"group_trx",                         MXS_MODULE_PARAM_COUNT,
-             "1"                                                                                                                                               },
+             "1"},
             {"start_index",                       MXS_MODULE_PARAM_COUNT,
-             "1"                                                                                                                                                                            },
+             "1"},
             {"block_size",                        MXS_MODULE_PARAM_SIZE,
-             "0"                                                                                                                                                                               },
-            {"codec",                             MXS_MODULE_PARAM_ENUM,                             "null",
+             "0"},
+            {"codec",                             MXS_MODULE_PARAM_ENUM,  "null",
              MXS_MODULE_OPT_ENUM_UNIQUE,
-             codec_values                                                                                                                                  },
+             codec_values},
             {"match",
-             MXS_MODULE_PARAM_REGEX                                                                                        },
+             MXS_MODULE_PARAM_REGEX},
             {"exclude",
-             MXS_MODULE_PARAM_REGEX                                                                                        },
+             MXS_MODULE_PARAM_REGEX},
             {MXS_END_MODULE_PARAMS}
         }
     };

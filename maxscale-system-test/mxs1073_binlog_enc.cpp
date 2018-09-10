@@ -8,7 +8,7 @@
  * - check that all slave have the same data
  * - 'maxbinlogcheck' against Maxscale binlog file
  * - check 'maxbinlogcheck' output for lack of errors and presence of 'Decrypting binlog file with algorithm'
- *message
+ * message
  * - try remote access to Maxscale binlog with 'mysqlbinlog'
  * - copy Maxscale binlogs to Master and check output of 'show binary logs' before and after copying
  * (expect same file name and size, but different checksums)
@@ -22,7 +22,7 @@
 
 /**
  * @brief get_first_binlog_file Get name, size and checksum of first binlog file from 'show binary logs'
- *output list
+ * output list
  * @param Test TestConnections object
  * @param name string for file name
  * @param size variable for file size

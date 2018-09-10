@@ -41,4 +41,4 @@ const char* bug670_sql
         delete from mysql.t1 where id = 7; \
         select 1 as \"endof cycle\" from dual;\n";
 
-#endif // BUG670_SQL_H
+#endif      // BUG670_SQL_H

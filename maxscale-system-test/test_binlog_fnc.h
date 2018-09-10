@@ -27,4 +27,4 @@ int start_transaction(TestConnections* Test);
  */
 void test_binlog(TestConnections* Test);
 
-#endif // TEST_BINLOG_FNC_H
+#endif      // TEST_BINLOG_FNC_H

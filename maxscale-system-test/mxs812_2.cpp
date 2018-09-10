@@ -1,6 +1,6 @@
 /**
  * @file mxs812_2.cpp - Execute binary protocol prepared statements while master is blocked, checks "Current
- *no. of conns" after the test
+ * no. of conns" after the test
  * - start threads which prepares and executes simple statement in the loop
  * - every 5 seconds block and after another 5 seconds unblock Master
  * - checks "Current no. of conns" after the test, expect 0

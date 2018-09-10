@@ -113,8 +113,8 @@ extern "C"
             NULL,                       /* Thread init. */
             NULL,                       /* Thread finish. */
             {
-                {"global_script",      MXS_MODULE_PARAM_PATH,      NULL,  MXS_MODULE_OPT_PATH_R_OK},
-                {"session_script",     MXS_MODULE_PARAM_PATH,      NULL,  MXS_MODULE_OPT_PATH_R_OK},
+                {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
+                {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
                 {MXS_END_MODULE_PARAMS}
             }
         };

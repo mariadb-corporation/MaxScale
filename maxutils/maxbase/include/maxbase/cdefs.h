@@ -86,7 +86,7 @@
 #include <threads.h>
 #endif
 
-#else // __STDC_VERSION >= 201112
+#else   // __STDC_VERSION >= 201112
 
 #if defined (__GNUC__)
 #define thread_local __thread
@@ -96,7 +96,7 @@
 
 #endif
 
-#else // __cplusplus
+#else   // __cplusplus
 
 // GCC 4.8 added support for native thread_local.
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
@@ -109,4 +109,4 @@
 
 #endif
 
-#endif // __cplusplus
+#endif      // __cplusplus

@@ -105,8 +105,8 @@ enum mxs_avro_codec_type
 
 static const MXS_ENUM_VALUE codec_values[] =
 {
-    {"null",    MXS_AVRO_CODEC_NULL      },
-    {"deflate", MXS_AVRO_CODEC_DEFLATE   },
+    {"null",    MXS_AVRO_CODEC_NULL   },
+    {"deflate", MXS_AVRO_CODEC_DEFLATE},
 // Not yet implemented
 //    {"snappy", MXS_AVRO_CODEC_SNAPPY},
     {NULL}
@@ -192,7 +192,7 @@ private:
 };
 
 void read_table_info(uint8_t* ptr,
-                     uint8_t post_header_len,
+                     uint8_t  post_header_len,
                      uint64_t* table_id,
                      char* dest,
                      size_t len);
@@ -208,7 +208,7 @@ void read_table_identifier(const char* db,
                            const char* sql,
                            const char* end,
                            char* dest,
-                           int size);
+                           int   size);
 int               avro_client_handle_request(Avro*, AvroSession*, GWBUF*);
 void              avro_client_rotate(Avro* router, AvroSession* client, uint8_t* ptr);
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);

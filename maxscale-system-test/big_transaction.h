@@ -14,4 +14,4 @@
  */
 int big_transaction(MYSQL* conn, int N);
 
-#endif // BIG_TRANSACTION_H
+#endif      // BIG_TRANSACTION_H

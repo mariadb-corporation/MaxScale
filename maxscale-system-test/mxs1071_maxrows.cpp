@@ -236,7 +236,7 @@ int compare_expected(TestConnections* Test, const char* sql, my_ulonglong exp_i,
 
 /**
  * @brief compare_stmt_expected Execute prepared statement and compare number of rows in every result set with
- *expected values
+ * expected values
  * This function uses mysql_stmt-* functions (COM_STMT_EXECUTE, COM_STMT_FETCH)
  * @param Test TestConnections object
  * @param stmt MYSQL_STMT prepared statement handler

@@ -1,6 +1,6 @@
 /**
  * @file mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop executed following statements in the loop
- *against all maxscales->routers[0]:
+ * against all maxscales->routers[0]:
  * @verbatim
  *  SET NAMES "UTF8";
  *  PREPARE s1 FROM 'SHOW GLOBAL STATUS WHERE variable_name = ?';

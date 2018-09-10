@@ -1,6 +1,6 @@
 /*
- *lint -e662
- *lint -e661
+ * lint -e662
+ * lint -e661
  */
 
 /*

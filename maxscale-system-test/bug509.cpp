@@ -1,12 +1,12 @@
 /**
  * @file bug509.cpp regression case for bug 509 and 507 ( "Referring to a nonexisting server in servers=...
- *doesn't even raise a warning"
+ * doesn't even raise a warning"
  * and "rw-split router does not send last_insert_id() to master" )
  *
  * - "CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));",
  * - do a number of INSERTs first using RWsplit, then directly Galera nodes.
  * - do "select @@wsrep_node_address, last_insert_id();" and "select last_insert_id(), @@wsrep_node_address;"
- *and compares results.
+ * and compares results.
  * - do "insert into t2 (x) values (i);" 1000 times and compares results of
  * "select @@wsrep_node_address, last_insert_id();" and "select last_insert_id(), @@wsrep_node_address;"
  *
@@ -86,17 +86,15 @@ int main(int argc, char* argv[])
     char last_insert_id1[1024];
     char last_insert_id2[1024];
     if ((
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel1,
-                "last_insert_id()",
-                &last_insert_id1[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel1,
+                       "last_insert_id()",
+                       &last_insert_id1[0])
             != 0 ) || (
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel2,
-                "last_insert_id()",
-                &last_insert_id2[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel2,
+                       "last_insert_id()",
+                       &last_insert_id2[0])
             != 0 ))
     {
         Test->tprintf("last_insert_id() fied not found!!\n");

@@ -1,6 +1,6 @@
 /**
  * @file binlog_big_transaction.cpp test of simple binlog router setup and execute a number of big
- *transactions
+ * transactions
  */
 
 

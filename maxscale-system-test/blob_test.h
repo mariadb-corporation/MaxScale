@@ -23,7 +23,7 @@ int test_longblob(TestConnections* Test,
 
 /**
  * @brief check_longblob_data Does SELECT against table created by test_longblob() and cheks that data are
- *correct
+ * correct
  * @param Test TestConnection object
  * @param conn MYSQL connection handler
  * @param chunk_size size of one data chunk (in sizeof(long usingned))
@@ -37,4 +37,4 @@ int check_longblob_data(TestConnections* Test,
                         int chunks,
                         int rows);
 
-#endif // BLOB_TEST_H
+#endif      // BLOB_TEST_H

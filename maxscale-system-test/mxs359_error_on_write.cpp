@@ -51,8 +51,8 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     self = &test;
 
-    Queries rw_ok({{"INSERT INTO test.t1 VALUES (1)", true}, {"SELECT * FROM test.t1", true}});
-    Queries rw_err({{"INSERT INTO test.t1 VALUES (1)", false}, {"SELECT * FROM test.t1", true}});
+    Queries rw_ok({ {"INSERT INTO test.t1 VALUES (1)", true}, {"SELECT * FROM test.t1", true}});
+    Queries rw_err({ {"INSERT INTO test.t1 VALUES (1)", false}, {"SELECT * FROM test.t1", true}});
 
     Func block_master = [&test]() {
             test.repl->block_node(0);

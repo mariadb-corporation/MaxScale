@@ -195,26 +195,21 @@ typedef struct server
                                                                           : (server_is_ndb(s)       \
                                                                              ? "RUNNING NDB"        \
                                                                              : (( \
-                                                                                    server_is_running( \
-                                                                                        s) \
+                                                                                    server_is_running(s) \
                                                                                     && \
-                                                                                    server_is_in_maint( \
-                                                                                        s)) \
+                                                                                    server_is_in_maint(s)) \
                                                                                 ? \
                                                                                 "RUNNING MAINTENANCE"   \
                                                                                 : ( \
-                                                                                    server_is_relay( \
-                                                                                        s) \
+                                                                                    server_is_relay(s) \
                                                                                     ? \
                                                                                     "RUNNING RELAY"   \
                                                                                     : ( \
-                                                                                        server_is_usable( \
-                                                                                            s) \
+                                                                                        server_is_usable(s) \
                                                                                         ? \
                                                                                         "RUNNING (only)"   \
                                                                                         : ( \
-                                                                                            server_is_down( \
-                                                                                                s) \
+                                                                                            server_is_down(s) \
                                                                                             ? \
                                                                                             "DOWN" \
                                                                                             : \
@@ -524,7 +519,7 @@ extern void dprintServer(DCB*, const SERVER*);
 extern void dprintPersistentDCBs(DCB*, const SERVER*);
 extern void dListServers(DCB*);
 
-int server_response_time_num_samples(const SERVER* server);
+int    server_response_time_num_samples(const SERVER* server);
 double server_response_time_average(const SERVER* server);
 
 MXS_END_DECLS

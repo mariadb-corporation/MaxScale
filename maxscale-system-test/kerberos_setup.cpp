@@ -157,23 +157,20 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
 
     Test->tprintf("Trying use usr1 to execute query: RW Split\n");
-    Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4006",
-                             false),
-        "Error executing query against RW Split\n");
+    Test->add_result(Test->repl->ssh_node(1,
+                                          "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4006",
+                                          false),
+                     "Error executing query against RW Split\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Master\n");
-    Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4008",
-                             false),
-        "Error executing query against Read Connection Master\n");
+    Test->add_result(Test->repl->ssh_node(1,
+                                          "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4008",
+                                          false),
+                     "Error executing query against Read Connection Master\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Slave\n");
-    Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009",
-                             false),
-        "Error executing query against Read Connection Slave\n");
+    Test->add_result(Test->repl->ssh_node(1,
+                                          "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009",
+                                          false),
+                     "Error executing query against Read Connection Slave\n");
 
     for (int i = 0; i < Test->repl->N; i++)
     {

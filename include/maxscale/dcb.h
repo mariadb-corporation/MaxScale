@@ -102,16 +102,16 @@ typedef enum
     ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER"   \
                                       : ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER"   \
                                                                         : ((r) \
-                                                                           == DCB_ROLE_BACKEND_HANDLER ? \
-                                                                           "DCB_ROLE_BACKEND_HANDLER"   \
-                                                                                                       : (( \
-                                                                                                              r) \
-                                                                                                          == \
-                                                                                                          DCB_ROLE_INTERNAL \
-                                                                                                          ? \
-                                                                                                          "DCB_ROLE_INTERNAL"   \
-                                                                                                          : \
-                                                                                                          "UNKNOWN DCB ROLE"))))
+                                                                           == DCB_ROLE_BACKEND_HANDLER   \
+                                                                           ? "DCB_ROLE_BACKEND_HANDLER"   \
+                                                                           : (( \
+                                                                                  r) \
+                                                                              == \
+                                                                              DCB_ROLE_INTERNAL \
+                                                                              ? \
+                                                                              "DCB_ROLE_INTERNAL"   \
+                                                                              : \
+                                                                              "UNKNOWN DCB ROLE"))))
 
 #define DCB_STRTYPE(dcb) \
     (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB"   \
@@ -193,14 +193,14 @@ typedef struct dcb
     MXS_PROTOCOL            func;                       /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR       authfunc;                   /**< The authenticator functions for this descriptor
                                                          * */
-    uint32_t                writeqlen;                  /**< Current number of byes in the write queue */
-    uint32_t                high_water;                 /**< High water mark of write queue */
-    uint32_t                low_water;                  /**< Low water mark of write queue */
-    GWBUF*                  writeq;                     /**< Write Data Queue */
-    GWBUF*                  delayq;                     /**< Delay Backend Write Data Queue */
-    GWBUF*                  readq;                      /**< Read queue for storing incomplete reads */
-    GWBUF*                  fakeq;                      /**< Fake event queue for generated events */
-    uint32_t                fake_event;                 /**< Fake event to be delivered to handler */
+    uint32_t writeqlen;                                 /**< Current number of byes in the write queue */
+    uint32_t high_water;                                /**< High water mark of write queue */
+    uint32_t low_water;                                 /**< Low water mark of write queue */
+    GWBUF*   writeq;                                    /**< Write Data Queue */
+    GWBUF*   delayq;                                    /**< Delay Backend Write Data Queue */
+    GWBUF*   readq;                                     /**< Read queue for storing incomplete reads */
+    GWBUF*   fakeq;                                     /**< Fake event queue for generated events */
+    uint32_t fake_event;                                /**< Fake event to be delivered to handler */
 
     DCBSTATS    stats;                      /**< DCB related statistics */
     struct dcb* nextpersistent;             /**< Next DCB in the persistent pool for SERVER */

@@ -1,6 +1,6 @@
 /**
  * @file mxs127.cpp - bug mxs-127 regression case ("disable_sescmd_history causes MaxScale to crash under
- *load")
+ * load")
  * - execute set @test=%d 10000 times against RWSplit, ReadConn Master and ReadConn Slave
  */
 

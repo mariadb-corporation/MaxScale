@@ -29,11 +29,11 @@ typedef std::set<std::string> StringSet;
  * - Maxscale_sshkey - ssh key for Maxscale machine
  * - maxscale_cnf - name of maxscale .cnf file (full)
  * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to
- *kill)
+ * kill)
  * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual
- *machine to kill)
+ * machine to kill)
  * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP
- *address of virtual machine to kill)
+ * address of virtual machine to kill)
  * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
  * - node_N - Number of Master/Slave setup nodes
  * - node_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
@@ -42,7 +42,7 @@ typedef std::set<std::string> StringSet;
  * - node_User - User name to access Master/Slav setup
  * - node_Password - Password to access Master/Slave setup
  * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera
- *setup
+ * setup
  *
  */
 class TestConnections
@@ -54,7 +54,7 @@ private:
 public:
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale
-     *machine
+     * machine
      * @param test_exec_name Path to currect executable
      */
     TestConnections(int argc, char* argv[]);
@@ -108,7 +108,7 @@ public:
 
     /**
      * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one
-     *parameter: IP address of virtual machine to kill)
+     * parameter: IP address of virtual machine to kill)
      */
     char get_logs_command[4096];
 
@@ -287,7 +287,7 @@ public:
 
     /**
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as
-     *slave connected to MaxScale binlog router
+     * slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
     int start_binlog(int m = 0);
@@ -321,7 +321,7 @@ public:
 
     /**
      * @brief copy_all_logs_periodic Copies all MaxScale logs and (if happens) core to current workspace and
-     *sends time stemp to log copying script
+     * sends time stemp to log copying script
      */
     int copy_all_logs_periodic();
 
@@ -335,11 +335,11 @@ public:
     /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false
-     *for no connection.
+     * for no connection.
      * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection,
-     *false for no connection.
+     * false for no connection.
      * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection,
-     *false for no connection.
+     * false for no connection.
      * @return  0 if connections are in the expected state
      */
     int test_maxscale_connections(int m,
@@ -351,11 +351,11 @@ public:
      * @brief Create a number of connections to all services, run simple query, close all connections
      * @param conn_N number of connections
      * @param rwsplit_flag if true connections to RWSplit router will be created, if false - no connections to
-     *RWSplit
+     * RWSplit
      * @param master_flag if true connections to ReadConn master router will be created, if false - no
-     *connections to ReadConn master
+     * connections to ReadConn master
      * @param slave_flag if true connections to ReadConn slave router will be created, if false - no
-     *connections to ReadConn slave
+     * connections to ReadConn slave
      * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false
      *- no connections to RWSplit with Galera backend
      * @return  0 in case of success
@@ -402,10 +402,10 @@ public:
 
     /**
      * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale
-     *services
+     * services
      * @param Test Pointer to TestConnections object that contains references to test setup
      * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4
-     *last INSERT is about 700kb long
+     * last INSERT is about 700kb long
      * @return 0 in case of no error and all checks are ok
      */
     int insert_select(int m, int N);
@@ -432,7 +432,7 @@ public:
      * @param err_msg Error message to search in the log
      * @param expected TRUE if err_msg is expedted in the log, false if err_msg should NOT be in the log
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected
-     *is false)
+     * is false)
      */
     void check_log_err(int m, const char* err_msg, bool expected);
 
@@ -470,7 +470,7 @@ public:
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
      * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to
-     *check if i is alive.
+     * check if i is alive.
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
@@ -598,4 +598,4 @@ void* log_copy_thread(void* ptr);
  */
 std::string dump_status(const StringSet& current, const StringSet& expected);
 
-#endif // TESTCONNECTIONS_H
+#endif      // TESTCONNECTIONS_H

@@ -1,7 +1,7 @@
 /**
  * @file max720_line_with_no_equal.cpp mxs720 regression case - first part: line without "=", second - weird
- *lines  ("MaxScale fails to start and doesn't log any useful message when there are spurious characters in
- *the config file")
+ * lines  ("MaxScale fails to start and doesn't log any useful message when there are spurious characters in
+ * the config file")
  *
  * - use incorrect maxscale.cnf
  * - check log for error

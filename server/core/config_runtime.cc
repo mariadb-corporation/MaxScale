@@ -848,7 +848,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
 
         if (get_suffixed_size(value, &max_size))
         {
-            decltype(QC_CACHE_PROPERTIES::max_size) new_size = max_size;
+            decltype(QC_CACHE_PROPERTIES::max_size)new_size = max_size;
 
             if (new_size >= 0)
             {
@@ -935,7 +935,12 @@ bool runtime_create_listener(Service* service,
 
         if (ssl_key && ssl_cert && ssl_ca
             && (ssl
-                    = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth,
+                    = create_ssl(name,
+                                 ssl_key,
+                                 ssl_cert,
+                                 ssl_ca,
+                                 ssl_version,
+                                 ssl_depth,
                                  verify_ssl)) == NULL)
         {
             MXS_ERROR("SSL initialization for listener '%s' failed.", name);

@@ -1,6 +1,6 @@
 /**
  * @file bug643.cpp  regression case for bugs 643 ("Hints, RWSplit: MaxScale goes into infinite loop and
- *crashes") and bug645
+ * crashes") and bug645
  * - setup RWSplit in the following way for bug643
  * @verbatim
  *  [hints]

@@ -461,8 +461,8 @@ void BinlogFilterSession::skipDatabaseTable(const uint8_t* data,
             && db == fConfig.dbname)
         {
             // Config Db name matches: 1.1 OR 1.2
-            m_skip = fConfig.table.empty()  /* 1.1 */
-                || table == fConfig.table;  /* 1.2 */
+            m_skip = fConfig.table.empty()      /* 1.1 */
+                || table == fConfig.table;      /* 1.2 */
         }
         else
         {

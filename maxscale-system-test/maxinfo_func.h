@@ -22,4 +22,4 @@ int          setnonblocking(int sock);
 int          get_x_fl_from_json(char* line, long long int* x1, long long int* fl);
 
 
-#endif // MAXINFO_FUNC_H
+#endif      // MAXINFO_FUNC_H

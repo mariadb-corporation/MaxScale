@@ -1,6 +1,6 @@
 /**
  * @file bug705.cpp regression case for bug 705 ("Authentication fails when the user connects to a database
- *when the SQL mode includes ANSI_QUOTES")
+ * when the SQL mode includes ANSI_QUOTES")
  *
  * - use only one backend
  * - derectly to backend SET GLOBAL sql_mode="ANSI"
@@ -117,11 +117,11 @@
  |
  |  mysql root@centos-7-minimal:[Mon Jan 26 14:27:33 2015][(none)]> SET SESSION sql_mode = "POSTGRESQL";
  |select @@sql_mode;
- |  
- |  
- |  
- |  
- |  
+ |
+ |
+ |
+ |
+ |
  |                                                                                                       Query
  |OK, 0 rows affected (0.00 sec)
  |
@@ -197,7 +197,8 @@
  |via mysql client
  |  Comment 5 ivan.stoykov@skysql.com 2015-01-26 16:37:32 UTC
  |  There is at least one case that after setting the sql_mode to string :
- |  "REAL_AS_FLOAT,PIPES_AS_CONCAT,ANSI_QUOTES,IGNORE_SPACE,ONLY_FULL_GROUP_BY,ANSI,STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+ |
+ |"REAL_AS_FLOAT,PIPES_AS_CONCAT,ANSI_QUOTES,IGNORE_SPACE,ONLY_FULL_GROUP_BY,ANSI,STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
  |at 10.0.15-MariaDB-wsrep-log  , using maxscale in this way returned an error.
  |
  |  $ mysql --host max-scale-host --user=test --password=xxx --port 4449 mysqlslap

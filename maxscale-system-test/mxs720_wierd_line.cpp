@@ -1,6 +1,6 @@
 /**
  * @file max720_wierd_line.cpp mxs720 regression case - second part: weird lines  ("MaxScale fails to start
- *and doesn't log any useful message when there are spurious characters in the config file")
+ * and doesn't log any useful message when there are spurious characters in the config file")
  *
  * - use incorrect maxscale.cnf
  * - check log for error

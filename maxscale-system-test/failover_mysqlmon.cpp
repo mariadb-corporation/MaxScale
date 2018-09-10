@@ -7,7 +7,7 @@
  * - unblock backend nodes
  * - wait for monitor
  * - check that we are still using the last node to which we failed over to and that the old nodes are in
- *maintenance mode
+ * maintenance mode
  */
 
 

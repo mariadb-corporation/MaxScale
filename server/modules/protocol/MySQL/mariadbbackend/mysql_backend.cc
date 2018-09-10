@@ -518,9 +518,9 @@ static int gw_read_backend_event(DCB* dcb)
         else if (readbuf)
         {
             /*
-             ** We have a complete response from the server
-             ** TODO: add support for non-contiguous responses
-             */
+            ** We have a complete response from the server
+            ** TODO: add support for non-contiguous responses
+            */
             readbuf = gwbuf_make_contiguous(readbuf);
             MXS_ABORT_IF_NULL(readbuf);
 

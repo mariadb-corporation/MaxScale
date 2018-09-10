@@ -25,7 +25,7 @@
  * - check data on all nodes
  * - chack sha1
  * - repeat last test with FLUSH LOGS on master 1. before putting data to Master 2. after putting data to
- *master
+ * master
  */
 
 

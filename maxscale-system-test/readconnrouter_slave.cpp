@@ -1,6 +1,6 @@
 /**
  * @file readconnrouter_slave.cpp Creates 100 connections to ReadConn in slave mode and check if connections
- *are distributed among all slaves
+ * are distributed among all slaves
  *
  * - create 100 connections to ReadConn slave
  * - check if all slave have equal number of connections (+-1)

@@ -64,7 +64,7 @@ typedef struct httpd_session
                                              * the document name */
     char* query_string;                     /*< the Query string, starts with ?, after path_info and document
                                              * name */
-    int   headers_received;                 /*< All the headers has been received, if 1 */
+    int headers_received;                   /*< All the headers has been received, if 1 */
 } HTTPD_session;
 
 MXS_END_DECLS

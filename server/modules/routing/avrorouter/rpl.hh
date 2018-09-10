@@ -235,7 +235,9 @@ public:
         SRowEventHandler event_handler,
         pcre2_code* match,
         pcre2_code* exclude,
-        gtid_pos_t = {});
+        gtid_pos_t =
+    {
+    });
 
     // Add a stored TableCreateEvent
     void add_create(STableCreateEvent create);

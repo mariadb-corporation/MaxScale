@@ -94,7 +94,7 @@ typedef struct mxs_router_object
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER*(*createInstance)(SERVICE * service, MXS_CONFIG_PARAMETER* params);
+    MXS_ROUTER*(*createInstance)(SERVICE * service, MXS_CONFIG_PARAMETER * params);
 
     /**
      * Called to create a new user session within the router
@@ -109,7 +109,7 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session);
+    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION * session);
 
     /**
      * @brief Called when a session is closed
@@ -119,7 +119,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void (* closeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    void (* closeSession)(MXS_ROUTER * instance, MXS_ROUTER_SESSION * router_session);
 
     /**
      * @brief Called when a session is freed
@@ -129,7 +129,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void (* freeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    void (* freeSession)(MXS_ROUTER * instance, MXS_ROUTER_SESSION * router_session);
 
     /**
      * @brief Called on each query that requires routing
@@ -152,7 +152,7 @@ typedef struct mxs_router_object
      * @param instance Router instance
      * @param dcb      DCB where the diagnostic information should be written
      */
-    void (* diagnostics)(MXS_ROUTER* instance, DCB* dcb);
+    void (* diagnostics)(MXS_ROUTER * instance, DCB * dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -175,10 +175,10 @@ typedef struct mxs_router_object
      * @param queue          Response from the server
      * @param backend_dcb    The backend DCB which responded to the query
      */
-    void (* clientReply)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
-                         GWBUF* queue,
-                         DCB*   backend_dcb);
+    void (* clientReply)(MXS_ROUTER * instance,
+                         MXS_ROUTER_SESSION * router_session,
+                         GWBUF * queue,
+                         DCB * backend_dcb);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -191,10 +191,10 @@ typedef struct mxs_router_object
      *
      * @param succp Pointer to a `bool` which should be set to true for success or false for error
      */
-    void (* handleError)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
-                         GWBUF* errmsgbuf,
-                         DCB*   backend_dcb,
+    void (* handleError)(MXS_ROUTER * instance,
+                         MXS_ROUTER_SESSION * router_session,
+                         GWBUF * errmsgbuf,
+                         DCB * backend_dcb,
                          mxs_error_action_t action,
                          bool* succp);
 
@@ -212,7 +212,7 @@ typedef struct mxs_router_object
      *
      * @param instance Router instance
      */
-    void (* destroyInstance)(MXS_ROUTER* instance);
+    void (* destroyInstance)(MXS_ROUTER * instance);
 
     /**
      * @brief Configure router instance at runtime
@@ -233,7 +233,7 @@ typedef struct mxs_router_object
      *         failed. If reconfiguration failed, the state of the router
      *         instance should not be modified.
      */
-    bool (* configureInstance)(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
+    bool (* configureInstance)(MXS_ROUTER * instance, MXS_CONFIG_PARAMETER * params);
 } MXS_ROUTER_OBJECT;
 
 /**

@@ -1032,9 +1032,9 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
                                                                     : (present
                                                                        & SERVER_JOINED) ? SYNCED_UP_EVENT
                                                                                         : (present
-                                                                                           & SERVER_NDB) ?
-            NDB_UP_EVENT
-                                                                                                         :
+                                                                                           & SERVER_NDB)
+            ? NDB_UP_EVENT
+            :
             SERVER_UP_EVENT;
         break;
 
@@ -1043,9 +1043,9 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
                                       : (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT
                                                               : (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT
                                                                                        : (prev
-                                                                                          & SERVER_NDB) ?
-            NDB_DOWN_EVENT
-                                                                                                        :
+                                                                                          & SERVER_NDB)
+            ? NDB_DOWN_EVENT
+            :
             SERVER_DOWN_EVENT;
         break;
 
@@ -1054,9 +1054,9 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
                                       : (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT
                                                               : (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT
                                                                                        : (prev
-                                                                                          & SERVER_NDB) ?
-            LOST_NDB_EVENT
-                                                                                                        :
+                                                                                          & SERVER_NDB)
+            ? LOST_NDB_EVENT
+            :
             UNDEFINED_EVENT;
         break;
 
@@ -1066,9 +1066,9 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
                                                                     : (present
                                                                        & SERVER_JOINED) ? NEW_SYNCED_EVENT
                                                                                         : (present
-                                                                                           & SERVER_NDB) ?
-            NEW_NDB_EVENT
-                                                                                                         :
+                                                                                           & SERVER_NDB)
+            ? NEW_NDB_EVENT
+            :
             UNDEFINED_EVENT;
         break;
 
@@ -1131,7 +1131,7 @@ static void mon_append_node_names(MXS_MONITOR* mon,
     const char* separator = "";
     char arr[MAX_SERVER_MONUSER_LEN
              + MAX_SERVER_MONPW_LEN
-             + MAX_SERVER_ADDRESS_LEN + 64];// Some extra space for port and separator
+             + MAX_SERVER_ADDRESS_LEN + 64];    // Some extra space for port and separator
     dest[0] = '\0';
 
     while (servers && len)
@@ -2608,7 +2608,7 @@ bool MonitorInstance::should_update_disk_space_status(const MXS_MONITORED_SERVER
 
     if (m_monitor->disk_space_check_interval
         && (m_monitor->disk_space_threshold || pMs->server->disk_space_threshold)
-        && (pMs->disk_space_checked != -1)) // -1 means disabled
+        && (pMs->disk_space_checked != -1))     // -1 means disabled
     {
         int64_t now = get_time_ms();
 

@@ -103,9 +103,9 @@ typedef struct
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", PCRE2_CASELESS                              },
-    {"case",       0                                           },
-    {"extended",   PCRE2_EXTENDED                              },
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0             },
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
 
@@ -169,14 +169,14 @@ extern "C"
             {
                 {"count",
                  MXS_MODULE_PARAM_COUNT,
-                 "0"              },
+                 "0"},
                 {"time",
                  MXS_MODULE_PARAM_COUNT,
-                 CCR_DEFAULT_TIME                                                                     },
+                 CCR_DEFAULT_TIME},
                 {PARAM_MATCH,
-                 MXS_MODULE_PARAM_REGEX                                                              },
+                 MXS_MODULE_PARAM_REGEX},
                 {PARAM_IGNORE,
-                 MXS_MODULE_PARAM_REGEX                                                              },
+                 MXS_MODULE_PARAM_REGEX},
                 {
                     "options",
                     MXS_MODULE_PARAM_ENUM,

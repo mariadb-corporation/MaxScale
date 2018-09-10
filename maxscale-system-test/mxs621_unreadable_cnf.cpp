@@ -1,6 +1,6 @@
 /**
  * @file max621_unreadable_cnf.cpp mxs621 regression case ("MaxScale fails to start silently if config file is
- *not readable")
+ * not readable")
  *
  * - make maxscale.cnf unreadable
  * - try to restart Maxscale

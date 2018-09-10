@@ -219,37 +219,37 @@ typedef enum
     GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT = (1 << 30),
     GW_MYSQL_CAPABILITIES_REMEMBER_OPTIONS       = (1 << 31),
     GW_MYSQL_CAPABILITIES_CLIENT                 = (
-        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
-        | GW_MYSQL_CAPABILITIES_FOUND_ROWS
-        | GW_MYSQL_CAPABILITIES_LONG_FLAG
-        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
-        | GW_MYSQL_CAPABILITIES_LOCAL_FILES
-        | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
-        | GW_MYSQL_CAPABILITIES_TRANSACTIONS
-        | GW_MYSQL_CAPABILITIES_PROTOCOL_41
-        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
-        | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
+            GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
+            | GW_MYSQL_CAPABILITIES_FOUND_ROWS
+            | GW_MYSQL_CAPABILITIES_LONG_FLAG
+            | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
+            | GW_MYSQL_CAPABILITIES_LOCAL_FILES
+            | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
+            | GW_MYSQL_CAPABILITIES_TRANSACTIONS
+            | GW_MYSQL_CAPABILITIES_PROTOCOL_41
+            | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
+            | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
+            | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
+            | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
     GW_MYSQL_CAPABILITIES_SERVER = (
-        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
-        | GW_MYSQL_CAPABILITIES_FOUND_ROWS
-        | GW_MYSQL_CAPABILITIES_LONG_FLAG
-        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
-        | GW_MYSQL_CAPABILITIES_NO_SCHEMA
-        | GW_MYSQL_CAPABILITIES_ODBC
-        | GW_MYSQL_CAPABILITIES_LOCAL_FILES
-        | GW_MYSQL_CAPABILITIES_IGNORE_SPACE
-        | GW_MYSQL_CAPABILITIES_PROTOCOL_41
-        | GW_MYSQL_CAPABILITIES_INTERACTIVE
-        | GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE
-        | GW_MYSQL_CAPABILITIES_TRANSACTIONS
-        | GW_MYSQL_CAPABILITIES_RESERVED
-        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
-        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
-        | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
+            GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
+            | GW_MYSQL_CAPABILITIES_FOUND_ROWS
+            | GW_MYSQL_CAPABILITIES_LONG_FLAG
+            | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
+            | GW_MYSQL_CAPABILITIES_NO_SCHEMA
+            | GW_MYSQL_CAPABILITIES_ODBC
+            | GW_MYSQL_CAPABILITIES_LOCAL_FILES
+            | GW_MYSQL_CAPABILITIES_IGNORE_SPACE
+            | GW_MYSQL_CAPABILITIES_PROTOCOL_41
+            | GW_MYSQL_CAPABILITIES_INTERACTIVE
+            | GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE
+            | GW_MYSQL_CAPABILITIES_TRANSACTIONS
+            | GW_MYSQL_CAPABILITIES_RESERVED
+            | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
+            | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
+            | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
+            | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
+            | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
 } gw_mysql_capabilities_t;
 
 /**
@@ -332,10 +332,10 @@ typedef struct
     GWBUF*                 stored_query;                /*< Temporarily stored queries */
     bool                   collect_result;              /*< Collect the next result set as one buffer */
     bool                   changing_user;
-    uint32_t               num_eof_packets;             /*< Encountered eof packet number, used for check
-                                                         * packet type */
-    bool                   large_query;                 /*< Whether to ignore the command byte of the next
-                                                         * packet*/
+    uint32_t               num_eof_packets; /*< Encountered eof packet number, used for check
+                                             * packet type */
+    bool large_query;                       /*< Whether to ignore the command byte of the next
+                                             * packet*/
 } MySQLProtocol;
 
 typedef struct

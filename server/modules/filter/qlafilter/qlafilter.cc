@@ -113,9 +113,9 @@ static bool cb_log(const MODULECMD_ARG* argv, json_t** output);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", PCRE2_CASELESS      },
-    {"case",       0                   },
-    {"extended",   PCRE2_EXTENDED      },
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0             },
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
 
@@ -128,12 +128,12 @@ static const MXS_ENUM_VALUE log_type_values[] =
 
 static const MXS_ENUM_VALUE log_data_values[] =
 {
-    {"service",    LOG_DATA_SERVICE         },
-    {"session",    LOG_DATA_SESSION         },
-    {"date",       LOG_DATA_DATE            },
-    {"user",       LOG_DATA_USER            },
-    {"query",      LOG_DATA_QUERY           },
-    {"reply_time", LOG_DATA_REPLY_TIME      },
+    {"service",    LOG_DATA_SERVICE   },
+    {"session",    LOG_DATA_SESSION   },
+    {"date",       LOG_DATA_DATE      },
+    {"user",       LOG_DATA_USER      },
+    {"query",      LOG_DATA_QUERY     },
+    {"reply_time", LOG_DATA_REPLY_TIME},
     {NULL}
 };
 

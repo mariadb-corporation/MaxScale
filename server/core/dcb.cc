@@ -2495,8 +2495,8 @@ DCB* dcb_accept(DCB* dcb)
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create
-                && (client_dcb->authenticator_data = client_dcb->authfunc.create(
-                        client_dcb->listener->auth_instance)) == NULL)
+                && (client_dcb->authenticator_data
+                        = client_dcb->authfunc.create(client_dcb->listener->auth_instance)) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB");
                 dcb_close(client_dcb);
@@ -2956,7 +2956,7 @@ class SerialDcbTask : public Worker::Task
 {
 public:
 
-    SerialDcbTask(bool(*func)(DCB*, void*), void* data)
+    SerialDcbTask(bool (*func)(DCB*, void*), void* data)
         : m_func(func)
         , m_data(data)
         , m_more(1)
@@ -2991,7 +2991,7 @@ public:
     }
 
 private:
-    bool (* m_func)(DCB* dcb, void* data);
+    bool (* m_func)(DCB * dcb, void* data);
     void* m_data;
     int   m_more;
 };

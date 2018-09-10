@@ -1,6 +1,6 @@
 /**
  * @file server_lag.cpp  Create high INSERT load to create slave lag and check that Maxscale start routing
- *queries to Master
+ * queries to Master
  *
  * - in Maxscqale.cnf set max_slave_replication_lag=20
  * - in parallel thread execute as many INSERTs as possible

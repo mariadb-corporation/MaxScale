@@ -90,7 +90,7 @@ typedef struct mxs_monitor_api
      *
      * @param monitor  The monitor object.
      */
-    void (* destroyInstance)(MXS_MONITOR_INSTANCE* monitor);
+    void (* destroyInstance)(MXS_MONITOR_INSTANCE * monitor);
 
     /**
      * @brief Start the monitor
@@ -104,8 +104,8 @@ typedef struct mxs_monitor_api
      *
      * @return True, if the monitor could be started, false otherwise.
      */
-    bool (* startMonitor)(MXS_MONITOR_INSTANCE* monitor,
-                          const MXS_CONFIG_PARAMETER* params);
+    bool (* startMonitor)(MXS_MONITOR_INSTANCE * monitor,
+                          const MXS_CONFIG_PARAMETER * params);
 
     /**
      * @brief Stop the monitor
@@ -115,7 +115,7 @@ typedef struct mxs_monitor_api
      *
      * @param monitor The monitor object
      */
-    void (* stopMonitor)(MXS_MONITOR_INSTANCE* monitor);
+    void (* stopMonitor)(MXS_MONITOR_INSTANCE * monitor);
 
     /**
      * @brief Write diagnostic information to a DCB.
@@ -123,7 +123,7 @@ typedef struct mxs_monitor_api
      * @param monitor  The monitor object.
      * @param dcb      The dcb to write to.
      */
-    void (* diagnostics)(const MXS_MONITOR_INSTANCE* monitor, DCB* dcb);
+    void (* diagnostics)(const MXS_MONITOR_INSTANCE * monitor, DCB * dcb);
 
     /**
      * @brief Return diagnostic information about the monitor
@@ -244,20 +244,20 @@ struct mxs_monitor
     int connect_attempts;                                   /**< How many times a connection is attempted */
     int read_timeout;                                       /**< Timeout in seconds to read from the server.
                                                              *   There are retries and the total effective
-                                                             *timeout
+                                                             * timeout
                                                              *   value is three times the option value.
                                                              */
     int write_timeout;                                      /**< Timeout in seconds for each attempt to write
                                                              * to the server.
                                                              * There are retries and the total effective
-                                                             *timeout value is
+                                                             * timeout value is
                                                              * two times the option value.
                                                              */
-    MXS_MONITOR_API*       api;                             /**< The monitor api */
-    char*                  module_name;                     /**< Name of the monitor module */
-    MXS_MONITOR_INSTANCE*  instance;                        /**< Instance returned from startMonitor */
-    size_t                 interval;                        /**< The monitor interval */
-    int                    check_maintenance_flag;          /**< Set when admin requests a maintenance status
+    MXS_MONITOR_API*      api;                              /**< The monitor api */
+    char*                 module_name;                      /**< Name of the monitor module */
+    MXS_MONITOR_INSTANCE* instance;                         /**< Instance returned from startMonitor */
+    size_t                interval;                         /**< The monitor interval */
+    int                   check_maintenance_flag;           /**< Set when admin requests a maintenance status
                                                              * change. */
     bool                   active;                          /**< True if monitor is active */
     time_t                 journal_max_age;                 /**< Maximum age of journal file */
@@ -268,8 +268,8 @@ struct mxs_monitor
     MxsDiskSpaceThreshold* disk_space_threshold;            /**< Disk space thresholds */
     int64_t                disk_space_check_interval;       /**< How often should a disk space check be made
                                                              * at most. */
-    uint64_t               ticks;                           /**< Number of performed monitoring intervals */
-    struct mxs_monitor*    next;                            /**< Next monitor in the linked list */
+    uint64_t            ticks;                              /**< Number of performed monitoring intervals */
+    struct mxs_monitor* next;                               /**< Next monitor in the linked list */
 };
 
 /**

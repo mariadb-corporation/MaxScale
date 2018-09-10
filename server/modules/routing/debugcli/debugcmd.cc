@@ -701,7 +701,7 @@ struct subcommand setoptions[] =
         "STATUS The status to set\n"
         "\n"
         "Example: set server dbnode4 master",
-        {ARG_TYPE_SERVER,  ARG_TYPE_OBJECT_NAME }
+        {ARG_TYPE_SERVER,  ARG_TYPE_OBJECT_NAME}
     },
     {
         "pollsleep", 1, 1, (FN)set_pollsleep,
@@ -1950,25 +1950,25 @@ static struct
     struct  subcommand* options;
 } cmds[] =
 {
-    {"add",      addoptions           },
-    {"remove",   removeoptions        },
-    {"create",   createoptions        },
-    {"destroy",  destroyoptions       },
-    {"alter",    alteroptions         },
-    {"set",      setoptions           },
-    {"clear",    clearoptions         },
-    {"disable",  disableoptions       },
-    {"enable",   enableoptions        },
-    {"flush",    flushoptions         },
-    {"list",     listoptions          },
-    {"reload",   reloadoptions        },
-    {"restart",  restartoptions       },
-    {"shutdown", shutdownoptions      },
-    {"show",     showoptions          },
-    {"sync",     syncoptions          },
-    {"call",     calloptions          },
-    {"ping",     pingoptions          },
-    {NULL,       NULL                 }
+    {"add",      addoptions     },
+    {"remove",   removeoptions  },
+    {"create",   createoptions  },
+    {"destroy",  destroyoptions },
+    {"alter",    alteroptions   },
+    {"set",      setoptions     },
+    {"clear",    clearoptions   },
+    {"disable",  disableoptions },
+    {"enable",   enableoptions  },
+    {"flush",    flushoptions   },
+    {"list",     listoptions    },
+    {"reload",   reloadoptions  },
+    {"restart",  restartoptions },
+    {"shutdown", shutdownoptions},
+    {"show",     showoptions    },
+    {"sync",     syncoptions    },
+    {"call",     calloptions    },
+    {"ping",     pingoptions    },
+    {NULL,       NULL           }
 };
 
 static bool command_requires_admin_privileges(const char* cmd)
@@ -2801,10 +2801,10 @@ static int string_to_priority(const char* name)
     static const struct log_priority_entry LOG_PRIORITY_ENTRIES[] =
     {
         // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
-        {"debug",   LOG_DEBUG     },
-        {"info",    LOG_INFO      },
-        {"notice",  LOG_NOTICE    },
-        {"warning", LOG_WARNING   },
+        {"debug",   LOG_DEBUG  },
+        {"info",    LOG_INFO   },
+        {"notice",  LOG_NOTICE },
+        {"warning", LOG_WARNING},
     };
 
     const size_t N_LOG_PRIORITY_ENTRIES = sizeof(LOG_PRIORITY_ENTRIES) / sizeof(LOG_PRIORITY_ENTRIES[0]);

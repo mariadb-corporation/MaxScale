@@ -171,40 +171,40 @@ typedef enum
     ((s) == MXS_AUTH_STATE_INIT ? "MXS_AUTH_STATE_INIT"   \
                                 : ((s) == MXS_AUTH_STATE_PENDING_CONNECT ? "MXS_AUTH_STATE_PENDING_CONNECT"   \
                                                                          : ((s) \
-                                                                            == MXS_AUTH_STATE_CONNECTED ? \
-                                                                            "MXS_AUTH_STATE_CONNECTED"   \
-                                                                                                        : (( \
-                                                                                                               s) \
-                                                                                                           == \
-                                                                                                           MXS_AUTH_STATE_MESSAGE_READ \
-                                                                                                           ? \
-                                                                                                           "MXS_AUTH_STATE_MESSAGE_READ"   \
-                                                                                                           : (( \
-                                                                                                                  s) \
-                                                                                                              == \
-                                                                                                              MXS_AUTH_STATE_RESPONSE_SENT \
-                                                                                                              ? \
-                                                                                                              "MXS_AUTH_STATE_RESPONSE_SENT"   \
-                                                                                                              : (( \
-                                                                                                                     s) \
-                                                                                                                 == \
-                                                                                                                 MXS_AUTH_STATE_FAILED \
-                                                                                                                 ? \
-                                                                                                                 "MXS_AUTH_STATE_FAILED"   \
-                                                                                                                 : (( \
-                                                                                                                        s) \
-                                                                                                                    == \
-                                                                                                                    MXS_AUTH_STATE_HANDSHAKE_FAILED \
-                                                                                                                    ? \
-                                                                                                                    "MXS_AUTH_STATE_HANDSHAKE_FAILED"   \
-                                                                                                                    : (( \
-                                                                                                                           s) \
-                                                                                                                       == \
-                                                                                                                       MXS_AUTH_STATE_COMPLETE \
-                                                                                                                       ? \
-                                                                                                                       "MXS_AUTH_STATE_COMPLETE"   \
-                                                                                                                       : \
-                                                                                                                       "UNKNOWN AUTH STATE"))))))))
+                                                                            == MXS_AUTH_STATE_CONNECTED   \
+                                                                            ? "MXS_AUTH_STATE_CONNECTED"   \
+                                                                            : (( \
+                                                                                   s) \
+                                                                               == \
+                                                                               MXS_AUTH_STATE_MESSAGE_READ \
+                                                                               ? \
+                                                                               "MXS_AUTH_STATE_MESSAGE_READ"   \
+                                                                               : (( \
+                                                                                      s) \
+                                                                                  == \
+                                                                                  MXS_AUTH_STATE_RESPONSE_SENT \
+                                                                                  ? \
+                                                                                  "MXS_AUTH_STATE_RESPONSE_SENT"   \
+                                                                                  : (( \
+                                                                                         s) \
+                                                                                     == \
+                                                                                     MXS_AUTH_STATE_FAILED \
+                                                                                     ? \
+                                                                                     "MXS_AUTH_STATE_FAILED"   \
+                                                                                     : (( \
+                                                                                            s) \
+                                                                                        == \
+                                                                                        MXS_AUTH_STATE_HANDSHAKE_FAILED \
+                                                                                        ? \
+                                                                                        "MXS_AUTH_STATE_HANDSHAKE_FAILED"   \
+                                                                                        : (( \
+                                                                                               s) \
+                                                                                           == \
+                                                                                           MXS_AUTH_STATE_COMPLETE \
+                                                                                           ? \
+                                                                                           "MXS_AUTH_STATE_COMPLETE"   \
+                                                                                           : \
+                                                                                           "UNKNOWN AUTH STATE"))))))))
 
 /**
  * The MXS_AUTHENTICATOR version data. The following should be updated whenever

@@ -45,4 +45,4 @@ void load(long* new_inserts,
           bool  galera,
           bool  report_errors);
 
-#endif // BIG_LOAD_H
+#endif      // BIG_LOAD_H

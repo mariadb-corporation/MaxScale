@@ -11,4 +11,4 @@
  */
 void copy_rules(TestConnections* Test, const char* rules_name, const char* rules_dir);
 
-#endif // FW_COPY_RULES_H
+#endif      // FW_COPY_RULES_H

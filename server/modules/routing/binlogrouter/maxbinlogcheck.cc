@@ -38,17 +38,17 @@ static int  set_encryption_options(ROUTER_INSTANCE* inst, char* key_file, char* 
 #ifdef HAVE_GLIBC
 static struct option long_options[] =
 {
-    {"debug",         no_argument,            0,                 'd'},
-    {"version",       no_argument,            0,                 'V'},
-    {"fix",           no_argument,            0,                 'f'},
-    {"mariadb10",     no_argument,            0,                 'M'},
-    {"header",        no_argument,            0,                 'H'},
-    {"key_file",      required_argument,      0,                 'K'},
-    {"aes_algo",      required_argument,      0,                 'A'},
-    {"replace-event", required_argument,      0,                 'R'},
-    {"remove-trx",    required_argument,      0,                 'T'},
-    {"help",          no_argument,            0,                 '?'},
-    {0,               0,                      0,                 0  }
+    {"debug",         no_argument,            0,                      'd'                },
+    {"version",       no_argument,            0,                      'V'                },
+    {"fix",           no_argument,            0,                      'f'                },
+    {"mariadb10",     no_argument,            0,                      'M'                },
+    {"header",        no_argument,            0,                      'H'                },
+    {"key_file",      required_argument,      0,                      'K'                },
+    {"aes_algo",      required_argument,      0,                      'A'                },
+    {"replace-event", required_argument,      0,                      'R'                },
+    {"remove-trx",    required_argument,      0,                      'T'                },
+    {"help",          no_argument,            0,                      '?'                },
+    {0,               0,                      0,                      0                  }
 };
 #endif
 const char* binlog_check_version = "2.2.1";

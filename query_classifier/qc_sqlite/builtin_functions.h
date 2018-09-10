@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
- #pragma once
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,7 +23,9 @@ void init_builtin_functions();
 void finish_builtin_functions();
 
 bool is_builtin_readonly_function(const char* zToken,
-                                  uint32_t major, uint32_t minor, uint32_t patch,
+                                  uint32_t major,
+                                  uint32_t minor,
+                                  uint32_t patch,
                                   bool check_oracle);
 
 #ifdef __cplusplus

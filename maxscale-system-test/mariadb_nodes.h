@@ -344,7 +344,7 @@ public:
 
     /**
      * @brief disable_ssl Modifies my.cnf in order to get rid of ssl, redefine access user to allow
-     *connections without ssl
+     * connections without ssl
      * @return 0 if success
      */
     int disable_ssl();
@@ -485,4 +485,4 @@ public:
     // }
 };
 
-#endif // MARIADB_NODES_H
+#endif      // MARIADB_NODES_H

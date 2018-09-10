@@ -1267,12 +1267,12 @@ string SlaveStatus::to_string() const
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
-        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
-        host_port.c_str(),
-        running_states.c_str(),
-        master_server_id,
-        gtid_io_pos.to_string().c_str(),
-        seconds_behind_master);
+            "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
+            host_port.c_str(),
+            running_states.c_str(),
+            master_server_id,
+            gtid_io_pos.to_string().c_str(),
+            seconds_behind_master);
     return rval;
 }
 

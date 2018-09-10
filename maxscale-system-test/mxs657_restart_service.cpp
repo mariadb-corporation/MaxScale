@@ -1,6 +1,6 @@
 /**
  * @file mxs657_restart_service.cpp mxs657 regression case ("Debug assertion when service is shut down and
- *restarted repeatedly")
+ * restarted repeatedly")
  *
  * - shutdown and restart RW Split Router in the loop from a number of threads
  * Note: does not work crash reliable way with 'smoke' option

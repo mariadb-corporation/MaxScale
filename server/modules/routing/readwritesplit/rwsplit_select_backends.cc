@@ -127,7 +127,7 @@ SRWBackendVector::iterator backend_cmp_response_time(SRWBackendVector& sBackends
         SERVER_REF* server = (**sBackends[i]).backend();
         auto ave = server_response_time_average(server->server);
 
-        if (ave==0)
+        if (ave == 0)
         {
             constexpr double very_quick = 1.0 / 10000000;   // arbitrary very short duration (0.1
                                                             // microseconds)

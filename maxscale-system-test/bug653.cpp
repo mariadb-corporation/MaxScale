@@ -1,10 +1,10 @@
 /**
  * @file bug653.cpp  regression case for bug 653 ("Memory corruption when users with long hostnames that can
- *no the resolved are loaded into MaxScale")
+ * no the resolved are loaded into MaxScale")
  *
  * - CREATE USER
  *'user_with_very_long_hostname'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org'
- *IDENTIFIED BY 'old';
+ * IDENTIFIED BY 'old';
  * - try to connect using user 'user_with_very_long_hostname'
  * - DROP USER
  *'user_with_very_long_hostname'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org'

@@ -260,4 +260,4 @@ public:
     const char* sg_intern;
 };
 
-#endif // RDS_VPC_H
+#endif      // RDS_VPC_H

@@ -128,8 +128,8 @@ typedef struct mxs_module_param
     enum mxs_module_param_type type;            /**< Type of the parameter */
     const char*                default_value;   /**< Default value for the parameter, NULL for no default
                                                  * value */
-    uint64_t                   options;         /**< Parameter options */
-    const MXS_ENUM_VALUE*      accepted_values; /**< Only for enum values */
+    uint64_t              options;              /**< Parameter options */
+    const MXS_ENUM_VALUE* accepted_values;      /**< Only for enum values */
 } MXS_MODULE_PARAM;
 
 /** Maximum number of parameters that modules can declare */

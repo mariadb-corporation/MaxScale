@@ -151,9 +151,9 @@ extern "C"
     {
         static modulecmd_arg_type_t args[] =
         {
-            {MODULECMD_ARG_SERVICE, "Service where the user is added" },
-            {MODULECMD_ARG_STRING,  "User to add"                     },
-            {MODULECMD_ARG_STRING,  "Password of the user"            }
+            {MODULECMD_ARG_SERVICE, "Service where the user is added"},
+            {MODULECMD_ARG_STRING,  "User to add"                    },
+            {MODULECMD_ARG_STRING,  "Password of the user"           }
         };
 
         modulecmd_register_command("cdc",
@@ -192,7 +192,9 @@ extern "C"
             NULL,   /* Process finish. */
             NULL,   /* Thread init. */
             NULL,   /* Thread finish. */
-            {{MXS_END_MODULE_PARAMS}}
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
         };
 
         return &info;

@@ -46,7 +46,7 @@ public:
     int                master_port = PORT_UNKNOWN;          /* Master server port. */
     slave_io_running_t slave_io_running = SLAVE_IO_NO;      /* Slave I/O thread running state: * "Yes",
                                                              * "Connecting" or "No" */
-    bool        slave_sql_running = false;                  /* Slave SQL thread running state, true if "Yes"
+    bool slave_sql_running = false;                         /* Slave SQL thread running state, true if "Yes"
                                                              * */
     GtidList    gtid_io_pos;                                /* Gtid I/O position of the slave thread. */
     std::string last_error;                                 /* Last IO or SQL error encountered. */
@@ -100,9 +100,9 @@ struct NodeData
     bool in_stack;      /* Is this node currently is the search stack. */
 
     // Results from algorithm runs. Should only be overwritten when server data has been queried.
-    int                  cycle;             /* Which cycle is this node part of, if any. */
-    int                  reach;             /* How many servers replicate from this server or its children. */
-    ServerArray          parents;           /* Which nodes is this node replicating from. External masters
+    int         cycle;                      /* Which cycle is this node part of, if any. */
+    int         reach;                      /* How many servers replicate from this server or its children. */
+    ServerArray parents;                    /* Which nodes is this node replicating from. External masters
                                              * excluded. */
     ServerArray          children;          /* Which nodes are replicating from this node. */
     std::vector<int64_t> external_masters;  /* Server id:s of external masters. */
@@ -172,7 +172,7 @@ public:
 
     /**
      * Update information which changes rarely. This method should be called after (re)connecting to a
-     *backend.
+     * backend.
      * Calling this every monitoring loop is overkill.
      */
     void update_server_version();

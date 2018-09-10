@@ -22,4 +22,4 @@ const char* setup_slave_no_pos
       "MASTER_PORT=%d";
 
 
-#endif // SQL_CONST_H
+#endif      // SQL_CONST_H

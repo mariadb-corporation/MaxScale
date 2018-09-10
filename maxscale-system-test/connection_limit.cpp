@@ -2,7 +2,7 @@
  * @file connection_limit.cpp  connection_limit check if max_connections parameter works
  *
  * - Maxscale.cnf contains max_connections=10 for RWSplit, max_connections=20 for ReadConn master and
- *max_connections=25 for ReadConn slave
+ * max_connections=25 for ReadConn slave
  * - create max num of connections and check tha N+1 connection fails
  */
 

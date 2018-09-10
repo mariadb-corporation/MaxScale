@@ -74,4 +74,4 @@ int select_from_t1(MYSQL* conn, int N);
  */
 int check_if_t1_exists(MYSQL* conn);
 
-#endif // SQL_T1_H
+#endif      // SQL_T1_H

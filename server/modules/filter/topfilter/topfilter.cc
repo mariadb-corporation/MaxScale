@@ -124,9 +124,9 @@ typedef struct
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE                           },
-    {"case",       0                                   },
-    {"extended",   REG_EXTENDED                        },
+    {"ignorecase", REG_ICASE   },
+    {"case",       0           },
+    {"extended",   REG_EXTENDED},
     {NULL}
 };
 
@@ -164,23 +164,22 @@ extern "C"
             MXS_MODULE_API_FILTER,
             MXS_MODULE_GA,
             MXS_FILTER_VERSION,
-            "A top N query logging filter",
+            "A top N query "
+            "logging filter",
             "V1.0.1",
             RCAP_TYPE_CONTIGUOUS_INPUT,
             &MyObject,
-            NULL,                           /* Process init. */
-            NULL,                           /* Process finish. */
-            NULL,                           /* Thread init. */
-            NULL,                           /* Thread finish. */
+            NULL,
+            NULL,
+            NULL,
+            NULL,
             {
-                {"count",                  MXS_MODULE_PARAM_COUNT,
-                 "10"                                                     },
-                {"filebase",               MXS_MODULE_PARAM_STRING,               NULL,
-                 MXS_MODULE_OPT_REQUIRED                            },
-                {"match",                  MXS_MODULE_PARAM_STRING},
-                {"exclude",                MXS_MODULE_PARAM_STRING},
-                {"source",                 MXS_MODULE_PARAM_STRING},
-                {"user",                   MXS_MODULE_PARAM_STRING},
+                {"count",                 MXS_MODULE_PARAM_COUNT,   "10"                   },
+                {"filebase",              MXS_MODULE_PARAM_STRING,  NULL, MXS_MODULE_OPT_REQUIRED},
+                {"match",                 MXS_MODULE_PARAM_STRING},
+                {"exclude",               MXS_MODULE_PARAM_STRING},
+                {"source",                MXS_MODULE_PARAM_STRING},
+                {"user",                  MXS_MODULE_PARAM_STRING},
                 {
                     "options",
                     MXS_MODULE_PARAM_ENUM,

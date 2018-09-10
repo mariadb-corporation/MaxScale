@@ -2,7 +2,7 @@
  * @file bug479.cpp regression case for bug 479 ( Undefined filter reference in MaxScale.cnf causes a crash)
  *
  * - Maxscale.cnf with "filters=non existing filter | не существуюший фильтер", cheks error log for warnings
- *and
+ * and
  * - check if Maxscale is alive
  */
 

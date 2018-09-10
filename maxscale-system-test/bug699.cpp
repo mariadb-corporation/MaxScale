@@ -1,6 +1,6 @@
 /**
  * @file bug699.cpp regression case for bug 699 ( "rw-split sensitive to order of terms in field list of
- *SELECT (round 2)" )
+ * SELECT (round 2)" )
  *
  * - compare @@hostname from "select  @@wsrep_node_name, @@hostname" and "select  @@hostname,
  *@@wsrep_node_name"
@@ -223,17 +223,15 @@ int main(int argc, char* argv[])
     char serverid2[1024];
 
     if ((
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel3,
-                "@@server_id",
-                &serverid1[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel3,
+                       "@@server_id",
+                       &serverid1[0])
             != 0 ) || (
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel4,
-                "@@server_id",
-                &serverid2[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel4,
+                       "@@server_id",
+                       &serverid2[0])
             != 0 ))
     {
         Test->add_result(1, "@@server_id field not found!!\n");
@@ -249,17 +247,15 @@ int main(int argc, char* argv[])
     }
 
     if ((
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel1,
-                "@@hostname",
-                &serverid1[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel1,
+                       "@@hostname",
+                       &serverid1[0])
             != 0 ) || (
-            find_field(
-                Test->maxscales->conn_rwsplit[0],
-                sel2,
-                "@@hostname",
-                &serverid2[0])
+            find_field(Test->maxscales->conn_rwsplit[0],
+                       sel2,
+                       "@@hostname",
+                       &serverid2[0])
             != 0 ))
     {
         Test->add_result(1, "@@hostname field not found!!\n");

@@ -1,6 +1,6 @@
 /**
  * @file bug656.cpp Checks Maxscale behaviour in case if Master node is blocked - NOT NEEDED BECAUSE IT IS
- *ALREADY CHECKED BY OTHER TESTS!!!!
+ * ALREADY CHECKED BY OTHER TESTS!!!!
  *
  * - ConnecT to RWSplit
  * - block Mariadb server on Master node by Firewall

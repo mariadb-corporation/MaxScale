@@ -1,6 +1,6 @@
 /**
  * @file ses_bigmem Executes a lot of session commands with "disable_sescmd_history=true" and check that
- *memory consumption is not increasing
+ * memory consumption is not increasing
  * (relates to MXS-672 "maxscale possible memory leak"
  */
 

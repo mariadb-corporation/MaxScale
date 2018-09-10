@@ -32,7 +32,7 @@ bool server_clear_status(SERVER* server, int bit, std::string* errmsg_out = NULL
  */
 inline bool almost_equal_server_scores(double lhs, double rhs)
 {
-    constexpr double div = 100; // within 1% of each other.
+    constexpr double div = 100;     // within 1% of each other.
     return std::abs((long)(lhs - rhs)) < std::abs((long)std::max(lhs, rhs)) * (1 / div);
 }
 }

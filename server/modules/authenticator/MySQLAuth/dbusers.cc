@@ -788,7 +788,7 @@ bool check_service_permissions(SERVICE* service)
 {
     if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH)
         || config_get_global_options()->skip_permission_checks
-        || service->dbref == NULL)  // No servers to check
+        || service->dbref == NULL)      // No servers to check
     {
         return true;
     }

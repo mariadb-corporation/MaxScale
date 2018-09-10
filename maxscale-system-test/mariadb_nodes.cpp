@@ -228,12 +228,11 @@ int Mariadb_nodes::find_master()
     int master_node = 255;
     while ((found == 0) && (i < N))
     {
-        if (find_field(
-                nodes[i],
-                (char*) "show slave status;",
-                (char*) "Master_Host",
-                &str[0]
-                ) == 0)
+        if (find_field(nodes[i],
+                       (char*) "show slave status;",
+                       (char*) "Master_Host",
+                       &str[0]
+                       ) == 0)
         {
             found = 1;
             strcpy(master_IP, str);

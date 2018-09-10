@@ -1,6 +1,6 @@
 /**
  * @file mxs652_bad_ssl.cpp mxs652 regression case ("ssl is configured in a wrong way, but Maxscale can be
- *started and works")
+ * started and works")
  *
  * - Maxscale.cnf contains ssl configuration for all services in 'router' section instead of 'listener' with
  *'ssl=require'

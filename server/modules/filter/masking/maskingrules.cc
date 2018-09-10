@@ -751,11 +751,11 @@ bool rule_get_values(json_t* pRule,
     // Get Key object based on 'rule_type' param
     if ((pKeyObj = rule_get_object(pRule,
                                    rule_type))
-        &&  // Run checks on user access
+        &&      // Run checks on user access
         rule_run_common_checks(pRule,
                                applies_to,
                                exempted)
-        &&  // Extract values from the rule
+        &&      // Extract values from the rule
         rule_get_common_values(pKeyObj,
                                column,
                                table,
@@ -1004,7 +1004,7 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
                         &table,
                         &database,
                         KEY_REPLACE)
-        && rule_get_match_value_fill(pRule, // get match/value/fill
+        && rule_get_match_value_fill(pRule,     // get match/value/fill
                                      &match,
                                      &value,
                                      &fill))

@@ -1,6 +1,6 @@
 /**
  * @file bug654.cpp  regression case for bug654 abd 698 ("maxadm: show dbusers <two-part service name without
- *quotation> causes SEGFAULT", "Using invalid parameter in many maxadmin commands causes MaxScale to fail")
+ * quotation> causes SEGFAULT", "Using invalid parameter in many maxadmin commands causes MaxScale to fail")
  *
  * - execute maxadmin command show dbusers RW Split Router and show dbusers "RW Split Router"
  * . execute different maxadmin commands with wrong parameters

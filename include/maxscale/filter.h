@@ -88,7 +88,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER*(*createInstance)(const char* name, MXS_CONFIG_PARAMETER* params);
+    MXS_FILTER*(*createInstance)(const char* name, MXS_CONFIG_PARAMETER * params);
 
     /**
      * Called to create a new user session within the filter
@@ -103,7 +103,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter session or NULL on error
      */
-    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session);
+    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION * session);
 
     /**
      * @brief Called when a session is closed
@@ -113,7 +113,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* closeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
+    void (* closeSession)(MXS_FILTER * instance, MXS_FILTER_SESSION * fsession);
 
     /**
      * @brief Called when a session is freed
@@ -123,7 +123,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* freeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
+    void (* freeSession)(MXS_FILTER * instance, MXS_FILTER_SESSION * fsession);
 
     /**
      * @brief Sets the downstream component of the filter pipeline
@@ -131,7 +131,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* setDownstream)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, MXS_DOWNSTREAM* downstream);
+    void (* setDownstream)(MXS_FILTER * instance, MXS_FILTER_SESSION * fsession, MXS_DOWNSTREAM * downstream);
 
     /**
      * @brief Sets the upstream component of the filter pipeline
@@ -139,7 +139,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* setUpstream)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, MXS_UPSTREAM* downstream);
+    void (* setUpstream)(MXS_FILTER * instance, MXS_FILTER_SESSION * fsession, MXS_UPSTREAM * downstream);
 
     /**
      * @brief Called on each query that requires routing
@@ -176,7 +176,7 @@ typedef struct mxs_filter_object
      * @param fsession Filter session, NULL if general information about the filter is queried
      * @param dcb      DCB where the diagnostic information should be written
      */
-    void (* diagnostics)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+    void (* diagnostics)(MXS_FILTER * instance, MXS_FILTER_SESSION * fsession, DCB * dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -188,7 +188,7 @@ typedef struct mxs_filter_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics_json)(const MXS_FILTER * instance, const MXS_FILTER_SESSION* fsession);
+    json_t* (*diagnostics_json)(const MXS_FILTER * instance, const MXS_FILTER_SESSION * fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter
@@ -204,7 +204,7 @@ typedef struct mxs_filter_object
      *
      * @param instance Filter instance
      */
-    void (* destroyInstance)(MXS_FILTER* instance);
+    void (* destroyInstance)(MXS_FILTER * instance);
 } MXS_FILTER_OBJECT;
 
 /**

@@ -54,9 +54,9 @@ static StringVector param_names_target_indexed;
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", PCRE2_CASELESS                                    },
-    {"case",       0                                                 },
-    {"extended",   PCRE2_EXTENDED                                    }, // Ignore white space and # comments
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0             },
+    {"extended",   PCRE2_EXTENDED},                                     // Ignore white space and # comments
     {NULL}
 };
 
@@ -944,13 +944,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                                                   /* Thread finish. */
         {
             {"source",
-             MXS_MODULE_PARAM_STRING                                                                                                                         },
+             MXS_MODULE_PARAM_STRING},
             {"user",
-             MXS_MODULE_PARAM_STRING                                                                                                                                                                                  },
+             MXS_MODULE_PARAM_STRING},
             {MATCH_STR,
-             MXS_MODULE_PARAM_STRING                                                                                                                                                                                                                                          },
+             MXS_MODULE_PARAM_STRING},
             {SERVER_STR,
-             MXS_MODULE_PARAM_SERVER                                                                                                                                                                                                                                          },
+             MXS_MODULE_PARAM_SERVER},
             {
                 "options",
                 MXS_MODULE_PARAM_ENUM,

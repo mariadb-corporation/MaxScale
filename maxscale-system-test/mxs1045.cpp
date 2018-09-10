@@ -1,6 +1,6 @@
 /**
  * @file mxs1045.cpp Regression case for the bug "Defunct processes after maxscale have executed script during
- *failover"
+ * failover"
  * - configure monitor:
  * @verbatim
  *  script=/bin/sh -c "echo hello world!"

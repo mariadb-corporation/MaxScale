@@ -1,6 +1,6 @@
 /**
  * @file bug730.cpp regression case for bug 730 ("Regex filter and shorter than original replacement queries
- *MaxScale")
+ * MaxScale")
  *
  * - setup regex filter, add it to all maxscales->routers[0]
  * @verbatim

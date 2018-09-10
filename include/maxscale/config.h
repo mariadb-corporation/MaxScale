@@ -242,53 +242,53 @@ typedef struct config_context
  */
 typedef struct
 {
-    bool         config_check;                              /**< Only check config */
-    int          n_threads;                                 /**< Number of polling threads */
-    size_t       thread_stack_size;                         /**< The stack size of each worker thread */
-    char*        version_string;                            /**< The version string of embedded db library */
-    char         release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
-    char         sysname[SYSNAME_LEN];                      /**< The OS name of the system */
-    uint8_t      mac_sha1[SHA_DIGEST_LENGTH];               /**< The SHA1 digest of an interface MAC address
-                                                             * */
-    unsigned int n_nbpoll;                                  /**< Tune number of non-blocking polls */
-    unsigned int pollsleep;                                 /**< Wait time in blocking polls */
-    int          syslog;                                    /**< Log to syslog */
-    int          maxlog;                                    /**< Log to MaxScale's own logs */
-    unsigned int auth_conn_timeout;                         /**< Connection timeout for the user
-                                                             * authentication */
-    unsigned int auth_read_timeout;                         /**< Read timeout for the user authentication */
-    unsigned int auth_write_timeout;                        /**< Write timeout for the user authentication */
-    bool         skip_permission_checks;                    /**< Skip service and monitor permission checks */
-    int32_t      passive;                                   /**< True if MaxScale is in passive mode */
-    int64_t      promoted_at;                               /**< Time when this Maxscale instance was
-                                                            * promoted from a passive to an active */
-    char                qc_name[PATH_MAX];                  /**< The name of the query classifier to load */
-    char*               qc_args;                            /**< Arguments for the query classifier */
-    QC_CACHE_PROPERTIES qc_cache_properties;                /**< The query classifier cache properties. */
-    qc_sql_mode_t       qc_sql_mode;                        /**< The query classifier sql mode */
-    char                admin_host[MAX_ADMIN_HOST_LEN];     /**< Admin interface host */
-    uint16_t            admin_port;                         /**< Admin interface port */
-    bool                admin_auth;                         /**< Admin interface authentication */
-    bool                admin_enabled;                      /**< Admin interface is enabled */
-    bool                admin_log_auth_failures;            /**< Log admin interface authentication failures
-                                                             * */
-    char                admin_ssl_key[PATH_MAX];            /**< Admin SSL key */
-    char                admin_ssl_cert[PATH_MAX];           /**< Admin SSL cert */
-    char                admin_ssl_ca_cert[PATH_MAX];        /**< Admin SSL CA cert */
-    int                 query_retries;                      /**< Number of times a interrupted query is
-                                                             * retried */
-    time_t              query_retry_timeout;                /**< Timeout for query retries */
-    bool                substitute_variables;               /**< Should environment variables be substituted
-                                                             * */
-    char*               local_address;                      /**< Local address to use when connecting */
-    time_t              users_refresh_time;                 /**< How often the users can be refreshed */
-    uint64_t            writeq_high_water;                  /**< High water mark of dcb write queue */
-    uint64_t            writeq_low_water;                   /**< Low water mark of dcb write queue */
-    char                peer_hosts[MAX_ADMIN_HOST_LEN];     /**< The protocol, address and port for peers
-                                                             * (currently only one) */
-    char                peer_user[MAX_ADMIN_HOST_LEN];      /**< Username for maxscale-to-maxscale traffic */
-    char                peer_password[MAX_ADMIN_HOST_LEN];  /**< Password for maxscale-to-maxscale traffic */
-    mxb_log_target_t    log_target;                         /**< Log type */
+    bool    config_check;                               /**< Only check config */
+    int     n_threads;                                  /**< Number of polling threads */
+    size_t  thread_stack_size;                          /**< The stack size of each worker thread */
+    char*   version_string;                             /**< The version string of embedded db library */
+    char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
+    char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
+    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address
+                                                         * */
+    unsigned int n_nbpoll;                              /**< Tune number of non-blocking polls */
+    unsigned int pollsleep;                             /**< Wait time in blocking polls */
+    int          syslog;                                /**< Log to syslog */
+    int          maxlog;                                /**< Log to MaxScale's own logs */
+    unsigned int auth_conn_timeout;                     /**< Connection timeout for the user
+                                                         * authentication */
+    unsigned int auth_read_timeout;                     /**< Read timeout for the user authentication */
+    unsigned int auth_write_timeout;                    /**< Write timeout for the user authentication */
+    bool         skip_permission_checks;                /**< Skip service and monitor permission checks */
+    int32_t      passive;                               /**< True if MaxScale is in passive mode */
+    int64_t      promoted_at;                           /**< Time when this Maxscale instance was
+                                                        * promoted from a passive to an active */
+    char                qc_name[PATH_MAX];              /**< The name of the query classifier to load */
+    char*               qc_args;                        /**< Arguments for the query classifier */
+    QC_CACHE_PROPERTIES qc_cache_properties;            /**< The query classifier cache properties. */
+    qc_sql_mode_t       qc_sql_mode;                    /**< The query classifier sql mode */
+    char                admin_host[MAX_ADMIN_HOST_LEN]; /**< Admin interface host */
+    uint16_t            admin_port;                     /**< Admin interface port */
+    bool                admin_auth;                     /**< Admin interface authentication */
+    bool                admin_enabled;                  /**< Admin interface is enabled */
+    bool                admin_log_auth_failures;        /**< Log admin interface authentication failures
+                                                         * */
+    char admin_ssl_key[PATH_MAX];                       /**< Admin SSL key */
+    char admin_ssl_cert[PATH_MAX];                      /**< Admin SSL cert */
+    char admin_ssl_ca_cert[PATH_MAX];                   /**< Admin SSL CA cert */
+    int  query_retries;                                 /**< Number of times a interrupted query is
+                                                         * retried */
+    time_t query_retry_timeout;                         /**< Timeout for query retries */
+    bool   substitute_variables;                        /**< Should environment variables be substituted
+                                                         * */
+    char*    local_address;                             /**< Local address to use when connecting */
+    time_t   users_refresh_time;                        /**< How often the users can be refreshed */
+    uint64_t writeq_high_water;                         /**< High water mark of dcb write queue */
+    uint64_t writeq_low_water;                          /**< Low water mark of dcb write queue */
+    char     peer_hosts[MAX_ADMIN_HOST_LEN];            /**< The protocol, address and port for peers
+                                                         * (currently only one) */
+    char             peer_user[MAX_ADMIN_HOST_LEN];     /**< Username for maxscale-to-maxscale traffic */
+    char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
+    mxb_log_target_t log_target;                        /**< Log type */
 } MXS_CONFIG;
 
 /**

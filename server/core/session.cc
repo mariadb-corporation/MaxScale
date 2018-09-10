@@ -303,9 +303,8 @@ static void session_simple_free(MXS_SESSION* session, DCB* dcb)
         }
         if (session && session->router_session)
         {
-            session->service->router->freeSession(
-                session->service->router_instance,
-                session->router_session);
+            session->service->router->freeSession(session->service->router_instance,
+                                                  session->router_session);
         }
         session->state = SESSION_STATE_STOPPING;
     }

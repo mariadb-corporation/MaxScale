@@ -2,7 +2,7 @@
  * @file bug592.cpp  regression case for bug 592 ( "slave in "Running" state breaks authorization" ) MXS-326
  *
  * - stop all slaves: "stop slave;" directly to every node (now they are in "Running" state, not in "Russning,
- *Slave")
+ * Slave")
  * - via RWSplit "CREATE USER 'test_user'@'%' IDENTIFIED BY 'pass'"
  * - try to connect using 'test_user' (expecting success)
  * - start all slaves: "start slave;" directly to every node

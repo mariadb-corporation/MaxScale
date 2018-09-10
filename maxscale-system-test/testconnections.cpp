@@ -107,18 +107,18 @@ TestConnections::TestConnections(int argc, char* argv[])
     static struct option long_options[] =
     {
 
-        {"help",              no_argument,              0,           'h'},
-        {"verbose",           no_argument,              0,           'v'},
-        {"silent",            no_argument,              0,           'n'},
-        {"quiet",             no_argument,              0,           'q'},
-        {"no-maxscale-start", no_argument,              0,           's'},
-        {"no-maxscale-init",  no_argument,              0,           'i'},
-        {"no-nodes-check",    no_argument,              0,           'r'},
-        {"restart-galera",    no_argument,              0,           'g'},
-        {"no-timeouts",       no_argument,              0,           'z'},
-        {"no-galera",         no_argument,              0,           'y'},
-        {"local-maxscale",    no_argument,              0,           'l'},
-        {0,                   0,                        0,           0  }
+        {"help",              no_argument,              0,                        'h'          },
+        {"verbose",           no_argument,              0,                        'v'          },
+        {"silent",            no_argument,              0,                        'n'          },
+        {"quiet",             no_argument,              0,                        'q'          },
+        {"no-maxscale-start", no_argument,              0,                        's'          },
+        {"no-maxscale-init",  no_argument,              0,                        'i'          },
+        {"no-nodes-check",    no_argument,              0,                        'r'          },
+        {"restart-galera",    no_argument,              0,                        'g'          },
+        {"no-timeouts",       no_argument,              0,                        'z'          },
+        {"no-galera",         no_argument,              0,                        'y'          },
+        {"local-maxscale",    no_argument,              0,                        'l'          },
+        {0,                   0,                        0,                        0            }
     };
 
     int c;

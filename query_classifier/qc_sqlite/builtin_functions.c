@@ -19,7 +19,7 @@
 static struct
 {
     bool inited;
-} unit = { false };
+} unit = {false};
 
 // The functions have been taken from:
 // https://mariadb.com/kb/en/mariadb/functions-and-operators/
@@ -441,8 +441,8 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
     "row_number",
 };
 
-const size_t N_BUILTIN_10_2_3_FUNCTIONS =
-    sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
+const size_t N_BUILTIN_10_2_3_FUNCTIONS
+    = sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
 
 static const char* ORACLE_FUNCTIONS[] =
 {
@@ -486,7 +486,9 @@ void finish_builtin_functions()
 }
 
 bool is_builtin_readonly_function(const char* key,
-                                  uint32_t major, uint32_t minor, uint32_t patch,
+                                  uint32_t major,
+                                  uint32_t minor,
+                                  uint32_t patch,
                                   bool check_oracle)
 {
     mxb_assert(unit.inited);
@@ -495,12 +497,15 @@ bool is_builtin_readonly_function(const char* key,
 
     if (!value)
     {
-        if ((major > 10) ||
-            ((major == 10) && (minor > 2)) ||
-            ((major == 10) && (minor == 2) && (patch >= 3)))
+        if ((major > 10)
+            || ((major == 10) && (minor > 2))
+            || ((major == 10) && (minor == 2) && (patch >= 3)))
         {
-            value = bsearch(key, BUILTIN_10_2_3_FUNCTIONS, N_BUILTIN_10_2_3_FUNCTIONS,
-                            sizeof(char*), search_compare);
+            value = bsearch(key,
+                            BUILTIN_10_2_3_FUNCTIONS,
+                            N_BUILTIN_10_2_3_FUNCTIONS,
+                            sizeof(char*),
+                            search_compare);
         }
     }
 

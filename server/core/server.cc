@@ -1044,15 +1044,15 @@ static struct
     uint64_t    bit;
 } ServerBits[] =
 {
-    {"running",     SERVER_RUNNING            },
-    {"master",      SERVER_MASTER             },
-    {"slave",       SERVER_SLAVE              },
-    {"synced",      SERVER_JOINED             },
-    {"ndb",         SERVER_NDB                },
-    {"maintenance", SERVER_MAINT              },
-    {"maint",       SERVER_MAINT              },
-    {"stale",       SERVER_WAS_MASTER         },
-    {NULL,          0                         }
+    {"running",     SERVER_RUNNING   },
+    {"master",      SERVER_MASTER    },
+    {"slave",       SERVER_SLAVE     },
+    {"synced",      SERVER_JOINED    },
+    {"ndb",         SERVER_NDB       },
+    {"maintenance", SERVER_MAINT     },
+    {"maint",       SERVER_MAINT     },
+    {"stale",       SERVER_WAS_MASTER},
+    {NULL,          0                }
 };
 
 /**

@@ -1,6 +1,6 @@
 /**
  * MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current
- *master
+ * master
  *
  * https://jira.mariadb.org/browse/MXS-1476
  */

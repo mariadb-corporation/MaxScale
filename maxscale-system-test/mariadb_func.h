@@ -134,7 +134,7 @@ static MYSQL* open_conn_no_db(int port,
 
 /**
  * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up
- *returns
+ * returns
  * @param conn      MYSQL connection
  * @param format    SQL string with printf style formatting
  * @param ...       Parameters for @c format
@@ -144,7 +144,7 @@ int execute_query(MYSQL* conn, const char* format, ...) mxb_attribute((format(pr
 
 /**
  * @brief execute_query_from_file Read a line from a file, trim leading and trailing whitespace and execute
- *it.
+ * it.
  * @param conn MYSQL handler
  * @param file file handler
  * @return 0 in case of success
@@ -153,7 +153,7 @@ int execute_query_from_file(MYSQL* conn, FILE* file);
 
 /**
  * @brief Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clean up
- *returns
+ * returns
  * @param conn MYSQL connection struct
  * @param sql   SQL string
  * @return 0 in case of success
@@ -344,4 +344,4 @@ private:
     MYSQL*      m_conn = nullptr;
 };
 
-#endif // MARIADB_FUNC_H
+#endif      // MARIADB_FUNC_H

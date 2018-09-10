@@ -1,6 +1,6 @@
 /**
  * @file bug681.cpp  - regression test for bug681 ("crash if max_slave_connections=10% and 4 or less backends
- *are configured")
+ * are configured")
  *
  * - Configure RWSplit with max_slave_connections=10%
  * - check ReadConn master and ReadConn slave are alive and RWSplit is not started

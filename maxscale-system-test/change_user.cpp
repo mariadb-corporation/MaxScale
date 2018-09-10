@@ -2,13 +2,13 @@
  * @file change_user.cpp mysql_change_user test
  *
  * - using RWSplit and user 'skysql': GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH
- *PRIVILEGES;
+ * PRIVILEGES;
  * - create a new connection to RSplit as 'user'
  * - try INSERT expecting 'access denied'
  * - call mysql_change_user() to change user to 'skysql'
  * - try INSERT again expecting success
  * - try to execute mysql_change_user() to switch to user 'user' but use rong password (expecting access
- *denied)
+ * denied)
  * - try INSERT again expecting success (user should not be changed)
  */
 

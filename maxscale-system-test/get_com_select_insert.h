@@ -30,4 +30,4 @@ int print_delta(long int* new_selects,
                 int nodes_num);
 
 
-#endif // GET_COM_SELECT_INSERT_H
+#endif      // GET_COM_SELECT_INSERT_H

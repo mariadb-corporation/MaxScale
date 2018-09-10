@@ -1,6 +1,6 @@
 /**
  * @file binlog_change_master.cpp In the binlog router setup stop Master and promote one of the Slaves to be
- *new Master
+ * new Master
  * - setup binlog
  * - start thread wich executes transactions
  * - block master

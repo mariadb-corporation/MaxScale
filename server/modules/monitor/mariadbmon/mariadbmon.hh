@@ -118,14 +118,14 @@ private:
     struct ManualCommand
     {
     public:
-        std::mutex                mutex;                        /**< Mutex used by the condition variables */
-        std::condition_variable   has_command;                  /**< Notified when a command is waiting
+        std::mutex              mutex;                          /**< Mutex used by the condition variables */
+        std::condition_variable has_command;                    /**< Notified when a command is waiting
                                                                  * execution */
         bool                      command_waiting_exec = false; /**< Guard variable for the above */
         std::function<void(void)> method;                       /**< The method to run when executing the
                                                                  * command */
-        std::condition_variable   has_result;                   /**< Notified when the command has ran */
-        bool                      result_waiting = false;       /**< Guard variable for the above */
+        std::condition_variable has_result;                     /**< Notified when the command has ran */
+        bool                    result_waiting = false;         /**< Guard variable for the above */
     };
 
     ServerArray   m_servers;            /**< Servers of the monitor */
@@ -135,9 +135,9 @@ private:
     // Values updated by monitor
     MariaDBServer* m_master;                    /**< Master server for Master/Slave replication */
     MariaDBServer* m_next_master;               /**< When master changes because of a failover/switchover, the
-                                                * new
-                                                *  master is written here so the next monitor loop picks it
-                                                *up. */
+                                                 * new
+                                                 *  master is written here so the next monitor loop picks it
+                                                 * up. */
     IdToServerMap m_servers_by_id;              /**< Map from server id:s to MariaDBServer */
     int64_t       m_master_gtid_domain;         /**< gtid_domain_id most recently seen on the master  */
     std::string   m_external_master_host;       /**< External master host, for fail/switchover */
@@ -145,8 +145,8 @@ private:
     bool          m_cluster_topology_changed;   /**< Has cluster topology changed since last monitor loop? */
     bool          m_cluster_modified;           /**< Has a failover/switchover/rejoin been performed this
                                                  * loop? */
-    CycleMap      m_cycles;                     /**< Map from cycle number to cycle member servers */
-    CycleInfo     m_master_cycle_status;        /**< Info about master server cycle from previous round */
+    CycleMap  m_cycles;                         /**< Map from cycle number to cycle member servers */
+    CycleInfo m_master_cycle_status;            /**< Info about master server cycle from previous round */
 
     // Replication topology detection settings
     bool m_detect_stale_master;         /**< Monitor flag for MySQL replication Stale Master detection */
@@ -155,32 +155,32 @@ private:
     bool m_ignore_external_masters;     /**< Ignore masters outside of the monitor configuration */
 
     // Failover, switchover and rejoin settings
-    bool        m_auto_failover;                /**< Is automatic master failover is enabled? */
-    bool        m_auto_rejoin;                  /**< Is automatic rejoin enabled? */
-    int         m_failcount;                    /**< Numer of cycles master must be down before auto-failover
-                                                 * begins */
-    std::string m_replication_user;             /**< Replication user for CHANGE MASTER TO-commands */
-    std::string m_replication_password;         /**< Replication password for CHANGE MASTER TO-commands */
-    uint32_t    m_failover_timeout;             /**< Time limit in seconds for master failover */
-    uint32_t    m_switchover_timeout;           /**< Time limit in seconds for master switchover */
-    bool        m_verify_master_failure;        /**< Is master failure is verified via slaves? */
-    int         m_master_failure_timeout;       /**< Master failure verification (via slaves) time in seconds
-                                                 * */
-    ServerArray m_excluded_servers;             /**< Servers banned for master promotion during auto-failover
-                                                 * or
-                                                 *   autoselect switchover. */
-    std::string m_promote_sql_file;             /**< File with sql commands which are ran to a server being
-                                                 * promoted. */
-    std::string m_demote_sql_file;              /**< File with sql commands which are ran to a server being
-                                                 * demoted. */
-    bool        m_enforce_read_only_slaves;     /**< Should the monitor set read-only=1 on any slave servers.
-                                                 * */
-    bool        m_switchover_on_low_disk_space; /**< Should the monitor do a switchover on low disk space. */
-    bool        m_maintenance_on_low_disk_space;/**< Set slave and unreplicating servers with low disk space
-                                                 * to
-                                                 *   maintenance. */
-    bool m_handle_event_scheduler;              /**< Should failover/switchover handle any scheduled events on
-                                                 *  the servers */
+    bool m_auto_failover;                   /**< Is automatic master failover is enabled? */
+    bool m_auto_rejoin;                     /**< Is automatic rejoin enabled? */
+    int  m_failcount;                       /**< Numer of cycles master must be down before auto-failover
+                                             * begins */
+    std::string m_replication_user;         /**< Replication user for CHANGE MASTER TO-commands */
+    std::string m_replication_password;     /**< Replication password for CHANGE MASTER TO-commands */
+    uint32_t    m_failover_timeout;         /**< Time limit in seconds for master failover */
+    uint32_t    m_switchover_timeout;       /**< Time limit in seconds for master switchover */
+    bool        m_verify_master_failure;    /**< Is master failure is verified via slaves? */
+    int         m_master_failure_timeout;   /**< Master failure verification (via slaves) time in seconds
+                                             * */
+    ServerArray m_excluded_servers;         /**< Servers banned for master promotion during auto-failover
+                                             * or
+                                             *   autoselect switchover. */
+    std::string m_promote_sql_file;         /**< File with sql commands which are ran to a server being
+                                             * promoted. */
+    std::string m_demote_sql_file;          /**< File with sql commands which are ran to a server being
+                                             * demoted. */
+    bool m_enforce_read_only_slaves;        /**< Should the monitor set read-only=1 on any slave servers.
+                                             * */
+    bool m_switchover_on_low_disk_space;    /**< Should the monitor do a switchover on low disk space. */
+    bool m_maintenance_on_low_disk_space;   /**< Set slave and unreplicating servers with low disk space
+                                             * to
+                                             *   maintenance. */
+    bool m_handle_event_scheduler;          /**< Should failover/switchover handle any scheduled events on
+                                             *  the servers */
 
     // Other settings
     bool m_log_no_master;               /**< Should it be logged that there is no master */

@@ -1,6 +1,6 @@
 /**
  * @file bug650.cpp  regression case for bug 650 ("Hints, RWSplit: MaxScale goes into infinite loop and
- *crashes") and bug645
+ * crashes") and bug645
  * - try simple query using all services
  * - check for errors in the log
  */

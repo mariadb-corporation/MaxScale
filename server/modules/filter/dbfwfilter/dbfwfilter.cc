@@ -504,9 +504,9 @@ static void dbfw_thr_finish()
 
 static const MXS_ENUM_VALUE action_values[] =
 {
-    {"allow",  FW_ACTION_ALLOW  },
-    {"block",  FW_ACTION_BLOCK  },
-    {"ignore", FW_ACTION_IGNORE },
+    {"allow",  FW_ACTION_ALLOW },
+    {"block",  FW_ACTION_BLOCK },
+    {"ignore", FW_ACTION_IGNORE},
     {NULL}
 };
 
@@ -524,8 +524,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
-        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to reload"            },
-        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,            "Path to rule file"           }
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to reload" },
+        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,            "Path to rule file"}
     };
 
     modulecmd_register_command(MXS_MODULE_NAME,

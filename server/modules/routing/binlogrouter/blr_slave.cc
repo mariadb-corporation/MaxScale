@@ -405,14 +405,14 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
         if (!blr_check_connecting_slave(router,
                                         slave,
                                         BLR_SLAVE_CONNECTING)
-            ||  /* Check whether connecting slaves can be only MariaDB 10 ones */
+            ||      /* Check whether connecting slaves can be only MariaDB 10 ones */
             !blr_check_connecting_slave(router,
                                         slave,
                                         BLR_SLAVE_IS_MARIADB10)
-            ||  /**
-                 * If MariaDB 10 GTID master replication is set
-                 * only MariaDB 10 GTID slaves can continue the registration.
-                 */
+            ||      /**
+                     * If MariaDB 10 GTID master replication is set
+                     * only MariaDB 10 GTID slaves can continue the registration.
+                     */
             !blr_check_connecting_slave(router,
                                         slave,
                                         BLR_SLAVE_HAS_MARIADB10_GTID))
@@ -820,8 +820,7 @@ static uint8_t timestamp_def[] =
     0x00, 0x00, 0x03, 0xfe, 0x00, 0x00, 0x02, 0x00
 };
 static uint8_t timestamp_eof[] = {0x05, 0x00, 0x00, 0x05,
-                                  0xfe, 0x00, 0x00, 0x02, 0x00
-};
+                                  0xfe, 0x00, 0x00, 0x02, 0x00};
 
 /**
  * Send a response to a "SELECT UNIX_TIMESTAMP()" request.
@@ -4367,7 +4366,7 @@ int blr_apply_change_master_0(ROUTER_INSTANCE* router,
     ssl_error = blr_set_master_ssl(router, new_config, error);
 
     if (ssl_error != -1
-        &&  // No CA cert is defined or only one of CERT or KEY is defined
+        &&      // No CA cert is defined or only one of CERT or KEY is defined
         (new_config.ssl_ca.empty() || new_config.ssl_cert.empty() != new_config.ssl_key.empty()))
     {
         if (new_config.ssl_enabled)

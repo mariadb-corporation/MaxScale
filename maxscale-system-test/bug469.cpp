@@ -1,11 +1,11 @@
 /**
  * @file bug469 bug469 regression test case ("rwsplit counts every connection twice in master - counnection
- *counts leak")
+ * counts leak")
  * - use maxadmin command "show server server1" and check "Current no. of conns" and "Number of connections" -
- *both should be 0
+ * both should be 0
  * - execute simple query against RWSplit
  * - use maxadmin command "show server server1" and check "Current no. of conns" (should be 0) and "Number of
- *connections" (should be 1)
+ * connections" (should be 1)
  */
 
 

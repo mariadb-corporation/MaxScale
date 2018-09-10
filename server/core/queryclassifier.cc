@@ -156,7 +156,7 @@ std::string get_text_ps_id(GWBUF* buffer)
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
                    GWBUF* querybuf,
-                   bool (* func)(QueryClassifier& qc, const std::string&))
+                   bool (* func)(QueryClassifier & qc, const std::string&))
 {
     bool rval = true;
     int n_tables;
@@ -428,11 +428,11 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype, HINT
      */
     else if (!load_active
              && (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
-                 || /** Configured to allow writing user variables to all nodes */
+                 ||     /** Configured to allow writing user variables to all nodes */
                  (m_use_sql_variables_in == TYPE_ALL
                   && qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE))
                  || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
-                 || /** enable or disable autocommit are always routed to all */
+                 ||     /** enable or disable autocommit are always routed to all */
                  qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
                  || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
     {

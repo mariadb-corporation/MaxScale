@@ -1,6 +1,6 @@
 /**
  * @file short_sessions.cpp Executes a lof of short queries, use own short session for every query (some
- *relations to bug#424)
+ * relations to bug#424)
  *
  * - using RSplit create table
  * - close connection

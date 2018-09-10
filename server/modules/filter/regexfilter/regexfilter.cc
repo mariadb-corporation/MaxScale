@@ -91,8 +91,8 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", PCRE2_CASELESS                              },
-    {"case",       0                                           },
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0             },
     {NULL}
 };
 
@@ -125,37 +125,49 @@ extern "C"
             NULL,   // No destroyInstance
         };
 
+        static const char description[] = "A query rewrite filter that uses regular "
+                                          "expressions to rewrite queries";
         static MXS_MODULE info =
         {
             MXS_MODULE_API_FILTER,
             MXS_MODULE_GA,
             MXS_FILTER_VERSION,
-            "A query rewrite filter that uses regular expressions to rewrite queries",
+            description,
             "V1.1.0",
             RCAP_TYPE_CONTIGUOUS_INPUT,
             &MyObject,
-            NULL,                                                                       /* Process init. */
-            NULL,                                                                       /* Process finish. */
-            NULL,                                                                       /* Thread init. */
-            NULL,                                                                       /* Thread finish. */
+            NULL,
+            NULL,
+            NULL,
+            NULL,
             {
-                {"match",                                                             MXS_MODULE_PARAM_STRING,
-                 NULL,
-                 MXS_MODULE_OPT_REQUIRED        },
-                {"replace",                                                           MXS_MODULE_PARAM_STRING,
-                 NULL,
-                 MXS_MODULE_OPT_REQUIRED                   },
-                {"source",
-                 MXS_MODULE_PARAM_STRING},
-                {"user",
-                 MXS_MODULE_PARAM_STRING},
-                {"log_trace",                                                         MXS_MODULE_PARAM_BOOL,
-                 "false"               },
-                {"log_file",
-                 MXS_MODULE_PARAM_STRING},
-                {"options",                                                           MXS_MODULE_PARAM_ENUM,
-                 "ignorecase",                                                     MXS_MODULE_OPT_NONE,
-                 option_values},
+                {
+                    "match",
+                    MXS_MODULE_PARAM_STRING,
+                    NULL,
+                    MXS_MODULE_OPT_REQUIRED
+                },
+                {
+                    "replace",
+                    MXS_MODULE_PARAM_STRING,
+                    NULL,
+                    MXS_MODULE_OPT_REQUIRED
+                },
+                {
+                    "options",
+                    MXS_MODULE_PARAM_ENUM,
+                    "ignorecase",
+                    MXS_MODULE_OPT_NONE,
+                    option_values
+                },
+                {
+                    "log_trace",
+                    MXS_MODULE_PARAM_BOOL,
+                    "false"
+                },
+                {"source",                  MXS_MODULE_PARAM_STRING },
+                {"user",                    MXS_MODULE_PARAM_STRING },
+                {"log_file",                MXS_MODULE_PARAM_STRING },
                 {MXS_END_MODULE_PARAMS}
             }
         };

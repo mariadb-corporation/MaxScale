@@ -1,6 +1,6 @@
 /**
  * @file mxs781_binlog_wrong_passwrd.cpp Try to configure binlog router to use wrong password for Master and
- *check 'slave status' on binlog
+ * check 'slave status' on binlog
  * - try to put wrong password when connect binlog router to real master
  * - check binlog router status using 'show slave status', expect 'Slave stopped'
  */

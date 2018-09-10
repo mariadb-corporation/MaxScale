@@ -69,7 +69,7 @@ static int   gw_client_hangup_event(DCB* dcb);
 static char* gw_default_auth();
 static int   gw_connection_limit(DCB* dcb, int limit);
 static int   MySQLSendHandshake(DCB* dcb);
-static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
+static int route_by_statement(MXS_SESSION*, uint64_t, GWBUF * *);
 static void           mysql_client_auth_error_handling(DCB* dcb, int auth_val, int packet_number);
 static int            gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
 static int            gw_read_normal_data(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
@@ -572,7 +572,7 @@ static void store_client_information(DCB* dcb, GWBUF* buffer)
 
     gwbuf_copy_data(buffer, 0, len, data);
     mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
-               || len == MYSQL_AUTH_PACKET_BASE_SIZE);  // For SSL request packet
+               || len == MYSQL_AUTH_PACKET_BASE_SIZE);      // For SSL request packet
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
@@ -681,7 +681,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
          * Protocol::SSLRequest packet.
          *
          * @see
-         *https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
+         * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
          */
         store_client_information(dcb, read_buffer);
     }

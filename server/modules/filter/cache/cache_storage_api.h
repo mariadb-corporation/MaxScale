@@ -169,7 +169,7 @@ typedef struct cache_storage_api
      *         created.
      */
     CACHE_STORAGE* (*createInstance)(const char* name,
-                                     const CACHE_STORAGE_CONFIG* config,
+                                     const CACHE_STORAGE_CONFIG * config,
                                      int argc, char* argv[]);
 
     /**

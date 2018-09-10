@@ -164,33 +164,33 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                           /* Thread finish. */
         {
             {"uuid",
-             MXS_MODULE_PARAM_STRING                                                                        },
+             MXS_MODULE_PARAM_STRING},
             {"server_id",
-             MXS_MODULE_PARAM_COUNT                                                                                                       },
+             MXS_MODULE_PARAM_COUNT},
             {"master_id",                                MXS_MODULE_PARAM_COUNT,
-             "0"                                                                                                   },
+             "0"},
             {"master_uuid",
-             MXS_MODULE_PARAM_STRING                                                                                                      },
+             MXS_MODULE_PARAM_STRING},
             {"master_version",
-             MXS_MODULE_PARAM_STRING                                                                                                      },
+             MXS_MODULE_PARAM_STRING},
             {"master_hostname",
-             MXS_MODULE_PARAM_STRING                                                                                                      },
+             MXS_MODULE_PARAM_STRING},
             {"slave_hostname",
-             MXS_MODULE_PARAM_STRING                                                                                                      },
+             MXS_MODULE_PARAM_STRING},
             {"mariadb10-compatibility",                  MXS_MODULE_PARAM_BOOL,
-             "true"                                                                                                                                                                                                                                                                                               },
+             "true"},
             {"maxwell-compatibility",                    MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                    },
+             "false"},
             {"filestem",                                 MXS_MODULE_PARAM_STRING,
-             BINLOG_NAME_ROOT                                                                                                                                                                                                                                                                                                                                                                 },
+             BINLOG_NAME_ROOT},
             {"file",                                     MXS_MODULE_PARAM_COUNT,
-             "1"                                                                                                                                                                                                                                                                                                                                                                                                                    },
+             "1"},
             {"transaction_safety",                       MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                      },
+             "false"},
             {"semisync",                                 MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            },
+             "false"},
             {"encrypt_binlog",                           MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  },
+             "false"},
             {
                 "encryption_algorithm",                  MXS_MODULE_PARAM_ENUM,
                 "aes_cbc",
@@ -198,28 +198,28 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {"encryption_key_file",                      MXS_MODULE_PARAM_PATH,
              NULL,
-             MXS_MODULE_OPT_PATH_R_OK                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           },
+             MXS_MODULE_OPT_PATH_R_OK},
             {"mariadb10_master_gtid",                    MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        },
+             "false"},
             {
                 "binlog_structure",                      MXS_MODULE_PARAM_ENUM,
                 "flat",
                 MXS_MODULE_OPT_NONE,                     binlog_storage_values
             },
             {"shortburst",                               MXS_MODULE_PARAM_COUNT,
-             DEF_SHORT_BURST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      },
+             DEF_SHORT_BURST},
             {"longburst",                                MXS_MODULE_PARAM_COUNT,
-             DEF_LONG_BURST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             },
+             DEF_LONG_BURST},
             {"burstsize",                                MXS_MODULE_PARAM_SIZE,
-             DEF_BURST_SIZE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   },
+             DEF_BURST_SIZE},
             {"heartbeat",                                MXS_MODULE_PARAM_COUNT,
-             BLR_HEARTBEAT_DEFAULT_INTERVAL                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   },
+             BLR_HEARTBEAT_DEFAULT_INTERVAL},
             {"connect_retry",                            MXS_MODULE_PARAM_COUNT,
-             BLR_MASTER_CONNECT_RETRY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               },
+             BLR_MASTER_CONNECT_RETRY},
             {"master_retry_count",                       MXS_MODULE_PARAM_COUNT,
-             BLR_MASTER_RETRY_COUNT                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       },
+             BLR_MASTER_RETRY_COUNT},
             {"send_slave_heartbeat",                     MXS_MODULE_PARAM_BOOL,
-             "false"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           },
+             "false"},
             {
                 "binlogdir",
                 MXS_MODULE_PARAM_PATH,
@@ -230,7 +230,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_CREAT
             },
             {"ssl_cert_verification_depth",              MXS_MODULE_PARAM_COUNT,
-             "9"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               },
+             "9"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -2016,9 +2016,11 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
         json_object_set_new(obj,
                             "ssl_ca_cert",
                             json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
-        json_object_set_new(obj, "ssl_cert",
+        json_object_set_new(obj,
+                            "ssl_cert",
                             json_string(router_inst->service->dbref->server->server_ssl->ssl_cert));
-        json_object_set_new(obj, "ssl_key",
+        json_object_set_new(obj,
+                            "ssl_key",
                             json_string(router_inst->service->dbref->server->server_ssl->ssl_key));
         json_object_set_new(obj,
                             "ssl_version",
@@ -2034,12 +2036,11 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 
         json_object_set_new(obj,
                             "key",
-                            json_string(
-                                router_inst->encryption.key_management_filename));
+                            json_string(router_inst->encryption.key_management_filename));
         json_object_set_new(obj,
                             "algorithm",
-                            json_string(
-                                blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm)));
+                            json_string(blr_get_encryption_algorithm(router_inst->encryption.
+                                                                     encryption_algorithm)));
         json_object_set_new(obj,
                             "key_length",
                             json_integer(8 * router_inst->encryption.key_len));

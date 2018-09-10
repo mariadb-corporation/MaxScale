@@ -72,19 +72,19 @@ enum ds_state
  */
 typedef struct
 {
-    MXS_DOWNSTREAM down;                                                    /**< Downstream filter */
-    MXS_UPSTREAM   up;                                                      /**< Upstream filter*/
-    GWBUF*         queue;                                                   /**< Queue containing a stored
-                                                                             * query */
-    bool           active;                                                  /**< Whether the session is active
-                                                                             * */
-    uint8_t        packet_num;                                              /**< If stream is open, the
-                                                                             * current packet sequence number
-                                                                             * */
-    DCB*           client_dcb;                                              /**< Client DCB */
-    enum ds_state  state;                                                   /**< The current state of the
-                                                                             * stream */
-    char           target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1];  /**< Current target table */
+    MXS_DOWNSTREAM down;                                            /**< Downstream filter */
+    MXS_UPSTREAM   up;                                              /**< Upstream filter*/
+    GWBUF*         queue;                                           /**< Queue containing a stored
+                                                                     * query */
+    bool active;                                                    /**< Whether the session is active
+                                                                     * */
+    uint8_t packet_num;                                             /**< If stream is open, the
+                                                                     * current packet sequence number
+                                                                     * */
+    DCB*          client_dcb;                                       /**< Client DCB */
+    enum ds_state state;                                            /**< The current state of the
+                                                                     * stream */
+    char target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1];    /**< Current target table */
 } DS_SESSION;
 
 extern "C"
@@ -131,8 +131,8 @@ extern "C"
             NULL,
             NULL,
             {
-                {"source",                 MXS_MODULE_PARAM_STRING                    },
-                {"user",                   MXS_MODULE_PARAM_STRING                    },
+                {"source",                 MXS_MODULE_PARAM_STRING },
+                {"user",                   MXS_MODULE_PARAM_STRING },
                 {MXS_END_MODULE_PARAMS}
             }
         };

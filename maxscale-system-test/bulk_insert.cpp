@@ -123,9 +123,9 @@ int bind_by_row(MYSQL* mysql)
 
     struct st_data data[] =
     {
-        {0, STMT_INDICATOR_NULL, "Monty",   STMT_INDICATOR_NTS,     "Widenius",     STMT_INDICATOR_NTS    },
-        {0, STMT_INDICATOR_NULL, "David",   STMT_INDICATOR_NTS,     "Axmark",       STMT_INDICATOR_NTS    },
-        {0, STMT_INDICATOR_NULL, "default", STMT_INDICATOR_DEFAULT, "N.N.",         STMT_INDICATOR_NTS    },
+        {0, STMT_INDICATOR_NULL, "Monty",   STMT_INDICATOR_NTS,     "Widenius", STMT_INDICATOR_NTS},
+        {0, STMT_INDICATOR_NULL, "David",   STMT_INDICATOR_NTS,     "Axmark",   STMT_INDICATOR_NTS},
+        {0, STMT_INDICATOR_NULL, "default", STMT_INDICATOR_DEFAULT, "N.N.",     STMT_INDICATOR_NTS},
     };
 
     unsigned int array_size = 3;

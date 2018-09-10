@@ -9,4 +9,4 @@ char virtual_ip[16];
 char* print_version_string(TestConnections* Test);
 void  configure_keepalived(TestConnections* Test, char* keepalived_file);
 
-#endif // KEEPALIVED_FUNC_H
+#endif      // KEEPALIVED_FUNC_H

@@ -22,7 +22,7 @@ MYSQL* connect_to_serv(TestConnections* Test, bool binlog);
 
 /**
  * @brief set_max_packet Executes 'cmd' on Master of RWSplit ('cmd' should be 'set global
- *max_paxket_size=...')
+ * max_paxket_size=...')
  * @param Test TestConnections object
  * @param binlog if true - connects to Master, otherwise - to RWSplit router
  * @param cmd command to execute
@@ -36,4 +36,4 @@ void set_max_packet(TestConnections* Test, bool binlog, char* cmd);
  */
 void different_packet_size(TestConnections* Test, bool binlog);
 
-#endif // DIFFERENT_SIZE_H
+#endif      // DIFFERENT_SIZE_H

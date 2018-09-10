@@ -66,7 +66,7 @@ int sendCommand(int so, char* cmd, char* buf);
 
 /**
  * @brief Send a comamnd using the MaxScaled protocol, search for certain numeric parameter in MaxScaled
- *output.
+ * output.
  *
  * Input terminates with a lien containing just the text OK
  *
@@ -108,4 +108,4 @@ int execute_maxadmin_command_tcp(char* hostname, char* user, char* password, cha
  */
 int execute_maxadmin_command_print_pcp(char* hostname, char* user, char* password, char* cmd);
 
-#endif // MAXADMIN_OPERATIONS_H
+#endif      // MAXADMIN_OPERATIONS_H

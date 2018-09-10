@@ -187,7 +187,9 @@ extern "C"
             NULL,   /* Process finish. */
             NULL,   /* Thread init. */
             NULL,   /* Thread finish. */
-            {{MXS_END_MODULE_PARAMS}}
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
         };
 
         return &info;

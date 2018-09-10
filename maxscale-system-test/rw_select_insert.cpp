@@ -1,6 +1,6 @@
 /**
  * @file rw_select_insert.cpp Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit
- *sends queries to master or to slave depending on if it is write or read only query
+ * sends queries to master or to slave depending on if it is write or read only query
  * - connect to RWSplit, create table
  * - execute SELECT using RWSplit
  * - check COM_SELECT and COM_INSERT change on all nodes
@@ -18,7 +18,7 @@
 
 /**
  * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no
- *COM_INSERT increase
+ * COM_INSERT increase
  * @param new_selects COM_SELECT after query
  * @param new_inserts COM_INSERT after query
  * @param selects COM_SELECT before query

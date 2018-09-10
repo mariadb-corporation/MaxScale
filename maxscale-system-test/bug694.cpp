@@ -1,6 +1,6 @@
 /**
  * @file bug694.cpp  - regression test for bug694 ("RWSplit: SELECT @a:=@a+1 as a, test.b FROM test breaks
- *client session")
+ * client session")
  *
  * - set use_sql_variables_in=all in MaxScale.cnf
  * - connect to readwritesplit router and execute:

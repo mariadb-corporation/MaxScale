@@ -26,7 +26,7 @@ using maxscale::string_printf;
 
 namespace
 {
-using VisitorFunc = std::function<bool (MariaDBServer*)>;   // Used by graph search
+using VisitorFunc = std::function<bool(MariaDBServer*)>;    // Used by graph search
 
 /**
  * Generic depth-first search. Iterates through the root and its child nodes (slaves) and runs

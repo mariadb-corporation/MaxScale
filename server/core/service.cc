@@ -865,9 +865,9 @@ bool serviceHasListener(Service* service,
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener)
-            &&  // Listener with same name exists
+            &&      // Listener with same name exists
             (strcmp(listener->name, name) == 0
-             || // Listener listening on the same interface and port exists
+             ||     // Listener listening on the same interface and port exists
              ((strcmp(listener->protocol, protocol) == 0 && listener->port == port
                && ((address && listener->address && strcmp(listener->address, address) == 0)
                    || (address == NULL && listener->address == NULL))))))

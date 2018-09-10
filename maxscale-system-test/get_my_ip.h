@@ -10,4 +10,4 @@
  */
 int get_my_ip(char* remote_ip, char* my_ip);
 
-#endif // GET_MY_IP_H
+#endif      // GET_MY_IP_H
