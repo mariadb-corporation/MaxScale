@@ -610,7 +610,8 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
         break;
 
     case ERRACT_REPLY_CLIENT:
-        if (m_client->session->state == SESSION_STATE_ROUTER_READY)
+        // The session pointer can be NULL if the creation fails when filters are being set up
+        if (m_client->session && m_client->session->state == SESSION_STATE_ROUTER_READY)
         {
             m_client->func.write(m_client, gwbuf_clone(pMessage));
         }
