@@ -38,7 +38,7 @@ void do_test(Test pre, Test post)
     if (pre.query)
     {
         rc = execute_query_silent(test.maxscales->conn_rwsplit[0], pre.query);
-        test.assert((rc == 0) == pre.should_work,
+        test.expect((rc == 0) == pre.should_work,
                     "Expected query '%s' to %s: %s",
                     pre.query,
                     pre.should_work ? "succeed" : "fail",
@@ -49,7 +49,7 @@ void do_test(Test pre, Test post)
     sleep(5);
 
     rc = execute_query_silent(test.maxscales->conn_rwsplit[0], post.query);
-    test.assert((rc == 0) == post.should_work,
+    test.expect((rc == 0) == post.should_work,
                 "Expected query '%s' to %s: %s",
                 post.query,
                 post.should_work ? "succeed" : "fail",

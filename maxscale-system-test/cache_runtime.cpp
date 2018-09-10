@@ -88,12 +88,12 @@ void select(TestConnections& test, int* pValue)
             }
             while (mysql_next_result(pMysql) == 0);
 
-            test.assert(nRows == 1, "Unexpected number of rows: %u", nRows);
+            test.expect(nRows == 1, "Unexpected number of rows: %u", nRows);
         }
     }
     else
     {
-        test.assert(false, "SELECT failed.");
+        test.expect(false, "SELECT failed.");
     }
 }
 
@@ -140,7 +140,7 @@ void run(TestConnections& test)
     set(test, Cache::POPULATE, true);
     set(test, Cache::USE, false);
     select(test, &value);
-    test.assert(value == 1, "Initial value was not 1.");
+    test.expect(value == 1, "Initial value was not 1.");
 
     // And update the real value.
     update(test, 2);    // Now the cache contains 1 and the db 2.
@@ -149,14 +149,14 @@ void run(TestConnections& test)
     set(test, Cache::POPULATE, false);
     set(test, Cache::USE, false);
     select(test, &value);
-    test.assert(value == 2, "The value received was not the latest one.");
+    test.expect(value == 2, "The value received was not the latest one.");
 
     // With @maxscale.cache.use==true we should get the old one, since
     // it was not updated above as @maxscale.cache.populate==false.
     set(test, Cache::POPULATE, false);
     set(test, Cache::USE, true);
     select(test, &value);
-    test.assert(value == 1, "The value received was not the populated one.");
+    test.expect(value == 1, "The value received was not the populated one.");
 
     // The hard_ttl is 8, so we sleep(10) seconds to ensure that TTL has passed.
     cout << "Sleeping 10 seconds." << endl;
@@ -168,7 +168,7 @@ void run(TestConnections& test)
     set(test, Cache::POPULATE, false);
     set(test, Cache::USE, true);
     select(test, &value);
-    test.assert(value == 2, "The cache was not updated even if TTL was passed.");
+    test.expect(value == 2, "The cache was not updated even if TTL was passed.");
 
     // Let's update again
     update(test, 3);
@@ -177,13 +177,13 @@ void run(TestConnections& test)
     set(test, Cache::POPULATE, false);
     set(test, Cache::USE, true);
     select(test, &value);
-    test.assert(value == 2, "New value %d, although the value in the cache is not stale.", value);
+    test.expect(value == 2, "New value %d, although the value in the cache is not stale.", value);
 
     // Force an update.
     set(test, Cache::POPULATE, true);
     set(test, Cache::USE, false);
     select(test, &value);
-    test.assert(value == 3, "Did not get new value.");
+    test.expect(value == 3, "Did not get new value.");
 
     // And check that the cache indeed was updated, but update the DB first.
     update(test, 4);
@@ -191,7 +191,7 @@ void run(TestConnections& test)
     set(test, Cache::POPULATE, false);
     set(test, Cache::USE, true);
     select(test, &value);
-    test.assert(value == 3, "Got a newer value than expected.");
+    test.expect(value == 3, "Got a newer value than expected.");
 }
 }
 

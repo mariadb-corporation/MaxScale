@@ -37,15 +37,15 @@ int main(int argc, char** argv)
     test.tprintf("Connect with a user that has a default role");
     MYSQL* conn
         = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "my_db", "test", "test");
-    test.assert(mysql_errno(conn) == 0, "Connection failed: %s", mysql_error(conn));
+    test.expect(mysql_errno(conn) == 0, "Connection failed: %s", mysql_error(conn));
     char value[100] {};
     find_field(conn, "SELECT CURRENT_ROLE() AS role", "role", value);
-    test.assert(strcmp(value, "dba") == 0, "Current role should be 'dba' but is: %s", value);
+    test.expect(strcmp(value, "dba") == 0, "Current role should be 'dba' but is: %s", value);
     mysql_close(conn);
 
     test.tprintf("Connect with a user that doesn't have a default role, expect failure");
     conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "my_db", "test2", "test2");
-    test.assert(mysql_errno(conn) != 0, "Connection should fail");
+    test.expect(mysql_errno(conn) != 0, "Connection should fail");
     mysql_close(conn);
 
     // Cleanup

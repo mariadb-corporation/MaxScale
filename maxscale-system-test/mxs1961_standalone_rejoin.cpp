@@ -45,17 +45,17 @@ int main(int argc, char* argv[])
 
     auto slave = [&](const char* name) {
             static StringSet slave {"Slave", "Running"};
-            test.assert(status(name) == slave, "'%s' should be a slave", name);
+            test.expect(status(name) == slave, "'%s' should be a slave", name);
         };
 
     auto master = [&](const char* name) {
             static StringSet master {"Master", "Running"};
-            test.assert(status(name) == master, "'%s' should be the master", name);
+            test.expect(status(name) == master, "'%s' should be the master", name);
         };
 
     auto down = [&](const char* name) {
             static StringSet down {"Down"};
-            test.assert(status(name) == down, "'%s' should be down", name);
+            test.expect(status(name) == down, "'%s' should be down", name);
         };
 
     auto block = [&](int node) {

@@ -36,7 +36,7 @@ int main(int argc, char** argv)
                                test.maxscales->access_homedir[0]);
 
     // Make sure the hidden configuration is not read and that MaxScale starts up
-    test.assert(test.maxscales->restart_maxscale() == 0, "Starting MaxScale should succeed");
+    test.expect(test.maxscales->restart_maxscale() == 0, "Starting MaxScale should succeed");
 
     test.maxscales->ssh_node_f(0, true, "rm -r /etc/maxscale.cnf.d/");
     remove("hidden.cnf");

@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     int master_id = get_master_server_id(test);
     cout << "Master server id is " << master_id << endl;
     const bool failover_ok = (master_id > 0 && master_id != old_master_id);
-    test.assert(failover_ok, "Master did not change or no master detected.");
+    test.expect(failover_ok, "Master did not change or no master detected.");
     string gtid_final;
     if (failover_ok)
     {
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         cout << LINE << "\n";
         print_gtids(test);
         cout << LINE << "\n";
-        test.assert(gtid_final == gtid_old_master,
+        test.expect(gtid_final == gtid_old_master,
                     "Old master did not successfully rejoin the cluster (%s != %s).",
                     gtid_final.c_str(),
                     gtid_old_master.c_str());
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
         test.maxscales->wait_for_monitor();     // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
-        test.assert(master_id == old_master_id, "Switchover back to server1 failed.");
+        test.expect(master_id == old_master_id, "Switchover back to server1 failed.");
     }
     else
     {

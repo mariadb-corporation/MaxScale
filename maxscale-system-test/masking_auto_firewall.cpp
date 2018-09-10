@@ -73,17 +73,17 @@ int main(int argc, char* argv[])
             }
             else
             {
-                test.assert(false, "Could not connect to RWS.");
+                test.expect(false, "Could not connect to RWS.");
             }
         }
         else
         {
-            test.assert(false, "Could not start MaxScale.");
+            test.expect(false, "Could not start MaxScale.");
         }
     }
     else
     {
-        test.assert(false, "Could not copy masking file to MaxScale node.");
+        test.expect(false, "Could not copy masking file to MaxScale node.");
     }
 
     return test.global_result;

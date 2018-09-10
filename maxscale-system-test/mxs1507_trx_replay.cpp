@@ -19,19 +19,19 @@ int main(int argc, char** argv)
         };
 
     auto ok = [&](string q) {
-            test.assert(query(q),
+            test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
                         mysql_error(test.maxscales->conn_rwsplit[0]));
         };
 
     auto err = [&](string q) {
-            test.assert(!query(q), "Query should not work: %s", q.c_str());
+            test.expect(!query(q), "Query should not work: %s", q.c_str());
         };
 
     auto check = [&](string q, string res) {
             Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
-            test.assert(!row.empty() && row[0] == res,
+            test.expect(!row.empty() && row[0] == res,
                         "Query '%s' should return 1: %s (%s)",
                         q.c_str(),
                         row.empty() ? "<empty>" : row[0].c_str(),

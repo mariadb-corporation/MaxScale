@@ -24,7 +24,7 @@ int main(int argc, char** argv)
                                                 "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
                                                 slave.c_str(),
                                                 master.c_str());
-            test.assert(rc == 0, "Switchover should work");
+            test.expect(rc == 0, "Switchover should work");
             master.swap(slave);
             test.maxscales->wait_for_monitor();
         };
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
         };
 
     auto ok = [&](string q) {
-            test.assert(query(q),
+            test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
                         mysql_error(test.maxscales->conn_rwsplit[0]));
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
             ok("START TRANSACTION");
             Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
             ok("COMMIT");
-            test.assert(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
+            test.expect(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
         };
 
     // Create a table, insert a value and make sure it's replicated to all slaves

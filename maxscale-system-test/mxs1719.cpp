@@ -33,7 +33,7 @@ void run(TestConnections& test)
     init(test);
 
     MYSQL* pMysql = mysql_init(NULL);
-    test.assert(pMysql, "Could not create MYSQL handle.");
+    test.expect(pMysql, "Could not create MYSQL handle.");
 
     const char* zUser = test.maxscales->user_name;
     const char* zPassword = test.maxscales->password;
@@ -51,7 +51,7 @@ void run(TestConnections& test)
         const char* q = "UPDATE MXS_1719 SET a=1; UPDATE MXS_1719 SET a=1;";
         // One multi-statement with two UPDATEs. Note: This query should fail
         // with 2.3 now that function blocking has been added
-        test.assert(execute_query_silent(pMysql, q) != 0, "Query '%s' should not succeed", q);
+        test.expect(execute_query_silent(pMysql, q) != 0, "Query '%s' should not succeed", q);
 
         // Sleep a while, so that the log is flushed.
         sleep(5);
@@ -66,7 +66,7 @@ void run(TestConnections& test)
     }
     else
     {
-        test.assert(false, "Could not connect to MaxScale.");
+        test.expect(false, "Could not connect to MaxScale.");
     }
 }
 }
@@ -92,17 +92,17 @@ int main(int argc, char* argv[])
             }
             else
             {
-                test.assert(false, "Could not connect to RWS.");
+                test.expect(false, "Could not connect to RWS.");
             }
         }
         else
         {
-            test.assert(false, "Could not start MaxScale.");
+            test.expect(false, "Could not start MaxScale.");
         }
     }
     else
     {
-        test.assert(false, "Could not copy masking file to MaxScale node.");
+        test.expect(false, "Could not copy masking file to MaxScale node.");
     }
 
     test.maxscales->connect();

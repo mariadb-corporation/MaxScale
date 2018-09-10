@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     // Mess with the slaves to fix situation such that only one slave can be rejoined. Stop maxscale.
     if (test.stop_maxscale(0))
     {
-        test.assert(false, "Could not stop MaxScale.");
+        test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
     }
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
             || mysql_query(nodes[i], RESET_SLAVE) != 0
             || mysql_query(nodes[i], READ_ONLY_OFF) != 0)
         {
-            test.assert(false, "Could not stop slave connections and/or disable read_only for node %d.", i);
+            test.expect(false, "Could not stop slave connections and/or disable read_only for node %d.", i);
             return test.global_result;
         }
     }
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     }
     print_gtids(test);
     bool gtids_ok = (gtid_begin == gtid_node2 && gtid_node2 < gtid_node3);
-    test.assert(gtids_ok, "Gtid:s have not advanced correctly.");
+    test.expect(gtids_ok, "Gtid:s have not advanced correctly.");
     if (!gtids_ok)
     {
         return test.global_result;
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     test.tprintf(LINE);
     if (test.start_maxscale(0))
     {
-        test.assert(false, "Could not start MaxScale.");
+        test.expect(false, "Could not start MaxScale.");
         return test.global_result;
     }
     test.maxscales->wait_for_monitor();
@@ -105,8 +105,8 @@ int main(int argc, char** argv)
     StringSet node3_states = test.get_server_status("server4");
     bool states_n2_ok = (node2_states.find("Slave") != node2_states.end());
     bool states_n3_ok = (node3_states.find("Slave") == node3_states.end());
-    test.assert(states_n2_ok, "Node 2 has not rejoined when it should have.");
-    test.assert(states_n3_ok, "Node 3 rejoined when it shouldn't have.");
+    test.expect(states_n2_ok, "Node 2 has not rejoined when it should have.");
+    test.expect(states_n3_ok, "Node 3 rejoined when it shouldn't have.");
     if (!states_n2_ok || !states_n3_ok)
     {
         return test.global_result;
@@ -122,11 +122,11 @@ int main(int argc, char** argv)
     test.maxscales->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
-    test.assert(master_id == 4, "Server 4 should be the cluster master.");
+    test.expect(master_id == 4, "Server 4 should be the cluster master.");
     StringSet node0_states = test.get_server_status("server1");
     bool states_n0_ok = (node0_states.find("Slave") != node0_states.end()
                          && node0_states.find("Relay Master") == node0_states.end());
-    test.assert(states_n0_ok, "Server 1 is not a slave when it should be.");
+    test.expect(states_n0_ok, "Server 1 is not a slave when it should be.");
     if (states_n0_ok)
     {
         int ec;
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
                                         &ec);
         test.maxscales->wait_for_monitor();
         master_id = get_master_server_id(test);
-        test.assert(master_id == 1, "Server 1 should be the cluster master.");
+        test.expect(master_id == 1, "Server 1 should be the cluster master.");
         get_output(test);
     }
 

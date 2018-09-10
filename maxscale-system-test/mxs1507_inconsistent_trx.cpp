@@ -19,14 +19,14 @@ int main(int argc, char** argv)
         };
 
     auto ok = [&](string q) {
-            test.assert(query(q),
+            test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
                         mysql_error(test.maxscales->conn_rwsplit[0]));
         };
 
     auto err = [&](string q) {
-            test.assert(!query(q), "Query should not work: %s", q.c_str());
+            test.expect(!query(q), "Query should not work: %s", q.c_str());
         };
 
     // Create a table and insert one value

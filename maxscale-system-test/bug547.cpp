@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
     test.set_timeout(30);
     test.tprintf("Connecting to all MaxScale services, expecting no errors");
-    test.assert(test.maxscales->connect_maxscale(0) == 0, "Connection should not fail");
+    test.expect(test.maxscales->connect_maxscale(0) == 0, "Connection should not fail");
 
     test.set_timeout(30);
     test.tprintf("Trying some queries, expecting no failures");

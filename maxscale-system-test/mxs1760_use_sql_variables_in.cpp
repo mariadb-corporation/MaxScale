@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     cout << "Setting variable @a to 123" << endl;
     mysql_query(test.maxscales->conn_rwsplit[0], "SET @a = 123");
     int rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @a", "123");
-    test.assert(rc == 0, "Text protocol should return 123 as the value of @a");
+    test.expect(rc == 0, "Text protocol should return 123 as the value of @a");
 
     cout << "Preparing and executing " << NUM_STMT << " prepared statements" << endl;
     for (int i = 0; i < NUM_STMT && test.global_result == 0; i++)

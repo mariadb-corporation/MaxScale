@@ -404,7 +404,7 @@ void TestConnections::add_result(bool result, const char* format, ...)
     }
 }
 
-void TestConnections::assert(bool result, const char* format, ...)
+void TestConnections::expect(bool result, const char* format, ...)
 {
     if (!result)
     {
@@ -847,7 +847,7 @@ int TestConnections::copy_maxscale_logs(double timestamp)
 
         const char* command = "ls /tmp/core* && exit 42";
         int rc = maxscales->ssh_node_f(i, true, "%s", command);
-        assert(rc != 42, "Test should not generate core files");
+        expect(rc != 42, "Test should not generate core files");
     }
     return 0;
 }

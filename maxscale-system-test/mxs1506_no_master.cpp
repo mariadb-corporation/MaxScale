@@ -44,17 +44,17 @@ int main(int argc, char** argv)
 
     cout << "Blocking the master and executing a SELECT" << endl;
     thr = thread(block, std::ref(test), vector<int>({0}));
-    test.assert(query(test), "Select without master should work");
+    test.expect(query(test), "Select without master should work");
     thr.join();
 
     cout << "Blocking the slave and executing a SELECT" << endl;
     thr = thread(block, std::ref(test), vector<int>({1}));
-    test.assert(query(test), "Select without slave should work");
+    test.expect(query(test), "Select without slave should work");
     thr.join();
 
     cout << "Blocking both servers and executing a SELECT" << endl;
     thr = thread(block, std::ref(test), vector<int>({0, 1}));
-    test.assert(query(test), "Select with no servers should work");
+    test.expect(query(test), "Select with no servers should work");
     thr.join();
 
     return test.global_result;

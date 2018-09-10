@@ -118,7 +118,7 @@ int main(int argc, char** argv)
             for (auto q : t.queries)
             {
                 int rc = execute_query_silent(test.maxscales->conn_rwsplit[0], q.query);
-                test.assert(q.should_work == (rc == 0),
+                test.expect(q.should_work == (rc == 0),
                             "Step '%s': Query '%s' should %s: %s",
                             i.description,
                             q.query,

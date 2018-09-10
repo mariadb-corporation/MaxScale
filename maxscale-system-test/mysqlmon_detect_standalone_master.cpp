@@ -70,7 +70,7 @@ void restore_servers(TestConnections& test, bool events_added)
                                              &dummy);
         test.maxscales->wait_for_monitor();
         int master_id = get_master_server_id(test);
-        test.assert(master_id == 1, "Switchover failed to set server1 as master.");
+        test.expect(master_id == 1, "Switchover failed to set server1 as master.");
     }
     else
     {
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     get_output(test);
 
     int master_id = get_master_server_id(test);
-    test.assert(master_id == 4, "Server 4 should be master, but master is server %d.", master_id);
+    test.expect(master_id == 4, "Server 4 should be master, but master is server %d.", master_id);
 
     if (test.global_result != 0)
     {
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
     int real_id = test.repl->get_server_id(3);
-    test.assert(master_id == real_id, "@@server_id is different: %d != %d", master_id, real_id);
+    test.expect(master_id == real_id, "@@server_id is different: %d != %d", master_id, real_id);
     print_gtids(test);
     test.maxscales->close_maxscale_connections(0);
 

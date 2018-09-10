@@ -23,15 +23,15 @@ string get_server_id(TestConnections& test, MYSQL* pMysql)
     if (rv == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pMysql);
-        test.assert(pResult, "Could not store result.");
+        test.expect(pResult, "Could not store result.");
 
         if (pResult)
         {
             unsigned int n = mysql_field_count(pMysql);
-            test.assert(n == 1, "Unexpected number of fields.");
+            test.expect(n == 1, "Unexpected number of fields.");
 
             MYSQL_ROW pzRow = mysql_fetch_row(pResult);
-            test.assert(pzRow, "Returned row was NULL.");
+            test.expect(pzRow, "Returned row was NULL.");
 
             if (pzRow)
             {
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
     string slave_id = get_server_id(test, test.maxscales->conn_slave[0]);
     test.tprintf("Server id: %s", slave_id.c_str());
-    test.assert(slave_id != master_id, "Expected something else but %s", master_id.c_str());
+    test.expect(slave_id != master_id, "Expected something else but %s", master_id.c_str());
 
     return test.global_result;
 }

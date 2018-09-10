@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
     auto compare = [&test](string q, string res) {
             auto rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
-            test.assert(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
+            test.expect(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
         };
 
     auto check = [&test, &compare](string q, string res) {
@@ -42,14 +42,14 @@ int main(int argc, char** argv)
         };
 
     auto ok = [&test, &query](string q, int t = 0) {
-            test.assert(query(q, t),
+            test.expect(query(q, t),
                         "Query '%' should work: %s",
                         q.c_str(),
                         mysql_error(test.maxscales->conn_rwsplit[0]));
         };
 
     auto err = [&test, &query](string q, int t = 0) {
-            test.assert(!query(q, t), "Query should fail: %s", q.c_str());
+            test.expect(!query(q, t), "Query should fail: %s", q.c_str());
         };
 
     auto block = [&test](int pre = 0, int node = 0) {

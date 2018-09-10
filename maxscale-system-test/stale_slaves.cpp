@@ -27,9 +27,9 @@ int main(int argc, char** argv)
 
     auto get_id = [&]() {
             Connection c = test.maxscales->readconn_slave();
-            test.assert(c.connect(), "Connection should be OK: %s", c.error());
+            test.expect(c.connect(), "Connection should be OK: %s", c.error());
             string res = c.field("SELECT @@server_id");
-            test.assert(!res.empty(), "Field should not be empty: %s", c.error());
+            test.expect(!res.empty(), "Field should not be empty: %s", c.error());
             return res;
         };
 
@@ -51,28 +51,28 @@ int main(int argc, char** argv)
 
     string first = get_id();
     auto it = find(begin(ids), end(ids), first);
-    test.assert(it != end(ids), "ID should be found");
+    test.expect(it != end(ids), "ID should be found");
     int node = distance(begin(ids), it);
 
     test.tprintf("Blocking the slave that replied to us");
     test.repl->block_node(node);
     test.maxscales->wait_for_monitor();
-    test.assert(!in_use(first), "The first slave should not be in use");
+    test.expect(!in_use(first), "The first slave should not be in use");
 
     test.tprintf("Unblocking all nodes");
     test.repl->unblock_all_nodes();
     test.maxscales->wait_for_monitor();
-    test.assert(in_use(first), "The first slave should be in use");
+    test.expect(in_use(first), "The first slave should be in use");
 
     test.tprintf("Stopping replication on first slave");
     execute_query(test.repl->nodes[node], "STOP SLAVE");
     test.maxscales->wait_for_monitor();
-    test.assert(!in_use(first), "The first slave should not be in use");
+    test.expect(!in_use(first), "The first slave should not be in use");
 
     test.tprintf("Starting replication on first slave");
     execute_query(test.repl->nodes[node], "START SLAVE");
     test.maxscales->wait_for_monitor();
-    test.assert(in_use(first), "The first slave should be in use");
+    test.expect(in_use(first), "The first slave should be in use");
     test.repl->disconnect();
 
     return test.global_result;

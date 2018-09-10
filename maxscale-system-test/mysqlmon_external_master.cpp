@@ -18,7 +18,7 @@ const StringSet down = {DOWN};
 void check_status(TestConnections& test, const char* server, const StringSet& expected, const char* message)
 {
     StringSet state = test.get_server_status(server);
-    test.assert(state == expected, "%s: %s", message, dump_status(state, expected).c_str());
+    test.expect(state == expected, "%s: %s", message, dump_status(state, expected).c_str());
 }
 
 static bool is_running = true;

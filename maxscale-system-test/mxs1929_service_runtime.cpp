@@ -49,20 +49,20 @@ int main(int argc, char** argv)
     maxctrl("create server server3 " + host3 + " " + port3 + " --services svc1 --monitors mon1");
 
     c1.connect();
-    test.assert(c1.query("SELECT 1"), "Query to simple service should work: %s", c1.error());
+    test.expect(c1.query("SELECT 1"), "Query to simple service should work: %s", c1.error());
     c1.disconnect();
 
     cout << "Destroy the service and check that it is removed" << endl;
 
-    test.assert(!maxctrl("destroy service svc1", false), "Destroying linked service should fail");
+    test.expect(!maxctrl("destroy service svc1", false), "Destroying linked service should fail");
     maxctrl("unlink service svc1 server1 server2 server3");
-    test.assert(!maxctrl("destroy service svc1", false),
+    test.expect(!maxctrl("destroy service svc1", false),
                 "Destroying service with active listeners should fail");
     maxctrl("destroy listener svc1 listener1");
-    test.assert(maxctrl("destroy service svc1"), "Destroying valid service should work");
+    test.expect(maxctrl("destroy service svc1"), "Destroying valid service should work");
 
     test.set_timeout(60);
-    test.assert(!c1.connect(), "Connection should be rejected");
+    test.expect(!c1.connect(), "Connection should be rejected");
     test.stop_timeout();
 
     cout << "Create the same service again and check that it still works" << endl;
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     maxctrl("link service svc1 server1 server2 server3");
 
     c1.connect();
-    test.assert(c1.query("SELECT 1"), "Query to recreated service should work: %s", c1.error());
+    test.expect(c1.query("SELECT 1"), "Query to recreated service should work: %s", c1.error());
     c1.disconnect();
 
     cout << "Check that active connections aren't closed when service is destroyed" << endl;
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     maxctrl("destroy listener svc1 listener1");
     maxctrl("destroy service svc1");
 
-    test.assert(c1.query("SELECT 1"), "Query to destroyed service should still work");
+    test.expect(c1.query("SELECT 1"), "Query to destroyed service should still work");
 
     // Start a thread to attempt a connection before the last connection
     // is closed. The connection attempt should be rejected when the
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     condition_variable cv;
     thread t([&]() {
                  cv.notify_one();
-                 test.assert(!test.maxscales->rwsplit().connect(),
+                 test.expect(!test.maxscales->rwsplit().connect(),
                              "New connections to created service "
                              "should fail with a timeout while the original connection is open");
              });
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
 
     // Disconnect the original connection and try to reconnect
     c1.disconnect();
-    test.assert(!c1.connect(), "New connections should be rejected after original connection is closed");
+    test.expect(!c1.connect(), "New connections should be rejected after original connection is closed");
 
     // The connection should be rejected once the last connection is closed. If
     // it doesn't, we hit the test timeout before the connection timeout.

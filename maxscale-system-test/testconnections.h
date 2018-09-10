@@ -262,7 +262,7 @@ public:
     void add_result(bool result, const char* format, ...);
 
     /** Same as add_result() but inverted */
-    void assert(bool result, const char* format, ...);
+    void expect(bool result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -560,7 +560,7 @@ public:
     void check_maxctrl(std::string cmd, int m = 0, bool sudo = true)
     {
         auto result = maxctrl(cmd, m, sudo);
-        assert(result.first == 0, "Command '%s' should work: %s", cmd.c_str(), result.second.c_str());
+        expect(result.first == 0, "Command '%s' should work: %s", cmd.c_str(), result.second.c_str());
     }
 
     void check_current_operations(int m, int value);

@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     test.tprintf(LINE);
     test.tprintf(PRINT_ID, master_id);
     const bool failover_ok = (master_id > 0 && master_id != old_master_id);
-    test.assert(failover_ok, "Master did not change or no master detected.");
+    test.expect(failover_ok, "Master did not change or no master detected.");
     string gtid_final;
     if (failover_ok)
     {
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
         test.tprintf(LINE);
         print_gtids(test);
         test.tprintf(LINE);
-        test.assert(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster.");
+        test.expect(gtid_final == gtid_old_master, "Old master did not successfully rejoin the cluster.");
         // Switch master back to server1 so last check is faster
         int ec;
         test.maxscales->ssh_node_output(0,
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
         test.maxscales->wait_for_monitor();     // Wait for monitor to update status
         get_output(test);
         master_id = get_master_server_id(test);
-        test.assert(master_id == old_master_id, "Switchover back to server1 failed.");
+        test.expect(master_id == old_master_id, "Switchover back to server1 failed.");
     }
     else
     {

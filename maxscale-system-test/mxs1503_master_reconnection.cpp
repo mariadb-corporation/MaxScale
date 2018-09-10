@@ -35,22 +35,22 @@ int main(int argc, char** argv)
         };
 
     test.maxscales->connect();
-    test.assert(query("DROP TABLE IF EXISTS test.t1") == 0,
+    test.expect(query("DROP TABLE IF EXISTS test.t1") == 0,
                 "DROP TABLE should work.");
-    test.assert(query("CREATE TABLE test.t1 (id INT)") == 0,
+    test.expect(query("CREATE TABLE test.t1 (id INT)") == 0,
                 "CREATE TABLE should work.");
-    test.assert(query("INSERT INTO test.t1 VALUES (1)") == 0,
+    test.expect(query("INSERT INTO test.t1 VALUES (1)") == 0,
                 "Write should work at the start of the test.");
 
     block_master();
-    test.assert(query("INSERT INTO test.t1 VALUES (1)") != 0,
+    test.expect(query("INSERT INTO test.t1 VALUES (1)") != 0,
                 "Write should fail after master is blocked.");
 
-    test.assert(error_matches("read-only"),
+    test.expect(error_matches("read-only"),
                 "Error should mention read-only mode");
 
     unblock_master();
-    test.assert(query("INSERT INTO test.t1 VALUES (1)") == 0,
+    test.expect(query("INSERT INTO test.t1 VALUES (1)") == 0,
                 "Write should work after unblocking master");
 
     query("DROP TABLE test.t1");

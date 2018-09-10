@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT COUNT(*) FROM test.t1");
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
 
-    test.assert(!row.empty() && row[0] == "6",
+    test.expect(!row.empty() && row[0] == "6",
                 "Table should have 6 rows but has %s rows",
                 row.empty() ? "no" : row[0].c_str());
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");

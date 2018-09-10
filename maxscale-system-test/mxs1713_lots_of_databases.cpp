@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 
     std::string errstr;
     std::accumulate(errors.begin(), errors.end(), errstr, combiner);
-    test.assert(errors.empty(), "None of the queries should fail: %s", errstr.c_str());
+    test.expect(errors.empty(), "None of the queries should fail: %s", errstr.c_str());
 
     test.tprintf("Dropping databases...");
     for (auto db : db_list)

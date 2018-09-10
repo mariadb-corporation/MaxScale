@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     int rc = test.maxscales->ssh_node_f(0,
                                         true,
                                         "grep 'version_string' /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
-    test.assert(rc == 0,
+    test.expect(rc == 0,
                 "Generated configuration should have version_string defined and MaxScale should ignore it.");
 
     test.maxscales->ssh_node_f(0, true, "maxadmin alter service RW-Split-Router enable_root_user=false");
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     rc = test.maxscales->ssh_node_f(0,
                                     true,
                                     "grep 'version_string' /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
-    test.assert(rc != 0, "Generated configuration should not have version_string defined.");
+    test.expect(rc != 0, "Generated configuration should not have version_string defined.");
 
     return test.global_result;
 }

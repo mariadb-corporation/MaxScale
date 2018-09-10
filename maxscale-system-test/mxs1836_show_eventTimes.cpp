@@ -29,12 +29,12 @@ void run(TestConnections& test, MYSQL* pMysql)
     if (mysql_query(pMysql, "show eventTimes") == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pMysql);
-        test.assert(pResult, "Executing 'show eventTimes' returned no result.");
+        test.expect(pResult, "Executing 'show eventTimes' returned no result.");
 
         if (pResult)
         {
             int nFields = mysql_field_count(pMysql);
-            test.assert(nFields == 3, "Expected 3 fields, got %d.", nFields);
+            test.expect(nFields == 3, "Expected 3 fields, got %d.", nFields);
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(pResult)) != NULL)
@@ -47,9 +47,9 @@ void run(TestConnections& test, MYSQL* pMysql)
                 int64_t nEvents_queued = strtoll(row[1], NULL, 0);
                 int64_t nEvents_executed = strtoll(row[2], NULL, 0);
 
-                test.assert(nEvents_queued >= 0 && nEvents_queued < 100,
+                test.expect(nEvents_queued >= 0 && nEvents_queued < 100,
                             "Suspiciously large number of 'No. Events Queued'.");
-                test.assert(nEvents_executed >= 0 && nEvents_executed < 100,
+                test.expect(nEvents_executed >= 0 && nEvents_executed < 100,
                             "Suspiciously large number of 'No. Events Executed'.");
             }
 
@@ -58,7 +58,7 @@ void run(TestConnections& test, MYSQL* pMysql)
     }
     else
     {
-        test.assert(false, "Executing 'show eventTimes' failed: %s", mysql_error(pMysql));
+        test.expect(false, "Executing 'show eventTimes' failed: %s", mysql_error(pMysql));
     }
 }
 }
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     const char* zMaxScale_host = test.maxscales->ip(0);
 
     MYSQL* pMysql = open_conn_no_db(PORT, zMaxScale_host, USER, PASSWD);
-    test.assert(pMysql, "Could not connect to maxinfo on MaxScale.");
+    test.expect(pMysql, "Could not connect to maxinfo on MaxScale.");
 
     if (pMysql)
     {

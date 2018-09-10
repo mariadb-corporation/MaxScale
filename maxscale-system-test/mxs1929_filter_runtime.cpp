@@ -46,21 +46,21 @@ void basic(TestConnections& test)
 
     Connection c = test.maxscales->rwsplit();
     c.connect();
-    test.assert(c.check("SELECT 1", "2"), "The regex filter did not replace the query");
+    test.expect(c.check("SELECT 1", "2"), "The regex filter did not replace the query");
 
 
     auto res = test.maxctrl("destroy filter test1");
-    test.assert(res.first != 0, "Destruction should fail when filter is in use");
+    test.expect(res.first != 0, "Destruction should fail when filter is in use");
 
     test.check_maxctrl("alter service-filters svc1");
     test.check_maxctrl("destroy filter test1");
 
-    test.assert(c.check("SELECT 1", "2"), "The filter should not yet be destroyed");
+    test.expect(c.check("SELECT 1", "2"), "The filter should not yet be destroyed");
 
     c.disconnect();
     c.connect();
 
-    test.assert(c.check("SELECT 1", "1"), "The filter should be destroyed");
+    test.expect(c.check("SELECT 1", "1"), "The filter should be destroyed");
 }
 
 void visibility(TestConnections& test)
@@ -71,23 +71,23 @@ void visibility(TestConnections& test)
         };
 
     test.check_maxctrl("create filter test1 hintfilter");
-    test.assert(in_list_filters("test1"), "The filter should be visible after creation");
+    test.expect(in_list_filters("test1"), "The filter should be visible after creation");
 
     test.check_maxctrl("destroy filter test1");
-    test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
+    test.expect(!in_list_filters("test1"), "The filter should not be visible after destruction");
 
     test.check_maxctrl("create filter test1 hintfilter");
-    test.assert(in_list_filters("test1"), "The filter should again be visible after recreation");
-    test.assert(!in_list_filters("svc1"), "Filter should not be in use");
+    test.expect(in_list_filters("test1"), "The filter should again be visible after recreation");
+    test.expect(!in_list_filters("svc1"), "Filter should not be in use");
 
     test.check_maxctrl("alter service-filters svc1 test1");
-    test.assert(in_list_filters("svc1"), "Service should use the filter");
+    test.expect(in_list_filters("svc1"), "Service should use the filter");
 
     test.check_maxctrl("alter service-filters svc1");
-    test.assert(!in_list_filters("svc1"), "Service should not use the filter");
+    test.expect(!in_list_filters("svc1"), "Service should not use the filter");
 
     test.check_maxctrl("destroy filter test1");
-    test.assert(!in_list_filters("test1"), "The filter should not be visible after destruction");
+    test.expect(!in_list_filters("test1"), "The filter should not be visible after destruction");
 }
 
 void do_load_test(TestConnections& test,
@@ -133,7 +133,7 @@ void load(TestConnections& test)
 
                 while (running)
                 {
-                    test.assert(c.query("select 1"), "Query should succeed: %s", c.error());
+                    test.expect(c.query("select 1"), "Query should succeed: %s", c.error());
                 }
             }
         };
@@ -159,7 +159,7 @@ void filter_swap(TestConnections& test)
 
                 while (running)
                 {
-                    test.assert(c.check("select 1", "1"), "Query should not return 1 as a result");
+                    test.expect(c.check("select 1", "1"), "Query should not return 1 as a result");
                 }
             }
         };

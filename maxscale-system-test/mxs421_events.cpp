@@ -40,7 +40,7 @@ string get_unique_user()
 void connect_as_user(TestConnections& test, const string& user)
 {
     MYSQL* pMysql = mysql_init(NULL);
-    test.assert(pMysql, "mysql_init() failed.");
+    test.expect(pMysql, "mysql_init() failed.");
 
     if (pMysql)
     {
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     // There should be an error in maxscale.log
     test.log_includes(0, user.c_str());
     // But not in /var/log/auth.log
-    test.assert(!found_in_file(test, "/var/log/auth.log", user),
+    test.expect(!found_in_file(test, "/var/log/auth.log", user),
                 "Unexpectedly found %s in /var/log/auth.log",
                 user.c_str());
 
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     // There should be an error in maxscale.log, as maxlog is not affected by the syslog setting.
     test.log_includes(0, user.c_str());
     // And in /var/log/auth.log as that's where authentication errors now should go.
-    test.assert(found_in_file(test, "/var/log/auth.log", user),
+    test.expect(found_in_file(test, "/var/log/auth.log", user),
                 "Unexpectedly NOT found %s in /var/log/auth.log",
                 user.c_str());
 

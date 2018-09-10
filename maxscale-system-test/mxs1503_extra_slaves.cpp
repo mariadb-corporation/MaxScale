@@ -28,14 +28,14 @@ int main(int argc, char** argv)
         connections.emplace_back(query, test.maxscales->open_rwsplit_connection(), "SELECT SLEEP(10)");
         sleep(1);
         Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id");
-        test.assert(row == original_row, "Value of @@server_id should not change: %s", row.at(0).c_str());
+        test.expect(row == original_row, "Value of @@server_id should not change: %s", row.at(0).c_str());
     }
 
     for (auto& a : connections)
     {
         a.join();
         Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id");
-        test.assert(row == original_row, "Value of @@server_id should not change: %s", row.at(0).c_str());
+        test.expect(row == original_row, "Value of @@server_id should not change: %s", row.at(0).c_str());
     }
 
 

@@ -84,7 +84,7 @@ void check_group(TestConnections& test, const char* server, int expected_group)
         }
     }
 
-    test.assert(found_group == expected_group,
+    test.expect(found_group == expected_group,
                 "Server '%s', expected group '%d', not '%d'",
                 server,
                 expected_group,

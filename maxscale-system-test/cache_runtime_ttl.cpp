@@ -97,12 +97,12 @@ void select(TestConnections& test, Column column, int* pValue)
             }
             while (mysql_next_result(pMysql) == 0);
 
-            test.assert(nRows == 1, "Unexpected number of rows: %u", nRows);
+            test.expect(nRows == 1, "Unexpected number of rows: %u", nRows);
         }
     }
     else
     {
-        test.assert(false, "SELECT failed.");
+        test.expect(false, "SELECT failed.");
     }
 }
 
@@ -150,9 +150,9 @@ void run(TestConnections& test)
     set(test, Cache::HARD_TTL, 60);
     // And update the cache.
     select(test, Column::A, &value);
-    test.assert(value == 1, "Initial value was not 1.");
+    test.expect(value == 1, "Initial value was not 1.");
     select(test, Column::B, &value);
-    test.assert(value == 1, "Initial value was not 1.");
+    test.expect(value == 1, "Initial value was not 1.");
 
     // Update the real value.
     update(test, Column::A, 2);     // Now the cache contains 1 and the db 2.
@@ -165,14 +165,14 @@ void run(TestConnections& test)
     // is fetched from the server.
     set(test, Cache::SOFT_TTL, 4);
     select(test, Column::A, &value);
-    test.assert(value == 2, "The value received was not the latest one.");
+    test.expect(value == 2, "The value received was not the latest one.");
 
     // With a soft_ttl larger that the amount we slept should mean that
     // the value in the cache is *not* considered stale and that we
     // get that value.
     set(test, Cache::SOFT_TTL, 10);
     select(test, Column::B, &value);
-    test.assert(value == 1, "The value received was not from the cache.");
+    test.expect(value == 1, "The value received was not from the cache.");
 }
 }
 

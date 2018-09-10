@@ -253,11 +253,11 @@ void test_connecting(TestConnections& test,
 
     if (!could_connect && should_be_able_to)
     {
-        test.assert(false, "%s@%s should have been able to connect, but wasn't.", zUser, zHost);
+        test.expect(false, "%s@%s should have been able to connect, but wasn't.", zUser, zHost);
     }
     else if (could_connect && !should_be_able_to)
     {
-        test.assert(false, "%s@%s should NOT have been able to connect, but was.", zUser, zHost);
+        test.expect(false, "%s@%s should NOT have been able to connect, but was.", zUser, zHost);
     }
     else
     {
@@ -361,7 +361,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        test.assert(false, "MaxScale node does not have at least one IP-address.");
+        test.expect(false, "MaxScale node does not have at least one IP-address.");
     }
 
     return test.global_result;

@@ -45,17 +45,17 @@ void run_test(TestConnections& test, TestCase test_case)
 
     if (mysql_stmt_prepare(stmt, query.c_str(), query.size()))
     {
-        test.assert(false, "Prepared statement failure: %s", mysql_stmt_error(stmt));
+        test.expect(false, "Prepared statement failure: %s", mysql_stmt_error(stmt));
     }
 
     cout << test_case.name << endl;
-    test.assert(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind),
+    test.expect(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind),
                 "Test '%s' failed",
                 test_case.name.c_str());
 
     mysql_stmt_close(stmt);
 
-    test.assert(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0, "Normal queries should work");
+    test.expect(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0, "Normal queries should work");
 
     test.maxscales->disconnect();
 }

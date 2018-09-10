@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.maxscales->connect();
-    test.assert(test_long_data(test.maxscales->conn_rwsplit[0], 123456), "Test should work");
+    test.expect(test_long_data(test.maxscales->conn_rwsplit[0], 123456), "Test should work");
     test.maxscales->disconnect();
 
     return test.global_result;

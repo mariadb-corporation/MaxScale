@@ -91,7 +91,7 @@ void test_master_failure(TestConnections& test, std::ostream& out)
 
     out << "Writes should fail" << endl;
     int rc = execute_query_silent(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    test.assert(rc != 0, "Write after master failure should fail");
+    test.expect(rc != 0, "Write after master failure should fail");
 
     test.repl->unblock_node(0);
     test.maxscales->disconnect();

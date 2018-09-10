@@ -89,7 +89,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
 
             char* event = create_event_size(size);
             conn = connect_to_serv(Test, binlog);
-            Test->assert(execute_query_silent(conn, event) == 0, "Query should succeed");
+            Test->expect(execute_query_silent(conn, event) == 0, "Query should succeed");
             free(event);
             execute_query_silent(conn, (char*) "DELETE FROM test.large_event");
             mysql_close(conn);

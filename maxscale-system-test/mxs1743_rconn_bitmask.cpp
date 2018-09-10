@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     find_field(test.repl->nodes[0], query.c_str(), "connections", master_connections);
     find_field(test.repl->nodes[1], query.c_str(), "connections", slave_connections);
 
-    test.assert(strcmp(master_connections, slave_connections) == 0,
+    test.expect(strcmp(master_connections, slave_connections) == 0,
                 "Master and slave shoud have the same amount of connections: %s != %s",
                 master_connections,
                 slave_connections);

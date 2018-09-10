@@ -27,14 +27,14 @@ int main(int argc, char** argv)
         };
 
     test.maxscales->connect();
-    test.assert(query("DROP TABLE IF EXISTS test.t1;") == 0, "DROP TABLE should work.");
-    test.assert(query("CREATE TABLE test.t1 (id INT);") == 0, "CREATE TABLE should work.");
+    test.expect(query("DROP TABLE IF EXISTS test.t1;") == 0, "DROP TABLE should work.");
+    test.expect(query("CREATE TABLE test.t1 (id INT);") == 0, "CREATE TABLE should work.");
 
     // Execute session commands so that the history is not empty
     cout << "Setting user variables" << endl;
-    test.assert(query("SET @a = 1") == 0, "First session command should work.");
-    test.assert(query("USE test") == 0, "Second session command should work.");
-    test.assert(query("SET @b = 2") == 0, "Third session command should work.");
+    test.expect(query("SET @a = 1") == 0, "First session command should work.");
+    test.expect(query("USE test") == 0, "Second session command should work.");
+    test.expect(query("SET @b = 2") == 0, "Third session command should work.");
 
     // Block the master to trigger reconnection
     cout << "Blocking master" << endl;
@@ -47,9 +47,9 @@ int main(int argc, char** argv)
     // Check that inserts work
     cout << "Selecting user variables" << endl;
     test.set_timeout(15);
-    test.assert(query("INSERT INTO test.t1 VALUES (1)") == 0, "Write should work after unblocking master");
-    test.assert(check_result("@a", "1"), "@a should be 1");
-    test.assert(check_result("@b", "2"), "@b should be 2");
+    test.expect(query("INSERT INTO test.t1 VALUES (1)") == 0, "Write should work after unblocking master");
+    test.expect(check_result("@a", "1"), "@a should be 1");
+    test.expect(check_result("@b", "2"), "@b should be 2");
     query("DROP TABLE test.t1");
 
     return test.global_result;

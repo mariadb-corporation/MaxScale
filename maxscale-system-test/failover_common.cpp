@@ -33,7 +33,7 @@ void reset_replication(TestConnections& test)
         test.maxscales->wait_for_monitor(2);
         master_id = get_master_server_id(test);
         cout << "Master server id is now back to " << master_id << endl;
-        test.assert(master_id == 1, "Switchover back to server1 failed");
+        test.expect(master_id == 1, "Switchover back to server1 failed");
     }
     get_output(test);
     StringSet node_states;
@@ -43,7 +43,7 @@ void reset_replication(TestConnections& test)
         servername << "server" << i;
         node_states = test.get_server_status(servername.str().c_str());
         bool states_ok = (node_states.find("Slave") != node_states.end());
-        test.assert(states_ok, "Server %d is not replicating.", i);
+        test.expect(states_ok, "Server %d is not replicating.", i);
     }
 }
 
@@ -63,7 +63,7 @@ void check_test_1(TestConnections& test, int node0_id)
     get_output(test);
     int master_id = get_master_server_id(test);
     cout << "Master server id is " << master_id << endl;
-    test.assert(master_id > 0 && master_id != node0_id, "Master did not change or no master detected.");
+    test.expect(master_id > 0 && master_id != node0_id, "Master did not change or no master detected.");
     if (test.global_result == 0)
     {
         check(test);
@@ -99,7 +99,7 @@ void check_test_2(TestConnections& test)
     bool success = (master_id > 0
                     && (master_id == test.repl->get_server_id(2)
                         || master_id == test.repl->get_server_id(3)));
-    test.assert(success, WRONG_SLAVE);
+    test.expect(success, WRONG_SLAVE);
     if (test.global_result == 0)
     {
         check(test);
@@ -110,7 +110,7 @@ void check_test_2(TestConnections& test)
     test.maxscales->wait_for_monitor(2);
     get_output(test);
     StringSet node_states = test.get_server_status("server2");
-    test.assert(node_states.find("Slave") != node_states.end(), "Server 2 is not replicating.");
+    test.expect(node_states.find("Slave") != node_states.end(), "Server 2 is not replicating.");
     if (test.global_result == 0)
     {
         reset_replication(test);
@@ -168,7 +168,7 @@ void check_test_3(TestConnections& test)
     // Because servers have been restarted, redo connections.
     test.repl->connect();
     cout << "Master server id is " << master_id << endl;
-    test.assert(master_id > 0 && master_id == test.repl->get_server_id(3), WRONG_SLAVE);
+    test.expect(master_id > 0 && master_id == test.repl->get_server_id(3), WRONG_SLAVE);
     print_gtids(test);
 
     reset_replication(test);

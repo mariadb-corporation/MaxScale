@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     Connection conn {test.maxscales->rwsplit()};
 
     auto query = [&](bool should_work, string q) {
-            test.assert(conn.query(q) == should_work,
+            test.expect(conn.query(q) == should_work,
                         "Query '%s' should %s: %s",
                         q.c_str(),
                         should_work ? "work" : "fail",
@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
     auto compare = [&](bool equal, string q, string res) {
             Row row = conn.row(q);
-            test.assert(!row.empty() && (row[0] == res) == equal,
+            test.expect(!row.empty() && (row[0] == res) == equal,
                         "Values are %s: `%s` `%s`",
                         equal ? "not equal" : "equal",
                         row.empty() ? "<empty>" : row[0].c_str(),

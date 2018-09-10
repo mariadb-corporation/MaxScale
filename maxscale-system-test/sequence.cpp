@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
     for (auto a : statements)
     {
-        test.assert(execute_query_check_one(test.maxscales->conn_rwsplit[0], a.first, a.second) == 0,
+        test.expect(execute_query_check_one(test.maxscales->conn_rwsplit[0], a.first, a.second) == 0,
                     "Expected '%s' for query: %s",
                     a.second,
                     a.first);
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 
     for (auto a : oracle_statements)
     {
-        test.assert(execute_query_check_one(test.maxscales->conn_rwsplit[0], a.first, a.second) == 0,
+        test.expect(execute_query_check_one(test.maxscales->conn_rwsplit[0], a.first, a.second) == 0,
                     "Expected '%s' for query: %s",
                     a.second,
                     a.first);
