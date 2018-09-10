@@ -98,6 +98,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
         if ((match && (md_match = pcre2_match_data_create_from_pattern(match, NULL)) == NULL) ||
             (exclude && (md_exclude = pcre2_match_data_create_from_pattern(exclude, NULL)) == NULL))
         {
+            MXS_OOM();
             return NULL;
         }
 
@@ -105,6 +106,9 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
                                           (MySQLProtocol*)session->client_dcb->protocol,
                                           my_instance->get_service())) == NULL)
         {
+            MXS_ERROR("Failed to create local client connection to '%s'%s",
+                      my_instance->get_service()->name,
+                      my_instance->get_service()->ports ? "" : ": Service has no network listeners");
             return NULL;
         }
     }

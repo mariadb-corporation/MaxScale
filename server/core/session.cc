@@ -628,6 +628,7 @@ session_setup_filters(MXS_SESSION *session)
     if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(service->n_filters,
                                                         sizeof(SESSION_FILTER))) == NULL)
     {
+        MXS_OOM();
         return 0;
     }
     session->n_filters = service->n_filters;

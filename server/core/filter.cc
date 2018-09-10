@@ -420,6 +420,7 @@ filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downs
 
     if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
     {
+        MXS_OOM();
         return NULL;
     }
     me->instance = filter->filter;
@@ -427,6 +428,7 @@ filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downs
 
     if ((me->session = filter->obj->newSession(me->instance, session)) == NULL)
     {
+        MXS_ERROR("Failed to create filter session for '%s'", filter->name);
         MXS_FREE(me);
         return NULL;
     }
