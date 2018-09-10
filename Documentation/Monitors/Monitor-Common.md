@@ -30,7 +30,9 @@ monitor_interval=2500
 
 ### `backend_connect_timeout`
 
-This parameter controls the timeout for connecting to a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 3 seconds.
+This parameter controls the timeout for connecting to a monitored server. It is
+in seconds and the minimum value is 1 second. The default value for this
+parameter is 3 seconds.
 
 ```
 backend_connect_timeout=6
@@ -38,7 +40,9 @@ backend_connect_timeout=6
 
 ### `backend_write_timeout`
 
-This parameter controls the timeout for writing to a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 2 seconds.
+This parameter controls the timeout for writing to a monitored server. It is in
+seconds and the minimum value is 1 second. The default value for this parameter
+is 3 seconds.
 
 ```
 backend_write_timeout=4
@@ -46,7 +50,9 @@ backend_write_timeout=4
 
 ### `backend_read_timeout`
 
-This parameter controls the timeout for reading from a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 1 seconds.
+This parameter controls the timeout for reading from a monitored server. It is
+in seconds and the minimum value is 1 second. The default value for this
+parameter is 3 seconds.
 
 ```
 backend_read_timeout=2
