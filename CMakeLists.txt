@@ -16,7 +16,7 @@ endif()
 
 # Set default values for cache entries and set the MaxScale version
 include(cmake/defaults.cmake)
-include(VERSION22.cmake)
+include(VERSION.cmake)
 include(ExternalProject)
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
