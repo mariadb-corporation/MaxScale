@@ -1535,16 +1535,8 @@ bool server_set_disk_space_threshold(SERVER* server, const char* disk_space_thre
     return rv;
 }
 
-namespace
-{
-// Only need to prevent multiple writes, as long as only the average is read where
-// needed (and not in combination with num_samples), which is by design.
-std::mutex add_response_mutex;
-}
-
 void server_add_response_average(SERVER* srv, double ave, int num_samples)
 {
-    std::lock_guard<std::mutex> lock(add_response_mutex);
     Server* server = static_cast<Server*>(srv);
     server->response_time_add(ave, num_samples);
 }

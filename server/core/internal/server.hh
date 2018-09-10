@@ -19,6 +19,7 @@
 #include <maxbase/average.hh>
 #include <maxscale/server.h>
 #include <maxscale/resultset.hh>
+#include <maxscale/routingworker.hh>
 
 std::unique_ptr<ResultSet> serverGetList();
 
@@ -27,19 +28,24 @@ class Server : public SERVER
 {
 public:
 
+    Server()
+        : response_time(maxbase::EMAverage {0.04, 0.35, 500})
+    {
+    }
+
     int response_time_num_samples() const
     {
-        return response_time.num_samples();
+        return response_time->num_samples();
     }
 
     double response_time_average() const
     {
-        return response_time.average();
+        return response_time->average();
     }
 
     void response_time_add(double ave, int num_samples)
     {
-        response_time.add(ave, num_samples);
+        response_time->add(ave, num_samples);
     }
 
 private:
@@ -47,7 +53,7 @@ private:
     // can be calculated at runtime. The "500" or sample_max affects how often a
     // session should updates this stat. sample_max should be slightly lower than max sample
     // rate (which is less than qps due to the noise filter).
-    maxbase::EMAverage response_time = {0.04, 0.35, 500};
+    mxs::rworker_local<maxbase::EMAverage> response_time;
 };
 
 void server_free(Server* server);
