@@ -866,7 +866,8 @@ static int gw_read_and_write(DCB* dcb)
                     if (mxs_mysql_is_result_set(read_buffer))
                     {
                         bool more = false;
-                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                        int eof_cnt = modutil_count_signal_packets(read_buffer, 0, &more, NULL);
+                        if (more || eof_cnt % 2 != 0)
                         {
                             dcb_readq_prepend(dcb, read_buffer);
                             return 0;

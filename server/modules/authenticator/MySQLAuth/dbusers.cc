@@ -43,8 +43,8 @@
 /** MySQL 5.7 password column name */
 #define MYSQL57_PASSWORD "authentication_string"
 
-#define NEW_LOAD_DBUSERS_QUERY \
-    "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
+// Query used with 10.0 or older
+#define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.db AS d \
     ON (u.user = d.user AND u.host = d.host) WHERE u.plugin IN ('', 'mysql_native_password') %s \
     UNION \
@@ -52,56 +52,93 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
 
-// Query used with MariaDB 10.1 and newer, supports roles
-const char* mariadb_users_query
-    =   // First, select all users
-        "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
-        "( "
-        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-        "    ON (u.user = d.user AND u.host = d.host) "
-        "    UNION "
-        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "    ON (u.user = t.user AND u.host = t.host) "
-        ") AS t "
-        // Discard any users that are roles
-        "WHERE t.is_role <> 'Y' %s "
-        "UNION "
-        // Then select all users again
-        "SELECT r.user, r.host, u.db, u.select_priv, t.password FROM "
-        "( "
-        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.default_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-        "    ON (u.user = d.user AND u.host = d.host) "
-        "    UNION "
-        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.default_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "    ON (u.user = t.user AND u.host = t.host) "
-        ") AS t "
-        // Join it to the roles_mapping table to only have users with roles
-        "JOIN mysql.roles_mapping AS r "
-        "ON (r.user = t.user AND r.host = t.host) "
-        // Then join it into itself to get the privileges of the role with the name of the user
-        "JOIN "
-        "( "
-        "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
-        "    ON (u.user = d.user AND u.host = d.host) "
-        "    UNION "
-        "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
-        "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "    ON (u.user = t.user AND u.host = t.host) "
-        ") AS u "
-        "ON (u.user = r.role AND u.is_role = 'Y') "
-        // We only care about users that have a default role assigned
-        "WHERE t.default_role = u.user %s;";
+// Used with 10.2 or newer, supports composite roles
+const char* mariadb_102_users_query =
+    // `t` is users that are not roles
+    "WITH RECURSIVE t AS ( "
+    "  SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role, u.default_role"
+    "  FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "  ON (u.user = d.user AND u.host = d.host) "
+    "  UNION "
+    "  SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role, u.default_role "
+    "  FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "  ON (u.user = t.user AND u.host = t.host)"
+    "), users AS ("
+    // Select the root row, the actual user
+    "  SELECT t.user, t.host, t.db, t.select_priv, t.password, t.default_role AS role FROM t"
+    "  WHERE t.is_role <> 'Y'"
+    "  UNION"
+    // Recursively select all roles for the users
+    "  SELECT u.user, u.host, t.db, t.select_priv, u.password, r.role FROM t"
+    "  JOIN users AS u"
+    "  ON (t.user = u.role)"
+    "  LEFT JOIN mysql.roles_mapping AS r"
+    "  ON (t.user = r.user)"
+    ")"
+    "SELECT DISTINCT t.user, t.host, t.db, t.select_priv, t.password FROM users AS t %s";
 
-static int    get_users(SERV_LISTENER* listener, bool skip_local);
-static MYSQL* gw_mysql_init(void);
-static int    gw_mysql_set_timeouts(MYSQL* handle);
-static char*  mysql_format_user_entry(void* data);
-static bool   get_hostname(DCB* dcb, char* client_hostname, size_t size);
+// Query used with MariaDB 10.1, supports basic roles
+const char* mariadb_users_query =
+    // First, select all users
+    "SELECT t.user, t.host, t.db, t.select_priv, t.password FROM "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS t "
+    // Discard any users that are roles
+    "WHERE t.is_role <> 'Y' %s "
+    "UNION "
+    // Then select all users again
+    "SELECT r.user, r.host, u.db, u.select_priv, t.password FROM "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.default_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.default_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS t "
+    // Join it to the roles_mapping table to only have users with roles
+    "JOIN mysql.roles_mapping AS r "
+    "ON (r.user = t.user AND r.host = t.host) "
+    // Then join it into itself to get the privileges of the role with the name of the user
+    "JOIN "
+    "( "
+    "    SELECT u.user, u.host, d.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.db AS d "
+    "    ON (u.user = d.user AND u.host = d.host) "
+    "    UNION "
+    "    SELECT u.user, u.host, t.db, u.select_priv, u.password AS password, u.is_role "
+    "    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "    ON (u.user = t.user AND u.host = t.host) "
+    ") AS u "
+    "ON (u.user = r.role AND u.is_role = 'Y') "
+    // We only care about users that have a default role assigned
+    "WHERE t.default_role = u.user %s;";
+
+static int get_users(SERV_LISTENER *listener, bool skip_local);
+static MYSQL *gw_mysql_init(void);
+static int gw_mysql_set_timeouts(MYSQL* handle);
+static char *mysql_format_user_entry(void *data);
+static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
+
+static char* get_mariadb_102_users_query(bool include_root)
+{
+    const char *root = include_root ? "" : " WHERE t.user <> 'root'";
+
+    size_t n_bytes = snprintf(NULL, 0, mariadb_102_users_query, root);
+    char *rval = static_cast<char*>(MXS_MALLOC(n_bytes + 1));
+    MXS_ABORT_IF_NULL(rval);
+    snprintf(rval, n_bytes + 1, mariadb_102_users_query, root);
+
+    return rval;
+}
 
 static char* get_mariadb_users_query(bool include_root)
 {
@@ -115,11 +152,13 @@ static char* get_mariadb_users_query(bool include_root)
     return rval;
 }
 
-static char* get_users_query(const char* server_version, bool include_root, bool is_mariadb)
+static char* get_users_query(const char *server_version, int version, bool include_root, bool is_mariadb)
 {
     if (is_mariadb)     // 10.1.1 or newer, supports default roles
     {
-        return get_mariadb_users_query(include_root);
+        return version >= 100202 ?
+            get_mariadb_102_users_query(include_root) :
+            get_mariadb_users_query(include_root);
     }
 
     // Either an older MariaDB version or a MySQL variant, use the legacy query
@@ -896,7 +935,8 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
         mxs_mysql_set_server_version(con, server_ref->server);
     }
 
-    char* query = get_users_query(server_ref->server->version_string,
+    char *query = get_users_query(server_ref->server->version_string,
+                                  server_ref->server->version,
                                   service->enable_root,
                                   roles_are_available(con, service, server_ref->server));
 
@@ -906,7 +946,8 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
 
     if (query)
     {
-        if (mxs_mysql_query(con, query) == 0)
+        if (mxs_mysql_query(con, "USE mysql") == 0 && // Set default database in case we use CTEs
+            mxs_mysql_query(con, query) == 0)
         {
             MYSQL_RES* result = mysql_store_result(con);
 
