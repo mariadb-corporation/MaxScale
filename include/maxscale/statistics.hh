@@ -16,8 +16,8 @@
 
 enum ts_stats_type
 {
-    TS_STATS_MAX, /**< Maximum value */
-    TS_STATS_MIX, /**< Minimum value */
-    TS_STATS_SUM, /**< Sum of all value */
-    TS_STATS_AVG  /**< Average of all values */
+    TS_STATS_MAX,   /**< Maximum value */
+    TS_STATS_MIX,   /**< Minimum value */
+    TS_STATS_SUM,   /**< Sum of all value */
+    TS_STATS_AVG    /**< Average of all values */
 };

@@ -523,10 +523,12 @@ public:
         std::mutex lock;
         mxb::Semaphore sem;
 
-        auto n = RoutingWorker::broadcast([&](){
-            std::lock_guard<std::mutex> guard(lock);
-            rval.push_back(*get_local_value());
-        }, &sem, RoutingWorker::EXECUTE_AUTO);
+        auto n = RoutingWorker::broadcast([&]() {
+                                              std::lock_guard<std::mutex> guard(lock);
+                                              rval.push_back(*get_local_value());
+                                          },
+                                          &sem,
+                                          RoutingWorker::EXECUTE_AUTO);
 
         sem.wait_n(n);
         return std::move(rval);
