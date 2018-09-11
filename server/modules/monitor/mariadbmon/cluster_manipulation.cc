@@ -1251,9 +1251,10 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
 
     // Check which candidate is best
     string current_best_reason;
+    int64_t gtid_domain = m_master_gtid_domain;
     for (MariaDBServer* cand : candidates)
     {
-        if (is_candidate_better(cand, current_best, m_master_gtid_domain, &current_best_reason))
+        if (is_candidate_better(cand, current_best, demotion_target, gtid_domain, &current_best_reason))
         {
             // Select the server for promotion, for now.
             current_best = cand;
@@ -1263,9 +1264,9 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
     // Check if any of the excluded servers would be better than the best candidate. Only print one item.
     if (log_mode == Log::ON)
     {
-        for (MariaDBServer* excluded_info : valid_but_excluded)
+        for (MariaDBServer* excluded : valid_but_excluded)
         {
-            const char* excluded_name = excluded_info->name();
+            const char* excluded_name = excluded->name();
             if (current_best == NULL)
             {
                 const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
@@ -1273,7 +1274,7 @@ MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_t
                 MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
                 break;
             }
-            else if (is_candidate_better(excluded_info, current_best, m_master_gtid_domain))
+            else if (is_candidate_better(excluded, current_best, demotion_target, gtid_domain))
             {
                 // Print a warning if this server is actually a better candidate than the previous best.
                 const char EXCLUDED_CAND[] = "Server '%s' is superior to current best candidate '%s', "
@@ -1319,19 +1320,25 @@ bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
  *
  * @param candidate_info Server info of new candidate
  * @param current_best_info Server info of current best choice
+ * @param demotion_target Server which will be demoted
  * @param gtid_domain Which domain to compare
  * @param reason_out Why is the candidate better than current_best
  * @return True if candidate is better
  */
 bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate,
                                          const MariaDBServer* current_best,
+                                         const MariaDBServer* demotion_target,
                                          uint32_t gtid_domain,
                                          std::string* reason_out)
 {
+    const SlaveStatus* cand_slave_conn = candidate->slave_connection_status(demotion_target);
+    const SlaveStatus* curr_best_slave_conn = current_best->slave_connection_status(demotion_target);
+    mxb_assert(cand_slave_conn && curr_best_slave_conn);
+
+    uint64_t cand_io = cand_slave_conn->gtid_io_pos.get_gtid(gtid_domain).m_sequence;
+    uint64_t curr_io = curr_best_slave_conn->gtid_io_pos.get_gtid(gtid_domain).m_sequence;
     string reason;
     bool is_better = false;
-    uint64_t cand_io = candidate->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
-    uint64_t curr_io = current_best->m_slave_status[0].gtid_io_pos.get_gtid(gtid_domain).m_sequence;
     // A slave with a later event in relay log is always preferred.
     if (cand_io > curr_io)
     {
@@ -1597,7 +1604,7 @@ void MariaDBMonitor::check_cluster_operations_support()
                                             server->name());
                 printer.cat(all_reasons, reason);
             }
-            if (!server->uses_gtid())
+            else if (server->m_slave_status[0].gtid_io_pos.empty())
             {
                 supported = false;
                 auto reason = string_printf("Server '%s' is not using gtid-replication.", server->name());

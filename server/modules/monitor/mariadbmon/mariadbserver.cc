@@ -601,16 +601,6 @@ json_t* MariaDBServer::to_json() const
     return result;
 }
 
-bool MariaDBServer::uses_gtid(std::string* error_out)
-{
-    bool using_gtid = !m_slave_status.empty() && !m_slave_status[0].gtid_io_pos.empty();
-    if (!using_gtid && error_out)
-    {
-        *error_out = string_printf("Server '%s' is not using gtid replication.", name());
-    }
-    return using_gtid;
-}
-
 bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* error_out)
 {
     bool rval = false;
@@ -1085,7 +1075,7 @@ bool MariaDBServer::can_be_promoted(ClusterOperation op,
     return promotable;
 }
 
-const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* target)
+const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* target) const
 {
     // The slave node may have several slave connections, need to find the one that is
     // connected to the parent. This section is quite similar to the one in

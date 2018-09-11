@@ -274,7 +274,7 @@ public:
      * @param target Immediate master or relay server
      * @return The slave status info of the slave thread, or NULL if not found or not accepted
      */
-    const SlaveStatus* slave_connection_status(const MariaDBServer* target);
+    const SlaveStatus* slave_connection_status(const MariaDBServer* target) const;
 
     /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
@@ -383,15 +383,6 @@ public:
      * @return Diagnostics string
      */
     std::string diagnostics() const;
-
-    /**
-     * Check if server is using gtid replication.
-     *
-     * @param error_out Error output
-     * @return True if using gtid-replication. False if not, or if server is not a slave or otherwise does
-     * not have a gtid_IO_Pos.
-     */
-    bool uses_gtid(std::string* error_out = NULL);
 
     /**
      * Checks if this server can replicate from master. Only considers gtid:s and only detects obvious errors.

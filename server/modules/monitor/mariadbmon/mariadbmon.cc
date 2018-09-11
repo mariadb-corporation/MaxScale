@@ -603,12 +603,14 @@ void MariaDBMonitor::update_external_master()
 {
     if (m_master->is_slave_of_ext_master())
     {
-        mxb_assert(!m_master->m_slave_status.empty());
-        if (m_master->m_slave_status[0].master_host != m_external_master_host
-            || m_master->m_slave_status[0].master_port != m_external_master_port)
+        mxb_assert(!m_master->m_slave_status.empty() && !m_master->m_node.external_masters.empty());
+        // TODO: Add support for multiple external masters.
+        auto& master_sstatus = m_master->m_slave_status[0];
+        if (master_sstatus.master_host != m_external_master_host ||
+            master_sstatus.master_port != m_external_master_port)
         {
-            const string new_ext_host = m_master->m_slave_status[0].master_host;
-            const int new_ext_port = m_master->m_slave_status[0].master_port;
+            const string new_ext_host = master_sstatus.master_host;
+            const int new_ext_port = master_sstatus.master_port;
             if (m_external_master_port == PORT_UNKNOWN)
             {
                 MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",

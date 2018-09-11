@@ -281,6 +281,7 @@ private:
     bool server_is_excluded(const MariaDBServer* server);
     bool is_candidate_better(const MariaDBServer* candidate,
                              const MariaDBServer* current_best,
+                             const MariaDBServer* demotion_target,
                              uint32_t gtid_domain,
                              std::string* reason_out = NULL);
     bool promote_new_master(MariaDBServer* new_master, json_t** err_out);
