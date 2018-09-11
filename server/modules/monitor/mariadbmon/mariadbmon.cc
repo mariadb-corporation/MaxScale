@@ -37,6 +37,7 @@ const char* const CN_AUTO_FAILOVER = "auto_failover";
 const char* const CN_SWITCHOVER_ON_LOW_DISK_SPACE = "switchover_on_low_disk_space";
 const char* const CN_PROMOTION_SQL_FILE = "promotion_sql_file";
 const char* const CN_DEMOTION_SQL_FILE = "demotion_sql_file";
+const char* const CN_HANDLE_EVENTS = "handle_events";
 
 static const char CN_AUTO_REJOIN[] = "auto_rejoin";
 static const char CN_FAILCOUNT[] = "failcount";
@@ -46,7 +47,6 @@ static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_DETECT_STANDALONE_MASTER[] = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
-static const char CN_HANDLE_EVENTS[] = "handle_events";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[] = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[] = "master_failure_timeout";
@@ -1131,7 +1131,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 CN_HANDLE_EVENTS,
                 MXS_MODULE_PARAM_BOOL,
-                "false"
+                "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

@@ -139,6 +139,12 @@ public:
         BINLOG_ROUTER       /* MaxScale binlog server. Requires special handling. */
     };
 
+    enum class BinlogMode
+    {
+        BINLOG_ON,
+        BINLOG_OFF
+    };
+
     MXS_MONITORED_SERVER* m_server_base;/**< Monitored server base class/struct. MariaDBServer does not
                                          *  own the struct, it is not freed (or connection closed) when
                                          *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
@@ -467,30 +473,33 @@ public:
     void set_status(uint64_t bits);
 
     /**
-     * Disable any "ENABLED" events if event scheduler is enabled.
+     * Enable any "SLAVESIDE_DISABLED" events. Event scheduler is not touched.
      *
-     * @return True if successful
+     * @param error_out Error output
+     * @return True if all SLAVESIDE_DISABLED events were enabled
      */
-    bool disable_events();
+    bool enable_events(json_t** error_out);
 
     /**
-     * Enable any "SLAVESIDE_DISABLED" events if event scheduler is enabled.
+     * Disable any "ENABLED" events. Event scheduler is not touched.
      *
-     * @return True if successful
+     * @param binlog_mode If OFF, binlog event creation is disabled for the session during method execution.
+     * @param error_out Error output
+     * @return True if all ENABLED events were disabled
      */
-    bool enable_events();
+    bool disable_events(BinlogMode binlog_mode, json_t** error_out);
 
 private:
-    typedef std::function<bool (const std::string& db_name,
-                                const std::string& event_name,
-                                const std::string& event_definer,
-                                const std::string& event_status)> ManipulatorFunc;
+    class EventInfo;
+    typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
     void               warn_event_scheduler();
-    bool               events_foreach(ManipulatorFunc& func);
+    bool               events_foreach(ManipulatorFunc& func, json_t** error_out);
+    bool               alter_event(const EventInfo& event, const std::string& target_status,
+                                   json_t** error_out);
 };
 
 /**

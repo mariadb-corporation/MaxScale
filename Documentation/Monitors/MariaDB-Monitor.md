@@ -544,6 +544,26 @@ slave threads are stopped, breaking replication.
 promotion_sql_file=/home/root/scripts/promotion.sql
 demotion_sql_file=/home/root/scripts/demotion.sql
 ```
+#### `handle_server_events`
+
+This setting is on by default. If enabled, the monitor will attempt to enable
+and disable server events during a switchover, failover or rejoin. When a server
+is being demoted, any events with "ENABLED" status are set to
+"SLAVESIDE_DISABLED". The reverse applies to a server being promoted to master.
+When a standalone server is rejoining the cluster, its events are also disabled
+since it is now a slave.
+
+The monitor does not enable or disable the event scheduler itself. For the
+events to run on the new master server, the scheduler should be enabled by the
+admin. Enabling it in the server configuration file is recommended.
+
+Events running at high frequency may cause the replication to break in a
+failover scenario. If an old master which was failed over restarts, its event
+scheduler will be on if set in the server configuration file. Its events will
+also remember their "ENABLED"-status and run when scheduled. This may happen
+before the monitor rejoins the server and disables the events. This should only
+be an issue for events running more often than the monitor interval or events
+that run immediately after the server has restarted.
 
 ### Troubleshooting
 

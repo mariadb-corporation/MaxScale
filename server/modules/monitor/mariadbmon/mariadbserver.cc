@@ -35,6 +35,15 @@ const char CONNECTING[] = "Connecting";
 const char NO[] = "No";
 }
 
+class MariaDBServer::EventInfo
+{
+public:
+    std::string database;
+    std::string name;
+    std::string definer;
+    std::string status;
+};
+
 MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server, int config_index)
     : m_server_base(monitored_server)
     , m_config_index(config_index)
@@ -680,7 +689,7 @@ bool MariaDBServer::join_cluster(const string& change_cmd, bool disable_server_e
             // This is unlikely to change anything, since a restarted server does not have event scheduler
             // ON. If it were on and events were running while the server was standalone, its data would have
             // diverged from the rest of the cluster.
-            disable_events();
+            disable_events(BinlogMode::BINLOG_OFF, NULL);
         }
         query = "CHANGE MASTER TO ...";     // Don't show the real query as it contains a password.
         if (mxs_mysql_query(server_conn, change_cmd.c_str()) == 0)
@@ -1097,113 +1106,95 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     return rval;
 }
 
-bool MariaDBServer::disable_events()
+bool MariaDBServer::enable_events(json_t** error_out)
 {
-    ManipulatorFunc disabler = [this](const string& db_name,
-                                      const string& event_name,
-                                      const string& event_definer,
-                                      const string& event_status) -> bool {
-            bool rval = true;
-            string error_msg;
-            if (event_status == "ENABLED")
+    int found_disabled_events = 0;
+    int events_enabled = 0;
+    // Helper function which enables a slaveside disabled event.
+    ManipulatorFunc enabler = [this, &found_disabled_events, &events_enabled](const EventInfo& event,
+                                                                              json_t** error_out) {
+            if (event.status == "SLAVESIDE_DISABLED")
             {
-                // Found an enabled event. Disable it. Must first switch to the correct database.
-                string use_db_query = string_printf("USE %s;", db_name.c_str());
-                if (execute_cmd(use_db_query, &error_msg))
+                found_disabled_events++;
+                if (alter_event(event, "ENABLE", error_out))
                 {
-                    // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
-                    // This causes problems if the monitor user does not have privileges to run
-                    // the event contents. Prevent this by setting definer explicitly.
-                    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s DISABLE ON SLAVE;",
-                                                             event_definer.c_str(),
-                                                             event_name.c_str());
-                    if (execute_cmd(alter_event_query, &error_msg))
-                    {
-                        MXS_NOTICE("Event '%s' of database '%s' disabled on '%s'.",
-                                   event_name.c_str(),
-                                   db_name.c_str(),
-                                   name());
-                    }
-                    else
-                    {
-                        rval = false;
-                        MXS_ERROR("Could not disable event '%s' of database '%s' on '%s': %s",
-                                  event_name.c_str(),
-                                  db_name.c_str(),
-                                  name(),
-                                  error_msg.c_str());
-                    }
-                }
-                else
-                {
-                    rval = false;
-                    MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not disabled.",
-                              db_name.c_str(),
-                              name(),
-                              event_name.c_str(),
-                              error_msg.c_str());
+                    events_enabled++;
                 }
             }
-            return rval;
         };
 
-    warn_event_scheduler();
-    return events_foreach(disabler);
+    bool rval = false;
+    if (events_foreach(enabler, error_out))
+    {
+        if (found_disabled_events > 0)
+        {
+            warn_event_scheduler();
+        }
+        if (found_disabled_events == events_enabled)
+        {
+            rval = true;
+        }
+    }
+    return rval;
+}
+
+bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
+{
+    int found_enabled_events = 0;
+    int events_disabled = 0;
+    // Helper function which disables an enabled event.
+    ManipulatorFunc disabler = [this, &found_enabled_events, &events_disabled](const EventInfo& event,
+                                                                               json_t** error_out) {
+            if (event.status == "ENABLED")
+            {
+                found_enabled_events++;
+                if (alter_event(event, "DISABLE ON SLAVE", error_out))
+                {
+                    events_disabled++;
+                }
+            }
+        };
+
+    // If the server is rejoining the cluster, no events may be added to binlog. The ALTER EVENT query
+    // itself adds events. To prevent this, disable the binlog for this method.
+    string error_msg;
+    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    {
+        if (!execute_cmd("SET @@session.sql_log_bin=0;", &error_msg))
+        {
+            const char FMT[] = "Could not disable session binlog on '%s': %s Server events not disabled.";
+            PRINT_MXS_JSON_ERROR(error_out, FMT, name(), error_msg.c_str());
+            return false;
+        }
+    }
+
+    bool rval = false;
+    if (events_foreach(disabler, error_out))
+    {
+        if (found_enabled_events > 0)
+        {
+            warn_event_scheduler();
+        }
+        if (found_enabled_events == events_disabled)
+        {
+            rval = true;
+        }
+    }
+
+    if (binlog_mode == BinlogMode::BINLOG_OFF)
+    {
+        // Failure in re-enabling the session binlog doesn't really matter because we don't want the monitor
+        // generating binlog events anyway.
+        execute_cmd("SET @@session.sql_log_bin=1;");
+    }
+    return rval;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
     // disable fails.
 }
 
-bool MariaDBServer::enable_events()
-{
-    ManipulatorFunc enabler = [this](const string& db_name,
-                                     const string& event_name,
-                                     const string& event_definer,
-                                     const string& event_status) -> bool {
-            bool rval = true;
-            string error_msg;
-            if (event_status == "SLAVESIDE_DISABLED")
-            {
-                // Found a disabled event. Enable it. Must first switch to the correct database.
-                string use_db_query = string_printf("USE %s;", db_name.c_str());
-                if (execute_cmd(use_db_query, &error_msg))
-                {
-                    string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s ENABLE;",
-                                                             event_definer.c_str(),
-                                                             event_name.c_str());
-                    if (execute_cmd(alter_event_query, &error_msg))
-                    {
-                        MXS_NOTICE("Event '%s' of database '%s' enabled on '%s'.",
-                                   event_name.c_str(),
-                                   db_name.c_str(),
-                                   name());
-                    }
-                    else
-                    {
-                        rval = false;
-                        MXS_ERROR("Could not enable event '%s' of database '%s' on '%s': %s",
-                                  event_name.c_str(),
-                                  db_name.c_str(),
-                                  name(),
-                                  error_msg.c_str());
-                    }
-                }
-                else
-                {
-                    rval = false;
-                    MXS_ERROR("Could not switch to database '%s' on '%s': %s Event '%s' not enabled.",
-                              db_name.c_str(),
-                              name(),
-                              event_name.c_str(),
-                              error_msg.c_str());
-                }
-            }
-            return rval;
-        };
-
-    warn_event_scheduler();
-    return events_foreach(enabler);
-}
-
+/**
+ * Print a warning if the event scheduler is off.
+ */
 void MariaDBServer::warn_event_scheduler()
 {
     string error_msg;
@@ -1218,20 +1209,32 @@ void MariaDBServer::warn_event_scheduler()
     {
         if (proc_list->get_row_count() < 1)
         {
-            // This is ok, though unexpected since user should have event handling activated for a reason.
-            MXS_WARNING("Event scheduler is inactive on '%s'.", name());
+            // This is ok, though unexpected since events were found.
+            MXS_WARNING("Event scheduler is inactive on '%s' although events were found.", name());
         }
     }
 }
 
-bool MariaDBServer::events_foreach(ManipulatorFunc& func)
+/**
+ * Run the manipulator function on every server event.
+ *
+ * @param func The manipulator function
+ * @param error_out Error output
+ * @return True if event information could be read from information_schema.EVENTS. The return value does not
+ * depend on the manipulator function.
+ */
+bool MariaDBServer::events_foreach(ManipulatorFunc& func, json_t** error_out)
 {
     string error_msg;
     // Get info about all scheduled events on the server.
     auto event_info = execute_query("SELECT * FROM information_schema.EVENTS;", &error_msg);
     if (event_info.get() == NULL)
     {
-        MXS_ERROR("Could not query event status of '%s': %s", name(), error_msg.c_str());
+        MXS_ERROR("Could not query event status of '%s': %s Event handling can be disabled by "
+                  "setting '%s' to false.",
+                  name(),
+                  error_msg.c_str(),
+                  CN_HANDLE_EVENTS);
         return false;
     }
 
@@ -1241,19 +1244,61 @@ bool MariaDBServer::events_foreach(ManipulatorFunc& func)
     auto event_status_ind = event_info->get_col_index("STATUS");
     mxb_assert(db_name_ind > 0 && event_name_ind > 0 && event_definer_ind > 0 && event_status_ind > 0);
 
-    int errors = 0;
     while (event_info->next_row())
     {
-        string db_name = event_info->get_string(db_name_ind);
-        string event_name = event_info->get_string(event_name_ind);
-        string event_definer = event_info->get_string(event_definer_ind);
-        string event_status = event_info->get_string(event_status_ind);
-        if (!func(db_name, event_name, event_definer, event_status))
+        EventInfo event;
+        event.database = event_info->get_string(db_name_ind);
+        event.name = event_info->get_string(event_name_ind);
+        event.definer = event_info->get_string(event_definer_ind);
+        event.status = event_info->get_string(event_status_ind);
+        func(event, error_out);
+    }
+    return true;
+}
+
+/**
+ * Alter a scheduled server event, setting its status.
+ *
+ * @param event Event to alter
+ * @param target_status Status to set
+ * @param error_out Error output
+ * @return True if status was set
+ */
+bool MariaDBServer::alter_event(const EventInfo& event, const string& target_status, json_t** error_out)
+{
+    bool rval = false;
+    string error_msg;
+    // First switch to the correct database.
+    string use_db_query = string_printf("USE %s;", event.database.c_str());
+    if (execute_cmd(use_db_query, &error_msg))
+    {
+        // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
+        // This causes problems if the monitor user does not have privileges to run
+        // the event contents. Prevent this by setting definer explicitly.
+        string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;",
+                                                 event.definer.c_str(),
+                                                 event.name.c_str(),
+                                                 target_status.c_str());
+        if (execute_cmd(alter_event_query, &error_msg))
         {
-            errors++;
+            rval = true;
+            const char FMT[] = "Event '%s' of database '%s' on server '%s' set to '%s'.";
+            MXS_NOTICE(FMT, event.name.c_str(), event.database.c_str(), name(), target_status.c_str());
+        }
+        else
+        {
+            const char FMT[] = "Could not alter event '%s' of database '%s' on server '%s': %s";
+            PRINT_MXS_JSON_ERROR(error_out, FMT, event.name.c_str(), event.database.c_str(), name(),
+                                 error_msg.c_str());
         }
     }
-    return errors == 0;
+    else
+    {
+        const char FMT[] = "Could not switch to database '%s' on '%s': %s Event '%s' not altered.";
+        PRINT_MXS_JSON_ERROR(error_out, FMT, event.database.c_str(), name(), error_msg.c_str(),
+                             event.name.c_str());
+    }
+    return rval;
 }
 
 string SlaveStatus::to_string() const

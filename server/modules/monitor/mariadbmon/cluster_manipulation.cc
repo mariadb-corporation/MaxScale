@@ -693,10 +693,10 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target,
  *
  * @param current_master Server to demote
  * @param info Current master info. Will be written to. TODO: Remove need for this.
- * @param err_out json object for error printing. Can be NULL.
+ * @param error_out Error output. Can be NULL.
  * @return True if successful.
  */
-bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, json_t** err_out)
+bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, json_t** error_out)
 {
     MXS_NOTICE("Demoting server '%s'.", current_master->name());
     bool query_error = false;
@@ -741,7 +741,8 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
                 query_error = (mxs_mysql_query(conn, query) != 0);
 
                 // Disable all events here
-                if (!query_error && m_handle_event_scheduler && !current_master->disable_events())
+                if (!query_error && m_handle_event_scheduler
+                    && !current_master->disable_events(MariaDBServer::BinlogMode::BINLOG_ON, error_out))
                 {
                     event_disable_error = true;
                 }
@@ -784,23 +785,24 @@ bool MariaDBMonitor::switchover_demote_master(MariaDBServer* current_master, jso
             {
                 const char UNKNOWN_ERROR[] = "Demotion failed due to an unknown error when executing "
                                              "a query. Query: '%s'.";
-                PRINT_MXS_JSON_ERROR(err_out, UNKNOWN_ERROR, query);
+                PRINT_MXS_JSON_ERROR(error_out, UNKNOWN_ERROR, query);
             }
             else
             {
                 const char KNOWN_ERROR[] = "Demotion failed due to a query error: '%s'. Query: '%s'.";
-                PRINT_MXS_JSON_ERROR(err_out, KNOWN_ERROR, error_desc.c_str(), query);
+                PRINT_MXS_JSON_ERROR(error_out, KNOWN_ERROR, error_desc.c_str(), query);
             }
         }
         else if (gtid_update_error)
         {
             const char* const GTID_ERROR = "Demotion failed due to a query error: %s";
-            PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR, error_desc.c_str());
+            PRINT_MXS_JSON_ERROR(error_out, GTID_ERROR, error_desc.c_str());
         }
+        // event_disable_error has already been printed
     }
-    else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, err_out))
+    else if (!m_demote_sql_file.empty() && !current_master->run_sql_from_file(m_demote_sql_file, error_out))
     {
-        PRINT_MXS_JSON_ERROR(err_out,
+        PRINT_MXS_JSON_ERROR(error_out,
                              "%s execution failed when demoting server '%s'.",
                              CN_DEMOTION_SQL_FILE,
                              current_master->name());
@@ -945,12 +947,13 @@ bool MariaDBMonitor::wait_cluster_stabilization(MariaDBServer* new_master,
  * Prepares a server for the replication master role.
  *
  * @param new_master The new master server
- * @param err_out json object for error printing. Can be NULL.
+ * @param error_out Error output. Can be NULL.
  * @return True if successful
  */
-bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_out)
+bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** error_out)
 {
     bool success = false;
+    bool event_enable_error = false;
     MYSQL* new_master_conn = new_master->m_server_base->con;
     MXS_NOTICE("Promoting server '%s' to master.", new_master->name());
     const char* query = "STOP SLAVE;";
@@ -964,9 +967,13 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
             {
                 if (m_handle_event_scheduler)
                 {
-                    if (new_master->enable_events())
+                    if (new_master->enable_events(error_out))
                     {
                         success = true;
+                    }
+                    else
+                    {
+                        event_enable_error = true;
                     }
                 }
                 else
@@ -979,17 +986,21 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
 
     if (!success)
     {
-        PRINT_MXS_JSON_ERROR(err_out,
-                             "Promotion failed: '%s'. Query: '%s'.",
-                             mysql_error(new_master_conn),
-                             query);
+        if (!event_enable_error)
+        {
+            PRINT_MXS_JSON_ERROR(error_out,
+                                 "Promotion failed: '%s'. Query: '%s'.",
+                                 mysql_error(new_master_conn),
+                                 query);
+        }
+        // event_enable_error has already been printed
     }
     else
     {
         // Promotion commands ran successfully, run promotion sql script file before external replication.
-        if (!m_promote_sql_file.empty() && !new_master->run_sql_from_file(m_promote_sql_file, err_out))
+        if (!m_promote_sql_file.empty() && !new_master->run_sql_from_file(m_promote_sql_file, error_out))
         {
-            PRINT_MXS_JSON_ERROR(err_out,
+            PRINT_MXS_JSON_ERROR(error_out,
                                  "%s execution failed when promoting server '%s'.",
                                  CN_PROMOTION_SQL_FILE,
                                  new_master->name());
@@ -997,7 +1008,7 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** err_
         }
         // If the previous master was a slave to an external master, start the equivalent slave connection on
         // the new master. Success of replication is not checked.
-        else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, err_out))
+        else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, error_out))
         {
             success = false;
         }
