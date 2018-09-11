@@ -121,7 +121,10 @@ RWSplit::SrvStatMap RWSplit::all_server_stats() const
     {
         for (const auto& b : a)
         {
-            stats[b.first] += b.second;
+            if (b.first->is_active)
+            {
+                stats[b.first] += b.second;
+            }
         }
     }
 
@@ -383,6 +386,7 @@ void RWSplit::diagnostics(DCB* dcb)
         dcb_printf(dcb, "    Server    Total    Read    Write\n");
         for (const auto& s : srv_stats)
         {
+            mxb_assert(s.second.total == s.second.read + s.second.write);
             dcb_printf(dcb,
                        "    %s %10lu %10lu %10lu\n",
                        s.first->name,
@@ -414,24 +418,20 @@ json_t* RWSplit::diagnostics_json() const
         json_object_set_new(rval, "weightby", json_string(weightby));
     }
 
-    auto srv_stats = all_server_stats();
+    json_t* arr = json_array();
 
-    if (!srv_stats.empty())
+    for (const auto& a : all_server_stats())
     {
-        json_t* arr = json_array();
-
-        for (const auto& a : srv_stats)
-        {
-            json_t* obj = json_object();
-            json_object_set_new(obj, "id", json_string(a.first->name));
-            json_object_set_new(obj, "total", json_integer(a.second.total));
-            json_object_set_new(obj, "read", json_integer(a.second.read));
-            json_object_set_new(obj, "write", json_integer(a.second.write));
-            json_array_append_new(arr, obj);
-        }
-
-        json_object_set_new(rval, "server_query_statistics", arr);
+        mxb_assert(a.second.total == a.second.read + a.second.write);
+        json_t* obj = json_object();
+        json_object_set_new(obj, "id", json_string(a.first->name));
+        json_object_set_new(obj, "total", json_integer(a.second.total));
+        json_object_set_new(obj, "read", json_integer(a.second.read));
+        json_object_set_new(obj, "write", json_integer(a.second.write));
+        json_array_append_new(arr, obj);
     }
+
+    json_object_set_new(rval, "server_query_statistics", arr);
 
     return rval;
 }
