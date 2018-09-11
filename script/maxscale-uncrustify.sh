@@ -1,7 +1,6 @@
 #!/bin/bash
 
-for file in $(eval "list-src -x 'qc_sqlite pcre2 build'")
-do
-    uncrustify --no-backup --replace --mtime $file
-done
+currdir=$(dirname $(realpath $0))
+
+$currdir/list-src -x 'sqlite-src-3110100 pcre2' $currdir/..|xargs uncrustify -c $currdir/../uncrustify.cfg --no-backup --mtime
 
