@@ -35,7 +35,7 @@ static std::string extract_error(GWBUF* buffer)
     {
         size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
         char replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, gwbuf_length(buffer), (uint8_t*)replybuf);
+        gwbuf_copy_data(buffer, 0, sizeof(replybuf), (uint8_t*)replybuf);
         std::string err;
         std::string msg;
         err.append(replybuf + 8, 5);
