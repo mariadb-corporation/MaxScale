@@ -139,6 +139,16 @@ uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_
             ind_rhs++;
         }
     }
+
+    // If LHS has domains with higher id:s than at RHS, those domains need to be iterated here.
+    // This only affects the result if the LHS_ADD-mode is used.
+    if (domain_substraction_mode == MISSING_DOMAIN_LHS_ADD)
+    {
+        for (; ind_lhs < n_lhs; ind_lhs++)
+        {
+            events += m_triplets[ind_lhs].m_sequence;
+        }
+    }
     return events;
 }
 
