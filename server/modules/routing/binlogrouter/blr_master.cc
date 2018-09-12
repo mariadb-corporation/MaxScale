@@ -1535,7 +1535,7 @@ static void blr_log_identity(ROUTER_INSTANCE* router)
 
     if (router->set_master_hostname)
     {
-        master_hostname  = MXS_STRDUP(router->set_master_hostname);
+        master_hostname = MXS_STRDUP(router->set_master_hostname);
     }
     else
     {
