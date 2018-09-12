@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(15);
         Test->add_result(mysql_change_user(Test->maxscales->conn_rwsplit[0], "user", "pass2", (char *) "test"),
-                         "change_user failed! %", mysql_error(Test->maxscales->conn_rwsplit[0]));
+                         "change_user failed! %s", mysql_error(Test->maxscales->conn_rwsplit[0]));
         Test->add_result(mysql_change_user(Test->maxscales->conn_rwsplit[0], Test->maxscales->user_name, Test->maxscales->password,
                                            (char *) "test"), "change_user failed! %s", mysql_error(Test->maxscales->conn_rwsplit[0]));
     }

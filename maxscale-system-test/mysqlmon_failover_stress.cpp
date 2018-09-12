@@ -552,7 +552,7 @@ void run(TestConnections& test)
             }
             else
             {
-                test.expect(false, "Unexpected master id: %d");
+                test.expect(false, "Unexpected master id: %d", master_id);
             }
         }
 

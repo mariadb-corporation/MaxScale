@@ -252,10 +252,10 @@ public:
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
      */
-    void add_result(bool result, const char *format, ...);
+    void add_result(bool result, const char *format, ...) __attribute__((format(printf, 3, 4)));
 
     /** Same as add_result() but inverted */
-    void expect(bool result, const char *format, ...);
+    void expect(bool result, const char *format, ...) __attribute__((format(printf, 3, 4)));
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables

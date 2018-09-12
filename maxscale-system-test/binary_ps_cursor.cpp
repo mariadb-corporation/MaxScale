@@ -115,7 +115,7 @@ void test2(TestConnections& test)
     test.add_result(strcmp(buffer1, buffer2) == 0, "Expected results to differ");
     test.add_result(strcmp(buffer2, server_id) != 0,
                     "Expected prepare 2 to go to the master (%s) but it's %s",
-                    server_id[0], buffer2);
+                    server_id, buffer2);
 }
 
 void test3(TestConnections& test)
@@ -168,7 +168,7 @@ void test3(TestConnections& test)
     sprintf(server_id, "%d", test.repl->get_server_id(0));
     test.add_result(strcmp(buffer, server_id) != 0,
                     "Expected the execute inside a transaction to go to the master (%s) but it's %s",
-                    server_id[0], buffer);
+                    server_id, buffer);
 }
 
 int main(int argc, char** argv)

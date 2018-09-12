@@ -47,7 +47,7 @@ int main(int argc, char** argv)
                 std::accumulate(errors.begin(), errors.end(), std::string(),
     [](const std::string &a, const std::string &b) {
         return a + b + " ";
-    }));
+    }).c_str());
 
     test.tprintf("Dropping databases...");
     for (auto db : db_list)
