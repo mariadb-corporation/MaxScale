@@ -494,6 +494,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                   MYSQL_COMMAND(queue));
         break;
     }
+
+    gwbuf_free(queue);
     return rv;
 }
 
