@@ -30,8 +30,8 @@ const time_t MONITOR_INTERVAL = 1;
 // been performed. Not very critical.
 const time_t FAILOVER_DURATION = 5;
 
-// How long should we keep in running.
-const time_t TEST_DURATION = 90;
+// The test now runs only two failovers. Change for a longer time limit later.
+// TODO: add semisync to remove this limitation.
 
 #define CMESSAGE(msg) \
     do {\
@@ -519,11 +519,9 @@ void run(TestConnections& test)
         cout << "Starting clients." << endl;
         Client::start(test.verbose, zHost, port, zUser, zPassword);
 
-        time_t start = time(NULL);
-
         list_servers(test);
 
-        while (time(NULL) - start < TEST_DURATION)
+        for (int i = 0; i < 2; i++)
         {
             test.maxscales->wait_for_monitor();
 
