@@ -24,6 +24,7 @@ static bool check_nodes = true;
 static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
+static bool restart_galera = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -64,6 +65,11 @@ void TestConnections::require_repl_version(const char* version)
 void TestConnections::require_galera_version(const char* version)
 {
     maxscale::required_galera_version = version;
+}
+
+void TestConnections::restart_galera(bool value)
+{
+    maxscale::restart_galera = value;
 }
 
 TestConnections::TestConnections(int argc, char* argv[])
@@ -123,7 +129,6 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     int c;
     int option_index = 0;
-    bool restart_galera = false;
 
     while ((c = getopt_long(argc, argv, "hvnqsirgzyl", long_options, &option_index)) != -1)
     {
@@ -174,7 +179,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
         case 'g':
             printf("Restarting Galera setup\n");
-            restart_galera = true;
+            maxscale::restart_galera = true;
             break;
 
         case 'z':
@@ -280,7 +285,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if ((restart_galera) && (!no_galera))
+    if ((maxscale::restart_galera) && (!no_galera))
     {
         galera->stop_nodes();
         galera->start_replication();

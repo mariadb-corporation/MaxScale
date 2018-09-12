@@ -255,6 +255,18 @@ public:
     static void require_galera_version(const char* version);
 
     /**
+     * @brief Specify whether galera should be restarted.
+     *
+     * @param value If true, galera should be restarted.
+     *
+     * @note Even if set to false (which is also the default), '-g' or '--restart-galera' at
+     *       the command line will still cause a restart, unless '-y' or '--no-galera' has
+     *       been specified. '-y' will prevent galera from being restarted even if the value
+     *       has been set to true.
+     */
+    static void restart_galera(bool value);
+
+    /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
