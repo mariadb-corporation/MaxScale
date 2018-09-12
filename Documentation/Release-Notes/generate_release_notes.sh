@@ -1,11 +1,11 @@
 #!/bin/bash
 
-major=`cmake -P ../../VERSION.cmake -L|grep 'MAXSCALE_VERSION_MAJOR'|sed 's/.*=//'`
-minor=`cmake -P ../../VERSION.cmake -L|grep 'MAXSCALE_VERSION_MINOR'|sed 's/.*=//'`
-patch=`cmake -P ../../VERSION.cmake -L|grep 'MAXSCALE_VERSION_PATCH'|sed 's/.*=//'`
-maturity=`cmake -P ../../VERSION.cmake -L|grep 'MAXSCALE_MATURITY'|sed 's/.*=//'`
+major="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MAJOR'|sed 's/.*=//'`"
+minor="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_MINOR'|sed 's/.*=//'`"
+patch="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_VERSION_PATCH'|sed 's/.*=//'`"
+maturity="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_MATURITY'|sed 's/.*=//'`"
 
-VERSION=${major}.${minor}.${patch}
+VERSION="${major}.${minor}.${patch}"
 
 cat <<EOF > MaxScale-$VERSION-Release-Notes.md
 # MariaDB MaxScale ${VERSION} Release Notes
