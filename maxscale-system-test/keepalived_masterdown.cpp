@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     bool passive;
     char str[1024];
 
+    TestConnections::multiple_maxscales(true);
     TestConnections * Test = new TestConnections(argc, argv);
     //Test->set_timeout(10);
 

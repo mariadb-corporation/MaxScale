@@ -240,6 +240,9 @@ public:
     /** Skip initial start of MaxScale */
     static void skip_maxscale_start(bool value);
 
+    /** Prepare multiple maxscale instances */
+    static void multiple_maxscales(bool value);
+
     /** Test requires a certain backend version  */
     static void require_repl_version(const char *version);
     static void require_galera_version(const char *version);
