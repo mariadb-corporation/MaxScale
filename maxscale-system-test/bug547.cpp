@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(30);
-    sleep(5);
+    Test->maxscales->wait_for_monitor();
 
     Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
