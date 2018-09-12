@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Connect with a user that has a composite role as the default role");
     MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "db", "test", "test");
-    test.assert(mysql_errno(conn) == 0, "Connection failed: %s", mysql_error(conn));
+    test.expect(mysql_errno(conn) == 0, "Connection failed: %s", mysql_error(conn));
     mysql_close(conn);
 
     auto cleanup =
