@@ -18,6 +18,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
 #include <maxscale/alloc.h>
 #include <set>
@@ -71,6 +72,7 @@ private:
 int main()
 {
     maxbase::init();
+    maxbase::Log log;
 
     MariaDBMonitor::Test tester;
     return tester.run_tests();
