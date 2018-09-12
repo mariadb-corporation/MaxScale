@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
 
     char* version;
 
+    TestConnections::multiple_maxscales(true);
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 

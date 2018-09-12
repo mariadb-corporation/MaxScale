@@ -6,7 +6,7 @@
   "main": "maxctrl.js",
   "scripts": {
     "test": "nyc mocha --exit --timeout 15000 --slow 10000",
-    "preinstall": "cmake -P configure_version.cmake"
+    "preinstall": "test -f lib/version.js || cp lib/version.js.in lib/version.js"
   },
   "keywords": [
     "maxscale"

@@ -667,7 +667,7 @@ static inline bool session_ok_to_route(DCB* dcb)
     return rval;
 }
 
-static inline bool expecting_resultset(MySQLProtocol* proto)
+static inline bool expecting_text_result(MySQLProtocol* proto)
 {
     return proto->current_command == MXS_COM_QUERY
            || proto->current_command == MXS_COM_STMT_EXECUTE
@@ -861,7 +861,7 @@ static int gw_read_and_write(DCB* dcb)
 
             if (collecting_resultset(proto, capabilities))
             {
-                if (expecting_resultset(proto))
+                if (expecting_text_result(proto))
                 {
                     if (mxs_mysql_is_result_set(read_buffer))
                     {

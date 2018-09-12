@@ -1058,5 +1058,9 @@ add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS R
 # https://jira.mariadb.org/browse/MXS-1113
 add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL)
 
+# MXS-2037: Wildcards not working with source in Named Server Filter
+# https://jira.mariadb.org/browse/MXS-2037
+add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
+
 
 configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)

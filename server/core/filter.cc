@@ -344,6 +344,7 @@ MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION* session, MXS
 
     if ((me = (MXS_DOWNSTREAM*)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
     {
+        MXS_OOM();
         return NULL;
     }
     me->instance = filter->filter;
@@ -351,6 +352,7 @@ MXS_DOWNSTREAM* filter_apply(const SFilterDef& filter, MXS_SESSION* session, MXS
 
     if ((me->session = filter->obj->newSession(me->instance, session)) == NULL)
     {
+        MXS_ERROR("Failed to create filter session for '%s'", filter->name.c_str());
         MXS_FREE(me);
         return NULL;
     }

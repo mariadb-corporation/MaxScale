@@ -25,6 +25,7 @@ static bool manual_debug = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 static bool restart_galera = false;
+static bool multiple_maxscales = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -55,6 +56,11 @@ void TestConnections::check_nodes(bool value)
 void TestConnections::skip_maxscale_start(bool value)
 {
     maxscale::start = !value;
+}
+
+void TestConnections::multiple_maxscales(bool value)
+{
+    maxscale::multiple_maxscales = value;
 }
 
 void TestConnections::require_repl_version(const char* version)
@@ -666,9 +672,15 @@ void TestConnections::process_template(int m, const char* template_name, const c
 
 void TestConnections::init_maxscales()
 {
-    for (int i = 0; i < maxscales->N; i++)
+    // Always initialize the first MaxScale
+    init_maxscale(0);
+
+    if (maxscale::multiple_maxscales)
     {
-        init_maxscale(i);
+        for (int i = 1; i < maxscales->N; i++)
+        {
+            init_maxscale(i);
+        }
     }
 }
 

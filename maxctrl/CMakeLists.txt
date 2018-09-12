@@ -4,7 +4,7 @@ if (BUILD_MAXCTRL)
 
   if (NPM_FOUND AND NODEJS_FOUND AND NODEJS_VERSION VERSION_GREATER "6.0.0")
 
-    include(configure_version.cmake)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/lib/version.js.in ${CMAKE_CURRENT_BINARY_DIR}/lib/version.js @ONLY)
 
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/maxctrl/maxctrl
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
