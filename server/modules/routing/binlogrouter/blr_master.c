@@ -657,7 +657,6 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     router->active_logs = 0;
     spinlock_release(&router->lock);
     atomic_add(&router->handling_threads, -1);
-    gwbuf_free(buf);
 }
 
 /**
