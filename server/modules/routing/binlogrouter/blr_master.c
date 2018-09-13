@@ -153,6 +153,8 @@ static void blr_start_master(void* data)
 
     if (router->client)
     {
+        MXS_FREE(router->client->data);
+        router->client->data = NULL;
         dcb_close(router->client);
         router->client = NULL;
     }
@@ -655,6 +657,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     router->active_logs = 0;
     spinlock_release(&router->lock);
     atomic_add(&router->handling_threads, -1);
+    gwbuf_free(buf);
 }
 
 /**
@@ -2010,13 +2013,13 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
 
 static void blr_log_identity(ROUTER_INSTANCE *router)
 {
-    char *master_uuid;
-    char *master_hostname;
-    char *master_version;
+    char *master_uuid = NULL;
+    char *master_hostname = NULL;
+    char *master_version = NULL;
 
     if (router->set_master_version)
     {
-        master_version  = router->set_master_version;
+        master_version  = MXS_STRDUP(router->set_master_version);
     }
     else
     {
@@ -2025,16 +2028,16 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
 
     if (router->set_master_hostname)
     {
-        master_hostname  = router->set_master_hostname;
+        master_hostname  = MXS_STRDUP(router->set_master_hostname);
     }
     else
     {
         master_hostname = blr_extract_column(router->saved_master.selecthostname, 1);
     }
 
-    if (router->set_master_uuid)
+    if (router->set_master_uuid && router->master_uuid)
     {
-        master_uuid = router->master_uuid;
+        master_uuid = MXS_STRDUP(router->master_uuid);
     }
     else
     {
@@ -2074,6 +2077,10 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
                    (master_hostname == NULL ? "not available" : master_hostname),
                    (master_version == NULL ? "not available" : master_version));
     }
+
+    MXS_FREE(master_version);
+    MXS_FREE(master_hostname);
+    MXS_FREE(master_uuid);
 }
 
 /**

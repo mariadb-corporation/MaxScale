@@ -1404,6 +1404,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 void
 blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 {
+    ss_dassert(file);
     spinlock_acquire(&router->fileslock);
     file->refcnt--;
     if (file->refcnt == 0)
@@ -4055,6 +4056,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
     {
         if (sql_ret == SQLITE_CONSTRAINT)
         {
+            sqlite3_free(errmsg);
             /* Prepare UPDATE SQL */
             snprintf(sql_stmt,
                      GTID_SQL_BUFFER_SIZE,
@@ -4101,6 +4103,8 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
             return false;
         }
     }
+
+    sqlite3_free(errmsg);
 
     MXS_DEBUG("Saved/udated MariaDB GTID '%s', %s:%lu,%lu, SQL [%s]",
               gtid_info.gtid,

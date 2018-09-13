@@ -697,6 +697,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             MXS_INFO("Annotate_rows_event: %.*s", hdr.event_size - BINLOG_EVENT_HDR_LEN, ptr);
             pos += original_size;
             router->current_pos = pos;
+            gwbuf_free(result);
             continue;
         }
         else if (hdr.event_type == TABLE_MAP_EVENT)
