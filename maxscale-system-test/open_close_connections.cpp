@@ -77,24 +77,16 @@ void* query_thread1(void* ptr)
     {
         MYSQL* conn1 = data->Test->maxscales->open_rwsplit_connection(0);
         data->Test->add_result(mysql_errno(conn1),
-                               "Error opening RWsplit conn, thread num is %d, iteration %d, error is: %s\n",
-                               data->thread_id,
-                               data->i,
-                               mysql_error(conn1));
-        MYSQL* conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-        data->Test->add_result(mysql_errno(
-                                   conn2),
-                               "Error opening ReadConn master conn, thread num is %d, iteration %d, error is: %s\n",
-                               data->thread_id,
-                               data->i,
-                               mysql_error(conn2));
-        MYSQL* conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-        data->Test->add_result(mysql_errno(
-                                   conn3),
-                               "Error opening ReadConn master conn, thread num is %d, iteration %d, error is: %s\n",
-                               data->thread_id,
-                               data->i,
-                               mysql_error(conn3));
+                               "Error opening RWsplit conn, thread num is %d, iteration %li, error is: %s\n",
+                               data->thread_id, data->i, mysql_error(conn1));
+        MYSQL *conn2 = data->Test->maxscales->open_readconn_master_connection(0);
+        data->Test->add_result(mysql_errno(conn2),
+                               "Error opening ReadConn master conn, thread num is %d, iteration %li, error is: %s\n", data->thread_id,
+                               data->i, mysql_error(conn2));
+        MYSQL *conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
+        data->Test->add_result(mysql_errno(conn3),
+                               "Error opening ReadConn master conn, thread num is %d, iteration %li, error is: %s\n", data->thread_id,
+                               data->i, mysql_error(conn3));
         // USE test here is a hack to prevent Maxscale from failure; should be removed when fixed
         if (conn1 != NULL)
         {

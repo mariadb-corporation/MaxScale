@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
     test.expect(mysql_stmt_prepare(stmt, sqlstr, strlen(sqlstr)) == 0,
-                "Prepare should not fail",
+                "Prepare should not fail. Error: %s",
                 mysql_stmt_error(stmt));
     mysql_stmt_close(stmt);
 

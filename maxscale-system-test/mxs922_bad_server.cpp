@@ -59,7 +59,7 @@ void do_query(TestConnections* test, bool should_fail)
         ? "Query was successful when failure was expected."
         : "Query failed when success was expected.";
 
-    test->add_result(failed == should_fail, msg);
+    test->add_result(failed == should_fail, "%s", msg);
     test->maxscales->close_maxscale_connections(0);
 
     test->stop_timeout();

@@ -132,7 +132,7 @@ void gauge_raw_speed(TestConnections& test)
         std::ostringstream os;
         os << "The raw speed is too slow, " << rs.qps
            << "qps, compared to max_qps = " << max_qps << "qps for accurate testing.";
-        test.add_result(1, os.str().c_str());
+        test.add_result(1, "%s", os.str().c_str());
     }
 }
 
@@ -157,7 +157,7 @@ void verify_throttling_performace(TestConnections& test)
         std::ostringstream os;
         os << "Throttled speed 1: " << rs1.qps << " or 2: " << rs2.qps
            << "differs from max_qps " << max_qps << " by more than 10%%";
-        test.add_result(1, os.str().c_str());
+        test.add_result(1, "%s", os.str().c_str());
     }
 }
 
@@ -175,14 +175,14 @@ void verify_throttling_disconnect(TestConnections& test)
         std::ostringstream os;
         os << "Throttle filter did not disconnect rogue session.\n"
            << rs.qps << "qps " << " duration " << rs.duration;
-        test.add_result(1, os.str().c_str());
+        test.add_result(1, "%s", os.str().c_str());
     }
     if (std::abs(rs.qps - max_qps) > 0.1 * max_qps)
     {
         std::ostringstream os;
         os << "Throttled speed " << rs.qps << " differs from max_qps " << max_qps
            << " by more than 10%%";
-        test.add_result(1, os.str().c_str());
+        test.add_result(1, "%s", os.str().c_str());
     }
 }
 
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
     }
     catch (std::exception& ex)
     {
-        test.add_result(1, ex.what());
+        test.add_result(1, "%s", ex.what());
     }
     catch (...)
     {

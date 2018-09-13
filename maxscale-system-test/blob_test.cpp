@@ -193,7 +193,7 @@ int check_longblob_data(TestConnections* Test,
         {
             if ((int)data[y] != y)
             {
-                Test->add_result(1, "expected %d, got %d", data[y], y);
+                Test->add_result(1, "expected %lu, got %d", data[y], y);
                 break;
             }
         }

@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
     auto ok = [&test, &query](string q, int t = 0) {
             test.expect(query(q, t),
-                        "Query '%' should work: %s",
+                        "Query '%s' should work: %s",
                         q.c_str(),
                         mysql_error(test.maxscales->conn_rwsplit[0]));
         };

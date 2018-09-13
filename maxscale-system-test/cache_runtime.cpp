@@ -88,7 +88,7 @@ void select(TestConnections& test, int* pValue)
             }
             while (mysql_next_result(pMysql) == 0);
 
-            test.expect(nRows == 1, "Unexpected number of rows: %u", nRows);
+            test.expect(nRows == 1, "Unexpected number of rows: %lu", nRows);
         }
     }
     else
