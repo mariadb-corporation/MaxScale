@@ -3253,6 +3253,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
                           "rep_domain INT, "
                           "server_id INT, "
                           "sequence BIGINT, "
+                          "binlog_rdir VARCHAR(255), "
                           "binlog_file VARCHAR(255), "
                           "start_pos BIGINT, "
                           "end_pos BIGINT);"
@@ -3271,6 +3272,36 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE* inst)
         /* Close GTID maps database */
         sqlite3_close_v2(inst->gtid_maps);
         return false;
+    }
+
+    // If we are opening an existing database, created by a previous version
+    // of BLR, the column 'binlog_rdir' is not present, so we add it.
+    rc = sqlite3_exec(inst->gtid_maps,
+                      "ALTER TABLE gtid_maps ADD COLUMN binlog_rdir VARCHAR(255);",
+                      NULL,
+                      NULL,
+                      &errmsg);
+
+    if (rc != SQLITE_OK)
+    {
+        std::string s(errmsg);
+        sqlite3_free(errmsg);
+
+        if ((rc == SQLITE_ERROR) && (s.find("binlog_rdir") != std::string::npos))
+        {
+            // If it's the generic error and "binlog_rdir" is in the error message, we
+            // assume it is the complaint "duplicate column name: binlog_rdir" and
+            // things are fine (the column is already there).
+        }
+        else
+        {
+            // Otherwise we bail out.
+            MXS_ERROR("Service %s, failed to alter GTID index table 'gtid_map': %s",
+                      inst->service->name,
+                      s.c_str());
+            sqlite3_close_v2(inst->gtid_maps);
+            return false;
+        }
     }
 
     MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
