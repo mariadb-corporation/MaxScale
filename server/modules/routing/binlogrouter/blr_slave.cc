@@ -383,7 +383,7 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
     {
         MXS_ERROR("Invalid slave state machine state (%d) for binlog router.",
                   slave->state);
-        gwbuf_consume(queue, gwbuf_length(queue));
+        gwbuf_free(queue);
         return 0;
     }
 
@@ -466,6 +466,7 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
                   MYSQL_COMMAND(queue));
         break;
     }
+
     return rv;
 }
 
@@ -2146,6 +2147,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
             dcb_close(slave->dcb);
+            gwbuf_free(fde);
             return 1;
         }
     }
@@ -2190,6 +2192,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
             dcb_close(slave->dcb);
+            gwbuf_free(fde);
             return 1;
         }
         slave->lastEventReceived = MARIADB10_GTID_GTID_LIST_EVENT;
@@ -2211,6 +2214,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     /* Force the slave to call catchup routine */
     poll_fake_write_event(slave->dcb);
 
+    gwbuf_free(fde);
     return 1;
 }
 
@@ -2773,6 +2777,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                        slave->stats.n_events - events_before,
                        router->current_safe_event,
                        read_errmsg);
+            hdr.ok = SLAVE_POS_READ_OK;
         }
     }
 
@@ -3046,6 +3051,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                      * Fake rotate just written to client,
                      * no need to call poll_fake_write_event()
                      */
+
+                    // blr_slave_fake_rotate closes the file on success
+                    file = NULL;
                 }
                 else
                 {
@@ -6521,6 +6529,7 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
 
         if (!new_encryption_ctx)
         {
+            gwbuf_free(record);
             return 0;
         }
         record_ptr += BINLOG_EVENT_HDR_LEN;
@@ -6557,9 +6566,11 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
          * Note: if the requested pos is equal to MXS_START_ENCRYPTION_EVENT pos
          * the event will be skipped by blr_read_binlog() routine
          */
+        gwbuf_free(record);
         return 1;
     }
 
+    gwbuf_free(record);
     return 0;
 }
 

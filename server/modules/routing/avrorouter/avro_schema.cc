@@ -73,7 +73,6 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
 
                 if (json_is_object(val))
                 {
-
                     json_t* name = json_object_get(val, "name");
 
                     if (name && json_is_string(name))

@@ -224,6 +224,16 @@ string get_local_ip(TestConnections& test)
     return trim(output);
 }
 
+string get_gateway_ip(TestConnections& test)
+{
+    int exit_code;
+    char* output = test.maxscales->ssh_node_output(0, "echo $SSH_CLIENT", false, &exit_code);
+    *strchr(output, ' ') = '\0';
+    string rval(output);
+    free(output);
+    return rval;
+}
+
 void start_maxscale_with_local_address(TestConnections& test,
                                        const string& replace,
                                        const string& with)
@@ -281,6 +291,7 @@ void run_test(TestConnections& test, const vector<string>& ips)
     string ip2 = (ips.size() > 1) ? ips[1] : string("42.42.42.42");
 
     string local_ip = get_local_ip(test);
+    string gateway_ip = get_gateway_ip(test);
 
     const char* zUser1 = "alice";
     const char* zUser2 = "bob";
@@ -289,8 +300,10 @@ void run_test(TestConnections& test, const vector<string>& ips)
 
     create_user_and_grants(test, zUser1, zPassword1, ip1);
     create_user_and_grants(test, zUser1, zPassword1, local_ip);
+    create_user_and_grants(test, zUser1, zPassword1, gateway_ip);
     create_user_and_grants(test, zUser2, zPassword2, ip2);
     create_user_and_grants(test, zUser2, zPassword2, local_ip);
+    create_user_and_grants(test, zUser2, zPassword2, gateway_ip);
     test.repl->sync_slaves();
 
     test.tprintf("\n");

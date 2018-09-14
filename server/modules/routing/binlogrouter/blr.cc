@@ -1206,6 +1206,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
     slave->gtid_maps = NULL;
     memset(&slave->f_info, 0, sizeof(MARIADB_GTID_INFO));
     slave->annotate_rows = false;
+    slave->warning_msg = NULL;
 
     /**
      * Add this session to the list of active sessions.
@@ -1291,6 +1292,7 @@ static void freeSession(MXS_ROUTER* router_instance,
     {
         MXS_FREE(slave->mariadb_gtid);
     }
+    MXS_FREE(slave->warning_msg);
     MXS_FREE(slave);
 }
 
@@ -1395,7 +1397,9 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)instance;
     ROUTER_SLAVE* slave = (ROUTER_SLAVE*)router_session;
 
-    return blr_slave_request(router, slave, queue);
+    int rc = blr_slave_request(router, slave, queue);
+    gwbuf_free(queue);
+    return rc;
 }
 
 static const char* event_names[] =
