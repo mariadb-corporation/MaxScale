@@ -12,6 +12,7 @@
  */
 
 #include "mariadbserver.hh"
+#include "maxbase/stopwatch.hh"
 
 #include <chrono>
 #include <fstream>
@@ -25,6 +26,8 @@
 using std::string;
 using std::chrono::steady_clock;
 using maxscale::string_printf;
+using maxbase::Duration;
+using maxbase::StopWatch;
 
 namespace
 {
@@ -108,11 +111,30 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
     return rval;
 }
 
-bool MariaDBServer::execute_cmd(const string& cmd, std::string* errmsg_out)
+/**
+ * Execute a query which does not return data. If the query returns data, an error is returned.
+ *
+ * @param cmd The query
+ * @param mode Retry a failed query using the global query retry settings or not
+ * @param errmsg_out Error output.
+ * @return True on success, false on error or if query returned data
+ */
+bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
+                                   std::string* errmsg_out, unsigned int* errno_out)
 {
-    bool rval = false;
     auto conn = m_server_base->con;
-    if (mxs_mysql_query(conn, cmd.c_str()) == 0)
+    bool query_success = false;
+    if (mode == QueryRetryMode::ENABLED)
+    {
+        query_success = (mxs_mysql_query(conn, cmd.c_str()) == 0);
+    }
+    else
+    {
+        query_success = (mxs_mysql_query_ex(conn, cmd.c_str(), 0, 0) == 0);
+    }
+
+    bool rval = false;
+    if (query_success)
     {
         MYSQL_RES* result = mysql_store_result(conn);
         if (result == NULL)
@@ -125,16 +147,75 @@ bool MariaDBServer::execute_cmd(const string& cmd, std::string* errmsg_out)
             int rows = mysql_num_rows(result);
             *errmsg_out = string_printf("Query '%s' returned %d columns and %d rows of data when none "
                                         "was expected.",
-                                        cmd.c_str(),
-                                        cols,
-                                        rows);
+                                        cmd.c_str(), cols, rows);
         }
     }
-    else if (errmsg_out)
+    else
     {
-        *errmsg_out = string_printf("Query '%s' failed: '%s'.", cmd.c_str(), mysql_error(conn));
+        if (errmsg_out)
+        {
+            *errmsg_out = string_printf("Query '%s' failed: '%s'.", cmd.c_str(), mysql_error(conn));
+        }
+        if (errno_out)
+        {
+            *errno_out = mysql_errno(conn);
+        }
     }
     return rval;
+}
+
+bool MariaDBServer::execute_cmd(const std::string& cmd, std::string* errmsg_out)
+{
+    return execute_cmd_ex(cmd, QueryRetryMode::ENABLED, errmsg_out);
+}
+
+bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
+                                         std::string* errmsg_out, unsigned int* errno_out)
+{
+    return execute_cmd_ex(cmd, QueryRetryMode::DISABLED, errmsg_out, errno_out);
+}
+
+/**
+ * Execute a query which does not return data. If the query fails because of a network error
+ * (e.g. Connector-C timeout), automatically retry the query until time is up.
+ *
+ * @param cmd The query to execute. Should be a query with a predictable effect even when retried or
+ * ran several times.
+ * @param time_limit How long to retry
+ * @param errmsg_out Error output
+ * @return True, if successful.
+ */
+bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
+                                           std::string* errmsg_out)
+{
+    StopWatch timer;
+    // Even if time is up, try at least once.
+    bool cmd_success = false;
+    bool keep_trying = true;
+    while (!cmd_success && keep_trying)
+    {
+        string error_msg;
+        unsigned int errornum = 0;
+        cmd_success = execute_cmd_no_retry(cmd, &error_msg, &errornum);
+
+        // Check if there is time to retry.
+        Duration time_remaining = time_limit - timer.lap();
+        keep_trying = (mxs_mysql_is_net_error(errornum) && (time_remaining.secs() > 0));
+        if (!cmd_success)
+        {
+            if (keep_trying)
+            {
+                MXS_WARNING("Query '%s' failed on '%s': %s Retrying with %.1f seconds left.",
+                            cmd.c_str(), name(), error_msg.c_str(), time_remaining.secs());
+            }
+            else if (errmsg_out)
+            {
+                *errmsg_out = string_printf("Query '%s' failed on '%s': %s",
+                                            cmd.c_str(), name(), error_msg.c_str());
+            }
+        }
+    }
+    return cmd_success;
 }
 
 bool MariaDBServer::do_show_slave_status(string* errmsg_out)
@@ -1333,6 +1414,170 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
         MXS_NOTICE("Removed %lu slave connection(s) from '%s'.", m_slave_status.size(), name());
     }
     return !error;
+}
+
+bool MariaDBServer::promote_v2(ClusterOperation* op)
+{
+    bool success = false;
+    json_t** const error_out = op->error_out;
+
+    // Function should only be called for a master-slave pair.
+    auto master_conn = slave_connection_status(op->demotion_target);
+    mxb_assert(master_conn);
+    if (master_conn == NULL)
+    {
+        PRINT_MXS_JSON_ERROR(error_out,
+                             "'%s' is not a slave of '%s' and cannot be promoted to its place.",
+                             name(), op->demotion_target->name());
+        return false;
+    }
+
+    StopWatch timer;
+
+    // Step 1: Stop & reset slave connections. If doing a failover, only remove the connection to demotion
+    // target. In case of switchover, remove other slave connections as well since the demotion target
+    // will take them over.
+    bool stop_slave_error = false;
+
+    // Helper function for stopping a slave connection and setting error.
+    auto stop_slave_helper = [this, &timer, &stop_slave_error, op, error_out](const string& conn_name) {
+        if (!stop_slave_conn(conn_name, StopMode::RESET_ALL, op->time_remaining, error_out))
+        {
+            stop_slave_error = true;
+        }
+        op->time_remaining -= timer.restart();
+    };
+
+    if (op->type == OperationType::SWITCHOVER)
+    {
+        for (size_t i = 0; !stop_slave_error && i < m_slave_status.size(); i++)
+        {
+            stop_slave_helper(m_slave_status[i].name);
+        }
+    }
+    else
+    {
+        stop_slave_helper(master_conn->name);
+    }
+
+    if (!stop_slave_error)
+    {
+        // Step 2: If demotion target is master, meaning this server will become the master,
+        // enable writing and scheduled events. Also, run promotion_sql_file.
+        bool promotion_error = false;
+        if (op->demotion_target_is_master)
+        {
+            // Disabling read-only should be quick.
+            bool ro_disabled = set_read_only(ReadOnlySetting::DISABLE, op->time_remaining, error_out);
+            op->time_remaining -= timer.restart();
+            if (!ro_disabled)
+            {
+                promotion_error = true;
+            }
+            else
+            {
+                if (op->handle_events)
+                {
+                    // TODO: Add query replying to enable_events
+                    bool events_enabled = enable_events(error_out);
+                    op->time_remaining -= timer.restart();
+                    if (!events_enabled)
+                    {
+                        promotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out, "Failed to enable events on '%s'.", name());
+                    }
+                }
+
+                // Run promotion_sql_file if no errors so far.
+                if (!promotion_error && !op->promotion_sql_file.empty())
+                {
+                    bool file_ran_ok = run_sql_from_file(op->promotion_sql_file, error_out);
+                    op->time_remaining -= timer.restart();
+                    if (!file_ran_ok)
+                    {
+                        promotion_error = true;
+                        PRINT_MXS_JSON_ERROR(error_out,
+                                             "Execution of file '%s' failed during promotion of server '%s'.",
+                                             op->promotion_sql_file.c_str(), name());
+                    }
+                }
+            }
+        }
+
+        // Step 3: Copy slave connections from demotion target. If demotion target was replicating from
+        // this server (circular topology), the connection should be ignored. Also, connections which
+        // already exist on this server need not be regenerated.
+        if (!promotion_error)
+        {
+            // TODO
+        }
+    }
+    return success;
+}
+
+bool MariaDBServer::stop_slave_conn(const string& conn_name, StopMode mode, Duration time_limit,
+                                    json_t** error_out)
+{
+    /* STOP SLAVE is a bit problematic, since sometimes it seems to take several seconds to complete.
+     * If this time is greater than the connection read timeout, connector-c will cut the connection/
+     * query. The query is likely completed afterwards by the server. To prevent false errors,
+     * try the query repeatedly until time is up. Fortunately, the server doesn't consider stopping
+     * an already stopped slave connection an error. */
+    Duration time_left = time_limit;
+    StopWatch timer;
+    string stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
+    string error_msg;
+    bool stop_success = execute_cmd_time_limit(stop, time_left, &error_msg);
+    time_left -= timer.restart();
+
+    bool rval = false;
+    if (stop_success)
+    {
+        // The RESET SLAVE-query can also take a while if there is lots of relay log to delete.
+        // Very rare, though.
+        if (mode == StopMode::RESET || mode == StopMode::RESET_ALL)
+        {
+            string reset = string_printf("RESET SLAVE '%s'%s;",
+                                         conn_name.c_str(), (mode == StopMode::RESET_ALL) ? " ALL" : "");
+            if (execute_cmd_time_limit(reset, time_left, &error_msg))
+            {
+                rval = true;
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Failed to reset slave connection on '%s': %s",
+                                     name(), error_msg.c_str());
+            }
+        }
+        else
+        {
+            rval = true;
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(error_out,
+                             "Failed to stop slave connection on '%s': %s",
+                             name(), error_msg.c_str());
+    }
+    return rval;
+}
+
+bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, json_t** error_out)
+{
+    int new_val = (setting == ReadOnlySetting::ENABLE) ? 1 : 0;
+    string cmd = string_printf("SET GLOBAL read_only=%i;", new_val);
+    string error_msg;
+    bool success = execute_cmd_time_limit(cmd, time_limit, &error_msg);
+    if (!success)
+    {
+        string target_str = (setting == ReadOnlySetting::ENABLE) ? "enable" : "disable";
+        PRINT_MXS_JSON_ERROR(error_out,
+                             "Failed to %s read_only on '%s': %s",
+                             target_str.c_str(), name(), error_msg.c_str());
+    }
+    return success;
 }
 
 string SlaveStatus::to_string() const

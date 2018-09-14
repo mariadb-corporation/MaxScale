@@ -216,7 +216,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     return mysql;
 }
 
-bool mxs_mysql_is_net_error(int errcode)
+bool mxs_mysql_is_net_error(unsigned int errcode)
 {
     switch (errcode)
     {
@@ -234,15 +234,14 @@ bool mxs_mysql_is_net_error(int errcode)
     }
 }
 
-int mxs_mysql_query(MYSQL* conn, const char* query)
+int mxs_mysql_query_ex(MYSQL* conn, const char* query, int query_retries, time_t query_retry_timeout)
 {
-    MXS_CONFIG* cnf = config_get_global_options();
     time_t start = time(NULL);
     int rc = mysql_query(conn, query);
 
-    for (int n = 0; rc != 0 && n < cnf->query_retries
+    for (int n = 0; rc != 0 && n < query_retries
          && mxs_mysql_is_net_error(mysql_errno(conn))
-         && time(NULL) - start < cnf->query_retry_timeout; n++)
+         && time(NULL) - start < query_retry_timeout; n++)
     {
         rc = mysql_query(conn, query);
     }
@@ -258,6 +257,12 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
     }
 
     return rc;
+}
+
+int mxs_mysql_query(MYSQL* conn, const char* query)
+{
+    MXS_CONFIG* cnf = config_get_global_options();
+    return mxs_mysql_query_ex(conn, query, cnf->query_retries, cnf->query_retry_timeout);
 }
 
 const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)

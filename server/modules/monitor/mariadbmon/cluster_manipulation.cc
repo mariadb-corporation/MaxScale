@@ -1510,6 +1510,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json
             rval.reset(new ClusterOperation(OperationType::FAILOVER,
                                             promotion_target, demotion_target,
                                             demotion_target == m_master, m_handle_event_scheduler,
+                                            m_promote_sql_file, m_demote_sql_file,
                                             error_out, time_limit));
         }
     }
@@ -1851,6 +1852,7 @@ unique_ptr<ClusterOperation> MariaDBMonitor::switchover_prepare(SERVER* promotio
         rval.reset(new ClusterOperation(op_type,
                                         promotion_target, demotion_target,
                                         demotion_target == m_master, m_handle_event_scheduler,
+                                        m_promote_sql_file, m_demote_sql_file,
                                         error_out, time_limit));
     }
     return rval;

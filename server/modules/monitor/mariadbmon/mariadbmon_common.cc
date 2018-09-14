@@ -36,12 +36,15 @@ void DelimitedPrinter::cat(string& target, const string& addition)
 ClusterOperation::ClusterOperation(OperationType type,
                                    MariaDBServer* promotion_target, MariaDBServer* demotion_target,
                                    bool demo_target_is_master, bool handle_events,
+                                   string& promotion_sql_file, string& demotion_sql_file,
                                    json_t** error, maxbase::Duration time_remaining)
     : type(type)
     , promotion_target(promotion_target)
     , demotion_target(demotion_target)
     , demotion_target_is_master(demo_target_is_master)
     , handle_events(handle_events)
+    , promotion_sql_file(promotion_sql_file)
+    , demotion_sql_file(demotion_sql_file)
     , error_out(error)
     , time_remaining(time_remaining)
 {}

@@ -42,16 +42,15 @@ char* mxs_lestr_consume(uint8_t** c, size_t* size);
 MYSQL* mxs_mysql_real_connect(MYSQL* mysql, SERVER* server, const char* user, const char* passwd);
 
 /**
- * Check if the MYSQL error number is a connection error
+ * Check if the MYSQL error number is a connection error.
  *
+ * @param Error code
  * @return True if the MYSQL error number is a connection error
  */
-bool mxs_mysql_is_net_error(int errcode);
+bool mxs_mysql_is_net_error(unsigned int errcode);
 
 /**
- * Execute a query
- *
- * This function wraps mysql_query in a way that automatic query retry is possible.
+ * Execute a query using global query retry settings.
  *
  * @param conn  MySQL connection
  * @param query Query to execute
@@ -59,6 +58,17 @@ bool mxs_mysql_is_net_error(int errcode);
  * @return return value of mysql_query
  */
 int mxs_mysql_query(MYSQL* conn, const char* query);
+
+/**
+ * Execute a query, manually defining retry limits.
+ *
+ * @param conn MySQL connection
+ * @param query Query to execute
+ * @param query_retries Maximum number of retries
+ * @param query_retry_timeout Maximum time to spend retrying, in seconds
+ * @return return value of mysql_query
+ */
+int mxs_mysql_query_ex(MYSQL* conn, const char* query, int query_retries, time_t query_retry_timeout);
 
 /**
  * Trim MySQL quote characters surrounding a string.

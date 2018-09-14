@@ -17,6 +17,7 @@
 #include <string>
 #include <memory>
 #include <maxscale/monitor.h>
+#include <maxbase/stopwatch.hh>
 #include "gtid.hh"
 
 class QueryResult;
@@ -207,13 +208,15 @@ public:
     std::unique_ptr<QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL);
 
     /**
-     * Execute a query which does not return data. If the query returns data, an error is returned.
-     *
-     * @param cmd The query
-     * @param errmsg_out Error output. Can be null.
-     * @return True on success, false on error or if query returned data
+     * execute_cmd_ex with query retry ON.
      */
     bool execute_cmd(const std::string& cmd, std::string* errmsg_out = NULL);
+
+    /**
+     * execute_cmd_ex with query retry OFF.
+     */
+    bool execute_cmd_no_retry(const std::string& cmd,
+                              std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
     /**
      * Update server slave connection information.
@@ -488,9 +491,35 @@ public:
      */
     bool reset_all_slave_conns(json_t** error_out);
 
+    /**
+     * Promote this server to take role of demotion target. Remove slave connections from this server.
+     * If target is/was a master, set read-only to OFF. Copy slave connections from target.
+     *
+     * @param op Cluster operation descriptor
+     * @return True if successful
+     */
+    bool promote_v2(ClusterOperation* operation);
+
 private:
     class EventInfo;
     typedef std::function<void (const EventInfo&, json_t** error_out)> ManipulatorFunc;
+
+    enum class StopMode
+    {
+        STOP_ONLY,
+        RESET,
+        RESET_ALL
+    };
+    enum class QueryRetryMode
+    {
+        ENABLED,
+        DISABLED
+    };
+    enum class ReadOnlySetting
+    {
+        ENABLE,
+        DISABLE
+    };
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
@@ -499,6 +528,17 @@ private:
     bool               events_foreach(ManipulatorFunc& func, json_t** error_out);
     bool               alter_event(const EventInfo& event, const std::string& target_status,
                                    json_t** error_out);
+
+    bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
+                         json_t** error_out);
+
+    bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
+                        std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+
+    bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
+                                std::string* errmsg_out);
+
+    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
 };
 
 /**

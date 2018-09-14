@@ -94,11 +94,14 @@ public:
     MariaDBServer* const demotion_target;               // Which server will be demoted
     const bool           demotion_target_is_master;     // Was the demotion target the master?
     const bool           handle_events;                 // Should scheduled server events be disabled/enabled?
+    const std::string    promotion_sql_file;            // SQL commands ran on a server promoted to master
+    const std::string    demotion_sql_file;             // SQL commands ran on a server demoted from master
     json_t** const       error_out;                     // Json error output
     maxbase::Duration    time_remaining;                // How much time remains to complete the operation
 
     ClusterOperation(OperationType type,
                      MariaDBServer* promotion_target, MariaDBServer* demotion_target,
                      bool demo_target_is_master, bool handle_events,
+                     std::string& promotion_sql_file, std::string& demotion_sql_file,
                      json_t** error, maxbase::Duration time_remaining);
 };
