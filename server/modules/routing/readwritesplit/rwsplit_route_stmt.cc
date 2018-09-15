@@ -357,6 +357,7 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
     }
 
     MXS_INFO("Session write, routing to all servers.");
+    bool attempted_write = false;
 
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
@@ -365,6 +366,7 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
 
         if (backend->in_use())
         {
+            attempted_write = true;
             backend->append_session_command(sescmd);
 
             uint64_t current_pos = backend->next_session_command()->get_position();
@@ -432,6 +434,11 @@ bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
              * completed session command count */
             rses->recv_sescmd++;
         }
+    }
+    else
+    {
+        MXS_ERROR("Could not route session command: %s", attempted_write ? "Write to all backends failed" :
+                  "All connections have failed");
     }
 
     return nsucc;
