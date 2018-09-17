@@ -436,7 +436,7 @@ public:
      * @param reason_out Output for the reason server cannot be promoted
      * @return True, if suggested new master is a viable promotion candidate
      */
-    bool can_be_promoted(ClusterOperation op, const MariaDBServer* demotion_target, std::string* reason_out);
+    bool can_be_promoted(OperationType op, const MariaDBServer* demotion_target, std::string* reason_out);
 
     /**
      * Read the file contents and send them as sql queries to the server. Any data

@@ -1030,7 +1030,7 @@ bool MariaDBServer::can_be_demoted_failover(string* reason_out)
     return demotable;
 }
 
-bool MariaDBServer::can_be_promoted(ClusterOperation op,
+bool MariaDBServer::can_be_promoted(OperationType op,
                                     const MariaDBServer* demotion_target,
                                     std::string* reason_out)
 {
@@ -1051,7 +1051,7 @@ bool MariaDBServer::can_be_promoted(ClusterOperation op,
     {
         reason = string_printf("its slave connection to '%s' is not using gtid.", demotion_target->name());
     }
-    else if (op == ClusterOperation::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
+    else if (op == OperationType::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
     {
         reason = string_printf("its slave connection to '%s' is broken.", demotion_target->name());
     }

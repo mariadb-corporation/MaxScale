@@ -22,6 +22,7 @@
 
 #include <string>
 #include <maxscale/json_api.h>
+#include <maxbase/stopwatch.hh>
 
 /** Utility macros for printing both MXS_ERROR and json error */
 #define PRINT_MXS_JSON_ERROR(err_out, format, ...) \
@@ -66,14 +67,38 @@ private:
     std::string       m_current_separator;
 };
 
-enum class ClusterOperation
+enum class Log
+{
+    OFF,
+    ON
+};
+
+enum class OperationType
 {
     SWITCHOVER,
     FAILOVER
 };
 
-enum class Log
+class MariaDBServer;
+
+/**
+ *  Class which encapsulates many settings and status descriptors for a failover/switchover.
+ *  Is more convenient to pass around than the separate elements. Most fields are constants or constant
+ *  pointers since they should not change during an operation.
+ */
+class ClusterOperation
 {
-    OFF,
-    ON
+public:
+    const OperationType  type;                        // Failover or switchover
+    MariaDBServer* const promotion_target;            // Which server will be promoted
+    MariaDBServer* const demotion_target;             // Which server will be demoted
+    const bool           demotion_target_is_master;   // Was the demotion target the master?
+    const bool           handle_events;               // Should scheduled server events be disabled/enabled?
+    json_t** const       error_out;                   // Json error output
+    maxbase::Duration    time_remaining;              // How much time remains to complete the operation
+
+    ClusterOperation(OperationType type,
+                     MariaDBServer* promotion_target, MariaDBServer* demotion_target,
+                     bool demo_target_is_master, bool handle_events,
+                     json_t** error, maxbase::Duration time_remaining);
 };

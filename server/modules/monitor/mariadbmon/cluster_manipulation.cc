@@ -21,12 +21,15 @@
 #include <maxscale/utils.hh>
 
 using std::string;
+using std::unique_ptr;
 using std::chrono::steady_clock;
 using maxscale::string_printf;
 
 static const char RE_ENABLE_FMT[] = "To re-enable automatic %s, manually set '%s' to 'true' "
                                     "for monitor '%s' via MaxAdmin or the REST API, or restart MaxScale.";
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
+const char FAILOVER_OK[] = "Failover '%s' -> '%s' performed.";
+const char FAILOVER_FAIL[] = "Failover '%s' -> '%s' failed.";
 
 static void print_redirect_errors(MariaDBServer* first_server,
                                   const ServerArray& servers,
@@ -92,25 +95,18 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
 bool MariaDBMonitor::manual_failover(json_t** output)
 {
     bool failover_done = false;
-    MariaDBServer* promotion_target = NULL;
-    MariaDBServer* demotion_target = NULL;
-
-    bool ok_to_failover = failover_prepare(Log::ON, &promotion_target, &demotion_target, output);
-    if (ok_to_failover)
+    auto op = failover_prepare(Log::ON, output);
+    if (op)
     {
-        failover_done = failover_perform(promotion_target, demotion_target, output);
+        failover_done = failover_perform(*op);
         if (failover_done)
         {
-            MXS_NOTICE("Failover '%s' -> '%s' performed.",
-                       demotion_target->name(),
-                       promotion_target->name());
+            MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion_target->name());
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output,
-                                 "Failover '%s' -> '%s' failed.",
-                                 demotion_target->name(),
-                                 promotion_target->name());
+            PRINT_MXS_JSON_ERROR(output, FAILOVER_FAIL,
+                                 op->demotion_target->name(), op->promotion_target->name());
         }
     }
     else
@@ -810,28 +806,21 @@ bool MariaDBMonitor::switchover_perform(MariaDBServer* promotion_target,
 /**
  * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
  *
- * @param promotion_target Server to promote
- * @param demotion_target Server to demote
- * @param error_out Error output. Can be NULL.
+ * @param op Operation descriptor
  * @return True if successful
  */
-bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target,
-                                      MariaDBServer* demotion_target,
-                                      json_t** error_out)
+bool MariaDBMonitor::failover_perform(ClusterOperation& op)
 {
-    mxb_assert(promotion_target && demotion_target);
-
-    // Total time limit on how long this operation may take. Checked and modified after significant steps are
-    // completed.
-    int seconds_remaining = m_failover_timeout;
-    time_t start_time = time(NULL);
+    mxb_assert(op.promotion_target && op.demotion_target);
+    MariaDBServer* const promotion_target = op.promotion_target;
+    maxbase::StopWatch timer;
 
     // Step 1: Populate a vector with all slaves not the selected master.
-    ServerArray redirectable_slaves = get_redirectables(promotion_target, demotion_target);
+    ServerArray redirectable_slaves = get_redirectables(promotion_target, op.demotion_target);
 
     bool rval = false;
     // Step 2: Stop and reset slave, set read-only to 0.
-    if (promote_new_master(promotion_target, error_out))
+    if (promote_new_master(promotion_target, op.error_out))
     {
         m_next_master = promotion_target;
         m_cluster_modified = true;
@@ -842,8 +831,7 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target,
         bool success = redirectable_slaves.empty() ? true : redirects > 0;
         if (success)
         {
-            time_t step3_time = time(NULL);
-            seconds_remaining -= difftime(step3_time, start_time);
+            op.time_remaining -= timer.restart();
 
             // Step 4: Finally, add an event to the new master to advance gtid and wait for the slaves
             // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
@@ -860,21 +848,20 @@ bool MariaDBMonitor::failover_perform(MariaDBServer* promotion_target,
                 rval = true;
                 MXS_DEBUG("Failover: no slaves to redirect, skipping stabilization check.");
             }
-            else if (wait_cluster_stabilization(promotion_target, redirected_slaves, seconds_remaining))
+            else if (wait_cluster_stabilization(promotion_target, redirected_slaves,
+                                                op.time_remaining.secs()))
             {
                 rval = true;
-                time_t step4_time = time(NULL);
-                int seconds_step4 = difftime(step4_time, step3_time);
-                seconds_remaining -= seconds_step4;
-                MXS_DEBUG("Failover: slave replication confirmation took %d seconds with "
-                          "%d seconds to spare.",
-                          seconds_step4,
-                          seconds_remaining);
+                auto step4_time = timer.restart();
+                op.time_remaining -= step4_time;
+                MXS_DEBUG("Failover: slave replication confirmation took %.1f seconds with "
+                          "%.1f seconds to spare.",
+                          step4_time.secs(), op.time_remaining.secs());
             }
         }
         else
         {
-            print_redirect_errors(NULL, redirectable_slaves, error_out);
+            print_redirect_errors(NULL, redirectable_slaves, op.error_out);
         }
     }
 
@@ -1223,7 +1210,7 @@ bool MariaDBMonitor::promote_new_master(MariaDBServer* new_master, json_t** erro
  * @return The selected promotion target or NULL if no valid candidates
  */
 MariaDBServer* MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target,
-                                                       ClusterOperation op,
+                                                       OperationType op,
                                                        Log log_mode,
                                                        json_t** error_out)
 {
@@ -1442,18 +1429,13 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate,
  * Check cluster and parameters for suitability to failover. Also writes found servers to output pointers.
  *
  * @param log_mode Logging mode
- * @param promotion_target_out Output for promotion target
- * @param demotion_target_out Output for demotion target
  * @param error_out Error output
- * @return True if cluster is suitable and failover may proceed
+ * @return Operation object if cluster is suitable and failover may proceed, or NULL on error
  */
-bool MariaDBMonitor::failover_prepare(Log log_mode,
-                                      MariaDBServer** promotion_target_out,
-                                      MariaDBServer** demotion_target_out,
-                                      json_t** error_out)
+unique_ptr<ClusterOperation> MariaDBMonitor::failover_prepare(Log log_mode, json_t** error_out)
 {
     // This function resembles 'switchover_prepare', but does not yet support manual selection.
-    const auto op = ClusterOperation::FAILOVER;
+
     // Check that the cluster has a non-functional master server and that one of the slaves of
     // that master can be promoted. TODO: add support for demoting a relay server.
     MariaDBServer* demotion_target = NULL;
@@ -1478,10 +1460,8 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
     if (demotion_target)
     {
         // Autoselect best server for promotion.
-        MariaDBServer* promotion_candidate = select_promotion_target(demotion_target,
-                                                                     op,
-                                                                     log_mode,
-                                                                     error_out);
+        MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, OperationType::FAILOVER,
+                                                                     log_mode, error_out);
         if (promotion_candidate)
         {
             promotion_target = promotion_candidate;
@@ -1498,6 +1478,7 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
         gtid_ok = check_gtid_replication(log_mode, demotion_target, error_out);
     }
 
+    unique_ptr<ClusterOperation> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
         const SlaveStatus* slave_conn = promotion_target->slave_connection_status(demotion_target);
@@ -1510,43 +1491,47 @@ bool MariaDBMonitor::failover_prepare(Log log_mode,
             // failover, it's best to just try again during the next monitor iteration. The difference
             // to a typical prepare-fail is that the relay log status should be logged
             // repeatedly since it is likely to change continuously.
-            if (error_out)
+            if (error_out || log_mode == Log::ON)
             {
-                // Print a bit more helpful error for the user, goes to log too. This should be a very rare
-                // occurrence: either the dba managed to start failover really fast, or the relay log is
-                // massive. In the latter case it's ok that the monitor does not do the waiting since there
-                // is no telling how long the wait will be.
-                const char wait_relay_log[] = "The relay log of '%s' has %" PRIu64 " unprocessed events "
-                                                                                   "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, failover should be "
-                                                                                   "postponed until the log has been processed. Please try again later.";
-                string error_msg = string_printf(wait_relay_log,
-                                                 promotion_target->name(),
-                                                 events,
-                                                 slave_conn->gtid_io_pos.to_string().c_str(),
-                                                 promotion_target->m_gtid_current_pos.to_string().c_str());
-                PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
-            }
-            else if (log_mode == Log::ON)
-            {
-                // For automatic failover the message is more typical. TODO: Think if this message should
-                // be logged more often.
-                MXS_WARNING("The relay log of '%s' has %" PRId64 " unprocessed events "
-                                                                 "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s). To avoid data loss, "
-                                                                 "failover is postponed until the log has been processed.",
-                            promotion_target->name(),
-                            events,
-                            slave_conn->gtid_io_pos.to_string().c_str(),
-                            promotion_target->m_gtid_current_pos.to_string().c_str());
+                string unproc_events = string_printf(
+                        "The relay log of '%s' has %" PRIu64 " unprocessed events "
+                        "(Gtid_IO_Pos: %s, Gtid_Current_Pos: %s).",
+                        promotion_target->name(),
+                        events,
+                        slave_conn->gtid_io_pos.to_string().c_str(),
+                        promotion_target->m_gtid_current_pos.to_string().c_str());
+                if (error_out)
+                {
+                    // Print a bit more helpful error for the user, goes to log too. This should be a very rare
+                    // occurrence: either the dba managed to start failover really fast, or the relay log is
+                    // massive. In the latter case it's ok that the monitor does not do the waiting since there
+                    // is no telling how long the wait will be.
+                    const char wait_relay_log[] =
+                        "%s To avoid data loss, failover should be postponed until "
+                        "the log has been processed. Please try again later.";
+                    string error_msg = string_printf(wait_relay_log, unproc_events.c_str());
+                    PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                }
+                else if (log_mode == Log::ON)
+                {
+                    // For automatic failover the message is more typical. TODO: Think if this message should
+                    // be logged more often.
+                    MXS_WARNING("%s To avoid data loss, failover is postponed until the log "
+                                "has been processed.", unproc_events.c_str());
+                }
             }
         }
         else
         {
-            *promotion_target_out = promotion_target;
-            *demotion_target_out = demotion_target;
-            return true;
+            // The Duration ctor taking a double interprets is as seconds.
+            auto time_limit = maxbase::Duration((double)m_failover_timeout);
+            rval.reset(new ClusterOperation(OperationType::FAILOVER,
+                                            promotion_target, demotion_target,
+                                            demotion_target == m_master, m_handle_event_scheduler,
+                                            error_out, time_limit));
         }
     }
-    return false;
+    return rval;
 }
 
 /**
@@ -1592,15 +1577,19 @@ void MariaDBMonitor::handle_auto_failover()
     else if (master_down_count >= m_failcount)
     {
         // Failover is required, but first we should check if preconditions are met.
-        MariaDBServer* promotion_target = NULL;
-        MariaDBServer* demotion_target = NULL;
         Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-        if (failover_prepare(log_mode, &promotion_target, &demotion_target, NULL))
+        auto op = failover_prepare(log_mode, NULL);
+        if (op)
         {
             m_warn_failover_precond = true;
             MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", m_master->name());
-            if (!failover_perform(promotion_target, demotion_target, NULL))
+            if (failover_perform(*op))
             {
+                MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion_target->name());
+            }
+            else
+            {
+                MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion_target->name());
                 report_and_disable("failover", CN_AUTO_FAILOVER, &m_auto_failover);
             }
         }
@@ -1785,7 +1774,7 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server,
                                         MariaDBServer** demotion_target_out,
                                         json_t** error_out)
 {
-    const auto op = ClusterOperation::SWITCHOVER;
+    const auto op = OperationType::SWITCHOVER;
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
     mxb_assert(promotion_target_out && demotion_target_out

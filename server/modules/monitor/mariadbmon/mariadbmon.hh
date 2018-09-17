@@ -253,13 +253,8 @@ private:
     void handle_low_disk_space_master();
 
     // Failover methods
-    bool failover_prepare(Log log_mode,
-                          MariaDBServer** promotion_target_out,
-                          MariaDBServer** demotion_target_out,
-                          json_t** error_out);
-    bool failover_perform(MariaDBServer* promotion_target,
-                          MariaDBServer* demotion_target,
-                          json_t** error_out);
+    std::unique_ptr<ClusterOperation> failover_prepare(Log log_mode, json_t** error_out);
+    bool failover_perform(ClusterOperation& operation);
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 Duration* event_age_out);
     bool manual_failover(json_t** output);
@@ -275,7 +270,7 @@ private:
 
     // Methods common to failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* current_master,
-                                           ClusterOperation op,
+                                           OperationType op,
                                            Log log_mode,
                                            json_t** error_out);
     bool server_is_excluded(const MariaDBServer* server);
