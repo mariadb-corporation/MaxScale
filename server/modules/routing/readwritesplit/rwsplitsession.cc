@@ -421,7 +421,7 @@ void RWSplitSession::trx_replay_next_stmt()
     {
         // No more statements to execute
         m_is_replay_active = false;
-        atomic_add_uint64(&m_router->stats().n_trx_replay, 1);
+        mxb::atomic::add(&m_router->stats().n_trx_replay, 1, mxb::atomic::RELAXED);
 
         if (!m_replayed_trx.empty())
         {

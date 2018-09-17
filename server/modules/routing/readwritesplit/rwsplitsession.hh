@@ -289,10 +289,11 @@ private:
     {
         if (session_trx_is_ending(m_client->session))
         {
-            atomic_add_uint64(m_qc.is_trx_still_read_only()
-                              ? &m_router->stats().n_ro_trx
-                              : &m_router->stats().n_rw_trx,
-                              1);
+            mxb::atomic::add(m_qc.is_trx_still_read_only()
+                             ? &m_router->stats().n_ro_trx
+                             : &m_router->stats().n_rw_trx,
+                             1,
+                             mxb::atomic::RELAXED);
         }
     }
 };

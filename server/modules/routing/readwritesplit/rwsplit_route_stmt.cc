@@ -438,7 +438,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             if (backend->execute_session_command())
             {
                 nsucc += 1;
-                atomic_add_uint64(&backend->server()->stats.packets, 1);
+                mxb::atomic::add(&backend->server()->stats.packets, 1, mxb::atomic::RELAXED);
                 m_router->server_stats(backend->server()).total++;
                 m_router->server_stats(backend->server()).read++;
 
@@ -805,7 +805,7 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
     if (target)
     {
-        atomic_add_uint64(&m_router->stats().n_slave, 1);
+        mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
         m_router->server_stats(target->server()).read++;
         mxb_assert(target->in_use() || target->can_connect());
     }
@@ -938,7 +938,7 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
 
     if (target && target == m_current_master)
     {
-        atomic_add_uint64(&m_router->stats().n_master, 1);
+        mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
         m_router->server_stats(target->server()).write++;
     }
     else
@@ -1092,8 +1092,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
             m_current_query.copy_from(querybuf);
         }
 
-        atomic_add_uint64(&m_router->stats().n_queries, 1);
-        atomic_add_uint64(&target->server()->stats.packets, 1);
+        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&target->server()->stats.packets, 1, mxb::atomic::RELAXED);
         m_router->server_stats(target->server()).total++;
 
         if (!m_qc.large_query())

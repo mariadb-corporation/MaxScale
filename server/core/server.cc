@@ -31,6 +31,7 @@
 #include <sstream>
 #include <mutex>
 
+#include <maxbase/atomic.hh>
 #include <maxbase/stopwatch.hh>
 
 #include <maxscale/config.h>
@@ -284,8 +285,8 @@ DCB* server_get_persistent(SERVER* server, const char* user, const char* ip, con
                 }
                 MXS_FREE(dcb->user);
                 dcb->user = NULL;
-                atomic_add(&server->stats.n_persistent, -1);
-                atomic_add(&server->stats.n_current, 1);
+                mxb::atomic::add(&server->stats.n_persistent, -1);
+                mxb::atomic::add(&server->stats.n_current, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
             else

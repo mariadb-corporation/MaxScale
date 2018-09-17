@@ -40,7 +40,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxbase/atomic.h>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.h>
@@ -400,7 +400,7 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
             dcb->last_read = mxs_clock();
-            atomic_add_uint64(&server->stats.n_from_pool, 1);
+            mxb::atomic::add(&server->stats.n_from_pool, 1, mxb::atomic::RELAXED);
             return dcb;
         }
         else
@@ -533,8 +533,8 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
     /**
      * The dcb will be addded into poll set by dcb->func.connect
      */
-    atomic_add(&server->stats.n_connections, 1);
-    atomic_add(&server->stats.n_current, 1);
+    mxb::atomic::add(&server->stats.n_connections, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&server->stats.n_current, 1, mxb::atomic::RELAXED);
 
     return dcb;
 }
@@ -1254,7 +1254,7 @@ void dcb_final_close(DCB* dcb)
             // This is now a DCB_ROLE_BACKEND_HANDLER.
             // TODO: Make decisions according to the role and assert
             // TODO: that what the role implies is preset.
-            atomic_add(&dcb->server->stats.n_current, -1);
+            mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         }
 
         if (dcb->fd > 0)
@@ -1314,7 +1314,7 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
         && dcb_persistent_clean_count(dcb, owner->id(), false) < dcb->server->persistpoolmax
-        && dcb->server->stats.n_persistent < dcb->server->persistpoolmax)
+        && mxb::atomic::load(&dcb->server->stats.n_persistent) < dcb->server->persistpoolmax)
     {
         DCB_CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
@@ -1351,8 +1351,8 @@ static bool dcb_maybe_add_persistent(DCB* dcb)
 
         dcb->nextpersistent = dcb->server->persistent[owner->id()];
         dcb->server->persistent[owner->id()] = dcb;
-        atomic_add(&dcb->server->stats.n_persistent, 1);
-        atomic_add(&dcb->server->stats.n_current, -1);
+        mxb::atomic::add(&dcb->server->stats.n_persistent, 1);
+        mxb::atomic::add(&dcb->server->stats.n_current, -1, mxb::atomic::RELAXED);
         return true;
     }
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && dcb->server)
@@ -2106,7 +2106,7 @@ int dcb_persistent_clean_count(DCB* dcb, int id, bool cleanall)
                 /* Add removed DCBs to disposal list for processing outside spinlock */
                 persistentdcb->nextpersistent = disposals;
                 disposals = persistentdcb;
-                atomic_add(&server->stats.n_persistent, -1);
+                mxb::atomic::add(&server->stats.n_persistent, -1);
             }
             else
             {
@@ -2528,7 +2528,7 @@ DCB* dcb_accept(DCB* dcb)
 
     if (client_dcb)
     {
-        atomic_add(&client_dcb->service->client_count, 1);
+        mxb::atomic::add(&client_dcb->service->client_count, 1);
     }
 
     return client_dcb;

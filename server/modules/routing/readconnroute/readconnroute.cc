@@ -81,7 +81,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/server.hh>
 #include <maxscale/router.h>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
@@ -440,7 +440,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session
         return NULL;
     }
 
-    atomic_add(&candidate->connections, 1);
+    mxb::atomic::add(&candidate->connections, 1, mxb::atomic::RELAXED);
 
     inst->stats.n_sessions++;
 
@@ -473,7 +473,9 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES*) router_client_ses;
 
-    MXB_AT_DEBUG(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
+    MXB_AT_DEBUG(int prev_val = ) mxb::atomic::add(&router_cli_ses->backend->connections,
+                                                   -1,
+                                                   mxb::atomic::RELAXED);
     mxb_assert(prev_val > 0);
 
     MXS_FREE(router_cli_ses);
@@ -612,7 +614,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
     inst->stats.n_queries++;
 
     // Due to the streaming nature of readconnroute, this is not accurate
-    atomic_add_uint64(&router_cli_ses->backend->server->stats.packets, 1);
+    mxb::atomic::add(&router_cli_ses->backend->server->stats.packets, 1, mxb::atomic::RELAXED);
 
     /** Dirty read for quick check if router is closed. */
     if (router_cli_ses->rses_closed)

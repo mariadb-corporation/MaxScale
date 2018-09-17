@@ -23,6 +23,7 @@
 #include <sys/timerfd.h>
 
 #include <maxbase/assert.h>
+#include <maxbase/atomic.hh>
 #include <maxbase/log.h>
 #include <maxbase/string.h>
 
@@ -373,8 +374,8 @@ bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0)
     {
-        atomic_add_uint32(&m_nCurrent_descriptors, 1);
-        atomic_add_uint64(&m_nTotal_descriptors, 1);
+        mxb::atomic::add(&m_nCurrent_descriptors, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&m_nTotal_descriptors, 1, mxb::atomic::RELAXED);
     }
     else
     {
@@ -393,7 +394,7 @@ bool Worker::remove_fd(int fd)
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0)
     {
-        atomic_add_uint32(&m_nCurrent_descriptors, -1);
+        mxb::atomic::add(&m_nCurrent_descriptors, -1, mxb::atomic::RELAXED);
     }
     else
     {
@@ -767,7 +768,7 @@ void Worker::poll_waitevents()
 
         m_state = POLLING;
 
-        atomic_add_int64(&m_statistics.n_polls, 1);
+        atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
 
         uint64_t now = Load::get_time();
         int timeout = Load::GRANULARITY - (now - m_load.start_time());
@@ -816,7 +817,7 @@ void Worker::poll_waitevents()
             MXB_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
-            atomic_add_int64(&m_statistics.n_pollev, 1);
+            mxb::atomic::add(&m_statistics.n_pollev, 1, mxb::atomic::RELAXED);
 
             m_state = PROCESSING;
 
@@ -848,27 +849,27 @@ void Worker::poll_waitevents()
 
             if (actions & MXB_POLL_ACCEPT)
             {
-                atomic_add_int64(&m_statistics.n_accept, 1);
+                mxb::atomic::add(&m_statistics.n_accept, 1, mxb::atomic::RELAXED);
             }
 
             if (actions & MXB_POLL_READ)
             {
-                atomic_add_int64(&m_statistics.n_read, 1);
+                mxb::atomic::add(&m_statistics.n_read, 1, mxb::atomic::RELAXED);
             }
 
             if (actions & MXB_POLL_WRITE)
             {
-                atomic_add_int64(&m_statistics.n_write, 1);
+                mxb::atomic::add(&m_statistics.n_write, 1, mxb::atomic::RELAXED);
             }
 
             if (actions & MXB_POLL_HUP)
             {
-                atomic_add_int64(&m_statistics.n_hup, 1);
+                mxb::atomic::add(&m_statistics.n_hup, 1, mxb::atomic::RELAXED);
             }
 
             if (actions & MXB_POLL_ERROR)
             {
-                atomic_add_int64(&m_statistics.n_error, 1);
+                mxb::atomic::add(&m_statistics.n_error, 1, mxb::atomic::RELAXED);
             }
 
             /** Calculate event execution statistics */

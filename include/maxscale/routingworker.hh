@@ -19,6 +19,7 @@
 #include <mutex>
 #include <type_traits>
 
+#include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/poll.h>
@@ -336,7 +337,7 @@ public:
     static uint64_t create_key()
     {
         static uint64_t id_generator = 0;
-        return atomic_add_uint64(&id_generator, 1);
+        return mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED);
     }
 
     /**

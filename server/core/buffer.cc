@@ -18,7 +18,7 @@
 #include <sstream>
 
 #include <maxbase/assert.h>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/hint.h>
 #include <maxscale/log.h>
@@ -239,7 +239,7 @@ static void gwbuf_free_one(GWBUF* buf)
     BUF_PROPERTY* prop;
     buffer_object_t* bo;
 
-    if (atomic_add(&buf->sbuf->refcount, -1) == 1)
+    if (mxb::atomic::add(&buf->sbuf->refcount, -1) == 1)
     {
         bo = buf->sbuf->bufobj;
 
@@ -291,7 +291,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
         return NULL;
     }
 
-    atomic_add(&buf->sbuf->refcount, 1);
+    mxb::atomic::add(&buf->sbuf->refcount, 1);
     rval->server = buf->server;
     rval->sbuf = buf->sbuf;
     rval->start = buf->start;
@@ -371,7 +371,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
     {
         return NULL;
     }
-    atomic_add(&buf->sbuf->refcount, 1);
+    mxb::atomic::add(&buf->sbuf->refcount, 1);
     clonebuf->server = buf->server;
     clonebuf->sbuf = buf->sbuf;
     clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone info bits too */

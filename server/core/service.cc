@@ -33,7 +33,9 @@
 #include <vector>
 #include <unordered_set>
 
+#include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
+
 #include <maxscale/service.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
@@ -258,7 +260,7 @@ Service::~Service()
 
 void service_free(Service* service)
 {
-    mxb_assert(atomic_load_int(&service->client_count) == 0 || maxscale_teardown_in_progress());
+    mxb_assert(mxb::atomic::load(&service->client_count) == 0 || maxscale_teardown_in_progress());
     mxb_assert(!service->active || maxscale_teardown_in_progress());
 
     {
@@ -297,7 +299,7 @@ void service_destroy(Service* service)
                   mxs_strerror(errno));
     }
 
-    if (atomic_load_int(&service->client_count) == 0)
+    if (mxb::atomic::load(&service->client_count) == 0)
     {
         // The service has no active sessions, it can be closed immediately
         service_free(service);

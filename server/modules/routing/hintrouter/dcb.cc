@@ -12,7 +12,7 @@
  */
 
 #include "dcb.hh"
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/service.h>
 
 Dcb::Dcb(DCB* pDcb)
@@ -49,7 +49,7 @@ void Dcb::deleter(DCB* dcb)
 
         if (pSref)
         {
-            atomic_add(&pSref->connections, -1);
+            mxb::atomic::add(&pSref->connections, -1);
         }
         dcb_close(dcb);
     }

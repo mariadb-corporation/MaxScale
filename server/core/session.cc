@@ -27,7 +27,7 @@
 #include <sstream>
 
 #include <maxscale/alloc.h>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
@@ -232,8 +232,8 @@ static MXS_SESSION* session_alloc_body(SERVICE* service,
                  session->client_dcb->user,
                  session->client_dcb->remote);
     }
-    atomic_add(&service->stats.n_sessions, 1);
-    atomic_add(&service->stats.n_current, 1);
+    mxb::atomic::add(&service->stats.n_sessions, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
 
     // Store the session in the client DCB even if the session creation fails.
     // It will be freed later on when the DCB is closed.
@@ -261,7 +261,7 @@ void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
 {
     mxb_assert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
-    atomic_add(&session->refcount, 1);
+    mxb::atomic::add(&session->refcount, 1);
     dcb->session = session;
     dcb->service = session->service;
     /** Move this DCB under the same thread */
@@ -354,9 +354,9 @@ static void session_free(MXS_SESSION* session)
     Service* service = static_cast<Service*>(session->service);
 
     session_final_free(session);
-    bool should_destroy = !atomic_load_int(&service->active);
+    bool should_destroy = !mxb::atomic::load(&service->active);
 
-    if (atomic_add(&service->client_count, -1) && should_destroy)
+    if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
     {
         // Destroy the service in the main routing worker thread
         mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
@@ -371,7 +371,7 @@ static void session_final_free(MXS_SESSION* session)
 
     session->state = SESSION_STATE_TO_BE_FREED;
 
-    atomic_add(&session->service->stats.n_current, -1);
+    mxb::atomic::add(&session->service->stats.n_current, -1, mxb::atomic::RELAXED);
 
     if (session->client_dcb)
     {
@@ -800,7 +800,7 @@ MXS_SESSION* session_get_by_id(uint64_t id)
 
 MXS_SESSION* session_get_ref(MXS_SESSION* session)
 {
-    atomic_add(&session->refcount, 1);
+    mxb::atomic::add(&session->refcount, 1);
     return session;
 }
 
@@ -809,7 +809,7 @@ void session_put_ref(MXS_SESSION* session)
     if (session && session->state != SESSION_STATE_DUMMY)
     {
         /** Remove one reference. If there are no references left, free session */
-        if (atomic_add(&session->refcount, -1) == 1)
+        if (mxb::atomic::add(&session->refcount, -1) == 1)
         {
             session_free(session);
         }
@@ -818,7 +818,7 @@ void session_put_ref(MXS_SESSION* session)
 
 uint64_t session_get_next_id()
 {
-    return atomic_add_uint64(&next_session_id, 1);
+    return mxb::atomic::add(&next_session_id, 1, mxb::atomic::RELAXED);
 }
 
 json_t* session_json_data(const Session* session, const char* host)

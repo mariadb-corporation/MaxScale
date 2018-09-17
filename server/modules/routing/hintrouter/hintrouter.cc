@@ -17,6 +17,7 @@
 #include <limits>
 #include <vector>
 
+#include <maxbase/atomic.hh>
 #include <maxscale/log.h>
 #include "dcb.hh"
 
@@ -203,7 +204,7 @@ Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
     if (new_connection)
     {
         HR_DEBUG("Connected.");
-        atomic_add(&sref->connections, 1);
+        mxb::atomic::add(&sref->connections, 1, mxb::atomic::RELAXED);
         new_connection->service = session->service;
 
         result = Dcb(new_connection);

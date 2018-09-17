@@ -20,7 +20,7 @@
 
 #include <maxbase/semaphore.h>
 #include <maxscale/alloc.h>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/config.h>
 #include <maxscale/housekeeper.h>
@@ -57,7 +57,7 @@ static int64_t mxs_clock_ticks = 0;     /*< One clock tick is 100 milliseconds *
 
 int64_t mxs_clock()
 {
-    return atomic_load_int64(&mxs_clock_ticks);
+    return mxb::atomic::load(&mxs_clock_ticks, mxb::atomic::RELAXED);
 }
 
 namespace
@@ -121,7 +121,7 @@ private:
 
     bool is_running() const
     {
-        return atomic_load_uint32(&m_running);
+        return mxb::atomic::load(&m_running);
     }
 };
 
@@ -169,7 +169,7 @@ void Housekeeper::run()
         for (int i = 0; i < 10; i++)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            atomic_add_int64(&mxs_clock_ticks, 1);
+            mxb::atomic::add(&mxs_clock_ticks, 1, mxb::atomic::RELAXED);
         }
 
         mxs::SpinLockGuard guard(m_lock);
@@ -199,7 +199,7 @@ void Housekeeper::stop()
     mxb_assert(hk);                                         // init() has been called.
     mxb_assert(hk->m_thread.get_id() != std::thread::id()); // start has been called.
 
-    atomic_store_uint32(&m_running, 0);
+    mxb::atomic::store(&m_running, 0);
     m_thread.join();
 }
 

@@ -12,7 +12,7 @@
  */
 
 #include <maxbase/workertask.hh>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxbase/assert.h>
 
 namespace maxbase
@@ -39,14 +39,14 @@ WorkerDisposableTask::~WorkerDisposableTask()
 
 void WorkerDisposableTask::inc_ref()
 {
-    atomic_add(&m_count, 1);
+    mxb::atomic::add(&m_count, 1);
 }
 
 void WorkerDisposableTask::dec_ref()
 {
-    mxb_assert(atomic_load_int32(&m_count) > 0);
+    mxb_assert(mxb::atomic::load(&m_count) > 0);
 
-    if (atomic_add(&m_count, -1) == 1)
+    if (mxb::atomic::add(&m_count, -1) == 1)
     {
         delete this;
     }

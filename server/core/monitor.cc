@@ -28,6 +28,7 @@
 #include <vector>
 
 #include <maxscale/alloc.h>
+#include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
 #include <maxscale/json_api.h>
 #include <maxscale/log.h>
@@ -2937,7 +2938,7 @@ void MonitorInstance::run_one_tick()
     monitor_check_maintenance_requests(m_monitor);
 
     tick();
-    atomic_add_uint64(&m_monitor->ticks, 1);
+    mxb::atomic::add(&m_monitor->ticks, 1, mxb::atomic::RELAXED);
 
     flush_server_status();
 

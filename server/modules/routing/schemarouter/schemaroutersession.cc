@@ -17,6 +17,7 @@
 
 #include <inttypes.h>
 
+#include <maxbase/atomic.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
 #include <maxscale/poll.h>
@@ -81,7 +82,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
         m_connect_db = db;
     }
 
-    atomic_add(&m_router->m_stats.sessions, 1);
+    mxb::atomic::add(&m_router->m_stats.sessions, 1);
 }
 
 SchemaRouterSession::~SchemaRouterSession()
@@ -415,8 +416,8 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             /** Session commands, route to all servers */
             if (route_session_write(pPacket, command))
             {
-                atomic_add(&m_router->m_stats.n_sescmd, 1);
-                atomic_add(&m_router->m_stats.n_queries, 1);
+                mxb::atomic::add(&m_router->m_stats.n_sescmd, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
                 ret = 1;
             }
         }
@@ -453,16 +454,16 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         {
             if (handle_statement(pPacket, bref, command, type))
             {
-                atomic_add(&m_router->m_stats.n_sescmd, 1);
-                atomic_add(&m_router->m_stats.n_queries, 1);
+                mxb::atomic::add(&m_router->m_stats.n_sescmd, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
                 ret = 1;
             }
         }
         else if (bref->write(pPacket))
         {
             /** Add one query response waiter to backend reference */
-            atomic_add(&m_router->m_stats.n_queries, 1);
-            atomic_add_uint64(&bref->server()->stats.packets, 1);
+            mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&bref->server()->stats.packets, 1, mxb::atomic::RELAXED);
             ret = 1;
         }
         else
@@ -608,7 +609,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         }
         else if (bref->write_stored_command())
         {
-            atomic_add(&m_router->m_stats.n_queries, 1);
+            mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
         }
     }
 
@@ -750,7 +751,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
     bool succp = false;
 
     MXS_INFO("Session write, routing to all servers.");
-    atomic_add(&m_stats.longest_sescmd, 1);
+    mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
 
     /** Increment the session command count */
     ++m_sent_sescmd;
@@ -776,7 +777,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                 if ((*it)->execute_session_command())
                 {
                     succp = true;
-                    atomic_add_uint64(&(*it)->server()->stats.packets, 1);
+                    mxb::atomic::add(&(*it)->server()->stats.packets, 1, mxb::atomic::RELAXED);
                 }
                 else
                 {
@@ -1640,7 +1641,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, ui
 {
     bool succp = false;
 
-    atomic_add(&m_stats.longest_sescmd, 1);
+    mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
 
     /** Increment the session command count */
     ++m_sent_sescmd;
@@ -1655,7 +1656,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SSRBackend& bref, ui
             if (bref->execute_session_command())
             {
                 succp = true;
-                atomic_add_uint64(&bref->server()->stats.packets, 1);
+                mxb::atomic::add(&bref->server()->stats.packets, 1, mxb::atomic::RELAXED);
             }
             else
             {

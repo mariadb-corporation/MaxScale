@@ -21,7 +21,7 @@
 #include <vector>
 #include <sstream>
 
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
@@ -82,7 +82,7 @@ struct this_unit
 
 int next_worker_id()
 {
-    return atomic_add(&this_unit.next_worker_id, 1);
+    return mxb::atomic::add(&this_unit.next_worker_id, 1, mxb::atomic::RELAXED);
 }
 
 thread_local struct this_thread
@@ -961,7 +961,8 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 RoutingWorker* RoutingWorker::pick_worker()
 {
     static int id_generator = 0;
-    int id = this_unit.id_min_worker + (atomic_add(&id_generator, 1) % this_unit.nWorkers);
+    int id = this_unit.id_min_worker
+        + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
     return get(id);
 }
 }

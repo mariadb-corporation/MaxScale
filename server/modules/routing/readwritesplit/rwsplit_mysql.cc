@@ -131,7 +131,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
     else if (route_session_write(gwbuf_clone(querybuf), packet_type, qtype))
     {
         result = true;
-        atomic_add_uint64(&m_router->stats().n_all, 1);
+        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
     }
 
     m_qc.set_large_query(is_large);
