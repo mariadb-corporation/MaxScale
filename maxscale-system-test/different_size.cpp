@@ -96,6 +96,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
     Test->tprintf("Restoring max_allowed_packet");
     set_max_packet(Test, binlog,  (char *) "set global max_allowed_packet = 1048576;");
 
+    Test->set_timeout(300);
     conn = connect_to_serv(Test, binlog);
     Test->try_query(conn, "DROP TABLE test.large_event");
     mysql_close(conn);
