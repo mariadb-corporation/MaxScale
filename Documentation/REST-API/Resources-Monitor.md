@@ -269,7 +269,7 @@ The :name in the URI must map to a monitor name with all whitespace replaced wit
 hyphens. The request body must be a valid JSON document representing the modified monitor.
 
 ```
-PATCH /v1/monitor/:name
+PATCH /v1/monitors/:name
 ```
 
 ### Modifiable Fields
@@ -353,7 +353,7 @@ servers and if it does a PATCH request which removes these relationships is
 required before a DELETE request for the monitor can be made.
 
 ```
-DELETE /v1/monitor/:name/stop
+DELETE /v1/monitors/:name/stop
 ```
 
 #### Response
@@ -371,7 +371,7 @@ Monitor could not be deleted:
 Stops a started monitor.
 
 ```
-PUT /v1/monitor/:name/stop
+PUT /v1/monitors/:name/stop
 ```
 
 #### Response
@@ -385,7 +385,7 @@ Monitor is stopped:
 Starts a stopped monitor.
 
 ```
-PUT /v1/monitor/:name/start
+PUT /v1/monitors/:name/start
 ```
 
 #### Response
