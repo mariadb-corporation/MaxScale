@@ -1,6 +1,5 @@
 [maxscale]
 threads=4
-log_info=1
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/log/maxscale/
 datadir=@CMAKE_INSTALL_PREFIX@/lib/maxscale
@@ -14,7 +13,7 @@ type=monitor
 module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=10000
 
 [RW-Split-Router]
@@ -22,7 +21,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 max_slave_connections=100%
 
 [SchemaRouter-Router]
@@ -30,7 +29,7 @@ type=service
 router=schemarouter
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 auth_all_servers=1
 
 [RW-Split-Hint-Router]
@@ -38,7 +37,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 max_slave_connections=100%
 filters=Hint
 
@@ -48,7 +47,7 @@ router=readconnroute
 router_options=master
 servers=server1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 filters=QLA
 
 [Hint]

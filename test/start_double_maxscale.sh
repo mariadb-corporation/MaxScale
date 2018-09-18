@@ -9,37 +9,46 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
-# Create directories for the secondary MaxScale
+# Create directories for both MaxScales
+
+rm -r $maxscaledir/lib/maxscale
+rm -r $maxscaledir/cache/maxscale
+rm -r $maxscaledir/run/maxscale
 rm -r $maxscaledir/secondary/lib/maxscale
 rm -r $maxscaledir/secondary/cache/maxscale
 rm -r $maxscaledir/secondary/run/maxscale
-rm -r $maxscaledir/secondary/log/maxscale
+test -f /tmp/maxadmin.sock && rm /tmp/maxadmin.sock
 test -f /tmp/maxadmin2.sock && rm /tmp/maxadmin2.sock
 
-mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale
+mkdir -m 0755 -p $maxscaledir/lib/maxscale/maxscale.cnf.d
+mkdir -m 0755 -p $maxscaledir/cache/maxscale
+mkdir -m 0755 -p $maxscaledir/run/maxscale
+mkdir -m 0755 -p $maxscaledir/log/maxscale
+mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale/maxscale.cnf.d
 mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/log/maxscale
 
-# Start MaxScale
-$maxscaledir/bin/maxscale -lstdout -df $maxscaledir/maxscale.cnf >& $maxscaledir/maxscale1.output &
+if [ "`whoami`" == "root" ]
+then
+    user_opt="-U root"
+fi
 
-# Wait for the first MaxScale to start
-for ((i=0;i<60;i++))
-do
-    $maxscaledir/bin/maxadmin help >& /dev/null && break
-    sleep 0.1
-done
+# Start MaxScale
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale.cnf &>> $maxscaledir/maxscale1.output || exit 1
 
 # Start a second maxscale
-$maxscaledir/bin/maxscale -lstdout -df $maxscaledir/maxscale_secondary.cnf >& $maxscaledir/maxscale2.output &
+$maxscaledir/bin/maxscale $user_opt -f $maxscaledir/maxscale_secondary.cnf &>> $maxscaledir/maxscale2.output || exit 1
 
-# Wait for the second MaxScale to start
-for ((i=0;i<60;i++))
+# Wait for the MaxScales to start
+
+for ((i=0;i<150;i++))
 do
-    $maxscaledir/bin/maxadmin -S /tmp/maxadmin2.sock help >& /dev/null && break
+    $maxscaledir/bin/maxctrl list servers >& /dev/null && \
+    $maxscaledir/bin/maxctrl --hosts 127.0.0.1:8990 list servers >& /dev/null && \
+        exit 0
     sleep 0.1
 done
 
-# Give MaxScale some time to settle
-sleep 1
+# MaxScales failed to start, exit with an error
+exit 1

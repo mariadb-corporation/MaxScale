@@ -18,6 +18,8 @@ testdir=$3
 
 maxscaledir=$PWD/maxscale_test/
 
+rm -f $maxscaledir/maxscale{,1,2}.output $maxscaledir/{,secondary/}log/maxscale/maxscale.log
+
 # Create the test directories
 mkdir -p $maxscaledir $testdir
 
@@ -29,6 +31,9 @@ cp -t $testdir -r $testsrc/*
 
 # Required by MaxCtrl (not super pretty)
 cp -t $testdir/.. $srcdir/VERSION*.cmake
+
+# This avoids running npm as root if we're executing the tests as root (MaxCtrl specific)
+(cd $testdir && test -f configure_version.cmake && cmake -P configure_version.cmake)
 
 # Copy required docker-compose files to the MaxScale directory and bring MariaDB
 # servers up. This is an asynchronous process.
@@ -44,17 +49,13 @@ npm install || exit 1
 cd $maxscaledir
 cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_INSTALL_PREFIX=$maxscaledir \
-      -DBUILD_TESTS=Y \
+      -DBUILD_TESTS=N \
       -DMAXSCALE_VARDIR=$maxscaledir \
-      -DCMAKE_BUILD_TYPE=Debug \
       -DWITH_SCRIPTS=N \
       -DWITH_MAXSCALE_CNF=N \
-      -DBUILD_CDC=Y \
-      -DTARGET_COMPONENT=all \
-      -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
-      -DDEFAULT_ADMIN_USER=`whoami` || exit 1
+      -DBUILD_CDC=N || exit 1
 
-make install || exit 1
+make -j $(grep -c processor /proc/cpuinfo) install || exit 1
 
 # Create required directories (we could run the postinst script but it's a bit too invasive)
 mkdir -p $maxscaledir/lib64/maxscale
@@ -80,10 +81,20 @@ do
     printf "Waiting for $node to start... "
     for ((i=0; i<60; i++))
     do
-        docker-compose exec $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
+        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
         sleep 1
     done
-    echo "Done!"
+
+    docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null
+
+    if [ $? -ne 0 ]
+    then
+        echo "failed to start $node, error is:"
+        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1"
+        exit 1
+    else
+        echo "Done!"
+    fi
 done
 
 # Go to the test directory

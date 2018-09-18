@@ -1,13 +1,12 @@
 [maxscale]
 threads=4
-log_info=1
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/secondary/log/maxscale/
 datadir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale
 cachedir=@CMAKE_INSTALL_PREFIX@/secondary/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/secondary/run/maxscale
-config_persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
+persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/maxscale.cnf.d/
 admin_auth=false
 admin_port=8990
 
@@ -16,7 +15,7 @@ type=monitor
 module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 monitor_interval=10000
 
 [RW-Split-Router]
@@ -24,7 +23,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 max_slave_connections=100%
 
 [SchemaRouter-Router]
@@ -32,7 +31,7 @@ type=service
 router=schemarouter
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 auth_all_servers=1
 
 [RW-Split-Hint-Router]
@@ -40,7 +39,7 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
-passwd=maxpwd
+password=maxpwd
 max_slave_connections=100%
 filters=Hint
 
@@ -50,7 +49,8 @@ router=readconnroute
 router_options=master
 servers=server1
 user=maxuser
-passwd=maxpwd
+password=maxpwd
+filters=QLA
 
 [Hint]
 type=filter
@@ -70,6 +70,14 @@ service=Read-Connection-Router
 type=filter
 module=tee
 service=RW-Split-Hint-Router
+
+[QLA]
+type=filter
+module=qlafilter
+log_type=unified
+append=false
+flush=true
+filebase=/tmp/qla2.log
 
 [CLI]
 type=service
