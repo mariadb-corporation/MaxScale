@@ -1045,7 +1045,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "reset_replication",
+                               "reset-replication",
                                MODULECMD_TYPE_ACTIVE,
                                handle_manual_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,

@@ -206,7 +206,6 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         if (new_master_cand == NULL)
         {
             PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name, m_monitor->name);
-            return false;
         }
         else if (!new_master_cand->is_usable())
         {
@@ -250,6 +249,9 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 targets.push_back(server);
             }
         }
+        // The 'targets'-array cannot be empty, at least 'new_master' is there.
+        MXB_NOTICE("Reseting replication on the following servers: %s. '%s' will be the new master.",
+                   monitored_servers_to_string(targets).c_str(), new_master->name());
 
         // Helper function for running a command on all servers in the list.
         auto exec_cmd_on_array = [&error](const ServerArray& targets, const string& query,
@@ -282,47 +284,94 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         // In theory, this is wrong if there are no slaves. Cluster is modified soon anyway.
         m_cluster_modified = true;
 
-        // Step 3: Set read_only and delete binary logs,.
+        // Step 3: Set read_only and disable events.
         exec_cmd_on_array(targets, "SET GLOBAL read_only=1;", error_out);
-        exec_cmd_on_array(targets, "RESET MASTER;", error_out);
-
-        // Step 4: Set gtid_slave_pos on all servers. This is also sets gtid_current_pos.
         if (!error)
         {
-            string set_slave_pos = string_printf("SET GLOBAL gtid_slave_pos='%" PRIi64 "-%" PRIi64 "-0';",
-                                                 new_master->m_gtid_domain_id, new_master->m_server_id);
-            exec_cmd_on_array(targets, set_slave_pos, error_out);
+            MXB_NOTICE("read_only set on affected servers.");
+            if (m_handle_event_scheduler)
+            {
+                for (MariaDBServer* server : targets)
+                {
+                    if (!server->disable_events(MariaDBServer::BinlogMode::BINLOG_OFF, error_out))
+                    {
+                        error = true;
+                        break;
+                    }
+                }
+            }
         }
 
-        // Step 5: Set all slaves to replicate from the master.
+        // Step 4: delete binary logs.
+        exec_cmd_on_array(targets, "RESET MASTER;", error_out);
         if (!error)
         {
-            m_next_master = new_master;
-            // The following commands are only sent to slaves.
-            std::remove_if(targets.begin(), targets.end(), [new_master](MariaDBServer* elem) {
-                               return elem == new_master;
-                           });
-            // TODO: the following call does stop slave & reset slave again. Fix this later, although it
-            // doesn't cause error.
-            ServerArray dummy;
-            if ((size_t)redirect_slaves(new_master, targets, &dummy) < targets.size())
+            MXB_NOTICE("Binary logs deleted (RESET MASTER) on affected servers.");
+        }
+
+        // Step 5: Set gtid_slave_pos on all servers. This is also sets gtid_current_pos since binary logs
+        // have been deleted.
+        if (!error)
+        {
+            string slave_pos = string_printf("%" PRIi64 "-%" PRIi64 "-0",
+                                             new_master->m_gtid_domain_id, new_master->m_server_id);
+            string set_slave_pos = string_printf("SET GLOBAL gtid_slave_pos='%s';", slave_pos.c_str());
+            exec_cmd_on_array(targets, set_slave_pos, error_out);
+            if (!error)
             {
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "Some servers were not redirected to '%s'.", new_master->name());
-                error = true;
+                MXB_NOTICE("gtid_slave_pos set to '%s' on affected servers.", slave_pos.c_str());
             }
-            // Perform this step even if previous step wasn't 100% success.
+        }
+
+        if (!error)
+        {
+            // Step 6: Enable writing and events on new master.
             string error_msg;
-            if (!new_master->execute_cmd("SET GLOBAL read_only=0;", &error_msg))
+            if (new_master->execute_cmd("SET GLOBAL read_only=0;", &error_msg))
+            {
+                m_next_master = new_master;
+                if (!new_master->enable_events(error_out))
+                {
+                    error = true;
+                }
+            }
+            else
             {
                 error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                PRINT_MXS_JSON_ERROR(error_out,
+                                     "Could not enable writes on '%s': %s",
+                                     new_master->name(), error_msg.c_str());
+            }
+
+            if (m_next_master == new_master)
+            {
+                // Step 7: Set all slaves to replicate from the master. Perform this step even if enabling
+                // events failed.
+
+                // The following commands are only sent to slaves.
+                auto location = std::find(targets.begin(), targets.end(), new_master);
+                targets.erase(location);
+
+                // TODO: the following call does stop slave & reset slave again. Fix this later, although it
+                // doesn't cause error.
+                ServerArray dummy;
+                if ((size_t)redirect_slaves(new_master, targets, &dummy) == targets.size())
+                {
+                    // TODO: Properly check check slave IO/SQL threads.
+                    MXS_NOTICE("All slaves redirected successfully.");
+                }
+                else
+                {
+                    error = true;
+                    PRINT_MXS_JSON_ERROR(error_out,
+                                         "Some servers were not redirected to '%s'.", new_master->name());
+                }
             }
         }
         if (error)
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed. Servers may be in invalid state "
-                                            "for replication.");
+            PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed or succeeded only partially. "
+                                            "Server cluster may be in an invalid state for replication.");
         }
         rval = !error;
     }

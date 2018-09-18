@@ -1311,6 +1311,11 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
             break;
         }
     }
+
+    if (!error && !m_slave_status.empty())
+    {
+        MXS_NOTICE("Removed %lu slave connection(s) from '%s'.", m_slave_status.size(), name());
+    }
     return !error;
 }
 
