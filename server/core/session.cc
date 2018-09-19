@@ -365,8 +365,9 @@ static void session_free(MXS_SESSION* session)
     }
 }
 
-static void session_final_free(MXS_SESSION* session)
+static void session_final_free(MXS_SESSION* ses)
 {
+    Session* session = static_cast<Session*>(ses);
     mxb_assert(session->refcount == 0);
 
     session->state = SESSION_STATE_TO_BE_FREED;
