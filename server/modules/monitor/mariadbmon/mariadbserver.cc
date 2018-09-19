@@ -1265,8 +1265,24 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
         // An ALTER EVENT by default changes the definer (owner) of the event to the monitor user.
         // This causes problems if the monitor user does not have privileges to run
         // the event contents. Prevent this by setting definer explicitly.
+        // The definer may be of the form user@host. If host includes %, then it must be quoted.
+        // For simplicity, quote the host always.
+        string quoted_definer;
+        auto loc_at = event.definer.find('@');
+        if (loc_at != string::npos)
+        {
+            auto host_begin = loc_at + 1;
+            quoted_definer = event.definer.substr(0, loc_at + 1) +
+                    // host_begin may be the null-char if @ was the last char
+                    "'" + event.definer.substr(host_begin, string::npos) + "'";
+        }
+        else
+        {
+            // Just the username
+            quoted_definer = event.definer;
+        }
         string alter_event_query = string_printf("ALTER DEFINER = %s EVENT %s %s;",
-                                                 event.definer.c_str(),
+                                                 quoted_definer.c_str(),
                                                  event.name.c_str(),
                                                  target_status.c_str());
         if (execute_cmd(alter_event_query, &error_msg))

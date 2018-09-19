@@ -584,6 +584,14 @@ public:
     int  start_maxscale(int m = 0);
     void process_template(const char* src, const char* dest = "/etc/maxscale.cnf");
 
+    /**
+     * Get the current master server id from the cluster, as seen by rwsplit.
+     *
+     * @param m MaxScale node index
+     * @return Server id of the master
+     */
+    int get_master_server_id(int m = 0);
+
 private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(int i, std::string filename);

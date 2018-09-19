@@ -1754,6 +1754,23 @@ void TestConnections::tprintf(const char* format, ...)
     fflush(stderr);
 }
 
+int TestConnections::get_master_server_id(int m)
+{
+    int master_id = -1;
+    MYSQL* conn = maxscales->open_rwsplit_connection(m);
+    char str[100];
+    if (find_field(conn, "SELECT @@server_id, @@last_insert_id;", "@@server_id", str) == 0)
+    {
+        char* endptr = NULL;
+        auto colvalue = strtol(str, &endptr, 0);
+        if (endptr && *endptr == '\0')
+        {
+            master_id = colvalue;
+        }
+    }
+    mysql_close(conn);
+    return master_id;
+}
 void* timeout_thread(void* ptr)
 {
     TestConnections* Test = (TestConnections*) ptr;

@@ -298,6 +298,9 @@ add_test_executable(mysqlmon_switchover_stress.cpp mysqlmon_switchover_stress my
 # Check monitoring and failover when ignore_external_masters is enabled
 add_test_executable(mysqlmon_external_master.cpp mysqlmon_external_master mysqlmon_external_master LABELS mysqlmon REPL_BACKEND)
 
+# Check failover, switchover and rejoin with scheduled server events, uses config of mysqlmon_rejoin_good
+add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
