@@ -12,8 +12,10 @@
     "ajv": "^5.5.2",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "mocha": "^3.5.3",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0"
   }
 }
