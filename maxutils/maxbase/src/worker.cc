@@ -103,10 +103,6 @@ void WorkerLoad::about_to_work(uint64_t now)
     }
 }
 
-WorkerLoad::Average::~Average()
-{
-}
-
 // static
 uint64_t WorkerLoad::get_time()
 {
