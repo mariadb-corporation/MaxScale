@@ -210,7 +210,7 @@ public:
      */
     uint8_t value() const
     {
-        return mxb::atomic::load(&m_value);
+        return mxb::atomic::load(&m_value, mxb::atomic::RELAXED);
     }
 
 protected:
@@ -220,7 +220,7 @@ protected:
 protected:
     void set_value(uint32_t value)
     {
-        mxb::atomic::store(&m_value, value);
+        mxb::atomic::store(&m_value, value, mxb::atomic::RELAXED);
     }
 };
 
