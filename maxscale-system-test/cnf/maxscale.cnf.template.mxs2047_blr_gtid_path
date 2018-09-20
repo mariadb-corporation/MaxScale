@@ -1,0 +1,26 @@
+[BLR]
+type=service
+router=binlogrouter
+user=repl
+password=repl
+version_string=5.6.15-log
+master_id=5
+server_id=4711
+mariadb10_master_gtid=On
+
+[BLR-Listener]
+type=listener
+service=BLR
+protocol=MariaDBClient
+port=5306
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default

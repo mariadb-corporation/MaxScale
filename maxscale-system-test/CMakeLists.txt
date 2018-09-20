@@ -1068,5 +1068,8 @@ add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_
 # https://jira.mariadb.org/browse/MXS-2037
 add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildcards mxs2037_namedserver_wildcards LABELS namedserverfilter LIGHT REPL_BACKEND)
 
+# MXS-2047: BLR must store full path of events
+# https://jira.mariadb.org/browse/MXS-2047
+add_test_executable(mxs2047_blr_gtid_path.cpp mxs2047_blr_gtid_path mxs2047_blr_gtid_path LABELS binlogrouter GALERA_BACKEND)
 
 configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)
