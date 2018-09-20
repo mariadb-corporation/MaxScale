@@ -1072,4 +1072,8 @@ add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildca
 # https://jira.mariadb.org/browse/MXS-2047
 add_test_executable(mxs2047_blr_gtid_path.cpp mxs2047_blr_gtid_path mxs2047_blr_gtid_path LABELS binlogrouter GALERA_BACKEND)
 
+# MXS-701: Binlog filtering
+# https://jira.mariadb.org/browse/MXS-701
+add_test_executable(mxs701_binlog_filter.cpp mxs701_binlog_filter mxs701_binlog_filter LABELS bilogrouter REPL_BACKEND)
+
 configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)
