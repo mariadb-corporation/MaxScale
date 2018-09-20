@@ -419,6 +419,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
 
     MXS_INFO("Session write, routing to all servers.");
+    bool attempted_write = false;
 
     for (auto it = m_backends.begin(); it != m_backends.end(); it++)
     {
@@ -426,6 +427,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
         if (backend->in_use())
         {
+            attempted_write = true;
             backend->append_session_command(sescmd);
 
             uint64_t current_pos = backend->next_session_command()->get_position();
@@ -509,6 +511,11 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
              * completed session command count */
             m_recv_sescmd++;
         }
+    }
+    else
+    {
+        MXS_ERROR("Could not route session command: %s", attempted_write ? "Write to all backends failed" :
+                  "All connections have failed");
     }
 
     return nsucc;

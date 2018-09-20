@@ -19,6 +19,7 @@ int main(int argc, char* argv[])
 
     different_packet_size(Test, false);
 
+    Test->set_timeout(180);
     Test->repl->sync_slaves();
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;
