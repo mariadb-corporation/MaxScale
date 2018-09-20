@@ -549,7 +549,14 @@ Result get_result(MYSQL* conn, std::string sql)
 
         while (row)
         {
-            rval.emplace_back(&row[0], &row[mysql_num_fields(res)]);
+            std::vector<std::string> tmp;
+            int n = mysql_num_fields(res);
+            for (int i = 0; i < n; ++i)
+            {
+                tmp.push_back(row[i] ? row[i] : "");
+            }
+            rval.push_back(tmp);
+
             row = mysql_fetch_row(res);
         }
         mysql_free_result(res);
