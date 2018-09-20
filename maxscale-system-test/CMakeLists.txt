@@ -301,6 +301,9 @@ add_test_executable(mysqlmon_external_master.cpp mysqlmon_external_master mysqlm
 # Check failover, switchover and rejoin with scheduled server events, uses config of mysqlmon_rejoin_good
 add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor reset-replication test, use template for Rejoin (good)
+add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
