@@ -265,8 +265,8 @@ struct CRYPTO_dynlock_value
  */
 static struct CRYPTO_dynlock_value* ssl_create_dynlock(const char* file, int line)
 {
-    struct CRYPTO_dynlock_value* lock
-        = (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
+    struct CRYPTO_dynlock_value* lock =
+        (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         spinlock_init(&lock->lock);
@@ -335,11 +335,11 @@ static void sigusr1_handler(int i)
 }
 
 static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
-static const char patience_msg[]
-    = "\n"
-      "Patience is a virtue...\n"
-      "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
-      "no questions asked.\n";
+static const char patience_msg[] =
+    "\n"
+    "Patience is a virtue...\n"
+    "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
+    "no questions asked.\n";
 
 static void sigterm_handler(int i)
 {
@@ -1450,12 +1450,12 @@ int main(int argc, char** argv)
             }
             if (cnf_file_arg == NULL)
             {
-                const char* logerr
-                    = "Configuration file argument "
-                      "identifier \'-f\' was specified but "
-                      "the argument didn't specify\n  a valid "
-                      "configuration file or the argument "
-                      "was missing.";
+                const char* logerr =
+                    "Configuration file argument "
+                    "identifier \'-f\' was specified but "
+                    "the argument didn't specify\n  a valid "
+                    "configuration file or the argument "
+                    "was missing.";
                 print_log_n_stderr(true, true, logerr, logerr, 0);
                 usage();
                 succp = false;
@@ -1503,12 +1503,12 @@ int main(int argc, char** argv)
             }
             else
             {
-                const char* logerr
-                    = "Configuration file argument "
-                      "identifier \'-l\' was specified but "
-                      "the argument didn't specify\n  a valid "
-                      "configuration file or the argument "
-                      "was missing.";
+                const char* logerr =
+                    "Configuration file argument "
+                    "identifier \'-l\' was specified but "
+                    "the argument didn't specify\n  a valid "
+                    "configuration file or the argument "
+                    "was missing.";
                 print_log_n_stderr(true, true, logerr, logerr, 0);
                 usage();
                 succp = false;
@@ -2119,9 +2119,9 @@ int main(int argc, char** argv)
 
     if (!config_load(cnf_file_path))
     {
-        const char* fprerr
-            = "Failed to open, read or process the MaxScale configuration "
-              "file. Exiting. See the error log for details.";
+        const char* fprerr =
+            "Failed to open, read or process the MaxScale configuration "
+            "file. Exiting. See the error log for details.";
         print_log_n_stderr(false, true, fprerr, fprerr, 0);
         MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
                   "Exiting.",
@@ -2421,10 +2421,10 @@ bool pid_file_exists()
         else if (b == 0)
         {
             /** Empty file */
-            const char* logerr
-                = "PID file read from '%s'. File was empty.\n"
-                  "If the file is the correct PID file and no other MaxScale processes "
-                  "are running, please remove it manually and start MaxScale again.";
+            const char* logerr =
+                "PID file read from '%s'. File was empty.\n"
+                "If the file is the correct PID file and no other MaxScale processes "
+                "are running, please remove it manually and start MaxScale again.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2437,10 +2437,10 @@ bool pid_file_exists()
         if (pid < 1)
         {
             /** Bad PID */
-            const char* logerr
-                = "PID file read from '%s'. File contents not valid.\n"
-                  "If the file is the correct PID file and no other MaxScale processes "
-                  "are running, please remove it manually and start MaxScale again.";
+            const char* logerr =
+                "PID file read from '%s'. File contents not valid.\n"
+                "If the file is the correct PID file and no other MaxScale processes "
+                "are running, please remove it manually and start MaxScale again.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2449,10 +2449,10 @@ bool pid_file_exists()
 
         if (pid_is_maxscale(pid))
         {
-            const char* logerr
-                = "MaxScale is already running. Process id: %d. "
-                  "Use another location for the PID file to run multiple "
-                  "instances of MaxScale on the same machine.";
+            const char* logerr =
+                "MaxScale is already running. Process id: %d. "
+                "Use another location for the PID file to run multiple "
+                "instances of MaxScale on the same machine.";
             snprintf(logbuf, sizeof(logbuf), logerr, pid);
             print_log_n_stderr(true, true, logbuf, logbuf, 0);
             unlock_pidfile();
@@ -2462,10 +2462,10 @@ bool pid_file_exists()
             /** no such process, old PID file */
             if (lock_failed)
             {
-                const char* logerr
-                    = "Locking the PID file '%s' failed. "
-                      "Read PID from file and no process found with PID %d. "
-                      "Confirm that no other process holds the lock on the PID file.";
+                const char* logerr =
+                    "Locking the PID file '%s' failed. "
+                    "Read PID from file and no process found with PID %d. "
+                    "Confirm that no other process holds the lock on the PID file.";
                 snprintf(logbuf, sizeof(logbuf), logerr, pathbuf, pid);
                 print_log_n_stderr(true, true, logbuf, logbuf, 0);
                 close(fd);
@@ -2475,9 +2475,9 @@ bool pid_file_exists()
     }
     else
     {
-        const char* logerr
-            = "Cannot open PID file '%s', no read permissions. "
-              "Please confirm that the user running MaxScale has read permissions on the file.";
+        const char* logerr =
+            "Cannot open PID file '%s', no read permissions. "
+            "Please confirm that the user running MaxScale has read permissions on the file.";
         snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
         print_log_n_stderr(true, true, logbuf, logbuf, errno);
     }
@@ -3020,14 +3020,14 @@ static bool sniff_configuration(const char* filepath)
 
     if (rv != 0)
     {
-        const char FORMAT_CUSTOM[]
-            = "Failed to pre-parse configuration file %s. Error on line %d. %s";
-        const char FORMAT_SYNTAX[]
-            = "Failed to pre-parse configuration file %s. Error on line %d.";
-        const char FORMAT_OPEN[]
-            = "Failed to pre-parse configuration file %s. Failed to open file.";
-        const char FORMAT_MALLOC[]
-            = "Failed to pre-parse configuration file %s. Memory allocation failed.";
+        const char FORMAT_CUSTOM[] =
+            "Failed to pre-parse configuration file %s. Error on line %d. %s";
+        const char FORMAT_SYNTAX[] =
+            "Failed to pre-parse configuration file %s. Error on line %d.";
+        const char FORMAT_OPEN[] =
+            "Failed to pre-parse configuration file %s. Failed to open file.";
+        const char FORMAT_MALLOC[] =
+            "Failed to pre-parse configuration file %s. Memory allocation failed.";
 
         size_t extra = strlen(filepath) + UINTLEN(abs(rv)) + (s ? strlen(s) : 0);
         // We just use the largest one.
@@ -3223,10 +3223,10 @@ static bool handle_debug_args(char* args)
                 strcat(arglist, ", ");
             }
         }
-        const char DEBUG_ERROR_P1[]
-            = "Debug argument identifier '-g' or '--debug' was specified "
-              "but no arguments were found or one of them was invalid. Supported "
-              "arguments are: ";
+        const char DEBUG_ERROR_P1[] =
+            "Debug argument identifier '-g' or '--debug' was specified "
+            "but no arguments were found or one of them was invalid. Supported "
+            "arguments are: ";
         const char DEBUG_ERROR_P2[] = ".";
         size_t arg_error_msg_len = sizeof(DEBUG_ERROR_P1) + total_len + sizeof(DEBUG_ERROR_P2);
         char arg_error_msg[arg_error_msg_len];

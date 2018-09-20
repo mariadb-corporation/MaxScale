@@ -242,10 +242,10 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
                                                                   "max_resultset_rows");
         cinstance->config.max_resultset_size = config_get_size(params,
                                                                "max_resultset_size");
-        cinstance->config.m_return
-            = static_cast<maxrows_return_mode>(config_get_enum(params,
-                                                               "max_resultset_return",
-                                                               return_option_values));
+        cinstance->config.m_return =
+            static_cast<maxrows_return_mode>(config_get_enum(params,
+                                                             "max_resultset_return",
+                                                             return_option_values));
         cinstance->config.debug = config_get_integer(params, "debug");
     }
 
@@ -1207,8 +1207,8 @@ static int send_error_upstream(MAXROWS_SESSION_DATA* csdata)
      * The input SQL statement added in the error message
      * has a limit of MAXROWS_INPUT_SQL_MAX_LEN bytes
      */
-    sql_len = (sql_len > MAXROWS_INPUT_SQL_MAX_LEN)
-        ? MAXROWS_INPUT_SQL_MAX_LEN : sql_len;
+    sql_len = (sql_len > MAXROWS_INPUT_SQL_MAX_LEN) ?
+        MAXROWS_INPUT_SQL_MAX_LEN : sql_len;
     uint8_t sql[sql_len];
 
     mxb_assert(csdata->res.data != NULL);

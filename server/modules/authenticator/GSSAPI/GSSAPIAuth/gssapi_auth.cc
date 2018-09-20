@@ -33,15 +33,15 @@
  */
 
 /** Query that gets all users that authenticate via the gssapi plugin */
-const char* gssapi_users_query
-    = "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-      "mysql.user AS u LEFT JOIN mysql.db AS d "
-      "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
-      "UNION "
-      "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-      "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-      "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
-      "ORDER BY user";
+const char* gssapi_users_query =
+    "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
+    "mysql.user AS u LEFT JOIN mysql.db AS d "
+    "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
+    "UNION "
+    "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
+    "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
+    "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
+    "ORDER BY user";
 
 #define GSSAPI_USERS_QUERY_NUM_FIELDS 5
 
@@ -56,15 +56,15 @@ const char* gssapi_users_query
 #define GSSAPI_TABLE_NAME "gssapi_users"
 
 /** CREATE TABLE statement for the in-memory table */
-const char create_sql[]
-    = "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
-        "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
+const char create_sql[] =
+    "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
+    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
 
 /** The query that is executed when a user is authenticated */
-static const char gssapi_auth_query[]
-    = "SELECT * FROM " GSSAPI_TABLE_NAME
-        " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
-        " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
+static const char gssapi_auth_query[] =
+    "SELECT * FROM " GSSAPI_TABLE_NAME
+    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+    " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
@@ -75,8 +75,8 @@ static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
  * Note that the last two values are strings that can be NULL and thus they have
  * no quoted around them. The quotes for strings are added in add_gssapi_user().
  */
-static const char insert_sql_pattern[]
-    = "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+static const char insert_sql_pattern[] =
+    "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";

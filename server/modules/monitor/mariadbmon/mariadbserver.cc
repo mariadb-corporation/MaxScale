@@ -223,15 +223,15 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         string last_sql_error = result->get_string(i_last_sql_error);
         new_row.last_error = !last_io_error.empty() ? last_io_error : last_sql_error;
 
-        new_row.slave_io_running
-            = SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
+        new_row.slave_io_running =
+            SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         new_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
         new_row.master_server_id = result->get_uint(i_master_server_id);
 
         auto rlag = result->get_uint(i_seconds_behind_master);
         // If slave connection is stopped, the value given by the backend is null -> -1.
-        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED
-                                                   : (rlag > INT_MAX) ? INT_MAX : rlag;
+        new_row.seconds_behind_master = (rlag < 0) ? MXS_RLAG_UNDEFINED :
+            (rlag > INT_MAX) ? INT_MAX : rlag;
 
         if (all_slaves_status)
         {
@@ -409,16 +409,16 @@ void MariaDBServer::warn_replication_settings() const
     const char* servername = name();
     if (m_rpl_settings.gtid_strict_mode == false)
     {
-        const char NO_STRICT[]
-            = "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-              "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+        const char NO_STRICT[] =
+            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+            "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
         MXS_WARNING(NO_STRICT, servername);
     }
     if (m_rpl_settings.log_slave_updates == false)
     {
-        const char NO_SLAVE_UPDATES[]
-            = "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-              "will break for lagging slaves if '%s' is promoted.";
+        const char NO_SLAVE_UPDATES[] =
+            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+            "will break for lagging slaves if '%s' is promoted.";
         MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
 }
@@ -580,13 +580,13 @@ json_t* MariaDBServer::to_json() const
 
     json_object_set_new(result,
                         "gtid_current_pos",
-                        m_gtid_current_pos.empty() ? json_null()
-                                                   : json_string(m_gtid_current_pos.to_string().c_str()));
+                        m_gtid_current_pos.empty() ? json_null() :
+                        json_string(m_gtid_current_pos.to_string().c_str()));
 
     json_object_set_new(result,
                         "gtid_binlog_pos",
-                        m_gtid_binlog_pos.empty() ? json_null()
-                                                  : json_string(m_gtid_binlog_pos.to_string().c_str()));
+                        m_gtid_binlog_pos.empty() ? json_null() :
+                        json_string(m_gtid_binlog_pos.to_string().c_str()));
 
     json_object_set_new(result,
                         "master_group",
@@ -812,8 +812,8 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     if (rval)
     {
         /** Store master_id of current node. */
-        m_server_base->server->master_id = !m_slave_status.empty()
-            ? m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
+        m_server_base->server->master_id = !m_slave_status.empty() ?
+            m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
     return rval;
 }
@@ -1346,8 +1346,8 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
     json_object_set_new(result,
                         "seconds_behing_master",
-                        seconds_behind_master == MXS_RLAG_UNDEFINED ? json_null()
-                                                                    : json_integer(seconds_behind_master));
+                        seconds_behind_master == MXS_RLAG_UNDEFINED ? json_null() :
+                        json_integer(seconds_behind_master));
     json_object_set_new(result, "master_server_id", json_integer(master_server_id));
     json_object_set_new(result, "last_io_or_sql_error", json_string(last_error.c_str()));
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));

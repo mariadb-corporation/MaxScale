@@ -965,10 +965,10 @@ int run()
 namespace
 {
 
-char USAGE[]
-    = "usage: test_dbfwfilter [-d]\n"
-      "\n"
-      "-d    don't stop at first error\n";
+char USAGE[] =
+    "usage: test_dbfwfilter [-d]\n"
+    "\n"
+    "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])

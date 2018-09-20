@@ -8,18 +8,18 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    const char* sql
-        = "BEGIN NOT ATOMIC\n"
-          "  DECLARE EXIT HANDLER FOR SQLEXCEPTION\n"
-          "  BEGIN  \n"
-          "   ROLLBACK;\n"
-          "   RESIGNAL;\n"
-          "  END;\n"
-          "  START TRANSACTION;\n"
-          "    INSERT INTO test.t1 VALUES (1);\n"
-          "    UPDATE test.t1 SET id = 2 WHERE id = 1;\n"
-          "  COMMIT;\n"
-          "END\n";
+    const char* sql =
+        "BEGIN NOT ATOMIC\n"
+        "  DECLARE EXIT HANDLER FOR SQLEXCEPTION\n"
+        "  BEGIN  \n"
+        "   ROLLBACK;\n"
+        "   RESIGNAL;\n"
+        "  END;\n"
+        "  START TRANSACTION;\n"
+        "    INSERT INTO test.t1 VALUES (1);\n"
+        "    UPDATE test.t1 SET id = 2 WHERE id = 1;\n"
+        "  COMMIT;\n"
+        "END\n";
 
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");

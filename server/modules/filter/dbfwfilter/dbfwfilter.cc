@@ -854,8 +854,8 @@ bool create_user_templates(void* scanner)
 
     for (ValueList::const_iterator it = rstack->user.begin(); it != rstack->user.end(); it++)
     {
-        SUserTemplate newtemp
-            = SUserTemplate(new UserTemplate(*it, rstack->active_rules, rstack->active_mode));
+        SUserTemplate newtemp =
+            SUserTemplate(new UserTemplate(*it, rstack->active_rules, rstack->active_mode));
         rstack->templates.push_back(newtemp);
     }
 
@@ -1668,9 +1668,9 @@ static char* create_parse_error(Dbfw* my_instance,
 {
     char* msg = NULL;
 
-    char format[]
-        = "Query could not be %s and will hence be rejected. "
-          "Please ensure that the SQL syntax is correct";
+    char format[] =
+        "Query could not be %s and will hence be rejected. "
+        "Please ensure that the SQL syntax is correct";
     size_t len = sizeof(format) + strlen(reason);   // sizeof includes the trailing NULL as well.
     char message[len];
     sprintf(message, format, reason);

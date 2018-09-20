@@ -1624,11 +1624,11 @@ void MariaDBMonitor::check_cluster_operations_support()
 
     if (!supported)
     {
-        const char PROBLEMS[]
-            = "The backend cluster does not support failover/switchover due to the following reason(s):\n"
-              "%s\n"
-              "Automatic failover/switchover has been disabled. They should only be enabled "
-              "after the above issues have been resolved.";
+        const char PROBLEMS[] =
+            "The backend cluster does not support failover/switchover due to the following reason(s):\n"
+            "%s\n"
+            "Automatic failover/switchover has been disabled. They should only be enabled "
+            "after the above issues have been resolved.";
         string p1 = string_printf(PROBLEMS, all_reasons.c_str());
         string p2 = string_printf(RE_ENABLE_FMT, "failover", CN_AUTO_FAILOVER, m_monitor->name);
         string p3 = string_printf(RE_ENABLE_FMT,
@@ -1739,8 +1739,8 @@ bool MariaDBMonitor::switchover_prepare(SERVER* promotion_server,
     const auto op = ClusterOperation::SWITCHOVER;
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
-    mxb_assert(promotion_target_out && demotion_target_out &&
-               !*promotion_target_out && !*demotion_target_out);
+    mxb_assert(promotion_target_out && demotion_target_out
+               && !*promotion_target_out && !*demotion_target_out);
 
     MariaDBServer* demotion_target = NULL;
     string demotion_msg;

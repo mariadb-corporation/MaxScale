@@ -126,9 +126,9 @@ void SchemaRouterSession::close()
             m_router->m_stats.ses_shortest = ses_time;
         }
 
-        m_router->m_stats.ses_average
-            = (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
-                / (m_router->m_stats.sessions);
+        m_router->m_stats.ses_average =
+            (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
+            / (m_router->m_stats.sessions);
 
         spinlock_release(&m_router->m_lock);
     }
@@ -558,8 +558,8 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
               bref->backend()->server->name,
               m_client->session,
               m_state & INIT_MAPPING ? "true" : "false",
-              m_queue.size() == 0 ? "none"
-                                  : m_queue.size() > 0 ? "multiple" : "one");
+              m_queue.size() == 0 ? "none" :
+              m_queue.size() > 0 ? "multiple" : "one");
 
     if (m_state & INIT_MAPPING)
     {
@@ -1807,8 +1807,8 @@ SERVER* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_que
             rval = m_shard.get_location(tables[0]);
             MXS_FREE(tables[i]);
         }
-        rval ? MXS_INFO("Prepare statement on server %s", rval->name)
-             : MXS_INFO("Prepared statement targets no mapped tables");
+        rval ? MXS_INFO("Prepare statement on server %s", rval->name) :
+        MXS_INFO("Prepared statement targets no mapped tables");
         MXS_FREE(tables);
     }
     else if (mxs_mysql_is_ps_command(command))

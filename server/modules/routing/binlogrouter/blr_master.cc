@@ -1226,8 +1226,8 @@ static void* CreateMySQLAuthData(const char* username, const char* password, con
         return NULL;
     }
 
-    if ((auth_info
-             = static_cast<MYSQL_session*>(MXS_CALLOC(1, sizeof(MYSQL_session)))) == NULL)
+    if ((auth_info =
+             static_cast<MYSQL_session*>(MXS_CALLOC(1, sizeof(MYSQL_session)))) == NULL)
     {
         return NULL;
     }
@@ -1556,12 +1556,12 @@ static void blr_log_identity(ROUTER_INSTANCE* router)
                "Server_id: %d, Slave_UUID: %s, Host: %s",
                router->service->name,
                router->serverid,
-               router->uuid == NULL
-               ? "not available"
-               : router->uuid,
-               (router->set_slave_hostname && router->set_slave_hostname[0])
-               ? router->set_slave_hostname
-               : "not set");
+               router->uuid == NULL ?
+               "not available" :
+               router->uuid,
+               (router->set_slave_hostname && router->set_slave_hostname[0]) ?
+               router->set_slave_hostname :
+               "not set");
 
     /* Seen by the slaves */
 
@@ -1745,8 +1745,8 @@ bool blr_send_event(blr_thread_role_t role,
 
         while (rval && len > 0)
         {
-            uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1
-                                         : MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
+            uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1 :
+                MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
 
             if (blr_send_packet(slave, buf, payload_len, first))
             {
@@ -2531,12 +2531,12 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         blr_register_handle_checksum(router, buf);
         // Next state is BLRM_MARIADB10 or BLRM_GTIDMODE
         {
-            unsigned int state = router->mariadb10_compat
-                ? BLRM_MARIADB10
-                : BLRM_GTIDMODE;
-            const char* command = router->mariadb10_compat
-                ? "SET @mariadb_slave_capability=4"
-                : "SELECT @@GLOBAL.GTID_MODE";
+            unsigned int state = router->mariadb10_compat ?
+                BLRM_MARIADB10 :
+                BLRM_GTIDMODE;
+            const char* command = router->mariadb10_compat ?
+                "SET @mariadb_slave_capability=4" :
+                "SELECT @@GLOBAL.GTID_MODE";
 
             blr_register_send_command(router, command, state);
         }
@@ -2554,12 +2554,12 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
              * Always request "gtid_domain_id" to Master server
              * if MariaDB 10 Compatibilty is On
              */
-            unsigned int state = router->mariadb10_compat
-                ? BLRM_MARIADB10_GTID_DOMAIN
-                : BLRM_LATIN1;
-            const char* command = router->mariadb10_compat
-                ? "SELECT @@GLOBAL.gtid_domain_id"
-                : "SET NAMES latin1";
+            unsigned int state = router->mariadb10_compat ?
+                BLRM_MARIADB10_GTID_DOMAIN :
+                BLRM_LATIN1;
+            const char* command = router->mariadb10_compat ?
+                "SELECT @@GLOBAL.gtid_domain_id" :
+                "SET NAMES latin1";
             blr_register_send_command(router, command, state);
         }
         break;
@@ -2643,12 +2643,12 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
                                     buf);
         // Next state is MAXWELL BLRM_RESULTS_CHARSET or BLRM_SELECT1
         {
-            unsigned int state = router->maxwell_compat
-                ? BLRM_RESULTS_CHARSET
-                : BLRM_SELECT1;
-            const char* command = router->maxwell_compat
-                ? "SET character_set_results = NULL"
-                : "SELECT 1";
+            unsigned int state = router->maxwell_compat ?
+                BLRM_RESULTS_CHARSET :
+                BLRM_SELECT1;
+            const char* command = router->maxwell_compat ?
+                "SET character_set_results = NULL" :
+                "SELECT 1";
 
             blr_register_send_command(router, command, state);
             break;

@@ -520,10 +520,10 @@ bool dListSessions_cb(DCB* dcb, void* data)
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->ses_id,
-                   session->client_dcb && session->client_dcb->remote
-                   ? session->client_dcb->remote : "",
-                   session->service && session->service->name
-                   ? session->service->name : "",
+                   session->client_dcb && session->client_dcb->remote ?
+                   session->client_dcb->remote : "",
+                   session->service && session->service->name ?
+                   session->service->name : "",
                    session_state(session->state));
     }
 

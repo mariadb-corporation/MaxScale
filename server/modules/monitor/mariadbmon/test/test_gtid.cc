@@ -34,20 +34,23 @@ int test1()
     };
 
     std::vector<TestCase> cases = {
-        {"0-1-1", "0-1-1"},
-        {"4321-1234-4321", "4321-1234-4321"},
-        {"blah", ""},
-        {"1x2x3", ""},
-        {"1-2-3-4", ""},
-        {"45-54-123456789,0-1-2", "0-1-2,45-54-123456789"},
+        {"0-1-1",                               "0-1-1"                              },
+        {"4321-1234-4321",                      "4321-1234-4321"                     },
+        {"blah",                                ""                                   },
+        {"1x2x3",                               ""                                   },
+        {"1-2-3-4",                             ""                                   },
+        {"45-54-123456789,0-1-2",               "0-1-2,45-54-123456789"              },
         {"1-1-1,2-2-2,287-234-134,9-9-9,7-7-7", "1-1-1,2-2-2,7-7-7,9-9-9,287-234-134"},
-        {"1-1-1,3-3-3,a-b-c", ""},
-        {"-2--2--2",""},
-        {"2-2-i",""},
-        {"2-i-2",""},
-        {"i-2-2",""},
-        {"1-1-1,",""},
-        {"3-1-0,3-2-4", "3-1-0,3-2-4"}, // Invalid triplet, but this case is not detected by the parser.
+        {"1-1-1,3-3-3,a-b-c",                   ""                                   },
+        {"-2--2--2",                            ""                                   },
+        {"2-2-i",                               ""                                   },
+        {"2-i-2",                               ""                                   },
+        {"i-2-2",                               ""                                   },
+        {"1-1-1,",                              ""                                   },
+        {"3-1-0,3-2-4",                         "3-1-0,3-2-4"                        }, // Invalid triplet,
+                                                                                        // but this case is
+                                                                                        // not detected by the
+                                                                                        // parser.
     };
 
     int errors = 0;
@@ -56,8 +59,8 @@ int test1()
         string output = GtidList::from_string(test_case.input).to_string();
         if (output != test_case.result)
         {
-            cout << "Wrong result: '" << test_case.input << "' produced '" << output << "' while '" <<
-                    test_case.result << "' was expected.\n";
+            cout << "Wrong result: '" << test_case.input << "' produced '" << output << "' while '"
+                 << test_case.result << "' was expected.\n";
             errors++;
         }
     }
@@ -77,22 +80,22 @@ int test2()
 
     struct TestCase
     {
-        string input1;
-        string input2;
+        string   input1;
+        string   input2;
         sub_mode mode;
         uint64_t result;
     };
 
     std::vector<TestCase> cases = {
-        {"1-2-3", "1-2-3", ignore, 0},
-        {"1-2-3,2-3-4", "1-2-3", lhs_add, 4},
-        {"1-2-3,2-3-4", "1-2-3", ignore, 0},
-        {"3-2-1,4-3-2", "4-3-1,3-1-0", lhs_add, 2},
-        {"1-2-3,2-2-4,3-2-5", "1-2-3", lhs_add, 9},
-        {"1-1-1000000,2-2-2000000", "1-1-1,2-2-2", ignore, 2999997},
-        {"4-4-4,7-4-7,5-4-5,6-4-6,", "1-4-1", lhs_add, 0},
-        {"4-4-4,7-4-7,5-4-5,6-4-6", "1-4-1", lhs_add, 22},
-        {"5-1-4,", "5-1-2", ignore, 0},
+        {"1-2-3",                    "1-2-3",       ignore,  0      },
+        {"1-2-3,2-3-4",              "1-2-3",       lhs_add, 4      },
+        {"1-2-3,2-3-4",              "1-2-3",       ignore,  0      },
+        {"3-2-1,4-3-2",              "4-3-1,3-1-0", lhs_add, 2      },
+        {"1-2-3,2-2-4,3-2-5",        "1-2-3",       lhs_add, 9      },
+        {"1-1-1000000,2-2-2000000",  "1-1-1,2-2-2", ignore,  2999997},
+        {"4-4-4,7-4-7,5-4-5,6-4-6,", "1-4-1",       lhs_add, 0      },
+        {"4-4-4,7-4-7,5-4-5,6-4-6",  "1-4-1",       lhs_add, 22     },
+        {"5-1-4,",                   "5-1-2",       ignore,  0      },
     };
 
     int errors = 0;
@@ -103,8 +106,8 @@ int test2()
         auto output = gtid1.events_ahead(gtid2, test_case.mode);
         if (output != test_case.result)
         {
-            cout << "Wrong result: '" << test_case.input1 << "' and '" << test_case.input2 <<
-                    "' produced '" << output << "' while '" << test_case.result << "' was expected.\n";
+            cout << "Wrong result: '" << test_case.input1 << "' and '" << test_case.input2
+                 << "' produced '" << output << "' while '" << test_case.result << "' was expected.\n";
             errors++;
         }
     }

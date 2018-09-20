@@ -125,9 +125,9 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
 
 #define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
 #define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
-static const char gtid_wait_stmt[]
-    = "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
-      "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
+static const char gtid_wait_stmt[] =
+    "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
+    "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
 
 /** Function that returns a "score" for a server to enable comparison.
  *  Smaller numbers are better.

@@ -137,12 +137,12 @@ void GaleraMonitor::update_server_status(MXS_MONITORED_SERVER* monitored_server)
     server_string = monitored_server->server->version_string;
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
-    const char* cluster_member
-        = "SHOW STATUS WHERE Variable_name IN"
-          " ('wsrep_cluster_state_uuid',"
-          " 'wsrep_cluster_size',"
-          " 'wsrep_local_index',"
-          " 'wsrep_local_state')";
+    const char* cluster_member =
+        "SHOW STATUS WHERE Variable_name IN"
+        " ('wsrep_cluster_state_uuid',"
+        " 'wsrep_cluster_size',"
+        " 'wsrep_local_index',"
+        " 'wsrep_local_state')";
 
     if (mxs_mysql_query(monitored_server->con, cluster_member) == 0
         && (result = mysql_store_result(monitored_server->con)) != NULL)

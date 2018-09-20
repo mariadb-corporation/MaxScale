@@ -435,16 +435,16 @@ void dprintAllModules(DCB* dcb)
                        ptr->info->api_version.major,
                        ptr->info->api_version.minor,
                        ptr->info->api_version.patch,
-                       ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
-                       ? "In Development"
-                       : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
-                          ? "Alpha"
-                          : (ptr->info->status == MXS_MODULE_BETA_RELEASE
-                             ? "Beta"
-                             : (ptr->info->status == MXS_MODULE_GA
-                                ? "GA"
-                                : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
-                                   ? "Experimental" : "Unknown")))));
+                       ptr->info->status == MXS_MODULE_IN_DEVELOPMENT ?
+                       "In Development" :
+                       (ptr->info->status == MXS_MODULE_ALPHA_RELEASE ?
+                        "Alpha" :
+                        (ptr->info->status == MXS_MODULE_BETA_RELEASE ?
+                         "Beta" :
+                         (ptr->info->status == MXS_MODULE_GA ?
+                          "GA" :
+                          (ptr->info->status == MXS_MODULE_EXPERIMENTAL ?
+                           "Experimental" : "Unknown")))));
         }
         dcb_printf(dcb, "\n");
         ptr = ptr->next;

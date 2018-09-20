@@ -565,8 +565,8 @@ Result get_result(MYSQL* conn, std::string sql)
 Row get_row(MYSQL* conn, std::string sql)
 {
     Result res = get_result(conn, sql);
-    return res.empty() ? Row {}
-                       : res[0];
+    return res.empty() ? Row {} :
+           res[0];
 }
 
 int get_int_version(std::string version)

@@ -430,9 +430,9 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
         dcb->remote = MXS_STRDUP_A(session->client_dcb->remote);
     }
 
-    const char* authenticator = server->authenticator
-        ? server->authenticator : dcb->func.auth_default
-        ? dcb->func.auth_default() : "NullAuthDeny";
+    const char* authenticator = server->authenticator ?
+        server->authenticator : dcb->func.auth_default ?
+        dcb->func.auth_default() : "NullAuthDeny";
 
     MXS_AUTHENTICATOR* authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator,
                                                                    MODULE_AUTHENTICATOR);
@@ -1601,8 +1601,8 @@ static bool dlist_clients_cb(DCB* dcb, void* data)
                    " %-15s | %16p | %-20s | %10p\n",
                    (dcb->remote ? dcb->remote : ""),
                    dcb,
-                   (dcb->session->service
-                    ? dcb->session->service->name : ""),
+                   (dcb->session->service ?
+                    dcb->session->service->name : ""),
                    dcb->session);
     }
 
@@ -2495,8 +2495,8 @@ DCB* dcb_accept(DCB* dcb)
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create
-                && (client_dcb->authenticator_data
-                        = client_dcb->authfunc.create(client_dcb->listener->auth_instance)) == NULL)
+                && (client_dcb->authenticator_data =
+                        client_dcb->authfunc.create(client_dcb->listener->auth_instance)) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB");
                 dcb_close(client_dcb);
@@ -3138,9 +3138,9 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
                  * until it return 1 for success or -1 for error */
                 if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
                 {
-                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
-                        ? dcb_accept_SSL(dcb)
-                        : dcb_connect_SSL(dcb);
+                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
+                        dcb_accept_SSL(dcb) :
+                        dcb_connect_SSL(dcb);
                 }
                 if (1 == return_code)
                 {

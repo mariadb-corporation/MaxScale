@@ -446,11 +446,11 @@ bool check_server_status(TestConnections& test, int id)
         char result[1024];
         if (find_field(pConn, "SHOW SLAVE STATUS", "Last_IO_Error", result) == 0)
         {
-            const char needle[]
-                = ", which is not in the master's binlog. "
-                  "Since the master's binlog contains GTIDs with higher sequence numbers, "
-                  "it probably means that the slave has diverged due to executing extra "
-                  "erroneous transactions";
+            const char needle[] =
+                ", which is not in the master's binlog. "
+                "Since the master's binlog contains GTIDs with higher sequence numbers, "
+                "it probably means that the slave has diverged due to executing extra "
+                "erroneous transactions";
 
             if (strstr(result, needle))
             {

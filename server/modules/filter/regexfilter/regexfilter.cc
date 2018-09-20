@@ -260,8 +260,8 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
             return NULL;
         }
 
-        if ((my_instance->match_data
-                 = pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
+        if ((my_instance->match_data =
+                 pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
         {
             MXS_ERROR("Failure to create PCRE2 matching data. "
                       "This is most likely caused by a lack of available memory.");

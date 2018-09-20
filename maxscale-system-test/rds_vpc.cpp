@@ -394,8 +394,8 @@ int RDS::create_gw(const char** gw_id)
         return -1;
     }
 
-    *gw_id
-        = json_string_value(json_object_get(json_object_get(root, "InternetGateway"), "InternetGatewayId"));
+    *gw_id =
+        json_string_value(json_object_get(json_object_get(root, "InternetGateway"), "InternetGatewayId"));
     if (*gw_id == NULL)
     {
         fprintf(stderr, "error: can not parse output of create-internet-gateway command\n");

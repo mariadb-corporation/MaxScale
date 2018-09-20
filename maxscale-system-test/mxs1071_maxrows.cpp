@@ -50,147 +50,147 @@
 
 using namespace std;
 
-const char* test03_sql
-    = " CREATE PROCEDURE multi()\n"
-      "BEGIN\n"
-      "SELECT x1 FROM t1 LIMIT 2;\n"
-      "END";
+const char* test03_sql =
+    " CREATE PROCEDURE multi()\n"
+    "BEGIN\n"
+    "SELECT x1 FROM t1 LIMIT 2;\n"
+    "END";
 
-const char* test04_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1;\n"
-      "SELECT x1 FROM t1 LIMIT 2;\n"
-      "SELECT 1,2,3; \n"
-      "END";
+const char* test04_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1;\n"
+    "SELECT x1 FROM t1 LIMIT 2;\n"
+    "SELECT 1,2,3; \n"
+    "END";
 
-const char* test05_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1;\n"
-      "SELECT x1 FROM t1 LIMIT 8;\n"
-      "SELECT 1,2,3; \n"
-      "SELECT 1;"
-      "END";
+const char* test05_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1;\n"
+    "SELECT x1 FROM t1 LIMIT 8;\n"
+    "SELECT 1,2,3; \n"
+    "SELECT 1;"
+    "END";
 
-const char* test06_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1;\n"
-      "SELECT x1 FROM t1 LIMIT 18;\n"
-      "SELECT 2; \n"
-      "SELECT 2;"
-      "END";
+const char* test06_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1;\n"
+    "SELECT x1 FROM t1 LIMIT 18;\n"
+    "SELECT 2; \n"
+    "SELECT 2;"
+    "END";
 
-const char* test07_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1,2,3,4;\n"
-      "SELECT id, b from long_blob_table order by id desc limit 1;\n"
-      "SELECT id, b from long_blob_table order by id desc limit 4;\n"
-      "SELECT id, b from long_blob_table order by id desc limit 1;\n"
-      "SELECT id, b from long_blob_table order by id desc;\n"
-      "SELECT id, b from long_blob_table order by id desc;\n"
-      "SELECT 1;\n"
-      "END";
+const char* test07_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1,2,3,4;\n"
+    "SELECT id, b from long_blob_table order by id desc limit 1;\n"
+    "SELECT id, b from long_blob_table order by id desc limit 4;\n"
+    "SELECT id, b from long_blob_table order by id desc limit 1;\n"
+    "SELECT id, b from long_blob_table order by id desc;\n"
+    "SELECT id, b from long_blob_table order by id desc;\n"
+    "SELECT 1;\n"
+    "END";
 
-const char* test08_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1,2,3;\n"
-      "SELECT id, b, b from long_blob_table order by id desc limit 1;\n"
-      "SELECT 2;\n"
-      "SELECT id, b from long_blob_table order by id desc limit 4;\n"
-      "SELECT id, b from long_blob_table order by id desc limit 2;\n"
-      "SELECT 1;\n"
-      "SELECT 1;\n"
-      "SELECT x1 FROM t1 LIMIT 8;\n"
-      "SELECT 1;\n"
-      "SELECT 1,2,3,4;\n"
-      "END";
+const char* test08_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1,2,3;\n"
+    "SELECT id, b, b from long_blob_table order by id desc limit 1;\n"
+    "SELECT 2;\n"
+    "SELECT id, b from long_blob_table order by id desc limit 4;\n"
+    "SELECT id, b from long_blob_table order by id desc limit 2;\n"
+    "SELECT 1;\n"
+    "SELECT 1;\n"
+    "SELECT x1 FROM t1 LIMIT 8;\n"
+    "SELECT 1;\n"
+    "SELECT 1,2,3,4;\n"
+    "END";
 
-const char* test10_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1;\n"
-      "SELECT x1 FROM t1 limit 4;\n"
-      "select * from dual;\n"
-      "set @a=4;\n"
-      "SELECT 2;\n"
-      "SELECT * FROM t1;\n"
-      "END";
+const char* test10_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1;\n"
+    "SELECT x1 FROM t1 limit 4;\n"
+    "select * from dual;\n"
+    "set @a=4;\n"
+    "SELECT 2;\n"
+    "SELECT * FROM t1;\n"
+    "END";
 
-const char* test14_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1,3;\n"
-      "SET @table = 't1';\n"
-      "SET @s = CONCAT('SELECT * FROM ', @table, ' LIMIT 18');\n"
-      "PREPARE stmt1 FROM @s;\n"
-      "EXECUTE stmt1;\n"
-      "DEALLOCATE PREPARE stmt1;\n"
-      "SELECT 2,4,5;\n"
-      "END";
+const char* test14_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1,3;\n"
+    "SET @table = 't1';\n"
+    "SET @s = CONCAT('SELECT * FROM ', @table, ' LIMIT 18');\n"
+    "PREPARE stmt1 FROM @s;\n"
+    "EXECUTE stmt1;\n"
+    "DEALLOCATE PREPARE stmt1;\n"
+    "SELECT 2,4,5;\n"
+    "END";
 
-const char* test15_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT 1,3;\n"
-      "SET @table = 't1';\n"
-      "SET @s = CONCAT('SELECT * FROM ', @table, ' LIMIT 100');\n"
-      "PREPARE stmt1 FROM @s;\n"
-      "EXECUTE stmt1;\n"
-      "DEALLOCATE PREPARE stmt1;\n"
-      "SELECT 2,4,5;\n"
-      "END";
+const char* test15_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT 1,3;\n"
+    "SET @table = 't1';\n"
+    "SET @s = CONCAT('SELECT * FROM ', @table, ' LIMIT 100');\n"
+    "PREPARE stmt1 FROM @s;\n"
+    "EXECUTE stmt1;\n"
+    "DEALLOCATE PREPARE stmt1;\n"
+    "SELECT 2,4,5;\n"
+    "END";
 
-const char* test17_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT '' as 'A' limit 1;\n"
-      "SELECT '' as 'A' limit 10;\n"
-      "SELECT '' as 'A';\n"
-      "END";
+const char* test17_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT '' as 'A' limit 1;\n"
+    "SELECT '' as 'A' limit 10;\n"
+    "SELECT '' as 'A';\n"
+    "END";
 
-const char* test18_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT '' as 'A' limit 1;\n"
-      "SELECT '' as 'A' limit 10;\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A' limit 1;\n"
-      "SELECT '' as 'A' limit 10;\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "END";
+const char* test18_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT '' as 'A' limit 1;\n"
+    "SELECT '' as 'A' limit 10;\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A' limit 1;\n"
+    "SELECT '' as 'A' limit 10;\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "END";
 
-const char* test19_sql
-    = "CREATE PROCEDURE multi() BEGIN\n"
-      "SELECT '' as 'A' limit 1;\n"
-      "SELECT '' as 'A' limit 10;\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A' limit 1;\n"
-      "SELECT '' as 'A' limit 10;\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "SELECT '' as 'A';\n"
-      "END";
+const char* test19_sql =
+    "CREATE PROCEDURE multi() BEGIN\n"
+    "SELECT '' as 'A' limit 1;\n"
+    "SELECT '' as 'A' limit 10;\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A' limit 1;\n"
+    "SELECT '' as 'A' limit 10;\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "SELECT '' as 'A';\n"
+    "END";
 
 /**
  * @brief compare_expected Execute sql and compare number of rows in every result set with expected values

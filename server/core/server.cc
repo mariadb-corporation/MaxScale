@@ -987,8 +987,8 @@ size_t server_get_parameter(const SERVER* server, const char* name, char* out, s
  */
 std::unique_ptr<ResultSet> serverGetList()
 {
-    std::unique_ptr<ResultSet> set
-        = ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+    std::unique_ptr<ResultSet> set =
+        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
     Guard guard(server_lock);
 
     for (Server* server : all_servers)

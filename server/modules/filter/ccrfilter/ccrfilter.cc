@@ -356,13 +356,13 @@ static int routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* 
                 }
                 if (!decided)
                 {
-                    trigger_ccr
-                        = mxs_pcre2_check_match_exclude(my_instance->re,
-                                                        my_instance->nore,
-                                                        my_session->md,
-                                                        sql,
-                                                        length,
-                                                        MXS_MODULE_NAME);
+                    trigger_ccr =
+                        mxs_pcre2_check_match_exclude(my_instance->re,
+                                                      my_instance->nore,
+                                                      my_session->md,
+                                                      sql,
+                                                      length,
+                                                      MXS_MODULE_NAME);
                 }
                 if (trigger_ccr)
                 {

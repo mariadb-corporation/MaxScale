@@ -1394,8 +1394,8 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
                     {
                         if (rule_database)
                         {
-                            const char* check_database
-                                = info->database ? info->database : default_database;
+                            const char* check_database =
+                                info->database ? info->database : default_database;
 
                             if (check_database)
                             {
@@ -1741,9 +1741,9 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
 
                 if (database)
                 {
-                    matches
-                        = (strcasecmp(self->simple.database, database) == 0)
-                            && (strcasecmp(self->simple.table, table) == 0);
+                    matches =
+                        (strcasecmp(self->simple.database, database) == 0)
+                        && (strcasecmp(self->simple.table, table) == 0);
                 }
             }
             else

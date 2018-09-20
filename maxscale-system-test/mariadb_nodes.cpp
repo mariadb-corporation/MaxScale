@@ -413,9 +413,9 @@ int Mariadb_nodes::start_replication()
                           "%s",
                           IP_private[0],
                           port[0],
-                          g_require_gtid
-                          ? "MASTER_USE_GTID=slave_pos"
-                          : "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
+                          g_require_gtid ?
+                          "MASTER_USE_GTID=slave_pos" :
+                          "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
 
             execute_query(nodes[i], "START SLAVE");
         }

@@ -122,16 +122,16 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
     {
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
-            const RegexToServers* reg_serv
-                = m_fil_inst.find_servers(sql, sql_len, m_match_data);
+            const RegexToServers* reg_serv =
+                m_fil_inst.find_servers(sql, sql_len, m_match_data);
 
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
                 for (const auto& target : reg_serv->m_targets)
                 {
-                    queue->hint
-                        = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                    queue->hint =
+                        hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
                 }
                 m_n_diverted++;
                 m_fil_inst.m_total_diverted++;
@@ -315,12 +315,12 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
     {
         RegexHintFilter* instance = NULL;
         std::string user(config_get_string(params, "user"));
-        MXS_EXCEPTION_GUARD(instance
-                                = new RegexHintFilter(user,
-                                                      source_addresses,
-                                                      source_hostnames,
-                                                      mapping,
-                                                      max_capcount + 1));
+        MXS_EXCEPTION_GUARD(instance =
+                                new RegexHintFilter(user,
+                                                    source_addresses,
+                                                    source_hostnames,
+                                                    mapping,
+                                                    max_capcount + 1));
         return instance;
     }
 }
@@ -570,13 +570,13 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
     bool success = true;
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
-    pcre2_code* regex
-        = pcre2_compile((PCRE2_SPTR) match.c_str(),
-                        match.length(),
-                        pcre_ops,
-                        &errorcode,
-                        &error_offset,
-                        NULL);
+    pcre2_code* regex =
+        pcre2_compile((PCRE2_SPTR) match.c_str(),
+                      match.length(),
+                      pcre_ops,
+                      &errorcode,
+                      &error_offset,
+                      NULL);
 
     if (regex)
     {

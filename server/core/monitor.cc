@@ -597,8 +597,8 @@ void monitor_list(DCB* dcb)
             dcb_printf(dcb,
                        "%-20s | %s\n",
                        ptr->name,
-                       ptr->state & MONITOR_STATE_RUNNING
-                       ? "Running" : "Stopped");
+                       ptr->state & MONITOR_STATE_RUNNING ?
+                       "Running" : "Stopped");
         }
         ptr = ptr->next;
     }
@@ -1028,48 +1028,48 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITORED_SERVER* node)
     switch (event_type)
     {
     case UP_EVENT:
-        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT
-                                         : (present & SERVER_SLAVE) ? SLAVE_UP_EVENT
-                                                                    : (present
-                                                                       & SERVER_JOINED) ? SYNCED_UP_EVENT
-                                                                                        : (present
-                                                                                           & SERVER_NDB)
-            ? NDB_UP_EVENT
-            :
+        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+            (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+            (present
+             & SERVER_JOINED) ? SYNCED_UP_EVENT :
+            (present
+             & SERVER_NDB) ?
+            NDB_UP_EVENT
+                           :
             SERVER_UP_EVENT;
         break;
 
     case DOWN_EVENT:
-        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT
-                                      : (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT
-                                                              : (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT
-                                                                                       : (prev
-                                                                                          & SERVER_NDB)
-            ? NDB_DOWN_EVENT
-            :
+        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+            (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+            (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+            (prev
+             & SERVER_NDB) ?
+            NDB_DOWN_EVENT
+                           :
             SERVER_DOWN_EVENT;
         break;
 
     case LOSS_EVENT:
-        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT
-                                      : (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT
-                                                              : (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT
-                                                                                       : (prev
-                                                                                          & SERVER_NDB)
-            ? LOST_NDB_EVENT
-            :
+        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+            (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+            (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+            (prev
+             & SERVER_NDB) ?
+            LOST_NDB_EVENT
+                           :
             UNDEFINED_EVENT;
         break;
 
     case NEW_EVENT:
-        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT
-                                         : (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT
-                                                                    : (present
-                                                                       & SERVER_JOINED) ? NEW_SYNCED_EVENT
-                                                                                        : (present
-                                                                                           & SERVER_NDB)
-            ? NEW_NDB_EVENT
-            :
+        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+            (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+            (present
+             & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+            (present
+             & SERVER_NDB) ?
+            NEW_NDB_EVENT
+                           :
             UNDEFINED_EVENT;
         break;
 
@@ -2430,8 +2430,8 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params,
     // All servers in the array must be monitored by the given monitor.
     if (servers_size > 0)
     {
-        MXS_MONITORED_SERVER** monitored_array
-            = (MXS_MONITORED_SERVER**)MXS_CALLOC(servers_size, sizeof(MXS_MONITORED_SERVER*));
+        MXS_MONITORED_SERVER** monitored_array =
+            (MXS_MONITORED_SERVER**)MXS_CALLOC(servers_size, sizeof(MXS_MONITORED_SERVER*));
         for (int i = 0; i < servers_size; i++)
         {
             MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, servers[i]);
@@ -2660,9 +2660,9 @@ void MonitorInstance::update_disk_space_status(MXS_MONITORED_SERVER* pMs)
     {
         bool disk_space_exhausted = false;
 
-        MxsDiskSpaceThreshold* pDst
-            = pMs->server->disk_space_threshold
-                ? pMs->server->disk_space_threshold : m_monitor->disk_space_threshold;
+        MxsDiskSpaceThreshold* pDst =
+            pMs->server->disk_space_threshold ?
+            pMs->server->disk_space_threshold : m_monitor->disk_space_threshold;
         mxb_assert(pDst);
 
         int32_t star_max_percentage = -1;
@@ -2924,8 +2924,8 @@ bool MonitorInstance::call_run_one_tick(Worker::Call::action_t action)
         int64_t ms_to_next_call = m_monitor->interval - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
-        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= MXS_MON_BASE_INTERVAL_MS))
-            ? MXS_MON_BASE_INTERVAL_MS : ms_to_next_call;
+        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= MXS_MON_BASE_INTERVAL_MS)) ?
+            MXS_MON_BASE_INTERVAL_MS : ms_to_next_call;
 
         delayed_call(delay, &MonitorInstance::call_run_one_tick, this);
     }

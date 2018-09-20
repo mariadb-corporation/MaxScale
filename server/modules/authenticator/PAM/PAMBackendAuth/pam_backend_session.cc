@@ -49,9 +49,9 @@ bool check_auth_switch_request(DCB* dcb, GWBUF* buffer)
             && data[MYSQL_HEADER_LEN + 1] == MYSQL_REPLY_OK;
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
                   dcb->server->name,
-                  was_ok_packet
-                  ? " Authentication was complete before it even started, "
-                    "anonymous users might not be disabled." : "");
+                  was_ok_packet ?
+                  " Authentication was complete before it even started, "
+                  "anonymous users might not be disabled." : "");
         return false;
     }
     unsigned int buflen = gwbuf_length(buffer);

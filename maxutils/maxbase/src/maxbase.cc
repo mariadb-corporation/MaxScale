@@ -103,9 +103,9 @@ MaxBase::MaxBase(const char* zIdent,
 
         if (!m_log_inited)
         {
-            zMessage
-                = "The initialization of the MaxScale base library succeeded, but the "
-                  "initialization of the MaxScale log failed.";
+            zMessage =
+                "The initialization of the MaxScale base library succeeded, but the "
+                "initialization of the MaxScale log failed.";
         }
     }
     else

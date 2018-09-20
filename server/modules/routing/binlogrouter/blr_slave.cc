@@ -1219,9 +1219,9 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     }
 
     /* Get the right GTID columns array */
-    const char** gtid_status_columns = router->mariadb10_gtid
-        ? mariadb10_gtid_status_columns
-        : mysql_gtid_status_columns;
+    const char** gtid_status_columns = router->mariadb10_gtid ?
+        mariadb10_gtid_status_columns :
+        mysql_gtid_status_columns;
     /* Increment ncols with the right GTID columns */
     while (gtid_status_columns[gtid_cols++])
     {
@@ -1321,9 +1321,9 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     snprintf(column,
              max_column_size,
              "%s",
-             router->service->dbref->server->address
-             ? router->service->dbref->server->address
-             : "");
+             router->service->dbref->server->address ?
+             router->service->dbref->server->address :
+             "");
     col_len = strlen(column);
     *ptr++ = col_len;                           // Length of result string
     memcpy((char*)ptr, column, col_len);        // Result string
@@ -1589,8 +1589,8 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     snprintf(column,
              max_column_size,
              "%s",
-             router->master_uuid
-             ? router->master_uuid : router->uuid);
+             router->master_uuid ?
+             router->master_uuid : router->uuid);
     col_len = strlen(column);
     *ptr++ = col_len;                       // Length of result string
     memcpy((char*)ptr, column, col_len);    // Result string
@@ -1663,9 +1663,9 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
         // 1 - Add "Using_Gtid"
         sprintf(column,
                 "%s",
-                router->mariadb10_master_gtid
-                ? "Slave_pos"
-                : "No");
+                router->mariadb10_master_gtid ?
+                "Slave_pos" :
+                "No");
         col_len = strlen(column);
         *ptr++ = col_len;               // Length of result string
         memcpy(ptr, column, col_len);   // Result string
@@ -2301,9 +2301,9 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
     int rotating = 0;
     long burst_size;
     char read_errmsg[BINLOG_ERROR_MSG_LEN + 1];
-    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE
-        ? &slave->f_info
-        : NULL;
+    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
+        &slave->f_info :
+        NULL;
 
     read_errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
@@ -3205,9 +3205,9 @@ static int blr_slave_fake_rotate(ROUTER_INSTANCE* router,
     const char* sptr;
     int filenum;
     GWBUF* r_event;
-    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE
-        ? &slave->f_info
-        : NULL;
+    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
+        &slave->f_info :
+        NULL;
 
     if ((sptr = strrchr(new_file, '.')) == NULL)
     {
@@ -3258,9 +3258,9 @@ static GWBUF* blr_slave_read_fde(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     uint8_t* ptr;
     uint32_t chksum;
     char err_msg[BINLOG_ERROR_MSG_LEN + 1];
-    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE
-        ? &slave->f_info
-        : NULL;
+    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
+        &slave->f_info :
+        NULL;
 
     err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
 
@@ -4258,9 +4258,9 @@ namespace
 
 int validate_connection_name(ROUTER_INSTANCE* router, const std::string& name, char* error)
 {
-    static const char DEFAULT_MESSAGE[]
-        = "If a connection name is provided, it must be of the format ':N' where N "
-          "is an integer larger than 1.";
+    static const char DEFAULT_MESSAGE[] =
+        "If a connection name is provided, it must be of the format ':N' where N "
+        "is an integer larger than 1.";
 
     int index = -1;
 
@@ -4565,9 +4565,9 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
         if (use_gtid.empty() || (strcasecmp(use_gtid.c_str(), "slave_pos") != 0))
         {
-            static const char MESSAGE[]
-                = "Secondary masters can only be used in conjunction with GTID based replication. "
-                  "Specify MASTER_USE_GTID=Slave_pos for the default master connection.";
+            static const char MESSAGE[] =
+                "Secondary masters can only be used in conjunction with GTID based replication. "
+                "Specify MASTER_USE_GTID=Slave_pos for the default master connection.";
             mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
             strcpy(error, MESSAGE);
             return -1;
@@ -4610,8 +4610,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     if (!use_gtid.empty() && (strcasecmp(use_gtid.c_str(), "slave_pos") != 0))
     {
-        static const char MESSAGE[]
-            = "Only MASTER_USE_GTID=Slave_pos is allowed.";
+        static const char MESSAGE[] =
+            "Only MASTER_USE_GTID=Slave_pos is allowed.";
         mxb_assert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
         return -1;
@@ -5848,9 +5848,9 @@ static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         msg_ptr = strchr(slave->warning_msg, ':');
         if (msg_ptr)
         {
-            size_t len = (msg_ptr - slave->warning_msg > 16)
-                ? 16
-                : (msg_ptr - slave->warning_msg);
+            size_t len = (msg_ptr - slave->warning_msg > 16) ?
+                16 :
+                (msg_ptr - slave->warning_msg);
             memcpy(err_code, slave->warning_msg, len);
             err_code[len] = 0;
             code_len = strlen(err_code);
@@ -6479,9 +6479,9 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
     uint8_t* ptr;
     uint32_t chksum;
     char err_msg[BINLOG_ERROR_MSG_LEN + 1];
-    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE
-        ? &slave->f_info
-        : NULL;
+    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
+        &slave->f_info :
+        NULL;
 
     err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
 
@@ -6524,8 +6524,8 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
     {
         uint8_t* record_ptr = GWBUF_DATA(record);
         void* mem = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
-        SLAVE_ENCRYPTION_CTX* new_encryption_ctx
-            = static_cast<SLAVE_ENCRYPTION_CTX*>(mem);
+        SLAVE_ENCRYPTION_CTX* new_encryption_ctx =
+            static_cast<SLAVE_ENCRYPTION_CTX*>(mem);
 
         if (!new_encryption_ctx)
         {
@@ -6849,9 +6849,9 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
 
         sprintf(max_conns,
                 "%d",
-                !router->service->max_connections
-                ? BLR_DEFAULT_MAX_CONNS
-                : router->service->max_connections);
+                !router->service->max_connections ?
+                BLR_DEFAULT_MAX_CONNS :
+                router->service->max_connections);
         strcpy(heading, word);
 
         blr_slave_send_var_value(router,
@@ -7531,9 +7531,9 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE* router,
         }
         else
         {
-            const char* errmsg
-                = "SHOW [FULL] BINARY LOGS needs the"
-                  " 'mariadb10_slave_gtid' option to be set.";
+            const char* errmsg =
+                "SHOW [FULL] BINARY LOGS needs the"
+                " 'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
                       router->service->name);
@@ -7859,15 +7859,15 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE* router,
             const char* err_msg_s = "stopped replication: issue STOP SLAVE first.";
             char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
             MXS_ERROR("GTID registration without %s",
-                      router->master_state == BLRM_SLAVE_STOPPED
-                      ? err_msg_s : err_msg_u);
+                      router->master_state == BLRM_SLAVE_STOPPED ?
+                      err_msg_s : err_msg_u);
 
             snprintf(error_string,
                      BINLOG_ERROR_MSG_LEN,
                      "Cannot use Master GTID registration without %s",
-                     router->master_state == BLRM_SLAVE_STOPPED
-                     ? err_msg_s
-                     : err_msg_u);
+                     router->master_state == BLRM_SLAVE_STOPPED ?
+                     err_msg_s :
+                     err_msg_u);
 
             blr_slave_send_error_packet(slave,
                                         error_string,
@@ -8062,9 +8062,9 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
         }
         else
         {
-            const char* errmsg
-                = "PURGE BINARY LOGS needs the "
-                  "'mariadb10_slave_gtid' option to be set.";
+            const char* errmsg =
+                "PURGE BINARY LOGS needs the "
+                "'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
                       router->service->name);
@@ -8408,9 +8408,9 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE* router,
     unsigned int seqno;
     bool skipped_files = false;
     char t_prefix[BINLOG_FILE_EXTRA_INFO] = "";
-    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE
-        ? &slave->f_info
-        : NULL;
+    MARIADB_GTID_INFO* f_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE ?
+        &slave->f_info :
+        NULL;
     char next_file[BINLOG_FNAMELEN + 1] = "";
 
     // Save the current router binlog filename
@@ -8591,9 +8591,9 @@ static int blr_show_binary_logs(ROUTER_INSTANCE* router,
      */
 
     if (sqlite3_exec(router->gtid_maps,
-                     !result.use_tree
-                     ? select_query
-                     : select_query_full,
+                     !result.use_tree ?
+                     select_query :
+                     select_query_full,
                      binary_logs_select_cb,
                      &result,
                      &errmsg) != SQLITE_OK)
@@ -8765,9 +8765,9 @@ static int binary_logs_select_cb(void* data,
         blr_get_file_fullpath(values[0],
                               data_set->binlogdir,
                               file_path,
-                              data_set->use_tree
-                              ? t_prefix
-                              : NULL);
+                              data_set->use_tree ?
+                              t_prefix :
+                              NULL);
         // Get the file size
         fsize = blr_slave_get_file_size(file_path);
 
@@ -8854,9 +8854,9 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE* router,
     /* Set identy for MySQL replication monitor */
     sprintf(server_id,
             "%d",
-            router->set_master_server_id
-            ? router->masterid
-            : router->serverid);
+            router->set_master_server_id ?
+            router->masterid :
+            router->serverid);
 
     if ((pkt = blr_create_result_row(server_id, // File name
                                      "0",       // o = OFF
@@ -8957,9 +8957,9 @@ static int binary_logs_purge_cb(void* data,
         char full_path[PATH_MAX + 1];
 
         /* values[0] is filename, values[1] is prefix + file */
-        filename = !result_data->use_tree
-            ? values[0]
-            : values[1];
+        filename = !result_data->use_tree ?
+            values[0] :
+            values[1];
 
         sprintf(full_path, "%s/%s", result_data->binlogdir, filename);
 
@@ -9230,10 +9230,10 @@ static void blr_log_config_changes(ROUTER_INSTANCE* router,
     }
 
     /* Prepare GTID msg */
-    const char* gtid_msg
-        = !change_master.use_mariadb10_gtid.empty()
-            ? ", MASTER_USE_GTID=Slave_pos"
-            : "";
+    const char* gtid_msg =
+        !change_master.use_mariadb10_gtid.empty() ?
+        ", MASTER_USE_GTID=Slave_pos" :
+        "";
 
     /* Log previous state and new changes */
     MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
@@ -9449,9 +9449,9 @@ static bool blr_binlog_change_check(const ROUTER_INSTANCE* router,
             snprintf(error,
                      BINLOG_ERROR_MSG_LEN,
                      "%s MASTER_USE_GTID=Slave_pos is required",
-                     router->master_state == BLRM_UNCONFIGURED
-                     ? "Router is not configured for master connection,"
-                     : "Cannot use MASTER_LOG_FILE for master connection,");
+                     router->master_state == BLRM_UNCONFIGURED ?
+                     "Router is not configured for master connection," :
+                     "Cannot use MASTER_LOG_FILE for master connection,");
 
             return false;
         }

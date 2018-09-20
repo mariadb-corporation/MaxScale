@@ -937,8 +937,8 @@ bool RWSplitSession::handle_master_is_target(SRWBackend* dest)
     if (should_replace_master(target))
     {
         MXS_INFO("Replacing old master '%s' with new master '%s'",
-                 m_current_master
-                 ? m_current_master->name() : "<no previous master>",
+                 m_current_master ?
+                 m_current_master->name() : "<no previous master>",
                  target->name());
         replace_master(target);
     }
@@ -1004,8 +1004,8 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER* server, GWBUF* origin)
      **/
 
     GWBUF* rval = origin;
-    const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB)
-        ? MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
+    const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
+        MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
     const char* gtid_position = m_gtid_pos.c_str();
 
@@ -1088,9 +1088,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, SRWBackend& target, bool
      * will do the replacement of PS IDs which must not be done if we are
      * continuing an ongoing query.
      */
-    bool success = !m_qc.large_query()
-        ? target->write(send_buf, response)
-        : target->continue_write(send_buf);
+    bool success = !m_qc.large_query() ?
+        target->write(send_buf, response) :
+        target->continue_write(send_buf);
 
     if (success)
     {

@@ -783,9 +783,9 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     /* Log binlog structure storage mode */
     MXS_NOTICE("%s: storing binlog files in %s",
                service->name,
-               inst->storage_type == BLR_BINLOG_STORAGE_FLAT
-               ? "'flat' mode"
-               : "'tree' mode using GTID domain_id and server_id");
+               inst->storage_type == BLR_BINLOG_STORAGE_FLAT ?
+               "'flat' mode" :
+               "'tree' mode using GTID domain_id and server_id");
 
     /* Enable MariaDB the GTID maps store */
     if (inst->mariadb10_compat)
@@ -826,8 +826,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
 
         SSL_LISTENER* ssl_cfg;
         /* Allocate SSL struct for backend connection */
-        if ((ssl_cfg
-                 = static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
+        if ((ssl_cfg =
+                 static_cast<SSL_LISTENER*>(MXS_CALLOC(1, sizeof(SSL_LISTENER)))) == NULL)
         {
             MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
                       inst->service->name);
@@ -1649,8 +1649,8 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
                router_inst->stats.n_residuals);
     dcb_printf(dcb,
                "\tAverage events per packet:                   %.1f\n",
-               router_inst->stats.n_reads != 0
-               ? ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
+               router_inst->stats.n_reads != 0 ?
+               ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
 
     spinlock_acquire(&router_inst->lock);
     if (router_inst->stats.lastReply)
@@ -1669,8 +1669,8 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             dcb_printf(dcb,
                        "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived,
-                       (router_inst->lastEventReceived <= MAX_EVENT_TYPE)
-                       ? event_names[router_inst->lastEventReceived] : "unknown");
+                       (router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+                       event_names[router_inst->lastEventReceived] : "unknown");
         }
         else
         {
@@ -1824,8 +1824,8 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             {
                 dcb_printf(dcb,
                            "\t\tSlave connected with SSL:                %s\n",
-                           session->dcb->ssl_state == SSL_ESTABLISHED
-                           ? "Established" : "Not connected yet");
+                           session->dcb->ssl_state == SSL_ESTABLISHED ?
+                           "Established" : "Not connected yet");
             }
             dcb_printf(dcb,
                        "\t\tNext Sequence No:                        %d\n",
@@ -1947,10 +1947,10 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
                 {
                     dcb_printf(dcb,
                                "\t\tSlave_mode:                              catchup. %s%s\n",
-                               ((session->cstate & CS_EXPECTCB) == 0 ? ""
-                                                                     : "Waiting for DCB queue to drain."),
-                               ((session->cstate & CS_BUSY) == 0 ? ""
-                                                                 : " Busy in slave catchup."));
+                               ((session->cstate & CS_EXPECTCB) == 0 ? "" :
+                                "Waiting for DCB queue to drain."),
+                               ((session->cstate & CS_BUSY) == 0 ? "" :
+                                " Busy in slave catchup."));
                 }
             }
 #if SPINLOCK_PROFILE
@@ -2103,8 +2103,8 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
     json_object_set_new(rval, "events_read", json_integer(router_inst->stats.n_reads));
     json_object_set_new(rval, "residual_packets", json_integer(router_inst->stats.n_residuals));
 
-    double average_packets = router_inst->stats.n_reads != 0
-        ? ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
+    double average_packets = router_inst->stats.n_reads != 0 ?
+        ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
 
     json_object_set_new(rval, "average_events_per_packets", json_real(average_packets));
 
@@ -2122,9 +2122,9 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
         {
             json_object_set_new(rval,
                                 "latest_event_type",
-                                json_string((router_inst->lastEventReceived <= MAX_EVENT_TYPE)
-                                            ? event_names[router_inst->lastEventReceived]
-                                            : "unknown"));
+                                json_string((router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+                                            event_names[router_inst->lastEventReceived] :
+                                            "unknown"));
         }
         else
         {

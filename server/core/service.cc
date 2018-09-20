@@ -349,8 +349,8 @@ static int serviceStartPort(Service* service, SERV_LISTENER* port)
     const size_t ANY_IPV4_ADDRESS_LEN = 7;      // strlen("0:0:0:0");
 
     int listeners = 0;
-    size_t config_bind_len
-        = (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
+    size_t config_bind_len =
+        (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
     char config_bind[config_bind_len + 1];      // +1 for NULL
     MXS_PROTOCOL* funcs;
 

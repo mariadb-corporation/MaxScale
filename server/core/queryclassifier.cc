@@ -870,9 +870,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
-    bool in_read_only_trx
-        = (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED)
-            && session_trx_is_read_only(session());
+    bool in_read_only_trx =
+        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED)
+        && session_trx_is_read_only(session());
 
     if (gwbuf_length(pBuffer) > MYSQL_HEADER_LEN)
     {

@@ -391,15 +391,15 @@ bool test(uint32_t (* getter)(GWBUF*), bool dont_bail_out)
 namespace
 {
 
-char USAGE[]
-    = "usage: test_trxtracking [-p] [-q] [-r] [-d]\n"
-      "\n"
-      "-p  : Test using custom parser\n"
-      "-q  : Test using query classifier\n"
-      "-r  : Test using regex matching\n"
-      "-d  : Don't bail out at first error\n"
-      "\n"
-      "If neither -p, -q or -r has been specified, then all will be tested.\n";
+char USAGE[] =
+    "usage: test_trxtracking [-p] [-q] [-r] [-d]\n"
+    "\n"
+    "-p  : Test using custom parser\n"
+    "-q  : Test using query classifier\n"
+    "-r  : Test using regex matching\n"
+    "-d  : Don't bail out at first error\n"
+    "\n"
+    "If neither -p, -q or -r has been specified, then all will be tested.\n";
 }
 
 int main(int argc, char* argv[])

@@ -41,21 +41,21 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
 {
     int next_index = NodeData::INDEX_FIRST;
     // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
-    std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit
-        = [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
-                mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
-                node->m_node.index = next_index++;
-                if (visitor(node))
+    std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
+        [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
+            mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
+            node->m_node.index = next_index++;
+            if (visitor(node))
+            {
+                for (MariaDBServer* slave : node->m_node.children)
                 {
-                    for (MariaDBServer* slave : node->m_node.children)
+                    if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
                     {
-                        if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-                        {
-                            topology_DFS_visit(slave, visitor);
-                        }
+                        topology_DFS_visit(slave, visitor);
                     }
                 }
-            };
+            }
+        };
 
     topology_DFS_visit(root, visitor);
 }

@@ -34,8 +34,8 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
 
     test.tprintf("Connect with a user that has a default role");
-    MYSQL* conn
-        = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "my_db", "test", "test");
+    MYSQL* conn =
+        open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0], "my_db", "test", "test");
     test.expect(mysql_errno(conn) == 0, "Connection failed: %s", mysql_error(conn));
     char value[100] {};
     find_field(conn, "SELECT CURRENT_ROLE() AS role", "role", value);

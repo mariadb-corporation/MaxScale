@@ -338,8 +338,8 @@ void Connection::process_schema(json_t* json)
             type = json_object_get(v, "type");
         }
         std::string nameval = name ? json_string_value(name) : "";
-        std::string typeval
-            = type ? (json_is_string(type) ? json_string_value(type) : "varchar(50)") : "undefined";
+        std::string typeval =
+            type ? (json_is_string(type) ? json_string_value(type) : "varchar(50)") : "undefined";
 
         if (json_is_integer(length))
         {

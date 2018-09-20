@@ -57,9 +57,9 @@ static bool is_master(MXS_MONITORED_SERVER* server)
 {
     bool rval = false;
     MYSQL_RES* result;
-    const char* master_query
-        = "SELECT VARIABLE_VALUE, @@server_uuid, @@read_only FROM performance_schema.global_status "
-          "WHERE VARIABLE_NAME= 'group_replication_primary_member'";
+    const char* master_query =
+        "SELECT VARIABLE_VALUE, @@server_uuid, @@read_only FROM performance_schema.global_status "
+        "WHERE VARIABLE_NAME= 'group_replication_primary_member'";
 
     if (mysql_query(server->con, master_query) == 0 && (result = mysql_store_result(server->con)))
     {

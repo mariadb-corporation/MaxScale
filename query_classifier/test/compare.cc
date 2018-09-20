@@ -47,24 +47,24 @@ using std::stringstream;
 namespace
 {
 
-char USAGE[]
-    = "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
-      "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
-      "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
-      "-d    don't stop after first failed query\n"
-      "-1    the first classifier, default 'qc_mysqlembedded'\n"
-      "-2    the second classifier, default 'qc_sqlite'\n"
-      "-A    arguments for the first classifier\n"
-      "-B    arguments for the second classifier\n"
-      "-C    arguments for both classifiers\n"
-      "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
-      "-s    compare single statement\n"
-      "-S    strict, also require that the parse result is identical\n"
-      "-R    strict reporting, report if parse result is different\n"
-      "-v 0, only return code\n"
-      "   1, query and result for failed cases\n"
-      "   2, all queries, and result for failed cases\n"
-      "   3, all queries and all results\n";
+char USAGE[] =
+    "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
+    "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
+    "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
+    "-d    don't stop after first failed query\n"
+    "-1    the first classifier, default 'qc_mysqlembedded'\n"
+    "-2    the second classifier, default 'qc_sqlite'\n"
+    "-A    arguments for the first classifier\n"
+    "-B    arguments for the second classifier\n"
+    "-C    arguments for both classifiers\n"
+    "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
+    "-s    compare single statement\n"
+    "-S    strict, also require that the parse result is identical\n"
+    "-R    strict reporting, report if parse result is different\n"
+    "-v 0, only return code\n"
+    "   1, query and result for failed cases\n"
+    "   2, all queries, and result for failed cases\n"
+    "   3, all queries and all results\n";
 
 
 enum verbosity_t

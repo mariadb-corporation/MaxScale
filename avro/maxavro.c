@@ -338,9 +338,9 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE* file)
             size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
             if (val
-                && (val->key
-                        = maxavro_read_string_from_file(file,
-                                                        &size))
+                && (val->key =
+                        maxavro_read_string_from_file(file,
+                                                      &size))
                 && (val->value = maxavro_read_string_from_file(file, &size)))
             {
                 val->next = rval;

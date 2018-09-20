@@ -286,8 +286,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance, MXS_SESSION* session
 
     if ((my_session = static_cast<TOPN_SESSION*>(MXS_CALLOC(1, sizeof(TOPN_SESSION)))) != NULL)
     {
-        if ((my_session->filename
-                 = (char*) MXS_MALLOC(strlen(my_instance->filebase) + 20))
+        if ((my_session->filename =
+                 (char*) MXS_MALLOC(strlen(my_instance->filebase) + 20))
             == NULL)
         {
             MXS_FREE(my_session);

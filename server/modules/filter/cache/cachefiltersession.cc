@@ -869,9 +869,9 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                 if (log_decisions())
                 {
-                    zPrimary_reason
-                        = "populating but not using cache inside transaction that is not "
-                          "explicitly read-only, but that has used only SELECTs sofar";
+                    zPrimary_reason =
+                        "populating but not using cache inside transaction that is not "
+                        "explicitly read-only, but that has used only SELECTs sofar";
                 }
                 action = CACHE_POPULATE;
             }

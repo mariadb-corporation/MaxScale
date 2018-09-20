@@ -134,9 +134,9 @@ RWSplit::SrvStatMap RWSplit::all_server_stats() const
 int RWSplit::max_slave_count() const
 {
     int router_nservers = m_service->n_dbref;
-    int conf_max_nslaves = m_config->max_slave_connections > 0
-        ? m_config->max_slave_connections
-        : (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
+    int conf_max_nslaves = m_config->max_slave_connections > 0 ?
+        m_config->max_slave_connections :
+        (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
     return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 }
 

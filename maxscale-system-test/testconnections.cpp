@@ -948,8 +948,8 @@ int TestConnections::start_binlog(int m)
 
     repl->stop_nodes();
 
-    binlog
-        = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+    binlog =
+        open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
     execute_query(binlog, "stop slave");
     execute_query(binlog, "reset slave all");
     mysql_close(binlog);
@@ -1015,8 +1015,8 @@ int TestConnections::start_binlog(int m)
     add_result(maxscales->start_maxscale(m), "Maxscale start failed\n");
 
     tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    binlog
-        = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
+    binlog =
+        open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
 
     add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -1562,8 +1562,8 @@ int TestConnections::create_connections(int m,
                 printf("Galera \n");
             }
 
-            galera_conn[i]
-                = open_conn(4016, maxscales->IP[m], maxscales->user_name, maxscales->password, ssl);
+            galera_conn[i] =
+                open_conn(4016, maxscales->IP[m], maxscales->user_name, maxscales->password, ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;

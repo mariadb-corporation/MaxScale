@@ -45,8 +45,8 @@ int hash_password(TestConnections* test)
 
     int exit_code;
     test->tprintf("Creating a new encrypted password\n");
-    char* enc_pw
-        = test->maxscales->ssh_node_output(0, "maxpasswd /var/lib/maxscale/ skysql", true, &exit_code);
+    char* enc_pw =
+        test->maxscales->ssh_node_output(0, "maxpasswd /var/lib/maxscale/ skysql", true, &exit_code);
 
     char* ptr = strchr(enc_pw, '\n');
     if (ptr)

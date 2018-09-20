@@ -2363,8 +2363,8 @@ int blr_read_events_all_events(ROUTER_INSTANCE* router,
             {
                 MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
                           check_alg,
-                          check_alg == 1
-                          ? "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
+                          check_alg == 1 ?
+                          "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
             }
             if (check_alg == 1)
             {
@@ -2413,8 +2413,8 @@ int blr_read_events_all_events(ROUTER_INSTANCE* router,
             char nonce_hex[AES_BLOCK_SIZE * 2 + 1] = "";
             MXS_START_ENCRYPTION_EVENT ste_event = {};
             void* mem = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
-            BINLOG_ENCRYPTION_CTX* new_encryption_ctx
-                = static_cast<BINLOG_ENCRYPTION_CTX*>(mem);
+            BINLOG_ENCRYPTION_CTX* new_encryption_ctx =
+                static_cast<BINLOG_ENCRYPTION_CTX*>(mem);
 
             if (new_encryption_ctx == NULL)
             {
@@ -2761,10 +2761,10 @@ int blr_read_events_all_events(ROUTER_INSTANCE* router,
             db_name_len = ptr[4 + 4];
             var_block_len = ptr[4 + 4 + 1 + 2];
 
-            statement_len
-                = hdr.event_size
-                    - BINLOG_EVENT_HDR_LEN
-                    - (4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
+            statement_len =
+                hdr.event_size
+                - BINLOG_EVENT_HDR_LEN
+                - (4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
 
             statement_sql = static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
             if (statement_sql)
@@ -3782,8 +3782,8 @@ uint8_t* blr_create_start_encryption_event(ROUTER_INSTANCE* router,
 {
     uint8_t* new_event;
     uint8_t event_size = sizeof(MXS_START_ENCRYPTION_EVENT);
-    BINLOG_ENCRYPTION_CTX* new_encryption_ctx
-        = static_cast<BINLOG_ENCRYPTION_CTX*>(MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX)));
+    BINLOG_ENCRYPTION_CTX* new_encryption_ctx =
+        static_cast<BINLOG_ENCRYPTION_CTX*>(MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX)));
 
     if (new_encryption_ctx == NULL)
     {
@@ -4860,20 +4860,20 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE* router,
         // Add prefix
         sprintf(prefix,
                 "%" PRIu32 "/%" PRIu32 "/",
-                info_file
-                ? info_file->gtid_elms.domain_id
-                : router->mariadb10_gtid_domain,
-                info_file
-                ? info_file->gtid_elms.server_id
-                : router->orig_masterid);
+                info_file ?
+                info_file->gtid_elms.domain_id :
+                router->mariadb10_gtid_domain,
+                info_file ?
+                info_file->gtid_elms.server_id :
+                router->orig_masterid);
         strcat(path, prefix);
     }
 
     // Set final file name full path
     strcat(path,
-           info_file == NULL
-           ? router->binlog_name
-           : info_file->file);
+           info_file == NULL ?
+           router->binlog_name :
+           info_file->file);
 
     // Check file
     if (access(path, F_OK) == -1 && errno == ENOENT)
@@ -4881,9 +4881,9 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE* router,
         // No file found
         MXS_WARNING("%s: %s, missing binlog file '%s'",
                     router->service->name,
-                    info_file == NULL
-                    ? "ROTATE_EVENT"
-                    : "Slave request",
+                    info_file == NULL ?
+                    "ROTATE_EVENT" :
+                    "Slave request",
                     path);
 
         ret = false;

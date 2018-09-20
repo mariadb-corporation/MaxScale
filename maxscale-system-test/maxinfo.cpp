@@ -18,8 +18,8 @@ using namespace std;
 // const char * resources[N] = {"variables",  "status", "services",  "listeners", "modules", "sessions",
 // "clients", "servers", "eventTimes"};
 const int N = 8;
-const char* resources[N]
-    = {"variables", "status", "services", "listeners", "modules", "sessions", "clients", "servers"};
+const char* resources[N] =
+{"variables", "status", "services", "listeners", "modules", "sessions", "clients", "servers"};
 
 bool exit_flag = false;
 

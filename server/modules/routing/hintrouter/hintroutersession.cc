@@ -272,8 +272,8 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
     case HINT_ROUTE_TO_ALL:
         {
             HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
-            BackendMap::size_type n_writes
-                = std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
+            BackendMap::size_type n_writes =
+                std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
             if (n_writes != 0)
             {
                 m_surplus_replies = n_writes - 1;

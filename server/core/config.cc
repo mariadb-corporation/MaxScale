@@ -4626,13 +4626,13 @@ static pcre2_code* compile_regex_string(const char* regex_string,
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
     uint32_t capcount = 0;
-    pcre2_code* machine
-        = pcre2_compile((PCRE2_SPTR) regex_string,
-                        PCRE2_ZERO_TERMINATED,
-                        options,
-                        &errorcode,
-                        &error_offset,
-                        NULL);
+    pcre2_code* machine =
+        pcre2_compile((PCRE2_SPTR) regex_string,
+                      PCRE2_ZERO_TERMINATED,
+                      options,
+                      &errorcode,
+                      &error_offset,
+                      NULL);
     if (machine)
     {
         if (jit_enabled)

@@ -27,15 +27,15 @@ using namespace std;
 namespace
 {
 
-char USAGE[]
-    = "test_trxcompare [-v] (-s stmt)|[file]"
-      "\n"
-      "-s    test single statement\n"
-      "-v 0, only return code\n"
-      "   1, failed cases (default)\n"
-      "   2, successful transactional cases\n"
-      "   4, successful cases\n"
-      "   7, all cases\n";
+char USAGE[] =
+    "test_trxcompare [-v] (-s stmt)|[file]"
+    "\n"
+    "-s    test single statement\n"
+    "-v 0, only return code\n"
+    "   1, failed cases (default)\n"
+    "   2, successful transactional cases\n"
+    "   4, successful cases\n"
+    "   7, all cases\n";
 
 enum verbosity_t
 {

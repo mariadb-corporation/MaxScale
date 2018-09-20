@@ -119,10 +119,10 @@ int MariaDBMonitor::Test::run_tests()
 
     // Test 4: 10 servers, with a big cycle composed of two smaller ones plus non-cycle servers
     init_servers(10);
-    EdgeArray edges4
-        = {   { {1, 5}, {2, 1}, {2, 5}, {3, 1}, {3, 4}, {3, 10}, {4, 1}, {5, 6}, {6, 7}, {6, 4}, {7, 8},
-                {8, 6},
-                {9, 8}}};
+    EdgeArray edges4 =
+    {   { {1, 5}, {2, 1}, {2, 5}, {3, 1}, {3, 4}, {3, 10}, {4, 1}, {5, 6}, {6, 7}, {6, 4}, {7, 8},
+          {8, 6},
+          {9, 8}}};
     add_replication(edges4);
     CycleArray expected_cycles4 = { { { {1, 5, 6, 7, 8, 4}}}};
     results.push_back(check_result_cycles(expected_cycles4));

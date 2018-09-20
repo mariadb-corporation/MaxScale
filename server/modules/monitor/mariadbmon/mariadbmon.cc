@@ -281,11 +281,11 @@ string MariaDBMonitor::diagnostics_to_string() const
     rval += string_printf("Switchover timeout:     %u\n", m_switchover_timeout);
     rval += string_printf("Automatic rejoin:       %s\n", m_auto_rejoin ? "Enabled" : "Disabled");
     rval += string_printf("Enforce read-only:      %s\n",
-                          m_enforce_read_only_slaves
-                          ? "Enabled" : "Disabled");
+                          m_enforce_read_only_slaves ?
+                          "Enabled" : "Disabled");
     rval += string_printf("Detect stale master:    %s\n",
-                          (m_detect_stale_master == 1)
-                          ? "Enabled" : "Disabled");
+                          (m_detect_stale_master == 1) ?
+                          "Enabled" : "Disabled");
     if (m_excluded_servers.size() > 0)
     {
         rval += string_printf("Non-promotable servers (failover): ");
@@ -323,8 +323,8 @@ json_t* MariaDBMonitor::to_json() const
     json_object_set_new(rval, "master", m_master == NULL ? json_null() : json_string(m_master->name()));
     json_object_set_new(rval,
                         "master_gtid_domain_id",
-                        m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null()
-                                                                    : json_integer(m_master_gtid_domain));
+                        m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null() :
+                        json_integer(m_master_gtid_domain));
 
     json_t* server_info = json_array();
     for (MariaDBServer* server : m_servers)
@@ -606,8 +606,8 @@ void MariaDBMonitor::update_external_master()
         mxb_assert(!m_master->m_slave_status.empty() && !m_master->m_node.external_masters.empty());
         // TODO: Add support for multiple external masters.
         auto& master_sstatus = m_master->m_slave_status[0];
-        if (master_sstatus.master_host != m_external_master_host ||
-            master_sstatus.master_port != m_external_master_port)
+        if (master_sstatus.master_host != m_external_master_host
+            || master_sstatus.master_port != m_external_master_port)
         {
             const string new_ext_host = master_sstatus.master_host;
             const int new_ext_port = master_sstatus.master_port;
@@ -795,10 +795,10 @@ bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server,
 {
     bool rval = false;
     bool send_ok = execute_manual_command([this, &rval, promotion_server, demotion_server, error_out]() {
-                                              rval
-                                                  = manual_switchover(promotion_server,
-                                                                      demotion_server,
-                                                                      error_out);
+                                              rval =
+                                                  manual_switchover(promotion_server,
+                                                                    demotion_server,
+                                                                    error_out);
                                           },
                                           error_out);
     return send_ok && rval;

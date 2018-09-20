@@ -157,14 +157,14 @@ static char* get_users_query(const char* server_version, int version, bool inclu
 {
     if (is_mariadb)     // 10.1.1 or newer, supports default roles
     {
-        return version >= 100202
-               ? get_mariadb_102_users_query(include_root)
-               : get_mariadb_users_query(include_root);
+        return version >= 100202 ?
+               get_mariadb_102_users_query(include_root) :
+               get_mariadb_users_query(include_root);
     }
 
     // Either an older MariaDB version or a MySQL variant, use the legacy query
-    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.")
-        ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* password = strstr(server_version, "5.7.") || strstr(server_version, "8.0.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
     const char* with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
@@ -297,9 +297,9 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                         size_t   scramble_len)
 {
     sqlite3* handle = get_handle(instance);
-    const char* validate_query = instance->lower_case_table_names
-        ? mysqlauth_validate_user_query_lower
-        : mysqlauth_validate_user_query;
+    const char* validate_query = instance->lower_case_table_names ?
+        mysqlauth_validate_user_query_lower :
+        mysqlauth_validate_user_query;
     size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2
         + strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
@@ -686,8 +686,8 @@ static bool check_server_permissions(SERVICE* service,
     }
 
     const char* format = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
-    const char* query_pw = strstr(server->version_string, "5.7.")
-        ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char* query_pw = strstr(server->version_string, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(format) + strlen(query_pw) + 1];
     bool rval = true;
     sprintf(query, format, query_pw);

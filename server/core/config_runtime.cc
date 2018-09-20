@@ -934,14 +934,14 @@ bool runtime_create_listener(Service* service,
         SSL_LISTENER* ssl = NULL;
 
         if (ssl_key && ssl_cert && ssl_ca
-            && (ssl
-                    = create_ssl(name,
-                                 ssl_key,
-                                 ssl_cert,
-                                 ssl_ca,
-                                 ssl_version,
-                                 ssl_depth,
-                                 verify_ssl)) == NULL)
+            && (ssl =
+                    create_ssl(name,
+                               ssl_key,
+                               ssl_cert,
+                               ssl_ca,
+                               ssl_version,
+                               ssl_depth,
+                               verify_ssl)) == NULL)
         {
             MXS_ERROR("SSL initialization for listener '%s' failed.", name);
             config_runtime_error("SSL initialization for listener '%s' failed.", name);
@@ -2564,14 +2564,14 @@ bool runtime_create_listener_from_json(Service* service, json_t* json)
         const char* address = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
         const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
         const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options
-            = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* authenticator_options =
+            get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
         const char* ssl_key = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
         const char* ssl_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
         const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
         const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
-        const char* ssl_cert_verify_depth
-            = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+        const char* ssl_cert_verify_depth =
+            get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
         const char* ssl_verify_peer_certificate = get_string_or_null(json,
                                                                      MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
 
@@ -2708,15 +2708,15 @@ bool runtime_create_user_from_json(json_t* json)
 bool runtime_remove_user(const char* id, enum user_type type)
 {
     bool rval = false;
-    const char* err = type == USER_TYPE_INET
-        ? admin_remove_inet_user(id)
-        : admin_disable_linux_account(id);
+    const char* err = type == USER_TYPE_INET ?
+        admin_remove_inet_user(id) :
+        admin_disable_linux_account(id);
 
     if (err == ADMIN_SUCCESS)
     {
         MXS_NOTICE("%s '%s'",
-                   type == USER_TYPE_INET
-                   ? "Deleted network user" : "Disabled account",
+                   type == USER_TYPE_INET ?
+                   "Deleted network user" : "Disabled account",
                    id);
         rval = true;
     }

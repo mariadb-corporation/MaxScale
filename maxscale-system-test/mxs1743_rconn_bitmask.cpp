@@ -61,8 +61,8 @@ int main(int argc, char** argv)
     // Give the connections a few seconds to establish
     sleep(5);
 
-    std::string query
-        = "SELECT COUNT(*) AS connections FROM information_schema.processlist WHERE user = 'mxs1743'";
+    std::string query =
+        "SELECT COUNT(*) AS connections FROM information_schema.processlist WHERE user = 'mxs1743'";
     char master_connections[1024];
     char slave_connections[1024];
     find_field(test.repl->nodes[0], query.c_str(), "connections", master_connections);

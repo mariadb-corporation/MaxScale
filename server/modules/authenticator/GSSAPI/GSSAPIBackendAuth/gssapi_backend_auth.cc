@@ -160,9 +160,9 @@ bool extract_principal_name(DCB* dcb, GWBUF* buffer)
          * means that the server is not secure. */
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
                   dcb->server->name,
-                  databuf[0] == MYSQL_REPLY_OK
-                  ? " Authentication was complete before it even started, "
-                    "anonymous users might not be disabled." : "");
+                  databuf[0] == MYSQL_REPLY_OK ?
+                  " Authentication was complete before it even started, "
+                  "anonymous users might not be disabled." : "");
         return false;
     }
 

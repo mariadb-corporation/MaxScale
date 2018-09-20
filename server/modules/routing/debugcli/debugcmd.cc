@@ -2084,8 +2084,8 @@ static bool user_is_authorized(DCB* dcb)
 
 static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
 
-static const char item_separator[]
-    = "----------------------------------------------------------------------------\n";
+static const char item_separator[] =
+    "----------------------------------------------------------------------------\n";
 
 /**
  * We have a complete line from the user, lookup the commands and execute them

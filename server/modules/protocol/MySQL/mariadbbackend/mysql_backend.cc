@@ -369,8 +369,8 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
 mxs_auth_state_t handle_server_response(DCB* dcb, GWBUF* buffer)
 {
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
-    mxs_auth_state_t rval = proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED
-        ? MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
+    mxs_auth_state_t rval = proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
+        MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
 
     if (dcb->authfunc.extract(dcb, buffer))
     {
@@ -1236,8 +1236,8 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             MXS_ERROR("Unable to write to backend '%s' due to "
                       "%s failure. Server in state %s.",
                       dcb->server->name,
-                      backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED
-                      ? "handshake" : "authentication",
+                      backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
+                      "handshake" : "authentication",
                       STRSRVSTATUS(dcb->server));
         }
 

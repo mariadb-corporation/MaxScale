@@ -374,9 +374,9 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
             {
                 json_t* pMatch = json_object_get(pReplace, KEY_MATCH);
                 // Match takes the precedence
-                sRule = pMatch
-                    ? MaskingRules::MatchRule::create_from(pRule)
-                    : MaskingRules::ReplaceRule::create_from(pRule);
+                sRule = pMatch ?
+                    MaskingRules::MatchRule::create_from(pRule) :
+                    MaskingRules::ReplaceRule::create_from(pRule);
             }
 
             if (sRule.get())
@@ -1062,10 +1062,10 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     // we consider it a match if a table or database have been provided.
     // Otherwise it would be easy to bypass a table/database rule.
 
-    bool match
-        = (m_column == column_def.org_name())
-            && (m_table.empty() || table.empty() || (m_table == table))
-            && (m_database.empty() || database.empty() || (m_database == database));
+    bool match =
+        (m_column == column_def.org_name())
+        && (m_table.empty() || table.empty() || (m_table == table))
+        && (m_database.empty() || database.empty() || (m_database == database));
 
     if (match)
     {
@@ -1093,10 +1093,10 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
     // we consider it a match if a table or database have been provided.
     // Otherwise it would be easy to bypass a table/database rule.
 
-    bool match
-        = (m_column == zColumn)
-            && (m_table.empty() || !zTable || (m_table == zTable))
-            && (m_database.empty() || !zDatabase || (m_database == zDatabase));
+    bool match =
+        (m_column == zColumn)
+        && (m_table.empty() || !zTable || (m_table == zTable))
+        && (m_database.empty() || !zDatabase || (m_database == zDatabase));
 
     if (match)
     {

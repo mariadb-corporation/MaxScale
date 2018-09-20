@@ -49,8 +49,8 @@ static char* DB_TABLE
         "CREATE TABLE IF NOT EXISTS pairs (tag VARCHAR(64) PRIMARY KEY NOT NULL, query VARCHAR(2048), reply VARCHAR(2048), date_in DATETIME NOT NULL, date_out DATETIME DEFAULT NULL, counter INT DEFAULT 1)";
 static char* DB_INSERT = "INSERT INTO pairs(tag, query, date_in) VALUES ('%s','%s',FROM_UNIXTIME(%s))";
 static char* DB_UPDATE = "UPDATE pairs SET reply='%s', date_out=FROM_UNIXTIME(%s) WHERE tag='%s'";
-static char* DB_INCREMENT
-    = "UPDATE pairs SET counter = counter+1, date_out=FROM_UNIXTIME(%s) WHERE query='%s'";
+static char* DB_INCREMENT =
+    "UPDATE pairs SET counter = counter+1, date_out=FROM_UNIXTIME(%s) WHERE query='%s'";
 
 void sighndl(int signum)
 {
@@ -125,9 +125,9 @@ int handler(void* user,
 int isPair(amqp_message_t* a, amqp_message_t* b)
 {
     int keylen = a->properties.correlation_id.len
-        >= b->properties.correlation_id.len
-        ? a->properties.correlation_id.len
-        : b->properties.correlation_id.len;
+        >= b->properties.correlation_id.len ?
+        a->properties.correlation_id.len :
+        b->properties.correlation_id.len;
 
     return strncmp(a->properties.correlation_id.bytes,
                    b->properties.correlation_id.bytes,

@@ -215,11 +215,11 @@ GWBUF* mysql_create_custom_error(int packet_number,
         mysql_error_msg = msg;
     }
 
-    mysql_payload_size
-        = sizeof(field_count)
-            + sizeof(mysql_err)
-            + sizeof(mysql_statemsg)
-            + strlen(mysql_error_msg);
+    mysql_payload_size =
+        sizeof(field_count)
+        + sizeof(mysql_err)
+        + sizeof(mysql_statemsg)
+        + strlen(mysql_error_msg);
 
     /** allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
@@ -413,8 +413,8 @@ int mysql_send_auth_error(DCB* dcb,
         mysql_error_msg = mysql_message;
     }
 
-    mysql_payload_size
-        = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+    mysql_payload_size =
+        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -636,12 +636,12 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
     GWBUF* buf;
 
 
-    mysql_payload_size
-        = sizeof(field_count)
-            + sizeof(affected_rows)
-            + sizeof(insert_id)
-            + sizeof(mysql_server_status)
-            + sizeof(mysql_warning_counter);
+    mysql_payload_size =
+        sizeof(field_count)
+        + sizeof(affected_rows)
+        + sizeof(insert_id)
+        + sizeof(mysql_server_status)
+        + sizeof(mysql_warning_counter);
 
     if (message != NULL)
     {
@@ -1014,8 +1014,8 @@ int send_mysql_native_password_response(DCB* dcb)
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
-    uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN)
-        ? local_session.client_sha1 : null_client_sha1;
+    uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
+        local_session.client_sha1 : null_client_sha1;
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
@@ -1501,8 +1501,8 @@ void mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_
 
             while (ptr < (local_buf + packet_len))
             {
-                enum_session_state_type type
-                    = (enum enum_session_state_type)mxs_leint_consume(&ptr);
+                enum_session_state_type type =
+                    (enum enum_session_state_type)mxs_leint_consume(&ptr);
 #if defined (SS_DEBUG)
                 mxb_assert(type <= SESSION_TRACK_TRANSACTION_TYPE);
 #endif

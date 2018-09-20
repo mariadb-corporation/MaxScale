@@ -475,8 +475,8 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GW
         gwbuf_free(reply);
         mxb_assert(my_session->queue);
 
-        my_session->state = my_session->state == DS_CLOSING_STREAM
-            ? DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;
+        my_session->state = my_session->state == DS_CLOSING_STREAM ?
+            DS_STREAM_CLOSED : DS_REQUEST_ACCEPTED;
 
         GWBUF* queue = my_session->queue;
         my_session->queue = NULL;

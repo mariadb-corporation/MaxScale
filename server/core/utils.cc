@@ -1281,8 +1281,8 @@ size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 
 size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
-    std::unordered_map<std::string, std::string>* map
-        = static_cast<std::unordered_map<std::string, std::string>*>(userdata);
+    std::unordered_map<std::string, std::string>* map =
+        static_cast<std::unordered_map<std::string, std::string>*>(userdata);
 
     if (nmemb > 0)
     {

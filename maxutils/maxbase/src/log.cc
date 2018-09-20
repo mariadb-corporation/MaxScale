@@ -719,8 +719,8 @@ int mxb_log_message(int priority,
 
             int modname_len = modname ? strlen(modname) + 3 : 0;    // +3 due to "[...] "
 
-            static const char SUPPRESSION[]
-                = " (subsequent similar messages suppressed for %lu milliseconds)";
+            static const char SUPPRESSION[] =
+                " (subsequent similar messages suppressed for %lu milliseconds)";
             int suppression_len = 0;
             size_t suppress_ms = this_unit.throttling.suppress_ms;
 

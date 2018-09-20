@@ -208,9 +208,9 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 
 void SchemaRouter::diagnostics(DCB* dcb)
 {
-    double sescmd_pct = m_stats.n_sescmd != 0
-        ? 100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries)
-        : 0.0;
+    double sescmd_pct = m_stats.n_sescmd != 0 ?
+        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
+        0.0;
 
     /** Session command statistics */
     dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
@@ -243,9 +243,9 @@ void SchemaRouter::diagnostics(DCB* dcb)
 
 json_t* SchemaRouter::diagnostics_json() const
 {
-    double sescmd_pct = m_stats.n_sescmd != 0
-        ? 100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries)
-        : 0.0;
+    double sescmd_pct = m_stats.n_sescmd != 0 ?
+        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
+        0.0;
 
     json_t* rval = json_object();
     json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));

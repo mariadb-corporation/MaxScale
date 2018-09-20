@@ -280,13 +280,13 @@ int MySQLSendHandshake(DCB* dcb)
     const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
     int plugin_name_len = strlen(plugin_name);
 
-    mysql_payload_size
-        = sizeof(mysql_protocol_version) + (len_version_string + 1) + sizeof(mysql_thread_id_num) + 8
-            + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
-            + sizeof(mysql_server_language)
-            + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
-            + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
-            + sizeof(    /* mysql_last_byte */ uint8_t);
+    mysql_payload_size =
+        sizeof(mysql_protocol_version) + (len_version_string + 1) + sizeof(mysql_thread_id_num) + 8
+        + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
+        + sizeof(mysql_server_language)
+        + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
+        + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
+        + sizeof(    /* mysql_last_byte */ uint8_t);
 
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -739,8 +739,8 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        MXS_SESSION* session
-            = session_alloc_with_id(dcb->service, dcb, protocol->thread_id);
+        MXS_SESSION* session =
+            session_alloc_with_id(dcb->service, dcb, protocol->thread_id);
 
         if (session != NULL)
         {
@@ -1784,8 +1784,8 @@ static spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int
 {
     spec_com_res_t rval = RES_CONTINUE;
     bool is_complete = false;
-    unsigned int packet_len
-        = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
+    unsigned int packet_len =
+        MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
     if (gwbuf_length(read_buffer) == packet_len)
     {
         is_complete = true;

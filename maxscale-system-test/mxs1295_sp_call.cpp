@@ -3,12 +3,12 @@
  */
 #include "testconnections.h"
 
-const char sp_sql[]
-    = "DROP PROCEDURE IF EXISTS multi;"
-      "CREATE PROCEDURE multi()"
-      "BEGIN"
-      "    SELECT @@server_id;"
-      "END";
+const char sp_sql[] =
+    "DROP PROCEDURE IF EXISTS multi;"
+    "CREATE PROCEDURE multi()"
+    "BEGIN"
+    "    SELECT @@server_id;"
+    "END";
 
 int get_server_id(MYSQL* conn)
 {

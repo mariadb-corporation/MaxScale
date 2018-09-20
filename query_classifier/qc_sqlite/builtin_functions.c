@@ -441,8 +441,8 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
     "row_number",
 };
 
-const size_t N_BUILTIN_10_2_3_FUNCTIONS
-    = sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
+const size_t N_BUILTIN_10_2_3_FUNCTIONS =
+    sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
 
 static const char* ORACLE_FUNCTIONS[] =
 {

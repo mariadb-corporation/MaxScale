@@ -372,8 +372,8 @@ bool BinlogFilterSession::checkEvent(GWBUF* buffer,
                 fixEvent(event + MYSQL_HEADER_LEN + 1, hdr.event_size);
 
                 MXS_INFO("Skipped events: Setting next_pos = 0 in %s",
-                         event[4] == XID_EVENT
-                         ? "XID_EVENT" : "COMMIT");
+                         event[4] == XID_EVENT ?
+                         "XID_EVENT" : "COMMIT");
             }
             break;
 

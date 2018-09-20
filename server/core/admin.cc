@@ -81,10 +81,10 @@ static bool modifies_data(MHD_Connection* connection, string method)
 static void send_auth_error(MHD_Connection* connection)
 {
     static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
-    MHD_Response* resp
-        = MHD_create_response_from_buffer(sizeof(error_resp) - 1,
-                                          error_resp,
-                                          MHD_RESPMEM_PERSISTENT);
+    MHD_Response* resp =
+        MHD_create_response_from_buffer(sizeof(error_resp) - 1,
+                                        error_resp,
+                                        MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
     MHD_destroy_response(resp);
@@ -148,10 +148,10 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         data = mxs::json_dump(js, flags);
     }
 
-    MHD_Response* response
-        = MHD_create_response_from_buffer(data.size(),
-                                          (void*)data.c_str(),
-                                          MHD_RESPMEM_MUST_COPY);
+    MHD_Response* response =
+        MHD_create_response_from_buffer(data.size(),
+                                        (void*)data.c_str(),
+                                        MHD_RESPMEM_MUST_COPY);
 
     const Headers& headers = reply.get_headers();
 
@@ -413,8 +413,8 @@ bool mxs_admin_init()
                                        NULL,
                                        MHD_OPTION_SOCK_ADDR,
                                        &addr,
-                                       !using_ssl ? MHD_OPTION_END
-                                                  : MHD_OPTION_HTTPS_MEM_KEY,
+                                       !using_ssl ? MHD_OPTION_END :
+                                       MHD_OPTION_HTTPS_MEM_KEY,
                                        admin_ssl_key,
                                        MHD_OPTION_HTTPS_MEM_CERT,
                                        admin_ssl_cert,

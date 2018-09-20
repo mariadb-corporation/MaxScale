@@ -2479,9 +2479,9 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
         if (info->function_infos_len == info->function_infos_capacity)
         {
             size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
-            QC_FUNCTION_INFO* function_infos
-                = (QC_FUNCTION_INFO*)realloc(info->function_infos,
-                                             capacity * sizeof(QC_FUNCTION_INFO));
+            QC_FUNCTION_INFO* function_infos =
+                (QC_FUNCTION_INFO*)realloc(info->function_infos,
+                                           capacity * sizeof(QC_FUNCTION_INFO));
             assert(function_infos);
 
             info->function_infos = function_infos;
@@ -2977,8 +2977,8 @@ static void update_field_infos(parsing_info_t* pi,
 
             case Item_subselect::EXISTS_SUBS:
                 {
-                    Item_exists_subselect* exists_subselect_item
-                        = static_cast<Item_exists_subselect*>(item);
+                    Item_exists_subselect* exists_subselect_item =
+                        static_cast<Item_exists_subselect*>(item);
 
                     st_select_lex* ssl = exists_subselect_item->get_select_lex();
                     if (ssl)

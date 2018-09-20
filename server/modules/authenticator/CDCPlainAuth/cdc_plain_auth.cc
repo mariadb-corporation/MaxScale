@@ -259,8 +259,8 @@ static int cdc_auth_authenticate(DCB* dcb)
         MXS_DEBUG("Receiving connection from '%s'",
                   client_data->user);
 
-        auth_ret
-            = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
+        auth_ret =
+            cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret && cdc_replace_users(dcb->listener) == MXS_AUTH_LOADUSERS_OK)

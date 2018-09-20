@@ -139,8 +139,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
 
             statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
                                    + var_block_len + 1 + db_name_len);
-            statement_sql
-                = static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
+            statement_sql =
+                static_cast<char*>(MXS_CALLOC(1, statement_len + 1));
             MXS_ABORT_IF_NULL(statement_sql);
             memcpy(statement_sql,
                    (char*)ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
@@ -205,8 +205,8 @@ bool blr_handle_one_event(MXS_ROUTER* instance, REP_HEADER& hdr, uint8_t* ptr, u
      * the replication event types
      * else stop replication from master
      */
-    int event_limit = router->mariadb10_compat
-        ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+    int event_limit = router->mariadb10_compat ?
+        MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
     if (hdr.event_type <= event_limit)
     {

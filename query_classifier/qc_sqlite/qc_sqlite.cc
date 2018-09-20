@@ -3393,17 +3393,17 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
     {
         if (qc_info_was_tokenized(this_thread.pInfo->m_status))
         {
-            format
-                = "Statement was classified only based on keywords "
-                  "(Sqlite3 error: %s, %s): \"%.*s%s\"";
+            format =
+                "Statement was classified only based on keywords "
+                "(Sqlite3 error: %s, %s): \"%.*s%s\"";
         }
         else
         {
             if (qc_info_was_parsed(this_thread.pInfo->m_status))
             {
-                format
-                    = "Statement was only partially parsed "
-                      "(Sqlite3 error: %s, %s): \"%.*s%s\"";
+                format =
+                    "Statement was only partially parsed "
+                    "(Sqlite3 error: %s, %s): \"%.*s%s\"";
 
                 // The status was set to QC_QUERY_PARSED, but sqlite3 returned an
                 // error. Most likely, query contains some excess unrecognized stuff.
@@ -3411,9 +3411,9 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
             }
             else
             {
-                format
-                    = "Statement was neither parsed nor recognized from keywords "
-                      "(Sqlite3 error: %s, %s): \"%.*s%s\"";
+                format =
+                    "Statement was neither parsed nor recognized from keywords "
+                    "(Sqlite3 error: %s, %s): \"%.*s%s\"";
             }
         }
 
@@ -3461,9 +3461,9 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
             if (qc_info_was_tokenized(this_thread.pInfo->m_status))
             {
                 // This suggests a callback from the parser into this module is not made.
-                format
-                    = "Statement was classified only based on keywords, "
-                      "even though the statement was parsed: \"%.*s%s\"";
+                format =
+                    "Statement was classified only based on keywords, "
+                    "even though the statement was parsed: \"%.*s%s\"";
 
                 MXS_WARNING(format, l, query, suffix);
             }
@@ -3503,8 +3503,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
             {
                 bool suppress_logging = false;
 
-                QcSqliteInfo* pInfo
-                    = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
+                QcSqliteInfo* pInfo =
+                    (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
 
                 if (pInfo)
                 {
