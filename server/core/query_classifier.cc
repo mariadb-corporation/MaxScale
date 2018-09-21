@@ -654,6 +654,19 @@ char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
     return names;
 }
 
+void qc_free_table_names(char** names, int tblsize)
+{
+    if (names)
+    {
+        for (int i = 0; i < tblsize; i++)
+        {
+            MXS_FREE(names[i]);
+        }
+
+        MXS_FREE(names);
+    }
+}
+
 char* qc_get_canonical(GWBUF* query)
 {
     QC_TRACE();

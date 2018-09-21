@@ -761,6 +761,13 @@ qc_sql_mode_t qc_get_sql_mode();
  */
 char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
 
+/**
+ * Free tables returned by qc_get_table_names
+ *
+ * @param names List of names
+ * @param size  Size of @c names
+ */
+void qc_free_table_names(char** names, int size);
 
 /**
  * Returns a bitmask specifying the type(s) of the statement. The result

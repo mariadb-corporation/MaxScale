@@ -19,23 +19,23 @@
 // This declares a module in MaxScale
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    static const char desc[] = "A binlog event filter for slave servers";
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
-        "A binlog event filter for slave servers",
+        desc,
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &BinlogFilter::s_object,                    // This is defined in the MaxScale filter template
-        NULL,                                       /* Process init. */
-        NULL,                                       /* Process finish. */
-        NULL,                                       /* Thread init. */
-        NULL,                                       /* Thread finish. */
+        &BinlogFilter::s_object,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         {
-            {"filter_events",                     MXS_MODULE_PARAM_BOOL,    "false"},
-            {"skip_table",                        MXS_MODULE_PARAM_STRING,  ""     },
-            {"skip_db",                           MXS_MODULE_PARAM_STRING,  ""     },
+            {"match",             MXS_MODULE_PARAM_REGEX },
+            {"exclude",           MXS_MODULE_PARAM_REGEX },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -82,10 +82,4 @@ json_t* BinlogFilter::diagnostics_json() const
 uint64_t BinlogFilter::getCapabilities()
 {
     return RCAP_TYPE_NONE;
-}
-
-// Return BinlogFilter active state
-bool BinlogFilter::is_active() const
-{
-    return m_config.active;
 }

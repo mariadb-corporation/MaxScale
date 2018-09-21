@@ -79,7 +79,7 @@ private:
     void skipDatabaseTable(const uint8_t* data, const REP_HEADER& hdr);
 
     // Get Replication Checksum from registration query
-    bool getReplicationChecksum(GWBUF* pPacket);
+    void getReplicationChecksum(GWBUF* pPacket);
 
     // Abort filter operations
     void filterError(GWBUF* pPacket);
@@ -103,10 +103,6 @@ private:
     bool checkStatement(const uint8_t* event,
                         const uint32_t event_size);
 
-    // Check Default DB name extracted from QUERY_EVENT
-    bool checkUseDB(const std::string& db_name,
-                    const BinlogConfig& config);
-
     // Check DB.TABLE in ANNOTATE_ROWS event
     void checkAnnotate(const uint8_t* event,
                        const uint32_t event_size);
@@ -116,18 +112,17 @@ private:
     enum state_t
     {
         ERRORED,        // A blocking error occurred
-        INACTIVE,       // Fitering is not active
         COMMAND_MODE,   // Connected client in SQL mode: no filtering
         BINLOG_MODE     // Connected client in BINLOG_MODE: filter events
     };
 
 private:
     // Event filtering member vars
-    uint32_t m_serverid;            // server-id of connected slave
-    state_t  m_state;               // Internal state
-    bool     m_skip;                // Mark event skipping
-    bool     m_crc;                 // CRC32 for events. Not implemented
-    uint32_t m_large_left;          // Remaining bytes of a large event
-    bool     m_is_large;            // Large Event indicator
-    GWBUF*   m_sql_query;           // SQL query buffer
+    uint32_t m_serverid = 0;            // server-id of connected slave
+    state_t  m_state = COMMAND_MODE;    // Internal state
+    bool     m_skip = false;            // Mark event skipping
+    bool     m_crc = false;             // CRC32 for events. Not implemented
+    uint32_t m_large_left = 0;          // Remaining bytes of a large event
+    bool     m_is_large = false;        // Large Event indicator
+    bool     m_reading_checksum = false;// Whether we are waiting for the binlog checksum response
 };

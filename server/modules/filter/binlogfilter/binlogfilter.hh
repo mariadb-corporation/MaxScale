@@ -18,26 +18,20 @@
 #include "binlogfiltersession.hh"
 
 // Binlog Filter configuration
-class BinlogConfig
+struct BinlogConfig
 {
-public:
-    // Constructor
     BinlogConfig(const MXS_CONFIG_PARAMETER* pParams)
-        : active(config_get_bool(pParams, "filter_events"))
-        , dbname(config_get_string(pParams, "skip_db"))
-        , table(config_get_string(pParams, "skip_table"))
+        : match(config_get_compiled_regex(pParams, "match", 0, nullptr))
+        , md_match(match ? pcre2_match_data_create_from_pattern(match, nullptr) : nullptr)
+        , exclude(config_get_compiled_regex(pParams, "exclude", 0, nullptr))
+        , md_exclude(exclude ? pcre2_match_data_create_from_pattern(exclude, nullptr) : nullptr)
     {
     }
 
-    // Destructor
-    ~BinlogConfig()
-    {
-    }
-
-    // Members mapped to config options
-    bool        active;
-    std::string dbname;
-    std::string table;
+    pcre2_code*       match;
+    pcre2_match_data* md_match;
+    pcre2_code*       exclude;
+    pcre2_match_data* md_exclude;
 };
 
 class BinlogFilter : public maxscale::Filter<BinlogFilter, BinlogFilterSession>
@@ -65,9 +59,6 @@ public:
     // Get filter capabilities
     uint64_t getCapabilities();
 
-    // Filter is active
-    bool is_active() const;
-
     // Return reference to filter config
     const BinlogConfig& getConfig() const
     {
@@ -79,17 +70,5 @@ private:
     BinlogFilter(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
-    /**
-     * Current configuration in maxscale.cnf
-     *
-     * [BinlogFilter]
-     * type=filter
-     * module=binlogfilter
-     * filter_events=On
-     * skip_table=t4
-     * skip_db=test
-     *
-     * Note: Only one table and one db right now
-     */
     BinlogConfig m_config;
 };
