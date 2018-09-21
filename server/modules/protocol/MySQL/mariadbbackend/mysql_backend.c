@@ -836,14 +836,14 @@ gw_read_and_write(DCB *dcb)
                     result_collected = true;
                 }
                 else if (expecting_ps_response(proto) &&
-                         mxs_mysql_is_prep_stmt_ok(read_buffer))
+                         mxs_mysql_is_prep_stmt_ok(read_buffer) &&
+                         !complete_ps_response(read_buffer))
                 {
-                    if (!complete_ps_response(read_buffer))
-                    {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
-                    }
-
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
+                }
+                else
+                {
                     // Collected the complete result
                     proto->collect_result = false;
                     result_collected = true;
