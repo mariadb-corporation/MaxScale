@@ -878,22 +878,16 @@ static int gw_read_and_write(DCB* dcb)
                     proto->collect_result = false;
                     result_collected = true;
                 }
-                else if (expecting_ps_response(proto))
+                else if (expecting_ps_response(proto)
+                         && mxs_mysql_is_prep_stmt_ok(read_buffer)
+                         && !complete_ps_response(read_buffer))
                 {
-                    if (mxs_mysql_is_prep_stmt_ok(read_buffer)
-                        && !complete_ps_response(read_buffer))
-                    {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
-                    }
-
-                    // Collected the complete result
-                    proto->collect_result = false;
-                    result_collected = true;
+                    dcb_readq_prepend(dcb, read_buffer);
+                    return 0;
                 }
                 else
                 {
-                    // Assume that everything else responds with an single packet
+                    // Collected the complete result
                     proto->collect_result = false;
                     result_collected = true;
                 }

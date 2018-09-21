@@ -28,6 +28,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
 #include <maxscale/service.h>
@@ -929,6 +930,35 @@ static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
     return rval;
 }
 
+static void report_mdev13453_problem(MYSQL* con, SERVER* server)
+{
+    if (server->version >= 100200 && server->version < 100211
+        && mxs_pcre2_simple_match("SELECT command denied to user .* for table 'users'",
+                                  mysql_error(con), 0, NULL) == MXS_PCRE2_MATCH)
+    {
+        char user[256] = "<failed to query user>";      // Enough for all user-hostname combinations
+        const char* quoted_user = "select concat(\"'\", user, \"'@'\", host, \"'\") as user "
+                                  "from mysql.user "
+                                  "where concat(user, \"@\", host) = current_user()";
+        MYSQL_RES* res;
+
+        if (mxs_mysql_query(con, quoted_user) == 0 && (res = mysql_store_result(con)))
+        {
+            MYSQL_ROW row = mysql_fetch_row(res);
+
+            if (row && row[0])
+            {
+                snprintf(user, sizeof(user), "%s", row[0]);
+            }
+
+            mysql_free_result(res);
+        }
+
+        MXS_ERROR("Due to MDEV-13453, the service user requires extra grants on the `mysql` database. "
+                  "To fix the problem, add the following grant: GRANT SELECT ON `mysql`.* TO %s", user);
+    }
+}
+
 int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, SERV_LISTENER* listener)
 {
     if (server_ref->server->version_string[0] == 0)
@@ -982,7 +1012,9 @@ int get_users_from_server(MYSQL* con, SERVER_REF* server_ref, SERVICE* service, 
         }
         else
         {
-            MXS_ERROR("Failed to load users: %s", mysql_error(con));
+            MXS_ERROR("Failed to load users from server '%s': %s", server_ref->server->name,
+                      mysql_error(con));
+            report_mdev13453_problem(con, server_ref->server);
         }
 
         MXS_FREE(query);
