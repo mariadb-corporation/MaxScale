@@ -907,14 +907,17 @@ GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
 GRANT SELECT ON mysql.roles_mapping TO 'maxscale'@'maxscalehost';
 GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
+
+-- MariaDB from 10.2.2 to 10.2.10 requires extra grants
+GRANT SELECT ON mysql.* TO 'maxscale'@'maxscalehost';
 ```
+
+**Note:** MariaDB versions 10.2.10 and older require a `SELECT` grant on
+  `mysql.*` in addition to the normal grants. This is to work around MDEV-13453
+  which was fixed in MariaDB 10.2.11.
 
 See [MaxScale Troubleshooting](https://mariadb.com/kb/en/mariadb-enterprise/maxscale-troubleshooting/)
 for more information on how to troubleshoot authentication related problems.
-
-**Note:** Due to a bug in MariaDB 10.2.9, if you see a
-          `SELECT command denied to user ... for table 'users'`
-          error, grant `SELECT ON mysql.*` to this user.
 
 <a id="passwd"></a>
 #### `password`
